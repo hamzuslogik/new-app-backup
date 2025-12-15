@@ -1,0 +1,310 @@
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+}
+
+.tab {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background: #f5f5f5;
+}
+
+.tab.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.statut-filters {
+  display: flex;
+  gap: 10px;
+}
+
+.statut-filter {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.statut-filter:hover {
+  background: #f5f5f5;
+}
+
+.statut-filter.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.pending-header {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.compte-rendu-card.statut-pending {
+  border-left: 4px solid #ffc107;
+}
+
+.compte-rendu-card.statut-approved {
+  border-left: 4px solid #28a745;
+}
+
+.compte-rendu-card.statut-rejected {
+  border-left: 4px solid #dc3545;
+}
+
+.cr-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statut-icon {
+  font-size: 20px;
+}
+
+.statut-icon.pending {
+  color: #ffc107;
+}
+
+.statut-icon.approved {
+  color: #28a745;
+}
+
+.statut-icon.rejected {
+  color: #dc3545;
+}
+
+.statut-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statut-badge.statut-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.statut-badge.statut-approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.statut-badge.statut-rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.modifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.modification-item {
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  background: white;
+  border-radius: 4px;
+}
+
+.modification-key {
+  font-weight: 600;
+  color: #007bff;
+  min-width: 150px;
+}
+
+.modification-value {
+  color: #333;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  overflow: hidden; /* Pas de scroll sur l'overlay */
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto; /* Scroll uniquement sur le contenu du modal */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling sur iOS */
+}
+
+.modal-content.large {
+  max-width: 800px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.btn-close:hover {
+  color: #000;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-success {
+  background: #28a745;
+  color: white;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-edit {
+  background: #17a2b8;
+  color: white;
+}
+
+.commentaire-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.commentaire-section label {
+  font-weight: 600;
+}
+
+.commentaire-section textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+

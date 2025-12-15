@@ -1,0 +1,11 @@
+{"nom":"Dupont","prenom":"Jean","tel":"0123456789","gsm1":"0612345678","gsm2":"","email":"jean.dupont@example.com","adresse":"123 Rue de la République","cp":"75001","ville":"Paris","civ":"MR"}
+{"nom":"Martin","prenom":"Marie","tel":"0234567890","gsm1":"0623456789","gsm2":"","email":"marie.martin@example.com","adresse":"456 Avenue des Champs","cp":"69001","ville":"Lyon","civ":"MME"}
+{"nom":"Bernard","prenom":"Pierre","tel":"0345678901","gsm1":"","gsm2":"0634567890","email":"pierre.bernard@example.com","adresse":"789 Boulevard Saint-Michel","cp":"13001","ville":"Marseille","civ":"MR"}
+{"nom":"Dubois","prenom":"Sophie","tel":"0456789012","gsm1":"0645678901","gsm2":"","email":"sophie.dubois@example.com","adresse":"321 Rue de la Paix","cp":"33000","ville":"Bordeaux","civ":"MME"}
+{"nom":"Leroy","prenom":"Thomas","tel":"0567890123","gsm1":"0656789012","gsm2":"","email":"thomas.leroy@example.com","adresse":"654 Place Bellecour","cp":"31000","ville":"Toulouse","civ":"MR"}
+{"nom":"Moreau","prenom":"Julie","tel":"0678901234","gsm1":"","gsm2":"0667890123","email":"julie.moreau@example.com","adresse":"987 Rue du Commerce","cp":"44000","ville":"Nantes","civ":"MME"}
+{"nom":"Petit","prenom":"Lucas","tel":"0789012345","gsm1":"0678901234","gsm2":"","email":"lucas.petit@example.com","adresse":"147 Avenue Victor Hugo","cp":"59000","ville":"Lille","civ":"MR"}
+{"nom":"Robert","prenom":"Emma","tel":"0890123456","gsm1":"0689012345","gsm2":"","email":"emma.robert@example.com","adresse":"258 Rue de la Gare","cp":"67000","ville":"Strasbourg","civ":"MME"}
+{"nom":"Richard","prenom":"Antoine","tel":"0901234567","gsm1":"","gsm2":"0690123456","email":"antoine.richard@example.com","adresse":"369 Boulevard de la Liberté","cp":"35000","ville":"Rennes","civ":"MR"}
+{"nom":"Durand","prenom":"Camille","tel":"0012345678","gsm1":"0601234567","gsm2":"","email":"camille.durand@example.com","adresse":"741 Rue de la Mairie","cp":"06000","ville":"Nice","civ":"MME"}
+

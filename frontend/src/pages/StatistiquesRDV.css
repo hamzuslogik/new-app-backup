@@ -1,0 +1,181 @@
+.statistiques-rdv-page {
+  padding: 16px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.statistiques-rdv-header {
+  margin-bottom: 24px;
+}
+
+.statistiques-rdv-header h1 {
+  font-size: 23.8px;
+  color: #9cbfc8;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statistiques-rdv-header h1 svg {
+  color: #007bff;
+}
+
+.statistiques-rdv-header p {
+  color: #666;
+  font-size: 11.9px;
+  margin: 0;
+}
+
+/* Cartes de statistiques */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23.8px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.stat-card-success .stat-card-icon {
+  background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.stat-card-warning .stat-card-icon {
+  background: linear-gradient(135deg, #ffc107, #fd7e14);
+}
+
+.stat-card-info .stat-card-icon {
+  background: linear-gradient(135deg, #17a2b8, #007bff);
+}
+
+.stat-card-content {
+  flex: 1;
+}
+
+.stat-card-value {
+  font-size: 27.2px;
+  font-weight: bold;
+  color: #9cbfc8;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-card-label {
+  font-size: 11.9px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* États de chargement et erreur */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-container button {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s;
+}
+
+.error-container button:hover {
+  background: #0056b3;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .statistiques-rdv-page {
+    padding: 12px;
+  }
+
+  .statistiques-rdv-header h1 {
+    font-size: 20.4px;
+  }
+
+  .stats-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-card-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 20.4px;
+  }
+
+  .stat-card-value {
+    font-size: 23.8px;
+  }
+
+  .stat-card-label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .statistiques-rdv-page {
+    padding: 8px;
+  }
+
+  .statistiques-rdv-header h1 {
+    font-size: 17px;
+  }
+}
+

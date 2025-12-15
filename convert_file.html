@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertisseur CSV/Excel vers JSONL</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .download-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        
+        .info {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        
+        .info h3 {
+            margin-bottom: 10px;
+            color: #1976D2;
+        }
+        
+        .info ul {
+            margin-left: 20px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Convertisseur vers JSONL</h1>
+        <p class="subtitle">Convertissez vos fichiers CSV, Excel ou JSON en format JSONL</p>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <h3>Glissez-déposez votre fichier ici</h3>
+            <p>ou cliquez pour sélectionner</p>
+            <p style="margin-top: 10px; font-size: 12px; color: #999;">
+                Formats supportés: CSV, XLSX, XLS, JSON
+            </p>
+            <input type="file" id="fileInput" class="file-input" accept=".csv,.xlsx,.xls,.json">
+        </div>
+        
+        <div id="fileName" style="margin-top: 15px; font-weight: bold; display: none;"></div>
+        
+        <button class="btn" id="convertBtn" disabled>Convertir en JSONL</button>
+        
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p style="text-align: center; margin-top: 10px; color: #666;" id="progressText">Conversion en cours...</p>
+        </div>
+        
+        <div class="result" id="result"></div>
+        
+        <div class="info">
+            <h3>ℹ️ À propos du format JSONL</h3>
+            <ul>
+                <li>Chaque ligne est un objet JSON indépendant</li>
+                <li>Format idéal pour l'importation en masse</li>
+                <li>Pas de problèmes d'encodage ou de caractères spéciaux</li>
+                <li>Facile à générer et à traiter</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // Bibliothèques nécessaires (à charger depuis CDN)
+        const Papa = window.Papa || null;
+        const XLSX = window.XLSX || null;
+        
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const convertBtn = document.getElementById('convertBtn');
+        const fileName = document.getElementById('fileName');
+        const progress = document.getElementById('progress');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const result = document.getElementById('result');
+        
+        let selectedFile = null;
+        
+        // Gestion du drag & drop
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        function handleFile(file) {
+            const allowedTypes = ['.csv', '.xlsx', '.xls', '.json'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!allowedTypes.includes(ext)) {
+                showResult('error', 'Format de fichier non supporté. Utilisez CSV, XLSX, XLS ou JSON.');
+                return;
+            }
+            
+            selectedFile = file;
+            fileName.textContent = `Fichier sélectionné: ${file.name}`;
+            fileName.style.display = 'block';
+            convertBtn.disabled = false;
+            result.style.display = 'none';
+        }
+        
+        convertBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            convertBtn.disabled = true;
+            progress.style.display = 'block';
+            progressFill.style.width = '0%';
+            result.style.display = 'none';
+            
+            try {
+                const ext = '.' + selectedFile.name.split('.').pop().toLowerCase();
+                let data = [];
+                
+                progressFill.style.width = '30%';
+                progressText.textContent = 'Lecture du fichier...';
+                
+                if (ext === '.csv' || ext === '.txt') {
+                    data = await parseCSV(selectedFile);
+                } else if (ext === '.xlsx' || ext === '.xls') {
+                    data = await parseExcel(selectedFile);
+                } else if (ext === '.json') {
+                    data = await parseJSON(selectedFile);
+                }
+                
+                progressFill.style.width = '70%';
+                progressText.textContent = 'Conversion en JSONL...';
+                
+                if (data.length === 0) {
+                    throw new Error('Aucune donnée trouvée dans le fichier');
+                }
+                
+                const jsonlContent = data.map(obj => JSON.stringify(obj)).join('\n');
+                const blob = new Blob([jsonlContent], { type: 'application/jsonl' });
+                const url = URL.createObjectURL(blob);
+                
+                progressFill.style.width = '100%';
+                progressText.textContent = 'Conversion terminée !';
+                
+                const outputFileName = selectedFile.name.replace(ext, '.jsonl');
+                const downloadLink = document.createElement('a');
+                downloadLink.href = url;
+                downloadLink.download = outputFileName;
+                downloadLink.textContent = `Télécharger ${outputFileName}`;
+                downloadLink.className = 'download-link';
+                
+                showResult('success', 
+                    `Conversion réussie ! ${data.length} lignes converties.`,
+                    downloadLink
+                );
+                
+                // Auto-télécharger après 1 seconde
+                setTimeout(() => {
+                    downloadLink.click();
+                    URL.revokeObjectURL(url);
+                }, 1000);
+                
+            } catch (error) {
+                showResult('error', `Erreur: ${error.message}`);
+            } finally {
+                convertBtn.disabled = false;
+                setTimeout(() => {
+                    progress.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 2000);
+            }
+        });
+        
+        function parseCSV(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const text = e.target.result;
+                        const lines = text.split(/\r?\n/).filter(l => l.trim());
+                        if (lines.length === 0) {
+                            reject(new Error('Fichier CSV vide'));
+                            return;
+                        }
+                        
+                        // Détecter le séparateur
+                        const firstLine = lines[0];
+                        const separators = {
+                            ';': (firstLine.match(/;/g) || []).length,
+                            ',': (firstLine.match(/,/g) || []).length,
+                            '\t': (firstLine.match(/\t/g) || []).length
+                        };
+                        const separator = Object.keys(separators).reduce((a, b) => 
+                            separators[a] > separators[b] ? a : b
+                        );
+                        
+                        // Parser les lignes
+                        const headers = lines[0].split(separator).map(h => h.trim().replace(/^"|"$/g, ''));
+                        const results = [];
+                        
+                        for (let i = 1; i < lines.length; i++) {
+                            const values = lines[i].split(separator).map(v => v.trim().replace(/^"|"$/g, ''));
+                            if (values.length === headers.length) {
+                                const obj = {};
+                                headers.forEach((header, idx) => {
+                                    obj[header] = values[idx] || '';
+                                });
+                                // Vérifier qu'il y a au moins une valeur
+                                if (Object.values(obj).some(v => v !== '')) {
+                                    results.push(obj);
+                                }
+                            }
+                        }
+                        
+                        resolve(results);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Erreur de lecture du fichier'));
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+        
+        function parseExcel(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        // Utiliser SheetJS si disponible, sinon erreur
+                        if (typeof XLSX === 'undefined') {
+                            reject(new Error('Bibliothèque XLSX requise. Veuillez utiliser le script Node.js pour les fichiers Excel.'));
+                            return;
+                        }
+                        
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+                        
+                        resolve(jsonData.map(row => {
+                            const cleaned = {};
+                            Object.keys(row).forEach(key => {
+                                cleaned[key.trim()] = String(row[key] || '').trim();
+                            });
+                            return cleaned;
+                        }).filter(row => Object.values(row).some(v => v !== '')));
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Erreur de lecture du fichier'));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        function parseJSON(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        if (Array.isArray(parsed)) {
+                            resolve(parsed);
+                        } else if (typeof parsed === 'object') {
+                            resolve([parsed]);
+                        } else {
+                            reject(new Error('Le fichier JSON doit contenir un objet ou un tableau'));
+                        }
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Erreur de lecture du fichier'));
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+        
+        function showResult(type, message, downloadLink = null) {
+            result.className = `result ${type}`;
+            result.innerHTML = `<strong>${type === 'success' ? '✓' : '✗'}</strong> ${message}`;
+            if (downloadLink) {
+                result.appendChild(document.createElement('br'));
+                result.appendChild(downloadLink);
+            }
+            result.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
+

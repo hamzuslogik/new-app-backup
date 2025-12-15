@@ -1,0 +1,86 @@
+.app {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--light-bg);
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 200px;
+  transition: margin-left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content.sidebar-collapsed {
+  margin-left: 0;
+}
+
+.content-wrapper {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* Sur desktop (> 1024px), le main-content ajuste la marge selon l'état du sidebar */
+@media (min-width: 1025px) {
+  .main-content {
+    margin-left: 200px !important;
+    transition: margin-left 0.3s ease;
+  }
+  
+  .main-content.sidebar-collapsed {
+    margin-left: 0 !important; /* Enlever la marge quand le sidebar est masqué */
+  }
+}
+
+/* Media queries pour responsive */
+@media (max-width: 1024px) {
+  .main-content {
+    margin-left: 0 !important; /* Forcer margin-left à 0 pour éviter le chevauchement */
+  }
+  
+  .main-content.sidebar-collapsed {
+    margin-left: 0;
+  }
+  
+  .content-wrapper {
+    padding: 12px;
+  }
+}
+
+/* Plage spécifique pour tablettes (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main-content {
+    margin-left: 0 !important;
+  }
+  
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar:not(.collapsed) {
+    transform: translateX(0);
+  }
+  
+  .sidebar-overlay.active {
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .content-wrapper {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-wrapper {
+    padding: 6.4px;
+  }
+}
+

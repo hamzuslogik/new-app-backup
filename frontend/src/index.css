@@ -1,0 +1,114 @@
+/* Import des améliorations de thème - doit être en premier */
+@import './styles/theme-improvements.css';
+@import './styles/responsive.css';
+
+/* Variables CSS pour le thème */
+:root {
+  --primary-color: #16A34A;
+  --accent-color: #22C55E;
+  --secondary-color: #4a7a87;
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #17a2b8;
+  
+  /* Thème clair (par défaut) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #F9FAFB;
+  --bg-tertiary: #e9ecef;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --border-color: #e0e0e0;
+  --shadow: rgba(0, 0, 0, 0.1);
+  
+  /* Variables pour header et sidebar */
+  --header-bg: #14532D;
+  --sidebar-bg: #052E16;
+  --sidebar-active: #16A34A;
+  --dark-bg: #052E16;
+  --light-bg: #f5f5f5;
+  --text-light: #ffffff;
+  
+  /* Variables pour tableaux */
+  --table-header-bg: #ECFDF5;
+  --table-header-text: #064E3B;
+  --table-hover-bg: #DCFCE7;
+  
+  /* Variables pour formulaires */
+  --input-focus: #22C55E;
+  --label-color: #065F46;
+  
+  /* Variables pour filtres */
+  --filter-bg: #DCFCE7;
+  --filter-bg-alt: #BBF7D0;
+  --filter-border: #86EFAC;
+  --label-color: #065F46;
+  --label-secondary: #047857;
+  --input-text: #064E3B;
+  --input-placeholder: #6B7280;
+  --btn-primary-hover: #15803D;
+  --btn-secondary-bg: #E5E7EB;
+  --btn-secondary-text: #14532D;
+  --btn-secondary-hover: #D1D5DB;
+}
+
+
+/* Styles de base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Styles pour les inputs et formulaires */
+input, textarea, select {
+  font-size: 13.6px; /* Empêche le zoom sur iOS */
+  min-height: 44px; /* Taille minimale pour le touch */
+}
+
+button {
+  min-height: 44px; /* Taille minimale pour le touch */
+  cursor: pointer;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Empêcher le scroll du body quand un modal est ouvert */
+body.modal-open {
+  overflow: hidden !important;
+}
+

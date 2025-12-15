@@ -1,0 +1,2612 @@
+.dashboard {
+  padding: 16px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.dashboard-header-left {
+  flex: 1;
+}
+
+.dashboard-header h1 {
+  font-size: 23.8px;
+  color: #333333 !important;
+  margin-bottom: 4px;
+}
+
+.dashboard-header p {
+  color: var(--text-secondary, #666);
+  font-size: 11.9px;
+}
+
+.dashboard-header-right {
+  display: flex;
+  align-items: center;
+}
+
+.btn-link-fiches {
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+  padding: 9.6px 19.2px;
+  background: #f7a219;
+  color: white;
+  text-decoration: none;
+  border-radius: 7px;
+  font-weight: 800;
+  transition: all 0.3s;
+  font-size: 11.9px;
+}
+
+.btn-link-fiches:hover {
+  background: #e09115;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-link-fiches svg {
+  font-size: 13.6px;
+}
+
+/* Section des statistiques RDV */
+.dashboard-stats-section {
+  margin-bottom: 24px;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background: var(--bg-primary, white);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px var(--shadow, rgba(0, 0, 0, 0.1));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  color: var(--text-primary, #333);
+}
+
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23.8px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.stat-card-success .stat-card-icon {
+  background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.stat-card-warning .stat-card-icon {
+  background: linear-gradient(135deg, #ffc107, #fd7e14);
+}
+
+.stat-card-info .stat-card-icon {
+  background: linear-gradient(135deg, #17a2b8, #007bff);
+}
+
+.stat-card-content {
+  flex: 1;
+}
+
+.stat-card-value {
+  font-size: 27.2px;
+  font-weight: 800;
+  color: var(--text-primary, #9cbfc8);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-card-label {
+  font-size: 11.9px;
+  color: var(--text-secondary, #666);
+  font-weight: 500;
+}
+
+/* Bouton pour afficher/masquer le tableau des confirmateurs */
+.confirmateurs-table-toggle {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-toggle-confirmateurs {
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+  padding: 9.6px 19.2px;
+  background: #f7a219;
+  color: #000;
+  border: none;
+  border-radius: 7px;
+  font-weight: 800;
+  font-size: 11.9px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-toggle-confirmateurs:hover {
+  background: #e6941a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-toggle-confirmateurs svg {
+  font-size: 11.9px;
+}
+
+/* Tableau des confirmateurs */
+.confirmateurs-table-section {
+  margin-top: 16px;
+  padding-top: 24px;
+  border-top: 2px solid #eee;
+}
+
+.confirmateurs-loading,
+.confirmateurs-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.confirmateurs-error button {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: #f7a219;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.confirmateurs-error button:hover {
+  background: #e6941a;
+}
+
+.confirmateurs-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.confirmateurs-table-title {
+  font-size: 15.3px;
+  font-weight: 700;
+  color: var(--text-primary, #9cbfc8);
+  margin: 0;
+}
+
+.confirmateurs-table-wrapper {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Section fiches confirmées pour Confirmateur */
+.fiches-confirmees-section {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.fiches-confirmees-section h2 {
+  font-size: 17px;
+  color: #9cbfc8;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #eee;
+  font-weight: bold;
+}
+
+.confirmateurs-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.confirmateur-card {
+  background: white;
+  border: 2px solid #e9e9e9;
+  border-left: 4px solid #f7a219;
+  border-radius: 7px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
+}
+
+.confirmateur-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.confirmateur-card-header h3 {
+  font-size: 11.9px;
+  font-weight: 600;
+  color: #666;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.confirmateur-card-count {
+  font-size: 30.6px;
+  font-weight: bold;
+  color: #9cbfc8;
+  margin: 0;
+}
+
+.fiches-confirmees-list {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.confirmateurs-table-container {
+  overflow-x: auto;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  background: var(--bg-primary, white);
+}
+
+.confirmateurs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.9px;
+}
+
+.confirmateurs-table thead {
+  background: #f8f9fa !important;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.confirmateurs-table th {
+  padding: 9.6px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333333 !important;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.confirmateurs-table td {
+  padding: 9.6px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.confirmateurs-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.confirmateur-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.confirmateur-avatar-small {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.confirmateur-avatar-small.placeholder {
+  background: #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.9px;
+  font-weight: 700;
+  color: #6c757d;
+}
+
+.confirmateur-name {
+  font-weight: bold;
+  color: #9cbfc8;
+}
+
+.rdv-count-cell {
+  text-align: center;
+}
+
+.rdv-count {
+  display: inline-block;
+  padding: 4px 9.6px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 11.9px;
+  background: #007bff;
+  color: white;
+  min-width: 40px;
+}
+
+.rdv-count.zero {
+  background: #e9ecef;
+  color: #6c757d;
+}
+
+/* Panneau de recherche */
+.search-panel {
+  background: var(--filter-bg, #DCFCE7);
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 7px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  color: var(--label-color, #065F46) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.search-panel-header h2 {
+  font-size: 13.6px;
+  font-weight: 800;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--label-color, #065F46) !important;
+}
+
+.search-panel-header svg {
+  font-size: 11.9px;
+  color: var(--label-color, #065F46) !important;
+}
+
+/* Formulaire de recherche */
+.search-form {
+  padding: 16px;
+  background-color: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC);
+}
+
+.search-form-grid {
+  display: grid;
+  /* Environ 6-7 colonnes pour avoir tous les champs en 2 lignes maximum */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Sur écrans moyens, réduire à 6 colonnes */
+@media (max-width: 1600px) {
+  .search-form-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1400px) {
+  .search-form-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .search-form-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .search-form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .search-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  color: var(--label-color, #065F46) !important;
+  font-size: 11.9px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+/* S'assurer que tous les labels dans le filtre de recherche sont en couleur foncée */
+.search-form label,
+.search-form .form-group label {
+  color: var(--label-color, #065F46) !important;
+}
+
+.form-group input,
+.form-group select {
+  padding: 8px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 4px;
+  background: #FFFFFF;
+  color: var(--input-text, #064E3B);
+  font-size: 11.9px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-group input::placeholder,
+.form-group select::placeholder {
+  color: var(--input-placeholder, #6B7280);
+  opacity: 1;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--input-focus, #22C55E);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+/* Groupe produits */
+.products-group {
+  grid-column: 1 / -1;
+}
+
+.products-checkboxes {
+  display: flex;
+  gap: 8px;
+}
+
+.product-checkbox {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: all 0.3s;
+}
+
+.product-checkbox.pac {
+  background: #0000CD;
+  color: white;
+}
+
+.product-checkbox.pv {
+  background: #FFE441;
+  color: black;
+}
+
+.product-checkbox input {
+  margin-right: 6.4px;
+  cursor: pointer;
+}
+
+/* Groupe date */
+.date-group {
+  grid-column: span 2;
+}
+
+.date-time-inputs {
+  display: flex;
+  gap: 4px;
+}
+
+.date-time-inputs input[type="date"] {
+  flex: 2;
+}
+
+.date-time-inputs input[type="time"] {
+  flex: 1;
+}
+
+/* Actions du formulaire */
+.search-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.btn-search,
+.btn-reset {
+  padding: 9.6px 24px;
+  border: none;
+  border-radius: 7px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+  transition: all 0.3s;
+}
+
+.btn-search {
+  background-color: var(--primary-color, #16A34A);
+  color: white;
+  box-shadow: 0 0 5px -2px rgba(0, 0, 0, 0.75);
+}
+
+.btn-search:hover {
+  background-color: var(--btn-primary-hover, #15803D);
+  transform: translateY(-2px);
+}
+
+.btn-reset {
+  background-color: var(--btn-secondary-bg, #E5E7EB);
+  color: var(--btn-secondary-text, #14532D);
+}
+
+.btn-reset:hover {
+  background-color: var(--btn-secondary-hover, #D1D5DB);
+}
+
+.btn-reset:hover {
+  background-color: #555;
+}
+
+/* Onglets */
+.dashboard-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #eee;
+}
+
+.tab-button {
+  padding: 9.6px 19.2px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 11.9px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+}
+
+.tab-button:hover {
+  color: #9cbfc8;
+  background: #f5f5f5;
+  font-weight: bold;
+}
+
+.tab-button.active {
+  color: #f7a219;
+  border-bottom-color: #f7a219;
+  font-weight: 800;
+}
+
+.tab-button svg {
+  font-size: 13.6px;
+}
+
+/* Résultats */
+.dashboard-results {
+  background: white;
+  border-radius: 7px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #eee;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.results-header h2 {
+  font-size: 17px;
+  color: #9cbfc8;
+  margin: 0;
+  font-weight: bold;
+}
+
+.results-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.limit-selector {
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+}
+
+.limit-selector label {
+  color: #666;
+  font-size: 11.9px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.limit-select {
+  padding: 6.4px 9.6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  color: #333;
+  font-size: 11.9px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.limit-select:hover {
+  border-color: #f7a219;
+}
+
+.limit-select:focus {
+  outline: none;
+  border-color: #f7a219;
+  box-shadow: 0 0 5px rgba(247, 162, 25, 0.3);
+}
+
+.results-count {
+  color: #666;
+  font-size: 11.9px;
+  margin: 0;
+}
+
+.results-count strong {
+  color: #f7a219;
+  font-size: 15.3px;
+}
+
+/* Tableau des fiches */
+.fiches-table-container {
+  overflow-x: auto;
+  margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fiches-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.fiches-table thead {
+  background: #ffffff;
+  color: #333333;
+}
+
+.fiches-table th {
+  padding: 6px 6.4px;
+  text-align: left;
+  font-weight: 800;
+  font-size: 10.2px;
+  white-space: nowrap;
+}
+
+.fiches-table th.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.fiches-table th.sortable-header:hover {
+  background-color: #f5f5f5;
+}
+
+.fiches-table th.sortable-header .sort-icon {
+  display: inline-block;
+  font-size: 10px;
+  color: #999;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.fiches-table th.sortable-header .sort-icon.sort-active {
+  color: #f7a219;
+}
+
+.fiches-table td {
+  padding: 5px 6.4px;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+}
+
+.fiches-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* Garder le format tableau même sur mobile - scroll horizontal */
+@media (max-width: 768px) {
+  .fiches-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Garder le format tableau normal */
+  .fiches-table {
+    display: table;
+    min-width: 800px;
+    width: 100%;
+  }
+
+  .fiches-table thead {
+    display: table-header-group;
+    visibility: visible;
+    position: relative;
+    top: auto;
+    left: auto;
+    background: #ffffff;
+  }
+
+  .fiches-table thead tr {
+    display: table-row;
+    position: relative;
+    top: auto;
+    left: auto;
+  }
+
+  .fiches-table tbody {
+    display: table-row-group;
+  }
+
+  .fiches-table tbody tr {
+    display: table-row;
+    margin-bottom: 0;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .fiches-table th {
+    display: table-cell;
+    padding: 6px 6.4px;
+    text-align: left;
+    font-weight: 800;
+    font-size: 9.4px;
+    white-space: nowrap;
+  }
+
+  .fiches-table td {
+    display: table-cell;
+    border: none;
+    border-bottom: 1px solid #eee;
+    padding: 5px 6.4px;
+    position: relative;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .fiches-table td::before {
+    display: none; /* Supprimer les labels générés */
+  }
+
+  .fiches-table td:last-child {
+    border-bottom: 1px solid #eee;
+    padding: 5px 6.4px;
+    margin-top: 0;
+    border-top: none;
+  }
+
+  .fiches-table td:first-child {
+    font-size: 10.2px;
+    font-weight: normal;
+    color: inherit;
+    padding: 5px 6.4px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 0;
+  }
+}
+
+.fiches-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+/* Badge état */
+.etat-badge {
+  display: inline-block;
+  padding: 4px 6.4px;
+  border-radius: 4px;
+  color: white;
+  font-weight: 800;
+  font-size: 9.4px;
+  white-space: nowrap;
+}
+
+/* Indicateurs */
+.fiche-indicators {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.produit-indicator {
+  display: inline-block;
+  padding: 3px 4.8px;
+  border-radius: 3px;
+  color: #ffffff !important;
+  font-weight: 800;
+  font-size: 8.5px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.indicator {
+  display: inline-block;
+  padding: 3px 4.8px;
+  border-radius: 3px;
+  font-weight: 800;
+  font-size: 8.5px;
+  white-space: nowrap;
+}
+
+.indicator.r2 {
+  background: #ffa500;
+  color: white;
+}
+
+.indicator.rf {
+  background: #ff0000;
+  color: white;
+}
+
+.indicator.an {
+  background: #ff0000;
+  color: white;
+}
+
+.indicator.valid {
+  background: #4BB543;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-detail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: #9cbfc8;
+  color: #ffffff !important;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 11.9px;
+  transition: all 0.2s;
+}
+
+.btn-detail svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.btn-detail:hover {
+  background: #4a7a87;
+  transform: translateY(-1px);
+}
+
+.btn-detail:hover svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* Pagination Container */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+  flex-wrap: wrap;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.pagination button {
+  padding: 6.4px 12.8px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: #f7a219;
+  color: white;
+  border-color: #f7a219;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  color: #666;
+  font-weight: 600;
+}
+
+/* États de chargement et erreur */
+.dashboard-loading,
+.dashboard-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  text-align: center;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.dashboard-loading p {
+  margin-top: 16px;
+  font-size: 16px;
+  color: #666;
+  animation: fadeIn 1s ease-in-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #f7a219;
+  border-right: 5px solid #f7a219;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite, pulse-spinner 2s ease-in-out infinite;
+  margin-bottom: 16px;
+  box-shadow: 0 0 10px rgba(247, 162, 25, 0.3);
+}
+
+.spinner-small {
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(247, 162, 25, 0.2);
+  border-top: 3px solid #f7a219;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse-spinner {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(247, 162, 25, 0.3);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 20px rgba(247, 162, 25, 0.6);
+  }
+}
+
+/* Indicateur de chargement dans le header des résultats */
+.search-loading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #856404;
+  font-weight: 500;
+  animation: pulse 2s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+/* Animation de skeleton loading pour le tableau */
+.table-skeleton {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+.table-skeleton-row {
+  height: 50px;
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #f8f8f8 50%,
+    #f0f0f0 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.table-skeleton-cell {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Animation d'apparition pour les résultats */
+.fiches-table-container {
+  animation: fadeInTable 0.6s ease-out;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.fiches-table-container.loading {
+  opacity: 0.5;
+  pointer-events: none;
+  position: relative;
+}
+
+.fiches-table-container.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+@keyframes fadeInTable {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animation pour les lignes du tableau */
+.fiches-table tbody tr {
+  animation: fadeInRow 0.4s ease-out;
+  animation-fill-mode: both;
+}
+
+.fiches-table tbody tr:nth-child(1) { animation-delay: 0.05s; }
+.fiches-table tbody tr:nth-child(2) { animation-delay: 0.1s; }
+.fiches-table tbody tr:nth-child(3) { animation-delay: 0.15s; }
+.fiches-table tbody tr:nth-child(4) { animation-delay: 0.2s; }
+.fiches-table tbody tr:nth-child(5) { animation-delay: 0.25s; }
+.fiches-table tbody tr:nth-child(6) { animation-delay: 0.3s; }
+.fiches-table tbody tr:nth-child(7) { animation-delay: 0.35s; }
+.fiches-table tbody tr:nth-child(8) { animation-delay: 0.4s; }
+.fiches-table tbody tr:nth-child(9) { animation-delay: 0.45s; }
+.fiches-table tbody tr:nth-child(10) { animation-delay: 0.5s; }
+
+@keyframes fadeInRow {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.dashboard-error button {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: #f7a219;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.no-results {
+  text-align: center;
+  padding: 48px 16px;
+  color: #666;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.no-results p {
+  font-size: 16px;
+  margin: 0;
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .dashboard {
+    padding: 12px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .search-form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 8px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 20.4px;
+  }
+
+  .dashboard-header p {
+    font-size: 11px;
+  }
+
+  .btn-link-fiches {
+    padding: 8px 16px;
+    font-size: 11px;
+  }
+
+  .stats-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-card-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 20.4px;
+  }
+
+  .stat-card-value {
+    font-size: 23.8px;
+  }
+
+  .stat-card-label {
+    font-size: 11px;
+  }
+
+  .confirmateurs-table-section {
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .confirmateurs-table-title {
+    font-size: 13.6px;
+  }
+
+  .confirmateurs-table th,
+  .confirmateurs-table td {
+    padding: 8px 9.6px;
+    font-size: 11px;
+  }
+
+  .confirmateur-avatar-small {
+    width: 30px;
+    height: 30px;
+    font-size: 10.2px;
+  }
+
+  .dashboard-tabs {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .tab-button {
+    width: 100%;
+    justify-content: center;
+    padding: 8px;
+    font-size: 11px;
+  }
+
+  .search-panel-header {
+    padding: 9.6px 12px;
+  }
+
+  .search-form {
+    padding: 12px;
+  }
+
+  .search-form-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .date-group {
+    grid-column: span 1;
+  }
+
+  .date-time-inputs {
+    flex-direction: column;
+  }
+
+  .date-time-inputs input[type="date"],
+  .date-time-inputs input[type="time"] {
+    width: 100%;
+  }
+
+  .search-form-actions {
+    flex-direction: column;
+  }
+
+  .btn-search,
+  .btn-reset {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .fiches-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .fiches-table {
+    min-width: 800px;
+    font-size: 9.4px;
+    display: table;
+  }
+
+  .fiches-table thead {
+    display: table-header-group;
+    visibility: visible;
+    position: relative;
+  }
+
+  .fiches-table thead tr {
+    display: table-row;
+  }
+
+  .fiches-table tbody {
+    display: table-row-group;
+  }
+
+  .fiches-table tbody tr {
+    display: table-row;
+  }
+
+  .fiches-table th {
+    display: table-cell;
+    padding: 4px;
+  }
+
+  .fiches-table td {
+    display: table-cell;
+    padding: 4px;
+  }
+
+  .results-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .results-header h2 {
+    font-size: 15.3px;
+  }
+
+  .results-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard {
+    padding: 6.4px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 17px;
+  }
+
+  .btn-link-fiches {
+    padding: 6.4px 12.8px;
+    font-size: 10.2px;
+  }
+
+  .tab-button {
+    padding: 6.4px;
+    font-size: 10.2px;
+  }
+
+  /* Format tableau normal même sur très petits écrans */
+  .fiches-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .fiches-table {
+    min-width: 700px;
+    font-size: 9px;
+  }
+
+  .fiches-table th,
+  .fiches-table td {
+    padding: 4px;
+    font-size: 9px;
+    display: table-cell;
+  }
+
+  .fiches-table thead {
+    display: table-header-group;
+    visibility: visible;
+    position: relative;
+  }
+
+  .fiches-table thead tr {
+    display: table-row;
+    position: relative;
+  }
+
+  .fiches-table tbody tr {
+    display: table-row;
+    padding: 0;
+    margin-bottom: 0;
+  }
+
+  .fiches-table td::before {
+    display: none;
+  }
+
+  .fiche-indicators {
+    margin-bottom: 6.4px;
+    flex-wrap: wrap;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .btn-detail {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    font-size: 11.9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff !important;
+  }
+
+  .btn-detail svg {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+  }
+
+  .etat-badge {
+    padding: 4px 8px;
+    font-size: 10.2px;
+  }
+
+  .produit-indicator {
+    font-size: 8.5px;
+    padding: 3px 4.8px;
+    color: #ffffff !important;
+  }
+}
+
+/* Modal de détail de fiche */
+.fiche-detail-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 2000;
+  padding: 3vh 2vw;
+  padding-top: 4vh;
+  overflow: hidden; /* Pas de scroll sur l'overlay */
+}
+
+.fiche-detail-modal-content {
+  position: relative;
+  background: white;
+  border-radius: 8px;
+  max-width: 45%;
+  min-width: 350px;
+  width: 45%;
+  max-height: 95vh;
+  height: 95vh;
+  min-height: 80vh;
+  overflow-y: auto; /* Scroll uniquement sur le contenu du modal */
+  overflow-x: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
+  transition: border-color 0.3s ease;
+  scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box !important;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling sur iOS */
+}
+
+/* Adapter le planning à la largeur du modal */
+.fiche-detail-modal-content .planning-tab {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.fiche-detail-modal-content .planning-view {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Sur mobile, permettre le scroll horizontal pour afficher la largeur complète du tableau */
+@media (max-width: 768px) {
+  .fiche-detail-modal-content .planning-view {
+    overflow-x: auto !important; /* Permettre le scroll horizontal */
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+  }
+}
+
+@media (max-width: 480px) {
+  .fiche-detail-modal-content .planning-view {
+    overflow-x: auto !important; /* Permettre le scroll horizontal */
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+  }
+}
+
+.fiche-detail-modal-content .planning-table-container {
+  overflow-x: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+}
+
+/* Sur mobile, assurer que le conteneur permet le scroll horizontal */
+@media (max-width: 768px) {
+  .fiche-detail-modal-content .planning-table-container {
+    overflow-x: auto !important; /* Permettre le scroll horizontal pour afficher la largeur complète du tableau */
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .fiche-detail-modal-content .planning-table-container {
+    overflow-x: auto !important; /* Permettre le scroll horizontal pour afficher la largeur complète du tableau */
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+/* Forcer le tableau à s'adapter à la largeur disponible */
+.fiche-detail-modal-content .planning-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+  box-sizing: border-box !important;
+}
+
+/* Sur mobile, permettre au tableau de garder sa largeur minimale pour afficher selon la largeur du tableau */
+@media (max-width: 768px) {
+  .fiche-detail-modal-content .planning-table {
+    min-width: 800px !important; /* Garder la largeur minimale du tableau comme en desktop */
+    width: auto !important; /* Ne pas forcer 100%, laisser le tableau garder sa largeur naturelle */
+    max-width: none !important; /* Pas de limite de largeur maximale */
+    table-layout: auto !important; /* Permettre au tableau de s'adapter à son contenu */
+  }
+}
+
+@media (max-width: 480px) {
+  .fiche-detail-modal-content .planning-table {
+    min-width: 800px !important; /* Garder la largeur minimale du tableau comme en desktop */
+    width: auto !important; /* Ne pas forcer 100%, laisser le tableau garder sa largeur naturelle */
+    max-width: none !important; /* Pas de limite de largeur maximale */
+    table-layout: auto !important; /* Permettre au tableau de s'adapter à son contenu */
+  }
+}
+
+/* Ajuster les colonnes pour qu'elles s'adaptent à la largeur */
+.fiche-detail-modal-content .planning-table th,
+.fiche-detail-modal-content .planning-table td {
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Sur mobile, permettre aux cellules de garder leur contenu visible */
+@media (max-width: 768px) {
+  .fiche-detail-modal-content .planning-table th,
+  .fiche-detail-modal-content .planning-table td {
+    overflow: visible !important; /* Permettre le contenu de déborder pour le scroll horizontal */
+    text-overflow: clip !important;
+    white-space: nowrap !important; /* Empêcher le texte de se couper en plusieurs lignes */
+  }
+}
+
+@media (max-width: 480px) {
+  .fiche-detail-modal-content .planning-table th,
+  .fiche-detail-modal-content .planning-table td {
+    overflow: visible !important; /* Permettre le contenu de déborder pour le scroll horizontal */
+    text-overflow: clip !important;
+    white-space: nowrap !important; /* Empêcher le texte de se couper en plusieurs lignes */
+  }
+}
+
+/* Colonne heure - largeur fixe - Appliquer les couleurs de planning-header */
+.fiche-detail-modal-content .planning-table .time-slot-header,
+.fiche-detail-modal-content .planning-table td.time-slot-header {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+  padding: 6px 8px !important;
+  font-size: 11px !important;
+  background: var(--filter-bg, #DCFCE7) !important;
+  background-color: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+  color: var(--label-color, #065F46) !important;
+}
+
+.fiche-detail-modal-content .planning-table .time-slot-header *,
+.fiche-detail-modal-content .planning-table td.time-slot-header * {
+  color: var(--label-color, #065F46) !important;
+}
+
+/* Colonnes des jours - réparties équitablement sur la largeur restante - Appliquer les couleurs de planning-header */
+.fiche-detail-modal-content .planning-table thead th:not(.time-slot-header) {
+  width: calc((100% - 100px) / 5) !important;
+  min-width: 0 !important;
+  padding: 6px 8px !important;
+  font-size: 11px !important;
+  background: var(--filter-bg, #DCFCE7) !important;
+  background-color: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+  color: var(--label-color, #065F46) !important;
+}
+
+/* Sur mobile, permettre aux colonnes de garder leur taille naturelle */
+@media (max-width: 768px) {
+  .fiche-detail-modal-content .planning-table thead th:not(.time-slot-header) {
+    width: auto !important; /* Taille automatique pour garder la largeur naturelle */
+    min-width: 140px !important; /* Largeur minimale raisonnable pour chaque colonne (comme en desktop) */
+  }
+}
+
+@media (max-width: 480px) {
+  .fiche-detail-modal-content .planning-table thead th:not(.time-slot-header) {
+    width: auto !important; /* Taille automatique pour garder la largeur naturelle */
+    min-width: 140px !important; /* Largeur minimale raisonnable pour chaque colonne (comme en desktop) */
+  }
+}
+
+/* S'assurer que les th contenant day-header-planning ont le background */
+.fiche-detail-modal-content .planning-table thead th:not(:first-child) {
+  background: var(--filter-bg, #DCFCE7) !important;
+  background-color: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+}
+
+/* Th avec "Heure" - Appliquer les couleurs de planning-header */
+.fiche-detail-modal-content .planning-table thead th:first-child {
+  background: var(--filter-bg, #DCFCE7) !important;
+  background-color: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+  color: var(--label-color, #065F46) !important;
+}
+
+/* day-header-planning - Appliquer les couleurs de planning-header */
+.fiche-detail-modal-content .planning-table thead th:has(.day-header-planning) {
+  background: var(--filter-bg, #DCFCE7) !important;
+  background-color: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+}
+
+.fiche-detail-modal-content .planning-table .day-header-planning {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--label-color, #065F46) !important;
+}
+
+.fiche-detail-modal-content .planning-table .day-header-planning *,
+.fiche-detail-modal-content .planning-table .day-header-planning span,
+.fiche-detail-modal-content .planning-table .day-header-planning div {
+  color: var(--label-color, #065F46) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.fiche-detail-modal-content .planning-table tbody td:not(.time-slot-header) {
+  width: calc((100% - 100px) / 5) !important;
+  min-width: 0 !important;
+  padding: 6px 8px !important;
+}
+
+/* Sur mobile, permettre aux cellules du body de garder leur taille naturelle */
+@media (max-width: 768px) {
+  .fiche-detail-modal-content .planning-table tbody td:not(.time-slot-header) {
+    width: auto !important; /* Taille automatique pour garder la largeur naturelle */
+    min-width: 140px !important; /* Largeur minimale raisonnable pour chaque colonne (comme en desktop) */
+  }
+}
+
+@media (max-width: 480px) {
+  .fiche-detail-modal-content .planning-table tbody td:not(.time-slot-header) {
+    width: auto !important; /* Taille automatique pour garder la largeur naturelle */
+    min-width: 140px !important; /* Largeur minimale raisonnable pour chaque colonne (comme en desktop) */
+  }
+}
+
+/* Media queries pour augmenter la largeur du modal en mobile */
+@media (max-width: 768px) {
+  .fiche-detail-modal-overlay {
+    padding: 1vh 1vw !important;
+    padding-top: 1vh !important;
+    background: rgba(0, 0, 0, 0.5) !important; /* Opacité normale */
+  }
+
+  .fiche-detail-modal-content {
+    max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
+    width: 98% !important;
+    min-width: 95% !important;
+    max-height: 98vh !important;
+    height: 98vh !important;
+    min-height: 95vh !important;
+    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
+    overflow-y: auto !important; /* Garder le scroll vertical */
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+  }
+}
+
+@media (max-width: 480px) {
+  .fiche-detail-modal-overlay {
+    padding: 0.5vh 0.5vw !important;
+    padding-top: 0.5vh !important;
+    background: rgba(0, 0, 0, 0.5) !important; /* Opacité normale */
+  }
+
+  .fiche-detail-modal-content {
+    max-width: 100% !important; /* Largeur maximale pour très petits écrans */
+    width: 100% !important;
+    min-width: 98% !important;
+    max-height: 100vh !important;
+    height: 100vh !important;
+    min-height: 98vh !important;
+    border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
+    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
+    overflow-y: auto !important; /* Garder le scroll vertical */
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+  }
+}
+
+/* Ajuster les badges et textes dans les cellules */
+.fiche-detail-modal-content .planning-cell {
+  min-height: 70px !important;
+  padding: 4px !important;
+}
+
+.fiche-detail-modal-content .availability-badge {
+  font-size: 10px !important;
+  padding: 4px 6px !important;
+}
+
+.fiche-detail-modal-content .availability-text-compact {
+  font-size: 9px !important;
+  white-space: nowrap !important;
+}
+
+/* Permettre le scroll si nécessaire */
+.fiche-detail-modal-content .planning-tab .fiche-detail {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+/* Wrapper pour le contenu scrollable */
+.fiche-detail-modal-content > *:not(.fiche-detail-modal-close) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+}
+
+/* Activer le scroll horizontal en mobile pour le contenu du modal */
+@media (max-width: 768px) {
+  .fiche-detail-modal-content > *:not(.fiche-detail-modal-close) {
+    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+  }
+
+  .fiche-detail-modal-content .planning-tab .fiche-detail {
+    overflow-x: auto !important; /* Activer le scroll horizontal pour le planning en mobile */
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+  }
+}
+
+@media (max-width: 480px) {
+  .fiche-detail-modal-content > *:not(.fiche-detail-modal-close) {
+    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+  }
+
+  .fiche-detail-modal-content .planning-tab .fiche-detail {
+    overflow-x: auto !important; /* Activer le scroll horizontal pour le planning en mobile */
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+  }
+}
+
+/* Empêcher tout élément de dépasser la largeur du modal - mais exclure les boutons et éléments interactifs */
+.fiche-detail-modal-content input,
+.fiche-detail-modal-content textarea,
+.fiche-detail-modal-content select,
+.fiche-detail-modal-content .field-value,
+.fiche-detail-modal-content .field-display,
+.fiche-detail-modal-content .form-control {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Assurer que les boutons sont visibles et ne sont pas contraints par max-width */
+.fiche-detail-modal-content button,
+.fiche-detail-modal-content .btn-edit,
+.fiche-detail-modal-content .btn-save,
+.fiche-detail-modal-content .btn-cancel,
+.fiche-detail-modal-content .btn-validate,
+.fiche-detail-modal-content .btn-confirm,
+.fiche-detail-modal-content .btn-back {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 10 !important;
+  flex-shrink: 0 !important;
+  max-width: none !important;
+  width: auto !important;
+  min-width: auto !important;
+  font-weight: 600 !important;
+}
+
+.fiche-detail-modal-content:focus {
+  outline: none;
+}
+
+.fiche-detail-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  color: #333;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.fiche-detail-modal-close:hover {
+  background: #f7a219;
+  color: white;
+  transform: rotate(90deg);
+}
+
+/* Styles pour FicheDetail dans le modal */
+.fiche-detail-modal-content .fiche-detail {
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 8px !important;
+  margin: 0 !important;
+  max-width: 100% !important;
+  font-size: 12.5px !important;
+  line-height: 1.3 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  display: block !important;
+  height: 100% !important;
+  max-height: none !important;
+  font-weight: 600 !important;
+}
+
+/* Assurer que le contenu des sections peut être scrollé */
+.fiche-detail-modal-content .fiche-detail .fiche-sections {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+}
+
+/* Empêcher toute extension au-delà de la largeur du modal */
+.fiche-detail-modal-content .fiche-detail {
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+}
+
+/* Réduire la largeur des colonnes dans le modal */
+.fiche-detail-modal-content .form-row {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
+  gap: 2px !important;
+  margin-bottom: 3px !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+}
+
+.fiche-detail-modal-content .form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
+  gap: 2px !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+}
+
+/* Assurer que les form-groups respectent la largeur */
+.fiche-detail-modal-content .form-group {
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Réduire l'espace entre les lignes dans le modal */
+.fiche-detail-modal-content .field-label,
+.fiche-detail-modal-content .field-value,
+.fiche-detail-modal-content .field-actions {
+  padding: 0 2px !important;
+  font-size: 10px !important;
+  line-height: 0.95 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  font-weight: 600 !important;
+}
+
+.fiche-detail-modal-content .field-label,
+.fiche-detail-modal-content .field-value {
+  max-width: 100% !important;
+}
+
+.fiche-detail-modal-content .field-actions {
+  width: auto !important;
+  min-width: 40px !important;
+  max-width: none !important;
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  text-align: center !important;
+}
+
+/* Assurer que les boutons dans field-actions sont visibles */
+.fiche-detail-modal-content .field-actions button,
+.fiche-detail-modal-content .field-actions .btn-edit {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: auto !important;
+  min-width: 20px !important;
+  max-width: none !important;
+  padding: 0 4px !important;
+  margin: 0 !important;
+  background: #9cbfc8 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 2px !important;
+  cursor: pointer !important;
+  font-size: 8px !important;
+  height: 14px !important;
+  line-height: 1 !important;
+}
+
+.fiche-detail-modal-content .field-label {
+  font-weight: 700 !important;
+}
+
+.fiche-detail-modal-content .field-value {
+  font-size: 10px !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
+  max-width: 100% !important;
+  font-weight: 600 !important;
+}
+
+.fiche-detail-modal-content .field-display {
+  padding: 0 !important;
+  line-height: 0.95 !important;
+  font-size: 10px !important;
+  margin: 0 !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
+  max-width: 100% !important;
+  font-weight: 600 !important;
+}
+
+.fiche-detail-modal-content .fiche-details-table {
+  border-spacing: 0 !important;
+  border-collapse: collapse !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Forcer les colonnes du tableau à respecter la largeur */
+.fiche-detail-modal-content .fiche-details-table td {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.fiche-detail-modal-content .fiche-details-table .field-label {
+  width: 25% !important;
+  max-width: 25% !important;
+}
+
+.fiche-detail-modal-content .fiche-details-table .field-value {
+  width: 65% !important;
+  max-width: 65% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
+}
+
+.fiche-detail-modal-content .fiche-details-table .field-actions {
+  width: 10% !important;
+  max-width: 10% !important;
+}
+
+.fiche-detail-modal-content .fiche-details-table tr {
+  border-bottom: 0.5px solid #e0e0e0;
+  line-height: 0.9 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  border-spacing: 0 !important;
+}
+
+.fiche-detail-modal-content .fiche-details-table td {
+  line-height: 0.9 !important;
+  margin: 0 !important;
+  padding: 0 2px !important;
+  vertical-align: middle !important;
+}
+
+.fiche-detail-modal-content .fiche-details-table tbody tr {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 16px !important;
+}
+
+.fiche-detail-modal-content .fiche-details-table tbody tr td {
+  vertical-align: middle !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin: 0 !important;
+}
+
+/* Assurer que les cellules field-actions dans les tableaux sont visibles */
+.fiche-detail-modal-content .fiche-details-table td.field-actions {
+  width: auto !important;
+  min-width: 50px !important;
+  max-width: none !important;
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  padding: 0 2px !important;
+}
+
+/* Assurer que les boutons dans les tableaux sont visibles */
+.fiche-detail-modal-content .fiche-details-table .btn-edit,
+.fiche-detail-modal-content .fiche-details-table button {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: auto !important;
+  min-width: 20px !important;
+  max-width: none !important;
+  padding: 0 4px !important;
+  margin: 0 !important;
+  font-size: 8px !important;
+  height: 14px !important;
+  line-height: 1 !important;
+}
+
+.fiche-detail-modal-content .fiche-section {
+  margin-bottom: 3px !important;
+  padding: 3px !important;
+}
+
+.fiche-detail-modal-content .fiche-sections {
+  gap: 3px !important;
+}
+
+.fiche-detail-modal-content .section-title {
+  margin-bottom: 2px !important;
+  padding-bottom: 2px !important;
+  font-size: 11.5px !important;
+  line-height: 1.1 !important;
+  font-weight: 700 !important;
+}
+
+.fiche-detail-modal-content .form-actions {
+  margin-top: 3px !important;
+  padding-top: 3px !important;
+  gap: 2px !important;
+}
+
+/* Réduire les espacements des boutons dans le modal */
+.fiche-detail-modal-content .btn-edit,
+.fiche-detail-modal-content .btn-save,
+.fiche-detail-modal-content .btn-cancel {
+  padding: 0 4px !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+  height: 14px !important;
+  line-height: 1 !important;
+  min-width: 20px !important;
+}
+
+/* Réduire les espacements des onglets dans le modal */
+.fiche-detail-modal-content .fiche-tabs {
+  gap: 4px !important;
+  margin-bottom: 8px !important;
+}
+
+.fiche-detail-modal-content .fiche-tab {
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+/* Réduire les espacements du header dans le modal */
+.fiche-detail-modal-content .fiche-detail-header {
+  margin-bottom: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.fiche-detail-modal-content .fiche-detail-header h1 {
+  font-size: 16px !important;
+  margin: 0 !important;
+}
+
+/* Réduire les espacements des formulaires dans le modal */
+.fiche-detail-modal-content .confirmation-form,
+.fiche-detail-modal-content .etat-change-form,
+.fiche-detail-modal-content .sms-form,
+.fiche-detail-modal-content .nrp-form,
+.fiche-detail-modal-content .etat-form {
+  padding: 10px !important;
+  margin-top: 8px !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Assurer que tous les champs de texte dans le modal passent à la ligne */
+.fiche-detail-modal-content .form-control,
+.fiche-detail-modal-content textarea,
+.fiche-detail-modal-content input[type="text"],
+.fiche-detail-modal-content input[type="textarea"],
+.fiche-detail-modal-content input[type="email"],
+.fiche-detail-modal-content input[type="tel"],
+.fiche-detail-modal-content input[type="number"] {
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
+  overflow-x: hidden !important;
+  min-width: 0 !important;
+  word-break: break-word !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+.fiche-detail-modal-content textarea {
+  resize: vertical !important;
+  min-height: 60px !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: pre-wrap !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+  word-break: break-word !important;
+}
+
+/* S'assurer que les sections et conteneurs respectent la largeur */
+.fiche-detail-modal-content .fiche-section,
+.fiche-detail-modal-content .fiche-sections,
+.fiche-detail-modal-content .form-row,
+.fiche-detail-modal-content .form-grid,
+.fiche-detail-modal-content .form-group,
+.fiche-detail-modal-content .confirmation-form,
+.fiche-detail-modal-content .etat-change-form,
+.fiche-detail-modal-content .decalage-form {
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Assurer la visibilité des sections importantes en bas */
+.fiche-detail-modal-content .etat-change-section,
+.fiche-detail-modal-content .decalage-form,
+.fiche-detail-modal-content .validation-section-bottom {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  margin-top: 16px !important;
+  margin-bottom: 16px !important;
+  padding: 12px !important;
+  border-top: 2px solid #e0e0e0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Assurer que les textareas de commentaire passent à la ligne - règles renforcées */
+.fiche-detail-modal-content textarea.form-control,
+.fiche-detail-modal-content textarea,
+.fiche-detail-modal-content textarea[id*="commentaire"],
+.fiche-detail-modal-content textarea[id*="message"],
+.fiche-detail-modal-content textarea[name*="commentaire"],
+.fiche-detail-modal-content textarea[name*="message"] {
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: pre-wrap !important;
+  resize: vertical !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  min-width: 0 !important;
+}
+
+/* Assurer que le contenu long dans les cellules passe à la ligne */
+.fiche-detail-modal-content .fiche-details-table td,
+.fiche-detail-modal-content .fiche-details-table .field-value,
+.fiche-detail-modal-content .fiche-details-table .field-display {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
+  max-width: 100% !important;
+}
+
+.fiche-detail-modal-content .confirmation-form h3 {
+  margin-bottom: 8px !important;
+  padding-bottom: 4px !important;
+  font-size: 13px !important;
+}
+
+/* Réduire les espacements des tableaux de modifica dans le modal */
+.fiche-detail-modal-content .modifica-table th,
+.fiche-detail-modal-content .modifica-table td {
+  padding: 4px 6px !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+  font-weight: 600 !important;
+}
+
+@media (max-width: 768px) {
+  .fiche-detail-modal-overlay {
+    padding: 2vh 1vw !important; /* Garder un peu de padding pour voir les bords */
+    align-items: flex-start !important; /* Aligner en haut */
+    justify-content: center !important; /* Centrer horizontalement */
+    padding-top: 2vh !important; /* Un peu d'espace en haut */
+    padding-bottom: 2vh !important; /* Un peu d'espace en bas */
+    background: rgba(0, 0, 0, 0.5) !important; /* Opacité normale */
+  }
+
+  .fiche-detail-modal-content {
+    max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
+    width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
+    min-width: 95% !important; /* Largeur minimale en mode mobile */
+    height: 98vh !important; /* Hauteur fixe de 98% - utiliser presque tout l'écran */
+    min-height: 95vh !important; /* Hauteur minimale pour garantir 95% */
+    max-height: 98vh !important; /* Limiter à 98% pour garantir l'affichage */
+    border-radius: 8px !important; /* Rétablir le border-radius */
+    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
+    overflow-y: auto !important; /* Permet le défilement vertical si nécessaire */
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0 auto !important; /* Centrer horizontalement */
+    position: relative !important;
+    top: 0 !important; /* Aligner en haut */
+    align-self: auto !important; /* Ne pas étirer pour garder la largeur définie */
+  }
+
+  /* Optimiser le contenu pour afficher plus d'informations */
+  .fiche-detail-modal-content .fiche-detail {
+    padding: 6px !important; /* Réduire encore le padding */
+    overflow-y: auto !important;
+    flex: 1 1 auto !important; /* Prendre tout l'espace disponible */
+    min-height: 0 !important; /* Permettre au flex de fonctionner */
+    height: 100% !important; /* Prendre toute la hauteur du parent */
+    max-height: 100% !important;
+  }
+
+  /* Structure de la table pour alignement spécifique */
+  .fiche-detail-modal-content .fiche-details-table {
+    width: 100% !important;
+  }
+
+  .fiche-detail-modal-content .fiche-details-table tr {
+    display: table-row !important;
+    line-height: 0.9 !important;
+    max-height: 15px !important;
+  }
+
+  .fiche-detail-modal-content .fiche-details-table td {
+    display: table-cell !important;
+    padding: 0 2px !important;
+    line-height: 0.9 !important;
+    margin: 0 !important;
+  }
+  
+  .fiche-detail-modal-content .fiche-details-table tr {
+    max-height: 18px !important;
+    line-height: 0.9 !important;
+  }
+
+  /* Alignement des labels à gauche */
+  .fiche-detail-modal-content .field-label,
+  .fiche-detail-modal-content .fiche-detail .field-label {
+    text-align: left !important;
+    padding: 1px 4px !important;
+    font-size: 11px !important;
+    line-height: 0.9 !important;
+    max-height: 15px !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    width: auto !important;
+  }
+
+  /* Valeurs au centre avec 30% de largeur */
+  .fiche-detail-modal-content .field-value,
+  .fiche-detail-modal-content .fiche-detail .field-value {
+    text-align: center !important;
+    width: 30% !important;
+    padding: 1px 4px !important;
+    font-size: 10px !important;
+    line-height: 0.9 !important;
+    max-height: 15px !important;
+    margin: 0 !important;
+  }
+
+  /* Boutons de modification alignés à droite */
+  .fiche-detail-modal-content .field-actions,
+  .fiche-detail-modal-content .fiche-detail .field-actions {
+    text-align: right !important;
+    padding: 1px 6px !important;
+    margin: 0 !important;
+    width: auto !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+
+  .fiche-detail-modal-content .field-actions .btn-edit,
+  .fiche-detail-modal-content .fiche-detail .field-actions .btn-edit {
+    margin-left: auto !important;
+  }
+
+  /* Forcer l'alignement horizontal dans le modal même sur mobile */
+  .fiche-detail-modal-content .form-row,
+  .fiche-detail-modal-content .fiche-detail .form-row {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+    display: grid !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+  }
+
+  .fiche-detail-modal-content .form-grid,
+  .fiche-detail-modal-content .fiche-detail .form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+    display: grid !important;
+    gap: 6px !important;
+  }
+
+  /* Réduire les espacements en mode mobile pour afficher plus d'informations */
+  .fiche-detail-modal-content .fiche-section {
+    margin-bottom: 6px !important;
+    padding: 6px !important;
+  }
+
+  .fiche-detail-modal-content .fiche-sections {
+    gap: 6px !important;
+  }
+
+  .fiche-detail-modal-content .section-title {
+    margin-bottom: 4px !important;
+    padding-bottom: 3px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .fiche-detail-modal-overlay {
+    padding: 1vh 0.5vw !important; /* Garder un peu de padding pour voir les bords */
+    align-items: flex-start !important; /* Aligner en haut */
+    justify-content: center !important; /* Centrer horizontalement */
+    padding-top: 1vh !important;
+    padding-bottom: 1vh !important;
+    background: rgba(0, 0, 0, 0.5) !important; /* Opacité normale */
+  }
+
+  .fiche-detail-modal-content {
+    max-width: 100% !important; /* Largeur maximale pour très petits écrans */
+    min-width: 98% !important; /* Largeur minimale même sur très petits écrans */
+    width: 100% !important; /* Largeur maximale pour très petits écrans */
+    height: 100vh !important; /* Hauteur fixe de 100% - utiliser tout l'écran */
+    min-height: 98vh !important; /* Hauteur minimale pour garantir 98% */
+    max-height: 100vh !important; /* Limiter à 100% */
+    border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
+    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
+    overflow-y: auto !important; /* Garder le scroll vertical */
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0 auto !important; /* Centrer le modal horizontalement */
+    align-self: auto !important; /* Ne pas étirer pour garder la largeur définie */
+  }
+
+  /* Optimiser encore plus pour très petits écrans */
+  .fiche-detail-modal-content .fiche-detail {
+    padding: 4px !important; /* Encore moins de padding */
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  /* Réduire les marges et paddings des sections */
+  .fiche-detail-modal-content .fiche-section {
+    margin-bottom: 2px !important;
+    padding: 2px !important;
+  }
+
+  .fiche-detail-modal-content .section-title {
+    margin-bottom: 2px !important;
+    padding-bottom: 1px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    line-height: 0.9 !important;
+    max-height: 15px !important;
+  }
+
+  /* Maintenir la même structure sur très petits écrans */
+  .fiche-detail-modal-content .fiche-details-table {
+    width: 100% !important;
+  }
+
+  .fiche-detail-modal-content .fiche-details-table tr {
+    display: table-row !important;
+    line-height: 0.9 !important;
+    max-height: 15px !important;
+  }
+
+  .fiche-detail-modal-content .fiche-details-table td {
+    display: table-cell !important;
+    padding: 0 2px !important;
+    line-height: 0.9 !important;
+    margin: 0 !important;
+  }
+  
+  .fiche-detail-modal-content .fiche-details-table tr {
+    max-height: 18px !important;
+    line-height: 0.9 !important;
+  }
+
+  /* Alignement des labels à gauche */
+  .fiche-detail-modal-content .field-label,
+  .fiche-detail-modal-content .fiche-detail .field-label {
+    text-align: left !important;
+    padding: 1px 4px !important;
+    font-size: 10.5px !important;
+    line-height: 0.9 !important;
+    max-height: 15px !important;
+    font-weight: 700 !important;
+  }
+
+  /* Valeurs au centre avec 30% de largeur */
+  .fiche-detail-modal-content .field-value,
+  .fiche-detail-modal-content .fiche-detail .field-value {
+    text-align: center !important;
+    width: 30% !important;
+    padding: 1px 4px !important;
+    font-size: 9.5px !important;
+    line-height: 0.9 !important;
+    max-height: 15px !important;
+    font-weight: 600 !important;
+  }
+
+  /* Boutons de modification alignés à droite */
+  .fiche-detail-modal-content .field-actions,
+  .fiche-detail-modal-content .fiche-detail .field-actions {
+    text-align: right !important;
+    padding: 1px 4px !important;
+    width: auto !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+
+  .fiche-detail-modal-content .field-actions .btn-edit,
+  .fiche-detail-modal-content .fiche-detail .field-actions .btn-edit {
+    margin-left: auto !important;
+  }
+
+  /* Maintenir l'alignement horizontal même sur très petits écrans */
+  .fiche-detail-modal-content .form-row,
+  .fiche-detail-modal-content .fiche-detail .form-row {
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)) !important;
+    display: grid !important;
+    flex-direction: row !important;
+    gap: 2px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .fiche-detail-modal-content .form-grid,
+  .fiche-detail-modal-content .fiche-detail .form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)) !important;
+    display: grid !important;
+    gap: 2px !important;
+  }
+}

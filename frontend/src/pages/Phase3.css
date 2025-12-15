@@ -1,0 +1,125 @@
+.phase3-page {
+  padding: 16px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.phase3-header {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.phase3-header h1 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 20.4px;
+}
+
+.phase3-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #e0e0e0;
+  flex-wrap: wrap;
+}
+
+.phase3-tabs button {
+  padding: 9.6px 19.2px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13.6px;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+}
+
+.phase3-tabs button:hover {
+  color: #2196F3;
+  background: #f0f8ff;
+}
+
+.phase3-tabs button.active {
+  color: #2196F3;
+  border-bottom-color: #2196F3;
+  font-weight: 600;
+}
+
+.phase3-content {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tab-content h2 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  padding: 4px 9.6px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 11.9px;
+  font-weight: normal;
+  color: #666;
+}
+
+.phase3-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+.phase3-table thead {
+  background: #f8f9fa;
+}
+
+.phase3-table th {
+  padding: 9.6px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+}
+
+.phase3-table td {
+  padding: 9.6px;
+  border-bottom: 1px solid #eee;
+}
+
+.phase3-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.btn-link {
+  color: #2196F3;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.btn-link:hover {
+  color: #1976D2;
+  text-decoration: underline;
+}
+
+.loading,
+.no-data {
+  text-align: center;
+  padding: 32px;
+  color: #666;
+  font-size: 13.6px;
+}
+

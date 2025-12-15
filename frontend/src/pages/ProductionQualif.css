@@ -1,0 +1,597 @@
+.production-qualif {
+  padding: 16px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.production-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.production-header h1 {
+  font-size: 23.8px;
+  color: #333333 !important;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.production-header h1 svg {
+  color: #f7a219;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.view-mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: #e0e0e0;
+  border-radius: 5px;
+  padding: 3px;
+}
+
+.mode-btn {
+  padding: 6.4px 12.8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4.8px;
+  transition: all 0.3s;
+  font-size: 11.9px;
+}
+
+.mode-btn.active {
+  background: #f7a219;
+  color: white;
+}
+
+.mode-btn:hover:not(.active) {
+  background: #f0f0f0;
+}
+
+.filter-toggle-btn,
+.print-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  background: #f7a219;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+  transition: background 0.3s;
+}
+
+.filter-toggle-btn:hover,
+.print-btn:hover {
+  background: #e09115;
+}
+
+.production-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--filter-bg, #DCFCE7);
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 8px;
+}
+
+.production-filters .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.production-filters label {
+  color: var(--label-color, #065F46) !important;
+  font-weight: 600;
+  font-size: 11.9px;
+}
+
+.production-filters input,
+.production-filters select {
+  padding: 6.4px 9.6px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 5px;
+  font-size: 11.9px;
+  background: #FFFFFF;
+  color: var(--input-text, #064E3B);
+}
+
+.production-filters input::placeholder,
+.production-filters select::placeholder {
+  color: var(--input-placeholder, #6B7280);
+  opacity: 1;
+}
+
+.production-filters input:focus,
+.production-filters select:focus {
+  outline: none;
+  border-color: var(--input-focus, #22C55E);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+.period-info {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #e8f4f8;
+  border-left: 4px solid #9cbfc8;
+  border-radius: 4px;
+  font-weight: bold;
+  color: #9cbfc8;
+}
+
+.production-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.production-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.production-table thead {
+  background: #9cbfc8 !important;
+  color: #ffffff !important;
+}
+
+.production-table thead * {
+  color: #ffffff !important;
+}
+
+.production-table thead th {
+  color: #ffffff !important;
+  background: #9cbfc8 !important;
+}
+
+.production-table thead th *,
+.production-table thead th span,
+.production-table thead th div {
+  color: #ffffff !important;
+}
+
+.production-table th {
+  padding: 9.6px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 11.9px;
+  white-space: nowrap;
+  color: #ffffff !important;
+  background: #9cbfc8 !important;
+}
+
+/* Garantir que tous les th dans le tableau de statistiques sont en blanc */
+.production-table thead tr th {
+  color: #ffffff !important;
+  background: #9cbfc8 !important;
+}
+
+.production-table thead tr th * {
+  color: #ffffff !important;
+}
+
+.production-table thead th,
+.production-table th {
+  color: #ffffff !important;
+  background: #9cbfc8 !important;
+}
+
+/* Pour les th générés dynamiquement */
+.production-table th[title] {
+  color: #ffffff !important;
+  background: #9cbfc8 !important;
+}
+
+.production-table th[title] * {
+  color: #ffffff !important;
+}
+
+/* Règles avec spécificité maximale pour forcer le texte blanc dans le thead */
+/* Utilisation de .production-qualif pour augmenter la spécificité et surcharger les règles globales */
+/* Ces règles doivent être placées à la fin pour avoir la priorité */
+.production-qualif table.production-table thead,
+.production-qualif table.production-table thead *,
+.production-qualif table.production-table thead th,
+.production-qualif table.production-table thead th *,
+.production-qualif table.production-table thead tr,
+.production-qualif table.production-table thead tr th,
+.production-qualif table.production-table thead tr th *,
+.production-qualif table.production-table thead tr th span,
+.production-qualif table.production-table thead tr th div,
+.production-qualif table.production-table thead tr th strong,
+.production-qualif .production-table thead,
+.production-qualif .production-table thead *,
+.production-qualif .production-table thead th,
+.production-qualif .production-table thead th *,
+.production-qualif .production-table thead tr,
+.production-qualif .production-table thead tr th,
+.production-qualif .production-table thead tr th *,
+.production-qualif .production-table th {
+  color: #ffffff !important;
+  background-color: #9cbfc8 !important;
+}
+
+/* Force absolue pour tous les éléments du thead - priorité maximale */
+.production-qualif .production-table thead,
+.production-qualif .production-table thead *,
+.production-qualif .production-table thead th,
+.production-qualif .production-table thead th *,
+.production-qualif .production-table thead th span,
+.production-qualif .production-table thead th div,
+.production-qualif .production-table thead th strong,
+.production-qualif .production-table thead th em {
+  color: #ffffff !important;
+}
+
+.production-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.2s;
+}
+
+.production-table tbody tr:hover {
+  background: #f5f5f5;
+}
+
+.production-table td {
+  padding: 9.6px;
+  font-size: 11.9px;
+  text-align: center;
+}
+
+.superviseur-cell {
+  text-align: left !important;
+  font-weight: 600;
+}
+
+.stat-cell {
+  font-weight: 600;
+}
+
+.stat-cell.validated {
+  color: #4CAF50;
+  font-weight: 700;
+}
+
+.total-cell {
+  text-align: center;
+  font-weight: 700;
+  background: #f5f5f5 !important;
+  font-size: 13.6px;
+}
+
+.totals-row {
+  background: #e8f4f8 !important;
+  font-weight: 600;
+}
+
+.totals-row td {
+  border-top: 2px solid #9cbfc8;
+}
+
+.loading,
+.no-data {
+  text-align: center;
+  padding: 32px;
+  color: #666;
+  font-size: 13.6px;
+}
+
+/* Recherche rapide */
+.quick-search-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 9.6px 12px;
+  background: var(--filter-bg, #DCFCE7);
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 8px;
+}
+
+.quick-search-container svg {
+  color: var(--label-color, #065F46);
+  font-size: 15.3px;
+}
+
+.quick-search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 5px;
+  font-size: 11.9px;
+  background: #FFFFFF;
+  color: var(--input-text, #064E3B);
+}
+
+.quick-search-input::placeholder {
+  color: var(--input-placeholder, #6B7280);
+  opacity: 1;
+}
+
+.quick-search-input:focus {
+  outline: none;
+  border-color: var(--input-focus, #22C55E);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+/* Tableau des fiches */
+.fiches-table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+.results-info {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #e8f4f8;
+  border-left: 4px solid #9cbfc8;
+  border-radius: 4px;
+  font-weight: bold;
+  color: #9cbfc8;
+}
+
+.fiches-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+
+.fiches-table thead {
+  background: #ffffff;
+  color: #333333;
+}
+
+.fiches-table thead th {
+  color: #333333 !important;
+}
+
+.fiches-table th {
+  padding: 9.6px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11.9px;
+  color: #ffffff !important;
+  background: #9cbfc8 !important;
+  white-space: nowrap;
+}
+
+.fiches-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.2s;
+}
+
+.fiches-table tbody tr:hover {
+  background: #f5f5f5;
+}
+
+.fiches-table td {
+  padding: 9.6px;
+  font-size: 11.9px;
+  color: #333;
+}
+
+.etat-badge {
+  display: inline-block;
+  padding: 4px 6.4px;
+  border-radius: 4px;
+  color: white;
+  font-size: 10.2px;
+  font-weight: 600;
+}
+
+.btn-detail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4.8px 8px;
+  background: #f7a219;
+  color: white;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background 0.3s;
+}
+
+.btn-detail:hover {
+  background: #e09115;
+}
+
+@media print {
+  .noprint {
+    display: none !important;
+  }
+
+  .production-qualif {
+    padding: 0;
+  }
+
+  .production-content {
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .production-table {
+    font-size: 8.5px;
+  }
+
+  .production-table th,
+  .production-table td {
+    padding: 4.8px;
+  }
+
+  .production-table th {
+    color: #ffffff !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .production-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .filter-toggle-btn,
+  .print-btn {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .production-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .table-container {
+    overflow-x: scroll;
+  }
+
+  .production-table {
+    font-size: 10.2px;
+  }
+
+  .production-table th,
+  .production-table td {
+    padding: 6.4px 4.8px;
+  }
+
+  .production-table th {
+    color: #ffffff !important;
+  }
+
+  .fiches-table th {
+    color: #ffffff !important;
+  }
+}
+
+/* ======================================== */
+/* RÈGLES FINALES - PRIORITÉ MAXIMALE      */
+/* Pour forcer le texte blanc dans thead   */
+/* de fiches-table dans la page Production Qualif */
+/* ======================================== */
+.production-qualif .fiches-table thead,
+.production-qualif .fiches-table thead *,
+.production-qualif .fiches-table thead th,
+.production-qualif .fiches-table thead th *,
+.production-qualif .fiches-table thead th span,
+.production-qualif .fiches-table thead th div,
+.production-qualif .fiches-table thead tr,
+.production-qualif .fiches-table thead tr th,
+.production-qualif .fiches-table thead tr th *,
+.production-qualif table.fiches-table thead,
+.production-qualif table.fiches-table thead *,
+.production-qualif table.fiches-table thead th,
+.production-qualif table.fiches-table thead th *,
+.production-qualif table.fiches-table thead tr,
+.production-qualif table.fiches-table thead tr th,
+.production-qualif table.fiches-table thead tr th *,
+.production-qualif .fiches-table th {
+  color: #333333 !important;
+  background-color: #ffffff !important;
+}
+
+/* ======================================== */
+/* RÈGLES FINALES - PRIORITÉ MAXIMALE      */
+/* Pour forcer le texte blanc dans thead   */
+/* Ces règles doivent surcharger toutes les */
+/* règles globales dans App.css et theme-improvements.css */
+/* ======================================== */
+.production-qualif .table-container .production-table thead,
+.production-qualif .table-container .production-table thead *,
+.production-qualif .table-container .production-table thead th,
+.production-qualif .table-container .production-table thead th *,
+.production-qualif .table-container .production-table thead tr,
+.production-qualif .table-container .production-table thead tr th,
+.production-qualif .table-container .production-table thead tr th *,
+.production-qualif .production-table thead,
+.production-qualif .production-table thead *,
+.production-qualif .production-table thead th,
+.production-qualif .production-table thead th *,
+.production-qualif .production-table thead tr,
+.production-qualif .production-table thead tr th,
+.production-qualif .production-table thead tr th *,
+.production-qualif .production-table th,
+.production-qualif table.production-table thead,
+.production-qualif table.production-table thead *,
+.production-qualif table.production-table thead th,
+.production-qualif table.production-table thead th *,
+.production-qualif table.production-table thead tr,
+.production-qualif table.production-table thead tr th,
+.production-qualif table.production-table thead tr th *,
+.production-qualif table.production-table th {
+  color: #ffffff !important;
+  background-color: #9cbfc8 !important;
+}
+
+/* Force absolue - surcharge toutes les règles globales */
+/* Utilisation de tous les sélecteurs parent pour maximiser la spécificité */
+.production-qualif .production-content .table-container table.production-table thead th,
+.production-qualif .production-content .table-container .production-table thead th,
+.production-qualif .table-container table.production-table thead th,
+.production-qualif .table-container .production-table thead th,
+.production-qualif .production-content table.production-table thead th,
+.production-qualif .production-content .production-table thead th,
+.production-qualif table.production-table thead th,
+.production-qualif .production-table thead th,
+.production-qualif .production-table thead,
+.production-qualif .production-table thead *,
+.production-qualif .production-table thead th,
+.production-qualif .production-table thead th *,
+.production-qualif .production-table thead tr,
+.production-qualif .production-table thead tr th,
+.production-qualif .production-table thead tr th *,
+.production-qualif .production-table th {
+  color: #ffffff !important;
+  background-color: #9cbfc8 !important;
+}
+
+/* Dernière tentative avec tous les éléments possibles - SPECIFICITÉ MAXIMALE */
+.production-qualif .production-table thead th,
+.production-qualif table.production-table thead th,
+.production-qualif .table-container .production-table thead th,
+.production-qualif .table-container table.production-table thead th {
+  color: #ffffff !important;
+  background-color: #9cbfc8 !important;
+}
+
+/* RÈGLE ULTIME - Doit surcharger toutes les règles globales */
+.production-qualif .production-content .table-container table.production-table thead tr th,
+.production-qualif .production-content .table-container .production-table thead tr th,
+.production-qualif .table-container table.production-table thead tr th,
+.production-qualif .table-container .production-table thead tr th {
+  color: #ffffff !important;
+  background-color: #9cbfc8 !important;
+}
+

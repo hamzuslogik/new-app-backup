@@ -1,0 +1,21 @@
+.chart-container {
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.chart-title {
+  margin: 0 0 12px 0;
+  color: var(--text-primary, #333);
+  font-size: 15.3px;
+  font-weight: 600;
+}
+
+.chart-content {
+  min-height: 300px;
+}
+

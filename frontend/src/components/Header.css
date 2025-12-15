@@ -1,0 +1,509 @@
+.header {
+  background-color: var(--header-bg, #14532D) !important; /* Fond opaque */
+  color: var(--text-light, #ffffff) !important;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 1000; /* Au-dessus du contenu */
+  width: 100%;
+  backdrop-filter: blur(10px); /* Effet de flou pour le fond */
+  -webkit-backdrop-filter: blur(10px); /* Support Safari */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  /* Assurer l'opacité complète */
+  opacity: 1 !important;
+  /* Empêcher la transparence lors du scroll */
+  will-change: transform;
+}
+
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.menu-toggle {
+  background: none;
+  border: none;
+  color: var(--text-light, #ffffff) !important;
+  font-size: 17px;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1001; /* Au-dessus de l'overlay (z-index: 999) */
+}
+
+/* Afficher le bouton hamburger sur desktop pour permettre de masquer/afficher le sidebar */
+@media (min-width: 1025px) {
+  .menu-toggle {
+    display: flex; /* Afficher pour permettre de masquer/afficher */
+  }
+}
+
+.header-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-light, #ffffff) !important;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.notification-btn {
+  background: none;
+  border: none;
+  color: var(--text-light, #ffffff) !important;
+  font-size: 15.3px;
+  cursor: pointer;
+  position: relative;
+  padding: 6.4px;
+}
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background-color: var(--danger-color, #e74c3c);
+  color: white;
+  border-radius: 12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 8.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  border: 2px solid var(--header-bg, #14532D);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.badge.blinking {
+  animation: blink-red 0.8s infinite;
+  background-color: #ff0000;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+}
+
+@keyframes blink-red {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    background-color: #ff0000;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+    background-color: #ff3333;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 1);
+  }
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* Utiliser une spécificité très élevée pour forcer la couleur blanche dans le header */
+.header .user-menu .user-info .user-name,
+.header .user-menu .user-info span.user-name,
+.header .header-right .user-menu .user-info .user-name,
+.header .header-right .user-menu .user-info span.user-name,
+header.header .user-menu .user-info .user-name,
+header.header .user-menu .user-info span.user-name,
+header.header .header-right .user-menu .user-info .user-name,
+header.header .header-right .user-menu .user-info span.user-name {
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.header .user-menu .user-info .user-role,
+.header .user-menu .user-info span.user-role,
+.header .header-right .user-menu .user-info .user-role,
+.header .header-right .user-menu .user-info span.user-role,
+header.header .user-menu .user-info .user-role,
+header.header .user-menu .user-info span.user-role,
+header.header .header-right .user-menu .user-info .user-role,
+header.header .header-right .user-menu .user-info span.user-role {
+  font-size: 12px !important;
+  opacity: 1 !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Forcer la couleur blanche sur tous les spans dans user-info du header */
+.header .user-info span,
+header.header .user-info span {
+  color: #ffffff !important;
+}
+
+/* Règles de secours avec moins de spécificité */
+.user-menu .user-info .user-name,
+.user-menu .user-info span.user-name {
+  font-weight: 600;
+  font-size: 11.9px;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.user-menu .user-info .user-role,
+.user-menu .user-info span.user-role {
+  font-size: 10.2px;
+  opacity: 1 !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 11.9px;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.user-role {
+  font-size: 10.2px;
+  opacity: 1 !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.logout-btn {
+  background: var(--danger-color);
+  color: white;
+  border: none;
+  padding: 6.4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.9px;
+}
+
+.logout-btn:hover {
+  opacity: 0.9;
+}
+
+.notification-container {
+  position: relative;
+}
+
+.notifications-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 400px;
+  max-height: 500px;
+  background: var(--bg-primary, white);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow, rgba(0, 0, 0, 0.15));
+  z-index: 1000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.notifications-header {
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f7a219;
+  color: white;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.notifications-header h3 {
+  margin: 0;
+  font-size: 13.6px;
+  font-weight: 600;
+}
+
+.notifications-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-all-notifications-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10.2px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.view-all-notifications-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  text-decoration: none;
+}
+
+.mark-all-read-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10.2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mark-all-read-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.notifications-list {
+  overflow-y: auto;
+  max-height: 400px;
+}
+
+.notification-item {
+  padding: 9.6px 12px;
+  border-bottom: 1px solid var(--border-color, #f0f0f0);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+  background-color: var(--bg-secondary, #f5f5f5);
+}
+
+.notification-item.unread {
+  background-color: #e3f2fd;
+  font-weight: 500;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-message {
+  margin: 0 0 4px 0;
+  font-size: 11.9px;
+  color: var(--text-primary, #333);
+}
+
+.notification-date {
+  font-size: 9.4px;
+  color: var(--text-secondary, #666);
+}
+
+.mark-read-btn {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+}
+
+.mark-read-btn:hover {
+  opacity: 1;
+  color: #666;
+}
+
+.no-notifications {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted, #999);
+}
+
+.notification-item.has-actions {
+  cursor: default;
+}
+
+.notification-item.has-actions:hover {
+  background-color: #f5f5f5;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 6.4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.accept-btn,
+.refuse-btn {
+  flex: 1;
+  padding: 4.8px 9.6px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10.2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: opacity 0.2s;
+}
+
+.accept-btn {
+  background-color: #4caf50;
+  color: white;
+}
+
+.accept-btn:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.refuse-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.refuse-btn:hover:not(:disabled) {
+  background-color: #da190b;
+}
+
+.accept-btn:disabled,
+.refuse-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Media queries pour responsive */
+@media (max-width: 1024px) {
+  .header {
+    padding: 9.6px 12px;
+  }
+
+  .header-title {
+    font-size: 15.3px;
+  }
+
+  .notifications-dropdown {
+    width: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 8px 9.6px;
+  }
+
+  .header-title {
+    font-size: 13.6px;
+  }
+  
+  .user-info {
+    display: none;
+  }
+
+  .user-menu {
+    gap: 8px;
+  }
+
+  .logout-btn {
+    padding: 4.8px 9.6px;
+    font-size: 10.2px;
+  }
+
+  .notification-btn {
+    font-size: 13.6px;
+    padding: 4.8px;
+  }
+
+  .notifications-dropdown {
+    width: calc(100vw - 40px);
+    max-width: 320px;
+    right: 10px;
+    left: auto;
+  }
+
+  .notification-item {
+    padding: 8px 9.6px;
+  }
+
+  .notification-message {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 6.4px 8px;
+  }
+
+  .header-title {
+    font-size: 11.9px;
+  }
+
+  .menu-toggle {
+    font-size: 15.3px;
+    padding: 4px;
+  }
+
+  .header-left {
+    gap: 8px;
+  }
+
+  .header-right {
+    gap: 6.4px;
+  }
+
+  .logout-btn {
+    padding: 4px 8px;
+    font-size: 9.4px;
+  }
+
+  .notifications-dropdown {
+    width: calc(100vw - 20px);
+    right: 10px;
+    left: auto;
+  }
+}
+

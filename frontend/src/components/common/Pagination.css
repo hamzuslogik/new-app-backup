@@ -1,0 +1,118 @@
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #666;
+  font-size: 11.9px;
+}
+
+.items-per-page-selector {
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+}
+
+.items-per-page-selector label {
+  color: #666;
+  font-size: 11.9px;
+  font-weight: 500;
+}
+
+.items-per-page-selector select {
+  padding: 4.8px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 11.9px;
+  background: white;
+  cursor: pointer;
+}
+
+.items-per-page-selector select:focus {
+  outline: none;
+  border-color: var(--primary-color, #9cbfc8);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 9.6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  color: #333;
+  font-size: 11.9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--primary-color, #9cbfc8);
+  color: white;
+  border-color: var(--primary-color, #9cbfc8);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-btn.active {
+  background: var(--primary-color, #9cbfc8);
+  color: white;
+  border-color: var(--primary-color, #9cbfc8);
+  font-weight: 600;
+}
+
+.pagination-ellipsis {
+  padding: 0 6.4px;
+  color: #999;
+  font-size: 11.9px;
+}
+
+@media (max-width: 768px) {
+  .pagination-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pagination-info {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .pagination-controls {
+    justify-content: center;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .pagination-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6.4px;
+    font-size: 10.2px;
+  }
+}
+

@@ -1,0 +1,327 @@
+/* Styles globaux */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Styles pour les cartes et conteneurs */
+.card {
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px var(--shadow, rgba(0, 0, 0, 0.1));
+}
+
+
+/* Styles pour les tableaux */
+table:not(.planning-table):not(.availability-table) {
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
+}
+
+thead:not(.planning-table thead):not(.availability-table thead):not(.production-table thead):not(.fiches-table thead):not(.suivi-table thead) {
+  background: var(--bg-tertiary, #e9ecef) !important;
+  color: #333333 !important;
+}
+
+thead th:not(.planning-table th):not(.availability-table th):not(.production-table th):not(.fiches-table th):not(.suivi-table th) {
+  color: #ffffff !important;
+}
+
+/* Planning table - en-têtes en blanc */
+.planning-table thead,
+.planning-table thead th,
+.availability-table thead,
+.availability-table thead th,
+.production-table thead,
+.production-table thead th,
+.fiches-table thead,
+.fiches-table thead th {
+  background: #ffffff !important;
+  color: #333333 !important;
+}
+
+.suivi-table thead,
+.suivi-table thead th {
+  background: #ffffff !important;
+  color: #333333 !important;
+}
+
+.planning-table thead *,
+.planning-table thead th *,
+.planning-table th,
+.planning-table th *,
+.availability-table thead *,
+.availability-table thead th *,
+.availability-table th,
+.availability-table th *,
+.production-table thead *,
+.production-table thead th *,
+.production-table th,
+.production-table th *,
+.fiches-table thead *,
+.fiches-table thead th *,
+.fiches-table th,
+.fiches-table th * {
+  color: #333333 !important;
+}
+
+.suivi-table thead *,
+.suivi-table thead th *,
+.suivi-table th,
+.suivi-table th * {
+  color: #333333 !important;
+}
+
+/* Règle générale : tous les thead avec fond sombre (#9cbfc8) doivent avoir du texte blanc */
+thead[style*="background: #9cbfc8"],
+thead[style*="background-color: #9cbfc8"],
+thead[style*="background:#9cbfc8"],
+thead[style*="background-color:#9cbfc8"],
+thead[style*="--dark-bg"] {
+  color: #ffffff !important;
+}
+
+thead[style*="background: #9cbfc8"] *,
+thead[style*="background-color: #9cbfc8"] *,
+thead[style*="background:#9cbfc8"] *,
+thead[style*="background-color:#9cbfc8"] *,
+thead[style*="--dark-bg"] * {
+  color: #ffffff !important;
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+tbody tr:hover {
+  background: var(--bg-secondary, #f5f5f5);
+}
+
+/* ======================================== */
+/* RÈGLES FINALES - PRIORITÉ MAXIMALE      */
+/* Pour forcer le texte noir dans thead    */
+/* de fiches-table avec fond blanc         */
+/* Ces règles doivent surcharger toutes les */
+/* règles globales, y compris celles avec  */
+/* :not() dans theme-improvements.css      */
+/* ======================================== */
+table.fiches-table thead,
+table.fiches-table thead *,
+table.fiches-table thead th,
+table.fiches-table thead th *,
+table.fiches-table thead th span,
+table.fiches-table thead th div,
+table.fiches-table thead tr,
+table.fiches-table thead tr th,
+table.fiches-table thead tr th *,
+.fiches-table thead,
+.fiches-table thead *,
+.fiches-table thead th,
+.fiches-table thead th *,
+.fiches-table thead th span,
+.fiches-table thead th div,
+.fiches-table thead tr,
+.fiches-table thead tr th,
+.fiches-table thead tr th *,
+.fiches-table th {
+  color: #333333 !important;
+  background-color: #ffffff !important;
+}
+
+table.suivi-table thead,
+table.suivi-table thead *,
+table.suivi-table thead th,
+table.suivi-table thead th *,
+table.suivi-table thead th span,
+table.suivi-table thead th div,
+table.suivi-table thead tr,
+table.suivi-table thead tr th,
+table.suivi-table thead tr th *,
+.suivi-table thead,
+.suivi-table thead *,
+.suivi-table thead th,
+.suivi-table thead th *,
+.suivi-table thead th span,
+.suivi-table thead th div,
+.suivi-table thead tr,
+.suivi-table thead tr th,
+.suivi-table thead tr th *,
+.suivi-table th {
+  color: #333333 !important;
+  background-color: #ffffff !important;
+}
+
+/* Styles pour les modales */
+.modal-content {
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
+}
+
+
+/* Styles pour les inputs */
+input, textarea, select {
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
+  border: 1px solid var(--border-color, #e0e0e0);
+}
+
+
+/* Labels dans les formulaires */
+label, .form-group label, .filter-group label {
+  color: var(--label-color, #065F46);
+  font-weight: 600;
+}
+
+/* Styles pour les champs de filtre */
+input, textarea, select {
+  background: #FFFFFF;
+  color: var(--input-text, #064E3B);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--input-placeholder, #6B7280);
+  opacity: 1;
+}
+
+input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  border-color: var(--filter-border, #86EFAC);
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--input-focus, #22C55E);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+/* Filtres - fond */
+.filters-section, .search-form, .search-panel, .quick-search-container, .production-filters, .affectation-filters, .suivi-filters,
+.planning-header, .week-navigation, .planning-hebdomadaire-header, .planning-hebdomadaire-form,
+.affectation-dep-header, .affectation-dep-controls, .planning-week-navigation {
+  background: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC);
+  color: var(--label-color, #065F46) !important;
+}
+
+/* Forcer la couleur du texte sur les fonds de filtres - éléments textuels seulement */
+.filters-section p,
+.filters-section span:not(.badge):not(.icon),
+.search-form p,
+.search-form span:not(.badge):not(.icon),
+.search-panel p,
+.search-panel span:not(.badge):not(.icon),
+.quick-search-container p,
+.quick-search-container span:not(.badge):not(.icon),
+.production-filters p,
+.production-filters span:not(.badge):not(.icon),
+.affectation-filters p,
+.affectation-filters span:not(.badge):not(.icon),
+.suivi-filters p,
+.suivi-filters span:not(.badge):not(.icon),
+.planning-header p,
+.planning-header span:not(.badge):not(.icon),
+.planning-header h1,
+.planning-header h2,
+.planning-header h3,
+.week-navigation p,
+.week-navigation span:not(.badge):not(.icon),
+.planning-hebdomadaire-header p,
+.planning-hebdomadaire-header span:not(.badge):not(.icon),
+.planning-hebdomadaire-header h1,
+.planning-hebdomadaire-header h2,
+.planning-hebdomadaire-header h3,
+.affectation-dep-header p,
+.affectation-dep-header span:not(.badge):not(.icon),
+.affectation-dep-header h1,
+.affectation-dep-header h2,
+.affectation-dep-header h3,
+.affectation-dep-header .header-left,
+.affectation-dep-header .header-left *,
+.affectation-dep-header .header-left h1,
+.affectation-dep-header .header-left h2,
+.affectation-dep-header .header-left h3,
+.affectation-dep-header .header-left span,
+.affectation-dep-header .header-left div,
+.affectation-dep-header .header-left p,
+.planning-week-navigation p,
+.planning-week-navigation span:not(.badge):not(.icon) {
+  color: var(--label-color, #065F46) !important;
+}
+
+/* Forcer la couleur du texte pour tous les éléments enfants directs et indirects sur fond #DCFCE7 */
+[style*="background: #DCFCE7"],
+[style*="background:#DCFCE7"],
+[style*="background-color: #DCFCE7"],
+[style*="background-color:#DCFCE7"] {
+  color: var(--label-color, #065F46) !important;
+}
+
+[style*="background: #DCFCE7"] *,
+[style*="background:#DCFCE7"] *,
+[style*="background-color: #DCFCE7"] *,
+[style*="background-color:#DCFCE7"] * {
+  color: var(--label-color, #065F46) !important;
+}
+
+/* Tableaux - hover */
+table tbody tr:hover, .table tbody tr:hover {
+  background-color: var(--table-hover-bg, #DCFCE7) !important;
+}
+
+/* Tableaux - header */
+table thead, table thead th, .table thead, .table thead th {
+  background: var(--table-header-bg, #ECFDF5) !important;
+  color: var(--table-header-text, #064E3B) !important;
+}
+
+/* Zone de recherche rapide (pour les styles inline) */
+.quick-search-container {
+  background: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.quick-search-container svg {
+  color: var(--label-color, #065F46) !important;
+}
+
+.quick-search-input {
+  background: #FFFFFF !important;
+  color: var(--input-text, #064E3B) !important;
+  border-color: var(--filter-border, #86EFAC) !important;
+}
+
+.quick-search-input::placeholder {
+  color: var(--input-placeholder, #6B7280) !important;
+  opacity: 1;
+}
+
+.quick-search-input:focus {
+  outline: none !important;
+  border-color: var(--input-focus, #22C55E) !important;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1) !important;
+}
+
+/* Styles pour les boutons */
+.btn-primary {
+  background: var(--primary-color, #16A34A);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--btn-primary-hover, #15803D);
+}
+
+.btn-secondary, .btn-reset {
+  background: var(--btn-secondary-bg, #E5E7EB);
+  color: var(--btn-secondary-text, #14532D);
+  border: 1px solid var(--btn-secondary-bg, #E5E7EB);
+}
+
+.btn-secondary:hover, .btn-reset:hover {
+  background: var(--btn-secondary-hover, #D1D5DB);
+}
+

@@ -1,0 +1,377 @@
+.planning-hebdomadaire-page {
+  padding: 16px;
+  background-color: #f4f6f9;
+  min-height: calc(100vh - 60px);
+}
+
+/* Header */
+.planning-hebdomadaire-header {
+  background: var(--filter-bg, #DCFCE7);
+  border: 1px solid var(--filter-border, #86EFAC);
+  color: var(--label-color, #065F46);
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-radius: 8px;
+}
+
+.header-left {
+  flex: 1;
+  color: var(--label-color, #065F46);
+}
+
+.header-left * {
+  color: var(--label-color, #065F46) !important;
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--label-color, #065F46) !important;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--label-color, #065F46);
+}
+
+.header-right * {
+  color: var(--label-color, #065F46) !important;
+}
+
+.nav-btn {
+  background: rgba(6, 95, 70, 0.1);
+  border: 1px solid var(--filter-border, #86EFAC);
+  color: var(--label-color, #065F46);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 5px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+}
+
+.nav-btn:hover {
+  background: rgba(6, 95, 70, 0.2);
+  border-color: var(--input-focus, #22C55E);
+  transform: scale(1.05);
+}
+
+.nav-btn:active {
+  transform: scale(0.95);
+}
+
+.week-dates {
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--label-color, #065F46) !important;
+}
+
+.planning-hebdomadaire-header span {
+  color: var(--label-color, #065F46) !important;
+}
+
+.planning-hebdomadaire-header button {
+  color: var(--label-color, #065F46) !important;
+}
+
+.planning-hebdomadaire-header button svg {
+  color: var(--label-color, #065F46) !important;
+  fill: var(--label-color, #065F46) !important;
+}
+
+/* Formulaire d'ajout */
+.planning-hebdomadaire-form {
+  background: var(--filter-bg, #DCFCE7);
+  border: 1px solid var(--filter-border, #86EFAC);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  color: var(--label-color, #065F46) !important;
+}
+
+.planning-hebdomadaire-form *:not(input):not(select):not(textarea):not(button),
+.planning-hebdomadaire-form h1,
+.planning-hebdomadaire-form h2,
+.planning-hebdomadaire-form h3,
+.planning-hebdomadaire-form span:not(.badge):not(.icon),
+.planning-hebdomadaire-form div:not(.form-group input):not(.form-group select):not(.form-group textarea),
+.planning-hebdomadaire-form p {
+  color: var(--label-color, #065F46) !important;
+}
+
+.planning-hebdomadaire-form form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.planning-hebdomadaire-form form .btn-ajouter {
+  margin-top: 0;
+  align-self: center;
+}
+
+.planning-hebdomadaire-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 150px;
+}
+
+.planning-hebdomadaire-form .form-group label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--label-color, #065F46);
+}
+
+.planning-hebdomadaire-form .form-group select,
+.planning-hebdomadaire-form .form-group input {
+  padding: 8px 12px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  background: #FFFFFF;
+  color: var(--input-text, #064E3B);
+  border-radius: 5px;
+  font-size: 13px;
+}
+
+.planning-hebdomadaire-form .form-group input::placeholder,
+.planning-hebdomadaire-form .form-group select::placeholder {
+  color: var(--input-placeholder, #6B7280);
+  opacity: 1;
+}
+
+.planning-hebdomadaire-form .form-group select:focus,
+.planning-hebdomadaire-form .form-group input:focus {
+  outline: none;
+  border-color: var(--input-focus, #22C55E);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+.btn-ajouter {
+  padding: 10px 24px;
+  background: #9cbfc8;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.3s;
+  height: fit-content;
+}
+
+.btn-ajouter:hover:not(:disabled) {
+  background: #1a2529;
+}
+
+.btn-ajouter:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Section Copie planning */
+.planning-hebdomadaire-copy {
+  background: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.planning-hebdomadaire-copy h3 {
+  margin: 0 0 10px 0;
+  color: #9cbfc8;
+  font-size: 15px;
+}
+
+.copy-controls {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.week-selector-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.week-selector-container label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #9cbfc8;
+}
+
+.week-selector {
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 11px;
+  min-width: 200px;
+  min-height: 100px;
+  line-height: 1.3;
+}
+
+.week-selector option {
+  padding: 2px 4px;
+  font-size: 11px;
+}
+
+.copy-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.btn-duplicate {
+  padding: 10px 20px;
+  background: #4BB543;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.3s;
+}
+
+.btn-duplicate:hover:not(:disabled) {
+  background: #3a9a33;
+}
+
+.btn-duplicate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-reset {
+  padding: 10px 20px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.3s;
+}
+
+.btn-reset:hover:not(:disabled) {
+  background: #c0392b;
+}
+
+.btn-reset:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Tableau */
+.planning-hebdomadaire-table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+  padding: 8px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.planning-hebdomadaire-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+}
+
+.planning-hebdomadaire-table thead {
+  background-color: #f8f9fa;
+}
+
+.planning-hebdomadaire-table th {
+  padding: 2px 8px;
+  text-align: left;
+  font-weight: bold;
+  color: #9cbfc8;
+  border-bottom: 2px solid #ddd;
+  font-size: 11px;
+  line-height: 1.1;
+  vertical-align: middle;
+}
+
+.planning-hebdomadaire-table td {
+  padding: 2px 8px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 11px;
+  line-height: 1.1;
+  vertical-align: middle;
+}
+
+.planning-hebdomadaire-table tbody tr {
+  height: auto;
+  min-height: auto;
+}
+
+.planning-hebdomadaire-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.departement-link {
+  color: #9cbfc8;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.departement-link:hover {
+  text-decoration: underline;
+  color: #1a2529;
+}
+
+.btn-delete {
+  padding: 4px 8px;
+  background: transparent;
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s;
+  line-height: 1.2;
+}
+
+.btn-delete:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .planning-hebdomadaire-form form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .copy-controls {
+    flex-direction: column;
+  }
+
+  .planning-hebdomadaire-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+}
+

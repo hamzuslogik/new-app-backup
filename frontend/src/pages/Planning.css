@@ -1,0 +1,1461 @@
+.planning-page {
+  padding: 16px;
+  background-color: #f4f6f9;
+  min-height: calc(100vh - 60px);
+}
+
+.planning-header {
+  background: var(--filter-bg, #DCFCE7);
+  border: 1px solid var(--filter-border, #86EFAC);
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 16px;
+  color: var(--label-color, #065F46) !important;
+}
+
+.planning-header *:not(input):not(select):not(textarea):not(button),
+.planning-header h1,
+.planning-header h2,
+.planning-header h3,
+.planning-header span:not(.badge):not(.icon),
+.planning-header div:not(.form-group input):not(.form-group select):not(.form-group textarea),
+.planning-header p {
+  color: var(--label-color, #065F46) !important;
+}
+
+.planning-header h1 {
+  color: var(--label-color, #065F46) !important;
+  margin: 0 0 12px 0;
+  font-size: 23.8px;
+  font-weight: bold;
+}
+
+.planning-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.dep-select {
+  padding: 8px 12px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 5px;
+  font-size: 11.9px;
+  background: #FFFFFF;
+  color: var(--input-text, #064E3B);
+  min-width: 200px;
+}
+
+.dep-select:focus {
+  outline: none;
+  border-color: var(--input-focus, #22C55E);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+.week-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC);
+  padding: 8px 12px;
+  border-radius: 5px;
+  color: var(--label-color, #065F46) !important;
+}
+
+.week-navigation *,
+.week-navigation span,
+.week-navigation div {
+  color: var(--label-color, #065F46) !important;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--label-color, #065F46) !important;
+  font-size: 15.3px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: background 0.3s;
+}
+
+.nav-btn:hover {
+  background: rgba(6, 95, 70, 0.1);
+}
+
+.week-info {
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--label-color, #065F46) !important;
+}
+
+.week-info *,
+.week-info span {
+  color: var(--label-color, #065F46) !important;
+}
+
+.view-mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: #f0f0f0;
+  border-radius: 5px;
+  padding: 2px;
+}
+
+.view-mode-toggle button {
+  padding: 6.4px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.view-mode-toggle button.active {
+  background: #f7a219;
+  color: white;
+}
+
+.btn-create,
+.btn-duplicate {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+  transition: all 0.3s;
+}
+
+.btn-create {
+  background: #f7a219;
+  color: white;
+}
+
+.btn-create:hover {
+  background: #e6941a;
+}
+
+.btn-duplicate {
+  background: #9cbfc8;
+  color: white;
+}
+
+.btn-duplicate:hover {
+  background: #4a7a87;
+}
+
+/* Vue Planning */
+.planning-view {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.planning-table-container {
+  overflow-x: auto;
+}
+
+.planning-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.planning-table th,
+.planning-table td {
+  border: 1px solid #e9e9e9;
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.planning-table thead {
+  background: var(--table-header-bg, #ECFDF5) !important;
+  color: var(--table-header-text, #064E3B) !important;
+}
+
+.planning-table thead th {
+  background: var(--table-header-bg, #ECFDF5) !important;
+  color: var(--table-header-text, #064E3B) !important;
+  font-weight: bold;
+  font-size: 11.9px;
+  white-space: nowrap;
+}
+
+.planning-table th {
+  background: var(--table-header-bg, #ECFDF5) !important;
+  color: var(--table-header-text, #064E3B) !important;
+  font-weight: bold;
+  font-size: 11.9px;
+  white-space: nowrap;
+}
+
+/* Forcer tous les textes dans les en-têtes */
+.planning-table thead,
+.planning-table thead *,
+.planning-table thead th,
+.planning-table thead th *,
+.planning-table thead th span,
+.planning-table thead th div,
+.planning-table thead th::before,
+.planning-table thead th::after,
+.planning-table th,
+.planning-table th *,
+.planning-table th span,
+.planning-table th div,
+.planning-table th::before,
+.planning-table th::after {
+  color: var(--table-header-text, #064E3B) !important;
+  background-color: var(--table-header-bg, #ECFDF5) !important;
+}
+
+.planning-table td {
+  color: #333333 !important;
+  background-color: #ffffff;
+}
+
+.planning-table tbody tr:hover {
+  background-color: var(--table-hover-bg, #DCFCE7) !important;
+}
+
+.planning-table td.time-slot-header {
+  background: var(--table-header-bg, #ECFDF5) !important;
+  color: var(--table-header-text, #064E3B) !important;
+  font-weight: bold;
+  text-align: left !important;
+  padding-left: 15px !important;
+}
+
+.time-slot-header {
+  background: var(--table-header-bg, #ECFDF5) !important;
+  color: var(--table-header-text, #064E3B) !important;
+  font-weight: 600;
+  text-align: left !important;
+  padding-left: 15px !important;
+}
+
+/* Forcer le texte blanc pour tous les time-slot-header */
+.planning-table .time-slot-header,
+.planning-table td.time-slot-header,
+.planning-table tr td.time-slot-header,
+.planning-table tbody td.time-slot-header,
+.time-slot-header {
+  background: #9cbfc8 !important;
+  background-color: #9cbfc8 !important;
+  color: #ffffff !important;
+  color: rgb(255, 255, 255) !important;
+}
+
+.planning-table .time-slot-header *,
+.planning-table td.time-slot-header *,
+.time-slot-header * {
+  color: #ffffff !important;
+  color: rgb(255, 255, 255) !important;
+}
+
+.planning-cell {
+  position: relative;
+  min-height: 120px;
+  padding: 10px !important;
+  vertical-align: top;
+  background-color: #f9f9f9;
+  color: #333333 !important;
+}
+
+.planning-cell.has-planning {
+  background-color: #ffffff;
+  color: #333333 !important;
+}
+
+.planning-cell.blocked {
+  background-color: rgba(34, 45, 50, 0.8) !important;
+  opacity: 0.6;
+  color: #ffffff !important;
+}
+
+
+.planning-cell.closed-slot {
+  background-color: rgba(255, 0, 0, 0.3) !important;
+  position: relative;
+}
+
+.closed-slot-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 0, 0, 0.5);
+  z-index: 10;
+  border-radius: 4px;
+}
+
+.closed-label {
+  background-color: #f44336;
+  color: white;
+  padding: 6.4px 12.8px;
+  border-radius: 4px;
+  font-weight: 800;
+  font-size: 11.9px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.availability-cell.closed-slot {
+  background-color: rgba(255, 0, 0, 0.2) !important;
+  position: relative;
+}
+
+.closed-slot-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6.4px;
+  padding: 8px;
+}
+
+.closed-slot-indicator .closed-label {
+  background-color: #f44336;
+  color: white;
+  padding: 4.8px 9.6px;
+  border-radius: 4px;
+  font-weight: 800;
+  font-size: 10.2px;
+  text-transform: uppercase;
+}
+
+.toggle-closed-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 7px;
+  transition: all 0.3s;
+  padding: 0;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 10;
+}
+
+.toggle-closed-btn:hover {
+  background-color: #d32f2f;
+  transform: scale(1.1);
+}
+
+.toggle-closed-btn svg {
+  color: #ffffff;
+  width: 8px;
+  height: 8px;
+}
+
+.availability-cell:not(.closed-slot) .toggle-closed-btn {
+  background-color: rgba(244, 67, 54, 0.8);
+  opacity: 0.7;
+}
+
+.availability-cell:not(.closed-slot) .toggle-closed-btn:hover {
+  opacity: 1;
+}
+
+/* Appliquer les couleurs de planning-header à day-header-planning */
+/* Cibler tous les th sauf le premier (qui est "Heure") */
+.planning-table thead th:not(:first-child) {
+  background: var(--filter-bg, #DCFCE7) !important;
+  background-color: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+}
+
+/* Alternative avec :has() pour plus de précision si supporté */
+.planning-table thead th:has(.day-header-planning) {
+  background: var(--filter-bg, #DCFCE7) !important;
+  background-color: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+}
+
+.day-header-planning {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--label-color, #065F46) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.day-header-planning *,
+.day-header-planning span,
+.day-header-planning div {
+  color: var(--label-color, #065F46) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.planning-table th .day-header-planning,
+.planning-table th .day-header-planning *,
+.planning-table th .day-header-planning span {
+  color: var(--label-color, #065F46) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Appliquer les couleurs de planning-header au th avec "Heure" */
+.planning-table thead th:first-child {
+  background: var(--filter-bg, #DCFCE7) !important;
+  background-color: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+  color: var(--label-color, #065F46) !important;
+}
+
+.planning-table thead th:first-child * {
+  color: var(--label-color, #065F46) !important;
+}
+
+/* Appliquer les couleurs de planning-header aux time-slot-header */
+.planning-table .time-slot-header,
+.planning-table td.time-slot-header {
+  background: var(--filter-bg, #DCFCE7) !important;
+  background-color: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+  color: var(--label-color, #065F46) !important;
+}
+
+.planning-table .time-slot-header *,
+.planning-table td.time-slot-header * {
+  color: var(--label-color, #065F46) !important;
+}
+
+.availability-badge {
+  display: inline-block;
+  padding: 6.4px 9.6px;
+  border-radius: 10px/30px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  color: white;
+  min-width: 60px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.availability-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: white;
+  text-decoration: none;
+}
+
+.availability-count {
+  font-size: 13.6px;
+  font-weight: 900;
+}
+
+.availability-separator {
+  font-size: 11.9px;
+  margin: 0 2px;
+}
+
+.availability-total {
+  font-size: 11.9px;
+}
+
+.rdv-count-only {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: #f44336;
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 11.9px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.rdv-count-number {
+  font-size: 13.6px;
+}
+
+.rdvs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6.4px;
+}
+
+.rdv-item {
+  background: white;
+  border: 1px solid #ccc;
+  border-left: 4px solid;
+  border-radius: 10px;
+  padding: 8px;
+  position: relative;
+  font-size: 10.2px;
+  color: #333333 !important;
+}
+
+.rdv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.rdv-time {
+  position: absolute;
+  right: 8px;
+  top: -3px;
+  font-size: 0.59em;
+  font-weight: 800;
+  color: #333333 !important;
+}
+
+.etat-badge {
+  display: inline-block;
+  padding: 2px 4.8px;
+  border-radius: 3px;
+  font-size: 8.5px;
+  font-weight: 800;
+}
+
+.etat-badge.r2 {
+  background: #ff9800;
+  color: white;
+}
+
+.etat-badge.rf,
+.etat-badge.an,
+.etat-badge.rs {
+  background: #f44336;
+  color: white;
+}
+
+.rdv-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #333333 !important;
+}
+
+.rdv-link {
+  color: #9cbfc8;
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+
+.rdv-link:hover {
+  color: #f7a219;
+  text-decoration: underline;
+}
+
+/* Animation de clignotement pour les RDV urgents */
+.rdv-link.rdv-urgent {
+  color: #f44336;
+  animation: blink-red 1s infinite;
+  font-weight: 700;
+}
+
+@keyframes blink-red {
+  0%, 100% {
+    opacity: 1;
+    color: #f44336;
+  }
+  50% {
+    opacity: 0.5;
+    color: #ff6b6b;
+  }
+}
+
+.rdv-item.rdv-urgent-item {
+  animation: blink-red-border 1s infinite;
+  border-left-color: #f44336 !important;
+}
+
+@keyframes blink-red-border {
+  0%, 100% {
+    border-left-color: #f44336;
+    box-shadow: 0 0 5px rgba(244, 67, 54, 0.5);
+  }
+  50% {
+    border-left-color: #ff6b6b;
+    box-shadow: 0 0 10px rgba(244, 67, 54, 0.8);
+  }
+}
+
+/* Style pour les RDV confirmés (état 7 - CONFIRMER) */
+/* La couleur de fond est appliquée via inline style pour utiliser la couleur dynamique de l'état */
+
+.rdv-commercial {
+  font-size: 9.4px;
+  font-weight: 600;
+  color: #333333 !important;
+}
+
+.rdv-decalage {
+  margin-top: 4px;
+  font-size: 8.5px;
+  color: #333333 !important;
+  font-style: italic;
+}
+
+/* Vue Disponibilité */
+.availability-view {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.availability-table-container {
+  overflow-x: auto;
+}
+
+.availability-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.availability-table th,
+.availability-table td {
+  border: 1px solid #e9e9e9;
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.availability-table td:not(.time-slot-header) {
+  color: #333333 !important;
+  background-color: #ffffff;
+}
+
+.availability-table thead {
+  background: #9cbfc8 !important;
+  color: #ffffff !important;
+}
+
+.availability-table thead th {
+  background: #9cbfc8 !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  font-size: 11.9px;
+  white-space: nowrap;
+}
+
+.availability-table th {
+  background: #9cbfc8 !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  font-size: 11.9px;
+  white-space: nowrap;
+}
+
+/* Forcer tous les textes dans les en-têtes de availability-table à être blancs */
+.availability-table thead,
+.availability-table thead *,
+.availability-table thead th,
+.availability-table thead th *,
+.availability-table thead th span,
+.availability-table thead th div,
+.availability-table thead th::before,
+.availability-table thead th::after,
+.availability-table th,
+.availability-table th *,
+.availability-table th span,
+.availability-table th div,
+.availability-table th::before,
+.availability-table th::after {
+  color: #ffffff !important;
+  background-color: #9cbfc8 !important;
+}
+
+/* Forcer le texte blanc pour les time-slot-header dans availability-table */
+.availability-table .time-slot-header,
+.availability-table td.time-slot-header,
+.availability-table tbody td.time-slot-header,
+.availability-table tbody tr td.time-slot-header,
+.availability-table tr td.time-slot-header,
+table.availability-table td.time-slot-header,
+table.availability-table tbody td.time-slot-header,
+.availability-table tbody .time-slot-header {
+  background: #9cbfc8 !important;
+  background-color: rgb(156, 191, 200) !important;
+  color: #ffffff !important;
+  color: rgb(255, 255, 255) !important;
+  font-weight: 600;
+  text-align: left !important;
+  padding-left: 15px !important;
+}
+
+/* Règles supplémentaires avec priorité maximale pour forcer le texte blanc */
+.availability-table tbody tr td.time-slot-header,
+.availability-table tbody tr td.time-slot-header *,
+.availability-table tbody tr td.time-slot-header span,
+.availability-table tbody tr td.time-slot-header div {
+  background-color: rgb(156, 191, 200) !important;
+  background: rgb(156, 191, 200) !important;
+  color: rgb(255, 255, 255) !important;
+  color: #ffffff !important;
+}
+
+/* Priorité absolue pour le texte dans time-slot-header */
+table.availability-table tbody tr td.time-slot-header,
+table.availability-table tbody tr td.time-slot-header *,
+table.availability-table tbody tr td.time-slot-header span {
+  color: #ffffff !important;
+  color: rgb(255, 255, 255) !important;
+}
+
+.availability-table .time-slot-header *,
+.availability-table td.time-slot-header *,
+.availability-table td.time-slot-header span,
+.availability-table tbody td.time-slot-header *,
+.availability-table tbody td.time-slot-header span,
+.availability-table tbody tr td.time-slot-header *,
+.availability-table tbody tr td.time-slot-header span,
+table.availability-table td.time-slot-header *,
+table.availability-table td.time-slot-header span {
+  color: #ffffff !important;
+  color: rgb(255, 255, 255) !important;
+}
+
+/* Règles supplémentaires avec priorité maximale pour forcer le texte blanc */
+.availability-table tbody tr td.time-slot-header,
+.availability-table tbody tr td.time-slot-header *,
+.availability-table tbody tr td.time-slot-header span,
+.availability-table tbody tr td.time-slot-header div {
+  background-color: rgb(156, 191, 200) !important;
+  background: rgb(156, 191, 200) !important;
+  color: rgb(255, 255, 255) !important;
+  color: #ffffff !important;
+}
+
+/* Priorité absolue pour le texte dans time-slot-header */
+table.availability-table tbody tr td.time-slot-header,
+table.availability-table tbody tr td.time-slot-header *,
+table.availability-table tbody tr td.time-slot-header span {
+  color: #ffffff !important;
+  color: rgb(255, 255, 255) !important;
+}
+
+/* Règle ultime avec spécificité maximale pour le texte dans time-slot-header de availability-view */
+div.availability-view table.availability-table tbody tr td.time-slot-header,
+div.availability-view table.availability-table tbody tr td.time-slot-header *,
+div.availability-view table.availability-table tbody tr td.time-slot-header span,
+.availability-view table.availability-table tbody tr td.time-slot-header,
+.availability-view table.availability-table tbody tr td.time-slot-header *,
+.availability-view table.availability-table tbody tr td.time-slot-header span {
+  color: #ffffff !important;
+  color: rgb(255, 255, 255) !important;
+  background-color: rgb(156, 191, 200) !important;
+  background: rgb(156, 191, 200) !important;
+}
+
+.day-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #ffffff !important;
+}
+
+.day-header *,
+.day-header span,
+.day-header div {
+  color: #ffffff !important;
+}
+
+.availability-table th .day-header,
+.availability-table th .day-header *,
+.availability-table th .day-header span {
+  color: #ffffff !important;
+}
+
+.day-total-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.total-btn {
+  padding: 4px 8px;
+  background: #9cbfc8;
+  color: white;
+  border: 2px solid red;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 8.5px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+}
+
+.total-btn:hover {
+  background: #1a2529;
+}
+
+.day-toggle-closed-btn {
+  padding: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.day-toggle-closed-btn:hover {
+  background: rgba(244, 67, 54, 0.1);
+  transform: scale(1.1);
+}
+
+.day-toggle-closed-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.total-input {
+  width: 60px;
+  padding: 4px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 4px;
+  text-align: center;
+  background: #FFFFFF;
+  color: var(--input-text, #064E3B);
+}
+
+.total-input:focus {
+  outline: none;
+  border-color: var(--input-focus, #22C55E);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+.availability-cell {
+  min-height: 60px;
+  transition: background 0.3s;
+  position: relative;
+}
+
+.availability-cell.editable {
+  cursor: pointer;
+}
+
+.availability-cell.editable:hover:not(.closed-slot) {
+  background: rgba(247, 162, 25, 0.15) !important;
+  box-shadow: inset 0 0 0 2px rgba(247, 162, 25, 0.3);
+}
+
+.availability-cell.closed-slot {
+  cursor: not-allowed;
+}
+
+.edit-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.availability-input {
+  width: 50px;
+  padding: 6.4px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 4px;
+  text-align: center;
+  font-size: 11.9px;
+  margin: 0 auto;
+  background: #FFFFFF;
+  color: var(--input-text, #064E3B);
+}
+
+.availability-input:focus {
+  outline: none;
+  border-color: var(--input-focus, #22C55E);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+.availability-value {
+  font-size: 15.3px;
+  font-weight: 600;
+  color: #333;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 60px;
+}
+
+.availability-rdv-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13.6px;
+  font-weight: 700;
+}
+
+.availability-rdv-info .rdv-count {
+  font-weight: 700;
+}
+
+.availability-rdv-info .separator {
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.availability-rdv-info .availability-total {
+  font-weight: 700;
+  font-weight: 700;
+}
+
+.save-btn,
+.cancel-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 10.2px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.save-btn {
+  background: #4CAF50;
+  color: white;
+}
+
+.save-btn:hover {
+  background: #45a049;
+}
+
+.cancel-btn {
+  background: #f44336;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: #da190b;
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  overflow: hidden; /* Pas de scroll sur l'overlay */
+}
+
+.modal-content {
+  background: white;
+  border-radius: 7px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  overflow-y: auto; /* Scroll uniquement sur le contenu du modal */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling sur iOS */
+}
+
+.duplicate-modal-content {
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto; /* Scroll uniquement sur le contenu du modal */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling sur iOS */
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 2px solid #eee;
+  background: #9cbfc8;
+  color: white;
+  border-radius: 7px 7px 0 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20.4px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.3s;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.planning-form {
+  padding: 16px;
+  background: var(--filter-bg, #DCFCE7);
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 8px;
+  margin: 16px 0;
+  color: var(--label-color, #065F46) !important;
+}
+
+.planning-form *:not(input):not(select):not(textarea):not(button),
+.planning-form h1,
+.planning-form h2,
+.planning-form h3,
+.planning-form span:not(.badge):not(.icon),
+.planning-form div:not(.form-group input):not(.form-group select):not(.form-group textarea),
+.planning-form p {
+  color: var(--label-color, #065F46) !important;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--label-color, #065F46);
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 4px;
+  font-size: 11.9px;
+  background: #FFFFFF;
+  color: var(--input-text, #064E3B);
+  box-sizing: border-box;
+}
+
+.form-group input::placeholder,
+.form-group select::placeholder {
+  color: var(--input-placeholder, #6B7280);
+  opacity: 1;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--input-focus, #22C55E);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+.form-info {
+  background: #f9f9f9;
+  padding: 12px;
+  border-radius: 5px;
+  margin-bottom: 16px;
+}
+
+.form-info p {
+  margin: 4px 0;
+  color: #666;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px;
+  border-top: 2px solid #eee;
+  background: #f9f9f9;
+  border-radius: 0 0 7px 7px;
+}
+
+.btn-cancel,
+.btn-save {
+  padding: 9.6px 19.2px;
+  border: none;
+  border-radius: 7px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-cancel {
+  background: #666;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background: #555;
+}
+
+/* Media queries pour responsive */
+@media (max-width: 1024px) {
+  .planning-page {
+    padding: 12px;
+  }
+
+  .planning-header {
+    padding: 12px;
+  }
+
+  .planning-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dep-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .week-navigation {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .view-mode-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .planning-page {
+    padding: 8px;
+  }
+
+  .planning-header {
+    padding: 9.6px;
+  }
+
+  .planning-header h1 {
+    font-size: 18.7px;
+  }
+
+  .planning-controls {
+    gap: 8px;
+  }
+
+  .week-navigation {
+    flex-wrap: wrap;
+    padding: 6.4px 9.6px;
+  }
+
+  .week-info {
+    width: 100%;
+    text-align: center;
+    margin: 4px 0;
+  }
+
+  .view-mode-toggle {
+    width: 100%;
+  }
+
+  .btn-create,
+  .btn-duplicate {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modal-overlay {
+    padding: 8px;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .modal-header {
+    padding: 12px;
+  }
+
+  .modal-header h2 {
+    font-size: 15.3px;
+  }
+
+  .planning-form {
+    padding: 12px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    padding: 12px;
+  }
+
+  .btn-cancel,
+  .btn-save {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .planning-page {
+    padding: 6.4px;
+  }
+
+  .planning-header h1 {
+    font-size: 17px;
+  }
+
+  .planning-controls {
+    gap: 6.4px;
+  }
+
+  .nav-btn {
+    padding: 4px 6.4px;
+    font-size: 13.6px;
+  }
+
+  .week-info {
+    font-size: 11.9px;
+  }
+
+  .modal-header {
+    padding: 9.6px;
+  }
+
+  .modal-header h2 {
+    font-size: 13.6px;
+  }
+
+  .planning-form {
+    padding: 9.6px;
+  }
+
+  .form-group {
+    margin-bottom: 12px;
+  }
+
+  .modal-actions {
+    padding: 9.6px;
+  }
+}
+
+.btn-save {
+  background: #f7a219;
+  color: white;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: #e6941a;
+}
+
+.btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Styles pour la sélection des départements */
+.departments-selection {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 12px;
+  background: #f9f9f9;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.select-all-container {
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid #ddd;
+}
+
+.departments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6.4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6.4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.checkbox-label:hover {
+  background: #e9e9e9;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #f7a219;
+}
+
+.checkbox-label span {
+  font-size: 11.9px;
+  color: #333;
+  flex: 1;
+}
+
+.selected-count {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #ddd;
+  font-size: 11px;
+  color: #666;
+  font-weight: 600;
+  text-align: center;
+}
+
+.planning-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #f7a219;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .planning-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .week-navigation {
+    justify-content: center;
+  }
+
+  .planning-table,
+  .availability-table {
+    font-size: 10.2px;
+  }
+
+  .rdv-item {
+    font-size: 9.4px;
+    padding: 6.4px;
+  }
+
+  /* Tableaux Planning - scroll horizontal sur mobile */
+  .planning-table-container,
+  .availability-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    position: relative;
+  }
+
+  .planning-table,
+  .availability-table {
+    min-width: 600px;
+  }
+
+  /* Message vide pour les tableaux */
+  .planning-table tbody tr:only-child td,
+  .availability-table tbody tr:only-child td {
+    text-align: center;
+    padding: 32px 16px;
+    color: #666;
+    font-size: 11.9px;
+  }
+
+  /* Améliorer l'affichage des cellules vides */
+  .planning-cell:empty,
+  .availability-cell:empty {
+    min-height: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .planning-table,
+  .availability-table {
+    font-size: 9.4px;
+    min-width: 500px;
+  }
+
+  .planning-cell,
+  .availability-cell {
+    min-height: 50px;
+    padding: 5px !important;
+  }
+
+  .rdv-item {
+    font-size: 8.5px;
+    padding: 4.8px;
+  }
+
+  .availability-badge {
+    padding: 4.8px 8px;
+    font-size: 10.2px;
+  }
+}
+

@@ -1,0 +1,343 @@
+.compte-rendu-pending-page {
+  padding: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.statut-filters {
+  display: flex;
+  gap: 10px;
+}
+
+.statut-filter {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.statut-filter:hover {
+  background: #f5f5f5;
+}
+
+.statut-filter.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.compte-rendu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.compte-rendu-card {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.compte-rendu-card.statut-pending {
+  border-left: 4px solid #ffc107;
+}
+
+.compte-rendu-card.statut-approved {
+  border-left: 4px solid #28a745;
+}
+
+.compte-rendu-card.statut-rejected {
+  border-left: 4px solid #dc3545;
+}
+
+.cr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.cr-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cr-title h3 {
+  margin: 0;
+}
+
+.statut-icon {
+  font-size: 20px;
+}
+
+.statut-icon.pending {
+  color: #ffc107;
+}
+
+.statut-icon.approved {
+  color: #28a745;
+}
+
+.statut-icon.rejected {
+  color: #dc3545;
+}
+
+.statut-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statut-badge.statut-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.statut-badge.statut-approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.statut-badge.statut-rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.cr-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+.cr-meta span {
+  display: flex;
+  align-items: center;
+}
+
+.cr-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  opacity: 0.8;
+}
+
+.btn-icon.btn-success {
+  background: #28a745;
+  color: white;
+}
+
+.btn-icon.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.cr-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cr-field strong {
+  font-weight: 600;
+  color: #333;
+}
+
+.cr-text {
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  white-space: pre-wrap;
+}
+
+.modifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.modification-item {
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  background: white;
+  border-radius: 4px;
+}
+
+.modification-key {
+  font-weight: 600;
+  color: #007bff;
+  min-width: 150px;
+}
+
+.modification-value {
+  color: #333;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  overflow: hidden; /* Pas de scroll sur l'overlay */
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto; /* Scroll uniquement sur le contenu du modal */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling sur iOS */
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.btn-close:hover {
+  color: #000;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-success {
+  background: #28a745;
+  color: white;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.commentaire-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.commentaire-section label {
+  font-weight: 600;
+}
+
+.commentaire-section textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+}
+

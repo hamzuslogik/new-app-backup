@@ -1,0 +1,99 @@
+-- phpMyAdmin SQL Dump
+-- version 5.1.1
+-- https://www.phpmyadmin.net/
+--
+-- Hôte : localhost
+-- Généré le : mar. 18 nov. 2025 à 15:13
+-- Version du serveur : 10.6.4-MariaDB-1:10.6.4+maria~buster-log
+-- Version de PHP : 7.4.23
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Base de données : `admin_extranet`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `yj_etat`
+--
+
+CREATE TABLE `yj_etat` (
+  `id` int(11) NOT NULL,
+  `titre` varchar(100) NOT NULL,
+  `ordre` int(11) NOT NULL,
+  `groupe` int(11) NOT NULL,
+  `abbreviation` varchar(50) NOT NULL,
+  `nom_colonne` varchar(50) NOT NULL,
+  `taux` varchar(10) NOT NULL,
+  `taux_conf` varchar(20) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+--
+-- Déchargement des données de la table `yj_etat`
+--
+
+INSERT INTO `yj_etat` (`id`, `titre`, `ordre`, `groupe`, `abbreviation`, `nom_colonne`, `taux`, `taux_conf`) VALUES
+(1, 'EN-ATTENTE', 1, 1, 'EN ATT', 'EN_ATT', 'NEUTRE', 'NEUTRE'),
+(2, 'NRP', 2, 1, 'NRP', 'NRP', 'NEUTRE', 'NEUTRE'),
+(5, 'ANNULER', 5, 1, 'ANN', 'ANNULER', 'NEGATIVE', 'NEGATIVE'),
+(7, 'CONFIRMER', 1, 2, 'CONFIRMER', 'CONFIRMER', 'POSITIVE', 'POSITIVE'),
+(8, 'ANNULER ET A REPROGRAMMER', 2, 2, 'ANN REPRO', 'ANNULER_ET_A_REPROGRAMMER', 'POSITIVE', 'POSITIVE'),
+(9, 'CLIENT HONORE A SUIVRE', 3, 2, 'CL HS', 'CLIENT_HONORE_A_SUIVRE', 'POSITIVE', 'POSITIVE'),
+(11, 'RDV ANNULER', 5, 2, 'RDV ANN', 'RDV_ANNULER', 'POSITIVE', 'POSITIVE'),
+(12, 'REFUSER', 6, 2, 'REFU', 'REFUSER', 'POSITIVE', 'POSITIVE'),
+(13, 'SIGNER', 1, 3, 'SIGNER', 'SIGNER', 'POSITIVE', 'POSITIVE'),
+(16, 'SIGNER RETRACTER', 2, 3, 'RETRAC', 'RECTRACTER', 'POSITIVE', 'POSITIVE'),
+(19, 'RAPPEL POUR BUREAU', 2, 1, 'RAP BUREAU', 'RAPPEL_POUR_BUREAU', 'NEUTRE', 'NEUTRE'),
+(22, 'ANNULER 2 FOIS', 5, 1, 'ANN 2F', 'ANNULER_2_FOIS', 'NEGATIVE', 'NEGATIVE'),
+(23, 'HORS CIBLE CONFIRMATEUR', 6, 1, 'HC CONFI', 'HORS_CIBLE_CONFIRMATEUR', 'NEGATIVE', 'NEGATIVE'),
+(6, 'HORS CIBLE AGE / DOUBLON / LOCATAIRE', 5, 1, 'HC AGE DBL LOC', 'HC_AGE_DBL_LOC', 'NEGATIVE', 'NEGATIVE'),
+(24, 'HORS CIBLE FINANCEMENT', 6, 1, 'HC FIN', 'HC_FIN', 'NEGATIVE', 'NEGATIVE'),
+(25, 'REFUSER 2 FOIS', 7, 2, 'REFU2', 'REFUSER_2_FOIS', 'POSITIVE', 'POSITIVE'),
+(26, 'RDV ANNULER 2 FOIS', 5, 2, 'RDV ANN 2', 'RDV_ANNULER_2', 'POSITIVE', 'POSITIVE'),
+(29, 'HORS CIBLE AIR AIR', 5, 1, 'HC RR', 'HC_RR', 'NEGATIVE', 'NEGATIVE'),
+(38, 'SIGNER RETRACTER 2 FOIS', 3, 3, 'RETRAC_2', 'RETRACTER_DEUX_FOIS', 'POSITIVE', 'POSITIVE'),
+(34, 'HHC FINANCEMENT A VERIFIER', 7, 2, 'HHC FIN', 'HHC_FINANCEMENT_A_VERIFIER', 'NEGATIVE', 'NEGATIVE'),
+(35, 'HHC TECHNIQUE', 7, 2, 'HHC TEC', 'HHC_TECHNIQUE', 'NEGATIVE', 'NEGATIVE'),
+(36, 'HHC ERREUR CONFIRMATEUR', 8, 2, 'HHC EC', 'HHC_ERREUR_CONFIRMATEUR', 'NEGATIVE', 'NEGATIVE'),
+(37, 'HHC MENSONGE CLIENT', 9, 2, 'HHC MC', 'HHC_MENSONGE_CLIENT', 'NEGATIVE', 'NEGATIVE'),
+(45, 'SIGNER COMPLET', 4, 3, 'SIGNER_COMPLET', 'SIGNER_COMPLET', 'POSITIVE', 'POSITIVE'),
+(44, 'SIGNER PM', 5, 3, 'SIGNER_PM', 'SIGNER_PM', 'POSITIVE', 'POSITIVE'),
+(48, 'VT EN COURS', 10, 3, 'VT_ENCOURS', 'VT_ENCOURS', 'POSITIVE', 'POSITIVE'),
+(47, 'VT OK', 9, 3, 'VT_OK', 'VT_OK', 'POSITIVE', 'POSITIVE'),
+(49, 'TH POSE OK', 11, 3, 'TH_POSE_OK', 'TH_POSE_OK', 'POSITIVE', 'POSITIVE'),
+(50, 'TH PAIEMENT OK', 12, 3, 'TH_PAIEMENT_OK', 'TH_PAIEMENT_OK', 'POSITIVE', 'POSITIVE');
+
+--
+-- Index pour les tables déchargées
+--
+
+--
+-- Index pour la table `yj_etat`
+--
+ALTER TABLE `yj_etat`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- AUTO_INCREMENT pour les tables déchargées
+--
+
+--
+-- AUTO_INCREMENT pour la table `yj_etat`
+--
+ALTER TABLE `yj_etat`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

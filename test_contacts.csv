@@ -1,0 +1,12 @@
+nom,prenom,tel,gsm1,gsm2,email,adresse,cp,ville,civ
+Dupont,Jean,0123456789,0612345678,,jean.dupont@example.com,"123 Rue de la République",75001,Paris,MR
+Martin,Marie,0234567890,0623456789,,marie.martin@example.com,"456 Avenue des Champs",69001,Lyon,MME
+Bernard,Pierre,0345678901,,0634567890,pierre.bernard@example.com,"789 Boulevard Saint-Michel",13001,Marseille,MR
+Dubois,Sophie,0456789012,0645678901,,sophie.dubois@example.com,"321 Rue de la Paix",33000,Bordeaux,MME
+Leroy,Thomas,0567890123,0656789012,,thomas.leroy@example.com,"654 Place Bellecour",31000,Toulouse,MR
+Moreau,Julie,0678901234,,0667890123,julie.moreau@example.com,"987 Rue du Commerce",44000,Nantes,MME
+Petit,Lucas,0789012345,0678901234,,lucas.petit@example.com,"147 Avenue Victor Hugo",59000,Lille,MR
+Robert,Emma,0890123456,0689012345,,emma.robert@example.com,"258 Rue de la Gare",67000,Strasbourg,MME
+Richard,Antoine,0901234567,,0690123456,antoine.richard@example.com,"369 Boulevard de la Liberté",35000,Rennes,MR
+Durand,Camille,0012345678,0601234567,,camille.durand@example.com,"741 Rue de la Mairie",06000,Nice,MME
+

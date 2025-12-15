@@ -1,0 +1,230 @@
+.suivi-telepro {
+  padding: 16px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.suivi-header {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.suivi-header h1 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 20.4px;
+}
+
+.suivi-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.suivi-tabs button {
+  padding: 9.6px 19.2px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13.6px;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+}
+
+.suivi-tabs button:hover {
+  color: #2196F3;
+  background: #f0f8ff;
+}
+
+.suivi-tabs button.active {
+  color: #2196F3;
+  border-bottom-color: #2196F3;
+  font-weight: 600;
+}
+
+.suivi-filters {
+  background: var(--filter-bg, #DCFCE7) !important;
+  border: 1px solid var(--filter-border, #86EFAC);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6.4px;
+  min-width: 150px;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: var(--label-color, #065F46) !important;
+  font-size: 11.9px;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 6.4px 9.6px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 4px;
+  font-size: 11.9px;
+  background: #FFFFFF;
+  color: var(--input-text, #064E3B);
+}
+
+.filter-group input::placeholder,
+.filter-group select::placeholder {
+  color: var(--input-placeholder, #6B7280);
+  opacity: 1;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--input-focus, #22C55E);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+.print-btn {
+  padding: 6.4px 12.8px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11.9px;
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+  transition: background 0.3s;
+}
+
+.print-btn:hover {
+  background: #1976D2;
+}
+
+.suivi-content {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tab-content h2 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 17px;
+}
+
+.totals {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.total-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.total-label {
+  font-size: 11.9px;
+  color: #666;
+  font-weight: 500;
+}
+
+.total-value {
+  font-size: 20.4px;
+  color: #2196F3;
+  font-weight: 700;
+}
+
+.suivi-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+.suivi-table thead {
+  background: #ffffff;
+  color: #333333;
+}
+
+.suivi-table th {
+  padding: 9.6px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+}
+
+.suivi-table td {
+  padding: 9.6px;
+  border-bottom: 1px solid #eee;
+}
+
+.suivi-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.btn-link {
+  color: #2196F3;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.btn-link:hover {
+  color: #1976D2;
+  text-decoration: underline;
+}
+
+.loading {
+  text-align: center;
+  padding: 32px;
+  color: #666;
+  font-size: 13.6px;
+}
+
+.no-data {
+  text-align: center;
+  padding: 32px;
+  color: #999;
+  font-size: 13.6px;
+}
+
+@media print {
+  .noprint {
+    display: none !important;
+  }
+  
+  .suivi-telepro {
+    background: white;
+  }
+  
+  .suivi-header,
+  .suivi-filters,
+  .suivi-content {
+    box-shadow: none;
+    border: none;
+  }
+}
+
