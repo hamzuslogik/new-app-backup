@@ -43,7 +43,6 @@ const SuiviAgentsQualif = () => {
     date_debut: getTodayDate(), // Aujourd'hui par défaut pour RE Qualification
     date_fin: getTodayDate(), // Aujourd'hui par défaut
     id_agent: '',
-    id_etat_final: '',
     id_rp: '' // Nouveau filtre par RP
   });
 
@@ -132,24 +131,6 @@ const SuiviAgentsQualif = () => {
     }
   );
 
-  // Récupérer les états pour le filtre
-  const { data: etatsData } = useQuery('etats', async () => {
-    const res = await api.get('/management/etats');
-    let etats = res.data.data || [];
-    
-    // Pour les superviseurs qualification (RE Qualification), filtrer uniquement les états groupe 0
-    // Les autres utilisateurs (RP Qualification, Administrateurs, etc.) voient tous les états
-    if (isREQualif) {
-      etats = etats.filter(etat => {
-        // Uniquement les états du groupe 0 pour les superviseurs qualification
-        return (etat.groupe === '0' || etat.groupe === 0);
-      });
-    }
-    // Pour les autres (RP Qualification, Admin, etc.), retourner tous les états
-    
-    return etats;
-  });
-
   // Récupérer les centres
   const { data: centresData } = useQuery('centres', async () => {
     const res = await api.get('/management/centres');
@@ -183,7 +164,6 @@ const SuiviAgentsQualif = () => {
       if (filters.date_debut) params.date_debut = filters.date_debut;
       if (filters.date_fin) params.date_fin = filters.date_fin;
       if (filters.id_agent) params.id_agent = filters.id_agent;
-      if (filters.id_etat_final) params.id_etat_final = filters.id_etat_final;
       
       const res = await api.get('/fiches/agents-sous-responsabilite', { params });
       return res.data;
@@ -213,7 +193,6 @@ const SuiviAgentsQualif = () => {
   };
 
   const agents = agentsData || [];
-  const etats = etatsData || [];
   const stats = statsData || { agents: [], etats: [], period: {} };
   const fiches = filteredFiches || [];
 
