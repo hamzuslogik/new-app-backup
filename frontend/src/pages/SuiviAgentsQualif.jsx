@@ -137,16 +137,13 @@ const SuiviAgentsQualif = () => {
     const res = await api.get('/management/etats');
     let etats = res.data.data || [];
     
-    // Pour RE Qualification et RP Qualification, filtrer uniquement les états groupe 0 + EN-ATTENTE
+    // Pour RE Qualification et RP Qualification, filtrer uniquement les états groupe 0
     // RE Qualification: utilisateur avec agents sous responsabilité
     // RP Qualification: fonction 12 (RP Qualification)
     if (isREQualif || isRPQualif) {
       etats = etats.filter(etat => {
-        // Groupe 0 ou EN-ATTENTE (ID 1 ou titre 'EN-ATTENTE')
-        return (
-          (etat.groupe === '0' || etat.groupe === 0) ||
-          (etat.id === 1 || etat.titre === 'EN-ATTENTE' || etat.titre === 'En-Attente' || etat.titre === 'EN ATTENTE')
-        );
+        // Uniquement les états du groupe 0
+        return (etat.groupe === '0' || etat.groupe === 0);
       });
     }
     
@@ -369,9 +366,9 @@ const SuiviAgentsQualif = () => {
                       <td>
                         <span 
                           className="etat-badge"
-                          style={{ backgroundColor: fiche.etat_color || '#ccc' }}
+                          style={{ backgroundColor: (fiche.etat_groupe === '0' || fiche.etat_groupe === 0) ? (fiche.etat_color || '#ccc') : '#4CAF50' }}
                         >
-                          {fiche.etat_titre || '-'}
+                          {(fiche.etat_groupe === '0' || fiche.etat_groupe === 0) ? (fiche.etat_titre || '-') : 'Validé'}
                         </span>
                       </td>
                     </tr>

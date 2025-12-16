@@ -1494,7 +1494,8 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         centre.titre as centre_nom,
         etat.titre as etat_titre,
         etat.color as etat_color,
-        etat.abbreviation as etat_abbreviation
+        etat.abbreviation as etat_abbreviation,
+        etat.groupe as etat_groupe
        FROM fiches fiche
        LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
        LEFT JOIN centres centre ON fiche.id_centre = centre.id
