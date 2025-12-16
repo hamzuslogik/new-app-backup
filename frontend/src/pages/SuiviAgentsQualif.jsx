@@ -295,7 +295,7 @@ const SuiviAgentsQualif = () => {
               ))}
             </select>
           </div>
-          {(isREQualif || isRPQualif) && (
+          {isRPQualif && (
             <div className="filter-group">
               <label>État</label>
               <select
