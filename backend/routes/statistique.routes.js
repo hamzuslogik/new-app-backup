@@ -835,6 +835,21 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
           }
         });
 
+        // Compter les fiches validées (hors groupe 0, donc phase 1, 2 ou 3)
+        const idsGroupe0 = etatsGroupe0.map(e => e.id);
+        let validatedCount = 0;
+        if (idsGroupe0.length > 0) {
+          const validatedResult = await queryOne(`
+            SELECT COUNT(*) as count
+            FROM fiches f
+            INNER JOIN etats e ON f.id_etat_final = e.id
+            WHERE ${fichesConditions.join(' AND ')}
+            AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})
+            AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+          `, [...fichesParams, ...idsGroupe0]);
+          validatedCount = validatedResult?.count || 0;
+        }
+
         // Calculer le total de fiches créées
         const totalFiches = await queryOne(`
           SELECT COUNT(*) as total
@@ -856,6 +871,7 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
             centre_nom: agent.centre_nom
           },
           stats: Object.values(statsByEtat),
+          validated: validatedCount,
           total: totalFiches?.total || 0
         };
       })

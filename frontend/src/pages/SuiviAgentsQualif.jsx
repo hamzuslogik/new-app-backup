@@ -372,12 +372,12 @@ const SuiviAgentsQualif = () => {
                 <thead>
                   <tr>
                     <th rowSpan="2">Agent</th>
-                    <th rowSpan="2">Centre</th>
                     {stats.etats && stats.etats.length > 0 && stats.etats.map(etat => (
                       <th key={etat.id} title={etat.titre}>
                         {etat.abbreviation || etat.titre}
                       </th>
                     ))}
+                    <th rowSpan="2">Validé</th>
                     <th rowSpan="2">Total</th>
                   </tr>
                 </thead>
@@ -400,7 +400,6 @@ const SuiviAgentsQualif = () => {
                           <span className="agent-name">{agentStat.agent.pseudo || 'N/A'}</span>
                         </div>
                       </td>
-                      <td>{agentStat.agent.centre_nom || '-'}</td>
                       {stats.etats && stats.etats.map(etat => {
                         const stat = agentStat.stats.find(s => s.id === etat.id);
                         const count = stat?.count || 0;
@@ -416,6 +415,15 @@ const SuiviAgentsQualif = () => {
                           </td>
                         );
                       })}
+                      <td 
+                        className="validated-cell"
+                        style={{ 
+                          backgroundColor: (agentStat.validated || 0) > 0 ? '#4CAF5020' : 'transparent',
+                          color: (agentStat.validated || 0) > 0 ? '#333' : '#999'
+                        }}
+                      >
+                        {agentStat.validated || 0}
+                      </td>
                       <td className="total-cell">
                         <strong>{agentStat.total || 0}</strong>
                       </td>
@@ -424,7 +432,7 @@ const SuiviAgentsQualif = () => {
                 </tbody>
                 <tfoot>
                   <tr className="totals-row">
-                    <td colSpan="2"><strong>Totaux</strong></td>
+                    <td><strong>Totaux</strong></td>
                     {stats.etats && stats.etats.map(etat => {
                       const total = stats.agents.reduce((sum, agentStat) => {
                         const stat = agentStat.stats.find(s => s.id === etat.id);
@@ -436,6 +444,11 @@ const SuiviAgentsQualif = () => {
                         </td>
                       );
                     })}
+                    <td className="total-cell">
+                      <strong>
+                        {stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0)}
+                      </strong>
+                    </td>
                     <td className="total-cell">
                       <strong>
                         {stats.agents.reduce((sum, agentStat) => sum + (agentStat.total || 0), 0)}
