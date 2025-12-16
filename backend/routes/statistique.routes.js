@@ -1061,8 +1061,18 @@ router.get('/production-qualif', authenticate, async (req, res) => {
           };
         }
 
-        // Calculer le total
-        const total = Object.values(stats).reduce((sum, stat) => sum + (stat.count || 0), 0);
+        // Calculer le total (BRUT) : toutes les fiches créées dans la période, indépendamment de l'état actuel
+        const totalResult = await queryOne(
+          `SELECT COUNT(*) as total
+           FROM fiches f
+           WHERE f.id_agent IN (${agentIds.map(() => '?').join(',')})
+           AND f.date_insert_time >= ?
+           AND f.date_insert_time <= ?
+           AND (f.archive = 0 OR f.archive IS NULL)`,
+          [...agentIds, startDate, endDate]
+        );
+
+        const total = totalResult?.total || 0;
 
         return {
           superviseur,
