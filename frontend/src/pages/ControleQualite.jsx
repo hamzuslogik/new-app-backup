@@ -93,6 +93,8 @@ const ControleQualite = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['controle-qualite']);
+        queryClient.invalidateQueries(['production-qualif']);
+        queryClient.invalidateQueries(['agents-qualif-stats']);
         toast.success('État mis à jour avec succès');
       },
       onError: (error) => {

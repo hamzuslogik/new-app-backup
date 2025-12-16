@@ -540,6 +540,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           queryClient.invalidateQueries(['fiches']); // Invalider la liste des fiches aussi
           queryClient.invalidateQueries(['modifica', hash]); // Invalider les modifications
           
+          // Si l'état final a été modifié, invalider les statistiques
+          if (variables.field === 'id_etat_final') {
+            queryClient.invalidateQueries(['production-qualif']);
+            queryClient.invalidateQueries(['agents-qualif-stats']);
+          }
+          
           // Si la date du RDV a été modifiée, invalider et recharger toutes les queries de planning
           if (variables.field === 'date_rdv_time') {
             queryClient.invalidateQueries(['planning-week']);
@@ -1418,6 +1424,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           queryClient.invalidateQueries(['planning-week']);
           queryClient.invalidateQueries(['planning-availability']);
           queryClient.invalidateQueries(['planning-modal']);
+          // Invalider les statistiques de production et suivi agents
+          queryClient.invalidateQueries(['production-qualif']);
+          queryClient.invalidateQueries(['agents-qualif-stats']);
         }
         queryClient.invalidateQueries(['availability-modal']);
         setSelectedEtat(null);
