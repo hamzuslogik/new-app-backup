@@ -254,12 +254,8 @@ const Sidebar = ({ collapsed }) => {
       path: '/demandes-insertion',
       label: 'Demandes d\'Insertion',
       icon: FaExclamationTriangle,
-      permission: null,
+      permission: 'demandes_insertion_view',
       visible: true,
-      // Visible uniquement pour les administrateurs (1, 2, 7) et backoffice (11)
-      customCheck: (item, user) => {
-        return [1, 2, 7, 11].includes(user?.fonction);
-      },
     },
     {
       path: '/notifications',

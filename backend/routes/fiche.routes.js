@@ -1539,17 +1539,9 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
 // =====================================================
 
 // Récupérer les RDV validés et non validés pour Confirmateur/RE Confirmation
-router.get('/validation-rdv', authenticate, async (req, res) => {
+router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view'), async (req, res) => {
   try {
     const { valider, date_debut, date_fin } = req.query;
-    
-    // Vérifier que l'utilisateur est Confirmateur (fonction 6), RE Confirmation (fonction 14) ou Admin (fonction 1, 2, 7)
-    if (![1, 2, 6, 7, 14].includes(req.user.fonction)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès réservé aux Confirmateurs, RE Confirmation et Administrateurs'
-      });
-    }
 
     const whereConditions = [
       'f.id_etat_final = 7', // Fiches confirmées uniquement
@@ -1760,7 +1752,7 @@ router.get('/validation-rdv', authenticate, async (req, res) => {
 // =====================================================
 
 // Récupérer toutes les demandes d'insertion
-router.get('/demandes-insertion', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+router.get('/demandes-insertion', authenticate, checkPermissionCode('demandes_insertion_view'), async (req, res) => {
   try {
     const { statut, date_debut, date_fin } = req.query;
     
@@ -1832,7 +1824,7 @@ router.get('/demandes-insertion', authenticate, checkPermission(1, 2, 7, 11), as
 });
 
 // Traiter une demande d'insertion (approuver ou rejeter)
-router.put('/demandes-insertion/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demandes_insertion_view'), async (req, res) => {
   try {
     const { id } = req.params;
     const { statut, commentaire } = req.body;

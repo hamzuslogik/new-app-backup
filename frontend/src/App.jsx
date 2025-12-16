@@ -79,7 +79,7 @@ function App() {
           <Route path="management" element={<ProtectedRoute permission="management_view" excludeFunctions={[8]}><Management /></ProtectedRoute>} />
           <Route path="decalages" element={<ProtectedRoute permission="decalage_view"><Decalages /></ProtectedRoute>} />
           <Route path="validation" element={<ProtectedRoute permission="validation_view"><Validation /></ProtectedRoute>} />
-          <Route path="demandes-insertion" element={<ProtectedRoute permission={null} customCheck={(item, user) => [1, 2, 7, 11].includes(user?.fonction)}><DemandesInsertion /></ProtectedRoute>} />
+          <Route path="demandes-insertion" element={<ProtectedRoute permission="demandes_insertion_view"><DemandesInsertion /></ProtectedRoute>} />
           <Route path="notifications" element={<Notifications />} />
         </Route>
         <Route path="*" element={<HomeRedirect />} />
