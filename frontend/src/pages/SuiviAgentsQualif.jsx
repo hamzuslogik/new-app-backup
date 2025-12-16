@@ -274,20 +274,6 @@ const SuiviAgentsQualif = () => {
               ))}
             </select>
           </div>
-          {isRPQualif && (
-            <div className="filter-group">
-              <label>État</label>
-              <select
-                value={filters.id_etat_final}
-                onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
-              >
-                <option value="">Tous les états</option>
-                {etats.map(etat => (
-                  <option key={etat.id} value={etat.id}>{etat.titre}</option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
       )}
 
