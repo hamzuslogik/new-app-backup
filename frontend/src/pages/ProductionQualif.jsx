@@ -385,7 +385,6 @@ const ProductionQualif = () => {
                 <thead style={{ backgroundColor: '#9cbfc8', color: '#ffffff' }}>
                   <tr>
                     <th style={{ color: '#ffffff' }}>Superviseur</th>
-                    <th style={{ color: '#ffffff' }}>BRUT</th>
                     {stats.etats && stats.etats.map(etat => (
                       <th key={etat.id} title={etat.titre} style={{ color: '#ffffff' }}>
                         {etat.abbreviation || etat.titre}
@@ -403,9 +402,6 @@ const ProductionQualif = () => {
                             ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
                             : superviseurStat.superviseur.pseudo || 'N/A'}
                         </strong>
-                      </td>
-                      <td className="total-cell brut">
-                        <strong>{superviseurStat.total || 0}</strong>
                       </td>
                       {stats.etats && stats.etats.map(etat => {
                         const stat = superviseurStat.stats[etat.id];
@@ -433,11 +429,6 @@ const ProductionQualif = () => {
                 <tfoot>
                   <tr className="totals-row">
                     <td><strong>Totaux</strong></td>
-                    <td className="total-cell brut">
-                      <strong>
-                        {stats.superviseurs.reduce((sum, supStat) => sum + (supStat.total || 0), 0)}
-                      </strong>
-                    </td>
                     {stats.etats && stats.etats.map(etat => {
                       const total = stats.superviseurs.reduce((sum, supStat) => {
                         const stat = supStat.stats[etat.id];
