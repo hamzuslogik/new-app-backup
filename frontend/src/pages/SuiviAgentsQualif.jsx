@@ -137,15 +137,15 @@ const SuiviAgentsQualif = () => {
     const res = await api.get('/management/etats');
     let etats = res.data.data || [];
     
-    // Pour RE Qualification et RP Qualification, filtrer uniquement les états groupe 0
-    // RE Qualification: utilisateur avec agents sous responsabilité
-    // RP Qualification: fonction 12 (RP Qualification)
-    if (isREQualif || isRPQualif) {
+    // Pour les superviseurs qualification (RE Qualification), filtrer uniquement les états groupe 0
+    // Les autres utilisateurs (RP Qualification, Administrateurs, etc.) voient tous les états
+    if (isREQualif) {
       etats = etats.filter(etat => {
-        // Uniquement les états du groupe 0
+        // Uniquement les états du groupe 0 pour les superviseurs qualification
         return (etat.groupe === '0' || etat.groupe === 0);
       });
     }
+    // Pour les autres (RP Qualification, Admin, etc.), retourner tous les états
     
     return etats;
   });
