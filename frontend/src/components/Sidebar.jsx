@@ -103,12 +103,8 @@ const Sidebar = ({ collapsed }) => {
       path: '/statistiques-fiches',
       label: 'Statistiques Fiches',
       icon: FaChartBar,
-      permission: null, // Géré par la page elle-même
+      permission: 'statistiques_fiches_view',
       visible: true,
-      // Visible uniquement pour admins (1, 2, 7) et fonction 9
-      customCheck: (item, user) => {
-        return [1, 2, 7, 9].includes(user?.fonction);
-      },
     },
     {
       path: '/production-qualif',
@@ -214,13 +210,6 @@ const Sidebar = ({ collapsed }) => {
       icon: FaCheck,
       permission: 'validation_view',
       visible: true,
-      // Visible uniquement pour Confirmateurs (fonction 6), RE Confirmation (fonction 14) et admins
-      customCheck: (item, user, hasPermission) => {
-        // Si Confirmateur (fonction 6), RE Confirmation (fonction 14) ou Admin (fonction 1, 2, 7), visible
-        if (user?.fonction === 6 || user?.fonction === 14 || [1, 2, 7].includes(user?.fonction)) return true;
-        // Sinon, vérifier la permission
-        return hasPermission(item.permission);
-      },
     },
     {
       path: '/users',

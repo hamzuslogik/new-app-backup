@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
+const { checkPermissionCode } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
 
 // Récupérer les statistiques par type (centre, confirmateur, commercial, agent)
@@ -254,7 +255,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
 // Récupérer les statistiques de fiches par centre et date
 // - Administrateurs (fonction 1, 2, 7) : voient toutes les fiches
 // - Utilisateurs fonction 9 : voient uniquement les fiches de leurs centres assignés
-router.get('/fiches-par-centre', authenticate, async (req, res) => {
+router.get('/fiches-par-centre', authenticate, checkPermissionCode('statistiques_fiches_view'), async (req, res) => {
   try {
     const { 
       date_debut, 
@@ -291,7 +292,7 @@ router.get('/fiches-par-centre', authenticate, async (req, res) => {
       
       allowedCentres = userCentres.map(uc => uc.id_centre);
     } else {
-      // Autres utilisateurs : pas d'accès
+      // Autres utilisateurs : pas d'accès (déjà vérifié par checkPermissionCode, mais garder pour sécurité)
       return res.status(403).json({
         success: false,
         message: 'Accès refusé. Seuls les administrateurs et les utilisateurs de fonction 9 peuvent accéder à cette page.'
@@ -419,7 +420,7 @@ router.get('/fiches-par-centre', authenticate, async (req, res) => {
 
 // GET /api/statistiques/fiches-detaillees
 // Récupérer les fiches détaillées par centre avec les mêmes filtres
-router.get('/fiches-detaillees', authenticate, async (req, res) => {
+router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques_fiches_view'), async (req, res) => {
   try {
     const { 
       date_debut, 
