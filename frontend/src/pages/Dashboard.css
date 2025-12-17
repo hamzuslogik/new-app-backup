@@ -2011,8 +2011,8 @@ body.dashboard-page {
   padding: 8px !important;
   margin: 0 !important;
   max-width: 100% !important;
-  font-size: 12.5px !important;
-  line-height: 1.3 !important;
+  font-size: 14px !important;
+  line-height: 1.4 !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   flex: 1 1 auto !important;
@@ -2080,8 +2080,8 @@ body.dashboard-page {
 .fiche-detail-modal-content .field-value,
 .fiche-detail-modal-content .field-actions {
   padding: 0 2px !important;
-  font-size: 10px !important;
-  line-height: 0.95 !important;
+  font-size: 13px !important;
+  line-height: 1.3 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
   font-weight: 600 !important;
@@ -2139,8 +2139,8 @@ body.dashboard-page {
 
 .fiche-detail-modal-content .field-display {
   padding: 0 !important;
-  line-height: 0.95 !important;
-  font-size: 10px !important;
+  line-height: 1.4 !important;
+  font-size: 13px !important;
   margin: 0 !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
@@ -2256,10 +2256,10 @@ body.dashboard-page {
 }
 
 .fiche-detail-modal-content .section-title {
-  margin-bottom: 2px !important;
-  padding-bottom: 2px !important;
-  font-size: 11.5px !important;
-  line-height: 1.1 !important;
+  margin-bottom: 8px !important;
+  padding-bottom: 6px !important;
+  font-size: 16px !important;
+  line-height: 1.3 !important;
   font-weight: 700 !important;
 }
 
@@ -2459,12 +2459,14 @@ body.dashboard-page {
 
   /* Optimiser le contenu pour afficher plus d'informations */
   .fiche-detail-modal-content .fiche-detail {
-    padding: 6px !important; /* Réduire encore le padding */
+    padding: 12px !important;
     overflow-y: auto !important;
     flex: 1 1 auto !important; /* Prendre tout l'espace disponible */
     min-height: 0 !important; /* Permettre au flex de fonctionner */
     height: 100% !important; /* Prendre toute la hauteur du parent */
     max-height: 100% !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
   }
 
   /* Structure de la table pour alignement spécifique */
@@ -2494,10 +2496,10 @@ body.dashboard-page {
   .fiche-detail-modal-content .field-label,
   .fiche-detail-modal-content .fiche-detail .field-label {
     text-align: left !important;
-    padding: 1px 4px !important;
-    font-size: 11px !important;
-    line-height: 0.9 !important;
-    max-height: 15px !important;
+    padding: 4px 6px !important;
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    max-height: none !important;
     font-weight: 700 !important;
     margin: 0 !important;
     width: auto !important;
@@ -2508,10 +2510,10 @@ body.dashboard-page {
   .fiche-detail-modal-content .fiche-detail .field-value {
     text-align: center !important;
     width: 30% !important;
-    padding: 1px 4px !important;
-    font-size: 10px !important;
-    line-height: 0.9 !important;
-    max-height: 15px !important;
+    padding: 4px 6px !important;
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    max-height: none !important;
     margin: 0 !important;
   }
 
@@ -2559,9 +2561,10 @@ body.dashboard-page {
   }
 
   .fiche-detail-modal-content .section-title {
-    margin-bottom: 4px !important;
-    padding-bottom: 3px !important;
-    font-size: 12px !important;
+    margin-bottom: 8px !important;
+    padding-bottom: 6px !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
   }
 }
 
@@ -2594,24 +2597,26 @@ body.dashboard-page {
 
   /* Optimiser encore plus pour très petits écrans */
   .fiche-detail-modal-content .fiche-detail {
-    padding: 4px !important; /* Encore moins de padding */
+    padding: 12px !important;
     overflow-y: auto;
     flex: 1;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
   }
 
   /* Réduire les marges et paddings des sections */
   .fiche-detail-modal-content .fiche-section {
-    margin-bottom: 2px !important;
-    padding: 2px !important;
+    margin-bottom: 8px !important;
+    padding: 8px !important;
   }
 
   .fiche-detail-modal-content .section-title {
-    margin-bottom: 2px !important;
-    padding-bottom: 1px !important;
-    font-size: 10px !important;
+    margin-bottom: 8px !important;
+    padding-bottom: 6px !important;
+    font-size: 18px !important;
     font-weight: 700 !important;
-    line-height: 0.9 !important;
-    max-height: 15px !important;
+    line-height: 1.4 !important;
+    max-height: none !important;
   }
 
   /* Maintenir la même structure sur très petits écrans */
@@ -2641,10 +2646,10 @@ body.dashboard-page {
   .fiche-detail-modal-content .field-label,
   .fiche-detail-modal-content .fiche-detail .field-label {
     text-align: left !important;
-    padding: 1px 4px !important;
-    font-size: 10.5px !important;
-    line-height: 0.9 !important;
-    max-height: 15px !important;
+    padding: 4px 6px !important;
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    max-height: none !important;
     font-weight: 700 !important;
   }
 
@@ -2653,10 +2658,10 @@ body.dashboard-page {
   .fiche-detail-modal-content .fiche-detail .field-value {
     text-align: center !important;
     width: 30% !important;
-    padding: 1px 4px !important;
-    font-size: 9.5px !important;
-    line-height: 0.9 !important;
-    max-height: 15px !important;
+    padding: 4px 6px !important;
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    max-height: none !important;
     font-weight: 600 !important;
   }
 
