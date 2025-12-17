@@ -1,7 +1,7 @@
 .dashboard {
   padding: 16px;
   max-width: 100%;
-  overflow-x: visible;
+  overflow-x: auto;
 }
 
 .dashboard-header {
@@ -58,8 +58,6 @@
 /* Section des statistiques RDV */
 .dashboard-stats-section {
   margin-bottom: 24px;
-  overflow-x: visible;
-  width: 100%;
 }
 
 .stats-cards {
@@ -1255,17 +1253,6 @@
 @media (max-width: 768px) {
   .dashboard {
     padding: 8px;
-    overflow-x: hidden;
-  }
-
-  .dashboard-header {
-    overflow-x: visible;
-    width: 100%;
-  }
-
-  .dashboard-stats-section {
-    overflow-x: visible;
-    width: 100%;
   }
 
   .dashboard-header h1 {
@@ -1284,8 +1271,6 @@
   .stats-cards {
     grid-template-columns: 1fr !important;
     gap: 12px;
-    width: 100%;
-    overflow-x: visible;
   }
 
   .stat-card {
