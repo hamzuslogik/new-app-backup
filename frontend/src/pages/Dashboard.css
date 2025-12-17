@@ -73,7 +73,6 @@
   box-shadow: 0 2px 4px var(--shadow, rgba(0, 0, 0, 0.1));
   display: flex;
   align-items: center;
-  justify-content: flex-start;
   gap: 12px;
   transition: transform 0.2s, box-shadow 0.2s;
   color: var(--text-primary, #333);
@@ -113,7 +112,6 @@
 
 .stat-card-content {
   flex: 1;
-  text-align: left;
 }
 
 .stat-card-value {
