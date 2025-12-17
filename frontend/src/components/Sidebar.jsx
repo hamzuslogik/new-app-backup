@@ -121,6 +121,13 @@ const Sidebar = ({ collapsed }) => {
       },
     },
     {
+      path: '/kpi-qualification',
+      label: 'KPI Qualification',
+      icon: FaChartLine,
+      permission: 'kpi_qualification_view',
+      visible: true,
+    },
+    {
       path: '/affectation',
       label: 'Affectation',
       icon: FaUserCheck,

@@ -1,0 +1,291 @@
+.kpi-qualification {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.kpi-header h1 {
+  font-size: 28px;
+  color: #333;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kpi-header h1 svg {
+  color: #f7a219;
+}
+
+.period-selector {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.period-btn {
+  padding: 10px 20px;
+  border: 2px solid #9cbfc8;
+  background: white;
+  color: #9cbfc8;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+}
+
+.period-btn:hover {
+  background: #f0f8f9;
+  border-color: #7aa8b3;
+}
+
+.period-btn.active {
+  background: #9cbfc8;
+  color: white;
+  border-color: #9cbfc8;
+}
+
+.kpi-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.kpi-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 30px;
+}
+
+.kpi-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.kpi-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+}
+
+.kpi-card.best-agent {
+  border-top: 4px solid #4CAF50;
+}
+
+.kpi-card.best-team {
+  border-top: 4px solid #2196F3;
+}
+
+.kpi-card-header {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.kpi-icon {
+  font-size: 28px;
+  color: #f7a219;
+}
+
+.kpi-card-header h2 {
+  font-size: 20px;
+  color: #333;
+  margin: 0;
+  flex: 1;
+}
+
+.period-label {
+  background: #9cbfc8;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kpi-card-body {
+  padding: 25px;
+}
+
+.agent-info,
+.team-info {
+  margin-bottom: 20px;
+}
+
+.agent-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.agent-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #9cbfc8;
+}
+
+.agent-avatar.placeholder {
+  background: linear-gradient(135deg, #9cbfc8 0%, #7aa8b3 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.agent-details {
+  flex: 1;
+}
+
+.agent-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.agent-pseudo {
+  font-size: 14px;
+  color: #666;
+}
+
+.superviseur-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.superviseur-pseudo {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.team-stats {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  background: #f0f8f9;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #555;
+}
+
+.stat-item strong {
+  color: #9cbfc8;
+  font-size: 16px;
+}
+
+.kpi-value {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.kpi-value .value {
+  display: block;
+  font-size: 48px;
+  font-weight: bold;
+  color: #9cbfc8;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.kpi-value .label {
+  display: block;
+  font-size: 14px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-style: italic;
+}
+
+.period-info {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #9cbfc8;
+}
+
+.period-info p {
+  margin: 8px 0;
+  color: #555;
+}
+
+.period-info strong {
+  color: #333;
+}
+
+.info-text {
+  font-size: 13px;
+  color: #777;
+  font-style: italic;
+  margin-top: 10px;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+}
+
+.error {
+  color: #d32f2f;
+  background: #ffebee;
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .kpi-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .period-selector {
+    width: 100%;
+  }
+
+  .period-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+

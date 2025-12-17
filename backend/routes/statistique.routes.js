@@ -1103,6 +1103,149 @@ router.get('/production-qualif', authenticate, async (req, res) => {
   }
 });
 
+// =====================================================
+// KPI QUALIFICATION
+// =====================================================
+
+// Récupérer les KPI qualification (meilleurs agents et équipes)
+router.get('/kpi-qualification', authenticate, async (req, res) => {
+  try {
+    // Récupérer les IDs des états groupe 0 pour exclure
+    const etatsGroupe0 = await query(`
+      SELECT id FROM etats
+      WHERE (groupe = '0' OR groupe = 0)
+    `);
+    const idsGroupe0 = etatsGroupe0.map(e => e.id);
+
+    // Dates pour jour, semaine, mois
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Semaine (lundi à dimanche)
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Ajuster pour lundi
+    const monday = new Date(today.getFullYear(), today.getMonth(), diff);
+    const weekStart = monday.toISOString().split('T')[0];
+    const weekEnd = todayStr;
+    
+    // Mois
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const monthEnd = todayStr;
+
+    const kpiData = {
+      jour: {},
+      semaine: {},
+      mois: {}
+    };
+
+    // Pour chaque période (jour, semaine, mois)
+    const periods = [
+      { key: 'jour', start: todayStr, end: todayStr, label: 'Aujourd\'hui' },
+      { key: 'semaine', start: weekStart, end: weekEnd, label: 'Cette semaine' },
+      { key: 'mois', start: monthStart, end: monthEnd, label: 'Ce mois' }
+    ];
+
+    for (const period of periods) {
+      const startDate = `${period.start} 00:00:00`;
+      const endDate = `${period.end} 23:59:59`;
+
+      // Meilleur agent (fiches validées uniquement - phase 1, 2, 3)
+      const bestAgentQuery = `
+        SELECT 
+          u.id,
+          u.pseudo,
+          u.nom,
+          u.prenom,
+          u.photo,
+          COUNT(DISTINCT f.id) as count_validated
+        FROM fiches f
+        INNER JOIN utilisateurs u ON f.id_agent = u.id
+        INNER JOIN etats e ON f.id_etat_final = e.id
+        WHERE u.fonction = 3
+        AND u.etat > 0
+        AND f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+        ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
+        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
+        ORDER BY count_validated DESC
+        LIMIT 1
+      `;
+      
+      const bestAgentParams = idsGroupe0.length > 0 
+        ? [startDate, endDate, ...idsGroupe0]
+        : [startDate, endDate];
+      
+      const bestAgent = await queryOne(bestAgentQuery, bestAgentParams);
+
+      // Meilleure équipe (superviseur avec ses agents)
+      const bestTeamQuery = `
+        SELECT 
+          s.id as superviseur_id,
+          s.pseudo as superviseur_pseudo,
+          s.nom as superviseur_nom,
+          s.prenom as superviseur_prenom,
+          COUNT(DISTINCT f.id) as count_validated,
+          COUNT(DISTINCT a.id) as nb_agents
+        FROM fiches f
+        INNER JOIN utilisateurs a ON f.id_agent = a.id
+        INNER JOIN utilisateurs s ON a.chef_equipe = s.id
+        INNER JOIN etats e ON f.id_etat_final = e.id
+        WHERE a.fonction = 3
+        AND a.etat > 0
+        AND s.etat > 0
+        AND f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+        ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
+        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        GROUP BY s.id, s.pseudo, s.nom, s.prenom
+        ORDER BY count_validated DESC
+        LIMIT 1
+      `;
+      
+      const bestTeam = await queryOne(bestTeamQuery, bestAgentParams);
+
+      kpiData[period.key] = {
+        period: period.label,
+        date_start: period.start,
+        date_end: period.end,
+        best_agent: bestAgent ? {
+          id: bestAgent.id,
+          pseudo: bestAgent.pseudo,
+          nom: bestAgent.nom,
+          prenom: bestAgent.prenom,
+          photo: bestAgent.photo,
+          count: bestAgent.count_validated || 0
+        } : null,
+        best_team: bestTeam ? {
+          superviseur: {
+            id: bestTeam.superviseur_id,
+            pseudo: bestTeam.superviseur_pseudo,
+            nom: bestTeam.superviseur_nom,
+            prenom: bestTeam.superviseur_prenom
+          },
+          count: bestTeam.count_validated || 0,
+          nb_agents: bestTeam.nb_agents || 0
+        } : null
+      };
+    }
+
+    res.json({
+      success: true,
+      data: kpiData
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des KPI qualification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des KPI',
+      error: error.message
+    });
+  }
+});
+
 // Statistiques des agents pour un superviseur
 router.get('/superviseur/:id', authenticate, async (req, res) => {
   try {
