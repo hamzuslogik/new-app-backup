@@ -15,10 +15,10 @@ const LayoutContent = () => {
 
   // Fermer automatiquement la sidebar sur mobile/tablet lors du changement de page
   React.useEffect(() => {
-    if ((isMobile || isTablet) && !sidebarCollapsed) {
+    if (isMobile || isTablet) {
       closeSidebar();
     }
-  }, [location.pathname, isMobile, isTablet, closeSidebar, sidebarCollapsed]);
+  }, [location.pathname, isMobile, isTablet, closeSidebar]);
 
   // Délai avant que l'overlay ne devienne cliquable pour éviter qu'il capture le clic d'ouverture
   React.useEffect(() => {
