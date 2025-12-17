@@ -26,6 +26,8 @@ export const SidebarProvider = ({ children }) => {
       const mobile = width <= 768;
       const tablet = width > 768 && width <= 1024;
       const desktop = width > 1024;
+      const wasDesktop = isDesktop;
+      
       setIsMobile(mobile);
       setIsTablet(tablet);
       setIsDesktop(desktop);
@@ -40,15 +42,20 @@ export const SidebarProvider = ({ children }) => {
         });
         userToggleRef.current = false;
       } else if (mobile || tablet) {
-        // Sur mobile/tablet, ignorer complètement l'auto-hide et toutes les fermetures automatiques
-        // Le sidebar est géré UNIQUEMENT manuellement par l'utilisateur via le bouton hamburger
-        // Ne PAS fermer automatiquement la sidebar, même lors du resize
-        // Désactiver l'auto-hide quand on passe sur mobile/tablet (pour éviter qu'il s'active ensuite)
+        // Sur mobile/tablet, forcer le sidebar à être masqué par défaut
+        // Le sidebar ne s'affiche que via le bouton hamburger
+        // Désactiver l'auto-hide quand on passe sur mobile/tablet
         if (autoHideEnabled) {
           setAutoHideEnabled(false);
         }
-        // NE PAS modifier sidebarCollapsed automatiquement sur mobile/tablet
-        // L'utilisateur doit contrôler manuellement via le bouton hamburger
+        // Forcer le sidebar à être collapsed sur mobile/tablet
+        // Si on passe de desktop à mobile, fermer le sidebar
+        // Sur mobile, le sidebar doit toujours être masqué par défaut
+        if (wasDesktop) {
+          setSidebarCollapsed(true);
+        }
+        // Note: Si on est déjà sur mobile, le sidebar reste dans son état actuel
+        // (il sera fermé automatiquement lors du changement de page via Layout.jsx)
       }
     };
 
@@ -56,7 +63,7 @@ export const SidebarProvider = ({ children }) => {
     // Ne pas appeler handleResize au montage, l'état initial est déjà correct
 
     return () => window.removeEventListener('resize', handleResize);
-  }, [autoHideEnabled]);
+  }, [autoHideEnabled, isDesktop]);
 
   const toggleSidebar = () => {
     // Utiliser une fonction de callback pour s'assurer que l'état est à jour

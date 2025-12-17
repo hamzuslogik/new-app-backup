@@ -13,13 +13,12 @@ const LayoutContent = () => {
   const overlayRef = React.useRef(null);
   const [overlayReady, setOverlayReady] = React.useState(false);
 
-  // NOTE: Fermeture automatique de la sidebar sur mobile/tablet désactivée
-  // Le sidebar reste accessible et ne se ferme que manuellement par l'utilisateur
-  // React.useEffect(() => {
-  //   if ((isMobile || isTablet) && !sidebarCollapsed) {
-  //     closeSidebar();
-  //   }
-  // }, [location.pathname, isMobile, isTablet, closeSidebar, sidebarCollapsed]);
+  // Fermer automatiquement la sidebar sur mobile/tablet lors du changement de page
+  React.useEffect(() => {
+    if ((isMobile || isTablet) && !sidebarCollapsed) {
+      closeSidebar();
+    }
+  }, [location.pathname, isMobile, isTablet, closeSidebar, sidebarCollapsed]);
 
   // Délai avant que l'overlay ne devienne cliquable pour éviter qu'il capture le clic d'ouverture
   React.useEffect(() => {
