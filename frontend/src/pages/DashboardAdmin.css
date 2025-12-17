@@ -1244,9 +1244,9 @@ body.dashboard-admin-page {
   max-width: 70%;
   min-width: 350px;
   width: 70%;
-  max-height: 95vh;
-  height: 95vh;
-  min-height: 80vh;
+  max-height: 80vh;
+  height: 80vh;
+  min-height: 60vh;
   overflow-y: auto; /* Scroll uniquement sur le contenu du modal */
   overflow-x: hidden;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
@@ -1257,6 +1257,7 @@ body.dashboard-admin-page {
   flex-direction: column;
   box-sizing: border-box !important;
   -webkit-overflow-scrolling: touch; /* Smooth scrolling sur iOS */
+  padding-bottom: 20px; /* Espace en bas pour que le bouton soit visible */
 }
 
 /* Adapter le planning Ã  la largeur du modal */

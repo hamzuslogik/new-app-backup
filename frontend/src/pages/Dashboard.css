@@ -1615,9 +1615,9 @@ body.dashboard-page {
   max-width: 70%;
   min-width: 350px;
   width: 70%;
-  max-height: 95vh;
-  height: 95vh;
-  min-height: 80vh;
+  max-height: 80vh;
+  height: 80vh;
+  min-height: 60vh;
   overflow-y: auto; /* Scroll uniquement sur le contenu du modal */
   overflow-x: hidden;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
@@ -1628,6 +1628,7 @@ body.dashboard-page {
   flex-direction: column;
   box-sizing: border-box !important;
   -webkit-overflow-scrolling: touch; /* Smooth scrolling sur iOS */
+  padding-bottom: 20px; /* Espace en bas pour que le bouton soit visible */
 }
 
 /* Adapter le planning à la largeur du modal */
@@ -2377,8 +2378,9 @@ body.dashboard-page {
   visibility: visible !important;
   opacity: 1 !important;
   margin-top: 16px !important;
-  margin-bottom: 16px !important;
+  margin-bottom: 40px !important; /* Augmenter la marge en bas pour que le bouton soit visible */
   padding: 12px !important;
+  padding-bottom: 20px !important; /* Ajouter un padding en bas */
   border-top: 2px solid #e0e0e0 !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -2442,9 +2444,9 @@ body.dashboard-page {
     max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     min-width: 95% !important; /* Largeur minimale en mode mobile */
-    height: 98vh !important; /* Hauteur fixe de 98% - utiliser presque tout l'écran */
-    min-height: 95vh !important; /* Hauteur minimale pour garantir 95% */
-    max-height: 98vh !important; /* Limiter à 98% pour garantir l'affichage */
+    height: 80vh !important; /* Hauteur fixe de 80% - laisser de l'espace en bas */
+    min-height: 60vh !important; /* Hauteur minimale */
+    max-height: 80vh !important; /* Limiter à 80% pour laisser de l'espace en bas */
     border-radius: 8px !important; /* Rétablir le border-radius */
     overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
     overflow-y: auto !important; /* Permet le défilement vertical si nécessaire */
@@ -2455,6 +2457,7 @@ body.dashboard-page {
     position: relative !important;
     top: 0 !important; /* Aligner en haut */
     align-self: auto !important; /* Ne pas étirer pour garder la largeur définie */
+    padding-bottom: 20px !important; /* Espace en bas pour que le bouton soit visible */
   }
 
   /* Optimiser le contenu pour afficher plus d'informations */
@@ -2582,9 +2585,9 @@ body.dashboard-page {
     max-width: 100% !important; /* Largeur maximale pour très petits écrans */
     min-width: 98% !important; /* Largeur minimale même sur très petits écrans */
     width: 100% !important; /* Largeur maximale pour très petits écrans */
-    height: 100vh !important; /* Hauteur fixe de 100% - utiliser tout l'écran */
-    min-height: 98vh !important; /* Hauteur minimale pour garantir 98% */
-    max-height: 100vh !important; /* Limiter à 100% */
+    height: 80vh !important; /* Hauteur fixe de 80% - laisser de l'espace en bas */
+    min-height: 60vh !important; /* Hauteur minimale */
+    max-height: 80vh !important; /* Limiter à 80% pour laisser de l'espace en bas */
     border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
     overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
     overflow-y: auto !important; /* Garder le scroll vertical */
@@ -2593,6 +2596,7 @@ body.dashboard-page {
     flex-direction: column !important;
     margin: 0 auto !important; /* Centrer le modal horizontalement */
     align-self: auto !important; /* Ne pas étirer pour garder la largeur définie */
+    padding-bottom: 20px !important; /* Espace en bas pour que le bouton soit visible */
   }
 
   /* Optimiser encore plus pour très petits écrans */
