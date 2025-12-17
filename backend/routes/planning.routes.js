@@ -1084,52 +1084,73 @@ router.post('/hebdomadaire', authenticate, checkPermission(1, 2, 7), async (req,
 
     const weekNum = parseInt(week);
     const yearNum = parseInt(year);
-    const jourNum = parseInt(jour); // 1=Lundi, 2=Mardi, etc.
     const dep = String(id_departement).padStart(2, '0');
     const nbrCom = parseInt(nombre_commercial);
 
     // Obtenir les jours de la semaine
     const days = getWeekDays(yearNum, weekNum);
     
-    // Vérifier que le jour est valide (1-5)
-    if (jourNum < 1 || jourNum > 5) {
-      return res.status(400).json({
-        success: false,
-        message: 'Jour invalide (doit être entre 1 et 5)'
-      });
+    // Parser la valeur jour (peut être un nombre ou une plage "1-4")
+    let joursToProcess = [];
+    if (jour.includes('-')) {
+      // Plage de jours (ex: "1-4" pour Lundi à jeudi)
+      const [start, end] = jour.split('-').map(n => parseInt(n));
+      if (start < 1 || start > 5 || end < 1 || end > 5 || start > end) {
+        return res.status(400).json({
+          success: false,
+          message: 'Plage de jours invalide'
+        });
+      }
+      // Générer tous les jours de la plage
+      for (let j = start; j <= end; j++) {
+        joursToProcess.push(j);
+      }
+    } else {
+      // Jour unique
+      const jourNum = parseInt(jour);
+      if (jourNum < 1 || jourNum > 5) {
+        return res.status(400).json({
+          success: false,
+          message: 'Jour invalide (doit être entre 1 et 5)'
+        });
+      }
+      joursToProcess.push(jourNum);
     }
 
-    // Obtenir la date correspondante au jour
-    const targetDate = days[jourNum - 1].date;
-    
     // Pour chaque créneau horaire, créer ou mettre à jour la disponibilité
     const now = new Date();
     const dateModifTime = now.toISOString().slice(0, 19).replace('T', ' ');
 
-    for (const slot of TIME_SLOTS) {
-      // Vérifier si une disponibilité existe déjà
-      const existing = await queryOne(
-        `SELECT id FROM planning_availablity 
-         WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
-        [weekNum, yearNum, dep, targetDate, slot.hour]
-      );
+    // Traiter chaque jour de la plage
+    for (const jourNum of joursToProcess) {
+      // Obtenir la date correspondante au jour
+      const targetDate = days[jourNum - 1].date;
 
-      if (existing) {
-        // Mettre à jour
-        await query(
-          `UPDATE planning_availablity 
-           SET nbr_com = ?, force_crenaux = ?, date_modif_time = ?
-           WHERE id = ?`,
-          [nbrCom, forcer === 'CRENAUX' ? 1 : 0, dateModifTime, existing.id]
+      for (const slot of TIME_SLOTS) {
+        // Vérifier si une disponibilité existe déjà
+        const existing = await queryOne(
+          `SELECT id FROM planning_availablity 
+           WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
+          [weekNum, yearNum, dep, targetDate, slot.hour]
         );
-      } else {
-        // Créer
-        await query(
-          `INSERT INTO planning_availablity 
-           (week, year, dep, date_day, hour, nbr_com, force_crenaux, date_modif, date_modif_time)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [weekNum, yearNum, dep, targetDate, slot.hour, nbrCom, forcer === 'CRENAUX' ? 1 : 0, dateModifTime, dateModifTime]
-        );
+
+        if (existing) {
+          // Mettre à jour
+          await query(
+            `UPDATE planning_availablity 
+             SET nbr_com = ?, force_crenaux = ?, date_modif_time = ?
+             WHERE id = ?`,
+            [nbrCom, forcer === 'CRENAUX' ? 1 : 0, dateModifTime, existing.id]
+          );
+        } else {
+          // Créer
+          await query(
+            `INSERT INTO planning_availablity 
+             (week, year, dep, date_day, hour, nbr_com, force_crenaux, date_modif, date_modif_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [weekNum, yearNum, dep, targetDate, slot.hour, nbrCom, forcer === 'CRENAUX' ? 1 : 0, dateModifTime, dateModifTime]
+          );
+        }
       }
     }
 

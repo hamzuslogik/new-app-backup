@@ -48,11 +48,15 @@ function formatWeekRange(year, week) {
 
 // Jours de la semaine
 const JOURS = [
-  { value: 1, label: 'Lundi' },
-  { value: 2, label: 'Mardi' },
-  { value: 3, label: 'Mercredi' },
-  { value: 4, label: 'Jeudi' },
-  { value: 5, label: 'Vendredi' }
+  { value: '1-4', label: 'Lundi à jeudi' },
+  { value: '1-2', label: 'Lundi à mardi' },
+  { value: '1-3', label: 'Lundi à mercredi' },
+  { value: '3-4', label: 'Mercredi à jeudi' },
+  { value: '1', label: 'Lundi' },
+  { value: '2', label: 'Mardi' },
+  { value: '3', label: 'Mercredi' },
+  { value: '4', label: 'Jeudi' },
+  { value: '5', label: 'Vendredi' }
 ];
 
 const PlanningHebdomadaire = () => {
