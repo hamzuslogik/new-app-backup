@@ -15,6 +15,56 @@ const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = 'confirmed'; // Toujours 'confirmed' puisqu'il n'y a plus d'onglet
   
+  // Forcer le viewport à 1400px pour désactiver la responsivité mobile
+  useEffect(() => {
+    // Sauvegarder le viewport original
+    const originalViewport = document.querySelector('meta[name="viewport"]');
+    const originalContent = originalViewport?.getAttribute('content') || '';
+    
+    // Créer ou modifier la balise meta viewport
+    let viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) {
+      viewport = document.createElement('meta');
+      viewport.setAttribute('name', 'viewport');
+      document.head.appendChild(viewport);
+    }
+    viewport.setAttribute('content', 'width=1400');
+    
+    // Ajouter une classe au body pour cibler uniquement cette page
+    document.body.classList.add('dashboard-page');
+    document.documentElement.classList.add('dashboard-page');
+    
+    // Forcer les styles sur html et body
+    document.documentElement.style.width = '1400px';
+    document.documentElement.style.maxWidth = 'none';
+    document.documentElement.style.overflowX = 'hidden';
+    document.body.style.width = '1400px';
+    document.body.style.maxWidth = 'none';
+    document.body.style.overflowX = 'hidden';
+    
+    // Nettoyage au démontage du composant
+    return () => {
+      // Restaurer le viewport original
+      if (originalViewport && originalContent) {
+        originalViewport.setAttribute('content', originalContent);
+      } else if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1');
+      }
+      
+      // Retirer la classe du body
+      document.body.classList.remove('dashboard-page');
+      document.documentElement.classList.remove('dashboard-page');
+      
+      // Restaurer les styles html et body
+      document.documentElement.style.width = '';
+      document.documentElement.style.maxWidth = '';
+      document.documentElement.style.overflowX = '';
+      document.body.style.width = '';
+      document.body.style.maxWidth = '';
+      document.body.style.overflowX = '';
+    };
+  }, []);
+  
   // Pour Confirmateur (fonction 6) et RE Confirmation (fonction 14)
   const isConfirmateur = user?.fonction === 6;
   const isREConfirmation = user?.fonction === 14;

@@ -1,7 +1,88 @@
+/* Désactiver la responsivité mobile - Forcer largeur fixe 1400px */
+/* Appliquer uniquement quand la classe dashboard-page est présente */
+html.dashboard-page,
+body.dashboard-page {
+  width: 1400px !important;
+  max-width: none !important;
+  overflow-x: hidden !important;
+  margin: 0 !important;
+}
+
+/* Forcer les tableaux CRM à 1400px dans Dashboard */
+.dashboard-page .fiches-table,
+.dashboard-page .confirmateurs-table,
+.dashboard-page .fiches-table-container,
+.dashboard-page .confirmateurs-table-container {
+  width: 1400px !important;
+  max-width: none !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+/* Désactiver toute règle responsive mobile existante */
+@media (max-width: 768px) {
+  .dashboard-page * {
+    max-width: none !important;
+  }
+  
+  html.dashboard-page,
+  body.dashboard-page {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+  
+  .dashboard-page .dashboard {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+  
+  .dashboard-page .fiches-table,
+  .dashboard-page .confirmateurs-table,
+  .dashboard-page .fiches-table-container,
+  .dashboard-page .confirmateurs-table-container {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-page * {
+    max-width: none !important;
+  }
+  
+  html.dashboard-page,
+  body.dashboard-page {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+  
+  .dashboard-page .dashboard {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+  
+  .dashboard-page .fiches-table,
+  .dashboard-page .confirmateurs-table,
+  .dashboard-page .fiches-table-container,
+  .dashboard-page .confirmateurs-table-container {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+}
+
 .dashboard {
   padding: 16px;
-  max-width: 100%;
-  overflow-x: auto;
+  max-width: 1400px;
+  width: 1400px;
+  overflow-x: hidden;
+  margin: 0;
+}
+
+/* Forcer le dashboard dans Dashboard */
+.dashboard-page .dashboard {
+  width: 1400px !important;
+  max-width: 1400px !important;
+  margin: 0 !important;
 }
 
 .dashboard-header {
@@ -1531,9 +1612,9 @@
   position: relative;
   background: white;
   border-radius: 8px;
-  max-width: 45%;
+  max-width: 70%;
   min-width: 350px;
-  width: 45%;
+  width: 70%;
   max-height: 95vh;
   height: 95vh;
   min-height: 80vh;

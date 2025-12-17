@@ -1241,9 +1241,9 @@ body.dashboard-admin-page {
   position: relative;
   background: white;
   border-radius: 8px;
-  max-width: 45%;
+  max-width: 70%;
   min-width: 350px;
-  width: 45%;
+  width: 70%;
   max-height: 95vh;
   height: 95vh;
   min-height: 80vh;
