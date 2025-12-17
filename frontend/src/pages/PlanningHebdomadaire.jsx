@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import api from '../config/api';
 import { FaChevronLeft, FaChevronRight, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -555,9 +556,12 @@ const PlanningHebdomadaire = () => {
               Object.values(disponibilitesGrouped).map((item) => (
                 <tr key={item.departement_id}>
                   <td>
-                    <a href="#" className="departement-link">
+                    <Link 
+                      to={`/planning?dp=${item.departement_code || item.departement_id}&w=${week}&y=${year}`}
+                      className="departement-link"
+                    >
                       {item.departement_nom}
-                    </a>
+                    </Link>
                   </td>
                   <td>{item.lundi}</td>
                   <td>{item.mardi}</td>

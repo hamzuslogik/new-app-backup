@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -273,13 +273,13 @@ const Sidebar = ({ collapsed }) => {
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      <div className="sidebar-logo-container">
+      <Link to="/dashboard" className="sidebar-logo-container">
         {collapsed ? (
           <img src="/logo/logo.png" alt="JWS Group" className="sidebar-logo-icon" />
         ) : (
           <img src="/logo/logo.png" alt="JWS Group" className="sidebar-logo" />
         )}
-      </div>
+      </Link>
       <nav className="sidebar-nav">
         <ul className="sidebar-menu">
           {menuItems

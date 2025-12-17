@@ -1005,10 +1005,11 @@ router.get('/production-qualif', authenticate, async (req, res) => {
         for (const etat of etatsGroupe0) {
           const conditions = [
             `f.id_agent IN (${agentIds.map(() => '?').join(',')})`,
-            `f.date_insert_time >= ?`,
-            `f.date_insert_time <= ?`,
+            `f.date_appel_time >= ?`,
+            `f.date_appel_time <= ?`,
             `f.id_etat_final = ?`,
-            `(f.archive = 0 OR f.archive IS NULL)`
+            `(f.archive = 0 OR f.archive IS NULL)`,
+            `f.date_appel_time IS NOT NULL`
           ];
           const params = [...agentIds, startDate, endDate, etat.id];
 
@@ -1035,9 +1036,10 @@ router.get('/production-qualif', authenticate, async (req, res) => {
         if (!id_etat_final || (id_etat_final === 'validated')) {
           const conditions = [
             `f.id_agent IN (${agentIds.map(() => '?').join(',')})`,
-            `f.date_insert_time >= ?`,
-            `f.date_insert_time <= ?`,
-            `(f.archive = 0 OR f.archive IS NULL)`
+            `f.date_appel_time >= ?`,
+            `f.date_appel_time <= ?`,
+            `(f.archive = 0 OR f.archive IS NULL)`,
+            `f.date_appel_time IS NOT NULL`
           ];
           const params = [...agentIds, startDate, endDate];
 
@@ -1061,14 +1063,15 @@ router.get('/production-qualif', authenticate, async (req, res) => {
           };
         }
 
-        // Calculer le total (BRUT) : toutes les fiches créées dans la période, indépendamment de l'état actuel
+        // Calculer le total (BRUT) : toutes les fiches avec date d'appel dans la période, indépendamment de l'état actuel
         const totalResult = await queryOne(
           `SELECT COUNT(*) as total
            FROM fiches f
            WHERE f.id_agent IN (${agentIds.map(() => '?').join(',')})
-           AND f.date_insert_time >= ?
-           AND f.date_insert_time <= ?
-           AND (f.archive = 0 OR f.archive IS NULL)`,
+           AND f.date_appel_time >= ?
+           AND f.date_appel_time <= ?
+           AND (f.archive = 0 OR f.archive IS NULL)
+           AND f.date_appel_time IS NOT NULL`,
           [...agentIds, startDate, endDate]
         );
 

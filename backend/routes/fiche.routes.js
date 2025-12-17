@@ -1261,7 +1261,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
        LEFT JOIN centres centre ON fiche.id_centre = centre.id
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
        WHERE ${whereClause}
-       ORDER BY fiche.date_insert_time DESC
+       ORDER BY fiche.date_appel_time DESC
        LIMIT ? OFFSET ?`,
       [...params, parseInt(limit), offset]
     );
@@ -1436,27 +1436,27 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       params.push(parseInt(id_etat_final));
     }
 
-    // S'assurer que date_insert_time n'est pas NULL ou vide
-    whereConditions.push('fiche.date_insert_time IS NOT NULL');
-    whereConditions.push('fiche.date_insert_time != ""');
+    // S'assurer que date_appel_time n'est pas NULL ou vide
+    whereConditions.push('fiche.date_appel_time IS NOT NULL');
+    whereConditions.push('fiche.date_appel_time != ""');
     
-    // Par défaut, filtrer par date d'aujourd'hui si aucune date n'est fournie
+    // Par défaut, filtrer par date d'appel d'aujourd'hui si aucune date n'est fournie
     const today = new Date().toISOString().split('T')[0];
     if (date_debut) {
-      whereConditions.push('fiche.date_insert_time >= ?');
+      whereConditions.push('fiche.date_appel_time >= ?');
       params.push(`${date_debut} 00:00:00`);
     } else {
-      // Par défaut, fiches créées aujourd'hui
-      whereConditions.push('DATE(fiche.date_insert_time) = ?');
+      // Par défaut, fiches avec date d'appel aujourd'hui
+      whereConditions.push('DATE(fiche.date_appel_time) = ?');
       params.push(today);
     }
 
     if (date_fin) {
-      whereConditions.push('fiche.date_insert_time <= ?');
+      whereConditions.push('fiche.date_appel_time <= ?');
       params.push(`${date_fin} 23:59:59`);
     } else if (!date_debut) {
       // Si pas de date_debut non plus, ajouter la fin de journée pour aujourd'hui
-      whereConditions.push('fiche.date_insert_time <= ?');
+      whereConditions.push('fiche.date_appel_time <= ?');
       params.push(`${today} 23:59:59`);
     }
 
@@ -1501,7 +1501,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
        LEFT JOIN centres centre ON fiche.id_centre = centre.id
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
        WHERE ${whereClause}
-       ORDER BY fiche.date_insert_time DESC
+       ORDER BY fiche.date_appel_time DESC
        LIMIT ? OFFSET ?`,
       [...params, parseInt(limit), offset]
     );

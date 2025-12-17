@@ -28,20 +28,32 @@ USE `crm`;
 --   yj_fiche.situation_conju -> fiches.situation_conjugale
 --   yj_fiche.revenu -> fiches.revenu_foyer
 --   yj_fiche.credit -> fiches.credit_foyer
---   yj_fiche.date_heure_appel -> fiches.date_appel (datetime vers bigint) et date_insert_time
+--   yj_fiche.date_heure_appel -> fiches.date_appel (datetime vers bigint) et fiches.date_appel_time (datetime)
 --   yj_fiche.date_heure_playning -> fiches.date_rdv_time
 --   yj_fiche.date_heure_mod -> fiches.date_modif_time
---   yj_fiche.date_insertion -> fiches.date_insert_time
+--   yj_fiche.date_insertion -> fiches.date_insert (bigint) et fiches.date_insert_time (datetime)
 --   yj_fiche.etat_final (varchar) -> fiches.id_etat_final (int) - conversion via table etats
 --   yj_fiche.conf_produit (varchar) -> fiches.produit (int) et conf_produit (int)
 --   yj_fiche.conf_energie -> fiches.mode_chauffage
 --   yj_fiche.pac_* -> fiches.* (mapping des champs PAC)
+--   yj_fiche.surface_disponible -> fiches.surface_habitable (fallback si pac_surface_habitable vide)
+--   yj_fiche.chemines (varchar) -> fiches.nb_chemines (fallback si nb_chemines vide)
+--   yj_fiche.zones_ombres -> fiches.conf_zones_ombres
+--   yj_fiche.site_classe -> fiches.conf_site_classe
 --   yj_fiche.ph3_installateur (varchar) -> fiches.ph3_installateur (int)
+--   yj_fiche.ph3_prix (int) -> fiches.ph3_prix (decimal)
+--   yj_fiche.ph3_bonus_30 (varchar) -> fiches.ph3_bonus_30 (decimal)
+--   yj_fiche.ph3_mensualite (varchar) -> fiches.ph3_mensualite (decimal)
 --   yj_fiche.cq_etat (varchar) -> fiches.cq_etat (int)
 --   yj_fiche.cq_dossier (varchar) -> fiches.cq_dossier (int)
 --   yj_fiche.archive (tinyint) -> fiches.archive (int)
 --   yj_fiche.valider (tinyint) -> fiches.valider (int)
 --   yj_fiche.nom_agent (varchar) -> fiches.id_agent (int) - conversion via table utilisateurs
+--   yj_fiche.nom_commercial (varchar) -> fiches.id_commercial (int) - conversion via table utilisateurs (si id_commercial vide)
+--   yj_fiche.nom_commercial_2 (varchar) -> fiches.id_commercial_2 (int) - conversion via table utilisateurs
+--   yj_fiche.nom_confirmateur (varchar) -> fiches.id_confirmateur (int) - conversion via table utilisateurs
+--   yj_fiche.nom_confirmateur_2 (varchar) -> fiches.id_confirmateur_2 (int) - conversion via table utilisateurs
+--   yj_fiche.nom_confirmateur_3 (varchar) -> fiches.id_confirmateur_3 (int) - conversion via table utilisateurs
 
 INSERT INTO `fiches` (
   `id`, `civ`, `nom`, `prenom`, `tel`, `gsm1`, `gsm2`, `adresse`, `cp`, `ville`,
@@ -51,7 +63,7 @@ INSERT INTO `fiches` (
   `age_madame`, `revenu_foyer`, `credit_foyer`, `situation_conjugale`, `nb_enfants`,
   `profession_mr`, `profession_madame`, `commentaire`, `id_agent`, `id_centre`, `id_insert`,
   `id_confirmateur`, `id_confirmateur_2`, `id_confirmateur_3`, `id_qualite`, `id_qualif`,
-  `id_commercial`, `id_commercial_2`, `id_etat_final`, `date_appel`, `date_insert`,
+  `id_commercial`, `id_commercial_2`, `id_etat_final`, `date_appel`, `date_appel_time`, `date_insert`,
   `date_insert_time`, `date_audit`, `date_confirmation`, `date_qualif`, `date_rdv`,
   `date_rdv_time`, `date_affect`, `date_sign`, `date_sign_time`, `date_modif_time`,
   `archive`, `ko`, `hc`, `active`, `valider`, `conf_commentaire_produit`, `conf_consommations`,
@@ -80,8 +92,12 @@ SELECT
     NULLIF(`pac_consomation`, ''),
     NULL
   ) as `consommation_chauffage`,
-  -- Surface habitable: utiliser pac_surface_habitable
-  NULLIF(`pac_surface_habitable`, '') as `surface_habitable`,
+  -- Surface habitable: utiliser pac_surface_habitable, sinon surface_disponible
+  COALESCE(
+    NULLIF(`pac_surface_habitable`, ''),
+    NULLIF(`surface_disponible`, ''),
+    NULL
+  ) as `surface_habitable`,
   -- Année système chauffage: convertir pac_annee_chauf de varchar vers int
   CASE 
     WHEN `pac_annee_chauf` != '' AND `pac_annee_chauf` != '0' 
@@ -108,11 +124,14 @@ SELECT
     WHEN UPPER(`conf_produit`) LIKE '%PV%' THEN 2
     ELSE NULL
   END as `produit`,
-  -- Nombre de cheminées: convertir nb_chemines de int vers varchar
-  CASE 
-    WHEN `nb_chemines` > 0 THEN CAST(`nb_chemines` AS CHAR)
-    ELSE NULL
-  END as `nb_chemines`,
+  -- Nombre de cheminées: convertir nb_chemines de int vers varchar, sinon utiliser chemines (varchar)
+  COALESCE(
+    CASE 
+      WHEN `nb_chemines` > 0 THEN CAST(`nb_chemines` AS CHAR)
+      ELSE NULL
+    END,
+    NULLIF(`chemines`, '')
+  ) as `nb_chemines`,
   -- Mode chauffage: utiliser conf_energie
   NULLIF(`conf_energie`, '') as `mode_chauffage`,
   -- Consommation électricité: à partir de conf_consommation_electricite ou autres champs
@@ -174,7 +193,20 @@ SELECT
   END as `id_confirmateur_3`,
   `id_qualite`,
   NULL as `id_qualif`, -- Pas de champ direct dans yj_fiche
-  `id_commercial`,
+  -- id_commercial: utiliser id_commercial si présent, sinon chercher via nom_commercial
+  COALESCE(
+    CASE 
+      WHEN `id_commercial` > 0 THEN `id_commercial`
+      ELSE NULL
+    END,
+    CASE 
+      WHEN `nom_commercial` != '' AND `nom_commercial` IS NOT NULL
+      THEN (
+        SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = TRIM(UPPER(`yj_fiche`.`nom_commercial`)) LIMIT 1
+      )
+      ELSE NULL
+    END
+  ) as `id_commercial`,
   -- id_commercial_2: retrouver l'ID via le nom dans la table utilisateurs
   CASE 
     WHEN `nom_commercial_2` != '' AND `nom_commercial_2` IS NOT NULL
@@ -228,6 +260,12 @@ SELECT
     THEN UNIX_TIMESTAMP(`date_heure_appel`)
     ELSE NULL
   END as `date_appel`,
+  -- Date appel time: utiliser date_heure_appel directement
+  CASE 
+    WHEN `date_heure_appel` != '0000-00-00 00:00:00' AND `date_heure_appel` IS NOT NULL
+    THEN `date_heure_appel`
+    ELSE NULL
+  END as `date_appel_time`,
   -- Date insert: convertir date_insertion vers bigint
   CASE 
     WHEN `date_insertion` != '0000-00-00 00:00:00' AND `date_insertion` IS NOT NULL
@@ -285,7 +323,7 @@ SELECT
     ELSE NULL
   END as `conf_produit`,
   NULL as `conf_orientation_toiture`, -- Pas de champ direct dans yj_fiche
-  NULL as `conf_zones_ombres`, -- Pas de champ direct dans yj_fiche
+  NULLIF(`zones_ombres`, '') as `conf_zones_ombres`, -- zones_ombres -> conf_zones_ombres
   NULLIF(`site_classe`, '') as `conf_site_classe`, -- site_classe -> conf_site_classe
   NULL as `conf_consommation_electricite`, -- Pas de champ direct dans yj_fiche
   NULLIF(`conf_rdv_avec`, '') as `conf_rdv_avec`,
@@ -322,8 +360,9 @@ SELECT
   NULLIF(`ph3_marque_ballon`, '') as `ph3_marque_ballon`,
   NULLIF(`ph3_alimentation`, '') as `ph3_alimentation`,
   NULLIF(`ph3_type`, '') as `ph3_type`,
+  -- PH3 prix: convertir ph3_prix de int vers decimal
   CASE 
-    WHEN `ph3_prix` > 0 THEN `ph3_prix`
+    WHEN `ph3_prix` > 0 THEN CAST(`ph3_prix` AS DECIMAL(10,2))
     ELSE NULL
   END as `ph3_prix`,
   -- PH3 bonus 30: convertir ph3_bonus_30 de varchar vers decimal

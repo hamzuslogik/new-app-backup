@@ -185,9 +185,9 @@ const Header = () => {
         >
           <FaBars />
         </button>
-        <div className="header-logo-container">
+        <Link to="/dashboard" className="header-logo-container">
           <img src="/logo/logo.png" alt="JWS Group Logo" className="header-logo" />
-        </div>
+        </Link>
         <h1 className="header-title">CRM JWS Group</h1>
       </div>
       <div className="header-right">
