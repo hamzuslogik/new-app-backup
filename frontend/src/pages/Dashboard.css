@@ -79,6 +79,8 @@
   color: var(--text-primary, #333);
   text-decoration: none;
   cursor: pointer;
+  width: 100%;
+  text-align: left !important;
 }
 
 
@@ -97,6 +99,7 @@
   font-size: 23.8px;
   color: white;
   flex-shrink: 0;
+  margin-left: 0;
 }
 
 .stat-card-success .stat-card-icon {
