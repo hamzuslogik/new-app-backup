@@ -73,14 +73,11 @@
   box-shadow: 0 2px 4px var(--shadow, rgba(0, 0, 0, 0.1));
   display: flex;
   align-items: center;
-  justify-content: flex-start !important;
   gap: 12px;
   transition: transform 0.2s, box-shadow 0.2s;
   color: var(--text-primary, #333);
   text-decoration: none;
   cursor: pointer;
-  width: 100%;
-  text-align: left !important;
 }
 
 
@@ -99,7 +96,6 @@
   font-size: 23.8px;
   color: white;
   flex-shrink: 0;
-  margin-left: 0;
 }
 
 .stat-card-success .stat-card-icon {
