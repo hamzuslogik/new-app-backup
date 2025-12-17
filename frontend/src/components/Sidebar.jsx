@@ -51,6 +51,13 @@ const Sidebar = ({ collapsed }) => {
       visible: true, // Toujours visible, mais vérifié par permission
     },
     {
+      path: '/dashboard-admin',
+      label: 'Dashboard-ADMIN',
+      icon: FaHome,
+      permission: 'dashboard_view',
+      visible: true,
+    },
+    {
       path: '/fiches',
       label: 'Fiches',
       icon: FaFileAlt,

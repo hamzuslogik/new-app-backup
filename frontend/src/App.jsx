@@ -5,6 +5,7 @@ import PrivateRoute from './components/PrivateRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import DashboardAdmin from './pages/DashboardAdmin';
 import Fiches from './pages/Fiches';
 import FicheDetail from './pages/FicheDetail';
 import FicheDetailRoute from './components/FicheDetailRoute';
@@ -54,6 +55,7 @@ function App() {
         >
           <Route index element={<HomeRedirect />} />
           <Route path="dashboard" element={<ProtectedRoute permission="dashboard_view"><Dashboard /></ProtectedRoute>} />
+          <Route path="dashboard-admin" element={<ProtectedRoute permission="dashboard_view"><DashboardAdmin /></ProtectedRoute>} />
           <Route path="fiches" element={<ProtectedRoute permission="fiches_view"><Fiches /></ProtectedRoute>} />
           <Route path="fiches/:id" element={<ProtectedRoute permission="fiches_detail"><FicheDetailRoute /></ProtectedRoute>} />
           <Route path="planning" element={<ProtectedRoute permission="planning_view"><Planning /></ProtectedRoute>} />
