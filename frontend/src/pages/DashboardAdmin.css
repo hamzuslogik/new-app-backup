@@ -1,7 +1,81 @@
-﻿.dashboard {
+﻿/* Désactiver la responsivité mobile - Forcer largeur fixe 1400px */
+/* Appliquer uniquement quand la classe dashboard-admin-page est présente */
+html.dashboard-admin-page,
+body.dashboard-admin-page {
+  width: 1400px !important;
+  max-width: none !important;
+  overflow-x: hidden !important;
+  margin: 0 auto !important;
+}
+
+/* Forcer les tableaux CRM à 1400px dans Dashboard-ADMIN */
+.dashboard-admin-page .fiches-table,
+.dashboard-admin-page .confirmateurs-table,
+.dashboard-admin-page .fiches-table-container,
+.dashboard-admin-page .confirmateurs-table-container {
+  width: 1400px !important;
+  max-width: none !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+/* Désactiver toute règle responsive mobile existante */
+@media (max-width: 768px) {
+  .dashboard-admin-page * {
+    max-width: none !important;
+  }
+  
+  html.dashboard-admin-page,
+  body.dashboard-admin-page {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+  
+  .dashboard-admin-page .dashboard {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+  
+  .dashboard-admin-page .fiches-table,
+  .dashboard-admin-page .confirmateurs-table,
+  .dashboard-admin-page .fiches-table-container,
+  .dashboard-admin-page .confirmateurs-table-container {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-admin-page * {
+    max-width: none !important;
+  }
+  
+  html.dashboard-admin-page,
+  body.dashboard-admin-page {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+  
+  .dashboard-admin-page .dashboard {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+  
+  .dashboard-admin-page .fiches-table,
+  .dashboard-admin-page .confirmateurs-table,
+  .dashboard-admin-page .fiches-table-container,
+  .dashboard-admin-page .confirmateurs-table-container {
+    width: 1400px !important;
+    max-width: none !important;
+  }
+}
+
+.dashboard {
   padding: 16px;
-  max-width: 100%;
-  overflow-x: auto;
+  max-width: 1400px;
+  width: 1400px;
+  overflow-x: hidden;
+  margin: 0 auto;
 }
 
 .dashboard-header {
