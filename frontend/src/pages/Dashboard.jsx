@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
@@ -12,6 +12,7 @@ const Dashboard = () => {
   const { user, hasPermission } = useAuth();
   const { setAutoHide, isDesktop } = useSidebar();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = 'confirmed'; // Toujours 'confirmed' puisqu'il n'y a plus d'onglet
   
   // Pour Confirmateur (fonction 6) et RE Confirmation (fonction 14)
@@ -24,6 +25,27 @@ const Dashboard = () => {
     limit: 10,
     fiche_search: false,
   });
+  
+  // Lire les paramètres de l'URL et les appliquer aux filtres
+  useEffect(() => {
+    const urlParams = Object.fromEntries(searchParams.entries());
+    if (Object.keys(urlParams).length > 0 && urlParams.fiche_search === '1') {
+      // Convertir les paramètres de l'URL en filtres
+      const newFilters = {
+        page: parseInt(urlParams.page) || 1,
+        limit: parseInt(urlParams.limit) || 10,
+        fiche_search: true,
+        ...urlParams
+      };
+      // Convertir id_etat_final en nombre si présent
+      if (newFilters.id_etat_final) {
+        newFilters.id_etat_final = parseInt(newFilters.id_etat_final);
+      }
+      setFilters(newFilters);
+      // Ouvrir automatiquement les filtres si des paramètres sont présents
+      setShowFilters(true);
+    }
+  }, [searchParams]);
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
     direction: 'asc', // 'asc' or 'desc'
@@ -578,44 +600,61 @@ const Dashboard = () => {
       </div>
 
       {/* Section des statistiques RDV */}
-      {!isLoadingStats && dashboardStats && (
-        <div className="dashboard-stats-section">
-          <div className="stats-cards">
-            {/* RDV confirmés aujourd'hui */}
-            <div className="stat-card stat-card-success">
-              <div className="stat-card-icon">
-                <FaCalendarCheck />
-              </div>
-              <div className="stat-card-content">
-                <div className="stat-card-value">{dashboardStats.rdvTodayConfirmed || 0}</div>
-                <div className="stat-card-label">RDV Confirmés Aujourd'hui</div>
-              </div>
-            </div>
+      {!isLoadingStats && dashboardStats && (() => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+        
+        // URL pour "confirmer de la journée"
+        const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_modif_time&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
+        
+        // URL pour "annuler à reprogrammer"
+        const annulerUrl = `/dashboard?fiche_search=1&id_etat_final=8&date_champ=date_modif_time&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
+        
+        // URL pour "rdv à venir"
+        const rdvVenirUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_rdv_time&date_debut=${todayStr}&time_debut=00:00:00`;
+        
+        return (
+          <div className="dashboard-stats-section">
+            <div className="stats-cards">
+              {/* Confirmer de la journée */}
+              <Link to={confirmesUrl} className="stat-card stat-card-success">
+                <div className="stat-card-icon">
+                  <FaCalendarCheck />
+                </div>
+                <div className="stat-card-content">
+                  <div className="stat-card-value">{dashboardStats.rdvTodayConfirmed || 0}</div>
+                  <div className="stat-card-label">Confirmer de la journée</div>
+                </div>
+              </Link>
 
-            {/* RDV annulés à reprogrammer aujourd'hui */}
-            <div className="stat-card stat-card-warning">
-              <div className="stat-card-icon">
-                <FaCalendarTimes />
-              </div>
-              <div className="stat-card-content">
-                <div className="stat-card-value">{dashboardStats.rdvTodayAnnuler || 0}</div>
-                <div className="stat-card-label">RDV Annulés à Reprogrammer Aujourd'hui</div>
-              </div>
-            </div>
+              {/* Annuler à reprogrammer */}
+              <Link to={annulerUrl} className="stat-card stat-card-warning">
+                <div className="stat-card-icon">
+                  <FaCalendarTimes />
+                </div>
+                <div className="stat-card-content">
+                  <div className="stat-card-value">{dashboardStats.rdvTodayAnnuler || 0}</div>
+                  <div className="stat-card-label">Annuler à reprogrammer</div>
+                </div>
+              </Link>
 
-            {/* RDV à venir */}
-            <div className="stat-card stat-card-info">
-              <div className="stat-card-icon">
-                <FaCalendarAlt />
-              </div>
-              <div className="stat-card-content">
-                <div className="stat-card-value">{dashboardStats.rdvUpcoming || 0}</div>
-                <div className="stat-card-label">RDV à Venir (Confirmés)</div>
-              </div>
+              {/* RDV à venir */}
+              <Link to={rdvVenirUrl} className="stat-card stat-card-info">
+                <div className="stat-card-icon">
+                  <FaCalendarAlt />
+                </div>
+                <div className="stat-card-content">
+                  <div className="stat-card-value">{dashboardStats.rdvUpcoming || 0}</div>
+                  <div className="stat-card-label">RDV à venir</div>
+                </div>
+              </Link>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Panneau de recherche et filtres */}
       <div className="search-panel">

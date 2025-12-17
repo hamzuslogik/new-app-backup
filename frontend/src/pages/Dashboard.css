@@ -76,6 +76,8 @@
   gap: 12px;
   transition: transform 0.2s, box-shadow 0.2s;
   color: var(--text-primary, #333);
+  text-decoration: none;
+  cursor: pointer;
 }
 
 
