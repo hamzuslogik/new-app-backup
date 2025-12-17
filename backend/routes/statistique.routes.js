@@ -1110,6 +1110,8 @@ router.get('/production-qualif', authenticate, async (req, res) => {
 // Récupérer les KPI qualification (meilleurs agents et équipes)
 router.get('/kpi-qualification', authenticate, async (req, res) => {
   try {
+    const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
+    
     // Récupérer les IDs des états groupe 0 pour exclure
     const etatsGroupe0 = await query(`
       SELECT id FROM etats
@@ -1128,9 +1130,20 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
     const weekStart = monday.toISOString().split('T')[0];
     const weekEnd = todayStr;
     
-    // Mois
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const monthEnd = todayStr;
+    // Mois - utiliser le mois sélectionné ou le mois en cours
+    let monthStart, monthEnd;
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      // Mois sélectionné
+      const [year, monthNum] = month.split('-').map(Number);
+      monthStart = new Date(year, monthNum - 1, 1).toISOString().split('T')[0];
+      // Dernier jour du mois
+      const lastDay = new Date(year, monthNum, 0).getDate();
+      monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
+    } else {
+      // Mois en cours par défaut
+      monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      monthEnd = todayStr;
+    }
 
     const kpiData = {
       jour: {},

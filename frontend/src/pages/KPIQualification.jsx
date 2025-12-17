@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -8,13 +8,46 @@ import './KPIQualification.css';
 const KPIQualification = () => {
   const { user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois
+  const [selectedMonth, setSelectedMonth] = useState(''); // Format: YYYY-MM
+
+  // Générer la liste des mois (12 derniers mois)
+  const getAvailableMonths = () => {
+    const months = [];
+    const today = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const monthStr = `${year}-${month}`;
+      const monthLabel = date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
+      months.push({ value: monthStr, label: monthLabel });
+    }
+    return months;
+  };
+
+  // Initialiser le mois en cours si on est sur la période "mois"
+  useEffect(() => {
+    if (selectedPeriod === 'mois' && !selectedMonth) {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      setSelectedMonth(`${year}-${month}`);
+    }
+  }, [selectedPeriod, selectedMonth]);
 
   // Récupérer les KPI
   const { data: kpiData, isLoading, error } = useQuery(
-    'kpi-qualification',
+    ['kpi-qualification', selectedPeriod, selectedMonth],
     async () => {
-      const res = await api.get('/statistiques/kpi-qualification');
+      const params = {};
+      if (selectedPeriod === 'mois' && selectedMonth) {
+        params.month = selectedMonth;
+      }
+      const res = await api.get('/statistiques/kpi-qualification', { params });
       return res.data.data;
+    },
+    {
+      enabled: selectedPeriod !== 'mois' || !!selectedMonth
     }
   );
 
@@ -48,19 +81,50 @@ const KPIQualification = () => {
     <div className="kpi-qualification">
       <div className="kpi-header">
         <h1><FaChartLine /> KPI Qualification</h1>
-        <div className="period-selector">
-          {periods.map(period => {
-            const Icon = period.icon;
-            return (
-              <button
-                key={period.key}
-                className={`period-btn ${selectedPeriod === period.key ? 'active' : ''}`}
-                onClick={() => setSelectedPeriod(period.key)}
+        <div className="header-controls">
+          <div className="period-selector">
+            {periods.map(period => {
+              const Icon = period.icon;
+              return (
+                <button
+                  key={period.key}
+                  className={`period-btn ${selectedPeriod === period.key ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedPeriod(period.key);
+                    if (period.key !== 'mois') {
+                      setSelectedMonth('');
+                    } else if (!selectedMonth) {
+                      // Si on passe à "mois" et qu'aucun mois n'est sélectionné, utiliser le mois en cours
+                      const today = new Date();
+                      const year = today.getFullYear();
+                      const month = String(today.getMonth() + 1).padStart(2, '0');
+                      setSelectedMonth(`${year}-${month}`);
+                    }
+                  }}
+                >
+                  <Icon /> {period.label}
+                </button>
+              );
+            })}
+          </div>
+          {selectedPeriod === 'mois' && (
+            <div className="month-selector">
+              <label htmlFor="month-select">Mois :</label>
+              <select
+                id="month-select"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="month-select"
               >
-                <Icon /> {period.label}
-              </button>
-            );
-          })}
+                <option value="">Sélectionner un mois</option>
+                {getAvailableMonths().map(month => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
