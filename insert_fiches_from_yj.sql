@@ -41,6 +41,7 @@ USE `crm`;
 --   yj_fiche.cq_dossier (varchar) -> fiches.cq_dossier (int)
 --   yj_fiche.archive (tinyint) -> fiches.archive (int)
 --   yj_fiche.valider (tinyint) -> fiches.valider (int)
+--   yj_fiche.nom_agent (varchar) -> fiches.id_agent (int) - conversion via table utilisateurs
 
 INSERT INTO `fiches` (
   `id`, `civ`, `nom`, `prenom`, `tel`, `gsm1`, `gsm2`, `adresse`, `cp`, `ville`,
@@ -129,7 +130,14 @@ SELECT
   NULLIF(`profession_mr`, '') as `profession_mr`,
   NULLIF(`profession_mme`, '') as `profession_madame`, -- profession_mme -> profession_madame
   NULLIF(`commentaire`, '') as `commentaire`,
-  `id_agent`,
+  -- id_agent: retrouver l'ID via le nom dans la table utilisateurs
+  CASE 
+    WHEN `nom_agent` != '' AND `nom_agent` IS NOT NULL
+    THEN (
+      SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = TRIM(UPPER(`yj_fiche`.`nom_agent`)) LIMIT 1
+    )
+    ELSE NULL
+  END as `id_agent`,
   `id_centre`,
   NULL as `id_insert`, -- Pas de champ direct dans yj_fiche
   -- id_confirmateur: retrouver l'ID via le nom dans la table utilisateurs (avec fallback sur id_confirmateur si le nom n'existe pas)
