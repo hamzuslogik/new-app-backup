@@ -12,12 +12,25 @@ const LayoutContent = () => {
   const location = useLocation();
   const overlayRef = React.useRef(null);
   const [overlayReady, setOverlayReady] = React.useState(false);
+  const prevPathnameRef = React.useRef(location.pathname);
+  const isInitialMountRef = React.useRef(true);
 
   // Fermer automatiquement la sidebar sur mobile/tablet lors du changement de page
   React.useEffect(() => {
-    if (isMobile || isTablet) {
+    // Ignorer le montage initial
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      prevPathnameRef.current = location.pathname;
+      return;
+    }
+
+    // Ne fermer que si le pathname a réellement changé et qu'on est sur mobile/tablet
+    if ((isMobile || isTablet) && location.pathname !== prevPathnameRef.current) {
       closeSidebar();
     }
+    
+    // Mettre à jour la référence du pathname
+    prevPathnameRef.current = location.pathname;
   }, [location.pathname, isMobile, isTablet, closeSidebar]);
 
   // Délai avant que l'overlay ne devienne cliquable pour éviter qu'il capture le clic d'ouverture

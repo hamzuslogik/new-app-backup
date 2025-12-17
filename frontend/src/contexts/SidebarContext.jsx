@@ -50,8 +50,8 @@ export const SidebarProvider = ({ children }) => {
         }
         // Forcer le sidebar à être collapsed sur mobile/tablet
         // Si on passe de desktop à mobile, fermer le sidebar
-        // Sur mobile, le sidebar doit toujours être masqué par défaut
-        if (wasDesktop) {
+        // Ne PAS forcer la fermeture si l'utilisateur vient de l'ouvrir manuellement
+        if (wasDesktop && !userToggleRef.current) {
           setSidebarCollapsed(true);
         }
         // Note: Si on est déjà sur mobile, le sidebar reste dans son état actuel
