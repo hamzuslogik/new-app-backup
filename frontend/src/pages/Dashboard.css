@@ -1269,7 +1269,7 @@
   }
 
   .stats-cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
     gap: 12px;
   }
 
