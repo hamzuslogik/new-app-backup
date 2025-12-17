@@ -5,7 +5,7 @@ body.dashboard-admin-page {
   width: 1400px !important;
   max-width: none !important;
   overflow-x: hidden !important;
-  margin: 0 auto !important;
+  margin: 0 !important;
 }
 
 /* Forcer les tableaux CRM à 1400px dans Dashboard-ADMIN */
@@ -75,7 +75,14 @@ body.dashboard-admin-page {
   max-width: 1400px;
   width: 1400px;
   overflow-x: hidden;
-  margin: 0 auto;
+  margin: 0;
+}
+
+/* Forcer le dashboard dans Dashboard-ADMIN */
+.dashboard-admin-page .dashboard {
+  width: 1400px !important;
+  max-width: 1400px !important;
+  margin: 0 !important;
 }
 
 .dashboard-header {

@@ -28,7 +28,7 @@ const DashboardAdmin = () => {
       viewport.setAttribute('name', 'viewport');
       document.head.appendChild(viewport);
     }
-    viewport.setAttribute('content', 'width=1400, initial-scale=1');
+    viewport.setAttribute('content', 'width=1400');
     
     // Ajouter une classe au body pour cibler uniquement cette page
     document.body.classList.add('dashboard-admin-page');
