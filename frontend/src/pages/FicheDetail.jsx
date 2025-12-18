@@ -2028,7 +2028,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               fontSize: '13.6px',
               fontWeight: 'bold'
             }}>
-              DÉCALAGE DU RENDEZ-VOUS
+              Demande de décalage
             </h2>
             
             {/* Afficher les décalages existants pour cette fiche */}
@@ -2041,7 +2041,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 marginBottom: '10px'
               }}>
                 <h3 style={{ marginTop: '0', marginBottom: '10px', fontSize: '11.9px', fontWeight: 'bold' }}>
-                  Demandes de décalage existantes ({decalagesData.length})
+                  Demande de décalage ({decalagesData.length})
                 </h3>
                 <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                   {decalagesData.map((decalage, index) => (
@@ -2318,7 +2318,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     padding: '10px 20px'
                   }}
                 >
-                  {decalageMutation.isLoading ? 'Envoi...' : 'CRÉER UNE NOUVELLE DEMANDE DE DÉCALAGE'}
+                  {decalageMutation.isLoading ? 'Envoi...' : 'Demande de décalage'}
                 </button>
               </div>
             </div>
