@@ -1645,9 +1645,9 @@ body.dashboard-page {
   max-width: 70%;
   min-width: 350px;
   width: 70%;
-  max-height: 80vh;
-  height: 80vh;
-  min-height: 60vh;
+  max-height: 95vh;
+  height: 95vh;
+  min-height: 80vh;
   overflow-y: auto; /* Scroll uniquement sur le contenu du modal */
   overflow-x: hidden;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
