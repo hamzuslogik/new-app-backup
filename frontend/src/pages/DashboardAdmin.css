@@ -1,10 +1,11 @@
-﻿/* Désactiver la responsivité mobile - Forcer largeur fixe 1400px */
+﻿/* Désactiver la responsivité mobile - Forcer largeur minimale 1400px */
 /* Appliquer uniquement quand la classe dashboard-admin-page est présente */
 html.dashboard-admin-page,
 body.dashboard-admin-page {
-  width: 1400px !important;
+  min-width: 1400px !important;
+  width: auto !important;
   max-width: none !important;
-  overflow-x: hidden !important;
+  overflow-x: auto !important; /* Permettre le scroll horizontal si nécessaire */
   margin: 0 !important;
 }
 
@@ -27,12 +28,15 @@ body.dashboard-admin-page {
   
   html.dashboard-admin-page,
   body.dashboard-admin-page {
-    width: 1400px !important;
+    min-width: 1400px !important;
+    width: auto !important;
     max-width: none !important;
+    overflow-x: auto !important;
   }
   
   .dashboard-admin-page .dashboard {
-    width: 1400px !important;
+    min-width: 1400px !important;
+    width: auto !important;
     max-width: none !important;
   }
   
@@ -52,12 +56,15 @@ body.dashboard-admin-page {
   
   html.dashboard-admin-page,
   body.dashboard-admin-page {
-    width: 1400px !important;
+    min-width: 1400px !important;
+    width: auto !important;
     max-width: none !important;
+    overflow-x: auto !important;
   }
   
   .dashboard-admin-page .dashboard {
-    width: 1400px !important;
+    min-width: 1400px !important;
+    width: auto !important;
     max-width: none !important;
   }
   
@@ -72,16 +79,18 @@ body.dashboard-admin-page {
 
 .dashboard {
   padding: 16px;
-  max-width: 1400px;
-  width: 1400px;
-  overflow-x: hidden;
+  min-width: 1400px;
+  width: auto;
+  max-width: none;
+  overflow-x: visible;
   margin: 0;
 }
 
 /* Forcer le dashboard dans Dashboard-ADMIN */
 .dashboard-admin-page .dashboard {
-  width: 1400px !important;
-  max-width: 1400px !important;
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
   margin: 0 !important;
 }
 

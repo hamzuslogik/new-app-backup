@@ -34,13 +34,15 @@ const DashboardAdmin = () => {
     document.body.classList.add('dashboard-admin-page');
     document.documentElement.classList.add('dashboard-admin-page');
     
-    // Forcer les styles sur html et body
-    document.documentElement.style.width = '1400px';
+    // Forcer les styles sur html et body - utiliser min-width pour permettre le scroll si nécessaire
+    document.documentElement.style.minWidth = '1400px';
+    document.documentElement.style.width = 'auto';
     document.documentElement.style.maxWidth = 'none';
-    document.documentElement.style.overflowX = 'hidden';
-    document.body.style.width = '1400px';
+    document.documentElement.style.overflowX = 'auto'; // Permettre le scroll horizontal si nécessaire
+    document.body.style.minWidth = '1400px';
+    document.body.style.width = 'auto';
     document.body.style.maxWidth = 'none';
-    document.body.style.overflowX = 'hidden';
+    document.body.style.overflowX = 'auto'; // Permettre le scroll horizontal si nécessaire
     
     // Nettoyage au démontage du composant
     return () => {
@@ -56,9 +58,11 @@ const DashboardAdmin = () => {
       document.documentElement.classList.remove('dashboard-admin-page');
       
       // Restaurer les styles html et body
+      document.documentElement.style.minWidth = '';
       document.documentElement.style.width = '';
       document.documentElement.style.maxWidth = '';
       document.documentElement.style.overflowX = '';
+      document.body.style.minWidth = '';
       document.body.style.width = '';
       document.body.style.maxWidth = '';
       document.body.style.overflowX = '';
