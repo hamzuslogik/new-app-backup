@@ -9,12 +9,12 @@ body.dashboard-page {
   margin: 0 !important;
 }
 
-/* Forcer les tableaux CRM à 1400px dans Dashboard */
+/* Forcer les tableaux CRM à prendre toute la largeur dans Dashboard */
 .dashboard-page .fiches-table,
 .dashboard-page .confirmateurs-table {
   min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
   table-layout: fixed !important;
   border-collapse: collapse !important;
 }
@@ -22,8 +22,8 @@ body.dashboard-page {
 .dashboard-page .fiches-table-container,
 .dashboard-page .confirmateurs-table-container {
   min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
   overflow-x: auto !important; /* Permettre le scroll horizontal si nécessaire */
 }
 
@@ -840,6 +840,19 @@ body.dashboard-page {
   width: 100%;
   border-collapse: collapse;
   font-size: 11px;
+}
+
+/* En version desktop, forcer les tableaux à prendre toute la largeur */
+@media (min-width: 1400px) {
+  .dashboard-page .fiches-table,
+  .dashboard-page .confirmateurs-table {
+    width: 100% !important;
+  }
+  
+  .dashboard-page .fiches-table-container,
+  .dashboard-page .confirmateurs-table-container {
+    width: 100% !important;
+  }
 }
 
 .fiches-table thead {
