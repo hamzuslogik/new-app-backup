@@ -2041,7 +2041,7 @@ body.dashboard-page {
   margin: 0 !important;
   max-width: 100% !important;
   font-size: 14px !important;
-  line-height: 1.2 !important;
+  line-height: 1.0 !important;
   overflow: visible !important; /* Pas de scroll interne */
   flex: 1 1 auto !important;
   min-height: auto !important;
@@ -2110,7 +2110,7 @@ body.dashboard-page {
 .fiche-detail-modal-content .field-actions {
   padding: 0 2px !important;
   font-size: 13px !important;
-  line-height: 1.1 !important;
+  line-height: 0.9 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
   font-weight: 600 !important;
@@ -2218,7 +2218,7 @@ body.dashboard-page {
 
 .fiche-detail-modal-content .fiche-details-table tr {
   border-bottom: 0.5px solid #e0e0e0;
-  line-height: 0.7 !important;
+  line-height: 0.5 !important;
   margin: 0 !important;
   padding: 0 !important;
   height: auto !important;
@@ -2227,22 +2227,22 @@ body.dashboard-page {
 }
 
 .fiche-detail-modal-content .fiche-details-table td {
-  line-height: 0.7 !important;
+  line-height: 0.5 !important;
   margin: 0 !important;
-  padding: 1px 2px !important;
+  padding: 0 2px !important;
   vertical-align: middle !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr {
   height: auto !important;
   min-height: 0 !important;
-  max-height: 12px !important;
+  max-height: 10px !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr td {
   vertical-align: middle !important;
-  padding-top: 1px !important;
-  padding-bottom: 1px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   margin: 0 !important;
 }
 
@@ -2276,8 +2276,8 @@ body.dashboard-page {
 }
 
 .fiche-detail-modal-content .fiche-section {
-  margin-bottom: 3px !important;
-  padding: 3px !important;
+  margin-bottom: 1px !important;
+  padding: 1px !important;
 }
 
 .fiche-detail-modal-content .fiche-sections {
@@ -2285,11 +2285,11 @@ body.dashboard-page {
 }
 
 .fiche-detail-modal-content .section-title {
-  margin-bottom: 4px !important;
-  padding: 4px 12px !important;
-  padding-bottom: 3px !important;
+  margin-bottom: 2px !important;
+  padding: 2px 12px !important;
+  padding-bottom: 2px !important;
   font-size: 16px !important;
-  line-height: 1.2 !important;
+  line-height: 1.1 !important;
   font-weight: 700 !important;
   background-color: var(--etat-color, #3498db) !important;
   color: white !important;
