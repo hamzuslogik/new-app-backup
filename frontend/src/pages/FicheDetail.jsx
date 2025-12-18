@@ -5373,41 +5373,54 @@ const PlanningViewForModal = ({
   canEdit = false,
   currentFicheHash // Le hash est passé mais on ne peut plus comparer par ID car il est masqué
 }) => {
-  const [editingCell, setEditingCell] = useState(null);
-  const [editValue, setEditValue] = useState('');
+  const [editValues, setEditValues] = useState({});
   
-  const handleCellDoubleClick = (date, hour, e) => {
-    e.stopPropagation();
-    if (!canEdit) return;
-    // Vérifier si le créneau est fermé
-    const availData = availability?.[date]?.[hour];
-    const isClosed = availData?.is_closed === 1;
-    if (isClosed) return; // Ne pas permettre l'édition si le créneau est fermé
-    const currentValue = availData?.nbr_com ?? 0; // null devient 0 pour l'édition
-    setEditingCell(`${date}-${hour}`);
-    setEditValue(currentValue.toString());
+  const handleAvailabilityChange = (date, hour, value) => {
+    setEditValues(prev => ({
+      ...prev,
+      [`${date}-${hour}`]: value
+    }));
   };
   
-  const handleSave = (date, hour) => {
-    if (editValue === '' || editValue === null || editValue === undefined) {
-      setEditingCell(null);
-      setEditValue('');
+  const handleAvailabilityBlur = (date, hour) => {
+    const value = editValues[`${date}-${hour}`];
+    if (value === undefined || value === '') return;
+    
+    const numValue = parseInt(value);
+    if (isNaN(numValue) || numValue < 0) {
+      // Réinitialiser la valeur si invalide
+      setEditValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[`${date}-${hour}`];
+        return newValues;
+      });
       return;
     }
-    const value = parseInt(editValue);
-    if (isNaN(value) || value < 0) {
-      return;
-    }
+    
     if (onUpdateAvailability) {
-      onUpdateAvailability(date, hour, value, 'hour');
+      onUpdateAvailability(date, hour, numValue, 'hour');
     }
-    setEditingCell(null);
-    setEditValue('');
+    
+    // Nettoyer la valeur après sauvegarde
+    setEditValues(prev => {
+      const newValues = { ...prev };
+      delete newValues[`${date}-${hour}`];
+      return newValues;
+    });
   };
   
-  const handleCancel = () => {
-    setEditingCell(null);
-    setEditValue('');
+  const handleAvailabilityKeyDown = (date, hour, e) => {
+    if (e.key === 'Enter') {
+      e.target.blur(); // Déclenche handleAvailabilityBlur
+    } else if (e.key === 'Escape') {
+      // Annuler la modification
+      setEditValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[`${date}-${hour}`];
+        return newValues;
+      });
+      e.target.blur();
+    }
   };
   return (
     <div className="planning-view">
@@ -5464,12 +5477,14 @@ const PlanningViewForModal = ({
                     // Note: L'ID est masqué, on ne peut plus comparer directement
                     // On marque simplement le créneau si on a des RDV
                     const currentFicheInSlot = false;
-                    const isEditing = editingCell === `${day.date}-${slot.hour}`;
                     const canEditThis = canEdit && !isBlocked;
+                    const cellKey = `${day.date}-${slot.hour}`;
+                    const currentEditValue = editValues[cellKey];
+                    const inputValue = currentEditValue !== undefined ? currentEditValue : (availabilityCount !== null ? availabilityCount : '');
                     
                     return (
                       <td
-                        key={`${day.date}-${slot.hour}`}
+                        key={cellKey}
                         className={`planning-cell ${isBlocked ? 'blocked' : ''} ${hasPlanning ? 'has-planning' : ''} ${currentFicheInSlot ? 'current-fiche' : ''} ${hasData ? 'has-data' : ''} ${isAvailable && !hasData ? 'available-slot' : ''}`}
                         style={{ 
                           backgroundColor: isBlocked ? 'rgba(34, 45, 50, 0.8)' : 'transparent',
@@ -5477,101 +5492,52 @@ const PlanningViewForModal = ({
                           cursor: isAvailable ? 'pointer' : 'default',
                           border: isAvailable && !hasData ? '2px dashed #8BC34A' : 'none'
                         }}
-                        onClick={() => !isEditing && isAvailable && onSelectSlot(day.date, slot.hour)}
-                        onDoubleClick={(e) => canEditThis && handleCellDoubleClick(day.date, slot.hour, e)}
-                        title={
-                          isEditing 
-                            ? 'Modifier la disponibilité' 
-                            : canEditThis && hasData
-                            ? `Double-cliquer pour modifier la disponibilité (${day.dayName} à ${slot.name})`
-                            : isAvailable 
-                            ? `Cliquer pour créer un rendez-vous le ${day.dayName} à ${slot.name}` 
-                            : isBlocked 
-                            ? 'Créneau bloqué' 
-                            : 'Créneau non disponible'
-                        }
+                        onClick={() => isAvailable && onSelectSlot(day.date, slot.hour)}
+                        title={isAvailable ? `Cliquer pour créer un rendez-vous le ${day.dayName} à ${slot.name}` : isBlocked ? 'Créneau bloqué' : 'Créneau non disponible'}
                       >
-                        {/* Badge de disponibilité avec format "X / Y" - TOUJOURS affiché si on a des données */}
-                        {isEditing ? (
-                          <div className="edit-controls" onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                          {/* Badge de disponibilité avec format "X / Y" - TOUJOURS affiché si on a des données */}
+                          {hasData ? (
+                            <div className="availability-info">
+                              <div className="availability-badge" style={{ backgroundColor: bgColor }}>
+                                <span className="availability-text-compact">
+                                  {confirmedCount} / {displayAvailability}
+                                </span>
+                              </div>
+                            </div>
+                          ) : isAvailable && !isBlocked ? (
+                            <div className="availability-info">
+                              <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
+                                <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
+                                  Cliquer pour créer
+                                </span>
+                              </div>
+                            </div>
+                          ) : null}
+                          
+                          {/* Champ texte pour modifier la disponibilité (uniquement pour admin) */}
+                          {canEditThis && (
                             <input
                               type="number"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="availability-input"
-                              autoFocus
+                              value={inputValue}
+                              onChange={(e) => handleAvailabilityChange(day.date, slot.hour, e.target.value)}
+                              onBlur={() => handleAvailabilityBlur(day.date, slot.hour)}
+                              onKeyDown={(e) => handleAvailabilityKeyDown(day.date, slot.hour, e)}
+                              onClick={(e) => e.stopPropagation()}
                               min="0"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleSave(day.date, slot.hour);
-                                } else if (e.key === 'Escape') {
-                                  handleCancel();
-                                }
-                              }}
+                              placeholder="0"
                               style={{
-                                width: '50px',
+                                width: '35px',
                                 padding: '2px 4px',
-                                fontSize: '11px',
+                                fontSize: '10px',
                                 border: '1px solid #ccc',
-                                borderRadius: '3px'
+                                borderRadius: '3px',
+                                textAlign: 'center'
                               }}
+                              title="Modifier la disponibilité"
                             />
-                            <button
-                              className="save-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSave(day.date, slot.hour);
-                              }}
-                              style={{
-                                padding: '2px 6px',
-                                marginLeft: '4px',
-                                fontSize: '10px',
-                                background: '#4CAF50',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <FaCheck />
-                            </button>
-                            <button
-                              className="cancel-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCancel();
-                              }}
-                              style={{
-                                padding: '2px 6px',
-                                marginLeft: '2px',
-                                fontSize: '10px',
-                                background: '#f44336',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <FaTimes />
-                            </button>
-                          </div>
-                        ) : hasData ? (
-                          <div className="availability-info">
-                            <div className="availability-badge" style={{ backgroundColor: bgColor }}>
-                              <span className="availability-text-compact">
-                                {confirmedCount} / {displayAvailability}
-                              </span>
-                            </div>
-                          </div>
-                        ) : isAvailable && !isBlocked ? (
-                          <div className="availability-info">
-                            <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
-                              <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
-                                Cliquer pour créer
-                              </span>
-                            </div>
-                          </div>
-                        ) : null}
+                          )}
+                        </div>
                       </td>
                     );
                   })}
