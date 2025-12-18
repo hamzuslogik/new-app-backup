@@ -4760,6 +4760,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           getUserName={getUserName}
           getAvailabilityColor={getAvailabilityColor}
           TIME_SLOTS={TIME_SLOTS}
+          user={user}
         />
       )}
 
@@ -4946,8 +4947,61 @@ const PlanningTab = ({
   getUserColor,
   getUserName,
   getAvailabilityColor,
-  TIME_SLOTS
+  TIME_SLOTS,
+  user
 }) => {
+  const queryClient = useQueryClient();
+  
+  // Vérifier si l'utilisateur peut éditer (uniquement fonction 1)
+  const canEdit = user?.fonction === 1;
+  
+  // Mutation pour modifier la disponibilité
+  const updateAvailabilityMutation = useMutation(
+    async ({ week, year, dep, date, hour, value, type }) => {
+      const res = await api.put('/planning/availability', { week, year, dep, date, hour, value, type });
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['planning-modal']);
+        queryClient.invalidateQueries(['availability-modal']);
+      },
+      onError: (error) => {
+        console.error('Erreur modification disponibilité:', error);
+        alert(error.response?.data?.message || 'Erreur lors de la modification');
+      }
+    }
+  );
+  
+  // Handler pour mettre à jour la disponibilité
+  const handleUpdateAvailability = (date, hour, value, type = 'hour') => {
+    if (!planningWeek || !planningYear || !planningDep) return;
+    
+    // Formater l'heure correctement (HH:MM:SS)
+    let hourFormatted = hour;
+    if (hour && !hour.includes(':')) {
+      hourFormatted = `${hour}:00:00`;
+    } else if (hour && hour.split(':').length === 2) {
+      hourFormatted = `${hour}:00`;
+    }
+    
+    const numValue = parseInt(value);
+    if (isNaN(numValue) || numValue < 0) {
+      alert('Valeur invalide');
+      return;
+    }
+    
+    updateAvailabilityMutation.mutate({
+      week: planningWeek,
+      year: planningYear,
+      dep: planningDep,
+      date,
+      hour: hourFormatted,
+      value: numValue,
+      type
+    });
+  };
+  
   const { data: planningResponse, isLoading: isLoadingPlanning, refetch: refetchPlanning } = useQuery(
     ['planning-modal', planningWeek, planningYear, planningDep],
     async () => {
@@ -5078,7 +5132,11 @@ const PlanningTab = ({
             getUserName={getUserName}
             getAvailabilityColor={getAvailabilityColor}
             dep={planningDep}
+            week={planningWeek}
+            year={planningYear}
             onSelectSlot={(date, hour) => onSelectSlot(date, hour, null, availabilityData)}
+            onUpdateAvailability={handleUpdateAvailability}
+            canEdit={canEdit}
             currentFicheHash={ficheHash}
           />
         ) : (
@@ -5308,9 +5366,49 @@ const PlanningViewForModal = ({
   getUserName, 
   getAvailabilityColor, 
   dep,
+  week,
+  year,
   onSelectSlot,
+  onUpdateAvailability,
+  canEdit = false,
   currentFicheHash // Le hash est passé mais on ne peut plus comparer par ID car il est masqué
 }) => {
+  const [editingCell, setEditingCell] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  
+  const handleCellDoubleClick = (date, hour, e) => {
+    e.stopPropagation();
+    if (!canEdit) return;
+    // Vérifier si le créneau est fermé
+    const availData = availability?.[date]?.[hour];
+    const isClosed = availData?.is_closed === 1;
+    if (isClosed) return; // Ne pas permettre l'édition si le créneau est fermé
+    const currentValue = availData?.nbr_com ?? 0; // null devient 0 pour l'édition
+    setEditingCell(`${date}-${hour}`);
+    setEditValue(currentValue.toString());
+  };
+  
+  const handleSave = (date, hour) => {
+    if (editValue === '' || editValue === null || editValue === undefined) {
+      setEditingCell(null);
+      setEditValue('');
+      return;
+    }
+    const value = parseInt(editValue);
+    if (isNaN(value) || value < 0) {
+      return;
+    }
+    if (onUpdateAvailability) {
+      onUpdateAvailability(date, hour, value, 'hour');
+    }
+    setEditingCell(null);
+    setEditValue('');
+  };
+  
+  const handleCancel = () => {
+    setEditingCell(null);
+    setEditValue('');
+  };
   return (
     <div className="planning-view">
       <div className="planning-table-container">
@@ -5366,6 +5464,8 @@ const PlanningViewForModal = ({
                     // Note: L'ID est masqué, on ne peut plus comparer directement
                     // On marque simplement le créneau si on a des RDV
                     const currentFicheInSlot = false;
+                    const isEditing = editingCell === `${day.date}-${slot.hour}`;
+                    const canEditThis = canEdit && !isBlocked;
                     
                     return (
                       <td
@@ -5377,11 +5477,85 @@ const PlanningViewForModal = ({
                           cursor: isAvailable ? 'pointer' : 'default',
                           border: isAvailable && !hasData ? '2px dashed #8BC34A' : 'none'
                         }}
-                        onClick={() => isAvailable && onSelectSlot(day.date, slot.hour)}
-                        title={isAvailable ? `Cliquer pour créer un rendez-vous le ${day.dayName} à ${slot.name}` : isBlocked ? 'Créneau bloqué' : 'Créneau non disponible'}
+                        onClick={() => !isEditing && isAvailable && onSelectSlot(day.date, slot.hour)}
+                        onDoubleClick={(e) => canEditThis && handleCellDoubleClick(day.date, slot.hour, e)}
+                        title={
+                          isEditing 
+                            ? 'Modifier la disponibilité' 
+                            : canEditThis && hasData
+                            ? `Double-cliquer pour modifier la disponibilité (${day.dayName} à ${slot.name})`
+                            : isAvailable 
+                            ? `Cliquer pour créer un rendez-vous le ${day.dayName} à ${slot.name}` 
+                            : isBlocked 
+                            ? 'Créneau bloqué' 
+                            : 'Créneau non disponible'
+                        }
                       >
                         {/* Badge de disponibilité avec format "X / Y" - TOUJOURS affiché si on a des données */}
-                        {hasData ? (
+                        {isEditing ? (
+                          <div className="edit-controls" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="number"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              className="availability-input"
+                              autoFocus
+                              min="0"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSave(day.date, slot.hour);
+                                } else if (e.key === 'Escape') {
+                                  handleCancel();
+                                }
+                              }}
+                              style={{
+                                width: '50px',
+                                padding: '2px 4px',
+                                fontSize: '11px',
+                                border: '1px solid #ccc',
+                                borderRadius: '3px'
+                              }}
+                            />
+                            <button
+                              className="save-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSave(day.date, slot.hour);
+                              }}
+                              style={{
+                                padding: '2px 6px',
+                                marginLeft: '4px',
+                                fontSize: '10px',
+                                background: '#4CAF50',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '3px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <FaCheck />
+                            </button>
+                            <button
+                              className="cancel-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancel();
+                              }}
+                              style={{
+                                padding: '2px 6px',
+                                marginLeft: '2px',
+                                fontSize: '10px',
+                                background: '#f44336',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '3px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <FaTimes />
+                            </button>
+                          </div>
+                        ) : hasData ? (
                           <div className="availability-info">
                             <div className="availability-badge" style={{ backgroundColor: bgColor }}>
                               <span className="availability-text-compact">
