@@ -15,8 +15,8 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
   const previousPath = React.useRef(location.pathname);
   const modalContentRef = React.useRef(null);
 
-  // Utiliser le hook pour bloquer le scroll du body
-  useModalScrollLock(!!ficheHash);
+  // Ne plus bloquer le scroll du body - le modal utilise le scroll de la page
+  // useModalScrollLock(!!ficheHash);
 
   // Récupérer les données de la fiche pour obtenir la couleur de l'état
   const { data: ficheData } = useQuery(
@@ -84,11 +84,10 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
   const etatColor = getEtatColor();
 
   const modalContent = (
-    <div className="fiche-detail-modal-overlay" onClick={onClose}>
+    <div className="fiche-detail-modal-overlay">
       <div 
         ref={modalContentRef}
         className="fiche-detail-modal-content" 
-        onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           // Empêcher la fermeture du modal avec Escape si on est en train de scroller
           if (e.key === 'Escape') {

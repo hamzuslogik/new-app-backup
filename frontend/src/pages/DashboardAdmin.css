@@ -1258,13 +1258,13 @@ body.dashboard-admin-page {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
   z-index: 2000;
-  padding: 3vh 2vw;
-  padding-top: 4vh;
-  overflow: hidden; /* Pas de scroll sur l'overlay */
+  overflow-y: auto; /* Permettre le scroll de la page */
+  overflow-x: hidden;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .fiche-detail-modal-content {
@@ -1274,22 +1274,18 @@ body.dashboard-admin-page {
   max-width: 70%;
   min-width: 350px;
   width: 70%;
-  max-height: 95vh;
-  height: 95vh;
-  min-height: 80vh;
-  overflow-y: auto; /* Scroll uniquement sur le contenu du modal */
-  overflow-x: hidden;
+  min-height: 100vh; /* Prendre au moins la hauteur de la fenêtre */
+  overflow: visible; /* Pas de scroll interne, utiliser le scroll de la page */
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par dÃ©faut, sera remplacÃ©e par le style inline */
   transition: border-color 0.3s ease;
-  scroll-behavior: smooth;
   display: flex;
   flex-direction: column;
   box-sizing: border-box !important;
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling sur iOS */
   padding: 8px;
   padding-bottom: 20px; /* Espace en bas pour que le bouton soit visible */
   background: white;
+  margin: 20px auto; /* Centrer et ajouter de l'espace */
 }
 
 /* Adapter le planning Ã  la largeur du modal */
@@ -1548,12 +1544,11 @@ body.dashboard-admin-page {
   max-width: 100% !important;
   font-size: 14px !important;
   line-height: 1.4 !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow: visible !important; /* Pas de scroll interne */
   flex: 1 1 auto !important;
-  min-height: 0 !important;
+  min-height: auto !important;
   display: block !important;
-  height: 100% !important;
+  height: auto !important;
   max-height: none !important;
   font-weight: 600 !important;
   background-color: color-mix(in srgb, var(--etat-color, #3498db) 3%, white);

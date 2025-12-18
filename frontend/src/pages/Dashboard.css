@@ -1629,13 +1629,13 @@ body.dashboard-page {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
   z-index: 2000;
-  padding: 3vh 2vw;
-  padding-top: 4vh;
-  overflow: hidden; /* Pas de scroll sur l'overlay */
+  overflow-y: auto; /* Permettre le scroll de la page */
+  overflow-x: hidden;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .fiche-detail-modal-content {
@@ -1645,22 +1645,18 @@ body.dashboard-page {
   max-width: 70%;
   min-width: 350px;
   width: 70%;
-  max-height: 95vh;
-  height: 95vh;
-  min-height: 80vh;
-  overflow-y: auto; /* Scroll uniquement sur le contenu du modal */
-  overflow-x: hidden;
+  min-height: 100vh; /* Prendre au moins la hauteur de la fenêtre */
+  overflow: visible; /* Pas de scroll interne, utiliser le scroll de la page */
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
   transition: border-color 0.3s ease;
-  scroll-behavior: smooth;
   display: flex;
   flex-direction: column;
   box-sizing: border-box !important;
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling sur iOS */
   padding: 8px;
   padding-bottom: 20px; /* Espace en bas pour que le bouton soit visible */
   background: white;
+  margin: 20px auto; /* Centrer et ajouter de l'espace */
 }
 
 /* Adapter le planning à la largeur du modal */
@@ -2046,12 +2042,11 @@ body.dashboard-page {
   max-width: 100% !important;
   font-size: 14px !important;
   line-height: 1.4 !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow: visible !important; /* Pas de scroll interne */
   flex: 1 1 auto !important;
-  min-height: 0 !important;
+  min-height: auto !important;
   display: block !important;
-  height: 100% !important;
+  height: auto !important;
   max-height: none !important;
   font-weight: 600 !important;
   background-color: color-mix(in srgb, var(--etat-color, #3498db) 3%, white);
@@ -2481,30 +2476,24 @@ body.dashboard-page {
     max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     min-width: 95% !important; /* Largeur minimale en mode mobile */
-    height: 80vh !important; /* Hauteur fixe de 80% - laisser de l'espace en bas */
-    min-height: 60vh !important; /* Hauteur minimale */
-    max-height: 80vh !important; /* Limiter à 80% pour laisser de l'espace en bas */
+    min-height: 100vh !important; /* Prendre au moins la hauteur de la fenêtre */
+    overflow: visible !important; /* Pas de scroll interne, utiliser le scroll de la page */
     border-radius: 8px !important; /* Rétablir le border-radius */
-    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
-    overflow-y: auto !important; /* Permet le défilement vertical si nécessaire */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
     display: flex !important;
     flex-direction: column !important;
-    margin: 0 auto !important; /* Centrer horizontalement */
+    margin: 20px auto !important; /* Centrer horizontalement */
     position: relative !important;
-    top: 0 !important; /* Aligner en haut */
-    align-self: auto !important; /* Ne pas étirer pour garder la largeur définie */
     padding-bottom: 20px !important; /* Espace en bas pour que le bouton soit visible */
   }
 
   /* Optimiser le contenu pour afficher plus d'informations */
   .fiche-detail-modal-content .fiche-detail {
     padding: 12px !important;
-    overflow-y: auto !important;
+    overflow: visible !important; /* Pas de scroll interne */
     flex: 1 1 auto !important; /* Prendre tout l'espace disponible */
-    min-height: 0 !important; /* Permettre au flex de fonctionner */
-    height: 100% !important; /* Prendre toute la hauteur du parent */
-    max-height: 100% !important;
+    min-height: auto !important;
+    height: auto !important;
+    max-height: none !important;
     font-size: 16px !important;
     line-height: 1.5 !important;
   }
