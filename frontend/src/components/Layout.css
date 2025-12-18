@@ -2,6 +2,8 @@
   display: flex;
   min-height: 100vh;
   background-color: var(--light-bg);
+  overflow-x: auto; /* Permettre le scroll horizontal si nécessaire */
+  min-width: 0; /* Permettre au flex de réduire la largeur si nécessaire */
 }
 
 .main-content {
@@ -10,6 +12,8 @@
   transition: margin-left 0.3s ease;
   display: flex;
   flex-direction: column;
+  min-width: 0; /* Permettre au flex de réduire la largeur si nécessaire */
+  overflow-x: auto; /* Permettre le scroll horizontal si nécessaire */
 }
 
 .main-content.sidebar-collapsed {
@@ -20,6 +24,8 @@
   flex: 1;
   padding: 16px;
   overflow-y: auto;
+  overflow-x: auto; /* Permettre le scroll horizontal si nécessaire */
+  min-width: 0; /* Permettre au flex de réduire la largeur si nécessaire */
 }
 
 /* Sur desktop (> 1024px), le main-content ajuste la marge selon l'état du sidebar */

@@ -11,13 +11,20 @@ body.dashboard-page {
 
 /* Forcer les tableaux CRM à 1400px dans Dashboard */
 .dashboard-page .fiches-table,
-.dashboard-page .confirmateurs-table,
-.dashboard-page .fiches-table-container,
-.dashboard-page .confirmateurs-table-container {
-  width: 1400px !important;
+.dashboard-page .confirmateurs-table {
+  min-width: 1400px !important;
+  width: auto !important;
   max-width: none !important;
   table-layout: fixed !important;
   border-collapse: collapse !important;
+}
+
+.dashboard-page .fiches-table-container,
+.dashboard-page .confirmateurs-table-container {
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow-x: auto !important; /* Permettre le scroll horizontal si nécessaire */
 }
 
 /* Désactiver toute règle responsive mobile existante */
@@ -41,11 +48,18 @@ body.dashboard-page {
   }
   
   .dashboard-page .fiches-table,
-  .dashboard-page .confirmateurs-table,
+  .dashboard-page .confirmateurs-table {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+  
   .dashboard-page .fiches-table-container,
   .dashboard-page .confirmateurs-table-container {
-    width: 1400px !important;
+    min-width: 1400px !important;
+    width: auto !important;
     max-width: none !important;
+    overflow-x: auto !important;
   }
 }
 
@@ -69,11 +83,18 @@ body.dashboard-page {
   }
   
   .dashboard-page .fiches-table,
-  .dashboard-page .confirmateurs-table,
+  .dashboard-page .confirmateurs-table {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+  
   .dashboard-page .fiches-table-container,
   .dashboard-page .confirmateurs-table-container {
-    width: 1400px !important;
+    min-width: 1400px !important;
+    width: auto !important;
     max-width: none !important;
+    overflow-x: auto !important;
   }
 }
 
