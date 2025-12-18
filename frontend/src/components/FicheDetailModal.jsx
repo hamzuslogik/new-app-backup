@@ -64,6 +64,23 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
     }
   }, [ficheHash]);
 
+  // Écouter la touche Escape pour fermer le modal
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && ficheHash) {
+        onClose();
+      }
+    };
+
+    if (ficheHash) {
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [ficheHash, onClose]);
+
   // Déterminer la couleur du border selon l'état de la fiche
   const getEtatColor = () => {
     if (!ficheData) return '#3498db'; // Couleur par défaut
@@ -84,16 +101,11 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
   const etatColor = getEtatColor();
 
   const modalContent = (
-    <div className="fiche-detail-modal-overlay">
+    <div className="fiche-detail-modal-overlay" onClick={onClose}>
       <div 
         ref={modalContentRef}
         className="fiche-detail-modal-content" 
-        onKeyDown={(e) => {
-          // Empêcher la fermeture du modal avec Escape si on est en train de scroller
-          if (e.key === 'Escape') {
-            onClose();
-          }
-        }}
+        onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
         style={{
           border: `8px solid ${etatColor}`,
