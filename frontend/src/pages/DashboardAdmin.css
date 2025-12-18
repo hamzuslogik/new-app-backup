@@ -1543,7 +1543,7 @@ body.dashboard-admin-page {
   margin: 0 !important;
   max-width: 100% !important;
   font-size: 14px !important;
-  line-height: 1.0 !important;
+  line-height: 0.9 !important;
   overflow: visible !important; /* Pas de scroll interne */
   flex: 1 1 auto !important;
   min-height: auto !important;
@@ -1720,7 +1720,7 @@ body.dashboard-admin-page {
 
 .fiche-detail-modal-content .fiche-details-table tr {
   border-bottom: 0.5px solid #e0e0e0;
-  line-height: 0.5 !important;
+  line-height: 0.4 !important;
   margin: 0 !important;
   padding: 0 !important;
   height: auto !important;
@@ -1729,7 +1729,7 @@ body.dashboard-admin-page {
 }
 
 .fiche-detail-modal-content .fiche-details-table td {
-  line-height: 0.5 !important;
+  line-height: 0.4 !important;
   margin: 0 !important;
   padding: 0 2px !important;
   vertical-align: middle !important;
@@ -1738,7 +1738,7 @@ body.dashboard-admin-page {
 .fiche-detail-modal-content .fiche-details-table tbody tr {
   height: auto !important;
   min-height: 0 !important;
-  max-height: 10px !important;
+  max-height: 8px !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr td {
@@ -1787,11 +1787,11 @@ body.dashboard-admin-page {
 }
 
 .fiche-detail-modal-content .section-title {
-  margin-bottom: 2px !important;
-  padding: 2px 12px !important;
-  padding-bottom: 2px !important;
+  margin-bottom: 1px !important;
+  padding: 1px 12px !important;
+  padding-bottom: 1px !important;
   font-size: 16px !important;
-  line-height: 1.1 !important;
+  line-height: 1.0 !important;
   font-weight: 700 !important;
   background-color: var(--etat-color, #3498db) !important;
   color: white !important;
@@ -1818,14 +1818,21 @@ body.dashboard-admin-page {
 
 /* RÃ©duire les espacements des onglets dans le modal */
 .fiche-detail-modal-content .fiche-tabs {
-  gap: 4px !important;
-  margin-bottom: 8px !important;
+  gap: 2px !important;
+  margin-bottom: 4px !important;
+  border-bottom: 1px solid #e0e0e0 !important;
 }
 
 .fiche-detail-modal-content .fiche-tab {
-  padding: 6px 12px !important;
-  font-size: 13px !important;
+  padding: 2px 8px !important;
+  font-size: 11px !important;
   font-weight: 600 !important;
+  line-height: 1.0 !important;
+  border-bottom: 2px solid transparent !important;
+}
+
+.fiche-detail-modal-content .fiche-tab.active {
+  border-bottom: 2px solid var(--etat-color, #3498db) !important;
 }
 
 /* RÃ©duire les espacements du header dans le modal */
