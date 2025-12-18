@@ -3715,7 +3715,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   <option value="">Sélectionner un état</option>
                   {/* Pour admins, agents et confirmateurs : afficher tous les états */}
                   {etats?.map(etat => (
-                    <option key={etat.id} value={etat.id}>
+                    <option 
+                      key={etat.id} 
+                      value={etat.id}
+                      style={{ backgroundColor: etat.color || '#cccccc', color: etat.color === '#ffffff' || etat.color === '#fff' ? '#000' : '#fff' }}
+                    >
                       {etat.titre}
                     </option>
                   ))}
