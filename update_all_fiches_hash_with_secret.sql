@@ -42,7 +42,7 @@ SELECT '✅ Tous les hash ont été vidés' as message;
 -- ⚠️ ATTENTION: MODIFIEZ CETTE LIGNE avec votre HASH_SECRET actuel
 -- Pour trouver votre HASH_SECRET, vérifiez le fichier .env à la racine du projet
 -- ou la variable d'environnement FICHE_HASH_SECRET
-SET @hash_secret = 'your-secret-key-change-in-production';
+SET @hash_secret = 'crm-jws-group-secret-key-2024-change-in-production';
 
 -- Afficher le HASH_SECRET utilisé (masqué pour sécurité)
 SELECT 
