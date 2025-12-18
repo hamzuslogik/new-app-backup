@@ -219,11 +219,10 @@ const Dashboard = () => {
       limit: limitParam
     };
     
-    // Fiches CONFIRMER (7) uniquement et RDV_URGENT modifiées aujourd'hui
+    // Fiches CONFIRMER (7) uniquement modifiées aujourd'hui
     return {
       ...baseParams,
-      id_etat_final: [7], // CONFIRMER uniquement (exclure ANNULER ET A REPROGRAMMER - état 8)
-      qualification_code: 'RDV_URGENT', // Inclure aussi les RDV_URGENT (peuvent être en état 7)
+      id_etat_final: [7], // CONFIRMER uniquement
       date_champ: 'date_modif_time',
       date_debut: dateStr,
       date_fin: dateStr,
