@@ -99,7 +99,8 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
         style={{
           border: `8px solid ${etatColor}`,
           outline: 'none',
-        }}
+          '--etat-color': etatColor,
+        } as React.CSSProperties}
       >
         <button className="fiche-detail-modal-close" onClick={onClose}>
           <FaTimes />

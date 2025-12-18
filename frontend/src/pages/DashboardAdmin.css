@@ -1287,7 +1287,9 @@ body.dashboard-admin-page {
   flex-direction: column;
   box-sizing: border-box !important;
   -webkit-overflow-scrolling: touch; /* Smooth scrolling sur iOS */
+  padding: 8px;
   padding-bottom: 20px; /* Espace en bas pour que le bouton soit visible */
+  background: white;
 }
 
 /* Adapter le planning Ã  la largeur du modal */
@@ -1554,6 +1556,7 @@ body.dashboard-admin-page {
   height: 100% !important;
   max-height: none !important;
   font-weight: 600 !important;
+  background-color: color-mix(in srgb, var(--etat-color, #3498db) 3%, white);
 }
 
 /* Assurer que le contenu des sections peut Ãªtre scrollÃ© */
@@ -1789,11 +1792,15 @@ body.dashboard-admin-page {
 }
 
 .fiche-detail-modal-content .section-title {
-  margin-bottom: 2px !important;
-  padding-bottom: 2px !important;
-  font-size: 11.5px !important;
+  margin-bottom: 8px !important;
+  padding: 8px 12px !important;
+  padding-bottom: 6px !important;
+  font-size: 16px !important;
   line-height: 1.3 !important;
   font-weight: 700 !important;
+  background-color: var(--etat-color, #3498db) !important;
+  color: white !important;
+  border-radius: 4px !important;
 }
 
 .fiche-detail-modal-content .form-actions {
