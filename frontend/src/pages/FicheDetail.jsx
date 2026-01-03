@@ -4693,14 +4693,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   <label htmlFor="conf_rdv_avec_validation" style={{ fontWeight: '600', fontSize: '13px' }}>
                     Avec qui le RDV a-t-il été validé ? (optionnel)
                   </label>
-                  <input
+                  <select
                     id="conf_rdv_avec_validation"
-                    type="text"
-                    placeholder="Ex: MR, MME"
                     value={confRdvAvecValue || ''}
                     onChange={(e) => setConfRdvAvecValue(e.target.value)}
                     style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                  />
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="MR">Mr</option>
+                    <option value="MME">Mme</option>
+                    <option value="MR et MME">Mr et Mme</option>
+                  </select>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="conf_presence_couple_validation" style={{ fontWeight: '600', fontSize: '13px' }}>

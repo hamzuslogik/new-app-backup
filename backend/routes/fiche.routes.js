@@ -484,6 +484,16 @@ router.get('/', authenticate, async (req, res) => {
       // Si aucune permission n'existe dans la base, ne pas filtrer (rétrocompatibilité)
     }
 
+    // Exclure les états du groupe 0 pour tous les utilisateurs sauf les agents qualification (fonction 3)
+    // Les agents qualification ont besoin du groupe 0 pour leur travail
+    if (req.user.fonction !== 3) {
+      whereConditions.push(`NOT EXISTS (
+        SELECT 1 FROM etats e 
+        WHERE e.id = fiche.id_etat_final 
+        AND (e.groupe = '0' OR e.groupe = 0)
+      )`);
+    }
+
     // Filtres de recherche
     if (nom) {
       whereConditions.push('LOWER(fiche.nom) LIKE ?');

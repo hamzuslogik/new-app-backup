@@ -274,9 +274,10 @@ const Dashboard = () => {
   const confirmateurs = usersData ? usersData.filter(u => u.fonction === 6 && u.etat > 0) : [];
   const commerciaux = usersData ? usersData.filter(u => u.fonction === 5 && u.etat > 0) : [];
   const centres = centresData ? centresData.filter(c => c.etat > 0) : [];
-  const etats = etatsData || [];
+  // Exclure les états du groupe 0
+  const etats = (etatsData || []).filter(e => String(e.groupe) !== '0' && e.groupe !== 0);
 
-  // Grouper les états par phase
+  // Grouper les états par phase (excluant déjà le groupe 0)
   // Note: groupe est un VARCHAR dans la base, donc on compare avec des chaînes
   const etatsPhase1 = etats.filter(e => String(e.groupe) === '1' || e.groupe === 1);
   const etatsPhase2 = etats.filter(e => String(e.groupe) === '2' || e.groupe === 2);
