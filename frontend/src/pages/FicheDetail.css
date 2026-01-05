@@ -535,7 +535,7 @@
   text-align: center;
   border: 1px solid #e0e0e0;
   vertical-align: top;
-  min-height: 80px;
+  min-height: 160px;
   position: relative;
   color: #333333 !important;
   background-color: #ffffff;
@@ -584,7 +584,7 @@
 }
 
 .planning-cell {
-  min-height: 80px;
+  min-height: 160px;
   vertical-align: top;
   position: relative;
 }
