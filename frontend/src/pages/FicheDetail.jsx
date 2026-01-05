@@ -5378,8 +5378,6 @@ const PlanningViewForModal = ({
 }) => {
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
-  const [dayAvailabilityValues, setDayAvailabilityValues] = useState({});
-  const [cellAvailabilityValues, setCellAvailabilityValues] = useState({});
   
   const handleCellDoubleClick = (date, hour, e) => {
     e.stopPropagation();
@@ -5414,44 +5412,6 @@ const PlanningViewForModal = ({
     setEditingCell(null);
     setEditValue('');
   };
-
-  // Handler pour modifier la disponibilité de toute la journée
-  const handleDayAvailabilityChange = (date, value) => {
-    if (value === '' || value === null || value === undefined) {
-      const newValues = { ...dayAvailabilityValues };
-      delete newValues[date];
-      setDayAvailabilityValues(newValues);
-      return;
-    }
-    const numValue = parseInt(value);
-    if (isNaN(numValue) || numValue < 0) {
-      return;
-    }
-    setDayAvailabilityValues({ ...dayAvailabilityValues, [date]: numValue });
-    if (onUpdateAvailability) {
-      onUpdateAvailability(date, null, numValue, 'day');
-    }
-  };
-
-  // Handler pour modifier la disponibilité d'un créneau
-  const handleCellAvailabilityChange = (date, hour, value) => {
-    const key = `${date}-${hour}`;
-    if (value === '' || value === null || value === undefined) {
-      const newValues = { ...cellAvailabilityValues };
-      delete newValues[key];
-      setCellAvailabilityValues(newValues);
-      return;
-    }
-    const numValue = parseInt(value);
-    if (isNaN(numValue) || numValue < 0) {
-      return;
-    }
-    setCellAvailabilityValues({ ...cellAvailabilityValues, [key]: numValue });
-    if (onUpdateAvailability) {
-      onUpdateAvailability(date, hour, numValue, 'hour');
-    }
-  };
-
   return (
     <div className="planning-view">
       <div className="planning-table-container">
@@ -5459,56 +5419,13 @@ const PlanningViewForModal = ({
           <thead>
             <tr>
               <th>Heure</th>
-              {days.map(day => {
-                // Calculer la disponibilité de la journée pour l'affichage
-                let dayAvailability = null;
-                for (const slot of timeSlots) {
-                  const dayPlanning = planning?.[day.date]?.time?.[hourToTimeKey(slot.hour)];
-                  const availabilityFromPlanning = dayPlanning?.av ?? null;
-                  const availData = availability?.[day.date]?.[slot.hour];
-                  const availabilityCount = availabilityFromPlanning !== null ? availabilityFromPlanning : (availData?.nbr_com ?? null);
-                  if (availabilityCount !== null && availabilityCount !== undefined) {
-                    dayAvailability = availabilityCount;
-                    break;
-                  }
-                }
-                const displayDayValue = dayAvailabilityValues[day.date] !== undefined 
-                  ? dayAvailabilityValues[day.date] 
-                  : (dayAvailability !== null ? dayAvailability : '');
-                return (
-                  <th key={day.date}>
-                    <div className="day-header-planning" style={{ position: 'relative' }}>
-                      <span>{day.dayName} {day.date.split('-')[2]}</span>
-                      {canEdit && (
-                        <input
-                          type="number"
-                          value={displayDayValue}
-                          onChange={(e) => handleDayAvailabilityChange(day.date, e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          onFocus={(e) => e.stopPropagation()}
-                          style={{
-                            position: 'absolute',
-                            right: '2px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            width: '30px',
-                            padding: '1px 2px',
-                            fontSize: '9px',
-                            border: '1px solid #ccc',
-                            borderRadius: '2px',
-                            textAlign: 'center',
-                            backgroundColor: 'white',
-                            zIndex: 10
-                          }}
-                          min="0"
-                          placeholder="-"
-                          title="Modifier la disponibilité de la journée"
-                        />
-                      )}
-                    </div>
-                  </th>
-                );
-              })}
+              {days.map(day => (
+                <th key={day.date}>
+                  <div className="day-header-planning">
+                    <span>{day.dayName} {day.date.split('-')[2]}</span>
+                  </div>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -5642,81 +5559,21 @@ const PlanningViewForModal = ({
                             </button>
                           </div>
                         ) : hasData ? (
-                          <>
-                            <div className="availability-info">
-                              <div className="availability-badge" style={{ backgroundColor: bgColor }}>
-                                <span className="availability-text-compact">
-                                  {confirmedCount} / {displayAvailability}
-                                </span>
-                              </div>
+                          <div className="availability-info">
+                            <div className="availability-badge" style={{ backgroundColor: bgColor }}>
+                              <span className="availability-text-compact">
+                                {confirmedCount} / {displayAvailability}
+                              </span>
                             </div>
-                            {canEditThis && (
-                              <input
-                                type="number"
-                                value={cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined 
-                                  ? cellAvailabilityValues[`${day.date}-${slot.hour}`] 
-                                  : (availabilityCount !== null ? availabilityCount : '')}
-                                onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                onFocus={(e) => e.stopPropagation()}
-                                style={{
-                                  position: 'absolute',
-                                  right: '3px',
-                                  top: '50%',
-                                  transform: 'translateY(-50%)',
-                                  width: '28px',
-                                  padding: '1px 2px',
-                                  fontSize: '9px',
-                                  border: '1px solid #ccc',
-                                  borderRadius: '2px',
-                                  textAlign: 'center',
-                                  backgroundColor: 'white',
-                                  zIndex: 10
-                                }}
-                                min="0"
-                                placeholder="-"
-                                title="Modifier la disponibilité"
-                              />
-                            )}
-                          </>
+                          </div>
                         ) : isAvailable && !isBlocked ? (
-                          <>
-                            <div className="availability-info">
-                              <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
-                                <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
-                                  Cliquer pour créer
-                                </span>
-                              </div>
+                          <div className="availability-info">
+                            <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
+                              <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
+                                Cliquer pour créer
+                              </span>
                             </div>
-                            {canEditThis && (
-                              <input
-                                type="number"
-                                value={cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined 
-                                  ? cellAvailabilityValues[`${day.date}-${slot.hour}`] 
-                                  : ''}
-                                onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                onFocus={(e) => e.stopPropagation()}
-                                style={{
-                                  position: 'absolute',
-                                  right: '3px',
-                                  top: '50%',
-                                  transform: 'translateY(-50%)',
-                                  width: '28px',
-                                  padding: '1px 2px',
-                                  fontSize: '9px',
-                                  border: '1px solid #ccc',
-                                  borderRadius: '2px',
-                                  textAlign: 'center',
-                                  backgroundColor: 'white',
-                                  zIndex: 10
-                                }}
-                                min="0"
-                                placeholder="-"
-                                title="Modifier la disponibilité"
-                              />
-                            )}
-                          </>
+                          </div>
                         ) : null}
                       </td>
                     );
