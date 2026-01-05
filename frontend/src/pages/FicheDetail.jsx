@@ -4958,53 +4958,6 @@ const PlanningTab = ({
   // Vérifier si l'utilisateur peut éditer (uniquement fonction 1)
   const canEdit = user?.fonction === 1;
   
-  // Mutation pour modifier la disponibilité
-  const updateAvailabilityMutation = useMutation(
-    async ({ week, year, dep, date, hour, value, type }) => {
-      const res = await api.put('/planning/availability', { week, year, dep, date, hour, value, type });
-      return res.data;
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['planning-modal']);
-        queryClient.invalidateQueries(['availability-modal']);
-      },
-      onError: (error) => {
-        console.error('Erreur modification disponibilité:', error);
-        alert(error.response?.data?.message || 'Erreur lors de la modification');
-      }
-    }
-  );
-  
-  // Handler pour mettre à jour la disponibilité
-  const handleUpdateAvailability = (date, hour, value, type = 'hour') => {
-    if (!planningWeek || !planningYear || !planningDep) return;
-    
-    // Formater l'heure correctement (HH:MM:SS)
-    let hourFormatted = hour;
-    if (hour && !hour.includes(':')) {
-      hourFormatted = `${hour}:00:00`;
-    } else if (hour && hour.split(':').length === 2) {
-      hourFormatted = `${hour}:00`;
-    }
-    
-    const numValue = parseInt(value);
-    if (isNaN(numValue) || numValue < 0) {
-      alert('Valeur invalide');
-      return;
-    }
-    
-    updateAvailabilityMutation.mutate({
-      week: planningWeek,
-      year: planningYear,
-      dep: planningDep,
-      date,
-      hour: hourFormatted,
-      value: numValue,
-      type
-    });
-  };
-  
   const { data: planningResponse, isLoading: isLoadingPlanning, refetch: refetchPlanning } = useQuery(
     ['planning-modal', planningWeek, planningYear, planningDep],
     async () => {
@@ -5027,6 +4980,67 @@ const PlanningTab = ({
 
   const planningData = planningResponse?.data || {};
   const availabilityData = availabilityResponse?.data || {};
+  
+  // Mutation pour modifier la disponibilité (définie après les queries pour accéder aux refetch)
+  const updateAvailabilityMutation = useMutation(
+    async ({ week, year, dep, date, hour, value, type }) => {
+      console.log('Mutation called with:', { week, year, dep, date, hour, value, type });
+      const res = await api.put('/planning/availability', { week, year, dep, date, hour, value, type });
+      console.log('Mutation response:', res.data);
+      return res.data;
+    },
+    {
+      onSuccess: (data) => {
+        console.log('Availability updated successfully:', data);
+        queryClient.invalidateQueries(['planning-modal']);
+        queryClient.invalidateQueries(['availability-modal']);
+        // Rafraîchir explicitement les données
+        setTimeout(() => {
+          refetchPlanning();
+          refetchAvailability();
+        }, 100);
+      },
+      onError: (error) => {
+        console.error('Erreur modification disponibilité:', error);
+        console.error('Error details:', error.response?.data);
+        alert(error.response?.data?.message || 'Erreur lors de la modification');
+      }
+    }
+  );
+  
+  // Handler pour mettre à jour la disponibilité
+  const handleUpdateAvailability = (date, hour, value, type = 'hour') => {
+    if (!planningWeek || !planningYear || !planningDep) {
+      console.warn('Missing planning parameters:', { planningWeek, planningYear, planningDep });
+      return;
+    }
+    
+    // Formater l'heure correctement (HH:MM:SS)
+    let hourFormatted = hour;
+    if (hour && !hour.includes(':')) {
+      hourFormatted = `${hour}:00:00`;
+    } else if (hour && hour.split(':').length === 2) {
+      hourFormatted = `${hour}:00`;
+    }
+    
+    const numValue = parseInt(value);
+    if (isNaN(numValue) || numValue < 0) {
+      alert('Valeur invalide');
+      return;
+    }
+    
+    console.log('handleUpdateAvailability called:', { date, hour, hourFormatted, value: numValue, type });
+    
+    updateAvailabilityMutation.mutate({
+      week: planningWeek,
+      year: planningYear,
+      dep: planningDep,
+      date,
+      hour: hourFormatted,
+      value: numValue,
+      type
+    });
+  };
   
   // Debug logs pour vérifier les données reçues
   useEffect(() => {
@@ -5380,6 +5394,25 @@ const PlanningViewForModal = ({
   const [editValue, setEditValue] = useState('');
   const [cellAvailabilityValues, setCellAvailabilityValues] = useState({});
   
+  // Synchroniser le state local avec les données reçues
+  useEffect(() => {
+    if (planning && availability) {
+      const newValues = {};
+      days.forEach(day => {
+        timeSlots.forEach(slot => {
+          const dayPlanning = planning?.[day.date]?.time?.[hourToTimeKey(slot.hour)];
+          const availabilityFromPlanning = dayPlanning?.av ?? null;
+          const availData = availability?.[day.date]?.[slot.hour];
+          const availabilityCount = availabilityFromPlanning !== null ? availabilityFromPlanning : (availData?.nbr_com ?? null);
+          if (availabilityCount !== null && availabilityCount !== undefined) {
+            newValues[`${day.date}-${slot.hour}`] = availabilityCount;
+          }
+        });
+      });
+      setCellAvailabilityValues(newValues);
+    }
+  }, [planning, availability, days, timeSlots]);
+  
   const handleCellDoubleClick = (date, hour, e) => {
     e.stopPropagation();
     if (!canEdit) return;
@@ -5427,9 +5460,14 @@ const PlanningViewForModal = ({
     if (isNaN(numValue) || numValue < 0) {
       return;
     }
+    // Mettre à jour le state local immédiatement pour l'affichage
     setCellAvailabilityValues({ ...cellAvailabilityValues, [key]: numValue });
+    // Appeler la fonction de mise à jour
     if (onUpdateAvailability) {
+      console.log('Updating availability:', { date, hour, value: numValue });
       onUpdateAvailability(date, hour, numValue, 'hour');
+    } else {
+      console.warn('onUpdateAvailability is not defined');
     }
   };
 
