@@ -5378,8 +5378,6 @@ const PlanningViewForModal = ({
 }) => {
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
-  const [editingDay, setEditingDay] = useState(null);
-  const [editDayValue, setEditDayValue] = useState('');
   
   const handleCellDoubleClick = (date, hour, e) => {
     e.stopPropagation();
@@ -5414,48 +5412,6 @@ const PlanningViewForModal = ({
     setEditingCell(null);
     setEditValue('');
   };
-
-  // Handler pour modifier la disponibilité de toute la journée
-  const handleDayEdit = (date) => {
-    if (!canEdit) return;
-    // Calculer la disponibilité moyenne de la journée (ou la première disponible)
-    let dayAvailability = null;
-    for (const slot of timeSlots) {
-      const dayPlanning = planning?.[date]?.time?.[hourToTimeKey(slot.hour)];
-      const availabilityFromPlanning = dayPlanning?.av ?? null;
-      const availData = availability?.[date]?.[slot.hour];
-      const availabilityCount = availabilityFromPlanning !== null ? availabilityFromPlanning : (availData?.nbr_com ?? null);
-      if (availabilityCount !== null && availabilityCount !== undefined) {
-        dayAvailability = availabilityCount;
-        break; // Prendre la première disponibilité trouvée
-      }
-    }
-    setEditingDay(date);
-    setEditDayValue(dayAvailability !== null ? dayAvailability.toString() : '');
-  };
-
-  const handleDaySave = (date) => {
-    if (editDayValue === '' || editDayValue === null || editDayValue === undefined) {
-      setEditingDay(null);
-      setEditDayValue('');
-      return;
-    }
-    const value = parseInt(editDayValue);
-    if (isNaN(value) || value < 0) {
-      return;
-    }
-    if (onUpdateAvailability) {
-      onUpdateAvailability(date, null, value, 'day');
-    }
-    setEditingDay(null);
-    setEditDayValue('');
-  };
-
-  const handleDayCancel = () => {
-    setEditingDay(null);
-    setEditDayValue('');
-  };
-
   return (
     <div className="planning-view">
       <div className="planning-table-container">
@@ -5463,114 +5419,13 @@ const PlanningViewForModal = ({
           <thead>
             <tr>
               <th>Heure</th>
-              {days.map(day => {
-                const isEditingDay = editingDay === day.date;
-                // Calculer la disponibilité de la journée pour l'affichage
-                let dayAvailability = null;
-                for (const slot of timeSlots) {
-                  const dayPlanning = planning?.[day.date]?.time?.[hourToTimeKey(slot.hour)];
-                  const availabilityFromPlanning = dayPlanning?.av ?? null;
-                  const availData = availability?.[day.date]?.[slot.hour];
-                  const availabilityCount = availabilityFromPlanning !== null ? availabilityFromPlanning : (availData?.nbr_com ?? null);
-                  if (availabilityCount !== null && availabilityCount !== undefined) {
-                    dayAvailability = availabilityCount;
-                    break;
-                  }
-                }
-                return (
-                  <th key={day.date}>
-                    <div className="day-header-planning">
-                      <span>{day.dayName} {day.date.split('-')[2]}</span>
-                      {canEdit && (
-                        <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
-                          {isEditingDay ? (
-                            <>
-                              <input
-                                type="number"
-                                value={editDayValue}
-                                onChange={(e) => setEditDayValue(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                style={{
-                                  width: '40px',
-                                  padding: '2px 4px',
-                                  fontSize: '10px',
-                                  border: '1px solid #ccc',
-                                  borderRadius: '3px',
-                                  textAlign: 'center'
-                                }}
-                                autoFocus
-                                min="0"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleDaySave(day.date);
-                                  } else if (e.key === 'Escape') {
-                                    handleDayCancel();
-                                  }
-                                }}
-                              />
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDaySave(day.date);
-                                }}
-                                style={{
-                                  padding: '2px 4px',
-                                  fontSize: '9px',
-                                  background: '#4CAF50',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '2px',
-                                  cursor: 'pointer'
-                                }}
-                                title="Valider"
-                              >
-                                <FaCheck />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDayCancel();
-                                }}
-                                style={{
-                                  padding: '2px 4px',
-                                  fontSize: '9px',
-                                  background: '#f44336',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '2px',
-                                  cursor: 'pointer'
-                                }}
-                                title="Annuler"
-                              >
-                                <FaTimes />
-                              </button>
-                            </>
-                          ) : (
-                            <span
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDayEdit(day.date);
-                              }}
-                              style={{
-                                fontSize: '10px',
-                                color: '#666',
-                                cursor: 'pointer',
-                                padding: '2px 6px',
-                                border: '1px dashed #ccc',
-                                borderRadius: '3px',
-                                backgroundColor: '#f5f5f5'
-                              }}
-                              title="Modifier la disponibilité de la journée"
-                            >
-                              {dayAvailability !== null ? dayAvailability : '-'}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </th>
-                );
-              })}
+              {days.map(day => (
+                <th key={day.date}>
+                  <div className="day-header-planning">
+                    <span>{day.dayName} {day.date.split('-')[2]}</span>
+                  </div>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -5704,91 +5559,21 @@ const PlanningViewForModal = ({
                             </button>
                           </div>
                         ) : hasData ? (
-                          <>
-                            <div className="availability-info">
-                              <div className="availability-badge" style={{ backgroundColor: bgColor }}>
-                                <span className="availability-text-compact">
-                                  {confirmedCount} / {displayAvailability}
-                                </span>
-                              </div>
+                          <div className="availability-info">
+                            <div className="availability-badge" style={{ backgroundColor: bgColor }}>
+                              <span className="availability-text-compact">
+                                {confirmedCount} / {displayAvailability}
+                              </span>
                             </div>
-                            {canEditThis && (
-                              <input
-                                type="number"
-                                value={availabilityCount !== null ? availabilityCount : ''}
-                                onChange={(e) => {
-                                  const newValue = e.target.value;
-                                  if (newValue === '' || (parseInt(newValue) >= 0 && !isNaN(parseInt(newValue)))) {
-                                    if (onUpdateAvailability && newValue !== '' && !isNaN(parseInt(newValue))) {
-                                      onUpdateAvailability(day.date, slot.hour, parseInt(newValue), 'hour');
-                                    }
-                                  }
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                onFocus={(e) => e.stopPropagation()}
-                                style={{
-                                  position: 'absolute',
-                                  right: '5px',
-                                  top: '50%',
-                                  transform: 'translateY(-50%)',
-                                  width: '35px',
-                                  padding: '2px 4px',
-                                  fontSize: '10px',
-                                  border: '1px solid #ccc',
-                                  borderRadius: '3px',
-                                  textAlign: 'center',
-                                  backgroundColor: 'white',
-                                  zIndex: 10
-                                }}
-                                min="0"
-                                placeholder="-"
-                                title="Modifier la disponibilité"
-                              />
-                            )}
-                          </>
+                          </div>
                         ) : isAvailable && !isBlocked ? (
-                          <>
-                            <div className="availability-info">
-                              <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
-                                <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
-                                  Cliquer pour créer
-                                </span>
-                              </div>
+                          <div className="availability-info">
+                            <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
+                              <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
+                                Cliquer pour créer
+                              </span>
                             </div>
-                            {canEditThis && (
-                              <input
-                                type="number"
-                                value=""
-                                onChange={(e) => {
-                                  const newValue = e.target.value;
-                                  if (newValue === '' || (parseInt(newValue) >= 0 && !isNaN(parseInt(newValue)))) {
-                                    if (onUpdateAvailability && newValue !== '' && !isNaN(parseInt(newValue))) {
-                                      onUpdateAvailability(day.date, slot.hour, parseInt(newValue), 'hour');
-                                    }
-                                  }
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                onFocus={(e) => e.stopPropagation()}
-                                style={{
-                                  position: 'absolute',
-                                  right: '5px',
-                                  top: '50%',
-                                  transform: 'translateY(-50%)',
-                                  width: '35px',
-                                  padding: '2px 4px',
-                                  fontSize: '10px',
-                                  border: '1px solid #ccc',
-                                  borderRadius: '3px',
-                                  textAlign: 'center',
-                                  backgroundColor: 'white',
-                                  zIndex: 10
-                                }}
-                                min="0"
-                                placeholder="-"
-                                title="Modifier la disponibilité"
-                              />
-                            )}
-                          </>
+                          </div>
                         ) : null}
                       </td>
                     );
