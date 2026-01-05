@@ -5629,6 +5629,7 @@ const PlanningViewForModal = ({
                             {canEditThis && (
                               <input
                                 type="number"
+                                className="availability-input"
                                 value={cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined 
                                   ? cellAvailabilityValues[`${day.date}-${slot.hour}`] 
                                   : (availabilityCount !== null ? availabilityCount : '')}
@@ -5640,17 +5641,7 @@ const PlanningViewForModal = ({
                                   left: '50%',
                                   top: '50%',
                                   transform: 'translate(-50%, -50%)',
-                                  width: '45px',
-                                  padding: '4px 6.4px',
-                                  fontSize: '9.4px',
-                                  fontWeight: '700',
-                                  border: '1px solid #ccc',
-                                  borderRadius: '4px',
-                                  textAlign: 'center',
-                                  backgroundColor: 'white',
-                                  zIndex: 10,
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                                  boxSizing: 'border-box'
+                                  zIndex: 10
                                 }}
                                 min="0"
                                 placeholder="-"
@@ -5670,6 +5661,7 @@ const PlanningViewForModal = ({
                             {canEditThis && (
                               <input
                                 type="number"
+                                className="availability-input"
                                 value={cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined 
                                   ? cellAvailabilityValues[`${day.date}-${slot.hour}`] 
                                   : ''}
@@ -5681,17 +5673,7 @@ const PlanningViewForModal = ({
                                   left: '50%',
                                   top: '50%',
                                   transform: 'translate(-50%, -50%)',
-                                  width: '45px',
-                                  padding: '4px 6.4px',
-                                  fontSize: '9.4px',
-                                  fontWeight: '700',
-                                  border: '1px solid #ccc',
-                                  borderRadius: '4px',
-                                  textAlign: 'center',
-                                  backgroundColor: 'white',
-                                  zIndex: 10,
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                                  boxSizing: 'border-box'
+                                  zIndex: 10
                                 }}
                                 min="0"
                                 placeholder="-"
