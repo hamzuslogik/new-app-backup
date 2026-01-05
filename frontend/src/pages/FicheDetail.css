@@ -530,15 +530,46 @@
   background-color: #9cbfc8 !important;
 }
 
+.planning-view .planning-table tbody tr {
+  height: 160px !important;
+}
+
+.planning-view .planning-table td {
+  padding: 6.4px;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+  vertical-align: top;
+  height: 160px !important;
+  min-height: 160px !important;
+  position: relative;
+  color: #333333 !important;
+  background-color: #ffffff;
+}
+
+.planning-view .planning-table tbody td {
+  height: 160px !important;
+  min-height: 160px !important;
+}
+
+.planning-table tbody tr {
+  height: 160px !important;
+}
+
 .planning-table td {
   padding: 6.4px;
   text-align: center;
   border: 1px solid #e0e0e0;
   vertical-align: top;
-  min-height: 160px;
+  height: 160px !important;
+  min-height: 160px !important;
   position: relative;
   color: #333333 !important;
   background-color: #ffffff;
+}
+
+.planning-table tbody td {
+  height: 160px !important;
+  min-height: 160px !important;
 }
 
 .planning-table td.time-slot-header {
@@ -583,8 +614,16 @@
   color: var(--label-color, #065F46) !important;
 }
 
+.planning-view .planning-cell {
+  height: 160px !important;
+  min-height: 160px !important;
+  vertical-align: top;
+  position: relative;
+}
+
 .planning-cell {
-  min-height: 160px;
+  height: 160px !important;
+  min-height: 160px !important;
   vertical-align: top;
   position: relative;
 }
