@@ -5602,9 +5602,7 @@ const PlanningViewForModal = ({
                                   left: '50%',
                                   top: '50%',
                                   transform: 'translate(-50%, -50%)',
-                                  width: 'auto',
-                                  minWidth: '40px',
-                                  maxWidth: '50px',
+                                  width: '45px',
                                   padding: '4px 6.4px',
                                   fontSize: '9.4px',
                                   fontWeight: '700',
@@ -5613,7 +5611,8 @@ const PlanningViewForModal = ({
                                   textAlign: 'center',
                                   backgroundColor: 'white',
                                   zIndex: 10,
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                                  boxSizing: 'border-box'
                                 }}
                                 min="0"
                                 placeholder="-"
@@ -5644,9 +5643,7 @@ const PlanningViewForModal = ({
                                   left: '50%',
                                   top: '50%',
                                   transform: 'translate(-50%, -50%)',
-                                  width: 'auto',
-                                  minWidth: '40px',
-                                  maxWidth: '50px',
+                                  width: '45px',
                                   padding: '4px 6.4px',
                                   fontSize: '9.4px',
                                   fontWeight: '700',
@@ -5655,7 +5652,8 @@ const PlanningViewForModal = ({
                                   textAlign: 'center',
                                   backgroundColor: 'white',
                                   zIndex: 10,
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                                  boxSizing: 'border-box'
                                 }}
                                 min="0"
                                 placeholder="-"
