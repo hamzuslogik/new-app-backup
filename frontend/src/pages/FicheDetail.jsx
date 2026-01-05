@@ -5378,6 +5378,7 @@ const PlanningViewForModal = ({
 }) => {
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [cellAvailabilityValues, setCellAvailabilityValues] = useState({});
   
   const handleCellDoubleClick = (date, hour, e) => {
     e.stopPropagation();
@@ -5412,6 +5413,26 @@ const PlanningViewForModal = ({
     setEditingCell(null);
     setEditValue('');
   };
+
+  // Handler pour modifier la disponibilité d'un créneau via le champ texte
+  const handleCellAvailabilityChange = (date, hour, value) => {
+    const key = `${date}-${hour}`;
+    if (value === '' || value === null || value === undefined) {
+      const newValues = { ...cellAvailabilityValues };
+      delete newValues[key];
+      setCellAvailabilityValues(newValues);
+      return;
+    }
+    const numValue = parseInt(value);
+    if (isNaN(numValue) || numValue < 0) {
+      return;
+    }
+    setCellAvailabilityValues({ ...cellAvailabilityValues, [key]: numValue });
+    if (onUpdateAvailability) {
+      onUpdateAvailability(date, hour, numValue, 'hour');
+    }
+  };
+
   return (
     <div className="planning-view">
       <div className="planning-table-container">
@@ -5559,21 +5580,81 @@ const PlanningViewForModal = ({
                             </button>
                           </div>
                         ) : hasData ? (
-                          <div className="availability-info">
-                            <div className="availability-badge" style={{ backgroundColor: bgColor }}>
-                              <span className="availability-text-compact">
-                                {confirmedCount} / {displayAvailability}
-                              </span>
+                          <>
+                            <div className="availability-info">
+                              <div className="availability-badge" style={{ backgroundColor: bgColor }}>
+                                <span className="availability-text-compact">
+                                  {confirmedCount} / {displayAvailability}
+                                </span>
+                              </div>
                             </div>
-                          </div>
+                            {canEditThis && (
+                              <input
+                                type="number"
+                                value={cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined 
+                                  ? cellAvailabilityValues[`${day.date}-${slot.hour}`] 
+                                  : (availabilityCount !== null ? availabilityCount : '')}
+                                onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                onFocus={(e) => e.stopPropagation()}
+                                style={{
+                                  position: 'absolute',
+                                  right: '4px',
+                                  bottom: '4px',
+                                  width: '35px',
+                                  padding: '2px 4px',
+                                  fontSize: '10px',
+                                  border: '1px solid #ccc',
+                                  borderRadius: '3px',
+                                  textAlign: 'center',
+                                  backgroundColor: 'white',
+                                  zIndex: 10,
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                }}
+                                min="0"
+                                placeholder="-"
+                                title="Modifier la disponibilité"
+                              />
+                            )}
+                          </>
                         ) : isAvailable && !isBlocked ? (
-                          <div className="availability-info">
-                            <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
-                              <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
-                                Cliquer pour créer
-                              </span>
+                          <>
+                            <div className="availability-info">
+                              <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
+                                <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
+                                  Cliquer pour créer
+                                </span>
+                              </div>
                             </div>
-                          </div>
+                            {canEditThis && (
+                              <input
+                                type="number"
+                                value={cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined 
+                                  ? cellAvailabilityValues[`${day.date}-${slot.hour}`] 
+                                  : ''}
+                                onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                onFocus={(e) => e.stopPropagation()}
+                                style={{
+                                  position: 'absolute',
+                                  right: '4px',
+                                  bottom: '4px',
+                                  width: '35px',
+                                  padding: '2px 4px',
+                                  fontSize: '10px',
+                                  border: '1px solid #ccc',
+                                  borderRadius: '3px',
+                                  textAlign: 'center',
+                                  backgroundColor: 'white',
+                                  zIndex: 10,
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                }}
+                                min="0"
+                                placeholder="-"
+                                title="Modifier la disponibilité"
+                              />
+                            )}
+                          </>
                         ) : null}
                       </td>
                     );
