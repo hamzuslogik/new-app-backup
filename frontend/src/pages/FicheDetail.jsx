@@ -5599,10 +5599,11 @@ const PlanningViewForModal = ({
                                 onFocus={(e) => e.stopPropagation()}
                                 style={{
                                   position: 'absolute',
-                                  right: '4px',
-                                  bottom: '4px',
-                                  width: '35px',
-                                  padding: '2px 4px',
+                                  left: '50%',
+                                  top: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '28px',
+                                  padding: '2px 3px',
                                   fontSize: '10px',
                                   border: '1px solid #ccc',
                                   borderRadius: '3px',
@@ -5637,10 +5638,11 @@ const PlanningViewForModal = ({
                                 onFocus={(e) => e.stopPropagation()}
                                 style={{
                                   position: 'absolute',
-                                  right: '4px',
-                                  bottom: '4px',
-                                  width: '35px',
-                                  padding: '2px 4px',
+                                  left: '50%',
+                                  top: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '28px',
+                                  padding: '2px 3px',
                                   fontSize: '10px',
                                   border: '1px solid #ccc',
                                   borderRadius: '3px',
