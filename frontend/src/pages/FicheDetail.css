@@ -531,7 +531,7 @@
 }
 
 .planning-view .planning-table tbody tr {
-  height: 160px !important;
+  height: 120px !important;
 }
 
 .planning-view .planning-table td {
@@ -539,20 +539,20 @@
   text-align: center;
   border: 1px solid #e0e0e0;
   vertical-align: top;
-  height: 160px !important;
-  min-height: 160px !important;
+  height: 120px !important;
+  min-height: 120px !important;
   position: relative;
   color: #333333 !important;
   background-color: #ffffff;
 }
 
 .planning-view .planning-table tbody td {
-  height: 160px !important;
-  min-height: 160px !important;
+  height: 120px !important;
+  min-height: 120px !important;
 }
 
 .planning-table tbody tr {
-  height: 160px !important;
+  height: 120px !important;
 }
 
 .planning-table td {
@@ -560,16 +560,16 @@
   text-align: center;
   border: 1px solid #e0e0e0;
   vertical-align: top;
-  height: 160px !important;
-  min-height: 160px !important;
+  height: 120px !important;
+  min-height: 120px !important;
   position: relative;
   color: #333333 !important;
   background-color: #ffffff;
 }
 
 .planning-table tbody td {
-  height: 160px !important;
-  min-height: 160px !important;
+  height: 120px !important;
+  min-height: 120px !important;
 }
 
 .planning-table td.time-slot-header {
@@ -615,15 +615,15 @@
 }
 
 .planning-view .planning-cell {
-  height: 160px !important;
-  min-height: 160px !important;
+  height: 120px !important;
+  min-height: 120px !important;
   vertical-align: top;
   position: relative;
 }
 
 .planning-cell {
-  height: 160px !important;
-  min-height: 160px !important;
+  height: 120px !important;
+  min-height: 120px !important;
   vertical-align: top;
   position: relative;
 }
