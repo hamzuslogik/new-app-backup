@@ -5527,6 +5527,7 @@ const PlanningViewForModal = ({
                     // On marque simplement le créneau si on a des RDV
                     const currentFicheInSlot = false;
                     const isEditing = editingCell === `${day.date}-${slot.hour}`;
+                    // canEditThis : uniquement pour les administrateurs (fonction 1) et si le créneau n'est pas bloqué
                     const canEditThis = canEdit && !isBlocked;
                     
                     return (
