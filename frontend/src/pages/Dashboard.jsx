@@ -75,9 +75,8 @@ const Dashboard = () => {
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [clickCount, setClickCount] = useState(0);
-  const [lastClickTime, setLastClickTime] = useState(0);
-  const clickTimeoutRef = useRef(null);
+  const lastTwoFingerTapTime = useRef(0);
+  const twoFingerTapTimeoutRef = useRef(null);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
@@ -118,64 +117,68 @@ const Dashboard = () => {
     }
   }, [showSearchModal, user?.fonction]);
 
-  // Détection de 3 clics sur l'écran en version mobile pour ouvrir le modal
+  // Détection de double tap avec deux doigts sur l'écran en version mobile pour ouvrir le modal
   useEffect(() => {
     if (!isMobile) return;
 
-    const handleClick = (e) => {
-      // Ignorer les clics sur les boutons, liens et éléments interactifs
-      const target = e.target;
-      if (
-        target.tagName === 'BUTTON' ||
-        target.tagName === 'A' ||
-        target.closest('button') ||
-        target.closest('a') ||
-        target.closest('.search-modal-overlay') ||
-        target.closest('.search-modal-content') ||
-        showSearchModal
-      ) {
-        return;
-      }
+    const handleTouchStart = (e) => {
+      // Ignorer si le modal est déjà ouvert
+      if (showSearchModal) return;
 
-      const currentTime = Date.now();
-      const timeSinceLastClick = currentTime - lastClickTime;
+      // Vérifier qu'il y a exactement 2 doigts
+      if (e.touches.length === 2) {
+        const target = e.target;
+        
+        // Ignorer les touches sur les boutons, liens et éléments interactifs
+        if (
+          target.tagName === 'BUTTON' ||
+          target.tagName === 'A' ||
+          target.closest('button') ||
+          target.closest('a') ||
+          target.closest('.search-modal-overlay') ||
+          target.closest('.search-modal-content')
+        ) {
+          return;
+        }
 
-      // Réinitialiser le compteur si plus de 2 secondes entre les clics
-      if (timeSinceLastClick > 2000) {
-        setClickCount(1);
-        setLastClickTime(currentTime);
-      } else {
-        const newCount = clickCount + 1;
-        setClickCount(newCount);
-        setLastClickTime(currentTime);
+        const currentTime = Date.now();
+        const timeSinceLastTap = currentTime - lastTwoFingerTapTime.current;
 
-        // Si 3 clics, ouvrir le modal
-        if (newCount >= 3) {
+        // Si c'est un double tap (moins de 500ms entre les deux taps)
+        if (timeSinceLastTap > 0 && timeSinceLastTap < 500) {
+          // Ouvrir le modal
           setShowSearchModal(true);
-          setClickCount(0);
-          setLastClickTime(0);
+          lastTwoFingerTapTime.current = 0;
+          
+          // Annuler le timeout de réinitialisation
+          if (twoFingerTapTimeoutRef.current) {
+            clearTimeout(twoFingerTapTimeoutRef.current);
+            twoFingerTapTimeoutRef.current = null;
+          }
+        } else {
+          // Premier tap, enregistrer le temps
+          lastTwoFingerTapTime.current = currentTime;
+          
+          // Réinitialiser après 500ms si pas de deuxième tap
+          if (twoFingerTapTimeoutRef.current) {
+            clearTimeout(twoFingerTapTimeoutRef.current);
+          }
+          twoFingerTapTimeoutRef.current = setTimeout(() => {
+            lastTwoFingerTapTime.current = 0;
+          }, 500);
         }
       }
-
-      // Réinitialiser le compteur après 2 secondes d'inactivité
-      if (clickTimeoutRef.current) {
-        clearTimeout(clickTimeoutRef.current);
-      }
-      clickTimeoutRef.current = setTimeout(() => {
-        setClickCount(0);
-        setLastClickTime(0);
-      }, 2000);
     };
 
-    document.addEventListener('click', handleClick);
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
 
     return () => {
-      document.removeEventListener('click', handleClick);
-      if (clickTimeoutRef.current) {
-        clearTimeout(clickTimeoutRef.current);
+      document.removeEventListener('touchstart', handleTouchStart);
+      if (twoFingerTapTimeoutRef.current) {
+        clearTimeout(twoFingerTapTimeoutRef.current);
       }
     };
-  }, [isMobile, clickCount, lastClickTime, showSearchModal]);
+  }, [isMobile, showSearchModal]);
 
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
