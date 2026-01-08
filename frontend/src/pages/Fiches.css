@@ -570,6 +570,19 @@ table.fiches-table thead,
   border-bottom: 1px solid #eee;
 }
 
+/* Colonnes Date Insertion et Date RDV - largeur augmentée */
+.fiches-table th:nth-child(5),
+.fiches-table td:nth-child(5) {
+  min-width: 140px;
+  width: 140px;
+}
+
+.fiches-table th:nth-child(6),
+.fiches-table td:nth-child(6) {
+  min-width: 140px;
+  width: 140px;
+}
+
 .fiches-table td:last-child {
   white-space: normal;
 }
@@ -1162,6 +1175,19 @@ table.fiches-table thead,
     display: table-cell !important;
     padding: 8px 6.4px;
     font-size: 10.2px;
+  }
+
+  /* Colonnes Date Insertion et Date RDV - largeur augmentée sur mobile */
+  .fiches-table th:nth-child(5),
+  .fiches-table td:nth-child(5) {
+    min-width: 160px !important;
+    width: 160px !important;
+  }
+
+  .fiches-table th:nth-child(6),
+  .fiches-table td:nth-child(6) {
+    min-width: 160px !important;
+    width: 160px !important;
   }
 
   /* Cacher les ::before sur mobile car on garde le format tableau */
