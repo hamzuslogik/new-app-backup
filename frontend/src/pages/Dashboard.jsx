@@ -10,7 +10,7 @@ import './Dashboard.css';
 
 const Dashboard = () => {
   const { user, hasPermission } = useAuth();
-  const { setAutoHide, isDesktop } = useSidebar();
+  const { setAutoHide, isDesktop, isMobile } = useSidebar();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = 'confirmed'; // Toujours 'confirmed' puisqu'il n'y a plus d'onglet
@@ -75,6 +75,9 @@ const Dashboard = () => {
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+  const [lastClickTime, setLastClickTime] = useState(0);
+  const clickTimeoutRef = useRef(null);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
@@ -114,6 +117,65 @@ const Dashboard = () => {
       }, 100);
     }
   }, [showSearchModal, user?.fonction]);
+
+  // Détection de 3 clics sur l'écran en version mobile pour ouvrir le modal
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleClick = (e) => {
+      // Ignorer les clics sur les boutons, liens et éléments interactifs
+      const target = e.target;
+      if (
+        target.tagName === 'BUTTON' ||
+        target.tagName === 'A' ||
+        target.closest('button') ||
+        target.closest('a') ||
+        target.closest('.search-modal-overlay') ||
+        target.closest('.search-modal-content') ||
+        showSearchModal
+      ) {
+        return;
+      }
+
+      const currentTime = Date.now();
+      const timeSinceLastClick = currentTime - lastClickTime;
+
+      // Réinitialiser le compteur si plus de 2 secondes entre les clics
+      if (timeSinceLastClick > 2000) {
+        setClickCount(1);
+        setLastClickTime(currentTime);
+      } else {
+        const newCount = clickCount + 1;
+        setClickCount(newCount);
+        setLastClickTime(currentTime);
+
+        // Si 3 clics, ouvrir le modal
+        if (newCount >= 3) {
+          setShowSearchModal(true);
+          setClickCount(0);
+          setLastClickTime(0);
+        }
+      }
+
+      // Réinitialiser le compteur après 2 secondes d'inactivité
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+      clickTimeoutRef.current = setTimeout(() => {
+        setClickCount(0);
+        setLastClickTime(0);
+      }, 2000);
+    };
+
+    document.addEventListener('click', handleClick);
+
+    return () => {
+      document.removeEventListener('click', handleClick);
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, [isMobile, clickCount, lastClickTime, showSearchModal]);
 
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
