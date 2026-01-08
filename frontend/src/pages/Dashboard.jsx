@@ -432,26 +432,25 @@ const Dashboard = () => {
     return etat?.titre || '';
   };
 
-  // Obtenir les confirmateurs formatés (avec confirmateur 2 et 3 si existent)
+  // Obtenir les confirmateurs formatés (afficher uniquement le dernier confirmateur)
   const getConfirmateursFormatted = (fiche) => {
-    const confirmateursList = [];
-    
-    if (fiche.id_confirmateur) {
-      const conf1 = getUserName(fiche.id_confirmateur);
-      if (conf1) confirmateursList.push(conf1);
+    // Vérifier dans l'ordre inverse (3, 2, 1) pour obtenir le dernier confirmateur
+    if (fiche.id_confirmateur_3) {
+      const conf3 = getUserName(fiche.id_confirmateur_3);
+      if (conf3) return conf3;
     }
     
     if (fiche.id_confirmateur_2) {
       const conf2 = getUserName(fiche.id_confirmateur_2);
-      if (conf2) confirmateursList.push(conf2);
+      if (conf2) return conf2;
     }
     
-    if (fiche.id_confirmateur_3) {
-      const conf3 = getUserName(fiche.id_confirmateur_3);
-      if (conf3) confirmateursList.push(conf3);
+    if (fiche.id_confirmateur) {
+      const conf1 = getUserName(fiche.id_confirmateur);
+      if (conf1) return conf1;
     }
     
-    return confirmateursList.length > 0 ? confirmateursList.join(' | ') : '';
+    return '';
   };
 
   // Déclarer fichesData avant les early returns pour pouvoir l'utiliser dans les hooks
@@ -1123,12 +1122,12 @@ const Dashboard = () => {
                         key={fiche.hash}
                         style={{ backgroundColor: `${etatColor}20` }}
                       >
-                        <td data-label="">{fiche.nom || ''} {fiche.prenom || ''}</td>
+                        <td data-label="">{fiche.nom || ''}</td>
                         <td data-label="Prénom:">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
-                        <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
-                        <td data-label="Date RDV:">{formatDate(fiche.date_rdv_time)}</td>
+                        <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                        <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_rdv_time)}</td>
                         <td data-label="État:">
                           <span 
                             className="etat-badge"
