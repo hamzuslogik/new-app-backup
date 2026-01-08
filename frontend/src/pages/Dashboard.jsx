@@ -372,7 +372,7 @@ const Dashboard = () => {
 
   // Obtenir la couleur du produit
   const getProduitColor = (produitId) => {
-    return produitId === 1 ? '#0000CD' : produitId === 2 ? '#FFE441' : '#cccccc';
+    return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#FFE441' : '#cccccc';
   };
 
   // Vérifier les indicateurs dans l'historique basés sur les titres des états

@@ -1815,7 +1815,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     >
       <div className="fiche-detail-header">
         <div className="fiche-type-badge" style={{ 
-          backgroundColor: fiche.produit_color || (fiche.produit === 1 ? '#0000CD' : '#FFE441'),
+          backgroundColor: fiche.produit_color || (fiche.produit === 1 ? '#66D5D4' : '#FFE441'),
           color: fiche.produit === 1 ? 'white' : 'black'
         }}>
           {fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : 'PV')}
