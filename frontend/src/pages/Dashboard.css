@@ -293,6 +293,11 @@ body.dashboard-page {
   box-sizing: border-box;
 }
 
+/* Champ nom avec taille de police minimale pour zoom automatique sur mobile */
+.search-modal-fields .form-group input[type="text"][placeholder="Nom"] {
+  font-size: 16px;
+}
+
 .search-modal-fields .form-group input:focus,
 .search-modal-fields .form-group select:focus {
   outline: none;

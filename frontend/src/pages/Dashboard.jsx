@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -101,6 +101,20 @@ const Dashboard = () => {
       setShowFilters(true);
     }
   }, [searchParams]);
+
+  // Ref pour le champ nom dans le modal
+  const nomInputRef = useRef(null);
+
+  // Focus automatique sur le champ nom quand le modal s'ouvre
+  useEffect(() => {
+    if (showSearchModal && nomInputRef.current && user?.fonction !== 5) {
+      // Petit délai pour s'assurer que le modal est rendu
+      setTimeout(() => {
+        nomInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showSearchModal, user?.fonction]);
+
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
     direction: 'asc', // 'asc' or 'desc'
@@ -1381,10 +1395,12 @@ const Dashboard = () => {
                     <div className="form-group">
                       <label>Nom</label>
                       <input
+                        ref={nomInputRef}
                         type="text"
                         value={filters.nom || ''}
                         onChange={(e) => handleFilterChange('nom', e.target.value)}
                         placeholder="Nom"
+                        autoFocus
                       />
                     </div>
                     <div className="form-group">
@@ -1509,8 +1525,9 @@ const Dashboard = () => {
                     </select>
                   ) : (
                     <select
-                      value={filters.id_etat_final || ''}
+                      value={filters.id_etat_final !== undefined && filters.id_etat_final !== null ? filters.id_etat_final : ''}
                       onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
+                      defaultValue=""
                     >
                       <option value="">Tous</option>
                       {etatsPhase1.length > 0 && (
