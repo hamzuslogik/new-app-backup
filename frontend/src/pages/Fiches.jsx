@@ -848,25 +848,29 @@ const Fiches = () => {
                               </div>
                             ) : null}
                             <div className="action-buttons">
-                              <FicheDetailLink 
-                                ficheHash={fiche.hash}
-                                className="btn-detail"
-                                title="Voir les détails"
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
-                              </FicheDetailLink>
-                              <button
-                                className="btn-edit"
-                                onClick={() => {
-                                  // Pour l'édition, on a besoin de l'ID, mais il est masqué
-                                  // On peut utiliser le hash pour récupérer la fiche
-                                  setEditingFiche({ ...fiche, id: null }); // L'ID sera récupéré via le hash
-                                }}
-                                title="Modifier"
-                              >
-                                <FaEdit />
-                              </button>
+                              {!isAgentQualif && (
+                                <FicheDetailLink 
+                                  ficheHash={fiche.hash}
+                                  className="btn-detail"
+                                  title="Voir les détails"
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
+                                </FicheDetailLink>
+                              )}
+                              {!isAgentQualif && (
+                                <button
+                                  className="btn-edit"
+                                  onClick={() => {
+                                    // Pour l'édition, on a besoin de l'ID, mais il est masqué
+                                    // On peut utiliser le hash pour récupérer la fiche
+                                    setEditingFiche({ ...fiche, id: null }); // L'ID sera récupéré via le hash
+                                  }}
+                                  title="Modifier"
+                                >
+                                  <FaEdit />
+                                </button>
+                              )}
                               {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (
                                 <button
                                   className="btn-archive"
@@ -935,7 +939,7 @@ const Fiches = () => {
       )}
 
       {/* Modal de modification */}
-      {editingFiche && (
+      {editingFiche && !isAgentQualif && (
         <FicheFormModal
           fiche={editingFiche}
           centres={centres}

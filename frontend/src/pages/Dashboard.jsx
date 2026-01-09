@@ -75,8 +75,6 @@ const Dashboard = () => {
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const lastTwoFingerTapTime = useRef(0);
-  const twoFingerTapTimeoutRef = useRef(null);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
@@ -116,69 +114,6 @@ const Dashboard = () => {
       }, 100);
     }
   }, [showSearchModal, user?.fonction]);
-
-  // Détection de double tap avec deux doigts sur l'écran en version mobile pour ouvrir le modal
-  useEffect(() => {
-    if (!isMobile) return;
-
-    const handleTouchStart = (e) => {
-      // Ignorer si le modal est déjà ouvert
-      if (showSearchModal) return;
-
-      // Vérifier qu'il y a exactement 2 doigts
-      if (e.touches.length === 2) {
-        const target = e.target;
-        
-        // Ignorer les touches sur les boutons, liens et éléments interactifs
-        if (
-          target.tagName === 'BUTTON' ||
-          target.tagName === 'A' ||
-          target.closest('button') ||
-          target.closest('a') ||
-          target.closest('.search-modal-overlay') ||
-          target.closest('.search-modal-content')
-        ) {
-          return;
-        }
-
-        const currentTime = Date.now();
-        const timeSinceLastTap = currentTime - lastTwoFingerTapTime.current;
-
-        // Si c'est un double tap (moins de 500ms entre les deux taps)
-        if (timeSinceLastTap > 0 && timeSinceLastTap < 500) {
-          // Ouvrir le modal
-          setShowSearchModal(true);
-          lastTwoFingerTapTime.current = 0;
-          
-          // Annuler le timeout de réinitialisation
-          if (twoFingerTapTimeoutRef.current) {
-            clearTimeout(twoFingerTapTimeoutRef.current);
-            twoFingerTapTimeoutRef.current = null;
-          }
-        } else {
-          // Premier tap, enregistrer le temps
-          lastTwoFingerTapTime.current = currentTime;
-          
-          // Réinitialiser après 500ms si pas de deuxième tap
-          if (twoFingerTapTimeoutRef.current) {
-            clearTimeout(twoFingerTapTimeoutRef.current);
-          }
-          twoFingerTapTimeoutRef.current = setTimeout(() => {
-            lastTwoFingerTapTime.current = 0;
-          }, 500);
-        }
-      }
-    };
-
-    document.addEventListener('touchstart', handleTouchStart, { passive: true });
-
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      if (twoFingerTapTimeoutRef.current) {
-        clearTimeout(twoFingerTapTimeoutRef.current);
-      }
-    };
-  }, [isMobile, showSearchModal]);
 
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
