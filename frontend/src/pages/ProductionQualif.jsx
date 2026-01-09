@@ -3,8 +3,9 @@ import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
-import { FaChartBar, FaFilter, FaPrint, FaList, FaSearch, FaFileAlt } from 'react-icons/fa';
+import { FaChartBar, FaFilter, FaPrint, FaList, FaSearch, FaFileAlt, FaFileExcel, FaFileCsv, FaFilePdf } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import './ProductionQualif.css';
 
 const ProductionQualif = () => {
@@ -162,6 +163,185 @@ const ProductionQualif = () => {
     window.print();
   };
 
+  // Fonctions d'export
+  const handleExportCSV = () => {
+    if (viewMode === 'fiches' && fiches.length > 0) {
+      // Préparer les données avec le superviseur
+      const exportData = fiches.map(fiche => {
+        const agent = agentsData?.find(a => a.id === fiche.id_agent);
+        const superviseur = superviseurs.find(s => s.id === agent?.chef_equipe);
+        const superviseurName = superviseur 
+          ? (superviseur.nom && superviseur.prenom 
+              ? `${superviseur.nom} ${superviseur.prenom}`
+              : superviseur.pseudo || '-')
+          : '-';
+        
+        return {
+          ...fiche,
+          superviseur_name: superviseurName
+        };
+      });
+      
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'date_insert_time', label: 'Date création' },
+        { key: 'agent_pseudo', label: 'Agent' },
+        { key: 'superviseur_name', label: 'Superviseur' },
+        { key: 'nom', label: 'Nom' },
+        { key: 'prenom', label: 'Prénom' },
+        { key: 'tel', label: 'Téléphone' },
+        { key: 'cp', label: 'CP' },
+        { key: 'etat_titre', label: 'État' }
+      ];
+      exportToCSV(exportData, columns, 'production-qualif-fiches');
+    } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
+      // Exporter les statistiques
+      const statsData = stats.superviseurs.flatMap(superviseurStat => {
+        const superviseurName = superviseurStat.superviseur.nom && superviseurStat.superviseur.prenom
+          ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
+          : superviseurStat.superviseur.pseudo || 'N/A';
+        
+        return stats.etats.map(etat => ({
+          superviseur: superviseurName,
+          etat: etat.titre || etat.abbreviation,
+          count: superviseurStat.stats[etat.id]?.count || 0
+        })).concat({
+          superviseur: superviseurName,
+          etat: 'Validé',
+          count: superviseurStat.stats['validated']?.count || 0
+        });
+      });
+      
+      const columns = [
+        { key: 'superviseur', label: 'Superviseur' },
+        { key: 'etat', label: 'État' },
+        { key: 'count', label: 'Nombre' }
+      ];
+      exportToCSV(statsData, columns, 'production-qualif-stats');
+    } else {
+      alert('Aucune donnée à exporter');
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (viewMode === 'fiches' && fiches.length > 0) {
+      // Préparer les données avec le superviseur
+      const exportData = fiches.map(fiche => {
+        const agent = agentsData?.find(a => a.id === fiche.id_agent);
+        const superviseur = superviseurs.find(s => s.id === agent?.chef_equipe);
+        const superviseurName = superviseur 
+          ? (superviseur.nom && superviseur.prenom 
+              ? `${superviseur.nom} ${superviseur.prenom}`
+              : superviseur.pseudo || '-')
+          : '-';
+        
+        return {
+          ...fiche,
+          superviseur_name: superviseurName
+        };
+      });
+      
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'date_insert_time', label: 'Date création' },
+        { key: 'agent_pseudo', label: 'Agent' },
+        { key: 'superviseur_name', label: 'Superviseur' },
+        { key: 'nom', label: 'Nom' },
+        { key: 'prenom', label: 'Prénom' },
+        { key: 'tel', label: 'Téléphone' },
+        { key: 'cp', label: 'CP' },
+        { key: 'etat_titre', label: 'État' }
+      ];
+      exportToExcel(exportData, columns, 'production-qualif-fiches');
+    } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
+      // Exporter les statistiques
+      const statsData = stats.superviseurs.flatMap(superviseurStat => {
+        const superviseurName = superviseurStat.superviseur.nom && superviseurStat.superviseur.prenom
+          ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
+          : superviseurStat.superviseur.pseudo || 'N/A';
+        
+        return stats.etats.map(etat => ({
+          superviseur: superviseurName,
+          etat: etat.titre || etat.abbreviation,
+          count: superviseurStat.stats[etat.id]?.count || 0
+        })).concat({
+          superviseur: superviseurName,
+          etat: 'Validé',
+          count: superviseurStat.stats['validated']?.count || 0
+        });
+      });
+      
+      const columns = [
+        { key: 'superviseur', label: 'Superviseur' },
+        { key: 'etat', label: 'État' },
+        { key: 'count', label: 'Nombre' }
+      ];
+      exportToExcel(statsData, columns, 'production-qualif-stats');
+    } else {
+      alert('Aucune donnée à exporter');
+    }
+  };
+
+  const handleExportPDF = () => {
+    if (viewMode === 'fiches' && fiches.length > 0) {
+      // Préparer les données avec le superviseur et formater les dates
+      const exportData = fiches.map(fiche => {
+        const agent = agentsData?.find(a => a.id === fiche.id_agent);
+        const superviseur = superviseurs.find(s => s.id === agent?.chef_equipe);
+        const superviseurName = superviseur 
+          ? (superviseur.nom && superviseur.prenom 
+              ? `${superviseur.nom} ${superviseur.prenom}`
+              : superviseur.pseudo || '-')
+          : '-';
+        
+        return {
+          ...fiche,
+          superviseur_name: superviseurName,
+          date_insert_time: fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : '-'
+        };
+      });
+      
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'date_insert_time', label: 'Date création' },
+        { key: 'agent_pseudo', label: 'Agent' },
+        { key: 'superviseur_name', label: 'Superviseur' },
+        { key: 'nom', label: 'Nom' },
+        { key: 'prenom', label: 'Prénom' },
+        { key: 'tel', label: 'Téléphone' },
+        { key: 'cp', label: 'CP' },
+        { key: 'etat_titre', label: 'État' }
+      ];
+      exportToPDF(exportData, columns, 'production-qualif-fiches', 'Production Qualification - Fiches');
+    } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
+      // Exporter les statistiques
+      const statsData = stats.superviseurs.flatMap(superviseurStat => {
+        const superviseurName = superviseurStat.superviseur.nom && superviseurStat.superviseur.prenom
+          ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
+          : superviseurStat.superviseur.pseudo || 'N/A';
+        
+        return stats.etats.map(etat => ({
+          superviseur: superviseurName,
+          etat: etat.titre || etat.abbreviation,
+          count: superviseurStat.stats[etat.id]?.count || 0
+        })).concat({
+          superviseur: superviseurName,
+          etat: 'Validé',
+          count: superviseurStat.stats['validated']?.count || 0
+        });
+      });
+      
+      const columns = [
+        { key: 'superviseur', label: 'Superviseur' },
+        { key: 'etat', label: 'État' },
+        { key: 'count', label: 'Nombre' }
+      ];
+      exportToPDF(statsData, columns, 'production-qualif-stats', 'Production Qualification - Statistiques');
+    } else {
+      alert('Aucune donnée à exporter');
+    }
+  };
+
   const superviseurs = superviseursData || [];
   const etats = etatsData || [];
   const stats = statsData || { superviseurs: [], etats: [], period: {} };
@@ -194,6 +374,17 @@ const ProductionQualif = () => {
           >
             <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
           </button>
+          <div className="export-buttons noprint">
+            <button className="export-btn" onClick={handleExportExcel} title="Exporter en Excel">
+              <FaFileExcel /> Excel
+            </button>
+            <button className="export-btn" onClick={handleExportCSV} title="Exporter en CSV">
+              <FaFileCsv /> CSV
+            </button>
+            <button className="export-btn" onClick={handleExportPDF} title="Exporter en PDF">
+              <FaFilePdf /> PDF
+            </button>
+          </div>
           <button className="print-btn noprint" onClick={handlePrint}>
             <FaPrint /> Imprimer
           </button>

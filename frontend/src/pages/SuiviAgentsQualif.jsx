@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaUserTie, FaFilter, FaSearch } from 'react-icons/fa';
+import { FaUserTie, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf } from 'react-icons/fa';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import './SuiviAgentsQualif.css';
 
 const SuiviAgentsQualif = () => {
@@ -192,6 +193,129 @@ const SuiviAgentsQualif = () => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
+  // Fonctions d'export
+  const handleExportCSV = () => {
+    if (viewMode === 'fiches' && fiches.length > 0) {
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'date_insert_time', label: 'Date création' },
+        { key: 'agent_pseudo', label: 'Agent' },
+        { key: 'nom', label: 'Nom' },
+        { key: 'prenom', label: 'Prénom' },
+        { key: 'tel', label: 'Téléphone' },
+        { key: 'cp', label: 'CP' },
+        { key: 'etat_titre', label: 'État' }
+      ];
+      exportToCSV(fiches, columns, 'suivi-agents-qualif-fiches');
+    } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
+      // Exporter les statistiques par agent
+      const statsData = stats.agents.flatMap(agentStat => {
+        const agentName = agentStat.agent.pseudo || 'N/A';
+        return stats.etats.map(etat => ({
+          agent: agentName,
+          etat: etat.titre || etat.abbreviation,
+          count: agentStat.stats[etat.id]?.count || 0
+        })).concat({
+          agent: agentName,
+          etat: 'Validé',
+          count: agentStat.stats['validated']?.count || 0
+        });
+      });
+      
+      const columns = [
+        { key: 'agent', label: 'Agent' },
+        { key: 'etat', label: 'État' },
+        { key: 'count', label: 'Nombre' }
+      ];
+      exportToCSV(statsData, columns, 'suivi-agents-qualif-stats');
+    } else {
+      alert('Aucune donnée à exporter');
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (viewMode === 'fiches' && fiches.length > 0) {
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'date_insert_time', label: 'Date création' },
+        { key: 'agent_pseudo', label: 'Agent' },
+        { key: 'nom', label: 'Nom' },
+        { key: 'prenom', label: 'Prénom' },
+        { key: 'tel', label: 'Téléphone' },
+        { key: 'cp', label: 'CP' },
+        { key: 'etat_titre', label: 'État' }
+      ];
+      exportToExcel(fiches, columns, 'suivi-agents-qualif-fiches');
+    } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
+      // Exporter les statistiques par agent
+      const statsData = stats.agents.flatMap(agentStat => {
+        const agentName = agentStat.agent.pseudo || 'N/A';
+        return stats.etats.map(etat => ({
+          agent: agentName,
+          etat: etat.titre || etat.abbreviation,
+          count: agentStat.stats[etat.id]?.count || 0
+        })).concat({
+          agent: agentName,
+          etat: 'Validé',
+          count: agentStat.stats['validated']?.count || 0
+        });
+      });
+      
+      const columns = [
+        { key: 'agent', label: 'Agent' },
+        { key: 'etat', label: 'État' },
+        { key: 'count', label: 'Nombre' }
+      ];
+      exportToExcel(statsData, columns, 'suivi-agents-qualif-stats');
+    } else {
+      alert('Aucune donnée à exporter');
+    }
+  };
+
+  const handleExportPDF = () => {
+    if (viewMode === 'fiches' && fiches.length > 0) {
+      const columns = [
+        { key: 'id', label: 'ID' },
+        { key: 'date_insert_time', label: 'Date création' },
+        { key: 'agent_pseudo', label: 'Agent' },
+        { key: 'nom', label: 'Nom' },
+        { key: 'prenom', label: 'Prénom' },
+        { key: 'tel', label: 'Téléphone' },
+        { key: 'cp', label: 'CP' },
+        { key: 'etat_titre', label: 'État' }
+      ];
+      // Formater les dates pour le PDF
+      const formattedData = fiches.map(fiche => ({
+        ...fiche,
+        date_insert_time: fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : '-'
+      }));
+      exportToPDF(formattedData, columns, 'suivi-agents-qualif-fiches', 'Suivi Agents Qualification - Fiches');
+    } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
+      // Exporter les statistiques par agent
+      const statsData = stats.agents.flatMap(agentStat => {
+        const agentName = agentStat.agent.pseudo || 'N/A';
+        return stats.etats.map(etat => ({
+          agent: agentName,
+          etat: etat.titre || etat.abbreviation,
+          count: agentStat.stats[etat.id]?.count || 0
+        })).concat({
+          agent: agentName,
+          etat: 'Validé',
+          count: agentStat.stats['validated']?.count || 0
+        });
+      });
+      
+      const columns = [
+        { key: 'agent', label: 'Agent' },
+        { key: 'etat', label: 'État' },
+        { key: 'count', label: 'Nombre' }
+      ];
+      exportToPDF(statsData, columns, 'suivi-agents-qualif-stats', 'Suivi Agents Qualification - Statistiques');
+    } else {
+      alert('Aucune donnée à exporter');
+    }
+  };
+
   const agents = agentsData || [];
   const stats = statsData || { agents: [], etats: [], period: {} };
   const fiches = filteredFiches || [];
@@ -223,6 +347,17 @@ const SuiviAgentsQualif = () => {
           >
             <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
           </button>
+          <div className="export-buttons noprint">
+            <button className="export-btn" onClick={handleExportExcel} title="Exporter en Excel">
+              <FaFileExcel /> Excel
+            </button>
+            <button className="export-btn" onClick={handleExportCSV} title="Exporter en CSV">
+              <FaFileCsv /> CSV
+            </button>
+            <button className="export-btn" onClick={handleExportPDF} title="Exporter en PDF">
+              <FaFilePdf /> PDF
+            </button>
+          </div>
         </div>
       </div>
 
