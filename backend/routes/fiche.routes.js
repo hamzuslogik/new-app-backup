@@ -1311,6 +1311,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       limit = 1000,
       id_agent,
       id_etat_final,
+      id_superviseur,
       date_debut,
       date_fin
     } = req.query;
@@ -1356,14 +1357,35 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
 
       const superviseurIds = superviseursAssignes.map(s => s.id);
       
+      // Filtrer par superviseur si spécifié
+      let superviseursFiltres = superviseurIds;
+      if (id_superviseur) {
+        const superviseurId = parseInt(id_superviseur);
+        if (superviseurIds.includes(superviseurId)) {
+          superviseursFiltres = [superviseurId];
+        } else {
+          // Si le superviseur n'est pas assigné au RP, retourner vide
+          return res.json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total: 0,
+              pages: 0
+            }
+          });
+        }
+      }
+      
       // Récupérer les agents de tous ces superviseurs
-      if (superviseurIds.length > 0) {
+      if (superviseursFiltres.length > 0) {
         const agentsSousResponsabilite = await query(
           `SELECT id FROM utilisateurs 
-           WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')}) 
+           WHERE chef_equipe IN (${superviseursFiltres.map(() => '?').join(',')}) 
            AND fonction = 3 
            AND etat > 0`,
-          superviseurIds
+          superviseursFiltres
         );
         
         agentIds = (agentsSousResponsabilite || []).map(a => a.id);
@@ -1441,33 +1463,42 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       }
     }
 
+    // Gérer le filtre par état final
     if (id_etat_final) {
-      whereConditions.push('fiche.id_etat_final = ?');
-      params.push(parseInt(id_etat_final));
+      if (id_etat_final === 'validated') {
+        // Pour "validated", exclure les états du groupe 0
+        const etatsGroupe0 = await query(`
+          SELECT id FROM etats WHERE (groupe = '0' OR groupe = 0)
+        `);
+        const idsGroupe0 = etatsGroupe0.map(e => e.id);
+        if (idsGroupe0.length > 0) {
+          whereConditions.push(`fiche.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})`);
+          params.push(...idsGroupe0);
+        }
+      } else {
+        // Filtre par état spécifique
+        const parsedId = parseInt(id_etat_final);
+        if (!isNaN(parsedId)) {
+          whereConditions.push('fiche.id_etat_final = ?');
+          params.push(parsedId);
+        }
+      }
     }
 
-    // S'assurer que date_appel_time n'est pas NULL ou vide
-    whereConditions.push('fiche.date_appel_time IS NOT NULL');
-    whereConditions.push('fiche.date_appel_time != ""');
+    // Pour la production, utiliser date_insert_time (date de création) au lieu de date_appel_time
+    // S'assurer que date_insert_time n'est pas NULL ou vide
+    whereConditions.push('fiche.date_insert_time IS NOT NULL');
+    whereConditions.push('fiche.date_insert_time != ""');
     
-    // Par défaut, filtrer par date d'appel d'aujourd'hui si aucune date n'est fournie
-    const today = new Date().toISOString().split('T')[0];
+    // Filtrer par dates si fournies (pas de date par défaut pour permettre toutes les fiches)
     if (date_debut) {
-      whereConditions.push('fiche.date_appel_time >= ?');
+      whereConditions.push('fiche.date_insert_time >= ?');
       params.push(`${date_debut} 00:00:00`);
-    } else {
-      // Par défaut, fiches avec date d'appel aujourd'hui
-      whereConditions.push('DATE(fiche.date_appel_time) = ?');
-      params.push(today);
     }
 
     if (date_fin) {
-      whereConditions.push('fiche.date_appel_time <= ?');
+      whereConditions.push('fiche.date_insert_time <= ?');
       params.push(`${date_fin} 23:59:59`);
-    } else if (!date_debut) {
-      // Si pas de date_debut non plus, ajouter la fin de journée pour aujourd'hui
-      whereConditions.push('fiche.date_appel_time <= ?');
-      params.push(`${today} 23:59:59`);
     }
 
     const whereClause = whereConditions.join(' AND ');
@@ -1511,7 +1542,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
        LEFT JOIN centres centre ON fiche.id_centre = centre.id
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
        WHERE ${whereClause}
-       ORDER BY fiche.date_appel_time DESC
+       ORDER BY fiche.date_insert_time DESC
        LIMIT ? OFFSET ?`,
       [...params, parseInt(limit), offset]
     );

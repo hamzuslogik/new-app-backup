@@ -106,9 +106,12 @@ const ProductionQualif = () => {
       };
       if (filters.date_debut) params.date_debut = filters.date_debut;
       if (filters.date_fin) params.date_fin = filters.date_fin;
-      // La route backend gère déjà le filtrage par superviseur pour les RP
-      // On peut passer id_agent si on veut filtrer par un agent spécifique
-      if (filters.id_etat_final && filters.id_etat_final !== 'validated') {
+      // Filtrer par superviseur côté backend
+      if (filters.id_superviseur) {
+        params.id_superviseur = filters.id_superviseur;
+      }
+      // Filtrer par état (y compris "validated")
+      if (filters.id_etat_final) {
         params.id_etat_final = filters.id_etat_final;
       }
       
@@ -127,30 +130,13 @@ const ProductionQualif = () => {
     }
   );
 
-  // Filtrer les fiches par recherche rapide et par superviseur
+  // Filtrer les fiches par recherche rapide uniquement (le filtrage par superviseur et état est fait côté backend)
   const filteredFiches = useMemo(() => {
     if (!fichesData?.data) return [];
     
     let filtered = fichesData.data;
     
-    // Filtrer par superviseur si sélectionné
-    if (filters.id_superviseur && agentsData) {
-      const agentsSuperviseur = agentsData.filter(a => 
-        a.chef_equipe === parseInt(filters.id_superviseur)
-      );
-      const agentIds = agentsSuperviseur.map(a => a.id);
-      filtered = filtered.filter(fiche => agentIds.includes(fiche.id_agent));
-    }
-    
-    // Filtrer par état "Validé" si sélectionné
-    if (filters.id_etat_final === 'validated' && etatsData) {
-      const etatsGroupe0Ids = etatsData
-        .filter(e => e.groupe === '0' || e.groupe === 0)
-        .map(e => e.id);
-      filtered = filtered.filter(fiche => !etatsGroupe0Ids.includes(fiche.id_etat_final));
-    }
-    
-    // Filtrer par recherche rapide
+    // Filtrer par recherche rapide uniquement
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(fiche => {
@@ -166,7 +152,7 @@ const ProductionQualif = () => {
     }
     
     return filtered;
-  }, [fichesData, searchTerm, filters.id_superviseur, filters.id_etat_final, agentsData, etatsData]);
+  }, [fichesData, searchTerm]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
