@@ -195,28 +195,36 @@ const ProductionQualif = () => {
       ];
       exportToCSV(exportData, columns, 'production-qualif-fiches');
     } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
-      // Exporter les statistiques
-      const statsData = stats.superviseurs.flatMap(superviseurStat => {
+      // Exporter les statistiques en format tableau croisé
+      // Colonnes : Superviseur + tous les états
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
+      
+      // Créer les colonnes
+      const columns = [
+        { key: 'superviseur', label: 'Superviseur' },
+        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
+      ];
+      
+      // Créer les lignes (une par superviseur)
+      const statsData = stats.superviseurs.map(superviseurStat => {
         const superviseurName = superviseurStat.superviseur.nom && superviseurStat.superviseur.prenom
           ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
           : superviseurStat.superviseur.pseudo || 'N/A';
         
-        return stats.etats.map(etat => ({
-          superviseur: superviseurName,
-          etat: etat.titre || etat.abbreviation,
-          count: superviseurStat.stats[etat.id]?.count || 0
-        })).concat({
-          superviseur: superviseurName,
-          etat: 'Validé',
-          count: superviseurStat.stats['validated']?.count || 0
+        const row = { superviseur: superviseurName };
+        
+        // Ajouter les valeurs pour chaque état
+        stats.etats.forEach(etat => {
+          const label = etat.titre || etat.abbreviation;
+          row[`etat_${label}`] = superviseurStat.stats[etat.id]?.count || 0;
         });
+        
+        // Ajouter la valeur "Validé"
+        row['etat_Validé'] = superviseurStat.stats['validated']?.count || 0;
+        
+        return row;
       });
       
-      const columns = [
-        { key: 'superviseur', label: 'Superviseur' },
-        { key: 'etat', label: 'État' },
-        { key: 'count', label: 'Nombre' }
-      ];
       exportToCSV(statsData, columns, 'production-qualif-stats');
     } else {
       alert('Aucune donnée à exporter');
@@ -254,28 +262,36 @@ const ProductionQualif = () => {
       ];
       exportToExcel(exportData, columns, 'production-qualif-fiches');
     } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
-      // Exporter les statistiques
-      const statsData = stats.superviseurs.flatMap(superviseurStat => {
+      // Exporter les statistiques en format tableau croisé
+      // Colonnes : Superviseur + tous les états
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
+      
+      // Créer les colonnes
+      const columns = [
+        { key: 'superviseur', label: 'Superviseur' },
+        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
+      ];
+      
+      // Créer les lignes (une par superviseur)
+      const statsData = stats.superviseurs.map(superviseurStat => {
         const superviseurName = superviseurStat.superviseur.nom && superviseurStat.superviseur.prenom
           ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
           : superviseurStat.superviseur.pseudo || 'N/A';
         
-        return stats.etats.map(etat => ({
-          superviseur: superviseurName,
-          etat: etat.titre || etat.abbreviation,
-          count: superviseurStat.stats[etat.id]?.count || 0
-        })).concat({
-          superviseur: superviseurName,
-          etat: 'Validé',
-          count: superviseurStat.stats['validated']?.count || 0
+        const row = { superviseur: superviseurName };
+        
+        // Ajouter les valeurs pour chaque état
+        stats.etats.forEach(etat => {
+          const label = etat.titre || etat.abbreviation;
+          row[`etat_${label}`] = superviseurStat.stats[etat.id]?.count || 0;
         });
+        
+        // Ajouter la valeur "Validé"
+        row['etat_Validé'] = superviseurStat.stats['validated']?.count || 0;
+        
+        return row;
       });
       
-      const columns = [
-        { key: 'superviseur', label: 'Superviseur' },
-        { key: 'etat', label: 'État' },
-        { key: 'count', label: 'Nombre' }
-      ];
       exportToExcel(statsData, columns, 'production-qualif-stats');
     } else {
       alert('Aucune donnée à exporter');
@@ -314,28 +330,36 @@ const ProductionQualif = () => {
       ];
       exportToPDF(exportData, columns, 'production-qualif-fiches', 'Production Qualification - Fiches');
     } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
-      // Exporter les statistiques
-      const statsData = stats.superviseurs.flatMap(superviseurStat => {
+      // Exporter les statistiques en format tableau croisé
+      // Colonnes : Superviseur + tous les états
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
+      
+      // Créer les colonnes
+      const columns = [
+        { key: 'superviseur', label: 'Superviseur' },
+        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
+      ];
+      
+      // Créer les lignes (une par superviseur)
+      const statsData = stats.superviseurs.map(superviseurStat => {
         const superviseurName = superviseurStat.superviseur.nom && superviseurStat.superviseur.prenom
           ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
           : superviseurStat.superviseur.pseudo || 'N/A';
         
-        return stats.etats.map(etat => ({
-          superviseur: superviseurName,
-          etat: etat.titre || etat.abbreviation,
-          count: superviseurStat.stats[etat.id]?.count || 0
-        })).concat({
-          superviseur: superviseurName,
-          etat: 'Validé',
-          count: superviseurStat.stats['validated']?.count || 0
+        const row = { superviseur: superviseurName };
+        
+        // Ajouter les valeurs pour chaque état
+        stats.etats.forEach(etat => {
+          const label = etat.titre || etat.abbreviation;
+          row[`etat_${label}`] = superviseurStat.stats[etat.id]?.count || 0;
         });
+        
+        // Ajouter la valeur "Validé"
+        row['etat_Validé'] = superviseurStat.stats['validated']?.count || 0;
+        
+        return row;
       });
       
-      const columns = [
-        { key: 'superviseur', label: 'Superviseur' },
-        { key: 'etat', label: 'État' },
-        { key: 'count', label: 'Nombre' }
-      ];
       exportToPDF(statsData, columns, 'production-qualif-stats', 'Production Qualification - Statistiques');
     } else {
       alert('Aucune donnée à exporter');

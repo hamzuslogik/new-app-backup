@@ -208,25 +208,34 @@ const SuiviAgentsQualif = () => {
       ];
       exportToCSV(fiches, columns, 'suivi-agents-qualif-fiches');
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
-      // Exporter les statistiques par agent
-      const statsData = stats.agents.flatMap(agentStat => {
-        const agentName = agentStat.agent.pseudo || 'N/A';
-        return stats.etats.map(etat => ({
-          agent: agentName,
-          etat: etat.titre || etat.abbreviation,
-          count: agentStat.stats[etat.id]?.count || 0
-        })).concat({
-          agent: agentName,
-          etat: 'Validé',
-          count: agentStat.stats['validated']?.count || 0
-        });
-      });
+      // Exporter les statistiques en format tableau croisé
+      // Colonnes : Agent + tous les états
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
       
+      // Créer les colonnes
       const columns = [
         { key: 'agent', label: 'Agent' },
-        { key: 'etat', label: 'État' },
-        { key: 'count', label: 'Nombre' }
+        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
       ];
+      
+      // Créer les lignes (une par agent)
+      const statsData = stats.agents.map(agentStat => {
+        const agentName = agentStat.agent.pseudo || 'N/A';
+        
+        const row = { agent: agentName };
+        
+        // Ajouter les valeurs pour chaque état
+        stats.etats.forEach(etat => {
+          const label = etat.titre || etat.abbreviation;
+          row[`etat_${label}`] = agentStat.stats[etat.id]?.count || 0;
+        });
+        
+        // Ajouter la valeur "Validé"
+        row['etat_Validé'] = agentStat.stats['validated']?.count || 0;
+        
+        return row;
+      });
+      
       exportToCSV(statsData, columns, 'suivi-agents-qualif-stats');
     } else {
       alert('Aucune donnée à exporter');
@@ -247,25 +256,34 @@ const SuiviAgentsQualif = () => {
       ];
       exportToExcel(fiches, columns, 'suivi-agents-qualif-fiches');
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
-      // Exporter les statistiques par agent
-      const statsData = stats.agents.flatMap(agentStat => {
-        const agentName = agentStat.agent.pseudo || 'N/A';
-        return stats.etats.map(etat => ({
-          agent: agentName,
-          etat: etat.titre || etat.abbreviation,
-          count: agentStat.stats[etat.id]?.count || 0
-        })).concat({
-          agent: agentName,
-          etat: 'Validé',
-          count: agentStat.stats['validated']?.count || 0
-        });
-      });
+      // Exporter les statistiques en format tableau croisé
+      // Colonnes : Agent + tous les états
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
       
+      // Créer les colonnes
       const columns = [
         { key: 'agent', label: 'Agent' },
-        { key: 'etat', label: 'État' },
-        { key: 'count', label: 'Nombre' }
+        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
       ];
+      
+      // Créer les lignes (une par agent)
+      const statsData = stats.agents.map(agentStat => {
+        const agentName = agentStat.agent.pseudo || 'N/A';
+        
+        const row = { agent: agentName };
+        
+        // Ajouter les valeurs pour chaque état
+        stats.etats.forEach(etat => {
+          const label = etat.titre || etat.abbreviation;
+          row[`etat_${label}`] = agentStat.stats[etat.id]?.count || 0;
+        });
+        
+        // Ajouter la valeur "Validé"
+        row['etat_Validé'] = agentStat.stats['validated']?.count || 0;
+        
+        return row;
+      });
+      
       exportToExcel(statsData, columns, 'suivi-agents-qualif-stats');
     } else {
       alert('Aucune donnée à exporter');
@@ -291,25 +309,34 @@ const SuiviAgentsQualif = () => {
       }));
       exportToPDF(formattedData, columns, 'suivi-agents-qualif-fiches', 'Suivi Agents Qualification - Fiches');
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
-      // Exporter les statistiques par agent
-      const statsData = stats.agents.flatMap(agentStat => {
-        const agentName = agentStat.agent.pseudo || 'N/A';
-        return stats.etats.map(etat => ({
-          agent: agentName,
-          etat: etat.titre || etat.abbreviation,
-          count: agentStat.stats[etat.id]?.count || 0
-        })).concat({
-          agent: agentName,
-          etat: 'Validé',
-          count: agentStat.stats['validated']?.count || 0
-        });
-      });
+      // Exporter les statistiques en format tableau croisé
+      // Colonnes : Agent + tous les états
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
       
+      // Créer les colonnes
       const columns = [
         { key: 'agent', label: 'Agent' },
-        { key: 'etat', label: 'État' },
-        { key: 'count', label: 'Nombre' }
+        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
       ];
+      
+      // Créer les lignes (une par agent)
+      const statsData = stats.agents.map(agentStat => {
+        const agentName = agentStat.agent.pseudo || 'N/A';
+        
+        const row = { agent: agentName };
+        
+        // Ajouter les valeurs pour chaque état
+        stats.etats.forEach(etat => {
+          const label = etat.titre || etat.abbreviation;
+          row[`etat_${label}`] = agentStat.stats[etat.id]?.count || 0;
+        });
+        
+        // Ajouter la valeur "Validé"
+        row['etat_Validé'] = agentStat.stats['validated']?.count || 0;
+        
+        return row;
+      });
+      
       exportToPDF(statsData, columns, 'suivi-agents-qualif-stats', 'Suivi Agents Qualification - Statistiques');
     } else {
       alert('Aucune donnée à exporter');
