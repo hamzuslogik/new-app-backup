@@ -55,7 +55,7 @@ function App() {
         >
           <Route index element={<HomeRedirect />} />
           <Route path="dashboard" element={<ProtectedRoute permission="dashboard_view"><Dashboard /></ProtectedRoute>} />
-          <Route path="dashboard-admin" element={<ProtectedRoute permission="dashboard_view"><DashboardAdmin /></ProtectedRoute>} />
+          <Route path="recherche-fiches" element={<ProtectedRoute permission="dashboard_view"><DashboardAdmin /></ProtectedRoute>} />
           <Route path="fiches" element={<ProtectedRoute permission="fiches_view"><Fiches /></ProtectedRoute>} />
           <Route path="fiches/:id" element={<ProtectedRoute permission="fiches_detail"><FicheDetailRoute /></ProtectedRoute>} />
           <Route path="planning" element={<ProtectedRoute permission="planning_view"><Planning /></ProtectedRoute>} />

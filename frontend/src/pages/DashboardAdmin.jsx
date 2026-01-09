@@ -685,13 +685,13 @@ const DashboardAdmin = () => {
         const todayStr = `${year}-${month}-${day}`;
         
         // URL pour "confirmer de la journée"
-        const confirmesUrl = `/dashboard-admin?fiche_search=1&id_etat_final=7&date_champ=date_modif_time&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
+        const confirmesUrl = `/recherche-fiches?fiche_search=1&id_etat_final=7&date_champ=date_modif_time&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
         
         // URL pour "annuler à reprogrammer"
-        const annulerUrl = `/dashboard-admin?fiche_search=1&id_etat_final=8&date_champ=date_modif_time&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
+        const annulerUrl = `/recherche-fiches?fiche_search=1&id_etat_final=8&date_champ=date_modif_time&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
         
         // URL pour "rdv à venir"
-        const rdvVenirUrl = `/dashboard-admin?fiche_search=1&id_etat_final=7&date_champ=date_rdv_time&date_debut=${todayStr}&time_debut=00:00:00`;
+        const rdvVenirUrl = `/recherche-fiches?fiche_search=1&id_etat_final=7&date_champ=date_rdv_time&date_debut=${todayStr}&time_debut=00:00:00`;
         
         return (
           <div className="dashboard-stats-section">

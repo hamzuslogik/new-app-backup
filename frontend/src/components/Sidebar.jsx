@@ -22,6 +22,7 @@ import {
   FaCheck,
   FaExclamationTriangle,
   FaBell,
+  FaSearch,
 } from 'react-icons/fa';
 import './Sidebar.css';
 
@@ -51,9 +52,9 @@ const Sidebar = ({ collapsed }) => {
       visible: true, // Toujours visible, mais vérifié par permission
     },
     {
-      path: '/dashboard-admin',
-      label: 'Dashboard-ADMIN',
-      icon: FaHome,
+      path: '/recherche-fiches',
+      label: 'Recherche fiches',
+      icon: FaSearch,
       permission: 'dashboard_view',
       visible: true,
     },
