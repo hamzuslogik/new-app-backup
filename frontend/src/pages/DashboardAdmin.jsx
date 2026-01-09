@@ -662,7 +662,7 @@ const DashboardAdmin = () => {
     <div className="dashboard">
       <div className="dashboard-header">
         <div className="dashboard-header-left">
-          <h1><FaHome /> Tableau de bord ADMIN</h1>
+          <h1><FaSearch /> Recherche fiches</h1>
           <p>Bienvenue, {user?.pseudo || 'Utilisateur'}</p>
         </div>
         <div className="dashboard-header-right">
