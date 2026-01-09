@@ -75,6 +75,7 @@ const DashboardAdmin = () => {
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const nomInputRef = useRef(null);
   const [filters, setFilters] = useState({
     page: 1,
@@ -260,7 +261,7 @@ const DashboardAdmin = () => {
   );
 
   // Récupérer les fiches
-  const { data, isLoading, error, refetch } = useQuery(
+  const { data, isLoading, isFetching, error, refetch } = useQuery(
     ['fiches', filters, activeTab, quickSearch],
     async () => {
       console.time('[PERF] Requête API fiches - Total');
@@ -325,8 +326,9 @@ const DashboardAdmin = () => {
     }));
   };
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
+    setIsSearching(true);
     // Si on cherche uniquement par critère, ne pas appliquer les filtres de date
     const newFilters = { ...filters, fiche_search: true, page: 1 };
     
@@ -347,7 +349,11 @@ const DashboardAdmin = () => {
     }
     
     setFilters(newFilters);
-    refetch();
+    try {
+      await refetch();
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleReset = () => {
@@ -1068,7 +1074,7 @@ const DashboardAdmin = () => {
                 ? `Résultats de la recherche ${pagination.total}` 
                 : `${pagination.total}`}
           </h2>
-          {isLoading && (
+          {(isLoading || isFetching || isSearching) && (
             <div className="search-loading-indicator">
               <div className="spinner-small"></div>
               <span>Recherche en cours...</span>
@@ -1076,7 +1082,7 @@ const DashboardAdmin = () => {
           )}
         </div>
 
-        {isLoading && fiches.length === 0 ? (
+        {(isLoading || isSearching) && fiches.length === 0 ? (
           <div className="dashboard-loading">
             <div className="spinner"></div>
             <p>Chargement des résultats de recherche...</p>
@@ -1092,7 +1098,7 @@ const DashboardAdmin = () => {
           </div>
         ) : (
           <>
-            <div className={`fiches-table-container ${isLoading ? 'loading' : ''}`}>
+            <div className={`fiches-table-container ${(isLoading || isFetching || isSearching) ? 'loading' : ''}`}>
               <table className="fiches-table">
                 <thead>
                   <tr>
