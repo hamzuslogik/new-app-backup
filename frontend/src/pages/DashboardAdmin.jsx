@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -74,6 +74,8 @@ const DashboardAdmin = () => {
   const isREConfirmation = user?.fonction === 14;
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   const [showFilters, setShowFilters] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(true);
+  const nomInputRef = useRef(null);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
@@ -100,6 +102,17 @@ const DashboardAdmin = () => {
       setShowFilters(true);
     }
   }, [searchParams]);
+
+  // Auto-focus sur le champ Nom dans le modal de recherche
+  useEffect(() => {
+    if (showSearchModal && nomInputRef.current) {
+      // Petit délai pour s'assurer que le modal est rendu
+      setTimeout(() => {
+        nomInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showSearchModal]);
+
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
     direction: 'asc', // 'asc' or 'desc'
@@ -651,6 +664,15 @@ const DashboardAdmin = () => {
         <div className="dashboard-header-left">
           <h1><FaHome /> Tableau de bord ADMIN</h1>
           <p>Bienvenue, {user?.pseudo || 'Utilisateur'}</p>
+        </div>
+        <div className="dashboard-header-right">
+          <button 
+            className="btn-search-modal"
+            onClick={() => setShowSearchModal(true)}
+            title="Ouvrir la recherche avancée"
+          >
+            <FaSearch /> Recherche
+          </button>
         </div>
       </div>
 
@@ -1318,6 +1340,314 @@ const DashboardAdmin = () => {
           ficheHash={selectedFicheHash}
           onClose={() => setSelectedFicheHash(null)}
         />
+      )}
+
+      {/* Modal de recherche */}
+      {showSearchModal && (
+        <div className="search-modal-overlay" onClick={() => setShowSearchModal(false)}>
+          <div className="search-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="search-modal-header">
+              <h2>
+                <FaSearch /> Recherche et Filtres
+              </h2>
+              <button 
+                className="search-modal-close"
+                onClick={() => setShowSearchModal(false)}
+                title="Fermer"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <form className="search-modal-form" onSubmit={(e) => {
+              e.preventDefault();
+              handleSearch(e);
+              setShowSearchModal(false);
+            }}>
+              <div className="search-modal-fields">
+                {/* Produits */}
+                {user?.fonction !== 5 && (
+                  <div className="form-group">
+                    <label>Produit</label>
+                    <select
+                      value={Array.isArray(filters.produit) ? filters.produit[0] || '' : filters.produit || ''}
+                      onChange={(e) => handleFilterChange('produit', e.target.value ? e.target.value : '')}
+                    >
+                      <option value="">Tous les produits</option>
+                      {produitsData && Array.isArray(produitsData) && produitsData.length > 0 ? (
+                        produitsData.map(prod => (
+                          <option key={prod.id} value={prod.id}>
+                            {prod.nom || `Produit ${prod.id}`}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="1">PAC</option>
+                          <option value="2">PV</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                )}
+
+                {/* Nom et Prénom */}
+                {user?.fonction !== 5 && (
+                  <>
+                    <div className="form-group">
+                      <label>Nom</label>
+                      <input
+                        ref={nomInputRef}
+                        type="text"
+                        value={filters.nom || ''}
+                        onChange={(e) => handleFilterChange('nom', e.target.value)}
+                        placeholder="Nom"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Prénom</label>
+                      <input
+                        type="text"
+                        value={filters.prenom || ''}
+                        onChange={(e) => handleFilterChange('prenom', e.target.value)}
+                        placeholder="Prénom"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Critère de recherche */}
+                <div className="form-group">
+                  <label>Critère</label>
+                  <input
+                    type="text"
+                    value={filters.critere || ''}
+                    onChange={(e) => handleFilterChange('critere', e.target.value)}
+                    placeholder="Critère"
+                    required={user?.fonction === 5}
+                  />
+                </div>
+
+                {/* Type de critère */}
+                <div className="form-group">
+                  <label>Type de critère</label>
+                  <select
+                    value={filters.critere_champ || 'tel'}
+                    onChange={(e) => handleFilterChange('critere_champ', e.target.value)}
+                    required={user?.fonction === 5}
+                  >
+                    <option value="tel">Téléphone</option>
+                    {user?.fonction !== 5 && (
+                      <>
+                        <option value="cp">Code Postal</option>
+                        <option value="commentaire">Commentaire</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                {/* Département */}
+                {(user?.fonction !== 5 && user?.fonction !== 6 && user?.fonction !== 3) && (
+                  <div className="form-group">
+                    <label>Département(s)</label>
+                    <input
+                      type="text"
+                      value={filters.cp || ''}
+                      onChange={(e) => handleFilterChange('cp', e.target.value)}
+                      placeholder="Département(s) (ex: 75 ou 75,13,69)"
+                    />
+                  </div>
+                )}
+
+                {/* Confirmateur */}
+                {user?.fonction !== 5 && user?.fonction !== 3 && (
+                  <div className="form-group">
+                    <label>Confirmateur</label>
+                    <select
+                      value={filters.id_confirmateur || ''}
+                      onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      {confirmateurs.map(conf => (
+                        <option key={conf.id} value={conf.id}>
+                          {conf.pseudo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Commercial */}
+                {user?.fonction !== 5 && (
+                  <div className="form-group">
+                    <label>Commercial</label>
+                    <select
+                      value={filters.id_commercial || ''}
+                      onChange={(e) => handleFilterChange('id_commercial', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      {commerciaux.map(com => (
+                        <option key={com.id} value={com.id}>
+                          {com.pseudo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Centre */}
+                {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (
+                  <div className="form-group">
+                    <label>Centre</label>
+                    <select
+                      value={filters.id_centre || ''}
+                      onChange={(e) => handleFilterChange('id_centre', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      {centres.map(centre => (
+                        <option key={centre.id} value={centre.id}>
+                          {centre.titre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* État final */}
+                <div className="form-group">
+                  <label>État final</label>
+                  {isLoadingEtats ? (
+                    <select disabled>
+                      <option>Chargement...</option>
+                    </select>
+                  ) : etatsError ? (
+                    <select disabled>
+                      <option>Erreur de chargement</option>
+                    </select>
+                  ) : (
+                    <select
+                      value={filters.id_etat_final !== undefined && filters.id_etat_final !== null ? filters.id_etat_final : ''}
+                      onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
+                      defaultValue=""
+                    >
+                      <option value="">Tous</option>
+                      {etatsPhase1.length > 0 && (
+                        <optgroup label="PHASE 1">
+                          {etatsPhase1.map(etat => (
+                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                              {etat.titre}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {etatsPhase2.length > 0 && (
+                        <optgroup label="PHASE 2">
+                          {etatsPhase2.map(etat => (
+                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                              {etat.titre}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {etatsPhase3.length > 0 && (
+                        <optgroup label="PHASE 3">
+                          <option value="t_s" style={{ backgroundColor: '#FF3380' }}>TOUT SIGNER</option>
+                          {etatsPhase3.map(etat => (
+                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                              {etat.titre}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {etatsPhase1.length === 0 && etatsPhase2.length === 0 && etatsPhase3.length === 0 && etats.length > 0 && (
+                        <>
+                          {etats.map(etat => (
+                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                              {etat.titre}
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  )}
+                </div>
+
+                {/* Champ de date */}
+                <div className="form-group">
+                  <label>Champ de date</label>
+                  <select
+                    value={filters.date_champ || ''}
+                    onChange={(e) => handleFilterChange('date_champ', e.target.value)}
+                  >
+                    <option value="">Sélectionnez date</option>
+                    <option value="date_modif_time">Date Modification</option>
+                    <option value="date_insert_time">Date Insertion</option>
+                    <option value="date_appel_time">Date d'appel</option>
+                    {user?.fonction !== 3 && (
+                      <option value="date_rdv_time">Date Planning</option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Date début */}
+                <div className="form-group">
+                  <label>Date début</label>
+                  <div className="date-time-inputs">
+                    <input
+                      type="date"
+                      value={filters.date_debut || ''}
+                      onChange={(e) => handleFilterChange('date_debut', e.target.value)}
+                    />
+                    <input
+                      type="time"
+                      value={filters.time_debut || '00:00:00'}
+                      onChange={(e) => handleFilterChange('time_debut', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Date fin */}
+                <div className="form-group">
+                  <label>Date fin</label>
+                  <div className="date-time-inputs">
+                    <input
+                      type="date"
+                      value={filters.date_fin || ''}
+                      onChange={(e) => handleFilterChange('date_fin', e.target.value)}
+                    />
+                    <input
+                      type="time"
+                      value={filters.time_fin || '23:59:59'}
+                      onChange={(e) => handleFilterChange('time_fin', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="search-modal-actions">
+                <button type="submit" className="btn-search">
+                  <FaSearch /> RECHERCHE
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    handleReset();
+                    setShowSearchModal(false);
+                  }} 
+                  className="btn-reset"
+                >
+                  Réinitialiser
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setShowSearchModal(false)} 
+                  className="btn-cancel"
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
