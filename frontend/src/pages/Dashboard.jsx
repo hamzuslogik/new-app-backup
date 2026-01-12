@@ -753,35 +753,11 @@ const Dashboard = () => {
 
         {showFilters && (
           <form className="search-form" onSubmit={handleSearch}>
-            <div className="search-form-grid">
-              {/* Produits */}
-              {user?.fonction !== 5 && (
-                <div className="form-group">
-                  <label>Produit</label>
-                  <select
-                    value={Array.isArray(filters.produit) ? filters.produit[0] || '' : filters.produit || ''}
-                    onChange={(e) => handleFilterChange('produit', e.target.value ? e.target.value : '')}
-                  >
-                    <option value="">Tous les produits</option>
-                    {produitsData && Array.isArray(produitsData) && produitsData.length > 0 ? (
-                      produitsData.map(prod => (
-                        <option key={prod.id} value={prod.id}>
-                          {prod.nom || `Produit ${prod.id}`}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="1">PAC</option>
-                        <option value="2">PV</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-              )}
-
-              {/* Nom et Prénom */}
-              {user?.fonction !== 5 && (
-                <>
+            <div className="search-form-two-columns">
+              {/* Colonne de gauche */}
+              <div className="search-form-left">
+                {/* Nom */}
+                {user?.fonction !== 5 && (
                   <div className="form-group">
                     <label>Nom</label>
                     <input
@@ -791,6 +767,184 @@ const Dashboard = () => {
                       placeholder="Nom"
                     />
                   </div>
+                )}
+
+                {/* Département */}
+                {(user?.fonction !== 5 && user?.fonction !== 6 && user?.fonction !== 3) && (
+                  <div className="form-group">
+                    <label>Département(s)</label>
+                    <input
+                      type="text"
+                      value={filters.cp || ''}
+                      onChange={(e) => handleFilterChange('cp', e.target.value)}
+                      placeholder="Département(s) (ex: 75 ou 75,13,69)"
+                    />
+                  </div>
+                )}
+
+                {/* Critère de recherche */}
+                <div className="form-group">
+                  <label>Critère</label>
+                  <input
+                    type="text"
+                    value={filters.critere || ''}
+                    onChange={(e) => handleFilterChange('critere', e.target.value)}
+                    placeholder="Critère"
+                    required={user?.fonction === 5}
+                  />
+                </div>
+
+                {/* État final */}
+                <div className="form-group">
+                  <label>État final</label>
+                  {isLoadingEtats ? (
+                    <select disabled>
+                      <option>Chargement...</option>
+                    </select>
+                  ) : etatsError ? (
+                    <select disabled>
+                      <option>Erreur de chargement</option>
+                    </select>
+                  ) : (
+                    <select
+                      value={filters.id_etat_final || ''}
+                      onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      {etatsPhase1.length > 0 && (
+                        <optgroup label="PHASE 1">
+                          {etatsPhase1.map(etat => (
+                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                              {etat.titre}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {etatsPhase2.length > 0 && (
+                        <optgroup label="PHASE 2">
+                          {etatsPhase2.map(etat => (
+                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                              {etat.titre}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {etatsPhase3.length > 0 && (
+                        <optgroup label="PHASE 3">
+                          <option value="t_s" style={{ backgroundColor: '#FF3380' }}>TOUT SIGNER</option>
+                          {etatsPhase3.map(etat => (
+                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                              {etat.titre}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {/* Si aucun état n'est trouvé dans les phases, afficher tous les états */}
+                      {etatsPhase1.length === 0 && etatsPhase2.length === 0 && etatsPhase3.length === 0 && etats.length > 0 && (
+                        <>
+                          {etats.map(etat => (
+                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                              {etat.titre}
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  )}
+                </div>
+
+                {/* Date début */}
+                <div className="form-group date-group">
+                  <label>Date début</label>
+                  <div className="date-time-inputs">
+                    <input
+                      type="date"
+                      value={filters.date_debut || ''}
+                      onChange={(e) => handleFilterChange('date_debut', e.target.value)}
+                    />
+                    <input
+                      type="time"
+                      value={filters.time_debut || '00:00:00'}
+                      onChange={(e) => handleFilterChange('time_debut', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Date fin */}
+                <div className="form-group date-group">
+                  <label>Date fin</label>
+                  <div className="date-time-inputs">
+                    <input
+                      type="date"
+                      value={filters.date_fin || ''}
+                      onChange={(e) => handleFilterChange('date_fin', e.target.value)}
+                    />
+                    <input
+                      type="time"
+                      value={filters.time_fin || '23:59:59'}
+                      onChange={(e) => handleFilterChange('time_fin', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Commercial */}
+                {user?.fonction !== 5 && (
+                  <div className="form-group">
+                    <label>Commercial</label>
+                    <select
+                      value={filters.id_commercial || ''}
+                      onChange={(e) => handleFilterChange('id_commercial', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      {commerciaux.map(com => (
+                        <option key={com.id} value={com.id}>
+                          {com.pseudo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Boutons d'action */}
+                <div className="search-form-actions-left">
+                  <button type="submit" className="btn-search">
+                    <FaSearch /> RECHERCHE
+                  </button>
+                  <button type="button" onClick={handleReset} className="btn-reset">
+                    Réinitialiser
+                  </button>
+                </div>
+              </div>
+
+              {/* Colonne de droite */}
+              <div className="search-form-right">
+                {/* Produits */}
+                {user?.fonction !== 5 && (
+                  <div className="form-group">
+                    <label>Produit</label>
+                    <select
+                      value={Array.isArray(filters.produit) ? filters.produit[0] || '' : filters.produit || ''}
+                      onChange={(e) => handleFilterChange('produit', e.target.value ? e.target.value : '')}
+                    >
+                      <option value="">Tous les produits</option>
+                      {produitsData && Array.isArray(produitsData) && produitsData.length > 0 ? (
+                        produitsData.map(prod => (
+                          <option key={prod.id} value={prod.id}>
+                            {prod.nom || `Produit ${prod.id}`}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="1">PAC</option>
+                          <option value="2">PV</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                )}
+
+                {/* Prénom */}
+                {user?.fonction !== 5 && (
                   <div className="form-group">
                     <label>Prénom</label>
                     <input
@@ -800,224 +954,79 @@ const Dashboard = () => {
                       placeholder="Prénom"
                     />
                   </div>
-                </>
-              )}
+                )}
 
-              {/* Critère de recherche */}
-              <div className="form-group">
-                <label>Critère</label>
-                <input
-                  type="text"
-                  value={filters.critere || ''}
-                  onChange={(e) => handleFilterChange('critere', e.target.value)}
-                  placeholder="Critère"
-                  required={user?.fonction === 5}
-                />
-              </div>
-
-              {/* Type de critère */}
-              <div className="form-group">
-                <label>Type de critère</label>
-                <select
-                  value={filters.critere_champ || 'tel'}
-                  onChange={(e) => handleFilterChange('critere_champ', e.target.value)}
-                  required={user?.fonction === 5}
-                >
-                  <option value="tel">Téléphone</option>
-                  {user?.fonction !== 5 && (
-                    <>
-                      <option value="cp">Code Postal</option>
-                      <option value="commentaire">Commentaire</option>
-                    </>
-                  )}
-                </select>
-              </div>
-
-              {/* Département */}
-              {(user?.fonction !== 5 && user?.fonction !== 6 && user?.fonction !== 3) && (
+                {/* Type de critère */}
                 <div className="form-group">
-                  <label>Département(s)</label>
-                  <input
-                    type="text"
-                    value={filters.cp || ''}
-                    onChange={(e) => handleFilterChange('cp', e.target.value)}
-                    placeholder="Département(s) (ex: 75 ou 75,13,69)"
-                  />
-                </div>
-              )}
-
-              {/* Confirmateur */}
-              {user?.fonction !== 5 && user?.fonction !== 3 && (
-                <div className="form-group">
-                  <label>Confirmateur</label>
+                  <label>Type de critère</label>
                   <select
-                    value={filters.id_confirmateur || ''}
-                    onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
+                    value={filters.critere_champ || 'tel'}
+                    onChange={(e) => handleFilterChange('critere_champ', e.target.value)}
+                    required={user?.fonction === 5}
                   >
-                    <option value="">Tous</option>
-                    {confirmateurs.map(conf => (
-                      <option key={conf.id} value={conf.id}>
-                        {conf.pseudo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Commercial */}
-              {user?.fonction !== 5 && (
-                <div className="form-group">
-                  <label>Commercial</label>
-                  <select
-                    value={filters.id_commercial || ''}
-                    onChange={(e) => handleFilterChange('id_commercial', e.target.value)}
-                  >
-                    <option value="">Tous</option>
-                    {commerciaux.map(com => (
-                      <option key={com.id} value={com.id}>
-                        {com.pseudo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Centre */}
-              {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (
-                <div className="form-group">
-                  <label>Centre</label>
-                  <select
-                    value={filters.id_centre || ''}
-                    onChange={(e) => handleFilterChange('id_centre', e.target.value)}
-                  >
-                    <option value="">Tous</option>
-                    {centres.map(centre => (
-                      <option key={centre.id} value={centre.id}>
-                        {centre.titre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* État final */}
-              <div className="form-group">
-                <label>État final</label>
-                {isLoadingEtats ? (
-                  <select disabled>
-                    <option>Chargement...</option>
-                  </select>
-                ) : etatsError ? (
-                  <select disabled>
-                    <option>Erreur de chargement</option>
-                  </select>
-                ) : (
-                  <select
-                    value={filters.id_etat_final || ''}
-                    onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
-                  >
-                    <option value="">Tous</option>
-                    {etatsPhase1.length > 0 && (
-                      <optgroup label="PHASE 1">
-                        {etatsPhase1.map(etat => (
-                          <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
-                            {etat.titre}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                    {etatsPhase2.length > 0 && (
-                      <optgroup label="PHASE 2">
-                        {etatsPhase2.map(etat => (
-                          <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
-                            {etat.titre}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                    {etatsPhase3.length > 0 && (
-                      <optgroup label="PHASE 3">
-                        <option value="t_s" style={{ backgroundColor: '#FF3380' }}>TOUT SIGNER</option>
-                        {etatsPhase3.map(etat => (
-                          <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
-                            {etat.titre}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                    {/* Si aucun état n'est trouvé dans les phases, afficher tous les états */}
-                    {etatsPhase1.length === 0 && etatsPhase2.length === 0 && etatsPhase3.length === 0 && etats.length > 0 && (
+                    <option value="tel">Téléphone</option>
+                    {user?.fonction !== 5 && (
                       <>
-                        {etats.map(etat => (
-                          <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
-                            {etat.titre}
-                          </option>
-                        ))}
+                        <option value="cp">Code Postal</option>
+                        <option value="commentaire">Commentaire</option>
                       </>
                     )}
                   </select>
+                </div>
+
+                {/* Confirmateur */}
+                {user?.fonction !== 5 && user?.fonction !== 3 && (
+                  <div className="form-group">
+                    <label>Confirmateur</label>
+                    <select
+                      value={filters.id_confirmateur || ''}
+                      onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      {confirmateurs.map(conf => (
+                        <option key={conf.id} value={conf.id}>
+                          {conf.pseudo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 )}
-              </div>
 
-              {/* Champ de date */}
-              <div className="form-group">
-                <label>Champ de date</label>
-                <select
-                  value={filters.date_champ || ''}
-                  onChange={(e) => handleFilterChange('date_champ', e.target.value)}
-                >
-                  <option value="">Sélectionnez date</option>
-                  <option value="date_modif_time">Date Modification</option>
-                  <option value="date_insert_time">Date Insertion</option>
-                  <option value="date_appel_time">Date d'appel</option>
-                  {user?.fonction !== 3 && (
-                    <option value="date_rdv_time">Date Planning</option>
-                  )}
-                </select>
-              </div>
+                {/* Centre */}
+                {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (
+                  <div className="form-group">
+                    <label>Centre</label>
+                    <select
+                      value={filters.id_centre || ''}
+                      onChange={(e) => handleFilterChange('id_centre', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      {centres.map(centre => (
+                        <option key={centre.id} value={centre.id}>
+                          {centre.titre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              {/* Date début */}
-              <div className="form-group date-group">
-                <label>Date début</label>
-                <div className="date-time-inputs">
-                  <input
-                    type="date"
-                    value={filters.date_debut || ''}
-                    onChange={(e) => handleFilterChange('date_debut', e.target.value)}
-                  />
-                  <input
-                    type="time"
-                    value={filters.time_debut || '00:00:00'}
-                    onChange={(e) => handleFilterChange('time_debut', e.target.value)}
-                  />
+                {/* Champ de date */}
+                <div className="form-group">
+                  <label>Champ de date</label>
+                  <select
+                    value={filters.date_champ || ''}
+                    onChange={(e) => handleFilterChange('date_champ', e.target.value)}
+                  >
+                    <option value="">Sélectionnez date</option>
+                    <option value="date_modif_time">Date Modification</option>
+                    <option value="date_insert_time">Date Insertion</option>
+                    <option value="date_appel_time">Date d'appel</option>
+                    {user?.fonction !== 3 && (
+                      <option value="date_rdv_time">Date Planning</option>
+                    )}
+                  </select>
                 </div>
               </div>
-
-              {/* Date fin */}
-              <div className="form-group date-group">
-                <label>Date fin</label>
-                <div className="date-time-inputs">
-                  <input
-                    type="date"
-                    value={filters.date_fin || ''}
-                    onChange={(e) => handleFilterChange('date_fin', e.target.value)}
-                  />
-                  <input
-                    type="time"
-                    value={filters.time_fin || '23:59:59'}
-                    onChange={(e) => handleFilterChange('time_fin', e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="search-form-actions">
-              <button type="submit" className="btn-search">
-                <FaSearch /> RECHERCHE
-              </button>
-              <button type="button" onClick={handleReset} className="btn-reset">
-                Réinitialiser
-              </button>
             </div>
           </form>
         )}
