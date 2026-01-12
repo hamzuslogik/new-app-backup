@@ -668,10 +668,6 @@ const Dashboard = () => {
     <div className="dashboard">
       <div className="dashboard-header">
         <div className="dashboard-header-left">
-          <h1><FaHome /> Tableau de bord</h1>
-          <p>Bienvenue, {user?.pseudo || 'Utilisateur'}</p>
-        </div>
-        <div className="dashboard-header-right">
           <button 
             className="btn-search-modal"
             onClick={() => setShowSearchModal(true)}
@@ -679,6 +675,10 @@ const Dashboard = () => {
           >
             <FaSearch /> Recherche
           </button>
+          <div>
+            <h1><FaHome /> Tableau de bord</h1>
+            <p>Bienvenue, {user?.pseudo || 'Utilisateur'}</p>
+          </div>
         </div>
       </div>
 
