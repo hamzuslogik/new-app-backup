@@ -79,7 +79,7 @@ const DashboardAdmin = () => {
   const nomInputRef = useRef(null);
   const [filters, setFilters] = useState({
     page: 1,
-    limit: 10,
+    limit: 999999,
     fiche_search: false,
   });
   
@@ -90,7 +90,7 @@ const DashboardAdmin = () => {
       // Convertir les paramètres de l'URL en filtres
       const newFilters = {
         page: parseInt(urlParams.page) || 1,
-        limit: parseInt(urlParams.limit) || 10,
+        limit: parseInt(urlParams.limit) || 999999,
         fiche_search: true,
         ...urlParams
       };
@@ -359,7 +359,7 @@ const DashboardAdmin = () => {
   const handleReset = () => {
     setFilters({
       page: 1,
-      limit: 10,
+      limit: 999999,
       fiche_search: false,
     });
     // Réinitialiser aussi les filtres de date pour revenir aux valeurs par défaut
