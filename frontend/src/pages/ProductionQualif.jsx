@@ -29,7 +29,7 @@ const ProductionQualif = () => {
     date_debut: getFirstOfMonth(),
     date_fin: getTodayDate(),
     id_superviseur: '',
-    id_etat_final: ''
+    id_etat_final: [] // Tableau pour multi-select
   });
 
   // Vérifier si l'utilisateur est un RP Qualification (fonction 12) ou Superviseur Qualification (fonction 2)
@@ -80,7 +80,14 @@ const ProductionQualif = () => {
       if (filters.date_debut) params.date_debut = filters.date_debut;
       if (filters.date_fin) params.date_fin = filters.date_fin;
       if (filters.id_superviseur) params.id_superviseur = filters.id_superviseur;
-      if (filters.id_etat_final) params.id_etat_final = filters.id_etat_final;
+      // Pour les statistiques, on peut envoyer le premier état ou filtrer côté backend
+      if (filters.id_etat_final && filters.id_etat_final.length > 0) {
+        // Si un seul état, l'envoyer directement
+        if (filters.id_etat_final.length === 1) {
+          params.id_etat_final = filters.id_etat_final[0];
+        }
+        // Sinon, on ne filtre pas côté backend pour les stats (on affiche tout)
+      }
       
       const res = await api.get('/statistiques/production-qualif', { params });
       return res.data.data;
@@ -114,8 +121,13 @@ const ProductionQualif = () => {
         params.id_superviseur = filters.id_superviseur;
       }
       // Filtrer par état (y compris "validated")
-      if (filters.id_etat_final) {
-        params.id_etat_final = filters.id_etat_final;
+      // Pour les fiches, on peut filtrer côté frontend si plusieurs états sont sélectionnés
+      if (filters.id_etat_final && filters.id_etat_final.length > 0) {
+        // Si un seul état, l'envoyer au backend
+        if (filters.id_etat_final.length === 1) {
+          params.id_etat_final = filters.id_etat_final[0];
+        }
+        // Sinon, on filtrera côté frontend après récupération
       }
       
       try {
@@ -133,13 +145,35 @@ const ProductionQualif = () => {
     }
   );
 
-  // Filtrer les fiches par recherche rapide uniquement (le filtrage par superviseur et état est fait côté backend)
+  // Filtrer les fiches par recherche rapide et par états multiples
   const filteredFiches = useMemo(() => {
     if (!fichesData?.data) return [];
     
     let filtered = fichesData.data;
     
-    // Filtrer par recherche rapide uniquement
+    // Filtrer par états multiples si plusieurs états sont sélectionnés
+    if (filters.id_etat_final && filters.id_etat_final.length > 1) {
+      filtered = filtered.filter(fiche => {
+        // Si "validated" est sélectionné, vérifier si la fiche est hors groupe 0
+        if (filters.id_etat_final.includes('validated')) {
+          const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
+          if (!isGroupe0) return true; // Fiche validée
+        }
+        // Vérifier si l'état de la fiche est dans la liste sélectionnée
+        return filters.id_etat_final.includes(String(fiche.id_etat_final));
+      });
+    } else if (filters.id_etat_final && filters.id_etat_final.length === 1) {
+      // Un seul état sélectionné - le filtrage est fait côté backend
+      // Mais on peut aussi filtrer ici pour "validated"
+      if (filters.id_etat_final[0] === 'validated') {
+        filtered = filtered.filter(fiche => {
+          const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
+          return !isGroupe0;
+        });
+      }
+    }
+    
+    // Filtrer par recherche rapide
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(fiche => {
@@ -156,7 +190,7 @@ const ProductionQualif = () => {
     }
     
     return filtered;
-  }, [fichesData, searchTerm]);
+  }, [fichesData, searchTerm, filters.id_etat_final]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -179,9 +213,13 @@ const ProductionQualif = () => {
               : superviseur.pseudo || '-')
           : '-';
         
+        const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
+        const displayEtat = isGroupe0 ? (fiche.etat_titre || '-') : 'Validée';
+        
         return {
           ...fiche,
-          superviseur_name: superviseurName
+          superviseur_name: superviseurName,
+          etat_titre: displayEtat
         };
       });
       
@@ -247,9 +285,13 @@ const ProductionQualif = () => {
               : superviseur.pseudo || '-')
           : '-';
         
+        const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
+        const displayEtat = isGroupe0 ? (fiche.etat_titre || '-') : 'Validée';
+        
         return {
           ...fiche,
-          superviseur_name: superviseurName
+          superviseur_name: superviseurName,
+          etat_titre: displayEtat
         };
       });
       
@@ -315,10 +357,14 @@ const ProductionQualif = () => {
               : superviseur.pseudo || '-')
           : '-';
         
+        const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
+        const displayEtat = isGroupe0 ? (fiche.etat_titre || '-') : 'Validée';
+        
         return {
           ...fiche,
           superviseur_name: superviseurName,
-          date_insert_time: fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : '-'
+          date_insert_time: fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : '-',
+          etat_titre: displayEtat
         };
       });
       
@@ -456,19 +502,54 @@ const ProductionQualif = () => {
             </select>
           </div>
           <div className="filter-group">
-            <label>État</label>
-            <select
-              value={filters.id_etat_final}
-              onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
-            >
-              <option value="">Tous les états</option>
-              <option value="validated">Validé (hors groupe 0)</option>
+            <label>État (multi-select)</label>
+            <div className="multi-select-container">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={filters.id_etat_final.length === 0}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      handleFilterChange('id_etat_final', []);
+                    }
+                  }}
+                />
+                <span>Tous les états</span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={filters.id_etat_final.includes('validated')}
+                  onChange={(e) => {
+                    const newEtats = e.target.checked
+                      ? [...filters.id_etat_final, 'validated']
+                      : filters.id_etat_final.filter(e => e !== 'validated');
+                    handleFilterChange('id_etat_final', newEtats);
+                  }}
+                />
+                <span>Validé (hors groupe 0)</span>
+              </label>
               {etats.filter(e => e.groupe === '0' || e.groupe === 0).map(etat => (
-                <option key={etat.id} value={etat.id}>
-                  {etat.titre}
-                </option>
+                <label key={etat.id}>
+                  <input
+                    type="checkbox"
+                    checked={filters.id_etat_final.includes(String(etat.id))}
+                    onChange={(e) => {
+                      const newEtats = e.target.checked
+                        ? [...filters.id_etat_final, String(etat.id)]
+                        : filters.id_etat_final.filter(e => e !== String(etat.id));
+                      handleFilterChange('id_etat_final', newEtats);
+                    }}
+                  />
+                  <span>{etat.titre}</span>
+                </label>
               ))}
-            </select>
+            </div>
+            {filters.id_etat_final.length > 0 && (
+              <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+                {filters.id_etat_final.length} état{filters.id_etat_final.length > 1 ? 's' : ''} sélectionné{filters.id_etat_final.length > 1 ? 's' : ''}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -509,7 +590,7 @@ const ProductionQualif = () => {
           ) : fiches && fiches.length > 0 ? (
             <div className="fiches-table-container">
               <div className="results-info">
-                {searchTerm || filters.id_superviseur || filters.id_etat_final ? (
+                {searchTerm || filters.id_superviseur || (filters.id_etat_final && filters.id_etat_final.length > 0) ? (
                   <p>{fiches.length} fiche{fiches.length > 1 ? 's' : ''} trouvée{fiches.length > 1 ? 's' : ''} (sur {fichesData?.data?.length || fichesData?.pagination?.total || 0})</p>
                 ) : (
                   <p>Total: {fichesData?.data?.length || fichesData?.pagination?.total || 0} fiche{(fichesData?.data?.length || fichesData?.pagination?.total || 0) > 1 ? 's' : ''}</p>
@@ -553,12 +634,19 @@ const ProductionQualif = () => {
                         <td>{fiche.tel || '-'}</td>
                         <td>{fiche.cp || '-'}</td>
                         <td>
-                          <span 
-                            className="etat-badge"
-                            style={{ backgroundColor: fiche.etat_color || '#ccc' }}
-                          >
-                            {fiche.etat_titre || '-'}
-                          </span>
+                          {(() => {
+                            const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
+                            const displayEtat = isGroupe0 ? (fiche.etat_titre || '-') : 'Validée';
+                            const displayColor = isGroupe0 ? (fiche.etat_color || '#ccc') : '#4CAF50';
+                            return (
+                              <span 
+                                className="etat-badge"
+                                style={{ backgroundColor: displayColor }}
+                              >
+                                {displayEtat}
+                              </span>
+                            );
+                          })()}
                         </td>
                         {canSeeCommentaireQualite && (
                           <td style={{ maxWidth: '300px', wordWrap: 'break-word' }}>

@@ -625,3 +625,40 @@
   background-color: #9cbfc8 !important;
 }
 
+/* Multi-select styles */
+.production-filters .multi-select-container {
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+  border-radius: 5px !important;
+  padding: 8px !important;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #FFFFFF !important;
+}
+
+.production-filters .multi-select-container label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-weight: normal !important;
+  color: var(--input-text, #064E3B) !important;
+  font-size: 11.9px !important;
+}
+
+.production-filters .multi-select-container label:last-child {
+  margin-bottom: 0;
+}
+
+.production-filters .multi-select-container input[type="checkbox"] {
+  margin-right: 8px;
+  cursor: pointer;
+  width: auto;
+  height: auto;
+  padding: 0;
+}
+
+.production-filters .multi-select-container input[type="checkbox"]:focus {
+  outline: 2px solid var(--filter-border-focus, #4ADE80);
+  outline-offset: 2px;
+}
+
