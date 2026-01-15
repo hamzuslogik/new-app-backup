@@ -56,7 +56,8 @@ const SuiviAgentsQualif = () => {
     date_debut: getTodayDate(), // Aujourd'hui par défaut pour RE Qualification
     date_fin: getTodayDate(), // Aujourd'hui par défaut
     id_agent: '',
-    id_rp: '' // Nouveau filtre par RP
+    id_rp: '', // Nouveau filtre par RP
+    id_etat_final: [] // Tableau pour multi-select
   });
 
   // Récupérer les superviseurs assignés au RP Qualification (pour filtrer leurs agents)
@@ -181,7 +182,7 @@ const SuiviAgentsQualif = () => {
       if (filters.date_fin) params.date_fin = filters.date_fin;
       if (filters.id_agent) params.id_agent = filters.id_agent;
       // Envoyer tous les états au backend pour un filtrage optimisé
-      if (filters.id_etat_final && filters.id_etat_final.length > 0) {
+      if (filters.id_etat_final && Array.isArray(filters.id_etat_final) && filters.id_etat_final.length > 0) {
         params.id_etat_final = filters.id_etat_final;
       }
       
@@ -198,7 +199,7 @@ const SuiviAgentsQualif = () => {
     let filtered = fichesData.data;
     
     // Filtrer par états multiples
-    if (filters.id_etat_final && filters.id_etat_final.length > 0) {
+    if (filters.id_etat_final && Array.isArray(filters.id_etat_final) && filters.id_etat_final.length > 0) {
       filtered = filtered.filter(fiche => {
         const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
         const ficheIdEtat = String(fiche.id_etat_final);
@@ -511,11 +512,11 @@ const SuiviAgentsQualif = () => {
                 onClick={() => setIsMultiSelectOpen(!isMultiSelectOpen)}
               >
                 <div className="multi-select-selected">
-                  {filters.id_etat_final.length === 0 ? (
+                  {(!filters.id_etat_final || filters.id_etat_final.length === 0) ? (
                     <span className="multi-select-placeholder">Tous les états</span>
                   ) : (
                     <div className="multi-select-badges">
-                      {filters.id_etat_final.slice(0, 2).map((etatId, idx) => {
+                      {(filters.id_etat_final || []).slice(0, 2).map((etatId, idx) => {
                         if (etatId === 'validated') {
                           return (
                             <span key={idx} className="multi-select-badge">
@@ -530,7 +531,7 @@ const SuiviAgentsQualif = () => {
                           </span>
                         ) : null;
                       })}
-                      {filters.id_etat_final.length > 2 && (
+                      {filters.id_etat_final && filters.id_etat_final.length > 2 && (
                         <span className="multi-select-badge more">
                           +{filters.id_etat_final.length - 2}
                         </span>
@@ -546,7 +547,7 @@ const SuiviAgentsQualif = () => {
                     <label className="multi-select-option">
                       <input
                         type="checkbox"
-                        checked={filters.id_etat_final.length === 0}
+                        checked={!filters.id_etat_final || filters.id_etat_final.length === 0}
                         onChange={(e) => {
                           if (e.target.checked) {
                             handleFilterChange('id_etat_final', []);
@@ -558,11 +559,12 @@ const SuiviAgentsQualif = () => {
                     <label className="multi-select-option">
                       <input
                         type="checkbox"
-                        checked={filters.id_etat_final.includes('validated')}
+                        checked={filters.id_etat_final && filters.id_etat_final.includes('validated')}
                         onChange={(e) => {
+                          const currentEtats = filters.id_etat_final || [];
                           const newEtats = e.target.checked
-                            ? [...filters.id_etat_final, 'validated']
-                            : filters.id_etat_final.filter(e => e !== 'validated');
+                            ? [...currentEtats, 'validated']
+                            : currentEtats.filter(e => e !== 'validated');
                           handleFilterChange('id_etat_final', newEtats);
                         }}
                       />
@@ -572,11 +574,12 @@ const SuiviAgentsQualif = () => {
                       <label key={etat.id} className="multi-select-option">
                         <input
                           type="checkbox"
-                          checked={filters.id_etat_final.includes(String(etat.id))}
+                          checked={filters.id_etat_final && filters.id_etat_final.includes(String(etat.id))}
                           onChange={(e) => {
+                            const currentEtats = filters.id_etat_final || [];
                             const newEtats = e.target.checked
-                              ? [...filters.id_etat_final, String(etat.id)]
-                              : filters.id_etat_final.filter(e => e !== String(etat.id));
+                              ? [...currentEtats, String(etat.id)]
+                              : currentEtats.filter(e => e !== String(etat.id));
                             handleFilterChange('id_etat_final', newEtats);
                           }}
                         />
@@ -584,7 +587,7 @@ const SuiviAgentsQualif = () => {
                       </label>
                     ))}
                   </div>
-                  {filters.id_etat_final.length > 0 && (
+                  {filters.id_etat_final && filters.id_etat_final.length > 0 && (
                     <div className="multi-select-footer">
                       <button
                         type="button"
@@ -597,7 +600,7 @@ const SuiviAgentsQualif = () => {
                         <FaTimes /> Tout effacer
                       </button>
                       <span className="multi-select-count">
-                        {filters.id_etat_final.length} sélectionné{filters.id_etat_final.length > 1 ? 's' : ''}
+                        {filters.id_etat_final && filters.id_etat_final.length} sélectionné{(filters.id_etat_final && filters.id_etat_final.length > 1) ? 's' : ''}
                       </span>
                     </div>
                   )}
