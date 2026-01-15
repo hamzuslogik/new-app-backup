@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaUserTie, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf } from 'react-icons/fa';
+import { FaUserTie, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes } from 'react-icons/fa';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import './SuiviAgentsQualif.css';
 
@@ -10,6 +10,8 @@ const SuiviAgentsQualif = () => {
   const { user } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isMultiSelectOpen, setIsMultiSelectOpen] = useState(false);
+  const multiSelectRef = useRef(null);
 
   // Vérifier si l'utilisateur est un RE Qualification (a des agents sous sa responsabilité)
   const { data: agentsSousResponsabilite } = useQuery(
@@ -142,6 +144,15 @@ const SuiviAgentsQualif = () => {
     return res.data.data || [];
   });
 
+  // Récupérer les états - uniquement groupe 0 + Validé
+  const { data: etatsData } = useQuery('etats-suivi-agents-qualif', async () => {
+    const res = await api.get('/management/etats');
+    let etats = res.data.data || [];
+    // Filtrer uniquement les états groupe 0
+    etats = etats.filter(e => e.groupe === '0' || e.groupe === 0);
+    return etats;
+  });
+
   // Récupérer les statistiques
   const { data: statsData, isLoading: loadingStats } = useQuery(
     ['agents-qualif-stats', filters],
@@ -169,6 +180,10 @@ const SuiviAgentsQualif = () => {
       if (filters.date_debut) params.date_debut = filters.date_debut;
       if (filters.date_fin) params.date_fin = filters.date_fin;
       if (filters.id_agent) params.id_agent = filters.id_agent;
+      // Envoyer tous les états au backend pour un filtrage optimisé
+      if (filters.id_etat_final && filters.id_etat_final.length > 0) {
+        params.id_etat_final = filters.id_etat_final;
+      }
       
       const res = await api.get('/fiches/agents-sous-responsabilite', { params });
       return res.data;
@@ -176,27 +191,71 @@ const SuiviAgentsQualif = () => {
     { enabled: viewMode === 'fiches' && isREQualif }
   );
 
-  // Filtrer les fiches par recherche rapide
+  // Filtrer les fiches par recherche rapide et par états multiples
   const filteredFiches = useMemo(() => {
-    if (!fichesData?.data || !searchTerm) return fichesData?.data || [];
+    if (!fichesData?.data) return [];
     
-    const term = searchTerm.toLowerCase();
-    return fichesData.data.filter(fiche => {
-    return (
-      (fiche.nom && fiche.nom.toLowerCase().includes(term)) ||
-      (fiche.prenom && fiche.prenom.toLowerCase().includes(term)) ||
-      (fiche.tel && fiche.tel.includes(term)) ||
-      (fiche.cp && fiche.cp.includes(term)) ||
-      (fiche.agent_pseudo && fiche.agent_pseudo.toLowerCase().includes(term)) ||
-      (fiche.etat_titre && fiche.etat_titre.toLowerCase().includes(term)) ||
-      (fiche.commentaire_qualite && fiche.commentaire_qualite.toLowerCase().includes(term))
-    );
-    });
-  }, [fichesData, searchTerm]);
+    let filtered = fichesData.data;
+    
+    // Filtrer par états multiples
+    if (filters.id_etat_final && filters.id_etat_final.length > 0) {
+      filtered = filtered.filter(fiche => {
+        const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
+        const ficheIdEtat = String(fiche.id_etat_final);
+        
+        // Vérifier si "validated" est sélectionné et si la fiche est validée (hors groupe 0)
+        const isValidatedSelected = filters.id_etat_final.includes('validated');
+        const isFicheValidated = !isGroupe0;
+        
+        // Vérifier si l'état de la fiche est dans la liste sélectionnée
+        const isEtatSelected = filters.id_etat_final.includes(ficheIdEtat);
+        
+        // La fiche correspond si :
+        // - "validated" est sélectionné ET la fiche est validée, OU
+        // - l'état de la fiche est dans la liste sélectionnée
+        return (isValidatedSelected && isFicheValidated) || isEtatSelected;
+      });
+    }
+    
+    // Filtrer par recherche rapide
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(fiche => {
+        return (
+          (fiche.nom && fiche.nom.toLowerCase().includes(term)) ||
+          (fiche.prenom && fiche.prenom.toLowerCase().includes(term)) ||
+          (fiche.tel && fiche.tel.includes(term)) ||
+          (fiche.cp && fiche.cp.includes(term)) ||
+          (fiche.agent_pseudo && fiche.agent_pseudo.toLowerCase().includes(term)) ||
+          (fiche.etat_titre && fiche.etat_titre.toLowerCase().includes(term)) ||
+          (fiche.commentaire_qualite && fiche.commentaire_qualite.toLowerCase().includes(term))
+        );
+      });
+    }
+    
+    return filtered;
+  }, [fichesData, searchTerm, filters.id_etat_final]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
+
+  // Fermer le dropdown multi-select quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (multiSelectRef.current && !multiSelectRef.current.contains(event.target)) {
+        setIsMultiSelectOpen(false);
+      }
+    };
+
+    if (isMultiSelectOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMultiSelectOpen]);
 
   // Fonctions d'export
   const handleExportCSV = () => {
@@ -443,6 +502,108 @@ const SuiviAgentsQualif = () => {
                 <option key={agent.id} value={agent.id}>{agent.pseudo}</option>
               ))}
             </select>
+          </div>
+          <div className="filter-group">
+            <label>État (multi-select)</label>
+            <div className="multi-select-wrapper" ref={multiSelectRef}>
+              <div 
+                className="multi-select-trigger"
+                onClick={() => setIsMultiSelectOpen(!isMultiSelectOpen)}
+              >
+                <div className="multi-select-selected">
+                  {filters.id_etat_final.length === 0 ? (
+                    <span className="multi-select-placeholder">Tous les états</span>
+                  ) : (
+                    <div className="multi-select-badges">
+                      {filters.id_etat_final.slice(0, 2).map((etatId, idx) => {
+                        if (etatId === 'validated') {
+                          return (
+                            <span key={idx} className="multi-select-badge">
+                              Validée
+                            </span>
+                          );
+                        }
+                        const etat = etatsData?.find(e => String(e.id) === etatId);
+                        return etat ? (
+                          <span key={idx} className="multi-select-badge">
+                            {etat.titre}
+                          </span>
+                        ) : null;
+                      })}
+                      {filters.id_etat_final.length > 2 && (
+                        <span className="multi-select-badge more">
+                          +{filters.id_etat_final.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <FaChevronDown className={`multi-select-arrow ${isMultiSelectOpen ? 'open' : ''}`} />
+              </div>
+              {isMultiSelectOpen && (
+                <div className="multi-select-dropdown">
+                  <div className="multi-select-options">
+                    <label className="multi-select-option">
+                      <input
+                        type="checkbox"
+                        checked={filters.id_etat_final.length === 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            handleFilterChange('id_etat_final', []);
+                          }
+                        }}
+                      />
+                      <span>Tous les états</span>
+                    </label>
+                    <label className="multi-select-option">
+                      <input
+                        type="checkbox"
+                        checked={filters.id_etat_final.includes('validated')}
+                        onChange={(e) => {
+                          const newEtats = e.target.checked
+                            ? [...filters.id_etat_final, 'validated']
+                            : filters.id_etat_final.filter(e => e !== 'validated');
+                          handleFilterChange('id_etat_final', newEtats);
+                        }}
+                      />
+                      <span>Validée (hors groupe 0)</span>
+                    </label>
+                    {etatsData?.filter(e => e.groupe === '0' || e.groupe === 0).map(etat => (
+                      <label key={etat.id} className="multi-select-option">
+                        <input
+                          type="checkbox"
+                          checked={filters.id_etat_final.includes(String(etat.id))}
+                          onChange={(e) => {
+                            const newEtats = e.target.checked
+                              ? [...filters.id_etat_final, String(etat.id)]
+                              : filters.id_etat_final.filter(e => e !== String(etat.id));
+                            handleFilterChange('id_etat_final', newEtats);
+                          }}
+                        />
+                        <span style={{ color: etat.color || '#333' }}>{etat.titre}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {filters.id_etat_final.length > 0 && (
+                    <div className="multi-select-footer">
+                      <button
+                        type="button"
+                        className="multi-select-clear"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFilterChange('id_etat_final', []);
+                        }}
+                      >
+                        <FaTimes /> Tout effacer
+                      </button>
+                      <span className="multi-select-count">
+                        {filters.id_etat_final.length} sélectionné{filters.id_etat_final.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

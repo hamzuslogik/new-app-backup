@@ -481,3 +481,203 @@
   background-color: #ffffff !important;
 }
 
+/* Multi-select styles - Nouveau design amélioré */
+.suivi-filters .multi-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.suivi-filters .multi-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6.4px 9.6px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 5px;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 32px;
+}
+
+.suivi-filters .multi-select-trigger:hover {
+  border-color: var(--filter-border-focus, #4ADE80);
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.1);
+}
+
+.suivi-filters .multi-select-trigger:focus {
+  outline: none;
+  border-color: var(--filter-border-focus, #4ADE80);
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+}
+
+.suivi-filters .multi-select-selected {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.suivi-filters .multi-select-placeholder {
+  color: var(--input-placeholder, #6B7280);
+  font-size: 11.9px;
+}
+
+.suivi-filters .multi-select-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.suivi-filters .multi-select-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: var(--filter-bg, #DCFCE7);
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--input-text, #064E3B);
+  white-space: nowrap;
+}
+
+.suivi-filters .multi-select-badge.more {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.suivi-filters .multi-select-arrow {
+  color: var(--input-text, #064E3B);
+  font-size: 10px;
+  transition: transform 0.2s ease;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.suivi-filters .multi-select-arrow.open {
+  transform: rotate(180deg);
+}
+
+.suivi-filters .multi-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 5px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 1000;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.suivi-filters .multi-select-options {
+  padding: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.suivi-filters .multi-select-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.suivi-filters .multi-select-options::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.suivi-filters .multi-select-options::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.suivi-filters .multi-select-options::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.suivi-filters .multi-select-option {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+  font-size: 11.9px;
+  color: var(--input-text, #064E3B);
+  margin-bottom: 2px;
+}
+
+.suivi-filters .multi-select-option:hover {
+  background-color: var(--filter-bg, #DCFCE7);
+}
+
+.suivi-filters .multi-select-option input[type="checkbox"] {
+  margin-right: 10px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--filter-border-focus, #4ADE80);
+  flex-shrink: 0;
+}
+
+.suivi-filters .multi-select-option span {
+  flex: 1;
+  user-select: none;
+}
+
+.suivi-filters .multi-select-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 0 0 5px 5px;
+}
+
+.suivi-filters .multi-select-clear {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  color: #6b7280;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.suivi-filters .multi-select-clear:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.suivi-filters .multi-select-count {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
