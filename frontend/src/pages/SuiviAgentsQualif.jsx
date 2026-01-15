@@ -24,9 +24,15 @@ const SuiviAgentsQualif = () => {
 
   const isREQualif = agentsSousResponsabilite && agentsSousResponsabilite.length > 0;
   
+  // Vérifier si l'utilisateur est un RP Qualification (fonction 12)
+  const isRPQualif = user?.fonction === 12;
+  
   // Vérifier si l'utilisateur est un Superviseur Qualification (fonction 2) ou RP Qualification (fonction 12)
   const isSuperviseurQualif = user?.fonction === 2;
   const canSeeCommentaireQualite = isRPQualif || isSuperviseurQualif;
+  
+  // Vérifier si l'utilisateur est un Administrateur (fonction 1)
+  const isAdmin = user?.fonction === 1;
   
   // Pour Superviseur Qualification (RE Qualification), le mode par défaut est 'fiches' selon les exigences
   const [viewMode, setViewMode] = useState('stats'); // 'stats' ou 'fiches'
@@ -50,12 +56,6 @@ const SuiviAgentsQualif = () => {
     id_agent: '',
     id_rp: '' // Nouveau filtre par RP
   });
-
-  // Vérifier si l'utilisateur est un RP Qualification (fonction 12)
-  const isRPQualif = user?.fonction === 12;
-  
-  // Vérifier si l'utilisateur est un Administrateur (fonction 1)
-  const isAdmin = user?.fonction === 1;
 
   // Récupérer les superviseurs assignés au RP Qualification (pour filtrer leurs agents)
   const { data: superviseursAssignesRP } = useQuery(
