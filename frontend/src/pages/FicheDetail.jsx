@@ -1459,10 +1459,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     
     // Permissions d'édition :
     // - Admins (1, 2, 7) : peuvent tout modifier
+    // - Superviseur Qualification (2) : peuvent modifier les fiches des agents sous leur responsabilité
+    // - RP Qualification (12) : peuvent modifier les fiches des agents sous la responsabilité de leurs superviseurs
     // - Agents (3) : peuvent modifier les fiches de leur centre
     // - Commerciaux (5) : peuvent modifier leurs propres fiches (avec permission fiches_edit)
     // - Confirmateurs (6) : peuvent modifier toutes les fiches
-    const canEdit = !readOnly && (user.fonction === 1 || user.fonction === 2 || user.fonction === 7 || 
+    const canEdit = !readOnly && (user.fonction === 1 || user.fonction === 2 || user.fonction === 7 || user.fonction === 12 || 
                     (user.fonction === 3 && user.centre === ficheData.id_centre) ||
                     (user.fonction === 5 && hasPermission('fiches_edit') && ficheData.id_commercial === user.id) ||
                     (user.fonction === 6)); // Confirmateurs peuvent modifier toutes les fiches
@@ -1487,6 +1489,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     </option>
                   ))}
                 </select>
+              ) : type === 'textarea' ? (
+                <textarea
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="form-control"
+                  autoFocus
+                  rows={4}
+                />
               ) : (
                 <input
                   type={type}
@@ -3699,9 +3709,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
         {/* Permissions pour changer l'état :
             - Admins (1, 2, 7) : peuvent changer vers tous les états
+            - Superviseur Qualification (2) : peuvent changer les fiches des agents sous leur responsabilité
+            - RP Qualification (12) : peuvent changer les fiches des agents sous la responsabilité de leurs superviseurs
             - Agents (3) : peuvent changer les fiches de leur centre
             - Confirmateurs (6) : peuvent changer toutes les fiches */}
-        {((user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) ||
+        {((user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 12) ||
           (user?.fonction === 3 && user?.centre === ficheData?.id_centre) ||
           (user?.fonction === 6)) && (
           <div className="fiche-section etat-change-section">
