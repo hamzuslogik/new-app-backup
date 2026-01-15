@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
 import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
-import FicheDetailModal from '../components/FicheDetailModal';
+import FicheDetailLink from '../components/FicheDetailLink';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -120,7 +120,6 @@ const Dashboard = () => {
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
     direction: 'asc', // 'asc' or 'desc'
   });
-  const [selectedFicheHash, setSelectedFicheHash] = useState(null);
   const [showConfirmateursTable, setShowConfirmateursTable] = useState(false); // Fermé par défaut
   const [quickSearch, setQuickSearch] = useState(''); // Recherche rapide
 
@@ -1212,14 +1211,14 @@ const Dashboard = () => {
                             {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
                             {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
                           </div>
-                          <button
-                            onClick={() => setSelectedFicheHash(fiche.hash)}
+                          <FicheDetailLink 
+                            ficheHash={fiche.hash}
                             className="btn-detail"
                             title="Voir les détails"
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                           >
                             <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
-                          </button>
+                          </FicheDetailLink>
                         </td>
                       </tr>
                     );
@@ -1348,14 +1347,6 @@ const Dashboard = () => {
           </div>
         )}
       </div>
-
-      {/* Modal de détail de fiche */}
-      {selectedFicheHash && (
-        <FicheDetailModal
-          ficheHash={selectedFicheHash}
-          onClose={() => setSelectedFicheHash(null)}
-        />
-      )}
 
       {/* Modal de recherche */}
       {showSearchModal && (
