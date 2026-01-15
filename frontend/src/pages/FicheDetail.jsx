@@ -1464,10 +1464,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     // - Agents (3) : peuvent modifier les fiches de leur centre
     // - Commerciaux (5) : peuvent modifier leurs propres fiches (avec permission fiches_edit)
     // - Confirmateurs (6) : peuvent modifier toutes les fiches
-    const canEdit = !readOnly && (user.fonction === 1 || user.fonction === 2 || user.fonction === 7 || user.fonction === 12 || 
-                    (user.fonction === 3 && user.centre === ficheData.id_centre) ||
-                    (user.fonction === 5 && hasPermission('fiches_edit') && ficheData.id_commercial === user.id) ||
-                    (user.fonction === 6)); // Confirmateurs peuvent modifier toutes les fiches
+    // Convertir la fonction en nombre pour la comparaison (peut être string ou number)
+    const userFonction = user.fonction != null ? Number(user.fonction) : null;
+    
+    // Permissions d'édition pour qualité qualification (fonction 2 et 12)
+    const isQualiteQualif = userFonction === 2 || userFonction === 12;
+    const isAdmin = userFonction === 1 || userFonction === 7;
+    const isAgent = userFonction === 3 && user.centre === ficheData.id_centre;
+    const isCommercial = userFonction === 5 && hasPermission('fiches_edit') && ficheData.id_commercial === user.id;
+    const isConfirmateur = userFonction === 6;
+    
+    const canEdit = !readOnly && userFonction !== null && (isAdmin || isQualiteQualif || isAgent || isCommercial || isConfirmateur);
 
     return (
       <tr>
@@ -1915,7 +1922,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 ])}
               {renderField('Commentaire', 'commentaire', fiche.commentaire || '-', 'textarea')}
               {/* Afficher le commentaire qualité uniquement pour les utilisateurs qualité (fonction 2 et 12) */}
-              {((user?.fonction === 2 || user?.fonction === 12)) && 
+              {((Number(user?.fonction) === 2 || Number(user?.fonction) === 12)) && 
                 renderField('Commentaire Qualité', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')}
               {renderField('A déjà fait une étude', 'etude', fiche.etude || 'NON', 'select', [
                 { value: 'OUI', label: 'Oui' },
@@ -3713,9 +3720,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             - RP Qualification (12) : peuvent changer les fiches des agents sous la responsabilité de leurs superviseurs
             - Agents (3) : peuvent changer les fiches de leur centre
             - Confirmateurs (6) : peuvent changer toutes les fiches */}
-        {((user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 12) ||
-          (user?.fonction === 3 && user?.centre === ficheData?.id_centre) ||
-          (user?.fonction === 6)) && (
+        {((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 12) ||
+          (Number(user?.fonction) === 3 && user?.centre === ficheData?.id_centre) ||
+          (Number(user?.fonction) === 6)) && (
           <div className="fiche-section etat-change-section">
             <h2 className="section-title">Changer l'état de la fiche</h2>
             <div className="etat-change-form">
