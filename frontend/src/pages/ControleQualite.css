@@ -606,3 +606,21 @@
   }
 }
 
+/* Styles pour la colonne Utilisateur Qualité */
+.qualite-user-name {
+  font-size: 11px;
+  color: #333;
+  font-weight: 500;
+}
+
+.qualite-user-name.no-user {
+  color: #999;
+  font-style: italic;
+}
+
+.qualite-user-full-name {
+  font-size: 10px;
+  color: #666;
+  font-weight: normal;
+}
+

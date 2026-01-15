@@ -1242,7 +1242,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
 
     const total = totalResult?.total || 0;
 
-    // Récupérer les fiches
+    // Récupérer les fiches avec le dernier utilisateur qualité qui a modifié le commentaire
     const fiches = await query(
       `SELECT 
         fiche.id,
@@ -1265,11 +1265,31 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
         centre.titre as centre_nom,
         etat.titre as etat_titre,
         etat.color as etat_color,
-        etat.abbreviation as etat_abbreviation
+        etat.abbreviation as etat_abbreviation,
+        qualite_user.pseudo as qualite_user_pseudo,
+        qualite_user.nom as qualite_user_nom,
+        qualite_user.prenom as qualite_user_prenom
        FROM fiches fiche
        LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
        LEFT JOIN centres centre ON fiche.id_centre = centre.id
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
+       LEFT JOIN (
+         SELECT 
+           m1.id_fiche,
+           m1.id_user
+         FROM modifica m1
+         WHERE (m1.type = 'commentaire_qualite' OR m1.champ = 'commentaire_qualite')
+         AND m1.id = (
+           SELECT m2.id
+           FROM modifica m2
+           WHERE (m2.type = 'commentaire_qualite' OR m2.champ = 'commentaire_qualite')
+           AND m2.id_fiche = m1.id_fiche
+           ORDER BY COALESCE(m2.date_modif_time, m2.date) DESC
+           LIMIT 1
+         )
+       ) last_modif ON fiche.id = last_modif.id_fiche
+       LEFT JOIN utilisateurs qualite_user ON last_modif.id_user = qualite_user.id
+       LEFT JOIN utilisateurs qualite_assignee ON fiche.id_qualite = qualite_assignee.id
        WHERE ${whereClause}
        ORDER BY fiche.date_appel_time DESC
        LIMIT ? OFFSET ?`,
@@ -2659,6 +2679,16 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     if (field === 'id_etat_final' && value && value !== fiche.id_etat_final) {
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
       
+      // Attribuer id_qualite si c'est un utilisateur qualité et que c'est la première modification
+      const isQualiteUser = user.fonction === 2 || user.fonction === 8 || user.fonction === 12;
+      if (isQualiteUser && !fiche.id_qualite) {
+        await query(
+          `UPDATE fiches SET id_qualite = ? WHERE id = ?`,
+          [user.id, id]
+        );
+        console.log(`id_qualite attribué à l'utilisateur ${user.id} (${user.pseudo}) pour la fiche ${id}`);
+      }
+      
       // Mettre à jour automatiquement date_appel_time lors du changement d'état
       await query(
         `UPDATE fiches SET date_appel_time = ?, date_modif_time = ? WHERE id = ?`,
@@ -3186,6 +3216,16 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, async (req, res
     const newEtatId = parseInt(id_etat_final);
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
+    // Attribuer id_qualite si c'est un utilisateur qualité et que c'est la première modification
+    const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
+    if (isQualiteUser && !fiche.id_qualite) {
+      await query(
+        `UPDATE fiches SET id_qualite = ? WHERE id = ?`,
+        [req.user.id, id]
+      );
+      console.log(`id_qualite attribué à l'utilisateur ${req.user.id} (${req.user.pseudo}) pour la fiche ${id}`);
+    }
+
     // Mettre à jour l'état et date_appel_time automatiquement lors du changement d'état
     await query(
       'UPDATE fiches SET id_etat_final = ?, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
@@ -3260,7 +3300,7 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, async (re
     }
 
     // Vérifier que la fiche existe
-    const fiche = await queryOne('SELECT id_etat_final FROM fiches WHERE id = ?', [id]);
+    const fiche = await queryOne('SELECT id_etat_final, id_qualite FROM fiches WHERE id = ?', [id]);
     if (!fiche) {
       return res.status(404).json({
         success: false,
@@ -3284,6 +3324,16 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, async (re
     const oldEtatId = fiche.id_etat_final;
     const newEtatId = etatEnAttente.id;
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    // Attribuer id_qualite si c'est un utilisateur qualité et que c'est la première modification
+    const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
+    if (isQualiteUser && !fiche.id_qualite) {
+      await query(
+        `UPDATE fiches SET id_qualite = ? WHERE id = ?`,
+        [req.user.id, id]
+      );
+      console.log(`id_qualite attribué à l'utilisateur ${req.user.id} (${req.user.pseudo}) pour la fiche ${id}`);
+    }
 
     // Mettre à jour l'état vers "En-Attente" et date_appel_time automatiquement lors du changement d'état
     await query(

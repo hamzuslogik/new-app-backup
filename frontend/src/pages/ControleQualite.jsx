@@ -335,6 +335,7 @@ const ControleQualite = () => {
                   <th>État Actuel</th>
                   <th>Nouvel État</th>
                   <th>Commentaire Qualité</th>
+                  <th>Utilisateur Qualité</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -423,6 +424,29 @@ const ControleQualite = () => {
                           rows={2}
                         />
                       </div>
+                    </td>
+                    <td>
+                      {fiche.qualite_assignee_pseudo ? (
+                        <span className="qualite-user-name" title={`Utilisateur qualité assigné: ${fiche.qualite_assignee_pseudo}`}>
+                          {fiche.qualite_assignee_pseudo}
+                          {fiche.qualite_assignee_nom && fiche.qualite_assignee_prenom && (
+                            <span className="qualite-user-full-name">
+                              {' '}({fiche.qualite_assignee_prenom} {fiche.qualite_assignee_nom})
+                            </span>
+                          )}
+                        </span>
+                      ) : fiche.qualite_user_pseudo ? (
+                        <span className="qualite-user-name" title={`Dernier modificateur: ${fiche.qualite_user_pseudo}`}>
+                          {fiche.qualite_user_pseudo}
+                          {fiche.qualite_user_nom && fiche.qualite_user_prenom && (
+                            <span className="qualite-user-full-name">
+                              {' '}({fiche.qualite_user_prenom} {fiche.qualite_user_nom})
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="qualite-user-name no-user">-</span>
+                      )}
                     </td>
                     <td>
                       <div className="action-buttons">
