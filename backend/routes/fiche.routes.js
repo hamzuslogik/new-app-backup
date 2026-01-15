@@ -2595,6 +2595,41 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     } else if (user.fonction === 6) {
       // Confirmateurs : peuvent modifier toutes les fiches (pas de restriction)
       // Pas de vérification d'assignation nécessaire
+    } else if (user.fonction === 12) {
+      // RP Qualification : peuvent modifier les fiches des agents sous la responsabilité de leurs superviseurs
+      // Récupérer les superviseurs assignés au RP
+      const superviseursAssignes = await query(
+        `SELECT id FROM utilisateurs 
+         WHERE id_rp_qualif = ? AND fonction = 2 AND etat > 0`,
+        [user.id]
+      );
+      
+      if (!superviseursAssignes || superviseursAssignes.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Vous n\'avez pas la permission de modifier cette fiche'
+        });
+      }
+      
+      const superviseurIds = superviseursAssignes.map(s => s.id);
+      
+      // Récupérer les agents de ces superviseurs
+      const agentsSousResponsabilite = await query(
+        `SELECT id FROM utilisateurs 
+         WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')}) 
+         AND fonction = 3 AND etat > 0`,
+        superviseurIds
+      );
+      
+      const agentIds = agentsSousResponsabilite.map(a => a.id);
+      
+      // Vérifier que la fiche appartient à un de ces agents
+      if (!agentIds.includes(fiche.id_agent)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Vous n\'avez pas la permission de modifier cette fiche'
+        });
+      }
     }
     // Admins (1, 2, 7) : peuvent tout modifier, pas de vérification supplémentaire
     

@@ -1904,6 +1904,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   { id: 2, nom: 'PV' }
                 ])}
               {renderField('Commentaire', 'commentaire', fiche.commentaire || '-', 'textarea')}
+              {/* Afficher le commentaire qualité uniquement pour les utilisateurs qualité (fonction 2 et 12) */}
+              {((user?.fonction === 2 || user?.fonction === 12)) && 
+                renderField('Commentaire Qualité', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')}
               {renderField('A déjà fait une étude', 'etude', fiche.etude || 'NON', 'select', [
                 { value: 'OUI', label: 'Oui' },
                 { value: 'NON', label: 'Non' }
