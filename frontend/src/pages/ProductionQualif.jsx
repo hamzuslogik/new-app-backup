@@ -32,8 +32,10 @@ const ProductionQualif = () => {
     id_etat_final: ''
   });
 
-  // Vérifier si l'utilisateur est un RP Qualification (fonction 12)
+  // Vérifier si l'utilisateur est un RP Qualification (fonction 12) ou Superviseur Qualification (fonction 2)
   const isRPQualif = user?.fonction === 12;
+  const isSuperviseurQualif = user?.fonction === 2;
+  const canSeeCommentaireQualite = isRPQualif || isSuperviseurQualif;
 
   // Récupérer les superviseurs assignés au RP Qualification
   const { data: superviseursData } = useQuery(
@@ -126,7 +128,7 @@ const ProductionQualif = () => {
       }
     },
     { 
-      enabled: viewMode === 'fiches' && isRPQualif,
+      enabled: viewMode === 'fiches' && (isRPQualif || isSuperviseurQualif),
       retry: 1
     }
   );
@@ -147,7 +149,8 @@ const ProductionQualif = () => {
           (fiche.tel && fiche.tel.includes(term)) ||
           (fiche.cp && fiche.cp.includes(term)) ||
           (fiche.agent_pseudo && fiche.agent_pseudo.toLowerCase().includes(term)) ||
-          (fiche.etat_titre && fiche.etat_titre.toLowerCase().includes(term))
+          (fiche.etat_titre && fiche.etat_titre.toLowerCase().includes(term)) ||
+          (fiche.commentaire_qualite && fiche.commentaire_qualite.toLowerCase().includes(term))
         );
       });
     }
@@ -191,7 +194,8 @@ const ProductionQualif = () => {
         { key: 'prenom', label: 'Prénom' },
         { key: 'tel', label: 'Téléphone' },
         { key: 'cp', label: 'CP' },
-        { key: 'etat_titre', label: 'État' }
+        { key: 'etat_titre', label: 'État' },
+        ...(canSeeCommentaireQualite ? [{ key: 'commentaire_qualite', label: 'Commentaire Qualité' }] : [])
       ];
       exportToCSV(exportData, columns, 'production-qualif-fiches');
     } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
@@ -258,7 +262,8 @@ const ProductionQualif = () => {
         { key: 'prenom', label: 'Prénom' },
         { key: 'tel', label: 'Téléphone' },
         { key: 'cp', label: 'CP' },
-        { key: 'etat_titre', label: 'État' }
+        { key: 'etat_titre', label: 'État' },
+        ...(canSeeCommentaireQualite ? [{ key: 'commentaire_qualite', label: 'Commentaire Qualité' }] : [])
       ];
       exportToExcel(exportData, columns, 'production-qualif-fiches');
     } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
@@ -326,7 +331,8 @@ const ProductionQualif = () => {
         { key: 'prenom', label: 'Prénom' },
         { key: 'tel', label: 'Téléphone' },
         { key: 'cp', label: 'CP' },
-        { key: 'etat_titre', label: 'État' }
+        { key: 'etat_titre', label: 'État' },
+        ...(canSeeCommentaireQualite ? [{ key: 'commentaire_qualite', label: 'Commentaire Qualité' }] : [])
       ];
       exportToPDF(exportData, columns, 'production-qualif-fiches', 'Production Qualification - Fiches');
     } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
@@ -376,7 +382,7 @@ const ProductionQualif = () => {
       <div className="production-header">
         <h1><FaChartBar /> Production Qualification</h1>
         <div className="header-actions">
-          {isRPQualif && (
+          {(isRPQualif || isSuperviseurQualif) && (
             <div className="view-mode-toggle noprint">
               <button
                 className={`mode-btn ${viewMode === 'stats' ? 'active' : ''}`}
@@ -468,12 +474,12 @@ const ProductionQualif = () => {
       )}
 
       {/* Recherche rapide pour les fiches */}
-      {isRPQualif && viewMode === 'fiches' && (
+      {(isRPQualif || isSuperviseurQualif) && viewMode === 'fiches' && (
         <div className="quick-search-container">
           <FaSearch />
           <input
             type="text"
-            placeholder="Recherche rapide (nom, prénom, téléphone, code postal, agent, état)..."
+            placeholder="Recherche rapide (nom, prénom, téléphone, code postal, agent, état, commentaire qualité)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="quick-search-input"
@@ -482,7 +488,7 @@ const ProductionQualif = () => {
       )}
 
       <div className="production-content">
-        {viewMode === 'fiches' && isRPQualif ? (
+        {viewMode === 'fiches' && (isRPQualif || isSuperviseurQualif) ? (
           // Vue fiches pour RP Qualification
           loadingFiches ? (
             <div className="loading">Chargement des fiches...</div>
@@ -521,6 +527,7 @@ const ProductionQualif = () => {
                     <th>Téléphone</th>
                     <th>CP</th>
                     <th>État</th>
+                    {canSeeCommentaireQualite && <th>Commentaire Qualité</th>}
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -553,6 +560,11 @@ const ProductionQualif = () => {
                             {fiche.etat_titre || '-'}
                           </span>
                         </td>
+                        {canSeeCommentaireQualite && (
+                          <td style={{ maxWidth: '300px', wordWrap: 'break-word' }}>
+                            {fiche.commentaire_qualite || '-'}
+                          </td>
+                        )}
                         <td>
                           <FicheDetailLink 
                             ficheHash={fiche.hash}

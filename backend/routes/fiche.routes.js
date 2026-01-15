@@ -1529,6 +1529,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         fiche.id_etat_final,
         fiche.date_insert_time,
         fiche.date_modif_time,
+        fiche.commentaire_qualite,
         agent.pseudo as agent_pseudo,
         agent.nom as agent_nom,
         agent.prenom as agent_prenom,
