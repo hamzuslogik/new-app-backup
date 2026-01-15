@@ -1438,6 +1438,19 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
   const renderField = (label, field, value, type = 'text', options = null, readOnly = false) => {
     const isEditing = editingField === field;
+    
+    // Debug général pour voir tous les appels
+    if (field === 'nom' || field === 'commentaire_qualite') {
+      console.log('🔍 renderField appelé:', {
+        field,
+        label,
+        hasFicheData: !!ficheData,
+        hasUser: !!user,
+        userFonction: user?.fonction,
+        userFonctionType: typeof user?.fonction
+      });
+    }
+    
     // Permissions d'édition :
     // - Admins (1, 2, 7) : peuvent tout modifier
     // - Agents (3) : peuvent modifier les fiches de leur centre
@@ -1447,8 +1460,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       // Si les données ne sont pas chargées, afficher quand même le champ mais sans possibilité d'édition
       const canEdit = false;
       // Debug pour qualité qualification
-      if (field === 'nom') {
+      if (field === 'nom' || field === 'commentaire_qualite') {
         console.log('⚠️ Debug - ficheData ou user manquant:', {
+          field,
           ficheData: !!ficheData,
           user: !!user,
           userFonction: user?.fonction
@@ -1487,19 +1501,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     
     const canEdit = !readOnly && userFonction != null && (isAdmin || isQualiteQualif || isAgent || isCommercial || isConfirmateur);
     
-    // Debug pour qualité qualification - afficher dans la console
-    if ((userFonction == 2 || userFonction == 12) && field === 'nom') {
-      console.log('🔍 Debug qualité qualification - renderField:', {
-        field,
-        userFonctionRaw,
-        userFonction,
-        isQualiteQualif,
-        isAdmin,
-        readOnly,
-        canEdit,
-        user: user ? { id: user.id, fonction: user.fonction, fonctionType: typeof user.fonction } : null,
-        ficheData: ficheData ? { id: ficheData.id, id_agent: ficheData.id_agent } : null
-      });
+    // Debug pour qualité qualification - afficher dans la console pour TOUS les champs si qualité qualification
+    if (userFonction == 2 || userFonction == 12) {
+      if (field === 'nom' || field === 'commentaire_qualite' || field === 'commentaire') {
+        console.log('🔍 Debug qualité qualification - renderField:', {
+          field,
+          label,
+          userFonctionRaw,
+          userFonction,
+          isQualiteQualif,
+          isAdmin,
+          readOnly,
+          canEdit,
+          user: user ? { id: user.id, fonction: user.fonction, fonctionType: typeof user.fonction } : null,
+          ficheData: ficheData ? { id: ficheData.id, id_agent: ficheData.id_agent } : null
+        });
+      }
     }
 
     return (
@@ -1580,12 +1597,33 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     );
   };
 
+  // Debug général pour voir l'utilisateur au chargement
+  console.log('🔍 FicheDetail - État initial:', {
+    isLoading,
+    hasFicheData: !!ficheData,
+    hasUser: !!user,
+    userFonction: user?.fonction,
+    userFonctionType: typeof user?.fonction,
+    hash
+  });
+
   if (isLoading) {
     return <div className="loading">Chargement...</div>;
   }
 
   if (!ficheData) {
     return <div className="error">Fiche non trouvée</div>;
+  }
+
+  // Debug pour qualité qualification après chargement
+  if (user && (Number(user.fonction) === 2 || Number(user.fonction) === 12)) {
+    console.log('🔍 Debug qualité qualification - FicheDetail après chargement:', {
+      userFonction: user.fonction,
+      userFonctionType: typeof user.fonction,
+      hasFicheData: !!ficheData,
+      ficheId: ficheData?.id,
+      ficheAgent: ficheData?.id_agent
+    });
   }
 
   const fiche = ficheData;
