@@ -1232,6 +1232,31 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
 
     const whereClause = whereConditions.join(' AND ');
 
+    // Détecter la structure de la table modifica pour la requête
+    let modificaFieldCondition = '';
+    try {
+      const modificaColumns = await query(
+        `SELECT COLUMN_NAME 
+         FROM information_schema.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'modifica'`
+      );
+      const columnNames = modificaColumns.map(col => col.COLUMN_NAME);
+      const hasType = columnNames.includes('type');
+      const hasChamp = columnNames.includes('champ');
+      
+      if (hasType) {
+        modificaFieldCondition = "m1.type = 'commentaire_qualite'";
+      } else if (hasChamp) {
+        modificaFieldCondition = "m1.champ = 'commentaire_qualite'";
+      } else {
+        modificaFieldCondition = "1=0"; // Aucune structure reconnue, ne retournera rien
+      }
+    } catch (error) {
+      console.error('Erreur lors de la détection de la structure modifica:', error);
+      modificaFieldCondition = "1=0"; // En cas d'erreur, ne retournera rien
+    }
+
     // Compter le total
     const totalResult = await queryOne(
       `SELECT COUNT(*) as total
@@ -1268,7 +1293,11 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
         etat.abbreviation as etat_abbreviation,
         qualite_user.pseudo as qualite_user_pseudo,
         qualite_user.nom as qualite_user_nom,
-        qualite_user.prenom as qualite_user_prenom
+        qualite_user.prenom as qualite_user_prenom,
+        fiche.id_qualite,
+        qualite_assignee.pseudo as qualite_assignee_pseudo,
+        qualite_assignee.nom as qualite_assignee_nom,
+        qualite_assignee.prenom as qualite_assignee_prenom
        FROM fiches fiche
        LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
        LEFT JOIN centres centre ON fiche.id_centre = centre.id
@@ -1282,7 +1311,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
          AND m1.id = (
            SELECT m2.id
            FROM modifica m2
-           WHERE ${modificaFieldCondition}
+           WHERE ${modificaFieldCondition.replace('m1.', 'm2.')}
            AND m2.id_fiche = m1.id_fiche
            ORDER BY COALESCE(m2.date_modif_time, m2.date) DESC
            LIMIT 1
