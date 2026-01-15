@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
-import { FaChartBar, FaFilter, FaPrint, FaList, FaSearch, FaFileAlt, FaFileExcel, FaFileCsv, FaFilePdf } from 'react-icons/fa';
+import { FaChartBar, FaFilter, FaPrint, FaList, FaSearch, FaFileAlt, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import './ProductionQualif.css';
@@ -13,6 +13,8 @@ const ProductionQualif = () => {
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState('stats'); // 'stats' ou 'fiches'
   const [searchTerm, setSearchTerm] = useState('');
+  const [isMultiSelectOpen, setIsMultiSelectOpen] = useState(false);
+  const multiSelectRef = useRef(null);
 
   // États pour les filtres
   const getTodayDate = () => {
@@ -195,6 +197,23 @@ const ProductionQualif = () => {
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
+
+  // Fermer le dropdown multi-select quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (multiSelectRef.current && !multiSelectRef.current.contains(event.target)) {
+        setIsMultiSelectOpen(false);
+      }
+    };
+
+    if (isMultiSelectOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMultiSelectOpen]);
 
   const handlePrint = () => {
     window.print();
@@ -503,53 +522,105 @@ const ProductionQualif = () => {
           </div>
           <div className="filter-group">
             <label>État (multi-select)</label>
-            <div className="multi-select-container">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={filters.id_etat_final.length === 0}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      handleFilterChange('id_etat_final', []);
-                    }
-                  }}
-                />
-                <span>Tous les états</span>
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={filters.id_etat_final.includes('validated')}
-                  onChange={(e) => {
-                    const newEtats = e.target.checked
-                      ? [...filters.id_etat_final, 'validated']
-                      : filters.id_etat_final.filter(e => e !== 'validated');
-                    handleFilterChange('id_etat_final', newEtats);
-                  }}
-                />
-                <span>Validé (hors groupe 0)</span>
-              </label>
-              {etats.filter(e => e.groupe === '0' || e.groupe === 0).map(etat => (
-                <label key={etat.id}>
-                  <input
-                    type="checkbox"
-                    checked={filters.id_etat_final.includes(String(etat.id))}
-                    onChange={(e) => {
-                      const newEtats = e.target.checked
-                        ? [...filters.id_etat_final, String(etat.id)]
-                        : filters.id_etat_final.filter(e => e !== String(etat.id));
-                      handleFilterChange('id_etat_final', newEtats);
-                    }}
-                  />
-                  <span>{etat.titre}</span>
-                </label>
-              ))}
-            </div>
-            {filters.id_etat_final.length > 0 && (
-              <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-                {filters.id_etat_final.length} état{filters.id_etat_final.length > 1 ? 's' : ''} sélectionné{filters.id_etat_final.length > 1 ? 's' : ''}
+            <div className="multi-select-wrapper" ref={multiSelectRef}>
+              <div 
+                className="multi-select-trigger"
+                onClick={() => setIsMultiSelectOpen(!isMultiSelectOpen)}
+              >
+                <div className="multi-select-selected">
+                  {filters.id_etat_final.length === 0 ? (
+                    <span className="multi-select-placeholder">Tous les états</span>
+                  ) : (
+                    <div className="multi-select-badges">
+                      {filters.id_etat_final.slice(0, 2).map((etatId, idx) => {
+                        if (etatId === 'validated') {
+                          return (
+                            <span key={idx} className="multi-select-badge">
+                              Validée
+                            </span>
+                          );
+                        }
+                        const etat = etats.find(e => String(e.id) === etatId);
+                        return etat ? (
+                          <span key={idx} className="multi-select-badge">
+                            {etat.titre}
+                          </span>
+                        ) : null;
+                      })}
+                      {filters.id_etat_final.length > 2 && (
+                        <span className="multi-select-badge more">
+                          +{filters.id_etat_final.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <FaChevronDown className={`multi-select-arrow ${isMultiSelectOpen ? 'open' : ''}`} />
               </div>
-            )}
+              {isMultiSelectOpen && (
+                <div className="multi-select-dropdown">
+                  <div className="multi-select-options">
+                    <label className="multi-select-option">
+                      <input
+                        type="checkbox"
+                        checked={filters.id_etat_final.length === 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            handleFilterChange('id_etat_final', []);
+                          }
+                        }}
+                      />
+                      <span>Tous les états</span>
+                    </label>
+                    <label className="multi-select-option">
+                      <input
+                        type="checkbox"
+                        checked={filters.id_etat_final.includes('validated')}
+                        onChange={(e) => {
+                          const newEtats = e.target.checked
+                            ? [...filters.id_etat_final, 'validated']
+                            : filters.id_etat_final.filter(e => e !== 'validated');
+                          handleFilterChange('id_etat_final', newEtats);
+                        }}
+                      />
+                      <span>Validée (hors groupe 0)</span>
+                    </label>
+                    {etats.filter(e => e.groupe === '0' || e.groupe === 0).map(etat => (
+                      <label key={etat.id} className="multi-select-option">
+                        <input
+                          type="checkbox"
+                          checked={filters.id_etat_final.includes(String(etat.id))}
+                          onChange={(e) => {
+                            const newEtats = e.target.checked
+                              ? [...filters.id_etat_final, String(etat.id)]
+                              : filters.id_etat_final.filter(e => e !== String(etat.id));
+                            handleFilterChange('id_etat_final', newEtats);
+                          }}
+                        />
+                        <span style={{ color: etat.color || '#333' }}>{etat.titre}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {filters.id_etat_final.length > 0 && (
+                    <div className="multi-select-footer">
+                      <button
+                        type="button"
+                        className="multi-select-clear"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFilterChange('id_etat_final', []);
+                        }}
+                      >
+                        <FaTimes /> Tout effacer
+                      </button>
+                      <span className="multi-select-count">
+                        {filters.id_etat_final.length} sélectionné{filters.id_etat_final.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
