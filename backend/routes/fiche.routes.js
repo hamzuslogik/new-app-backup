@@ -1234,6 +1234,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
 
     // Détecter la structure de la table modifica pour la requête
     let modificaFieldCondition = '';
+    let modificaDateColumn = 'date_modif_time';
     try {
       const modificaColumns = await query(
         `SELECT COLUMN_NAME 
@@ -1244,6 +1245,13 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
       const columnNames = modificaColumns.map(col => col.COLUMN_NAME);
       const hasType = columnNames.includes('type');
       const hasChamp = columnNames.includes('champ');
+      
+      // Détecter la colonne de date
+      if (columnNames.includes('date_modif_time')) {
+        modificaDateColumn = 'date_modif_time';
+      } else if (columnNames.includes('date')) {
+        modificaDateColumn = 'date';
+      }
       
       if (hasType) {
         modificaFieldCondition = "m1.type = 'commentaire_qualite'";
@@ -1313,7 +1321,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
            FROM modifica m2
            WHERE ${modificaFieldCondition.replace('m1.', 'm2.')}
            AND m2.id_fiche = m1.id_fiche
-           ORDER BY COALESCE(m2.date_modif_time, m2.date) DESC
+           ORDER BY m2.\`${modificaDateColumn}\` DESC
            LIMIT 1
          )
        ) last_modif ON fiche.id = last_modif.id_fiche
