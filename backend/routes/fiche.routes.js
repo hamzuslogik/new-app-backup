@@ -1278,11 +1278,11 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
            m1.id_fiche,
            m1.id_user
          FROM modifica m1
-         WHERE (m1.type = 'commentaire_qualite' OR m1.champ = 'commentaire_qualite')
+         WHERE ${modificaFieldCondition}
          AND m1.id = (
            SELECT m2.id
            FROM modifica m2
-           WHERE (m2.type = 'commentaire_qualite' OR m2.champ = 'commentaire_qualite')
+           WHERE ${modificaFieldCondition}
            AND m2.id_fiche = m1.id_fiche
            ORDER BY COALESCE(m2.date_modif_time, m2.date) DESC
            LIMIT 1
