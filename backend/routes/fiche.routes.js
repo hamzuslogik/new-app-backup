@@ -1426,18 +1426,19 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
     let params = [...agentIds];
 
     // Pour RP Qualification (fonction 12), inclure tous les états (groupe 0 + "Validé" = tous les états)
-    // Pour les autres (RE Qualification), filtrer uniquement groupe 0 + EN-ATTENTE
+    // Pour les autres (RE Qualification), filtrer groupe 0 + EN-ATTENTE + fiches validées (groupe 1, 2 ou 3)
     if (req.user.fonction === 12) {
       // Pour RP Qualification : inclure tous les états (pas de filtre sur les états)
       // Le filtre par état se fera côté frontend si nécessaire
     } else {
-      // Pour RE Qualification : filtrer uniquement les états du groupe 0 + EN-ATTENTE
+      // Pour RE Qualification : filtrer les états du groupe 0 + EN-ATTENTE + fiches validées (hors groupe 0)
       whereConditions.push(`EXISTS (
         SELECT 1 FROM etats e 
         WHERE e.id = fiche.id_etat_final 
         AND (
           (e.groupe = '0' OR e.groupe = 0) OR
-          (e.id = 1 OR e.titre = 'EN-ATTENTE' OR e.titre = 'En-Attente' OR e.titre = 'EN ATTENTE')
+          (e.id = 1 OR e.titre = 'EN-ATTENTE' OR e.titre = 'En-Attente' OR e.titre = 'EN ATTENTE') OR
+          (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
         )
       )`);
     }

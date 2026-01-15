@@ -24,6 +24,10 @@ const SuiviAgentsQualif = () => {
 
   const isREQualif = agentsSousResponsabilite && agentsSousResponsabilite.length > 0;
   
+  // Vérifier si l'utilisateur est un Superviseur Qualification (fonction 2) ou RP Qualification (fonction 12)
+  const isSuperviseurQualif = user?.fonction === 2;
+  const canSeeCommentaireQualite = isRPQualif || isSuperviseurQualif;
+  
   // Pour Superviseur Qualification (RE Qualification), le mode par défaut est 'fiches' selon les exigences
   const [viewMode, setViewMode] = useState('stats'); // 'stats' ou 'fiches'
   
@@ -178,14 +182,15 @@ const SuiviAgentsQualif = () => {
     
     const term = searchTerm.toLowerCase();
     return fichesData.data.filter(fiche => {
-      return (
-        (fiche.nom && fiche.nom.toLowerCase().includes(term)) ||
-        (fiche.prenom && fiche.prenom.toLowerCase().includes(term)) ||
-        (fiche.tel && fiche.tel.includes(term)) ||
-        (fiche.cp && fiche.cp.includes(term)) ||
-        (fiche.agent_pseudo && fiche.agent_pseudo.toLowerCase().includes(term)) ||
-        (fiche.etat_titre && fiche.etat_titre.toLowerCase().includes(term))
-      );
+    return (
+      (fiche.nom && fiche.nom.toLowerCase().includes(term)) ||
+      (fiche.prenom && fiche.prenom.toLowerCase().includes(term)) ||
+      (fiche.tel && fiche.tel.includes(term)) ||
+      (fiche.cp && fiche.cp.includes(term)) ||
+      (fiche.agent_pseudo && fiche.agent_pseudo.toLowerCase().includes(term)) ||
+      (fiche.etat_titre && fiche.etat_titre.toLowerCase().includes(term)) ||
+      (fiche.commentaire_qualite && fiche.commentaire_qualite.toLowerCase().includes(term))
+    );
     });
   }, [fichesData, searchTerm]);
 
@@ -204,7 +209,8 @@ const SuiviAgentsQualif = () => {
         { key: 'prenom', label: 'Prénom' },
         { key: 'tel', label: 'Téléphone' },
         { key: 'cp', label: 'CP' },
-        { key: 'etat_titre', label: 'État' }
+        { key: 'etat_titre', label: 'État' },
+        ...(canSeeCommentaireQualite ? [{ key: 'commentaire_qualite', label: 'Commentaire Qualité' }] : [])
       ];
       exportToCSV(fiches, columns, 'suivi-agents-qualif-fiches');
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
@@ -252,7 +258,8 @@ const SuiviAgentsQualif = () => {
         { key: 'prenom', label: 'Prénom' },
         { key: 'tel', label: 'Téléphone' },
         { key: 'cp', label: 'CP' },
-        { key: 'etat_titre', label: 'État' }
+        { key: 'etat_titre', label: 'État' },
+        ...(canSeeCommentaireQualite ? [{ key: 'commentaire_qualite', label: 'Commentaire Qualité' }] : [])
       ];
       exportToExcel(fiches, columns, 'suivi-agents-qualif-fiches');
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
@@ -300,7 +307,8 @@ const SuiviAgentsQualif = () => {
         { key: 'prenom', label: 'Prénom' },
         { key: 'tel', label: 'Téléphone' },
         { key: 'cp', label: 'CP' },
-        { key: 'etat_titre', label: 'État' }
+        { key: 'etat_titre', label: 'État' },
+        ...(canSeeCommentaireQualite ? [{ key: 'commentaire_qualite', label: 'Commentaire Qualité' }] : [])
       ];
       // Formater les dates pour le PDF
       const formattedData = fiches.map(fiche => ({
@@ -445,7 +453,7 @@ const SuiviAgentsQualif = () => {
           <FaSearch />
           <input
             type="text"
-            placeholder="Recherche rapide (nom, prénom, téléphone, code postal, agent, état)..."
+            placeholder="Recherche rapide (nom, prénom, téléphone, code postal, agent, état, commentaire qualité)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="quick-search-input"
@@ -478,6 +486,7 @@ const SuiviAgentsQualif = () => {
                     <th>Téléphone</th>
                     <th>CP</th>
                     <th>État</th>
+                    {canSeeCommentaireQualite && <th>Commentaire Qualité</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -498,6 +507,11 @@ const SuiviAgentsQualif = () => {
                           {(fiche.etat_groupe === '0' || fiche.etat_groupe === 0) ? (fiche.etat_titre || '-') : 'Validé'}
                         </span>
                       </td>
+                      {canSeeCommentaireQualite && (
+                        <td style={{ maxWidth: '300px', wordWrap: 'break-word' }}>
+                          {fiche.commentaire_qualite || '-'}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
