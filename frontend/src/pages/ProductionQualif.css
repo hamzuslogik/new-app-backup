@@ -825,3 +825,92 @@
   font-weight: 500;
 }
 
+/* Styles pour la modification rapide du commentaire qualité */
+.comment-quick-edit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4.8px;
+  min-width: 250px;
+  max-width: 350px;
+}
+
+.comment-quick-actions {
+  display: flex;
+  gap: 4.8px;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 0;
+  height: auto;
+}
+
+.comment-quick-actions:empty {
+  display: none;
+}
+
+.comment-textarea-quick {
+  padding: 4.8px 6.4px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 50px;
+  max-height: 120px;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.comment-textarea-quick:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.15);
+}
+
+.comment-textarea-quick::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.btn-save-comment-quick,
+.btn-cancel-comment-quick {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-save-comment-quick {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.btn-save-comment-quick:hover:not(:disabled) {
+  background-color: #45a049;
+  transform: scale(1.05);
+}
+
+.btn-save-comment-quick:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cancel-comment-quick {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-cancel-comment-quick:hover:not(:disabled) {
+  background-color: #da190b;
+  transform: scale(1.05);
+}
+
+.btn-cancel-comment-quick:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

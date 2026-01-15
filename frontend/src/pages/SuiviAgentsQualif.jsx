@@ -1,17 +1,22 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaUserTie, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes } from 'react-icons/fa';
+import { FaUserTie, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes, FaSave } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import './SuiviAgentsQualif.css';
 
 const SuiviAgentsQualif = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [showFilters, setShowFilters] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMultiSelectOpen, setIsMultiSelectOpen] = useState(false);
   const multiSelectRef = useRef(null);
+  
+  // État pour gérer l'édition du commentaire qualité
+  const [editingComment, setEditingComment] = useState({ hash: null, value: '' });
 
   // Vérifier si l'utilisateur est un RE Qualification (a des agents sous sa responsabilité)
   const { data: agentsSousResponsabilite } = useQuery(
@@ -239,6 +244,40 @@ const SuiviAgentsQualif = () => {
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Mutation pour mettre à jour le commentaire qualité
+  const updateCommentaireQualiteMutation = useMutation(
+    async ({ hash, commentaire_qualite }) => {
+      const res = await api.patch(`/fiches/${hash}/field`, {
+        field: 'commentaire_qualite',
+        value: commentaire_qualite
+      });
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['fiches-agents-sous-responsabilite']);
+        toast.success('Commentaire qualité enregistré avec succès');
+        setEditingComment({ hash: null, value: '' });
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de l\'enregistrement du commentaire');
+      }
+    }
+  );
+
+  const handleSaveComment = (hash) => {
+    const commentaire = editingComment.hash === hash ? editingComment.value : '';
+    updateCommentaireQualiteMutation.mutate({ hash, commentaire_qualite: commentaire });
+  };
+
+  const handleKeyDown = (e, hash) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      handleSaveComment(hash);
+    } else if (e.key === 'Escape') {
+      setEditingComment({ hash: null, value: '' });
+    }
   };
 
   // Fermer le dropdown multi-select quand on clique en dehors
@@ -672,8 +711,58 @@ const SuiviAgentsQualif = () => {
                         </span>
                       </td>
                       {canSeeCommentaireQualite && (
-                        <td style={{ maxWidth: '300px', wordWrap: 'break-word' }}>
-                          {fiche.commentaire_qualite || '-'}
+                        <td style={{ maxWidth: '300px' }}>
+                          <div className="comment-quick-edit-container">
+                            <div className="comment-quick-actions">
+                              {(() => {
+                                const currentValue = editingComment.hash === fiche.hash ? editingComment.value : (fiche.commentaire_qualite || '');
+                                const originalValue = fiche.commentaire_qualite || '';
+                                const hasChanges = editingComment.hash === fiche.hash && currentValue !== originalValue;
+                                
+                                return hasChanges && (
+                                  <>
+                                    <button
+                                      className="btn-save-comment-quick"
+                                      onClick={() => handleSaveComment(fiche.hash)}
+                                      disabled={updateCommentaireQualiteMutation.isLoading}
+                                      title="Enregistrer (Ctrl+Enter)"
+                                    >
+                                      <FaSave />
+                                    </button>
+                                    <button
+                                      className="btn-cancel-comment-quick"
+                                      onClick={() => {
+                                        setEditingComment({ hash: null, value: '' });
+                                      }}
+                                      disabled={updateCommentaireQualiteMutation.isLoading}
+                                      title="Annuler (Echap)"
+                                    >
+                                      <FaTimes />
+                                    </button>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                            <textarea
+                              value={editingComment.hash === fiche.hash ? editingComment.value : (fiche.commentaire_qualite || '')}
+                              onChange={(e) => {
+                                if (editingComment.hash !== fiche.hash) {
+                                  setEditingComment({ hash: fiche.hash, value: e.target.value });
+                                } else {
+                                  setEditingComment({ ...editingComment, value: e.target.value });
+                                }
+                              }}
+                              onFocus={() => {
+                                if (editingComment.hash !== fiche.hash) {
+                                  setEditingComment({ hash: fiche.hash, value: fiche.commentaire_qualite || '' });
+                                }
+                              }}
+                              onKeyDown={(e) => handleKeyDown(e, fiche.hash)}
+                              className="comment-textarea-quick"
+                              placeholder="Commentaire qualité... (Ctrl+Enter pour sauvegarder)"
+                              rows={2}
+                            />
+                          </div>
                         </td>
                       )}
                     </tr>
