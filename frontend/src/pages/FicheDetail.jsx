@@ -1439,17 +1439,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const renderField = (label, field, value, type = 'text', options = null, readOnly = false) => {
     const isEditing = editingField === field;
     
-    // Debug général pour voir tous les appels
-    if (field === 'nom' || field === 'commentaire_qualite') {
-      console.log('🔍 renderField appelé:', {
-        field,
-        label,
-        hasFicheData: !!ficheData,
-        hasUser: !!user,
-        userFonction: user?.fonction,
-        userFonctionType: typeof user?.fonction
-      });
-    }
     
     // Permissions d'édition :
     // - Admins (1, 2, 7) : peuvent tout modifier
@@ -1459,15 +1448,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     if (!ficheData || !user) {
       // Si les données ne sont pas chargées, afficher quand même le champ mais sans possibilité d'édition
       const canEdit = false;
-      // Debug pour qualité qualification
-      if (field === 'nom' || field === 'commentaire_qualite') {
-        console.log('⚠️ Debug - ficheData ou user manquant:', {
-          field,
-          ficheData: !!ficheData,
-          user: !!user,
-          userFonction: user?.fonction
-        });
-      }
       return (
         <tr>
           <td className="field-label">{label}</td>
@@ -1491,9 +1471,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     const userFonctionRaw = user.fonction;
     const userFonction = userFonctionRaw != null ? Number(userFonctionRaw) : null;
     
-    // Permissions d'édition pour qualité qualification (fonction 2 et 12)
+    // Permissions d'édition pour qualité qualification (fonction 2, 8 et 12)
     // Utiliser == pour gérer les comparaisons string/number
-    const isQualiteQualif = userFonction == 2 || userFonction == 12;
+    const isQualiteQualif = userFonction == 2 || userFonction == 8 || userFonction == 12;
     const isAdmin = userFonction == 1 || userFonction == 7;
     const isAgent = userFonction == 3 && user.centre === ficheData.id_centre;
     const isCommercial = userFonction == 5 && hasPermission('fiches_edit') && ficheData.id_commercial === user.id;
@@ -1501,23 +1481,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     
     const canEdit = !readOnly && userFonction != null && (isAdmin || isQualiteQualif || isAgent || isCommercial || isConfirmateur);
     
-    // Debug pour qualité qualification - afficher dans la console pour TOUS les champs si qualité qualification
-    if (userFonction == 2 || userFonction == 12) {
-      if (field === 'nom' || field === 'commentaire_qualite' || field === 'commentaire') {
-        console.log('🔍 Debug qualité qualification - renderField:', {
-          field,
-          label,
-          userFonctionRaw,
-          userFonction,
-          isQualiteQualif,
-          isAdmin,
-          readOnly,
-          canEdit,
-          user: user ? { id: user.id, fonction: user.fonction, fonctionType: typeof user.fonction } : null,
-          ficheData: ficheData ? { id: ficheData.id, id_agent: ficheData.id_agent } : null
-        });
-      }
-    }
 
     return (
       <tr>
@@ -1586,26 +1549,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               <FaEdit />
             </button>
           )}
-          {/* Debug temporaire pour qualité qualification */}
-          {((userFonction == 2 || userFonction == 12) && field === 'nom') && (
-            <div style={{ fontSize: '9px', color: canEdit ? 'green' : 'red', marginTop: '2px', padding: '2px', background: '#f0f0f0' }}>
-              {canEdit ? '✓' : '✗'} fct:{userFonction} (raw:{userFonctionRaw}) rO:{readOnly ? '1' : '0'} qQ:{isQualiteQualif ? 'Y' : 'N'}
-            </div>
-          )}
         </td>
       </tr>
     );
   };
-
-  // Debug général pour voir l'utilisateur au chargement
-  console.log('🔍 FicheDetail - État initial:', {
-    isLoading,
-    hasFicheData: !!ficheData,
-    hasUser: !!user,
-    userFonction: user?.fonction,
-    userFonctionType: typeof user?.fonction,
-    hash
-  });
 
   if (isLoading) {
     return <div className="loading">Chargement...</div>;
@@ -1613,17 +1560,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
   if (!ficheData) {
     return <div className="error">Fiche non trouvée</div>;
-  }
-
-  // Debug pour qualité qualification après chargement
-  if (user && (Number(user.fonction) === 2 || Number(user.fonction) === 12)) {
-    console.log('🔍 Debug qualité qualification - FicheDetail après chargement:', {
-      userFonction: user.fonction,
-      userFonctionType: typeof user.fonction,
-      hasFicheData: !!ficheData,
-      ficheId: ficheData?.id,
-      ficheAgent: ficheData?.id_agent
-    });
   }
 
   const fiche = ficheData;
@@ -1991,8 +1927,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   { id: 2, nom: 'PV' }
                 ])}
               {renderField('Commentaire', 'commentaire', fiche.commentaire || '-', 'textarea')}
-              {/* Afficher le commentaire qualité uniquement pour les utilisateurs qualité (fonction 2 et 12) */}
-              {((Number(user?.fonction) === 2 || Number(user?.fonction) === 12)) && 
+              {/* Afficher le commentaire qualité uniquement pour les utilisateurs qualité (fonction 2, 8 et 12) */}
+              {((Number(user?.fonction) === 2 || Number(user?.fonction) === 8 || Number(user?.fonction) === 12)) && 
                 renderField('Commentaire Qualité', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')}
               {renderField('A déjà fait une étude', 'etude', fiche.etude || 'NON', 'select', [
                 { value: 'OUI', label: 'Oui' },
@@ -3790,7 +3726,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             - RP Qualification (12) : peuvent changer les fiches des agents sous la responsabilité de leurs superviseurs
             - Agents (3) : peuvent changer les fiches de leur centre
             - Confirmateurs (6) : peuvent changer toutes les fiches */}
-        {((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 12) ||
+        {((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 8 || Number(user?.fonction) === 12) ||
           (Number(user?.fonction) === 3 && user?.centre === ficheData?.id_centre) ||
           (Number(user?.fonction) === 6)) && (
           <div className="fiche-section etat-change-section">

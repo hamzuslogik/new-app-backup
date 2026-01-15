@@ -2649,6 +2649,9 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
           message: 'Vous n\'avez pas la permission de modifier cette fiche'
         });
       }
+    } else if (user.fonction === 8) {
+      // Qualité Qualification (fonction 8) : peuvent modifier toutes les fiches (pas de restriction)
+      // Pas de vérification d'assignation nécessaire
     }
     // Admins (1, 2, 7) : peuvent tout modifier, pas de vérification supplémentaire
     
