@@ -123,13 +123,10 @@ const ProductionQualif = () => {
         params.id_superviseur = filters.id_superviseur;
       }
       // Filtrer par état (y compris "validated")
-      // Pour les fiches, on peut filtrer côté frontend si plusieurs états sont sélectionnés
+      // Envoyer tous les états au backend pour un filtrage optimisé
       if (filters.id_etat_final && filters.id_etat_final.length > 0) {
-        // Si un seul état, l'envoyer au backend
-        if (filters.id_etat_final.length === 1) {
-          params.id_etat_final = filters.id_etat_final[0];
-        }
-        // Sinon, on filtrera côté frontend après récupération
+        // Envoyer le tableau d'états au backend
+        params.id_etat_final = filters.id_etat_final;
       }
       
       try {
@@ -153,26 +150,24 @@ const ProductionQualif = () => {
     
     let filtered = fichesData.data;
     
-    // Filtrer par états multiples si plusieurs états sont sélectionnés
-    if (filters.id_etat_final && filters.id_etat_final.length > 1) {
+    // Filtrer par états multiples
+    if (filters.id_etat_final && filters.id_etat_final.length > 0) {
       filtered = filtered.filter(fiche => {
-        // Si "validated" est sélectionné, vérifier si la fiche est hors groupe 0
-        if (filters.id_etat_final.includes('validated')) {
-          const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
-          if (!isGroupe0) return true; // Fiche validée
-        }
+        const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
+        const ficheIdEtat = String(fiche.id_etat_final);
+        
+        // Vérifier si "validated" est sélectionné et si la fiche est validée (hors groupe 0)
+        const isValidatedSelected = filters.id_etat_final.includes('validated');
+        const isFicheValidated = !isGroupe0;
+        
         // Vérifier si l'état de la fiche est dans la liste sélectionnée
-        return filters.id_etat_final.includes(String(fiche.id_etat_final));
+        const isEtatSelected = filters.id_etat_final.includes(ficheIdEtat);
+        
+        // La fiche correspond si :
+        // - "validated" est sélectionné ET la fiche est validée, OU
+        // - l'état de la fiche est dans la liste sélectionnée
+        return (isValidatedSelected && isFicheValidated) || isEtatSelected;
       });
-    } else if (filters.id_etat_final && filters.id_etat_final.length === 1) {
-      // Un seul état sélectionné - le filtrage est fait côté backend
-      // Mais on peut aussi filtrer ici pour "validated"
-      if (filters.id_etat_final[0] === 'validated') {
-        filtered = filtered.filter(fiche => {
-          const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
-          return !isGroupe0;
-        });
-      }
     }
     
     // Filtrer par recherche rapide

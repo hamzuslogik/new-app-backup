@@ -1464,9 +1464,65 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       }
     }
 
-    // Gérer le filtre par état final
+    // Gérer le filtre par état final (peut être un tableau ou une valeur unique)
     if (id_etat_final) {
-      if (id_etat_final === 'validated') {
+      // Normaliser : convertir en tableau si nécessaire
+      let etatArray = [];
+      if (Array.isArray(id_etat_final)) {
+        etatArray = id_etat_final;
+      } else if (typeof id_etat_final === 'string' && id_etat_final.includes(',')) {
+        // Si c'est une string avec des virgules, la split
+        etatArray = id_etat_final.split(',').map(e => e.trim()).filter(e => e.length > 0);
+      } else {
+        // Sinon, c'est une valeur unique
+        etatArray = [id_etat_final];
+      }
+      
+      // Si c'est un tableau (plusieurs états)
+      if (etatArray.length > 0) {
+        const etatIds = [];
+        let hasValidated = false;
+        
+        // Séparer les IDs d'états et "validated"
+        etatArray.forEach(etat => {
+          if (etat === 'validated') {
+            hasValidated = true;
+          } else {
+            const parsedId = parseInt(etat);
+            if (!isNaN(parsedId)) {
+              etatIds.push(parsedId);
+            }
+          }
+        });
+        
+        // Construire la condition
+        const conditions = [];
+        
+        // Si des IDs d'états sont sélectionnés
+        if (etatIds.length > 0) {
+          conditions.push(`fiche.id_etat_final IN (${etatIds.map(() => '?').join(',')})`);
+          params.push(...etatIds);
+        }
+        
+        // Si "validated" est sélectionné
+        if (hasValidated) {
+          const etatsGroupe0 = await query(`
+            SELECT id FROM etats WHERE (groupe = '0' OR groupe = 0)
+          `);
+          const idsGroupe0 = etatsGroupe0.map(e => e.id);
+          if (idsGroupe0.length > 0) {
+            conditions.push(`fiche.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})`);
+            params.push(...idsGroupe0);
+          }
+        }
+        
+        // Si plusieurs conditions, utiliser OR
+        if (conditions.length > 1) {
+          whereConditions.push(`(${conditions.join(' OR ')})`);
+        } else if (conditions.length === 1) {
+          whereConditions.push(conditions[0]);
+        }
+      } else if (id_etat_final === 'validated') {
         // Pour "validated", exclure les états du groupe 0
         const etatsGroupe0 = await query(`
           SELECT id FROM etats WHERE (groupe = '0' OR groupe = 0)
