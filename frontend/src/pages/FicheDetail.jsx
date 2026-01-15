@@ -1446,6 +1446,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     if (!ficheData || !user) {
       // Si les données ne sont pas chargées, afficher quand même le champ mais sans possibilité d'édition
       const canEdit = false;
+      // Debug pour qualité qualification
+      if (field === 'nom') {
+        console.log('⚠️ Debug - ficheData ou user manquant:', {
+          ficheData: !!ficheData,
+          user: !!user,
+          userFonction: user?.fonction
+        });
+      }
       return (
         <tr>
           <td className="field-label">{label}</td>
@@ -1465,16 +1473,34 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     // - Commerciaux (5) : peuvent modifier leurs propres fiches (avec permission fiches_edit)
     // - Confirmateurs (6) : peuvent modifier toutes les fiches
     // Convertir la fonction en nombre pour la comparaison (peut être string ou number)
-    const userFonction = user.fonction != null ? Number(user.fonction) : null;
+    // Utiliser == au lieu de === pour gérer les comparaisons string/number
+    const userFonctionRaw = user.fonction;
+    const userFonction = userFonctionRaw != null ? Number(userFonctionRaw) : null;
     
     // Permissions d'édition pour qualité qualification (fonction 2 et 12)
-    const isQualiteQualif = userFonction === 2 || userFonction === 12;
-    const isAdmin = userFonction === 1 || userFonction === 7;
-    const isAgent = userFonction === 3 && user.centre === ficheData.id_centre;
-    const isCommercial = userFonction === 5 && hasPermission('fiches_edit') && ficheData.id_commercial === user.id;
-    const isConfirmateur = userFonction === 6;
+    // Utiliser == pour gérer les comparaisons string/number
+    const isQualiteQualif = userFonction == 2 || userFonction == 12;
+    const isAdmin = userFonction == 1 || userFonction == 7;
+    const isAgent = userFonction == 3 && user.centre === ficheData.id_centre;
+    const isCommercial = userFonction == 5 && hasPermission('fiches_edit') && ficheData.id_commercial === user.id;
+    const isConfirmateur = userFonction == 6;
     
-    const canEdit = !readOnly && userFonction !== null && (isAdmin || isQualiteQualif || isAgent || isCommercial || isConfirmateur);
+    const canEdit = !readOnly && userFonction != null && (isAdmin || isQualiteQualif || isAgent || isCommercial || isConfirmateur);
+    
+    // Debug pour qualité qualification - afficher dans la console
+    if ((userFonction == 2 || userFonction == 12) && field === 'nom') {
+      console.log('🔍 Debug qualité qualification - renderField:', {
+        field,
+        userFonctionRaw,
+        userFonction,
+        isQualiteQualif,
+        isAdmin,
+        readOnly,
+        canEdit,
+        user: user ? { id: user.id, fonction: user.fonction, fonctionType: typeof user.fonction } : null,
+        ficheData: ficheData ? { id: ficheData.id, id_agent: ficheData.id_agent } : null
+      });
+    }
 
     return (
       <tr>
@@ -1542,6 +1568,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             >
               <FaEdit />
             </button>
+          )}
+          {/* Debug temporaire pour qualité qualification */}
+          {((userFonction == 2 || userFonction == 12) && field === 'nom') && (
+            <div style={{ fontSize: '9px', color: canEdit ? 'green' : 'red', marginTop: '2px', padding: '2px', background: '#f0f0f0' }}>
+              {canEdit ? '✓' : '✗'} fct:{userFonction} (raw:{userFonctionRaw}) rO:{readOnly ? '1' : '0'} qQ:{isQualiteQualif ? 'Y' : 'N'}
+            </div>
           )}
         </td>
       </tr>
