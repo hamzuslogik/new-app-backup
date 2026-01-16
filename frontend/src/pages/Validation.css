@@ -191,6 +191,10 @@
   min-width: 600px;
 }
 
+.fiches-table-container.compact .detail-column {
+  display: none;
+}
+
 .fiches-table thead {
   background: #ffffff;
   color: #333333;

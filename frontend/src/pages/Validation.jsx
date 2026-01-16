@@ -199,13 +199,13 @@ const Validation = () => {
                   <th>ID</th>
                   <th>Nom</th>
                   <th>Prénom</th>
-                  {showDetails && <th>Téléphone</th>}
-                  {showDetails && <th>CP</th>}
-                  {showDetails && <th>Ville</th>}
+                  <th className="detail-column">Téléphone</th>
+                  <th className="detail-column">CP</th>
+                  <th className="detail-column">Ville</th>
                   <th>Produit</th>
                   <th>Date RDV</th>
-                  {showDetails && <th>Commercial</th>}
-                  {showDetails && <th>Confirmateur(s)</th>}
+                  <th className="detail-column">Commercial</th>
+                  <th className="detail-column">Confirmateur(s)</th>
                   <th>Statut</th>
                   <th>Actions</th>
                 </tr>
@@ -222,9 +222,9 @@ const Validation = () => {
                       <td>{fiche.id}</td>
                       <td>{fiche.nom || '-'}</td>
                       <td>{fiche.prenom || '-'}</td>
-                      {showDetails && <td>{fiche.tel || '-'}</td>}
-                      {showDetails && <td>{fiche.cp || '-'}</td>}
-                      {showDetails && <td>{fiche.ville || '-'}</td>}
+                      <td className="detail-column">{fiche.tel || '-'}</td>
+                      <td className="detail-column">{fiche.cp || '-'}</td>
+                      <td className="detail-column">{fiche.ville || '-'}</td>
                       <td>
                         <span 
                           className="produit-indicator"
@@ -234,8 +234,8 @@ const Validation = () => {
                         </span>
                       </td>
                       <td>{formatDate(fiche.date_rdv_time)}</td>
-                      {showDetails && <td>{fiche.commercial_pseudo || '-'}</td>}
-                      {showDetails && <td>{confirmateurs.join(', ') || '-'}</td>}
+                      <td className="detail-column">{fiche.commercial_pseudo || '-'}</td>
+                      <td className="detail-column">{confirmateurs.join(', ') || '-'}</td>
                       <td>
                         {fiche.valider === 1 ? (
                           <span className="validation-badge validated">
