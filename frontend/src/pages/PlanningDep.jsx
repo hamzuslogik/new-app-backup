@@ -326,6 +326,7 @@ const PlanningDep = () => {
           dep={dep}
           weekStart={weekStart}
           weekEnd={weekEnd}
+          isAdmin={isAdmin}
         />
       )}
     </div>
@@ -333,7 +334,7 @@ const PlanningDep = () => {
 };
 
 // Composant pour la vue Planning (avec rendez-vous) - Lecture seule
-const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, getAvailabilityColor, dep, weekStart, weekEnd }) => {
+const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, getAvailabilityColor, dep, weekStart, weekEnd, isAdmin }) => {
   return (
     <div className="planning-view">
       <div className="planning-table-container">
