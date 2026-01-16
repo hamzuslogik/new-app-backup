@@ -33,9 +33,14 @@ function getWeekDays(year, week) {
   const days = [];
   const daysFr = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
   
+  // Extraire les composants du lundi pour éviter les problèmes de fuseau horaire
+  const mondayYear = monday.getFullYear();
+  const mondayMonth = monday.getMonth();
+  const mondayDay = monday.getDate();
+  
   for (let i = 0; i < 5; i++) {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + i);
+    // Créer la date directement avec les composants (évite les problèmes de fuseau horaire)
+    const date = new Date(mondayYear, mondayMonth, mondayDay + i);
     const dateStr = formatDateLocal(date);
     days.push({
       date: dateStr,

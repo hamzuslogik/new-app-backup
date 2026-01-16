@@ -443,12 +443,13 @@ const Planning = () => {
   const days = [];
   if (weekStart) {
     // Parser la date en heure locale pour éviter le décalage UTC
+    // weekStart est déjà au format YYYY-MM-DD du backend
     const [year, month, day] = weekStart.split('-').map(Number);
-    const startDate = new Date(year, month - 1, day);
     const daysFr = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+    // Créer les dates directement en ajoutant i jours, sans utiliser setDate()
     for (let i = 0; i < 5; i++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
+      // Créer la date directement avec les composants (évite les problèmes de fuseau horaire)
+      const date = new Date(year, month - 1, day + i);
       days.push({
         date: formatDateLocal(date),
         dayName: daysFr[i]
@@ -459,6 +460,7 @@ const Planning = () => {
     const monday = getMondayOfWeek(year, week);
     const daysFr = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
     for (let i = 0; i < 5; i++) {
+      // Utiliser getDate() et setDate() pour éviter les problèmes de mois
       const date = new Date(monday);
       date.setDate(monday.getDate() + i);
       days.push({
