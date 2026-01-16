@@ -280,14 +280,16 @@ const Validation = () => {
                 </tr>
               </thead>
               <tbody>
-                {statsByDepartement.map((dep, index) => (
-                  <tr key={dep.departement || index}>
-                    <td>{dep.departement || '-'}</td>
-                    <td>{dep.valides || 0}</td>
-                    <td>{dep.nonValides || 0}</td>
-                    <td>{dep.total || 0}</td>
-                  </tr>
-                ))}
+                {statsByDepartement
+                  .filter(dep => (dep.nonValides || 0) > 0)
+                  .map((dep, index) => (
+                    <tr key={dep.departement || index}>
+                      <td>{dep.departement || '-'}</td>
+                      <td>{dep.valides || 0}</td>
+                      <td>{dep.nonValides || 0}</td>
+                      <td>{dep.total || 0}</td>
+                    </tr>
+                  ))}
               </tbody>
               <tfoot>
                 <tr className="totals-row">
