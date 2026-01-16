@@ -145,7 +145,7 @@ const Planning = () => {
     return res.data.data || [];
   });
 
-  // Récupérer le planning
+  // Récupérer le planning avec rafraîchissement automatique toutes les 5 secondes
   const { data: planningData, isLoading, refetch } = useQuery(
     ['planning-week', week, year, dep],
     async () => {
@@ -154,11 +154,15 @@ const Planning = () => {
     },
     { 
       keepPreviousData: true,
-      enabled: !!week && !!year // Le département peut être vide, on utilisera '01' par défaut
+      enabled: !!week && !!year, // Le département peut être vide, on utilisera '01' par défaut
+      // Rafraîchissement automatique toutes les 5 secondes
+      refetchInterval: 5000,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true
     }
   );
 
-  // Récupérer la disponibilité
+  // Récupérer la disponibilité avec rafraîchissement automatique toutes les 5 secondes
   const { data: availabilityData, refetch: refetchAvailability, isLoading: isLoadingAvailability } = useQuery(
     ['planning-availability', week, year, dep],
     async () => {
@@ -169,11 +173,15 @@ const Planning = () => {
     },
     { 
       keepPreviousData: true, 
-      enabled: viewMode === 'availability' && !!week && !!year
+      enabled: viewMode === 'availability' && !!week && !!year,
+      // Rafraîchissement automatique toutes les 5 secondes
+      refetchInterval: 5000,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true
     }
   );
 
-  // Récupérer aussi le planning pour l'onglet disponibilité (pour compter les RDV)
+  // Récupérer aussi le planning pour l'onglet disponibilité (pour compter les RDV) avec rafraîchissement automatique
   const { data: planningDataForAvailability } = useQuery(
     ['planning-week-for-availability', week, year, dep],
     async () => {
@@ -182,7 +190,11 @@ const Planning = () => {
     },
     { 
       keepPreviousData: true, 
-      enabled: viewMode === 'availability' && !!week && !!year
+      enabled: viewMode === 'availability' && !!week && !!year,
+      // Rafraîchissement automatique toutes les 5 secondes
+      refetchInterval: 5000,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true
     }
   );
 

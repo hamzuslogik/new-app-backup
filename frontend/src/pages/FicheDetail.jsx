@@ -263,14 +263,20 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   }, [sousEtats, compteRenduOption, selectedEtat]);
 
-  // Récupérer la fiche (utiliser le hash au lieu de l'ID)
+  // Récupérer la fiche (utiliser le hash au lieu de l'ID) avec rafraîchissement automatique toutes les 5 secondes
   const { data: ficheData, isLoading } = useQuery(
     ['fiche', hash],
     async () => {
       const res = await api.get(`/fiches/${hash}`);
       return res.data.data;
     },
-    { enabled: !!hash }
+    { 
+      enabled: !!hash,
+      // Rafraîchissement automatique toutes les 5 secondes dans le modal
+      refetchInterval: isModal ? 5000 : false, // Uniquement si c'est un modal
+      refetchOnWindowFocus: isModal, // Rafraîchir quand la fenêtre redevient active (modal uniquement)
+      refetchOnReconnect: isModal // Rafraîchir quand la connexion est rétablie (modal uniquement)
+    }
   );
 
   // Récupérer les décalages existants pour cette fiche
@@ -4993,7 +4999,13 @@ const PlanningTab = ({
       const res = await api.get('/planning/week', { params: { w: planningWeek, y: planningYear, dp: planningDep } });
       return res.data;
     },
-    { enabled: !!planningDep && !!planningWeek && !!planningYear }
+    { 
+      enabled: !!planningDep && !!planningWeek && !!planningYear,
+      // Rafraîchissement automatique toutes les 5 secondes dans le modal
+      refetchInterval: 5000,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true
+    }
   );
 
   const { data: availabilityResponse, isLoading: isLoadingAvailability, refetch: refetchAvailability } = useQuery(
@@ -5003,7 +5015,13 @@ const PlanningTab = ({
       const res = await api.get('/planning/availability', { params: { w: planningWeek, y: planningYear, dp: planningDep } });
       return res.data;
     },
-    { enabled: !!planningDep && !!planningWeek && !!planningYear }
+    { 
+      enabled: !!planningDep && !!planningWeek && !!planningYear,
+      // Rafraîchissement automatique toutes les 5 secondes dans le modal
+      refetchInterval: 5000,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true
+    }
   );
 
   const planningData = planningResponse?.data || {};
