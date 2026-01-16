@@ -1062,8 +1062,13 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const formatWeekRange = () => {
     const days = getDaysFromPlanning();
     if (days.length === 0) return '';
-    const start = new Date(days[0].date);
-    const end = new Date(days[days.length - 1].date);
+    // Parser les dates en heure locale pour éviter les problèmes de fuseau horaire
+    const parseDateLocal = (dateStr) => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+    const start = parseDateLocal(days[0].date);
+    const end = parseDateLocal(days[days.length - 1].date);
     return `${start.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })} au ${end.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
   };
 
@@ -5335,8 +5340,13 @@ const PlanningTab = ({
   const formatWeekRange = () => {
     const days = getDaysFromPlanning();
     if (days.length === 0) return '';
-    const start = new Date(days[0].date);
-    const end = new Date(days[days.length - 1].date);
+    // Parser les dates en heure locale pour éviter les problèmes de fuseau horaire
+    const parseDateLocal = (dateStr) => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+    const start = parseDateLocal(days[0].date);
+    const end = parseDateLocal(days[days.length - 1].date);
     return `${start.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })} au ${end.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
   };
 

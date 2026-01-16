@@ -48,6 +48,14 @@ function hourToTimeKey(hour) {
   return hours * 3600 + minutes * 60 + (seconds || 0);
 }
 
+// Helper pour formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC)
+function formatDateLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Créneaux horaires
 const TIME_SLOTS = [
   { hour: '09:00:00', start: '09:00:00', end: '10:59:59', name: '9H ( 9h uniquement )', id: '09-00-00' },
@@ -112,10 +120,14 @@ const PlanningDep = () => {
   const weekStart = getMondayOfWeek(year, week);
   const days = [];
   const daysFr = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+  // Extraire les composants du lundi pour éviter les problèmes de fuseau horaire
+  const weekStartYear = weekStart.getFullYear();
+  const weekStartMonth = weekStart.getMonth();
+  const weekStartDay = weekStart.getDate();
   for (let i = 0; i < 5; i++) {
-    const date = new Date(weekStart);
-    date.setDate(weekStart.getDate() + i);
-    const dateStr = date.toISOString().split('T')[0];
+    // Créer la date directement avec les composants (évite les problèmes de fuseau horaire)
+    const date = new Date(weekStartYear, weekStartMonth, weekStartDay + i);
+    const dateStr = formatDateLocal(date);
     days.push({ date: dateStr, dayName: daysFr[i] });
   }
   const weekEnd = new Date(days[4].date);
