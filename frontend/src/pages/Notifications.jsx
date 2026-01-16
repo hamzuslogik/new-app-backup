@@ -306,7 +306,7 @@ const Notifications = () => {
                         </button>
                       </>
                     )}
-                    {notification.hash && (
+                    {notification.hash && user?.fonction !== 5 && (
                       <button
                         className="btn-view"
                         onClick={() => handleNotificationClick(notification)}

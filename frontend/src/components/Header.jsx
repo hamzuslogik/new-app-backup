@@ -263,9 +263,9 @@ const Header = () => {
                       return (
                         <div
                           key={notification.id}
-                          className={`notification-item ${notification.lu === 0 ? 'unread' : ''} ${canAction ? 'has-actions' : ''} ${!notification.fiche_id || !notification.hash ? 'no-fiche' : ''}`}
-                          onClick={() => !canAction && notification.fiche_id && notification.hash && handleNotificationClick(notification)}
-                          style={!notification.fiche_id || !notification.hash ? { cursor: 'default', opacity: 0.7 } : {}}
+                          className={`notification-item ${notification.lu === 0 ? 'unread' : ''} ${canAction ? 'has-actions' : ''} ${!notification.fiche_id || !notification.hash ? 'no-fiche' : ''} ${user?.fonction === 5 ? 'no-click' : ''}`}
+                          onClick={() => !canAction && notification.fiche_id && notification.hash && user?.fonction !== 5 && handleNotificationClick(notification)}
+                          style={!notification.fiche_id || !notification.hash || user?.fonction === 5 ? { cursor: 'default', opacity: 0.7 } : {}}
                         >
                           <div className="notification-content">
                             <p className="notification-message">{notification.message}</p>
