@@ -28,8 +28,11 @@ const StatistiquesFiches = () => {
     }
   );
 
+  // Vérifier si l'utilisateur a accès à cette page
+  const hasAccess = !!user?.id && ([1, 2, 7].includes(user.fonction) || user.fonction === 9);
+
   // Récupérer les statistiques (pour les onglets)
-  const { data: statsData, isLoading: isLoadingStats } = useQuery(
+  const { data: statsData, isLoading: isLoadingStats, error: errorStats } = useQuery(
     ['statistiques-fiches', filters, user?.id],
     async () => {
       const params = {
@@ -44,12 +47,15 @@ const StatistiquesFiches = () => {
       return res.data;
     },
     {
-      enabled: !!user?.id && ([1, 2, 7].includes(user.fonction) || user.fonction === 9)
+      enabled: hasAccess,
+      onError: (error) => {
+        console.error('Erreur lors du chargement des statistiques:', error);
+      }
     }
   );
 
   // Récupérer les fiches détaillées
-  const { data: fichesData, isLoading: isLoadingFiches } = useQuery(
+  const { data: fichesData, isLoading: isLoadingFiches, error: errorFiches } = useQuery(
     ['fiches-detaillees', filters, user?.id],
     async () => {
       const params = {
@@ -64,7 +70,10 @@ const StatistiquesFiches = () => {
       return res.data;
     },
     {
-      enabled: !!user?.id && ([1, 2, 7].includes(user.fonction) || user.fonction === 9)
+      enabled: hasAccess,
+      onError: (error) => {
+        console.error('Erreur lors du chargement des fiches détaillées:', error);
+      }
     }
   );
 
@@ -95,6 +104,17 @@ const StatistiquesFiches = () => {
     });
   };
 
+  // Vérifier l'accès
+  if (!hasAccess) {
+    return (
+      <div className="statistiques-fiches-page">
+        <div className="error-message">
+          Vous n'avez pas accès à cette page. Cette page est réservée aux administrateurs et aux utilisateurs avec la fonction 9.
+        </div>
+      </div>
+    );
+  }
+
   if (isLoadingStats || isLoadingFiches) {
     return (
       <div className="statistiques-fiches-page">
@@ -103,11 +123,21 @@ const StatistiquesFiches = () => {
     );
   }
 
+  if (errorStats || errorFiches) {
+    return (
+      <div className="statistiques-fiches-page">
+        <div className="error-message">
+          Erreur lors du chargement des statistiques: {errorStats?.message || errorFiches?.message || 'Erreur inconnue'}
+        </div>
+      </div>
+    );
+  }
+
   if (statsData?.success === false || fichesData?.success === false) {
     return (
       <div className="statistiques-fiches-page">
         <div className="error-message">
-          Erreur lors du chargement des statistiques
+          Erreur lors du chargement des statistiques: {statsData?.message || fichesData?.message || 'Erreur inconnue'}
         </div>
       </div>
     );
@@ -115,7 +145,7 @@ const StatistiquesFiches = () => {
 
   const stats = statsData?.data || [];
   const fiches = fichesData?.data || [];
-  const totalGlobal = stats.reduce((sum, centre) => sum + centre.total_fiches, 0);
+  const totalGlobal = stats.reduce((sum, centre) => sum + (centre.total_fiches || 0), 0);
 
   // Grouper les fiches par centre
   const fichesByCentre = {};
@@ -219,6 +249,14 @@ const StatistiquesFiches = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Message si aucune donnée */}
+      {!isLoadingStats && !isLoadingFiches && stats.length === 0 && (
+        <div className="no-data-message">
+          <p>Aucune statistique disponible pour la période sélectionnée.</p>
+          <p>Veuillez ajuster les filtres de date ou sélectionner un autre centre.</p>
         </div>
       )}
 
