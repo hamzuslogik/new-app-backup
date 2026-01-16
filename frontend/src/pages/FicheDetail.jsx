@@ -26,6 +26,14 @@ function hourToTimeKey(hour) {
   return hours * 3600 + minutes * 60 + (seconds || 0);
 }
 
+// Helper pour formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC)
+function formatDateLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // En mode modal, utiliser le contexte personnalisé, sinon utiliser useParams
   const routeParams = useRouteParams();
@@ -725,7 +733,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       try {
         const parsedDate = new Date(dateStr);
         if (!isNaN(parsedDate.getTime())) {
-          dateStr = parsedDate.toISOString().split('T')[0];
+          dateStr = formatDateLocal(parsedDate);
         } else {
           console.error('Date invalide:', dateStr);
           alert('Erreur: Date invalide');
@@ -1018,7 +1026,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + i);
       days.push({
-        date: date.toISOString().split('T')[0],
+        date: formatDateLocal(date),
         dayName: daysFr[i]
       });
     }
