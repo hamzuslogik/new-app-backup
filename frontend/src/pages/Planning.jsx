@@ -49,6 +49,14 @@ function hourToTimeKey(hour) {
   return hours * 3600 + minutes * 60 + (seconds || 0);
 }
 
+// Helper pour formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC)
+function formatDateLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Créneaux horaires
 const TIME_SLOTS = [
   { hour: '09:00:00', start: '09:00:00', end: '10:59:59', name: '9H ( 9h uniquement )', id: '09-00-00' },
@@ -434,13 +442,15 @@ const Planning = () => {
   // Obtenir les jours de la semaine
   const days = [];
   if (weekStart) {
-    const startDate = new Date(weekStart + 'T00:00:00');
+    // Parser la date en heure locale pour éviter le décalage UTC
+    const [year, month, day] = weekStart.split('-').map(Number);
+    const startDate = new Date(year, month - 1, day);
     const daysFr = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
     for (let i = 0; i < 5; i++) {
       const date = new Date(startDate);
       date.setDate(startDate.getDate() + i);
       days.push({
-        date: date.toISOString().split('T')[0],
+        date: formatDateLocal(date),
         dayName: daysFr[i]
       });
     }
@@ -452,7 +462,7 @@ const Planning = () => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + i);
       days.push({
-        date: date.toISOString().split('T')[0],
+        date: formatDateLocal(date),
         dayName: daysFr[i]
       });
     }

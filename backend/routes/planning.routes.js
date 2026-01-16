@@ -19,6 +19,14 @@ function getMondayOfWeek(year, week) {
   return targetMonday;
 }
 
+// Helper pour formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC)
+function formatDateLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Helper pour obtenir les jours de la semaine (Lundi à Vendredi)
 function getWeekDays(year, week) {
   const monday = getMondayOfWeek(year, week);
@@ -28,7 +36,7 @@ function getWeekDays(year, week) {
   for (let i = 0; i < 5; i++) {
     const date = new Date(monday);
     date.setDate(monday.getDate() + i);
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateLocal(date);
     days.push({
       date: dateStr,
       dayName: daysFr[i]
@@ -436,8 +444,8 @@ router.get('/availability', authenticate, async (req, res) => {
         // Utiliser les champs formatés pour la comparaison
         const av = availabilities.find(a => {
           const aDate = a.date_day_str || (a.date_day instanceof Date 
-            ? a.date_day.toISOString().split('T')[0] 
-            : String(a.date_day).split('T')[0]);
+            ? formatDateLocal(a.date_day)
+            : String(a.date_day).split('T')[0].split(' ')[0]);
           const aHour = a.hour_str || (a.hour instanceof Date 
             ? a.hour.toTimeString().split(' ')[0] 
             : String(a.hour));
@@ -841,7 +849,7 @@ router.post('/duplicate', authenticate, checkPermission(1, 2, 7), async (req, re
       let sourceDateStr = hbd.date_day_str;
       if (!sourceDateStr) {
         if (hbd.date_day instanceof Date) {
-          sourceDateStr = hbd.date_day.toISOString().split('T')[0];
+          sourceDateStr = formatDateLocal(hbd.date_day);
         } else {
           sourceDateStr = String(hbd.date_day).split('T')[0].split(' ')[0];
         }
@@ -887,7 +895,7 @@ router.post('/duplicate', authenticate, checkPermission(1, 2, 7), async (req, re
       let sourceDateStr = av.date_day_str;
       if (!sourceDateStr) {
         if (av.date_day instanceof Date) {
-          sourceDateStr = av.date_day.toISOString().split('T')[0];
+          sourceDateStr = formatDateLocal(av.date_day);
         } else {
           sourceDateStr = String(av.date_day).split('T')[0].split(' ')[0];
         }
@@ -1003,8 +1011,8 @@ router.get('/hebdomadaire', authenticate, async (req, res) => {
       if (!depKey || depKey === '00') return;
       
       const dateStr = av.date_day_str || (av.date_day instanceof Date 
-        ? av.date_day.toISOString().split('T')[0] 
-        : String(av.date_day).split('T')[0]);
+        ? formatDateLocal(av.date_day)
+        : String(av.date_day).split('T')[0].split(' ')[0]);
       
       // Obtenir le jour de la semaine (1=Lundi, 2=Mardi, etc.)
       const dayOfWeek = dateToDayMap[dateStr];
