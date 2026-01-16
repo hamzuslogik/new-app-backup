@@ -1636,6 +1636,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       return lines.length * lineHeight;
     };
     
+    let estimatedHeight = 0;
     estimatedHeight += titleFontSize + sectionSpacing; // Informations personnelles
     estimatedHeight += estimateTextHeight(`Civilité: ${fiche.civ || '-'}`);
     estimatedHeight += estimateTextHeight(`Nom: ${fiche.nom || '-'}`);
