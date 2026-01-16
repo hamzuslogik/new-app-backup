@@ -248,17 +248,65 @@ router.get('/week', authenticate, async (req, res) => {
       // Toujours utiliser date_rdv_time comme source principale
       // Après acceptation d'un décalage, date_rdv_time est mis à jour avec date_nouvelle
       // donc on utilise toujours date_rdv_time qui est la source de vérité
+      
+      // Utiliser d'abord date_rdv_date si disponible (extrait avec DATE() dans la requête SQL)
+      // Mais on doit quand même utiliser date_rdv_time pour obtenir la date en heure locale
+      // car DATE() retourne la date selon le fuseau horaire de MySQL, pas nécessairement l'heure locale
       if (fiche.date_rdv_time) {
+        // Utiliser date_rdv_time complet pour extraire la date en heure locale
+        let dateTimeStr = typeof fiche.date_rdv_time === 'string' 
+          ? fiche.date_rdv_time 
+          : (fiche.date_rdv_time instanceof Date 
+              ? fiche.date_rdv_time.toISOString().replace('T', ' ').substring(0, 19)
+              : String(fiche.date_rdv_time || ''));
+        
+        if (dateTimeStr) {
+          // Parser la date/heure complète et extraire la date en heure locale
+          const dateTimeObj = new Date(dateTimeStr);
+          if (!isNaN(dateTimeObj.getTime())) {
+            rdvDate = formatDateLocal(dateTimeObj);
+            // Extraire l'heure
+            const timeParts = dateTimeStr.split(' ')[1] || (dateTimeStr.includes('T') ? dateTimeStr.split('T')[1].substring(0, 8) : null);
+            rdvTime = timeParts || (fiche.date_rdv_time_only ? String(fiche.date_rdv_time_only) : null);
+          } else {
+            // Fallback : utiliser date_rdv_date si disponible
+            if (fiche.date_rdv_date) {
+              rdvDate = String(fiche.date_rdv_date);
+              rdvTime = fiche.date_rdv_time_only ? String(fiche.date_rdv_time_only) : null;
+            }
+          }
+        }
+      } else if (fiche.date_rdv_date) {
+        // Fallback : utiliser date_rdv_date si date_rdv_time n'est pas disponible
+        rdvDate = String(fiche.date_rdv_date);
+        rdvTime = fiche.date_rdv_time_only ? String(fiche.date_rdv_time_only) : null;
+      } else if (fiche.date_rdv_time) {
+        // Fallback : utiliser date_rdv_time si date_rdv_date n'est pas disponible
         // Convertir en chaîne si nécessaire (peut être un objet Date ou une chaîne)
-        const dateStr = typeof fiche.date_rdv_time === 'string' 
+        let dateStr = typeof fiche.date_rdv_time === 'string' 
           ? fiche.date_rdv_time 
           : (fiche.date_rdv_time instanceof Date 
               ? fiche.date_rdv_time.toISOString().replace('T', ' ').substring(0, 19)
               : String(fiche.date_rdv_time || ''));
         
         if (dateStr) {
-          rdvDate = dateStr.split(' ')[0] || dateStr.split('T')[0];
-          rdvTime = dateStr.split(' ')[1] || null;
+          // Extraire la date et l'heure
+          const parts = dateStr.split(' ')[0] || dateStr.split('T')[0];
+          rdvTime = dateStr.split(' ')[1] || (dateStr.includes('T') ? dateStr.split('T')[1].substring(0, 8) : null);
+          
+          // Utiliser DATE() pour extraire uniquement la partie date, en ignorant l'heure et le fuseau horaire
+          // Si c'est déjà au format YYYY-MM-DD, l'utiliser directement
+          if (parts && parts.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            rdvDate = parts;
+          } else {
+            // Si ce n'est pas au bon format, parser la date en heure locale
+            const dateObj = new Date(dateStr);
+            if (!isNaN(dateObj.getTime())) {
+              rdvDate = formatDateLocal(dateObj);
+            } else {
+              rdvDate = parts;
+            }
+          }
         }
       }
 
