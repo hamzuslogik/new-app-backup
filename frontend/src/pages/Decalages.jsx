@@ -8,6 +8,25 @@ import { toast } from 'react-toastify';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import './Decalages.css';
 
+// Helper pour obtenir le numéro de semaine ISO
+function getWeekNumber(date = new Date()) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+// Helper pour obtenir le lundi d'une semaine ISO
+function getMondayOfWeek(year, week) {
+  const simple = new Date(year, 0, 4);
+  const jan4Day = simple.getDay() || 7;
+  const week1Monday = new Date(year, 0, 4 - (jan4Day - 1));
+  const targetMonday = new Date(week1Monday);
+  targetMonday.setDate(week1Monday.getDate() + (week - 1) * 7);
+  return targetMonday;
+}
+
 const Decalages = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -78,8 +97,26 @@ const Decalages = () => {
   // Filtrer les décalages
   let filteredDecalages = decalagesData || [];
   
-  // Pour les commerciaux, pas de filtres (backend filtre déjà)
-  if (user?.fonction !== 5) {
+  // Pour les commerciaux : filtrer uniquement les demandes de la semaine en cours
+  if (user?.fonction === 5) {
+    const currentDate = new Date();
+    const currentWeek = getWeekNumber(currentDate);
+    const currentYear = currentDate.getFullYear();
+    const weekStart = getMondayOfWeek(currentYear, currentWeek);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6); // Dimanche de la semaine
+    
+    // Mettre les heures à minuit pour la comparaison
+    weekStart.setHours(0, 0, 0, 0);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    filteredDecalages = filteredDecalages.filter(decalage => {
+      if (!decalage.date_creation) return false;
+      const decalageDate = new Date(decalage.date_creation);
+      return decalageDate >= weekStart && decalageDate <= weekEnd;
+    });
+  } else {
+    // Pour les autres utilisateurs, appliquer les filtres normaux
     filteredDecalages = filteredDecalages.filter(decalage => {
       if (filters.id_etat && decalage.id_etat !== parseInt(filters.id_etat)) return false;
       if (filters.expediteur && decalage.expediteur !== parseInt(filters.expediteur)) return false;
@@ -274,15 +311,24 @@ const Decalages = () => {
                   </td>
                   <td data-label="Fiche:">
                     {decalage.fiche_id ? (
-                      <button
-                        className="fiche-link-btn"
-                        onClick={() => handleFicheClick(decalage)}
-                        title="Voir la fiche"
-                      >
-                        <FaFileAlt /> {decalage.fiche_nom || ''} {decalage.fiche_prenom || ''}
-                        <br />
-                        <small>{decalage.fiche_tel || ''}</small>
-                      </button>
+                      user?.fonction === 5 ? (
+                        // Pour les commerciaux, afficher sans lien (désactivé)
+                        <span className="fiche-info-disabled">
+                          <FaFileAlt /> {decalage.fiche_nom || ''} {decalage.fiche_prenom || ''}
+                          <br />
+                          <small>{decalage.fiche_tel || ''}</small>
+                        </span>
+                      ) : (
+                        <button
+                          className="fiche-link-btn"
+                          onClick={() => handleFicheClick(decalage)}
+                          title="Voir la fiche"
+                        >
+                          <FaFileAlt /> {decalage.fiche_nom || ''} {decalage.fiche_prenom || ''}
+                          <br />
+                          <small>{decalage.fiche_tel || ''}</small>
+                        </button>
+                      )
                     ) : (
                       <span className="no-fiche">Fiche non disponible</span>
                     )}
