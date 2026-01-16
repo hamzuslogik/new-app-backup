@@ -323,6 +323,7 @@ const PlanningDep = () => {
           getUserColor={getUserColor}
           getUserName={getUserName}
           getAvailabilityColor={getAvailabilityColor}
+          getConfirmerColor={getConfirmerColor}
           dep={dep}
           weekStart={weekStart}
           weekEnd={weekEnd}
@@ -334,7 +335,7 @@ const PlanningDep = () => {
 };
 
 // Composant pour la vue Planning (avec rendez-vous) - Lecture seule
-const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, getAvailabilityColor, dep, weekStart, weekEnd, isAdmin }) => {
+const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, getAvailabilityColor, getConfirmerColor, dep, weekStart, weekEnd, isAdmin }) => {
   return (
     <div className="planning-view">
       <div className="planning-table-container">
