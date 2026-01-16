@@ -48,7 +48,7 @@ const ControleQualite = () => {
     return res.data.data || [];
   });
 
-  // Récupérer les fiches
+  // Récupérer les fiches avec rafraîchissement automatique toutes les 3 secondes
   const { data: fichesData, isLoading, error, refetch } = useQuery(
     ['controle-qualite', filters],
     async () => {
@@ -76,6 +76,12 @@ const ControleQualite = () => {
       }
     },
     {
+      // Rafraîchissement automatique toutes les 3 secondes
+      refetchInterval: 3000,
+      // Rafraîchir quand la fenêtre redevient active
+      refetchOnWindowFocus: true,
+      // Rafraîchir quand la connexion est rétablie
+      refetchOnReconnect: true,
       onError: (error) => {
         console.error('Erreur useQuery contrôle qualité:', error);
         const errorMessage = error.response?.data?.message || error.message || 'Erreur lors du chargement des fiches';
@@ -92,7 +98,9 @@ const ControleQualite = () => {
     },
     {
       onSuccess: () => {
+        // Invalider et rafraîchir immédiatement pour tous les utilisateurs
         queryClient.invalidateQueries(['controle-qualite']);
+        refetch();
         toast.success('État mis à jour avec succès');
       },
       onError: (error) => {
@@ -109,7 +117,9 @@ const ControleQualite = () => {
     },
     {
       onSuccess: () => {
+        // Invalider et rafraîchir immédiatement pour tous les utilisateurs
         queryClient.invalidateQueries(['controle-qualite']);
+        refetch();
         toast.success('Fiche validée et passée en état "En-Attente"');
       },
       onError: (error) => {
@@ -129,7 +139,9 @@ const ControleQualite = () => {
     },
     {
       onSuccess: () => {
+        // Invalider et rafraîchir immédiatement pour tous les utilisateurs
         queryClient.invalidateQueries(['controle-qualite']);
+        refetch();
         toast.success('Commentaire qualité enregistré avec succès');
         setEditingComment({ hash: null, value: '' });
       },
