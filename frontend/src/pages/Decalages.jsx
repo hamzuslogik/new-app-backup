@@ -389,9 +389,13 @@ const Decalages = () => {
                     {/* Permissions pour modifier le statut :
                         - Admins (1, 2, 7) : peuvent changer vers tous les états
                         - Confirmateurs (6) : peuvent refuser ou valider, mais pas annuler
+                        - RE Confirmation (14) : peuvent refuser ou valider, mais pas annuler
+                        - RP Confirmation (15) : peuvent refuser ou valider, mais pas annuler
                         - Commerciaux (5) : peuvent seulement annuler leurs propres décalages */}
                     {([1, 2, 7].includes(user?.fonction) || 
                       (user?.fonction === 6) ||
+                      (user?.fonction === 14) ||
+                      (user?.fonction === 15) ||
                       (user?.fonction === 5 && decalage.expediteur === user?.id)) && (
                       <div className="action-buttons">
                         {etatsDecalage?.filter(etat => {
@@ -399,8 +403,8 @@ const Decalages = () => {
                           if ([1, 2, 7].includes(user?.fonction)) {
                             // Admins : tous les états
                             return true;
-                          } else if (user?.fonction === 6) {
-                            // Confirmateurs : pas d'annulation (id_etat = 6)
+                          } else if (user?.fonction === 6 || user?.fonction === 14 || user?.fonction === 15) {
+                            // Confirmateurs, RE Confirmation, RP Confirmation : pas d'annulation (id_etat = 6)
                             return etat.id !== 6;
                           } else if (user?.fonction === 5) {
                             // Commerciaux : seulement annulation (id_etat = 6)

@@ -55,6 +55,38 @@ router.get('/', authenticate, async (req, res) => {
       const ids = confirmateursIds.map(c => c.id);
       whereClause = `WHERE d.destination IN (${ids.map(() => '?').join(',')})`;
       params = ids;
+    } else if (req.user.fonction === 15) {
+      // RP Confirmation : voient les décalages de tous les RE Confirmation et confirmateurs sous leur responsabilité
+      // Récupérer les IDs des RE Confirmation sous responsabilité (chef_equipe = RP Confirmation)
+      const reConfirmationIds = await query(
+        'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 14 AND etat > 0',
+        [req.user.id]
+      );
+      
+      // Récupérer les IDs des confirmateurs sous responsabilité des RE Confirmation
+      let allConfirmateursIds = [];
+      if (reConfirmationIds.length > 0) {
+        const reIds = reConfirmationIds.map(re => re.id);
+        const confirmateursIds = await query(
+          `SELECT id FROM utilisateurs WHERE chef_equipe IN (${reIds.map(() => '?').join(',')}) AND fonction = 6 AND etat > 0`,
+          reIds
+        );
+        allConfirmateursIds = confirmateursIds.map(c => c.id);
+      }
+      
+      // Combiner les IDs des RE Confirmation et des confirmateurs
+      const allIds = [...reConfirmationIds.map(re => re.id), ...allConfirmateursIds];
+      
+      if (allIds.length === 0) {
+        // Aucun RE Confirmation ou confirmateur sous responsabilité, retourner vide
+        return res.json({
+          success: true,
+          data: []
+        });
+      }
+      
+      whereClause = `WHERE d.destination IN (${allIds.map(() => '?').join(',')})`;
+      params = allIds;
     } else if (req.user.fonction === 5) {
       // Commerciaux : voient uniquement leurs propres demandes de décalage (où ils sont expéditeurs)
       whereClause = 'WHERE d.expediteur = ?';
@@ -417,7 +449,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
 
     // Vérifier les permissions :
     // - Les commerciaux (fonction 5) peuvent annuler (id_etat = 6)
-    // - Les confirmateurs (fonction 6) et admins peuvent refuser (id_etat = 4) ou valider
+    // - Les confirmateurs (fonction 6), RE Confirmation (fonction 14), RP Confirmation (fonction 15) et admins peuvent refuser (id_etat = 4) ou valider
     // - Les admins (1, 2, 7) peuvent tout faire
     if (req.user.fonction === 5) {
       // Commerciaux : peuvent seulement annuler
@@ -427,8 +459,8 @@ router.put('/:id/statut', authenticate, async (req, res) => {
           message: 'Vous n\'avez pas la permission de modifier ce statut'
         });
       }
-    } else if (req.user.fonction === 6) {
-      // Confirmateurs : peuvent refuser ou valider, mais pas annuler
+    } else if (req.user.fonction === 6 || req.user.fonction === 14 || req.user.fonction === 15) {
+      // Confirmateurs, RE Confirmation, RP Confirmation : peuvent refuser ou valider, mais pas annuler
       if (id_etat === 6) {
         return res.status(403).json({
           success: false,
