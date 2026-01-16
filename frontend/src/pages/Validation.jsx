@@ -191,7 +191,7 @@ const Validation = () => {
           </div>
         ) : fiches.length === 0 ? (
           <div className="no-results">Aucun RDV trouvé</div>
-        ) : (
+        ) : showDetails ? (
           <div className={`fiches-table-container ${!showDetails ? 'compact' : ''}`}>
             <table className="fiches-table">
               <thead>
@@ -264,7 +264,7 @@ const Validation = () => {
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
 
         {/* Tableau des statistiques par département */}
         <div className="departements-stats-container">
