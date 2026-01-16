@@ -91,10 +91,11 @@ router.delete('/centres/:id', authenticate, checkPermission(1, 2, 7), async (req
 // =====================================================
 
 // Récupérer tous les départements (accessible à tous)
+// Pour la page de gestion, on affiche tous les départements, même ceux désactivés
 router.get('/departements', authenticate, async (req, res) => {
   try {
     const departements = await query(
-      'SELECT * FROM departements WHERE etat > 0 ORDER BY departement_code ASC'
+      'SELECT * FROM departements ORDER BY departement_code ASC'
     );
     res.json({ success: true, data: departements });
   } catch (error) {
