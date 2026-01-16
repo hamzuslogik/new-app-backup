@@ -3,13 +3,14 @@ import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaCheck, FaTimes, FaCalendarAlt, FaFilter } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaCalendarAlt, FaFilter, FaEye, FaEyeSlash } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
 import './Validation.css';
 
 const Validation = () => {
   const { user } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
+  const [showDetails, setShowDetails] = useState(true);
   
   // Calculer les dates par défaut : lendemain, et si c'est vendredi, afficher les RDV de lundi
   const getDefaultDates = () => {
@@ -99,12 +100,20 @@ const Validation = () => {
     <div className="validation-page">
       <div className="validation-header">
         <h1><FaCalendarAlt /> Validation des RDV</h1>
-        <button 
-          className="filter-toggle-btn" 
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
-        </button>
+        <div className="header-buttons">
+          <button 
+            className="filter-toggle-btn" 
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
+          </button>
+          <button 
+            className="details-toggle-btn" 
+            onClick={() => setShowDetails(!showDetails)}
+          >
+            {showDetails ? <FaEyeSlash /> : <FaEye />} {showDetails ? 'Masquer' : 'Afficher'} les détails
+          </button>
+        </div>
       </div>
 
       {/* Stats cards */}
@@ -183,20 +192,20 @@ const Validation = () => {
         ) : fiches.length === 0 ? (
           <div className="no-results">Aucun RDV trouvé</div>
         ) : (
-          <div className="fiches-table-container">
+          <div className={`fiches-table-container ${!showDetails ? 'compact' : ''}`}>
             <table className="fiches-table">
               <thead>
                 <tr>
                   <th>ID</th>
                   <th>Nom</th>
                   <th>Prénom</th>
-                  <th>Téléphone</th>
-                  <th>CP</th>
-                  <th>Ville</th>
+                  {showDetails && <th>Téléphone</th>}
+                  {showDetails && <th>CP</th>}
+                  {showDetails && <th>Ville</th>}
                   <th>Produit</th>
                   <th>Date RDV</th>
-                  <th>Commercial</th>
-                  <th>Confirmateur(s)</th>
+                  {showDetails && <th>Commercial</th>}
+                  {showDetails && <th>Confirmateur(s)</th>}
                   <th>Statut</th>
                   <th>Actions</th>
                 </tr>
@@ -213,9 +222,9 @@ const Validation = () => {
                       <td>{fiche.id}</td>
                       <td>{fiche.nom || '-'}</td>
                       <td>{fiche.prenom || '-'}</td>
-                      <td>{fiche.tel || '-'}</td>
-                      <td>{fiche.cp || '-'}</td>
-                      <td>{fiche.ville || '-'}</td>
+                      {showDetails && <td>{fiche.tel || '-'}</td>}
+                      {showDetails && <td>{fiche.cp || '-'}</td>}
+                      {showDetails && <td>{fiche.ville || '-'}</td>}
                       <td>
                         <span 
                           className="produit-indicator"
@@ -225,8 +234,8 @@ const Validation = () => {
                         </span>
                       </td>
                       <td>{formatDate(fiche.date_rdv_time)}</td>
-                      <td>{fiche.commercial_pseudo || '-'}</td>
-                      <td>{confirmateurs.join(', ') || '-'}</td>
+                      {showDetails && <td>{fiche.commercial_pseudo || '-'}</td>}
+                      {showDetails && <td>{confirmateurs.join(', ') || '-'}</td>}
                       <td>
                         {fiche.valider === 1 ? (
                           <span className="validation-badge validated">

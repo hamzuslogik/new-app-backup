@@ -13,6 +13,12 @@
   gap: 12px;
 }
 
+.header-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .validation-header h1 {
   font-size: 23.8px;
   color: #333333 !important;
@@ -42,6 +48,24 @@
 
 .filter-toggle-btn:hover {
   background: #e09115;
+}
+
+.details-toggle-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  background: #2196F3;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+  transition: background 0.3s;
+}
+
+.details-toggle-btn:hover {
+  background: #1976D2;
 }
 
 .validation-stats {
@@ -161,6 +185,10 @@
   width: 100%;
   border-collapse: collapse;
   min-width: 1200px;
+}
+
+.fiches-table-container.compact .fiches-table {
+  min-width: 600px;
 }
 
 .fiches-table thead {
