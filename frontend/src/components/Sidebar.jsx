@@ -136,6 +136,13 @@ const Sidebar = ({ collapsed }) => {
       visible: true,
     },
     {
+      path: '/kpis',
+      label: 'KPIs',
+      icon: FaChartLine,
+      permission: 'kpi_qualification_view',
+      visible: true,
+    },
+    {
       path: '/affectation',
       label: 'Affectation',
       icon: FaUserCheck,

@@ -1262,6 +1262,246 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
   }
 });
 
+// =====================================================
+// KPIs - Nouveaux KPI avec Top 3, Taux de conversion, Évolution
+// =====================================================
+
+// Récupérer les KPIs (Top 3 agents, Top 3 équipes, Taux de conversion, Évolution)
+router.get('/kpis', authenticate, async (req, res) => {
+  try {
+    const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
+    
+    // Récupérer les IDs des états groupe 0 pour exclure
+    const etatsGroupe0 = await query(`
+      SELECT id FROM etats
+      WHERE (groupe = '0' OR groupe = 0)
+    `);
+    const idsGroupe0 = etatsGroupe0.map(e => e.id);
+
+    // Dates pour jour, semaine, mois
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Semaine (lundi à dimanche)
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(today.getFullYear(), today.getMonth(), diff);
+    const weekStart = monday.toISOString().split('T')[0];
+    const weekEnd = todayStr;
+    
+    // Mois - utiliser le mois sélectionné ou le mois en cours
+    let monthStart, monthEnd;
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const [year, monthNum] = month.split('-').map(Number);
+      monthStart = new Date(year, monthNum - 1, 1).toISOString().split('T')[0];
+      const lastDay = new Date(year, monthNum, 0).getDate();
+      monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
+    } else {
+      monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      monthEnd = todayStr;
+    }
+
+    const kpiData = {
+      jour: {},
+      semaine: {},
+      mois: {}
+    };
+
+    // Pour chaque période (jour, semaine, mois)
+    const periods = [
+      { key: 'jour', start: todayStr, end: todayStr, label: 'Aujourd\'hui' },
+      { key: 'semaine', start: weekStart, end: weekEnd, label: 'Cette semaine' },
+      { key: 'mois', start: monthStart, end: monthEnd, label: 'Ce mois' }
+    ];
+
+    for (const period of periods) {
+      const startDate = `${period.start} 00:00:00`;
+      const endDate = `${period.end} 23:59:59`;
+
+      // Calculer les dates de la période précédente pour l'évolution
+      let previousStart, previousEnd;
+      if (period.key === 'jour') {
+        // Jour précédent
+        const yesterday = new Date(period.start);
+        yesterday.setDate(yesterday.getDate() - 1);
+        previousStart = previousEnd = yesterday.toISOString().split('T')[0];
+      } else if (period.key === 'semaine') {
+        // Semaine précédente
+        const prevMonday = new Date(monday);
+        prevMonday.setDate(prevMonday.getDate() - 7);
+        const prevSunday = new Date(prevMonday);
+        prevSunday.setDate(prevSunday.getDate() + 6);
+        previousStart = prevMonday.toISOString().split('T')[0];
+        previousEnd = prevSunday.toISOString().split('T')[0];
+      } else {
+        // Mois précédent
+        const prevMonth = new Date(monthStart);
+        prevMonth.setMonth(prevMonth.getMonth() - 1);
+        const prevMonthStart = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), 1).toISOString().split('T')[0];
+        const prevMonthEnd = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0).toISOString().split('T')[0];
+        previousStart = prevMonthStart;
+        previousEnd = prevMonthEnd;
+      }
+
+      const previousStartDate = `${previousStart} 00:00:00`;
+      const previousEndDate = `${previousEnd} 23:59:59`;
+
+      const baseParams = idsGroupe0.length > 0 
+        ? [startDate, endDate, ...idsGroupe0]
+        : [startDate, endDate];
+
+      // 1. Top 3 Agents
+      const top3AgentsQuery = `
+        SELECT 
+          u.id,
+          u.pseudo,
+          u.nom,
+          u.prenom,
+          u.photo,
+          COUNT(DISTINCT f.id) as count_validated
+        FROM fiches f
+        INNER JOIN utilisateurs u ON f.id_agent = u.id
+        INNER JOIN etats e ON f.id_etat_final = e.id
+        WHERE u.fonction = 3
+        AND u.etat > 0
+        AND f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+        ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
+        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
+        ORDER BY count_validated DESC
+        LIMIT 3
+      `;
+      const top3Agents = await query(top3AgentsQuery, baseParams);
+
+      // 2. Top 3 Équipes
+      const top3TeamsQuery = `
+        SELECT 
+          s.id as superviseur_id,
+          s.pseudo as superviseur_pseudo,
+          s.nom as superviseur_nom,
+          s.prenom as superviseur_prenom,
+          COUNT(DISTINCT f.id) as count_validated,
+          COUNT(DISTINCT a.id) as nb_agents
+        FROM fiches f
+        INNER JOIN utilisateurs a ON f.id_agent = a.id
+        INNER JOIN utilisateurs s ON a.chef_equipe = s.id
+        INNER JOIN etats e ON f.id_etat_final = e.id
+        WHERE a.fonction = 3
+        AND a.etat > 0
+        AND s.etat > 0
+        AND f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+        ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
+        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        GROUP BY s.id, s.pseudo, s.nom, s.prenom
+        ORDER BY count_validated DESC
+        LIMIT 3
+      `;
+      const top3Teams = await query(top3TeamsQuery, baseParams);
+
+      // 3. Total fiches validées (période actuelle)
+      const validatedParams = idsGroupe0.length > 0 
+        ? [startDate, endDate, ...idsGroupe0]
+        : [startDate, endDate];
+      
+      const validatedQuery = `
+        SELECT COUNT(DISTINCT f.id) as count
+        FROM fiches f
+        INNER JOIN etats e ON f.id_etat_final = e.id
+        WHERE f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+        ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
+        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+      `;
+      const validatedResult = await queryOne(validatedQuery, validatedParams);
+      const validatedCount = validatedResult?.count || 0;
+
+      // 4. Total fiches créées (période actuelle)
+      const totalQuery = `
+        SELECT COUNT(*) as count
+        FROM fiches f
+        WHERE f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `;
+      const totalResult = await queryOne(totalQuery, [startDate, endDate]);
+      const totalCount = totalResult?.count || 0;
+
+      // 5. Total fiches validées (période précédente)
+      const previousValidatedParams = idsGroupe0.length > 0 
+        ? [previousStartDate, previousEndDate, ...idsGroupe0]
+        : [previousStartDate, previousEndDate];
+      
+      const previousValidatedResult = await queryOne(validatedQuery, previousValidatedParams);
+      const previousValidatedCount = previousValidatedResult?.count || 0;
+
+      // 6. Total fiches créées (période précédente)
+      const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate]);
+      const previousTotalCount = previousTotalResult?.count || 0;
+
+      // Calculer le taux de conversion
+      const conversionRate = totalCount > 0 ? (validatedCount / totalCount) * 100 : 0;
+      const previousConversionRate = previousTotalCount > 0 ? (previousValidatedCount / previousTotalCount) * 100 : 0;
+      const conversionRateChange = conversionRate - previousConversionRate;
+
+      // Calculer l'évolution
+      const evolutionChange = previousValidatedCount > 0 
+        ? ((validatedCount - previousValidatedCount) / previousValidatedCount) * 100 
+        : (validatedCount > 0 ? 100 : 0);
+      
+      const evolutionTrend = evolutionChange > 0 ? 'up' : (evolutionChange < 0 ? 'down' : 'stable');
+
+      kpiData[period.key] = {
+        period: period.label,
+        date_start: period.start,
+        date_end: period.end,
+        conversion_rate: conversionRate,
+        conversion_rate_change: conversionRateChange,
+        top3_agents: top3Agents.map(agent => ({
+          id: agent.id,
+          pseudo: agent.pseudo,
+          nom: agent.nom,
+          prenom: agent.prenom,
+          photo: agent.photo,
+          count: agent.count_validated || 0
+        })),
+        top3_teams: top3Teams.map(team => ({
+          superviseur: {
+            id: team.superviseur_id,
+            pseudo: team.superviseur_pseudo,
+            nom: team.superviseur_nom,
+            prenom: team.superviseur_prenom
+          },
+          count: team.count_validated || 0,
+          nb_agents: team.nb_agents || 0
+        })),
+        evolution: {
+          current: validatedCount,
+          previous: previousValidatedCount,
+          change: evolutionChange,
+          trend: evolutionTrend
+        }
+      };
+    }
+
+    res.json({
+      success: true,
+      data: kpiData
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des KPIs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des KPIs',
+      error: error.message
+    });
+  }
+});
+
 // Statistiques des agents pour un superviseur
 router.get('/superviseur/:id', authenticate, async (req, res) => {
   try {

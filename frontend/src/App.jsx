@@ -23,6 +23,7 @@ import SuiviAgentsQualif from './pages/SuiviAgentsQualif';
 import SuiviAgents from './pages/SuiviAgents';
 import ProductionQualif from './pages/ProductionQualif';
 import KPIQualification from './pages/KPIQualification';
+import KPIs from './pages/KPIs';
 import ControleQualite from './pages/ControleQualite';
 import CompteRendu from './pages/CompteRendu';
 import CompteRenduPending from './pages/CompteRenduPending';
@@ -72,6 +73,7 @@ function App() {
           <Route path="suivi-agents" element={<ProtectedRoute permission="suivi_agents_view"><SuiviAgents /></ProtectedRoute>} />
           <Route path="production-qualif" element={<ProtectedRoute permission="production_qualif_view"><ProductionQualif /></ProtectedRoute>} />
           <Route path="kpi-qualification" element={<ProtectedRoute permission="kpi_qualification_view"><KPIQualification /></ProtectedRoute>} />
+          <Route path="kpis" element={<ProtectedRoute permission="kpi_qualification_view"><KPIs /></ProtectedRoute>} />
           <Route path="controle-qualite" element={<ProtectedRoute permission="controle_qualite_view"><ControleQualite /></ProtectedRoute>} />
           <Route path="compte-rendu" element={<ProtectedRoute permission="compte_rendu_view"><CompteRendu /></ProtectedRoute>} />
           <Route path="compte-rendu-pending" element={<ProtectedRoute permission={null} customCheck={(item, user) => [1, 2, 5, 7].includes(user?.fonction)}><CompteRenduPending /></ProtectedRoute>} />
