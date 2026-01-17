@@ -1502,6 +1502,516 @@ router.get('/kpis', authenticate, async (req, res) => {
   }
 });
 
+// =====================================================
+// KPIs CONFIRMATION - Top 3 confirmateurs, Taux de confirmation/signature, Évolution
+// =====================================================
+
+// Récupérer les KPIs Confirmation (Top 3 confirmateurs confirmations/signatures, Taux, Évolution)
+router.get('/kpis-confirmation', authenticate, async (req, res) => {
+  try {
+    const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
+    
+    // Dates pour jour, semaine, mois
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Semaine (lundi à dimanche)
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(today.getFullYear(), today.getMonth(), diff);
+    const weekStart = monday.toISOString().split('T')[0];
+    const weekEnd = todayStr;
+    
+    // Mois - utiliser le mois sélectionné ou le mois en cours
+    let monthStart, monthEnd;
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const [year, monthNum] = month.split('-').map(Number);
+      monthStart = new Date(year, monthNum - 1, 1).toISOString().split('T')[0];
+      const lastDay = new Date(year, monthNum, 0).getDate();
+      monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
+    } else {
+      monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      monthEnd = todayStr;
+    }
+
+    const kpiData = {
+      jour: {},
+      semaine: {},
+      mois: {}
+    };
+
+    // Pour chaque période (jour, semaine, mois)
+    const periods = [
+      { key: 'jour', start: todayStr, end: todayStr, label: 'Aujourd\'hui' },
+      { key: 'semaine', start: weekStart, end: weekEnd, label: 'Cette semaine' },
+      { key: 'mois', start: monthStart, end: monthEnd, label: 'Ce mois' }
+    ];
+
+    for (const period of periods) {
+      const startDate = `${period.start} 00:00:00`;
+      const endDate = `${period.end} 23:59:59`;
+
+      // Calculer les dates de la période précédente pour l'évolution
+      let previousStart, previousEnd;
+      if (period.key === 'jour') {
+        const yesterday = new Date(period.start);
+        yesterday.setDate(yesterday.getDate() - 1);
+        previousStart = previousEnd = yesterday.toISOString().split('T')[0];
+      } else if (period.key === 'semaine') {
+        const prevMonday = new Date(monday);
+        prevMonday.setDate(prevMonday.getDate() - 7);
+        const prevSunday = new Date(prevMonday);
+        prevSunday.setDate(prevSunday.getDate() + 6);
+        previousStart = prevMonday.toISOString().split('T')[0];
+        previousEnd = prevSunday.toISOString().split('T')[0];
+      } else {
+        const prevMonth = new Date(monthStart);
+        prevMonth.setMonth(prevMonth.getMonth() - 1);
+        const prevMonthStart = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), 1).toISOString().split('T')[0];
+        const prevMonthEnd = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0).toISOString().split('T')[0];
+        previousStart = prevMonthStart;
+        previousEnd = prevMonthEnd;
+      }
+
+      const previousStartDate = `${previousStart} 00:00:00`;
+      const previousEndDate = `${previousEnd} 23:59:59`;
+
+      // 1. Top 3 Confirmateurs - Confirmations (état 7)
+      const top3ConfirmationsQuery = `
+        SELECT 
+          u.id,
+          u.pseudo,
+          u.nom,
+          u.prenom,
+          u.photo,
+          COUNT(DISTINCT f.id) as count_confirmations
+        FROM fiches f
+        INNER JOIN utilisateurs u ON f.id_confirmateur = u.id
+        WHERE u.fonction = 6
+        AND u.etat > 0
+        AND f.id_etat_final = 7
+        AND f.date_modif_time >= ?
+        AND f.date_modif_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+        GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
+        ORDER BY count_confirmations DESC
+        LIMIT 3
+      `;
+      const top3Confirmations = await query(top3ConfirmationsQuery, [startDate, endDate]);
+
+      // 2. Top 3 Confirmateurs - Signatures (états 13, 16, 44, 45)
+      // Compter les signatures avec le système de score (1 confirmateur = 1, 2 = 0.5 chacun, 3 = 0.33 chacun)
+      // On doit compter tous les confirmateurs (1, 2, 3) pour chaque fiche
+      const signaturesFiches = await query(`
+        SELECT 
+          f.id,
+          f.id_confirmateur,
+          f.id_confirmateur_2,
+          f.id_confirmateur_3
+        FROM fiches f
+        WHERE f.id_etat_final IN (13, 16, 44, 45)
+        AND f.date_sign_time >= ?
+        AND f.date_sign_time <= ?
+        AND f.date_sign_time IS NOT NULL
+        AND f.date_sign_time != ''
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `, [startDate, endDate]);
+
+      // Calculer les scores par confirmateur
+      const signaturesScores = {};
+      signaturesFiches.forEach(fiche => {
+        const confirmateurs = [];
+        if (fiche.id_confirmateur) confirmateurs.push(fiche.id_confirmateur);
+        if (fiche.id_confirmateur_2) confirmateurs.push(fiche.id_confirmateur_2);
+        if (fiche.id_confirmateur_3) confirmateurs.push(fiche.id_confirmateur_3);
+        
+        const score = confirmateurs.length === 1 ? 1.0 : (confirmateurs.length === 2 ? 0.5 : (1.0 / 3.0));
+        
+        confirmateurs.forEach(confId => {
+          if (!signaturesScores[confId]) {
+            signaturesScores[confId] = 0;
+          }
+          signaturesScores[confId] += score;
+        });
+      });
+
+      // Récupérer les informations des confirmateurs et trier
+      const top3SignaturesIds = Object.entries(signaturesScores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([id]) => parseInt(id));
+
+      let top3Signatures = [];
+      if (top3SignaturesIds.length > 0) {
+        const confirmateursInfo = await query(`
+          SELECT id, pseudo, nom, prenom, photo
+          FROM utilisateurs
+          WHERE id IN (${top3SignaturesIds.map(() => '?').join(',')})
+          AND fonction = 6
+          AND etat > 0
+        `, top3SignaturesIds);
+
+        top3Signatures = confirmateursInfo.map(conf => ({
+          id: conf.id,
+          pseudo: conf.pseudo,
+          nom: conf.nom,
+          prenom: conf.prenom,
+          photo: conf.photo,
+          count_signatures: signaturesScores[conf.id] || 0
+        })).sort((a, b) => b.count_signatures - a.count_signatures);
+      }
+
+      // 3. Total confirmations (période actuelle)
+      const confirmationsQuery = `
+        SELECT COUNT(DISTINCT f.id) as count
+        FROM fiches f
+        WHERE f.id_etat_final = 7
+        AND f.date_modif_time >= ?
+        AND f.date_modif_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `;
+      const confirmationsResult = await queryOne(confirmationsQuery, [startDate, endDate]);
+      const confirmationsCount = confirmationsResult?.count || 0;
+
+      // 4. Total signatures (période actuelle) - avec système de score
+      // Utiliser les mêmes fiches que pour le top 3
+      let signaturesCount = 0;
+      signaturesFiches.forEach(fiche => {
+        const confirmateurs = [];
+        if (fiche.id_confirmateur) confirmateurs.push(fiche.id_confirmateur);
+        if (fiche.id_confirmateur_2) confirmateurs.push(fiche.id_confirmateur_2);
+        if (fiche.id_confirmateur_3) confirmateurs.push(fiche.id_confirmateur_3);
+        
+        const score = confirmateurs.length === 1 ? 1.0 : (confirmateurs.length === 2 ? 0.5 : (1.0 / 3.0));
+        signaturesCount += score;
+      });
+
+      // 5. Total fiches créées (période actuelle)
+      const totalQuery = `
+        SELECT COUNT(*) as count
+        FROM fiches f
+        WHERE f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `;
+      const totalResult = await queryOne(totalQuery, [startDate, endDate]);
+      const totalCount = totalResult?.count || 0;
+
+      // 6. Totaux période précédente
+      const previousConfirmationsResult = await queryOne(confirmationsQuery, [previousStartDate, previousEndDate]);
+      const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
+
+      // Calculer les signatures de la période précédente
+      const previousSignaturesFiches = await query(`
+        SELECT 
+          f.id,
+          f.id_confirmateur,
+          f.id_confirmateur_2,
+          f.id_confirmateur_3
+        FROM fiches f
+        WHERE f.id_etat_final IN (13, 16, 44, 45)
+        AND f.date_sign_time >= ?
+        AND f.date_sign_time <= ?
+        AND f.date_sign_time IS NOT NULL
+        AND f.date_sign_time != ''
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `, [previousStartDate, previousEndDate]);
+
+      let previousSignaturesCount = 0;
+      previousSignaturesFiches.forEach(fiche => {
+        const confirmateurs = [];
+        if (fiche.id_confirmateur) confirmateurs.push(fiche.id_confirmateur);
+        if (fiche.id_confirmateur_2) confirmateurs.push(fiche.id_confirmateur_2);
+        if (fiche.id_confirmateur_3) confirmateurs.push(fiche.id_confirmateur_3);
+        
+        const score = confirmateurs.length === 1 ? 1.0 : (confirmateurs.length === 2 ? 0.5 : (1.0 / 3.0));
+        previousSignaturesCount += score;
+      });
+
+      const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate]);
+      const previousTotalCount = previousTotalResult?.count || 0;
+
+      // Calculer les taux
+      const confirmationRate = totalCount > 0 ? (confirmationsCount / totalCount) * 100 : 0;
+      const signatureRate = totalCount > 0 ? (signaturesCount / totalCount) * 100 : 0;
+      
+      const previousConfirmationRate = previousTotalCount > 0 ? (previousConfirmationsCount / previousTotalCount) * 100 : 0;
+      const previousSignatureRate = previousTotalCount > 0 ? (previousSignaturesCount / previousTotalCount) * 100 : 0;
+      
+      const confirmationRateChange = confirmationRate - previousConfirmationRate;
+      const signatureRateChange = signatureRate - previousSignatureRate;
+
+      // Calculer l'évolution
+      const confirmationEvolutionChange = previousConfirmationsCount > 0 
+        ? ((confirmationsCount - previousConfirmationsCount) / previousConfirmationsCount) * 100 
+        : (confirmationsCount > 0 ? 100 : 0);
+      
+      const signatureEvolutionChange = previousSignaturesCount > 0 
+        ? ((signaturesCount - previousSignaturesCount) / previousSignaturesCount) * 100 
+        : (signaturesCount > 0 ? 100 : 0);
+      
+      const confirmationTrend = confirmationEvolutionChange > 0 ? 'up' : (confirmationEvolutionChange < 0 ? 'down' : 'stable');
+      const signatureTrend = signatureEvolutionChange > 0 ? 'up' : (signatureEvolutionChange < 0 ? 'down' : 'stable');
+
+      kpiData[period.key] = {
+        period: period.label,
+        date_start: period.start,
+        date_end: period.end,
+        confirmation_rate: confirmationRate,
+        confirmation_rate_change: confirmationRateChange,
+        signature_rate: signatureRate,
+        signature_rate_change: signatureRateChange,
+        top3_confirmations: top3Confirmations.map(conf => ({
+          id: conf.id,
+          pseudo: conf.pseudo,
+          nom: conf.nom,
+          prenom: conf.prenom,
+          photo: conf.photo,
+          count: Math.round(conf.count_confirmations || 0)
+        })),
+        top3_signatures: top3Signatures.map(conf => ({
+          id: conf.id,
+          pseudo: conf.pseudo,
+          nom: conf.nom,
+          prenom: conf.prenom,
+          photo: conf.photo,
+          count: parseFloat((conf.count_signatures || 0).toFixed(2))
+        })),
+        confirmation_evolution: {
+          current: confirmationsCount,
+          previous: previousConfirmationsCount,
+          change: confirmationEvolutionChange,
+          trend: confirmationTrend
+        },
+        signature_evolution: {
+          current: parseFloat(signaturesCount.toFixed(2)),
+          previous: parseFloat(previousSignaturesCount.toFixed(2)),
+          change: signatureEvolutionChange,
+          trend: signatureTrend
+        }
+      };
+    }
+
+    res.json({
+      success: true,
+      data: kpiData
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des KPIs confirmation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des KPIs confirmation',
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// KPIs PAR CENTRE - KPIs groupés par centre
+// =====================================================
+
+// Récupérer les KPIs par centre
+router.get('/kpis-centres', authenticate, async (req, res) => {
+  try {
+    const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
+    
+    // Récupérer les IDs des états groupe 0 pour exclure
+    const etatsGroupe0 = await query(`
+      SELECT id FROM etats
+      WHERE (groupe = '0' OR groupe = 0)
+    `);
+    const idsGroupe0 = etatsGroupe0.map(e => e.id);
+
+    // Dates pour jour, semaine, mois
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Semaine (lundi à dimanche)
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(today.getFullYear(), today.getMonth(), diff);
+    const weekStart = monday.toISOString().split('T')[0];
+    const weekEnd = todayStr;
+    
+    // Mois - utiliser le mois sélectionné ou le mois en cours
+    let monthStart, monthEnd;
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const [year, monthNum] = month.split('-').map(Number);
+      monthStart = new Date(year, monthNum - 1, 1).toISOString().split('T')[0];
+      const lastDay = new Date(year, monthNum, 0).getDate();
+      monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
+    } else {
+      monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      monthEnd = todayStr;
+    }
+
+    const kpiData = {
+      jour: {},
+      semaine: {},
+      mois: {}
+    };
+
+    // Pour chaque période (jour, semaine, mois)
+    const periods = [
+      { key: 'jour', start: todayStr, end: todayStr, label: 'Aujourd\'hui' },
+      { key: 'semaine', start: weekStart, end: weekEnd, label: 'Cette semaine' },
+      { key: 'mois', start: monthStart, end: monthEnd, label: 'Ce mois' }
+    ];
+
+    for (const period of periods) {
+      const startDate = `${period.start} 00:00:00`;
+      const endDate = `${period.end} 23:59:59`;
+
+      const baseParams = idsGroupe0.length > 0 
+        ? [startDate, endDate, ...idsGroupe0]
+        : [startDate, endDate];
+
+      // Récupérer tous les centres actifs
+      const centres = await query(`
+        SELECT id, titre
+        FROM centres
+        WHERE etat > 0
+        ORDER BY titre ASC
+      `);
+
+      const centresKPIs = [];
+
+      for (const centre of centres) {
+        // Total fiches créées pour ce centre
+        const totalQuery = `
+          SELECT COUNT(*) as count
+          FROM fiches f
+          WHERE f.id_centre = ?
+          AND f.date_insert_time >= ?
+          AND f.date_insert_time <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
+        `;
+        const totalResult = await queryOne(totalQuery, [centre.id, startDate, endDate]);
+        const totalCount = totalResult?.count || 0;
+
+        // Fiches validées pour ce centre
+        const validatedParams = idsGroupe0.length > 0 
+          ? [centre.id, startDate, endDate, ...idsGroupe0]
+          : [centre.id, startDate, endDate];
+        
+        const validatedQuery = `
+          SELECT COUNT(DISTINCT f.id) as count
+          FROM fiches f
+          INNER JOIN etats e ON f.id_etat_final = e.id
+          WHERE f.id_centre = ?
+          AND f.date_insert_time >= ?
+          AND f.date_insert_time <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
+          ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
+          AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        `;
+        const validatedResult = await queryOne(validatedQuery, validatedParams);
+        const validatedCount = validatedResult?.count || 0;
+
+        // Taux de conversion
+        const conversionRate = totalCount > 0 ? (validatedCount / totalCount) * 100 : 0;
+
+        // Meilleur agent pour ce centre
+        const bestAgentQuery = `
+          SELECT 
+            u.id,
+            u.pseudo,
+            u.nom,
+            u.prenom,
+            u.photo,
+            COUNT(DISTINCT f.id) as count_validated
+          FROM fiches f
+          INNER JOIN utilisateurs u ON f.id_agent = u.id
+          INNER JOIN etats e ON f.id_etat_final = e.id
+          WHERE f.id_centre = ?
+          AND u.fonction = 3
+          AND u.etat > 0
+          AND f.date_insert_time >= ?
+          AND f.date_insert_time <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
+          ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
+          AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+          GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
+          ORDER BY count_validated DESC
+          LIMIT 1
+        `;
+        const bestAgent = await queryOne(bestAgentQuery, validatedParams);
+
+        // Meilleure équipe pour ce centre
+        const bestTeamQuery = `
+          SELECT 
+            s.id as superviseur_id,
+            s.pseudo as superviseur_pseudo,
+            s.nom as superviseur_nom,
+            s.prenom as superviseur_prenom,
+            COUNT(DISTINCT f.id) as count_validated
+          FROM fiches f
+          INNER JOIN utilisateurs a ON f.id_agent = a.id
+          INNER JOIN utilisateurs s ON a.chef_equipe = s.id
+          INNER JOIN etats e ON f.id_etat_final = e.id
+          WHERE f.id_centre = ?
+          AND a.fonction = 3
+          AND a.etat > 0
+          AND s.etat > 0
+          AND f.date_insert_time >= ?
+          AND f.date_insert_time <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
+          ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
+          AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+          GROUP BY s.id, s.pseudo, s.nom, s.prenom
+          ORDER BY count_validated DESC
+          LIMIT 1
+        `;
+        const bestTeam = await queryOne(bestTeamQuery, validatedParams);
+
+        centresKPIs.push({
+          centre_id: centre.id,
+          centre_titre: centre.titre,
+          conversion_rate: conversionRate,
+          validated_count: validatedCount,
+          total_count: totalCount,
+          top_agent: bestAgent ? {
+            id: bestAgent.id,
+            pseudo: bestAgent.pseudo,
+            nom: bestAgent.nom,
+            prenom: bestAgent.prenom,
+            photo: bestAgent.photo,
+            count: bestAgent.count_validated || 0
+          } : null,
+          top_team: bestTeam ? {
+            superviseur: {
+              id: bestTeam.superviseur_id,
+              pseudo: bestTeam.superviseur_pseudo,
+              nom: bestTeam.superviseur_nom,
+              prenom: bestTeam.superviseur_prenom
+            },
+            count: bestTeam.count_validated || 0
+          } : null
+        });
+      }
+
+      kpiData[period.key] = {
+        period: period.label,
+        date_start: period.start,
+        date_end: period.end,
+        centres: centresKPIs
+      };
+    }
+
+    res.json({
+      success: true,
+      data: kpiData
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des KPIs par centre:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des KPIs par centre',
+      error: error.message
+    });
+  }
+});
+
 // Statistiques des agents pour un superviseur
 router.get('/superviseur/:id', authenticate, async (req, res) => {
   try {

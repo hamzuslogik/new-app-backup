@@ -139,7 +139,7 @@ const Sidebar = ({ collapsed }) => {
       path: '/kpis',
       label: 'KPIs',
       icon: FaChartLine,
-      permission: 'kpi_qualification_view',
+      permission: 'kpis_view',
       visible: true,
     },
     {

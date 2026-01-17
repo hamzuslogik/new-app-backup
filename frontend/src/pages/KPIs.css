@@ -33,6 +33,35 @@
   color: #f7a219;
 }
 
+.tabs-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  padding: 12px 24px;
+  border: 2px solid #9cbfc8;
+  background: white;
+  color: #9cbfc8;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s;
+}
+
+.tab-btn:hover {
+  background: #f0f8f9;
+  border-color: #7aa8b3;
+}
+
+.tab-btn.active {
+  background: #9cbfc8;
+  color: white;
+  border-color: #9cbfc8;
+}
+
 .period-selector {
   display: flex;
   gap: 10px;
@@ -155,6 +184,123 @@
 
 .kpi-card.team-card {
   border-top: 4px solid #9C27B0;
+}
+
+.kpi-card.confirmation-rate {
+  border-top: 4px solid #FF9800;
+}
+
+.kpi-card.signature-rate {
+  border-top: 4px solid #E91E63;
+}
+
+.kpi-card.confirmateur-card {
+  border-top: 4px solid #00BCD4;
+}
+
+/* Styles pour l'onglet Par Centre */
+.centres-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.centre-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  border-top: 4px solid #9cbfc8;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.centre-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.centre-header {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.centre-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.centre-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.centre-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.metric-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #9cbfc8;
+}
+
+.centre-top-agent,
+.centre-top-team {
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.centre-top-agent h4,
+.centre-top-team h4 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.centre-top-agent .agent-info,
+.centre-top-team .team-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.centre-top-team .team-info {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.team-count {
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+}
+
+@media (max-width: 768px) {
+  .centres-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .kpi-card-header {
