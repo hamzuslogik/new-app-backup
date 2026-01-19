@@ -1,7 +1,16 @@
 import React from 'react';
+import UtilisateursTab from '../components/management/UtilisateursTab';
+import './Users.css';
 
 const Users = () => {
-  return <div>Utilisateurs</div>;
+  return (
+    <div className="users-page">
+      <div className="page-header">
+        <h1>Gestion des Utilisateurs</h1>
+      </div>
+      <UtilisateursTab />
+    </div>
+  );
 };
 
 export default Users;
