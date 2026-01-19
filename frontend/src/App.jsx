@@ -32,6 +32,7 @@ import Permissions from './pages/Permissions';
 import ImportMasse from './pages/ImportMasse';
 import Messages from './pages/Messages';
 import Users from './pages/Users';
+import StatsAgentsQualite from './pages/StatsAgentsQualite';
 import Management from './pages/Management';
 import Decalages from './pages/Decalages';
 import Validation from './pages/Validation';
@@ -82,6 +83,7 @@ function App() {
           <Route path="import-masse" element={<ProtectedRoute permission="import_masse_view" excludeFunctions={[8]}><ImportMasse /></ProtectedRoute>} />
           <Route path="messages" element={<ProtectedRoute permission="messages_view"><Messages /></ProtectedRoute>} />
           <Route path="users" element={<ProtectedRoute permission="users_view"><Users /></ProtectedRoute>} />
+          <Route path="stats-agents-qualite" element={<ProtectedRoute permission="stats_agents_qualite_view"><StatsAgentsQualite /></ProtectedRoute>} />
           <Route path="management" element={<ProtectedRoute permission="management_view" excludeFunctions={[8]}><Management /></ProtectedRoute>} />
           <Route path="decalages" element={<ProtectedRoute permission="decalage_view"><Decalages /></ProtectedRoute>} />
           <Route path="validation" element={<ProtectedRoute permission="validation_view"><Validation /></ProtectedRoute>} />

@@ -2243,4 +2243,209 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
   }
 });
 
+// =====================================================
+// STATISTIQUES PAR AGENT QUALITÉ
+// =====================================================
+
+// Récupérer les statistiques par agent qualité (qui ont audité des fiches)
+router.get('/agents-qualite', authenticate, async (req, res) => {
+  try {
+    const { 
+      date_debut, 
+      date_fin,
+      id_agent_qualite // Filtre optionnel par agent qualité
+    } = req.query;
+
+    // Valeurs par défaut : mois en cours
+    const today = new Date();
+    const startDateStr = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const endDateStr = date_fin || today.toISOString().split('T')[0];
+
+    const startDate = `${startDateStr} 00:00:00`;
+    const endDate = `${endDateStr} 23:59:59`;
+
+    // Détecter la structure de la table modifica
+    let modificaFieldCondition = '';
+    let modificaDateColumn = 'date_modif_time';
+    try {
+      const modificaColumns = await query('SHOW COLUMNS FROM modifica');
+      const hasTypeColumn = modificaColumns.some(col => col.Field === 'type');
+      const hasChampColumn = modificaColumns.some(col => col.Field === 'champ');
+      
+      if (hasTypeColumn) {
+        modificaFieldCondition = "m.type = 'commentaire_qualite'";
+      } else if (hasChampColumn) {
+        modificaFieldCondition = "m.champ = 'commentaire_qualite'";
+      } else {
+        // Si aucune colonne spécifique, on filtre par les fiches qui ont un commentaire_qualite
+        // et on utilise la table fiches directement
+        modificaFieldCondition = "f.commentaire_qualite IS NOT NULL AND f.commentaire_qualite != ''";
+      }
+    } catch (error) {
+      console.error('Erreur lors de la détection de la structure modifica:', error);
+      // Fallback : utiliser les fiches avec commentaire_qualite
+      modificaFieldCondition = "f.commentaire_qualite IS NOT NULL AND f.commentaire_qualite != ''";
+    }
+
+    // Récupérer tous les agents qualité qui ont ajouté/modifié des commentaires qualité
+    // Un agent qualité est identifié par celui qui a modifié le champ commentaire_qualite
+    let agentsQualiteQuery = `
+      SELECT DISTINCT
+        u.id,
+        u.pseudo,
+        u.nom,
+        u.prenom,
+        u.photo,
+        u.fonction,
+        f.titre as fonction_titre,
+        u.centre,
+        c.titre as centre_titre
+      FROM modifica m
+      INNER JOIN fiches fic ON m.id_fiche = fic.id
+      INNER JOIN utilisateurs u ON m.id_user = u.id
+      LEFT JOIN fonctions f ON u.fonction = f.id
+      LEFT JOIN centres c ON u.centre = c.id
+      WHERE fic.commentaire_qualite IS NOT NULL
+      AND fic.commentaire_qualite != ''
+      ${modificaFieldCondition && modificaFieldCondition !== '' ? `AND ${modificaFieldCondition}` : ''}
+      AND m.${modificaDateColumn} >= ?
+      AND m.${modificaDateColumn} <= ?
+      AND u.etat > 0
+    `;
+
+    const agentsParams = [startDate, endDate];
+
+    if (id_agent_qualite) {
+      agentsQualiteQuery += ' AND u.id = ?';
+      agentsParams.push(parseInt(id_agent_qualite));
+    }
+
+    agentsQualiteQuery += ' ORDER BY u.pseudo ASC';
+
+    const agentsQualite = await query(agentsQualiteQuery, agentsParams);
+
+    // Pour chaque agent qualité, calculer les statistiques
+    const agentsStats = await Promise.all(
+      agentsQualite.map(async (agent) => {
+        // Nombre total de fiches auditées (avec commentaire qualité ajouté/modifié)
+        // On compte les fiches qui ont un commentaire_qualite et qui ont été modifiées par cet agent
+        const auditsQuery = `
+          SELECT COUNT(DISTINCT f.id) as total_audits
+          FROM fiches f
+          INNER JOIN modifica m ON f.id = m.id_fiche
+          WHERE m.id_user = ?
+          AND f.commentaire_qualite IS NOT NULL
+          AND f.commentaire_qualite != ''
+          AND m.${modificaDateColumn} >= ?
+          AND m.${modificaDateColumn} <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
+        `;
+        const auditsResult = await queryOne(auditsQuery, [agent.id, startDate, endDate]);
+        const totalAudits = auditsResult?.total_audits || 0;
+
+        // Nombre de fiches avec commentaire qualité (non vide) - même chose que total_audits
+        const fichesAvecCommentaire = totalAudits;
+
+        // Nombre de fiches par état (états groupe 0)
+        const etatsGroupe0 = await query(`
+          SELECT id, titre, color, abbreviation
+          FROM etats
+          WHERE (groupe = '0' OR groupe = 0)
+          ORDER BY ordre ASC
+        `);
+
+        const statsParEtat = {};
+        for (const etat of etatsGroupe0) {
+          const etatQuery = `
+            SELECT COUNT(DISTINCT f.id) as count
+            FROM fiches f
+            INNER JOIN modifica m ON f.id = m.id_fiche
+            WHERE m.id_user = ?
+            AND f.commentaire_qualite IS NOT NULL
+            AND f.commentaire_qualite != ''
+            AND m.${modificaDateColumn} >= ?
+            AND m.${modificaDateColumn} <= ?
+            AND f.id_etat_final = ?
+            AND (f.archive = 0 OR f.archive IS NULL)
+          `;
+          const etatResult = await queryOne(etatQuery, [agent.id, startDate, endDate, etat.id]);
+          statsParEtat[etat.id] = {
+            id: etat.id,
+            titre: etat.titre,
+            color: etat.color || '#ccc',
+            abbreviation: etat.abbreviation || etat.titre,
+            count: etatResult?.count || 0
+          };
+        }
+
+        // Détails des fiches auditées (limité à 100 pour les performances)
+        const fichesAuditeesQuery = `
+          SELECT DISTINCT
+            f.id,
+            f.hash,
+            f.nom,
+            f.prenom,
+            f.tel,
+            f.date_insert_time,
+            f.commentaire_qualite,
+            f.id_etat_final,
+            e.titre as etat_titre,
+            e.color as etat_color,
+            m.${modificaDateColumn} as date_audit
+          FROM fiches f
+          INNER JOIN modifica m ON f.id = m.id_fiche
+          LEFT JOIN etats e ON f.id_etat_final = e.id
+          WHERE m.id_user = ?
+          AND f.commentaire_qualite IS NOT NULL
+          AND f.commentaire_qualite != ''
+          AND m.${modificaDateColumn} >= ?
+          AND m.${modificaDateColumn} <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
+          ORDER BY m.${modificaDateColumn} DESC
+          LIMIT 100
+        `;
+        const fichesAuditees = await query(fichesAuditeesQuery, [agent.id, startDate, endDate]);
+
+        return {
+          agent: {
+            id: agent.id,
+            pseudo: agent.pseudo,
+            nom: agent.nom,
+            prenom: agent.prenom,
+            photo: agent.photo,
+            fonction: agent.fonction,
+            fonction_titre: agent.fonction_titre,
+            centre: agent.centre,
+            centre_titre: agent.centre_titre
+          },
+          stats: {
+            total_audits: totalAudits,
+            fiches_avec_commentaire: fichesAvecCommentaire,
+            par_etat: statsParEtat
+          },
+          fiches_auditees: fichesAuditees
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: {
+        agents: agentsStats,
+        period: {
+          date_debut: startDateStr,
+          date_fin: endDateStr
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des statistiques par agent qualité:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des statistiques',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

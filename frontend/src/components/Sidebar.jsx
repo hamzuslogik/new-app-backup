@@ -185,6 +185,13 @@ const Sidebar = ({ collapsed }) => {
       visible: true,
     },
     {
+      path: '/stats-agents-qualite',
+      label: 'Stats Agents Qualité',
+      icon: FaChartBar,
+      permission: 'stats_agents_qualite_view',
+      visible: true,
+    },
+    {
       path: '/compte-rendu',
       label: 'Compte Rendu',
       icon: FaClipboardList,
