@@ -825,14 +825,30 @@ const ProductionQualif = () => {
                           </td>
                         )}
                         <td>
-                          <FicheDetailLink 
-                            ficheHash={fiche.hash}
-                            ficheId={fiche.id}
-                            className="btn-detail"
-                            title="Voir les détails"
-                          >
-                            <FaFileAlt />
-                          </FicheDetailLink>
+                          {isRPQualif ? (
+                            <span 
+                              className="btn-detail disabled" 
+                              title="Accès aux détails désactivé pour les RP Qualification"
+                              style={{ 
+                                opacity: 0.5, 
+                                cursor: 'not-allowed',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              <FaFileAlt />
+                            </span>
+                          ) : (
+                            <FicheDetailLink 
+                              ficheHash={fiche.hash}
+                              ficheId={fiche.id}
+                              className="btn-detail"
+                              title="Voir les détails"
+                            >
+                              <FaFileAlt />
+                            </FicheDetailLink>
+                          )}
                         </td>
                       </tr>
                     );
