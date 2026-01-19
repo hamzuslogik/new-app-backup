@@ -35,10 +35,20 @@ const ProductionQualif = () => {
     id_etat_final: [] // Tableau pour multi-select
   });
 
+  // État pour gérer l'édition du commentaire qualité
+  const [editingComment, setEditingComment] = useState({ hash: null, value: '' });
+
   // Vérifier si l'utilisateur est un RP Qualification (fonction 12) ou Superviseur Qualification (fonction 2)
   const isRPQualif = user?.fonction === 12;
   const isSuperviseurQualif = user?.fonction === 2;
   const canSeeCommentaireQualite = isRPQualif || isSuperviseurQualif;
+  
+  // Vérifier si l'utilisateur est un Administrateur (fonction 1)
+  const isAdmin = user?.fonction === 1;
+  
+  // Vérifier si l'utilisateur peut modifier/créer des commentaires qualité
+  // Seul Admin (fonction 1) peut modifier
+  const canEditCommentaireQualite = isAdmin;
 
   // Récupérer les superviseurs assignés au RP Qualification
   const { data: superviseursData } = useQuery(
@@ -752,55 +762,65 @@ const ProductionQualif = () => {
                         {canSeeCommentaireQualite && (
                           <td style={{ maxWidth: '300px' }}>
                             <div className="comment-quick-edit-container">
-                              <div className="comment-quick-actions">
-                                {(() => {
-                                  const currentValue = editingComment.hash === fiche.hash ? editingComment.value : (fiche.commentaire_qualite || '');
-                                  const originalValue = fiche.commentaire_qualite || '';
-                                  const hasChanges = editingComment.hash === fiche.hash && currentValue !== originalValue;
-                                  
-                                  return hasChanges && (
-                                    <>
-                                      <button
-                                        className="btn-save-comment-quick"
-                                        onClick={() => handleSaveComment(fiche.hash)}
-                                        disabled={updateCommentaireQualiteMutation.isLoading}
-                                        title="Enregistrer (Ctrl+Enter)"
-                                      >
-                                        <FaSave />
-                                      </button>
-                                      <button
-                                        className="btn-cancel-comment-quick"
-                                        onClick={() => {
-                                          setEditingComment({ hash: null, value: '' });
-                                        }}
-                                        disabled={updateCommentaireQualiteMutation.isLoading}
-                                        title="Annuler (Echap)"
-                                      >
-                                        <FaTimes />
-                                      </button>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                              <textarea
-                                value={editingComment.hash === fiche.hash ? editingComment.value : (fiche.commentaire_qualite || '')}
-                                onChange={(e) => {
-                                  if (editingComment.hash !== fiche.hash) {
-                                    setEditingComment({ hash: fiche.hash, value: e.target.value });
-                                  } else {
-                                    setEditingComment({ ...editingComment, value: e.target.value });
-                                  }
-                                }}
-                                onFocus={() => {
-                                  if (editingComment.hash !== fiche.hash) {
-                                    setEditingComment({ hash: fiche.hash, value: fiche.commentaire_qualite || '' });
-                                  }
-                                }}
-                                onKeyDown={(e) => handleKeyDown(e, fiche.hash)}
-                                className="comment-textarea-quick"
-                                placeholder="Commentaire qualité... (Ctrl+Enter pour sauvegarder)"
-                                rows={2}
-                              />
+                              {canEditCommentaireQualite ? (
+                                <>
+                                  <div className="comment-quick-actions">
+                                    {(() => {
+                                      const currentValue = editingComment.hash === fiche.hash ? editingComment.value : (fiche.commentaire_qualite || '');
+                                      const originalValue = fiche.commentaire_qualite || '';
+                                      const hasChanges = editingComment.hash === fiche.hash && currentValue !== originalValue;
+                                      
+                                      return hasChanges && (
+                                        <>
+                                          <button
+                                            className="btn-save-comment-quick"
+                                            onClick={() => handleSaveComment(fiche.hash)}
+                                            disabled={updateCommentaireQualiteMutation.isLoading}
+                                            title="Enregistrer (Ctrl+Enter)"
+                                          >
+                                            <FaSave />
+                                          </button>
+                                          <button
+                                            className="btn-cancel-comment-quick"
+                                            onClick={() => {
+                                              setEditingComment({ hash: null, value: '' });
+                                            }}
+                                            disabled={updateCommentaireQualiteMutation.isLoading}
+                                            title="Annuler (Echap)"
+                                          >
+                                            <FaTimes />
+                                          </button>
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                  <textarea
+                                    value={editingComment.hash === fiche.hash ? editingComment.value : (fiche.commentaire_qualite || '')}
+                                    onChange={(e) => {
+                                      if (editingComment.hash !== fiche.hash) {
+                                        setEditingComment({ hash: fiche.hash, value: e.target.value });
+                                      } else {
+                                        setEditingComment({ ...editingComment, value: e.target.value });
+                                      }
+                                    }}
+                                    onFocus={() => {
+                                      if (editingComment.hash !== fiche.hash) {
+                                        setEditingComment({ hash: fiche.hash, value: fiche.commentaire_qualite || '' });
+                                      }
+                                    }}
+                                    onKeyDown={(e) => handleKeyDown(e, fiche.hash)}
+                                    className="comment-textarea-quick"
+                                    placeholder="Commentaire qualité... (Ctrl+Enter pour sauvegarder)"
+                                    rows={2}
+                                  />
+                                </>
+                              ) : (
+                                <div className="comment-readonly">
+                                  <div className="comment-readonly-text">
+                                    {fiche.commentaire_qualite || <span className="no-comment">Aucun commentaire qualité</span>}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </td>
                         )}

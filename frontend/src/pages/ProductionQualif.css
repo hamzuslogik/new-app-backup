@@ -826,6 +826,28 @@
 }
 
 /* Styles pour la modification rapide du commentaire qualité */
+.comment-readonly {
+  padding: 8px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  min-height: 60px;
+}
+
+.comment-readonly-text {
+  color: #333;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.comment-readonly-text .no-comment {
+  color: #999;
+  font-style: italic;
+}
+
+/* Styles pour la modification rapide du commentaire qualité */
 .comment-quick-edit-container {
   display: flex;
   flex-direction: column;
