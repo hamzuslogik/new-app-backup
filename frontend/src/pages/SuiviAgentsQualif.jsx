@@ -42,8 +42,8 @@ const SuiviAgentsQualif = () => {
   const canSeeCommentaireQualite = isRPQualif || isSuperviseurQualif;
   
   // Vérifier si l'utilisateur peut modifier/créer des commentaires qualité
-  // Seuls RP Qualification (fonction 12) et Admin (fonction 1) peuvent modifier
-  const canEditCommentaireQualite = isRPQualif || isAdmin;
+  // Seul Admin (fonction 1) peut modifier
+  const canEditCommentaireQualite = isAdmin;
   
   // Pour Superviseur Qualification (RE Qualification), le mode par défaut est 'fiches' selon les exigences
   const [viewMode, setViewMode] = useState('stats'); // 'stats' ou 'fiches'
