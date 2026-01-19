@@ -162,42 +162,20 @@ const Validation = () => {
             </select>
           </div>
           <div className="filter-group">
-            <label>Date début (optionnel)</label>
+            <label>Date début</label>
             <input
               type="date"
               value={filters.date_debut}
               onChange={(e) => handleFilterChange('date_debut', e.target.value)}
-              placeholder="Tous les RDV"
             />
-            {filters.date_debut && (
-              <button
-                type="button"
-                className="clear-date-btn"
-                onClick={() => handleFilterChange('date_debut', '')}
-                title="Effacer la date"
-              >
-                ×
-              </button>
-            )}
           </div>
           <div className="filter-group">
-            <label>Date fin (optionnel)</label>
+            <label>Date fin</label>
             <input
               type="date"
               value={filters.date_fin}
               onChange={(e) => handleFilterChange('date_fin', e.target.value)}
-              placeholder="Tous les RDV"
             />
-            {filters.date_fin && (
-              <button
-                type="button"
-                className="clear-date-btn"
-                onClick={() => handleFilterChange('date_fin', '')}
-                title="Effacer la date"
-              >
-                ×
-              </button>
-            )}
           </div>
         </div>
       )}
