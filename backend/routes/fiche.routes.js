@@ -1748,22 +1748,47 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
       }
     }
 
-    // Filtrer par date RDV (optionnel)
-    // Si aucune date n'est fournie, afficher tous les RDV confirmés
+    // Filtrer par date RDV
+    // Par défaut : afficher les RDV du lendemain, et si c'est vendredi, afficher les RDV de lundi
+    let dateDebut = date_debut;
+    let dateFin = date_fin;
+    
+    // Si aucune date n'est fournie, calculer les dates par défaut
+    if ((!dateDebut || dateDebut.trim() === '') && (!dateFin || dateFin.trim() === '')) {
+      const today = new Date();
+      const dayOfWeek = today.getDay(); // 0 = dimanche, 5 = vendredi
+      
+      // Si c'est vendredi (5), afficher les RDV de lundi
+      if (dayOfWeek === 5) {
+        const monday = new Date(today);
+        // Calculer le nombre de jours jusqu'au prochain lundi
+        // Vendredi (5) -> lundi prochain = +3 jours
+        monday.setDate(today.getDate() + 3);
+        dateDebut = monday.toISOString().split('T')[0];
+        dateFin = monday.toISOString().split('T')[0];
+      } else {
+        // Sinon, afficher les RDV du lendemain
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        dateDebut = tomorrow.toISOString().split('T')[0];
+        dateFin = tomorrow.toISOString().split('T')[0];
+      }
+    }
+    
     // S'assurer que date_rdv_time n'est pas NULL ou vide
     whereConditions.push('f.date_rdv_time IS NOT NULL');
     whereConditions.push('f.date_rdv_time != ""');
     
-    // Filtrer par date seulement si les dates sont fournies
-    if (date_debut && date_debut.trim() !== '') {
+    // Filtrer par date (utiliser les dates par défaut si aucune date n'a été fournie)
+    if (dateDebut && dateDebut.trim() !== '') {
       whereConditions.push('f.date_rdv_time >= ?');
-      params.push(`${date_debut} 00:00:00`);
-      console.log(`[Validation RDV] Date début: ${date_debut} 00:00:00`);
+      params.push(`${dateDebut} 00:00:00`);
+      console.log(`[Validation RDV] Date début: ${dateDebut} 00:00:00`);
     }
-    if (date_fin && date_fin.trim() !== '') {
+    if (dateFin && dateFin.trim() !== '') {
       whereConditions.push('f.date_rdv_time <= ?');
-      params.push(`${date_fin} 23:59:59`);
-      console.log(`[Validation RDV] Date fin: ${date_fin} 23:59:59`);
+      params.push(`${dateFin} 23:59:59`);
+      console.log(`[Validation RDV] Date fin: ${dateFin} 23:59:59`);
     }
 
     const whereClause = whereConditions.join(' AND ');
