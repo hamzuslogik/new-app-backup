@@ -12,37 +12,11 @@ const Validation = () => {
   const [showFilters, setShowFilters] = useState(true);
   const [showDetails, setShowDetails] = useState(true);
   
-  // Calculer les dates par défaut : lendemain, et si c'est vendredi, afficher les RDV de lundi
-  const getDefaultDates = () => {
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = dimanche, 5 = vendredi, 6 = samedi
-    
-    let dateDebut, dateFin;
-    
-    // Si c'est vendredi (5), afficher les RDV de lundi
-    if (dayOfWeek === 5) {
-      const monday = new Date(today);
-      // Calculer le nombre de jours jusqu'au prochain lundi
-      // Vendredi (5) -> lundi prochain = +3 jours
-      monday.setDate(today.getDate() + 3);
-      dateDebut = monday.toISOString().split('T')[0];
-      dateFin = monday.toISOString().split('T')[0];
-    } else {
-      // Sinon, afficher les RDV du lendemain
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      dateDebut = tomorrow.toISOString().split('T')[0];
-      dateFin = tomorrow.toISOString().split('T')[0];
-    }
-    
-    return { date_debut: dateDebut, date_fin: dateFin };
-  };
-  
-  const defaultDates = getDefaultDates();
+  // Par défaut : pas de filtre de date pour afficher tous les RDV confirmés
   const [filters, setFilters] = useState({
     valider: '', // '' = tous, '1' = validés, '0' = non validés
-    date_debut: defaultDates.date_debut,
-    date_fin: defaultDates.date_fin
+    date_debut: '', // Vide par défaut = tous les RDV
+    date_fin: '' // Vide par défaut = tous les RDV
   });
 
   // Récupérer les RDV validés/non validés
@@ -51,8 +25,9 @@ const Validation = () => {
     async () => {
       const params = {};
       if (filters.valider !== '') params.valider = filters.valider;
-      if (filters.date_debut) params.date_debut = filters.date_debut;
-      if (filters.date_fin) params.date_fin = filters.date_fin;
+      // Envoyer les dates seulement si elles sont renseignées
+      if (filters.date_debut && filters.date_debut.trim() !== '') params.date_debut = filters.date_debut;
+      if (filters.date_fin && filters.date_fin.trim() !== '') params.date_fin = filters.date_fin;
       
       console.log('[Validation] Paramètres envoyés:', params);
       console.log('[Validation] Filtres:', filters);
@@ -161,20 +136,42 @@ const Validation = () => {
             </select>
           </div>
           <div className="filter-group">
-            <label>Date début</label>
+            <label>Date début (optionnel)</label>
             <input
               type="date"
               value={filters.date_debut}
               onChange={(e) => handleFilterChange('date_debut', e.target.value)}
+              placeholder="Tous les RDV"
             />
+            {filters.date_debut && (
+              <button
+                type="button"
+                className="clear-date-btn"
+                onClick={() => handleFilterChange('date_debut', '')}
+                title="Effacer la date"
+              >
+                ×
+              </button>
+            )}
           </div>
           <div className="filter-group">
-            <label>Date fin</label>
+            <label>Date fin (optionnel)</label>
             <input
               type="date"
               value={filters.date_fin}
               onChange={(e) => handleFilterChange('date_fin', e.target.value)}
+              placeholder="Tous les RDV"
             />
+            {filters.date_fin && (
+              <button
+                type="button"
+                className="clear-date-btn"
+                onClick={() => handleFilterChange('date_fin', '')}
+                title="Effacer la date"
+              >
+                ×
+              </button>
+            )}
           </div>
         </div>
       )}
