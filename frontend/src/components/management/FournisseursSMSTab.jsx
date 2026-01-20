@@ -47,24 +47,47 @@ const FournisseursSMSTab = () => {
     }
   }, [showForm]);
 
-  const { data, isLoading } = useQuery(
+  const { data, isLoading, error } = useQuery(
     'fournisseurs_sms',
     async () => {
-      const response = await api.get('/management/fournisseurs-sms');
-      return response.data.data;
+      try {
+        const response = await api.get('/management/fournisseurs-sms');
+        if (!response.data || !response.data.success) {
+          throw new Error(response.data?.message || 'Erreur lors du chargement des fournisseurs SMS');
+        }
+        // S'assurer que data est toujours un tableau
+        return Array.isArray(response.data.data) ? response.data.data : [];
+      } catch (err) {
+        console.error('Erreur lors du chargement des fournisseurs SMS:', err);
+        throw err;
+      }
+    },
+    {
+      onError: (error) => {
+        console.error('Erreur lors du chargement des fournisseurs SMS:', error);
+        const errorMessage = error.response?.data?.message || 
+                           error.message || 
+                           'Erreur lors du chargement des fournisseurs SMS';
+        toast.error(errorMessage);
+      },
+      retry: 1,
+      refetchOnWindowFocus: false
     }
   );
 
   // Filtrer les données selon le terme de recherche
   const filteredData = useMemo(() => {
-    if (!data) return [];
-    if (!searchTerm.trim()) return data;
+    // S'assurer que data est un tableau
+    const dataArray = Array.isArray(data) ? data : [];
+    if (!searchTerm.trim()) {
+      return dataArray;
+    }
     const term = searchTerm.toLowerCase();
-    return data.filter(item => 
-      item.nom?.toLowerCase().includes(term) ||
-      item.login?.toLowerCase().includes(term) ||
-      item.api_url?.toLowerCase().includes(term) ||
-      item.id?.toString().includes(term)
+    return dataArray.filter(item => 
+      item?.nom?.toLowerCase().includes(term) ||
+      item?.login?.toLowerCase().includes(term) ||
+      item?.api_url?.toLowerCase().includes(term) ||
+      item?.id?.toString().includes(term)
     );
   }, [data, searchTerm]);
 
@@ -218,6 +241,29 @@ const FournisseursSMSTab = () => {
   };
 
   if (isLoading) return <LoadingSpinner text="Chargement des fournisseurs SMS..." />;
+
+  if (error) {
+    return (
+      <div className="management-tab">
+        <div className="tab-header">
+          <h2>Gestion des Fournisseurs SMS</h2>
+        </div>
+        <div className="error-message" style={{ padding: '20px', textAlign: 'center' }}>
+          <p style={{ color: '#dc3545', marginBottom: '10px' }}>
+            <strong>Erreur lors du chargement des fournisseurs SMS</strong>
+          </p>
+          <p style={{ color: '#6c757d' }}>{error.message || 'Une erreur inattendue s\'est produite'}</p>
+          <button 
+            className="btn-primary" 
+            onClick={() => queryClient.invalidateQueries('fournisseurs_sms')}
+            style={{ marginTop: '15px' }}
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="management-tab">

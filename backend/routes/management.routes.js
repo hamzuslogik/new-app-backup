@@ -1421,18 +1421,39 @@ router.get('/etat-decalage', authenticate, async (req, res) => {
 // Récupérer tous les fournisseurs SMS
 router.get('/fournisseurs-sms', authenticate, async (req, res) => {
   try {
+    // Vérifier si la table existe
+    const tableExists = await queryOne(
+      `SELECT COUNT(*) as count 
+       FROM information_schema.tables 
+       WHERE table_schema = DATABASE() 
+       AND table_name = 'fournisseurs_sms'`
+    );
+    
+    if (!tableExists || tableExists.count === 0) {
+      console.log('Table fournisseurs_sms n\'existe pas');
+      return res.json({ success: true, data: [] });
+    }
+
+    // Par défaut, retourner tous les fournisseurs (actifs et inactifs)
+    // Utiliser ?all=false pour ne retourner que les actifs
     const { all } = req.query;
     let queryStr = 'SELECT * FROM fournisseurs_sms';
-    if (all !== 'true') {
+    if (all === 'false') {
       queryStr += ' WHERE actif > 0';
     }
     queryStr += ' ORDER BY nom ASC';
     
     const fournisseurs = await query(queryStr);
-    res.json({ success: true, data: fournisseurs });
+    // S'assurer de toujours retourner un tableau
+    const result = Array.isArray(fournisseurs) ? fournisseurs : [];
+    res.json({ success: true, data: result });
   } catch (error) {
-    console.error('Erreur:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    console.error('Erreur lors de la récupération des fournisseurs SMS:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur serveur',
+      error: error.message 
+    });
   }
 });
 

@@ -160,6 +160,46 @@ WHERE NOT EXISTS (
 AND hf.`id` IS NOT NULL;
 
 -- =====================================================
+-- ÉTAPE 4.5 : Diagnostic pour une fiche spécifique (exemple: 924782)
+-- =====================================================
+-- 
+-- Cette section permet de diagnostiquer pourquoi certaines lignes ne sont pas migrées
+-- Décommentez et adaptez l'ID de la fiche pour analyser
+
+/*
+-- Analyser les lignes dans yj_histo_fiche pour la fiche 924782
+SELECT 
+    '=== ANALYSE yj_histo_fiche pour fiche 924782 ===' as info,
+    COUNT(*) as total_lignes_yj
+FROM `yj_histo_fiche`
+WHERE `id` = 924782;
+
+-- Voir toutes les lignes de cette fiche
+SELECT 
+    '=== TOUTES LES LIGNES yj_histo_fiche pour fiche 924782 ===' as info,
+    *
+FROM `yj_histo_fiche`
+WHERE `id` = 924782
+ORDER BY 
+    COALESCE(`date_creation`, `date`, `date_insertion`, `date_heure_mod`, `date_modif_time`, NOW());
+
+-- Analyser les lignes déjà migrées dans fiches_histo
+SELECT 
+    '=== LIGNES MIGRÉES dans fiches_histo pour fiche 924782 ===' as info,
+    COUNT(*) as total_lignes_histo
+FROM `fiches_histo`
+WHERE `id_fiche` = 924782;
+
+-- Voir les lignes migrées
+SELECT 
+    '=== LIGNES MIGRÉES pour fiche 924782 ===' as info,
+    *
+FROM `fiches_histo`
+WHERE `id_fiche` = 924782
+ORDER BY `date_creation`;
+*/
+
+-- =====================================================
 -- ÉTAPE 5 : Migration vers fiches_histo
 -- =====================================================
 -- 
@@ -190,7 +230,7 @@ FROM INFORMATION_SCHEMA.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE() 
   AND TABLE_NAME = 'yj_histo_fiche';
 
--- Vérifier quelles colonnes existent
+-- Vérifier quelles colonnes existent dans yj_histo_fiche
 SET @has_id_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'id');
 SET @has_id_fiche_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'id_fiche');
 SET @has_etat_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'etat');
@@ -201,9 +241,80 @@ SET @has_date_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'date
 SET @has_date_rdv_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'date_rdv');
 SET @has_date_rdv_time_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'date_rdv_time');
 
--- Afficher les colonnes détectées
+-- Vérifier les colonnes pour les nouvelles colonnes enrichies de fiches_histo
+-- Confirmateurs
+SET @has_id_confirmateur_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'id_confirmateur');
+SET @has_id_confirmateur_2_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'id_confirmateur_2');
+SET @has_id_confirmateur_3_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'id_confirmateur_3');
+SET @has_nom_confirmateur_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'nom_confirmateur');
+SET @has_conf_commentaire_produit_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'conf_commentaire_produit');
+SET @has_conf_rdv_avec_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'conf_rdv_avec');
+
+-- Dates
+SET @has_date_appel_time_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'date_appel_time');
+SET @has_date_heure_appel_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'date_heure_appel');
+SET @has_date_sign_time_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'date_sign_time');
+SET @has_date_sign_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'date_sign');
+
+-- Autres
+SET @has_id_sous_etat_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'id_sous_etat');
+SET @has_id_commercial_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'id_commercial');
+SET @has_ph3_installateur_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_installateur');
+
+-- Phase 3
+SET @has_ph3_pac_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_pac');
+SET @has_ph3_type_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_type');
+SET @has_ph3_prix_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_prix');
+SET @has_ph3_puissance_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_puissance');
+SET @has_ph3_consommation_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_consommation');
+SET @has_ph3_bonus_30_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_bonus_30');
+SET @has_ph3_mensualite_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_mensualite');
+SET @has_ph3_nbr_annee_finance_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_nbr_annee_finance');
+SET @has_nbr_annee_finance_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'nbr_annee_finance');
+SET @has_ph3_ballon_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_ballon');
+SET @has_ph3_alimentation_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'ph3_alimentation');
+SET @has_credit_immobilier_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'credit_immobilier');
+SET @has_credit_autre_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'credit_autre');
+SET @has_valeur_mensualite_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE col_name = 'valeur_mensualite');
+
+-- Vérifier quelles colonnes existent dans fiches_histo (pour adapter l'INSERT)
+DROP TEMPORARY TABLE IF EXISTS temp_fiches_histo_columns;
+CREATE TEMPORARY TABLE temp_fiches_histo_columns (
+    col_name VARCHAR(100)
+);
+INSERT INTO temp_fiches_histo_columns
+SELECT COLUMN_NAME
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_SCHEMA = DATABASE() 
+  AND TABLE_NAME = 'fiches_histo';
+
+SET @fh_has_id_confirmateur = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'id_confirmateur');
+SET @fh_has_id_confirmateur_2 = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'id_confirmateur_2');
+SET @fh_has_id_confirmateur_3 = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'id_confirmateur_3');
+SET @fh_has_conf_commentaire_produit = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'conf_commentaire_produit');
+SET @fh_has_date_appel_time = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'date_appel_time');
+SET @fh_has_date_sign_time = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'date_sign_time');
+SET @fh_has_id_sous_etat = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'id_sous_etat');
+SET @fh_has_id_commercial = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'id_commercial');
+SET @fh_has_ph3_installateur = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_installateur');
+SET @fh_has_ph3_pac = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_pac');
+SET @fh_has_ph3_type = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_type');
+SET @fh_has_ph3_prix = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_prix');
+SET @fh_has_ph3_puissance = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_puissance');
+SET @fh_has_ph3_consommation = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_consommation');
+SET @fh_has_ph3_bonus_30 = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_bonus_30');
+SET @fh_has_ph3_mensualite = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_mensualite');
+SET @fh_has_ph3_nbr_annee_finance = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_nbr_annee_finance');
+SET @fh_has_ph3_ballon = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_ballon');
+SET @fh_has_ph3_alimentation = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'ph3_alimentation');
+SET @fh_has_credit_immobilier = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'credit_immobilier');
+SET @fh_has_credit_autre = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'credit_autre');
+SET @fh_has_valeur_mensualite = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'valeur_mensualite');
+SET @fh_has_conf_rdv_avec = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'conf_rdv_avec');
+
+-- Afficher les colonnes détectées dans yj_histo_fiche
 SELECT 
-    '=== COLONNES DÉTECTÉES ===' as info,
+    '=== COLONNES DÉTECTÉES DANS yj_histo_fiche ===' as info,
     @has_id_col as has_id,
     @has_id_fiche_col as has_id_fiche,
     @has_etat_col as has_etat,
@@ -212,7 +323,26 @@ SELECT
     @has_date_creation_col as has_date_creation,
     @has_date_col as has_date,
     @has_date_rdv_col as has_date_rdv,
-    @has_date_rdv_time_col as has_date_rdv_time;
+    @has_date_rdv_time_col as has_date_rdv_time,
+    @has_id_confirmateur_col as has_id_confirmateur,
+    @has_date_appel_time_col as has_date_appel_time,
+    @has_ph3_pac_col as has_ph3_pac;
+
+-- Afficher les colonnes détectées dans fiches_histo
+SELECT 
+    '=== COLONNES DÉTECTÉES DANS fiches_histo ===' as info,
+    @fh_has_id_confirmateur as has_id_confirmateur,
+    @fh_has_id_confirmateur_2 as has_id_confirmateur_2,
+    @fh_has_id_confirmateur_3 as has_id_confirmateur_3,
+    @fh_has_conf_commentaire_produit as has_conf_commentaire_produit,
+    @fh_has_date_appel_time as has_date_appel_time,
+    @fh_has_date_sign_time as has_date_sign_time,
+    @fh_has_id_sous_etat as has_id_sous_etat,
+    @fh_has_id_commercial as has_id_commercial,
+    @fh_has_ph3_installateur as has_ph3_installateur,
+    @fh_has_ph3_pac as has_ph3_pac,
+    @fh_has_ph3_type as has_ph3_type,
+    @fh_has_ph3_prix as has_ph3_prix;
 
 -- =====================================================
 -- MIGRATION PRINCIPALE
@@ -287,16 +417,210 @@ SET @date_creation_select = CASE
     ELSE 'NOW()'
 END;
 
+-- Construire les parties SELECT pour les nouvelles colonnes enrichies
+-- Confirmateurs
+SET @id_confirmateur_select = CASE
+    WHEN @fh_has_id_confirmateur > 0 AND @has_id_confirmateur_col > 0 THEN CONCAT('CAST(hf.`id_confirmateur` AS UNSIGNED), ')
+    WHEN @fh_has_id_confirmateur > 0 AND @has_nom_confirmateur_col > 0 THEN 
+        '(SELECT u.`id` FROM `utilisateurs` u WHERE TRIM(UPPER(u.`pseudo`)) = TRIM(UPPER(hf.`nom_confirmateur`)) LIMIT 1), '
+    WHEN @fh_has_id_confirmateur > 0 THEN 'NULL, '
+    ELSE ''
+END;
+
+SET @id_confirmateur_2_select = CASE
+    WHEN @fh_has_id_confirmateur_2 > 0 AND @has_id_confirmateur_2_col > 0 THEN CONCAT('CAST(hf.`id_confirmateur_2` AS UNSIGNED), ')
+    ELSE ''
+END;
+
+SET @id_confirmateur_3_select = CASE
+    WHEN @fh_has_id_confirmateur_3 > 0 AND @has_id_confirmateur_3_col > 0 THEN CONCAT('CAST(hf.`id_confirmateur_3` AS UNSIGNED), ')
+    ELSE ''
+END;
+
+SET @conf_commentaire_produit_select = CASE
+    WHEN @fh_has_conf_commentaire_produit > 0 AND @has_conf_commentaire_produit_col > 0 THEN 'hf.`conf_commentaire_produit`, '
+    ELSE ''
+END;
+
+SET @conf_rdv_avec_select = CASE
+    WHEN @fh_has_conf_rdv_avec > 0 AND @has_conf_rdv_avec_col > 0 THEN 'hf.`conf_rdv_avec`, '
+    ELSE ''
+END;
+
+-- Dates
+SET @date_appel_time_select = CASE
+    WHEN @fh_has_date_appel_time > 0 AND @has_date_appel_time_col > 0 THEN 'hf.`date_appel_time`, '
+    WHEN @fh_has_date_appel_time > 0 AND @has_date_heure_appel_col > 0 THEN 'hf.`date_heure_appel`, '
+    ELSE ''
+END;
+
+SET @date_sign_time_select = CASE
+    WHEN @fh_has_date_sign_time > 0 AND @has_date_sign_time_col > 0 THEN 'hf.`date_sign_time`, '
+    WHEN @fh_has_date_sign_time > 0 AND @has_date_sign_col > 0 THEN 'hf.`date_sign`, '
+    ELSE ''
+END;
+
+-- Autres
+SET @id_sous_etat_select = CASE
+    WHEN @fh_has_id_sous_etat > 0 AND @has_id_sous_etat_col > 0 THEN CONCAT('CAST(hf.`id_sous_etat` AS UNSIGNED), ')
+    ELSE ''
+END;
+
+SET @id_commercial_select = CASE
+    WHEN @fh_has_id_commercial > 0 AND @has_id_commercial_col > 0 THEN CONCAT('CAST(hf.`id_commercial` AS UNSIGNED), ')
+    ELSE ''
+END;
+
+SET @ph3_installateur_select = CASE
+    WHEN @fh_has_ph3_installateur > 0 AND @has_ph3_installateur_col > 0 THEN CONCAT('CAST(hf.`ph3_installateur` AS UNSIGNED), ')
+    ELSE ''
+END;
+
+-- Phase 3
+SET @ph3_pac_select = CASE
+    WHEN @fh_has_ph3_pac > 0 AND @has_ph3_pac_col > 0 THEN 'hf.`ph3_pac`, '
+    ELSE ''
+END;
+
+SET @ph3_type_select = CASE
+    WHEN @fh_has_ph3_type > 0 AND @has_ph3_type_col > 0 THEN 'hf.`ph3_type`, '
+    ELSE ''
+END;
+
+SET @ph3_prix_select = CASE
+    WHEN @fh_has_ph3_prix > 0 AND @has_ph3_prix_col > 0 THEN 'hf.`ph3_prix`, '
+    ELSE ''
+END;
+
+SET @ph3_puissance_select = CASE
+    WHEN @fh_has_ph3_puissance > 0 AND @has_ph3_puissance_col > 0 THEN 'hf.`ph3_puissance`, '
+    ELSE ''
+END;
+
+SET @ph3_consommation_select = CASE
+    WHEN @fh_has_ph3_consommation > 0 AND @has_ph3_consommation_col > 0 THEN 'hf.`ph3_consommation`, '
+    ELSE ''
+END;
+
+SET @ph3_bonus_30_select = CASE
+    WHEN @fh_has_ph3_bonus_30 > 0 AND @has_ph3_bonus_30_col > 0 THEN 'hf.`ph3_bonus_30`, '
+    ELSE ''
+END;
+
+SET @ph3_mensualite_select = CASE
+    WHEN @fh_has_ph3_mensualite > 0 AND @has_ph3_mensualite_col > 0 THEN 'hf.`ph3_mensualite`, '
+    ELSE ''
+END;
+
+SET @ph3_nbr_annee_finance_select = CASE
+    WHEN @fh_has_ph3_nbr_annee_finance > 0 AND @has_ph3_nbr_annee_finance_col > 0 THEN CONCAT('CAST(hf.`ph3_nbr_annee_finance` AS UNSIGNED), ')
+    WHEN @fh_has_ph3_nbr_annee_finance > 0 AND @has_nbr_annee_finance_col > 0 THEN CONCAT('CAST(hf.`nbr_annee_finance` AS UNSIGNED), ')
+    ELSE ''
+END;
+
+SET @ph3_ballon_select = CASE
+    WHEN @fh_has_ph3_ballon > 0 AND @has_ph3_ballon_col > 0 THEN 'hf.`ph3_ballon`, '
+    ELSE ''
+END;
+
+SET @ph3_alimentation_select = CASE
+    WHEN @fh_has_ph3_alimentation > 0 AND @has_ph3_alimentation_col > 0 THEN 'hf.`ph3_alimentation`, '
+    ELSE ''
+END;
+
+SET @credit_immobilier_select = CASE
+    WHEN @fh_has_credit_immobilier > 0 AND @has_credit_immobilier_col > 0 THEN 'hf.`credit_immobilier`, '
+    ELSE ''
+END;
+
+SET @credit_autre_select = CASE
+    WHEN @fh_has_credit_autre > 0 AND @has_credit_autre_col > 0 THEN 'hf.`credit_autre`, '
+    ELSE ''
+END;
+
+SET @valeur_mensualite_select = CASE
+    WHEN @fh_has_valeur_mensualite > 0 AND @has_valeur_mensualite_col > 0 THEN 'hf.`valeur_mensualite`, '
+    ELSE ''
+END;
+
+-- Construire la liste des colonnes pour l'INSERT dynamiquement
+SET @insert_columns = '`id_fiche`, `id_etat`';
+SET @select_values = CONCAT(@id_fiche_select, ' AS `id_fiche`, ', @id_etat_select, ' AS `id_etat`');
+
+-- Ajouter date_rdv_time si la colonne existe dans fiches_histo
+SET @has_date_rdv_time_fh = (SELECT COUNT(*) FROM temp_fiches_histo_columns WHERE col_name = 'date_rdv_time');
+SET @insert_columns = CONCAT(@insert_columns, 
+    CASE WHEN @has_date_rdv_time_fh > 0 THEN ', `date_rdv_time`' ELSE '' END
+);
+SET @select_values = CONCAT(@select_values,
+    CASE WHEN @has_date_rdv_time_fh > 0 THEN CONCAT(', ', @date_rdv_select, ' AS `date_rdv_time`') ELSE '' END
+);
+
+-- Ajouter les nouvelles colonnes si elles existent dans fiches_histo (utiliser CASE WHEN au lieu de IF)
+SET @insert_columns = CONCAT(@insert_columns,
+    CASE WHEN @fh_has_id_confirmateur > 0 THEN ', `id_confirmateur`' ELSE '' END,
+    CASE WHEN @fh_has_id_confirmateur_2 > 0 THEN ', `id_confirmateur_2`' ELSE '' END,
+    CASE WHEN @fh_has_id_confirmateur_3 > 0 THEN ', `id_confirmateur_3`' ELSE '' END,
+    CASE WHEN @fh_has_conf_commentaire_produit > 0 THEN ', `conf_commentaire_produit`' ELSE '' END,
+    CASE WHEN @fh_has_conf_rdv_avec > 0 THEN ', `conf_rdv_avec`' ELSE '' END,
+    CASE WHEN @fh_has_date_appel_time > 0 THEN ', `date_appel_time`' ELSE '' END,
+    CASE WHEN @fh_has_date_sign_time > 0 THEN ', `date_sign_time`' ELSE '' END,
+    CASE WHEN @fh_has_id_sous_etat > 0 THEN ', `id_sous_etat`' ELSE '' END,
+    CASE WHEN @fh_has_id_commercial > 0 THEN ', `id_commercial`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_installateur > 0 THEN ', `ph3_installateur`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_pac > 0 THEN ', `ph3_pac`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_type > 0 THEN ', `ph3_type`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_prix > 0 THEN ', `ph3_prix`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_puissance > 0 THEN ', `ph3_puissance`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_consommation > 0 THEN ', `ph3_consommation`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_bonus_30 > 0 THEN ', `ph3_bonus_30`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_mensualite > 0 THEN ', `ph3_mensualite`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_nbr_annee_finance > 0 THEN ', `ph3_nbr_annee_finance`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_ballon > 0 THEN ', `ph3_ballon`' ELSE '' END,
+    CASE WHEN @fh_has_ph3_alimentation > 0 THEN ', `ph3_alimentation`' ELSE '' END,
+    CASE WHEN @fh_has_credit_immobilier > 0 THEN ', `credit_immobilier`' ELSE '' END,
+    CASE WHEN @fh_has_credit_autre > 0 THEN ', `credit_autre`' ELSE '' END,
+    CASE WHEN @fh_has_valeur_mensualite > 0 THEN ', `valeur_mensualite`' ELSE '' END,
+    ', `date_creation`'
+);
+
+SET @select_values = CONCAT(@select_values,
+    CASE WHEN @fh_has_id_confirmateur > 0 THEN CONCAT(', ', @id_confirmateur_select) ELSE '' END,
+    CASE WHEN @fh_has_id_confirmateur_2 > 0 THEN CONCAT(', ', @id_confirmateur_2_select) ELSE '' END,
+    CASE WHEN @fh_has_id_confirmateur_3 > 0 THEN CONCAT(', ', @id_confirmateur_3_select) ELSE '' END,
+    CASE WHEN @fh_has_conf_commentaire_produit > 0 THEN CONCAT(', ', @conf_commentaire_produit_select) ELSE '' END,
+    CASE WHEN @fh_has_conf_rdv_avec > 0 THEN CONCAT(', ', @conf_rdv_avec_select) ELSE '' END,
+    CASE WHEN @fh_has_date_appel_time > 0 THEN CONCAT(', ', @date_appel_time_select) ELSE '' END,
+    CASE WHEN @fh_has_date_sign_time > 0 THEN CONCAT(', ', @date_sign_time_select) ELSE '' END,
+    CASE WHEN @fh_has_id_sous_etat > 0 THEN CONCAT(', ', @id_sous_etat_select) ELSE '' END,
+    CASE WHEN @fh_has_id_commercial > 0 THEN CONCAT(', ', @id_commercial_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_installateur > 0 THEN CONCAT(', ', @ph3_installateur_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_pac > 0 THEN CONCAT(', ', @ph3_pac_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_type > 0 THEN CONCAT(', ', @ph3_type_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_prix > 0 THEN CONCAT(', ', @ph3_prix_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_puissance > 0 THEN CONCAT(', ', @ph3_puissance_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_consommation > 0 THEN CONCAT(', ', @ph3_consommation_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_bonus_30 > 0 THEN CONCAT(', ', @ph3_bonus_30_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_mensualite > 0 THEN CONCAT(', ', @ph3_mensualite_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_nbr_annee_finance > 0 THEN CONCAT(', ', @ph3_nbr_annee_finance_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_ballon > 0 THEN CONCAT(', ', @ph3_ballon_select) ELSE '' END,
+    CASE WHEN @fh_has_ph3_alimentation > 0 THEN CONCAT(', ', @ph3_alimentation_select) ELSE '' END,
+    CASE WHEN @fh_has_credit_immobilier > 0 THEN CONCAT(', ', @credit_immobilier_select) ELSE '' END,
+    CASE WHEN @fh_has_credit_autre > 0 THEN CONCAT(', ', @credit_autre_select) ELSE '' END,
+    CASE WHEN @fh_has_valeur_mensualite > 0 THEN CONCAT(', ', @valeur_mensualite_select) ELSE '' END,
+    CONCAT(', ', @date_creation_select, ' AS `date_creation`')
+);
+
 -- Construire la requête complète
--- IMPORTANT : On retire DISTINCT pour migrer TOUTES les entrées historiques
--- La détection de doublons se fait via NOT EXISTS avec une tolérance de temps
+-- IMPORTANT : On migre TOUTES les entrées historiques
+-- La détection de doublons se fait via NOT EXISTS en vérifiant :
+-- - id_fiche
+-- - id_etat  
+-- - date_creation (avec une tolérance de 1 seconde pour éviter les doublons dus aux arrondis)
 SET @sql_query = CONCAT(
-    'INSERT INTO `fiches_histo` (`id_fiche`, `id_etat`, `date_rdv_time`, `date_creation`) ',
+    'INSERT INTO `fiches_histo` (', @insert_columns, ') ',
     'SELECT ',
-    @id_fiche_select, ' AS `id_fiche`, ',
-    @id_etat_select, ' AS `id_etat`, ',
-    @date_rdv_select, ' AS `date_rdv_time`, ',
-    @date_creation_select, ' AS `date_creation` ',
+    @select_values, ' ',
     'FROM `yj_histo_fiche` hf ',
     'WHERE ',
     @id_fiche_select, ' IS NOT NULL ',
@@ -304,7 +628,7 @@ SET @sql_query = CONCAT(
         'SELECT 1 FROM `fiches_histo` fh ',
         'WHERE fh.`id_fiche` = ', @id_fiche_select, ' ',
         'AND fh.`id_etat` = ', @id_etat_select, ' ',
-        'AND ABS(TIMESTAMPDIFF(SECOND, fh.`date_creation`, ', @date_creation_select, ')) < 5',
+        'AND ABS(TIMESTAMPDIFF(SECOND, fh.`date_creation`, ', @date_creation_select, ')) <= 1',
     ') ',
     'ORDER BY ', @id_fiche_select, ', ', @date_creation_select
 );
@@ -346,8 +670,9 @@ PREPARE stmt FROM @sql_query;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
--- Nettoyer la table temporaire
+-- Nettoyer les tables temporaires
 DROP TEMPORARY TABLE IF EXISTS temp_yj_columns;
+DROP TEMPORARY TABLE IF EXISTS temp_fiches_histo_columns;
 
 -- =====================================================
 -- ÉTAPE 6 : Statistiques après migration
@@ -372,8 +697,28 @@ SELECT
         THEN '✓ Migration complète ou supérieure (doublons possibles dans yj_histo_fiche)'
         ELSE CONCAT('⚠ Attention : ', 
             (SELECT COUNT(*) FROM `yj_histo_fiche` WHERE `id` IS NOT NULL) - (SELECT COUNT(*) FROM `fiches_histo`),
-            ' lignes non migrées (peut être normal si doublons détectés)')
+            ' lignes non migrées')
     END as statut_migration;
+
+-- Diagnostic détaillé : identifier les fiches avec des différences importantes
+-- Cette requête compare le nombre de lignes dans yj_histo_fiche vs fiches_histo pour chaque fiche
+SELECT 
+    '=== DIAGNOSTIC : FICHES AVEC DIFFÉRENCES DE MIGRATION ===' as info,
+    yj.`id` as id_fiche,
+    COUNT(*) as lignes_yj_histo_fiche,
+    COALESCE(fh_count.total_histo, 0) as lignes_fiches_histo,
+    COUNT(*) - COALESCE(fh_count.total_histo, 0) as difference
+FROM `yj_histo_fiche` yj
+LEFT JOIN (
+    SELECT `id_fiche`, COUNT(*) as total_histo
+    FROM `fiches_histo`
+    GROUP BY `id_fiche`
+) fh_count ON fh_count.`id_fiche` = yj.`id`
+WHERE yj.`id` IS NOT NULL
+GROUP BY yj.`id`, fh_count.total_histo
+HAVING COUNT(*) > COALESCE(fh_count.total_histo, 0)
+ORDER BY difference DESC
+LIMIT 20;
 
 -- Nombre d'enregistrements par fiche
 SELECT 
@@ -413,13 +758,28 @@ SET SQL_SAFE_UPDATES = 1;
 -- =====================================================
 --
 -- 1. Ce script détecte automatiquement les colonnes disponibles dans yj_histo_fiche
--- 2. Il évite les doublons en vérifiant l'ID de la fiche, l'ID de l'état et la date (tolérance de 5 secondes)
+-- 2. Il évite les doublons en vérifiant l'ID de la fiche, l'ID de l'état et la date (tolérance de 1 seconde)
 -- 3. Si une colonne n'existe pas, le script utilise une valeur par défaut
 -- 4. Le script migre TOUTES les entrées historiques, même si la fiche n'existe pas encore dans 'fiches'
 --    (l'historique sera disponible dès que la fiche sera créée)
 -- 5. Si l'état n'est pas trouvé, l'état par défaut (1 = EN-ATTENTE) est utilisé
 -- 6. DISTINCT a été retiré pour garantir que toutes les entrées historiques sont migrées
--- 7. La tolérance de doublons est de 5 secondes (au lieu de 60) pour être plus précise
+-- 7. La tolérance de doublons est de 1 seconde pour éviter les doublons dus aux arrondis de dates
+-- 8. CORRECTION IMPORTANTE : La condition NOT EXISTS vérifie maintenant la combinaison complète
+--    (id_fiche, id_etat, date_creation) pour permettre la migration de toutes les lignes
+--    même si elles ont le même id_fiche et id_etat mais des dates différentes
+--
+-- 9. NOUVELLE VERSION : Le script prend maintenant en compte la structure enrichie de fiches_histo
+--    Il détecte automatiquement quelles colonnes existent dans fiches_histo et dans yj_histo_fiche
+--    et inclut seulement les colonnes disponibles dans la requête d'insertion.
+--    Les colonnes suivantes sont prises en compte si elles existent :
+--    - id_confirmateur, id_confirmateur_2, id_confirmateur_3 (avec conversion depuis nom_confirmateur si nécessaire)
+--    - conf_commentaire_produit, conf_rdv_avec
+--    - date_appel_time, date_sign_time
+--    - id_sous_etat, id_commercial, ph3_installateur
+--    - ph3_pac, ph3_type, ph3_prix, ph3_puissance, ph3_consommation, ph3_bonus_30, ph3_mensualite
+--    - ph3_nbr_annee_finance, ph3_ballon, ph3_alimentation
+--    - credit_immobilier, credit_autre, valeur_mensualite
 --
 -- =====================================================
 -- FIN DU SCRIPT

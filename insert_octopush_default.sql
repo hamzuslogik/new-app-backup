@@ -43,13 +43,46 @@ WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME = 'fournisseurs_sms' 
   AND COLUMN_NAME = 'date_modification';
 
--- Insérer ou mettre à jour Octopush
--- Cette requête utilise INSERT ... ON DUPLICATE KEY UPDATE pour gérer à la fois
--- l'insertion (si n'existe pas) et la mise à jour (si existe déjà)
+-- =====================================================
+-- DÉTECTION DES COLONNES ET INSERTION
+-- =====================================================
+
+-- Afficher toutes les colonnes disponibles dans la table
+SELECT 
+    '=== TOUTES LES COLONNES DE LA TABLE ===' as info,
+    COLUMN_NAME as nom_colonne,
+    DATA_TYPE as type_donnee,
+    IS_NULLABLE as nullable
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_SCHEMA = DATABASE() 
+  AND TABLE_NAME = 'fournisseurs_sms'
+ORDER BY ORDINAL_POSITION;
+
+-- Vérifier quelles colonnes existent
+SELECT 
+    '=== COLONNES DÉTECTÉES ===' as info,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fournisseurs_sms' AND COLUMN_NAME = 'nom') as has_nom,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fournisseurs_sms' AND COLUMN_NAME = 'login') as has_login,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fournisseurs_sms' AND COLUMN_NAME = 'email') as has_email,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fournisseurs_sms' AND COLUMN_NAME = 'username') as has_username,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fournisseurs_sms' AND COLUMN_NAME = 'user') as has_user,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fournisseurs_sms' AND COLUMN_NAME = 'api_key') as has_api_key,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fournisseurs_sms' AND COLUMN_NAME = 'api_url') as has_api_url,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fournisseurs_sms' AND COLUMN_NAME = 'actif') as has_actif,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fournisseurs_sms' AND COLUMN_NAME = 'date_creation') as has_date_creation,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fournisseurs_sms' AND COLUMN_NAME = 'date_modification') as has_date_modification;
+
+-- =====================================================
+-- ESSAYER DIFFÉRENTES VARIANTES D'INSERTION
+-- =====================================================
 -- 
--- Si votre table a une contrainte UNIQUE sur 'nom', cette requête fonctionnera parfaitement.
--- Si votre table n'a pas de contrainte UNIQUE sur 'nom', cette requête insérera toujours
--- un nouvel enregistrement (même si un autre avec le même nom existe).
+-- Exécutez la variante qui correspond à votre structure de table
+-- Si une variante échoue, essayez la suivante
+--
+
+-- VARIANTE 1: Avec colonne 'login'
+-- Décommentez cette section si votre table a une colonne 'login'
+/*
 INSERT INTO `fournisseurs_sms` (
     `nom`,
     `login`,
@@ -72,6 +105,76 @@ ON DUPLICATE KEY UPDATE
     `api_url` = VALUES(`api_url`),
     `actif` = VALUES(`actif`),
     `date_modification` = NOW();
+*/
+
+-- VARIANTE 2: Avec colonne 'email' au lieu de 'login'
+-- Décommentez cette section si votre table a une colonne 'email' mais pas 'login'
+/*
+INSERT INTO `fournisseurs_sms` (
+    `nom`,
+    `email`,
+    `api_key`,
+    `api_url`,
+    `actif`,
+    `date_creation`
+)
+VALUES (
+    'Octopush',
+    'pro_c52@sub-accounts.com',
+    'GtXgcqrakYQJnvLZPs5upHR0CjNxeyOh',
+    'https://api.octopush.com/v1/public',
+    1,
+    NOW()
+)
+ON DUPLICATE KEY UPDATE
+    `email` = VALUES(`email`),
+    `api_key` = VALUES(`api_key`),
+    `api_url` = VALUES(`api_url`),
+    `actif` = VALUES(`actif`),
+    `date_modification` = NOW();
+*/
+
+-- VARIANTE 3: Sans colonne de login/email (seulement nom, api_key, api_url)
+-- Décommentez cette section si votre table n'a pas de colonne pour le login
+/*
+INSERT INTO `fournisseurs_sms` (
+    `nom`,
+    `api_key`,
+    `api_url`,
+    `actif`,
+    `date_creation`
+)
+VALUES (
+    'Octopush',
+    'GtXgcqrakYQJnvLZPs5upHR0CjNxeyOh',
+    'https://api.octopush.com/v1/public',
+    1,
+    NOW()
+)
+ON DUPLICATE KEY UPDATE
+    `api_key` = VALUES(`api_key`),
+    `api_url` = VALUES(`api_url`),
+    `actif` = VALUES(`actif`),
+    `date_modification` = NOW();
+*/
+
+-- VARIANTE 4: Structure minimale (seulement les colonnes essentielles)
+-- Décommentez cette section et adaptez selon votre structure réelle
+/*
+INSERT INTO `fournisseurs_sms` (
+    `nom`,
+    `api_key`,
+    `api_url`
+)
+VALUES (
+    'Octopush',
+    'GtXgcqrakYQJnvLZPs5upHR0CjNxeyOh',
+    'https://api.octopush.com/v1/public'
+)
+ON DUPLICATE KEY UPDATE
+    `api_key` = VALUES(`api_key`),
+    `api_url` = VALUES(`api_url`);
+*/
 
 -- Alternative si la table n'a pas de contrainte UNIQUE sur 'nom'
 -- Utilisez cette approche si la requête ci-dessus ne fonctionne pas correctement
@@ -115,15 +218,11 @@ WHERE `nom` = 'Octopush';
 */
 
 -- Vérifier l'insertion
+-- Cette requête affichera toutes les colonnes disponibles pour le fournisseur Octopush
 SELECT 
-    '=== FOURNISSEUR SMS PAR DÉFAUT ===' as info,
-    id,
-    nom,
-    login,
-    LEFT(api_key, 10) as api_key_preview,
-    api_url,
-    actif,
-    date_creation
+    '=== FOURNISSEUR SMS PAR DÉFAUT ===' as info;
+
+SELECT *
 FROM `fournisseurs_sms`
 WHERE nom = 'Octopush'
 LIMIT 1;
