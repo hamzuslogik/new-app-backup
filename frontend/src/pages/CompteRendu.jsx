@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaFileAlt, FaSearch, FaEdit, FaTrash, FaEye, FaClipboardList, FaCheck, FaTimes, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { FaEdit, FaEye, FaClipboardList, FaCheck, FaTimes, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import EditCompteRenduModal from '../components/EditCompteRenduModal';
@@ -13,8 +12,6 @@ import './CompteRendu.css';
 const CompteRendu = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('visites'); // 'visites' ou 'pending'
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedStatutPending, setSelectedStatutPending] = useState(user.fonction === 5 ? 'pending' : 'all');
   const [commentaireAdmin, setCommentaireAdmin] = useState('');
   const [selectedCompteRendu, setSelectedCompteRendu] = useState(null);
@@ -22,18 +19,6 @@ const CompteRendu = () => {
   
   // Bloquer le scroll du body quand un modal est ouvert
   useModalScrollLock(!!selectedCompteRendu || !!editingCompteRendu);
-  const [filters, setFilters] = useState({
-    date_debut: new Date().toISOString().split('T')[0],
-    date_fin: '',
-    critere: '',
-    critere_champ: 'tel',
-    cp: '',
-    id_confirmateur: '',
-    id_commercial: '',
-    id_centre: '',
-    etat_fiche: '',
-    etat: '0' // 0: actif, 1: modifié, 2: supprimé
-  });
 
   // Récupérer les données de référence
   const { data: confirmateursData } = useQuery('confirmateurs', async () => {
@@ -56,25 +41,6 @@ const CompteRendu = () => {
     return res.data.data || [];
   });
 
-  // Récupérer les comptes rendus (visites)
-  const { data: compteRendusData, isLoading } = useQuery(
-    ['compte-rendu-visites', filters],
-    async () => {
-      const params = { ...filters, fiche_search: filters.critere ? 1 : 0 };
-      // Nettoyer les paramètres vides
-      Object.keys(params).forEach(key => {
-        if (params[key] === '' || params[key] === null || params[key] === undefined) {
-          delete params[key];
-        }
-      });
-      // Utiliser une route différente pour les visites ou filtrer côté client
-      const res = await api.get('/compte-rendu', { params });
-      // Filtrer pour ne garder que les comptes rendus de visites (ceux qui ont compte_rendu)
-      return (res.data.data || []).filter(cr => cr.compte_rendu);
-    },
-    { enabled: activeTab === 'visites' }
-  );
-
   // Récupérer les comptes rendus en attente
   const { data: comptesRendusPendingData, isLoading: isLoadingPending } = useQuery(
     ['compte-rendu-pending', selectedStatutPending],
@@ -82,24 +48,6 @@ const CompteRendu = () => {
       const params = selectedStatutPending !== 'all' ? { statut: selectedStatutPending } : {};
       const res = await api.get('/compte-rendu', { params });
       return res.data.data || [];
-    },
-    { enabled: activeTab === 'pending' }
-  );
-
-  // Mutation pour supprimer un compte rendu (visites)
-  const deleteMutation = useMutation(
-    async ({ id, id_fiche }) => {
-      const res = await api.delete(`/compte-rendu/${id}`, { data: { id_fiche } });
-      return res.data;
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('compte-rendu-visites');
-        toast.success('Compte rendu supprimé avec succès');
-      },
-      onError: (error) => {
-        toast.error(error.response?.data?.message || 'Erreur lors de la suppression');
-      }
     }
   );
 
@@ -160,36 +108,6 @@ const CompteRendu = () => {
     }
   );
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    queryClient.invalidateQueries('compte-rendu');
-  };
-
-  const handleReset = () => {
-    setFilters({
-      date_debut: new Date().toISOString().split('T')[0],
-      date_fin: '',
-      critere: '',
-      critere_champ: 'tel',
-      cp: '',
-      id_confirmateur: '',
-      id_commercial: '',
-      id_centre: '',
-      etat_fiche: '',
-      etat: '0'
-    });
-  };
-
-  const handleDelete = (id, id_fiche) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce compte rendu ?')) {
-      deleteMutation.mutate({ id, id_fiche });
-    }
-  };
-
   const handleApprove = (cr) => {
     if (window.confirm('Êtes-vous sûr de vouloir approuver ce compte rendu ? Les modifications seront appliquées à la fiche.')) {
       approveMutation.mutate({ id: cr.id, commentaire: commentaireAdmin });
@@ -228,7 +146,6 @@ const CompteRendu = () => {
     }
   };
 
-  const compteRendus = compteRendusData || [];
   const confirmateurs = confirmateursData || [];
   const commerciaux = commerciauxData || [];
   const centres = centresData || [];
@@ -241,221 +158,10 @@ const CompteRendu = () => {
     <div className="compte-rendu-page">
       <div className="page-header">
         <h1><FaClipboardList /> Comptes Rendus</h1>
-        <div className="header-actions">
-          <div className="tabs">
-            <button
-              className={`tab ${activeTab === 'visites' ? 'active' : ''}`}
-              onClick={() => setActiveTab('visites')}
-            >
-              <FaClipboardList /> Comptes Rendus Visites
-            </button>
-            <button
-              className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
-              onClick={() => setActiveTab('pending')}
-            >
-              <FaClock /> En Attente d'Approbation
-            </button>
-          </div>
-          {activeTab === 'visites' && (
-            <button
-              className="toggle-filters-btn"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <FaSearch /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* Section Comptes Rendus Visites */}
-      {activeTab === 'visites' && showFilters && (
-        <div className="filters-section">
-          <form onSubmit={handleSearch}>
-            <div className="filters-grid">
-              <div className="filter-group">
-                <label>Critère</label>
-                <input
-                  type="text"
-                  value={filters.critere}
-                  onChange={(e) => handleFilterChange('critere', e.target.value)}
-                  placeholder="Rechercher..."
-                />
-              </div>
-              <div className="filter-group">
-                <label>Type de critère</label>
-                <select
-                  value={filters.critere_champ}
-                  onChange={(e) => handleFilterChange('critere_champ', e.target.value)}
-                >
-                  <option value="tel">Téléphone</option>
-                  <option value="nom">Nom Prénom</option>
-                  <option value="gsm1">GSM</option>
-                  <option value="gsm2">GSM2</option>
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Département</label>
-                <input
-                  type="text"
-                  value={filters.cp}
-                  onChange={(e) => handleFilterChange('cp', e.target.value)}
-                  placeholder="Code postal"
-                />
-              </div>
-              <div className="filter-group">
-                <label>Confirmateur</label>
-                <select
-                  value={filters.id_confirmateur}
-                  onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
-                >
-                  <option value="">Tous</option>
-                  {confirmateurs.map(conf => (
-                    <option key={conf.id} value={conf.id}>{conf.pseudo}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Commercial</label>
-                <select
-                  value={filters.id_commercial}
-                  onChange={(e) => handleFilterChange('id_commercial', e.target.value)}
-                >
-                  <option value="">Tous</option>
-                  {commerciaux.map(com => (
-                    <option key={com.id} value={com.id}>{com.pseudo}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Centre</label>
-                <select
-                  value={filters.id_centre}
-                  onChange={(e) => handleFilterChange('id_centre', e.target.value)}
-                >
-                  <option value="">Tous</option>
-                  {centres.map(centre => (
-                    <option key={centre.id} value={centre.id}>{centre.titre}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>État fiche</label>
-                <select
-                  value={filters.etat_fiche}
-                  onChange={(e) => handleFilterChange('etat_fiche', e.target.value)}
-                >
-                  <option value="">Tous</option>
-                  {etats.map(etat => (
-                    <option key={etat.id} value={etat.id}>{etat.titre}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Date début</label>
-                <input
-                  type="date"
-                  value={filters.date_debut}
-                  onChange={(e) => handleFilterChange('date_debut', e.target.value)}
-                />
-              </div>
-              <div className="filter-group">
-                <label>Date fin</label>
-                <input
-                  type="date"
-                  value={filters.date_fin}
-                  onChange={(e) => handleFilterChange('date_fin', e.target.value)}
-                />
-              </div>
-              <div className="filter-group">
-                <label>État CR</label>
-                <select
-                  value={filters.etat}
-                  onChange={(e) => handleFilterChange('etat', e.target.value)}
-                >
-                  <option value="0">Actifs</option>
-                  <option value="1">Modifiés</option>
-                  <option value="2">Supprimés</option>
-                </select>
-              </div>
-            </div>
-            <div className="filters-actions">
-              <button type="submit" className="btn-primary">
-                <FaSearch /> Rechercher
-              </button>
-              <button type="button" onClick={handleReset} className="btn-secondary">
-                Réinitialiser
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Section Comptes Rendus Visites */}
-      {activeTab === 'visites' && (
-        <div className="results-section">
-          {isLoading ? (
-            <div className="loading">Chargement...</div>
-          ) : compteRendus.length > 0 ? (
-          <div className="compte-rendu-list">
-            {compteRendus.map((cr) => (
-              <div key={cr.id_cr || cr.id} className="compte-rendu-card">
-                <div className="cr-header">
-                  <div className="cr-info">
-                    <h3>
-                      {cr.nom} {cr.prenom}
-                    </h3>
-                    <div className="cr-meta">
-                      <span>Tél: {cr.tel}</span>
-                      {cr.name_visite && <span>Visite: {cr.name_visite}</span>}
-                    </div>
-                  </div>
-                  <div className="cr-actions">
-                    <FicheDetailLink ficheId={cr.id_fiche} className="btn-icon" title="Voir fiche">
-                      <FaEye />
-                    </FicheDetailLink>
-                    {(user.fonction === 1 || user.fonction === 2 || user.fonction === 6 || user.fonction === 7) && (
-                      <button
-                        className="btn-icon btn-danger"
-                        onClick={() => handleDelete(cr.id_cr || cr.id, cr.id_fiche)}
-                        title="Supprimer"
-                      >
-                        <FaTrash />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="cr-content">
-                  <div className="cr-field">
-                    <strong>Commercial:</strong> {cr.commercial_pseudo || 'N/A'}
-                  </div>
-                  <div className="cr-field">
-                    <strong>Date visite:</strong> {cr.date_visite ? new Date(cr.date_visite).toLocaleString('fr-FR') : 'N/A'}
-                  </div>
-                  <div className="cr-field">
-                    <strong>Date modification:</strong> {cr.cr_date_modif ? new Date(cr.cr_date_modif).toLocaleString('fr-FR') : 'N/A'}
-                  </div>
-                  {cr.etat_fiche && (
-                    <div className="cr-field">
-                      <strong>État fiche:</strong> {etats.find(e => e.id === cr.etat_fiche)?.titre || cr.etat_fiche}
-                    </div>
-                  )}
-                  <div className="cr-field">
-                    <strong>Compte rendu:</strong>
-                    <div className="cr-text">{cr.compte_rendu || 'Aucun compte rendu'}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="no-data">Aucun compte rendu trouvé</div>
-          )}
-        </div>
-      )}
-
       {/* Section Comptes Rendus Pending */}
-      {activeTab === 'pending' && (
-        <div className="results-section">
+      <div className="results-section">
           <div className="pending-header">
             {isAdmin && (
               <div className="statut-filters">
@@ -609,8 +315,7 @@ const CompteRendu = () => {
           ) : (
             <div className="no-data">Aucun compte rendu en attente trouvé</div>
           )}
-        </div>
-      )}
+      </div>
 
       {/* Modal d'approbation/rejet */}
       {selectedCompteRendu && isAdmin && selectedCompteRendu.statut === 'pending' && (
