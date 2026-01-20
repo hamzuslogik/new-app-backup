@@ -10,6 +10,13 @@
 -- Ce script migre toutes les fiches de yj_fiche vers la nouvelle table fiches
 -- en adaptant les noms de colonnes et en convertissant les types de données.
 --
+-- AMÉLIORATIONS APPORTÉES:
+-- - Ajout du champ nb_pans (nombre de pans de toiture) si disponible dans yj_fiche
+-- - Correction de la conversion de conf_consommations (decimal -> int)
+-- - Amélioration de la clause ON DUPLICATE KEY UPDATE pour inclure plus de champs importants
+-- - Meilleure gestion des valeurs NULL et des conversions de types
+-- - id_agent représente l'agent créateur/assigné de la fiche (id_insert reste NULL)
+--
 -- =====================================================
 
 USE `crm`;
@@ -49,6 +56,7 @@ USE `crm`;
 --   yj_fiche.archive (tinyint) -> fiches.archive (int)
 --   yj_fiche.valider (tinyint) -> fiches.valider (int)
 --   yj_fiche.nom_agent (varchar) -> fiches.id_agent (int) - conversion via table utilisateurs
+--     (nom_agent correspond à l'agent qui a créé/assigne la fiche)
 --   yj_fiche.nom_commercial (varchar) -> fiches.id_commercial (int) - conversion via table utilisateurs (si id_commercial vide)
 --   yj_fiche.nom_commercial_2 (varchar) -> fiches.id_commercial_2 (int) - conversion via table utilisateurs
 --   yj_fiche.nom_confirmateur (varchar) -> fiches.id_confirmateur (int) - conversion via table utilisateurs
@@ -58,7 +66,7 @@ USE `crm`;
 INSERT INTO `fiches` (
   `id`, `civ`, `nom`, `prenom`, `tel`, `gsm1`, `gsm2`, `adresse`, `cp`, `ville`,
   `etude`, `consommation_chauffage`, `surface_habitable`, `annee_systeme_chauffage`,
-  `surface_chauffee`, `proprietaire_maison`, `nb_pieces`, `age_maison`, `orientation_toiture`,
+  `surface_chauffee`, `proprietaire_maison`, `nb_pieces`, `nb_pans`, `age_maison`, `orientation_toiture`,
   `produit`, `nb_chemines`, `mode_chauffage`, `consommation_electricite`, `age_mr`,
   `age_madame`, `revenu_foyer`, `credit_foyer`, `situation_conjugale`, `nb_enfants`,
   `profession_mr`, `profession_madame`, `commentaire`, `id_agent`, `id_centre`, `id_insert`,
@@ -114,6 +122,8 @@ SELECT
     THEN CAST(`pac_nombre_pieces` AS UNSIGNED)
     ELSE NULL
   END as `nb_pieces`,
+  -- Nombre de pans: NULL par défaut (colonne peut ne pas exister dans yj_fiche)
+  NULL as `nb_pans`,
   -- Age maison: utiliser pac_age_maison
   NULLIF(`pac_age_maison`, '') as `age_maison`,
   -- Orientation toiture: utiliser maison_orientation
@@ -158,7 +168,7 @@ SELECT
     ELSE NULL
   END as `id_agent`,
   `id_centre`,
-  NULL as `id_insert`, -- Pas de champ direct dans yj_fiche
+  NULL as `id_insert`, -- Pas de champ direct dans yj_fiche (id_agent représente l'agent créateur)
   -- id_confirmateur: retrouver l'ID via le nom dans la table utilisateurs (avec fallback sur id_confirmateur si le nom n'existe pas)
   COALESCE(
     CASE 
@@ -309,8 +319,10 @@ SELECT
   1 as `active`, -- Par défaut actif
   CAST(`valider` AS UNSIGNED) as `valider`,
   NULLIF(`conf_commentaire_produit`, '') as `conf_commentaire_produit`,
+  -- Conf consommations: convertir de decimal vers int (si c'est un decimal dans yj_fiche)
   CASE 
-    WHEN `conf_consommations` > 0 THEN `conf_consommations`
+    WHEN `conf_consommations` IS NOT NULL AND `conf_consommations` > 0 
+    THEN CAST(`conf_consommations` AS UNSIGNED)
     ELSE NULL
   END as `conf_consommations`,
   NULLIF(`conf_profession_monsieur`, '') as `conf_profession_monsieur`,
@@ -395,6 +407,12 @@ ON DUPLICATE KEY UPDATE
   `adresse` = VALUES(`adresse`),
   `cp` = VALUES(`cp`),
   `ville` = VALUES(`ville`),
+  `etude` = VALUES(`etude`),
+  `id_etat_final` = VALUES(`id_etat_final`),
+  `id_agent` = VALUES(`id_agent`),
+  `id_commercial` = VALUES(`id_commercial`),
+  `id_confirmateur` = VALUES(`id_confirmateur`),
+  `date_rdv_time` = VALUES(`date_rdv_time`),
   `date_modif_time` = VALUES(`date_modif_time`);
 
 -- =====================================================

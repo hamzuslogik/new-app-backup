@@ -1414,4 +1414,124 @@ router.get('/etat-decalage', authenticate, async (req, res) => {
   }
 });
 
+// =====================================================
+// FOURNISSEURS SMS
+// =====================================================
+
+// Récupérer tous les fournisseurs SMS
+router.get('/fournisseurs-sms', authenticate, async (req, res) => {
+  try {
+    const { all } = req.query;
+    let queryStr = 'SELECT * FROM fournisseurs_sms';
+    if (all !== 'true') {
+      queryStr += ' WHERE actif > 0';
+    }
+    queryStr += ' ORDER BY nom ASC';
+    
+    const fournisseurs = await query(queryStr);
+    res.json({ success: true, data: fournisseurs });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Créer un fournisseur SMS
+router.post('/fournisseurs-sms', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+  try {
+    const { nom, login, api_key, api_url, actif = 1 } = req.body;
+    
+    if (!nom || !login || !api_key || !api_url) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le nom, le login, la clé API et l\'URL API sont requis' 
+      });
+    }
+
+    const result = await query(
+      'INSERT INTO fournisseurs_sms (nom, login, api_key, api_url, actif, date_creation) VALUES (?, ?, ?, ?, ?, NOW())',
+      [nom, login, api_key, api_url, actif]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Fournisseur SMS créé avec succès',
+      data: { id: result.insertId }
+    });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la création du fournisseur SMS' });
+  }
+});
+
+// Mettre à jour un fournisseur SMS
+router.put('/fournisseurs-sms/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nom, login, api_key, api_url, actif } = req.body;
+    
+    if (!nom || !login || !api_url) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le nom, le login et l\'URL API sont requis' 
+      });
+    }
+
+    // Si api_key est fournie, la mettre à jour, sinon garder l'ancienne
+    let queryStr = 'UPDATE fournisseurs_sms SET nom = ?, login = ?, api_url = ?, actif = ?, date_modification = NOW()';
+    const params = [nom, login, api_url, actif !== undefined ? actif : 1];
+    
+    if (api_key && api_key.trim() !== '') {
+      queryStr = 'UPDATE fournisseurs_sms SET nom = ?, login = ?, api_key = ?, api_url = ?, actif = ?, date_modification = NOW()';
+      params.splice(2, 0, api_key); // Insérer api_key après login
+    }
+    
+    queryStr += ' WHERE id = ?';
+    params.push(id);
+
+    await query(queryStr, params);
+
+    res.json({
+      success: true,
+      message: 'Fournisseur SMS mis à jour avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la mise à jour du fournisseur SMS' });
+  }
+});
+
+// Supprimer un fournisseur SMS
+router.delete('/fournisseurs-sms/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Vérifier si le fournisseur est actif (on peut empêcher la suppression d'un fournisseur actif)
+    const fournisseur = await queryOne(
+      'SELECT actif FROM fournisseurs_sms WHERE id = ?',
+      [id]
+    );
+    
+    if (!fournisseur) {
+      return res.status(404).json({
+        success: false,
+        message: 'Fournisseur SMS non trouvé'
+      });
+    }
+
+    if (fournisseur.actif === 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Impossible de supprimer un fournisseur SMS actif. Désactivez-le d\'abord.'
+      });
+    }
+
+    await query('DELETE FROM fournisseurs_sms WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Fournisseur SMS supprimé avec succès' });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la suppression' });
+  }
+});
+
 module.exports = router;
