@@ -2542,567 +2542,453 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           </div>
         )}
 
-        {/* Historique */}
-        {fiche.historique && fiche.historique.length > 0 && (
+        {/* État actuel et Historique */}
+        {(fiche.id_etat_final || (fiche.historique && fiche.historique.length > 0)) && (
           <div className="fiche-section">
-            <div 
-              className="section-title" 
-              style={{ 
-                cursor: 'pointer', 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                userSelect: 'none'
-              }}
-              onClick={() => setShowHistorique(!showHistorique)}
-            >
-              <span>Historique des états</span>
-              {showHistorique ? <FaChevronUp /> : <FaChevronDown />}
-            </div>
-            
-            {/* Afficher le dernier statut directement */}
-            {fiche.historique.length > 0 && (() => {
-              const dernierHisto = fiche.historique[fiche.historique.length - 1];
-              
-              // Fonction pour afficher les informations selon l'état (réutilisée du code de l'historique)
-              const renderHistoDetails = (histo) => {
-                const etatId = histo.id_etat;
+            {/* Fonction réutilisable pour afficher les détails selon l'état */}
+            {(() => {
+              const renderEtatDetails = (etatData) => {
+                const etatId = etatData.id_etat;
                 const confirmateursList = [
-                  histo.confirmateur_pseudo,
-                  histo.confirmateur_2_pseudo,
-                  histo.confirmateur_3_pseudo
+                  etatData.confirmateur_pseudo,
+                  etatData.confirmateur_2_pseudo,
+                  etatData.confirmateur_3_pseudo
                 ].filter(Boolean).join(', ') || '-';
                 
                 const items = [];
                 
                 // NRP (2)
                 if (etatId === 2) {
-                  if (histo.sous_etat_titre) items.push({ label: 'Sous-état', value: histo.sous_etat_titre });
-                  if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                  if (histo.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(histo.date_rdv_time).toLocaleDateString('fr-FR') });
-                  if (histo.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.sous_etat_titre) items.push({ label: 'Sous-état', value: etatData.sous_etat_titre });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
+                  if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RAPPEL POUR BUREAU (19)
                 else if (etatId === 19) {
-                  if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                  if (histo.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(histo.date_rdv_time).toLocaleDateString('fr-FR') });
-                  if (histo.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
+                  if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // ANNULER ET A REPROGRAMMER (8)
                 else if (etatId === 8) {
-                  if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                  if (histo.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(histo.date_rdv_time).toLocaleDateString('fr-FR') });
-                  if (histo.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
+                  if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // CLIENT HONORE A SUIVRE (9)
                 else if (etatId === 9) {
-                  if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (histo.confirmateur_2_pseudo) items.push({ label: 'Confirmateur 2', value: histo.confirmateur_2_pseudo });
-                  if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                  if (histo.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(histo.date_rdv_time).toLocaleDateString('fr-FR') });
-                  if (histo.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_2_pseudo) items.push({ label: 'Confirmateur 2', value: etatData.confirmateur_2_pseudo });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
+                  if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RDV ANNULER (11)
                 else if (etatId === 11) {
-                  if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                  if (histo.conf_rdv_avec) items.push({ label: 'Appel avec qui', value: histo.conf_rdv_avec });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.conf_rdv_avec) items.push({ label: 'Appel avec qui', value: etatData.conf_rdv_avec });
                 }
                 // RDV ANNULER 2 FOIS (26)
                 else if (etatId === 26) {
-                  if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                  if (histo.conf_rdv_avec) items.push({ label: 'Appel avec qui', value: histo.conf_rdv_avec });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.conf_rdv_avec) items.push({ label: 'Appel avec qui', value: etatData.conf_rdv_avec });
                 }
                 // REFUSER (12)
                 else if (etatId === 12) {
-                  if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                  if (histo.date_appel_time) items.push({ label: 'Date appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // HHC FINANCEMENT A VERIFIER (34)
                 else if (etatId === 34) {
-                  if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                  if (histo.date_appel_time) items.push({ label: 'Date appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // HHC TECHNIQUE (35)
                 else if (etatId === 35) {
-                  if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                  if (histo.commercial_pseudo) items.push({ label: 'Commercial', value: histo.commercial_pseudo });
-                  if (histo.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.commercial_pseudo) items.push({ label: 'Commercial', value: etatData.commercial_pseudo });
+                  if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // SIGNER, SIGNER RETRACTER, SIGNER COMPLET, SIGNER PM (13, 16, 45, 44) - Phase 3
                 else if ([13, 16, 45, 44].includes(etatId)) {
-                  // ETAT
-                  if (histo.etat_titre) items.push({ label: 'ETAT', value: histo.etat_titre });
-                  
-                  // SOUS ETAT : COMPLETE / INCOMPLETE
-                  if (histo.sous_etat_titre) {
-                    items.push({ label: 'SOUS ETAT', value: histo.sous_etat_titre });
-                  }
-                  
-                  // PSEUDO (Confirmateur)
-                  if (histo.confirmateur_pseudo) items.push({ label: 'PSEUDO', value: confirmateursList });
-                  
-                  // PAC : R/EAU ; R/R
-                  if (histo.ph3_pac) {
-                    const pacValue = histo.ph3_pac === 'reau' || histo.ph3_pac === 'R/EAU' ? 'R/EAU' : 
-                                     histo.ph3_pac === 'rr' || histo.ph3_pac === 'R/R' ? 'R/R' : histo.ph3_pac;
+                  if (etatData.sous_etat_titre) items.push({ label: 'SOUS ETAT', value: etatData.sous_etat_titre });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'PSEUDO', value: confirmateursList });
+                  if (etatData.ph3_pac) {
+                    const pacValue = etatData.ph3_pac === 'reau' || etatData.ph3_pac === 'R/EAU' ? 'R/EAU' : 
+                                     etatData.ph3_pac === 'rr' || etatData.ph3_pac === 'R/R' ? 'R/R' : etatData.ph3_pac;
                     items.push({ label: 'PAC', value: pacValue });
                   }
-                  
-                  // Financement
-                  if (histo.ph3_financement || histo.ph3_type) items.push({ label: 'Financement', value: histo.ph3_financement || histo.ph3_type });
-                  
-                  // Prix
-                  if (histo.ph3_prix) items.push({ label: 'Prix', value: histo.ph3_prix });
-                  
-                  // Crédit immobilier
-                  if (histo.credit_immobilier) items.push({ label: 'Crédit immobilier', value: histo.credit_immobilier });
-                  
-                  // Autre crédit
-                  if (histo.credit_autre) items.push({ label: 'Autre crédit', value: histo.credit_autre });
-                  
-                  // Puissance
-                  if (histo.ph3_puissance) items.push({ label: 'Puissance', value: histo.ph3_puissance });
-                  
-                  // Ballon
-                  if (histo.ph3_ballon) {
-                    const ballonValue = histo.ph3_ballon === 'OUI' || histo.ph3_ballon === 1 || histo.ph3_ballon === '1' ? 'OUI' :
-                                        histo.ph3_ballon === 'NON' || histo.ph3_ballon === 0 || histo.ph3_ballon === '0' ? 'NON' : histo.ph3_ballon;
+                  if (etatData.ph3_type) items.push({ label: 'Financement', value: etatData.ph3_type });
+                  if (etatData.ph3_prix) items.push({ label: 'Prix', value: etatData.ph3_prix });
+                  if (etatData.credit_immobilier) items.push({ label: 'Crédit immobilier', value: etatData.credit_immobilier });
+                  if (etatData.credit_autre) items.push({ label: 'Autre crédit', value: etatData.credit_autre });
+                  if (etatData.ph3_puissance) items.push({ label: 'Puissance', value: etatData.ph3_puissance });
+                  if (etatData.ph3_ballon) {
+                    const ballonValue = etatData.ph3_ballon === 'OUI' || etatData.ph3_ballon === 1 || etatData.ph3_ballon === '1' ? 'OUI' :
+                                        etatData.ph3_ballon === 'NON' || etatData.ph3_ballon === 0 || etatData.ph3_ballon === '0' ? 'NON' : etatData.ph3_ballon;
                     items.push({ label: 'Ballon', value: ballonValue });
                   }
-                  
-                  // Installateur
-                  if (histo.installeur_nom) items.push({ label: 'Installateur', value: histo.installeur_nom });
-                  
-                  // consommation annuelle ancien système
-                  if (histo.ph3_consommation || histo.conf_consommations) items.push({ label: 'Consommation annuelle ancien système', value: histo.ph3_consommation || histo.conf_consommations });
-                  
-                  // Partie à financer du client (valeur_mensualite ou ph3_mensualite)
-                  if (histo.valeur_mensualite || histo.ph3_mensualite) items.push({ label: 'Partie à financer du client', value: histo.valeur_mensualite || histo.ph3_mensualite });
-                  
-                  // Bonus annoncé
-                  if (histo.ph3_bonus || histo.ph3_bonus_30) items.push({ label: 'Bonus annoncé', value: histo.ph3_bonus || histo.ph3_bonus_30 });
-                  
-                  // Mensualité du crédit
-                  if (histo.ph3_mensualite) items.push({ label: 'Mensualité du crédit', value: histo.ph3_mensualite });
-                  
-                  // Nombre de mois du crédit
-                  if (histo.ph3_nbr_annee_finance || histo.nbr_annee_finance) items.push({ label: 'Nombre de mois du crédit', value: histo.ph3_nbr_annee_finance || histo.nbr_annee_finance });
-                  
-                  // Alimentation
-                  if (histo.ph3_alimentation) items.push({ label: 'Alimentation', value: histo.ph3_alimentation });
-                  
-                  // Type
-                  if (histo.ph3_type) items.push({ label: 'Type', value: histo.ph3_type });
-                  
-                  // DATE SIGNATURE
-                  if (histo.date_sign_time) items.push({ label: 'DATE SIGNATURE', value: new Date(histo.date_sign_time).toLocaleString('fr-FR') });
+                  if (etatData.installeur_nom) items.push({ label: 'Installateur', value: etatData.installeur_nom });
+                  if (etatData.ph3_consommation) items.push({ label: 'Consommation annuelle ancien système', value: etatData.ph3_consommation });
+                  if (etatData.valeur_mensualite || etatData.ph3_mensualite) items.push({ label: 'Partie à financer du client', value: etatData.valeur_mensualite || etatData.ph3_mensualite });
+                  if (etatData.ph3_bonus_30) items.push({ label: 'Bonus annoncé', value: etatData.ph3_bonus_30 });
+                  if (etatData.ph3_mensualite) items.push({ label: 'Mensualité du crédit', value: etatData.ph3_mensualite });
+                  if (etatData.ph3_nbr_annee_finance) items.push({ label: 'Nombre de mois du crédit', value: etatData.ph3_nbr_annee_finance });
+                  if (etatData.ph3_alimentation) items.push({ label: 'Alimentation', value: etatData.ph3_alimentation });
+                  if (etatData.ph3_type) items.push({ label: 'Type', value: etatData.ph3_type });
+                  if (etatData.date_sign_time) items.push({ label: 'DATE SIGNATURE', value: new Date(etatData.date_sign_time).toLocaleString('fr-FR') });
                 }
                 // CONFIRMER (7)
                 else if (etatId === 7) {
-                  if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire confirmateur', value: histo.conf_commentaire_produit, fullWidth: true });
-                  if (histo.conf_rdv_avec) items.push({ label: 'Entretien avec', value: histo.conf_rdv_avec });
-                  if (histo.date_rdv_time) items.push({ label: 'Date RDV', value: new Date(histo.date_rdv_time).toLocaleString('fr-FR') });
-                  if (histo.date_appel_time) items.push({ label: 'Date appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire confirmateur', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.conf_rdv_avec) items.push({ label: 'Entretien avec', value: etatData.conf_rdv_avec });
+                  if (etatData.date_rdv_time) items.push({ label: 'Date RDV', value: new Date(etatData.date_rdv_time).toLocaleString('fr-FR') });
+                  if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                   
-                  // Profession MR et type de contrat
-                  const professionMr = professions?.find(p => p.id == histo.profession_mr);
-                  const typeContratMr = typeContrat?.find(t => String(t.id) === String(histo.type_contrat_mr));
-                  if (histo.profession_mr || histo.type_contrat_mr) {
-                    const profMrText = professionMr ? professionMr.nom : (histo.profession_mr || '-');
-                    const contratMrText = typeContratMr ? typeContratMr.nom : (histo.type_contrat_mr || '-');
-                    items.push({ label: 'Profession MR et type de contrat', value: `${profMrText}${histo.profession_mr && histo.type_contrat_mr ? ' - ' : ''}${contratMrText}` });
+                  const professionMr = professions?.find(p => p.id == etatData.profession_mr);
+                  const typeContratMr = typeContrat?.find(t => String(t.id) === String(etatData.type_contrat_mr));
+                  if (etatData.profession_mr || etatData.type_contrat_mr) {
+                    const profMrText = professionMr ? professionMr.nom : (etatData.profession_mr || '-');
+                    const contratMrText = typeContratMr ? typeContratMr.nom : (etatData.type_contrat_mr || '-');
+                    items.push({ label: 'Profession MR et type de contrat', value: `${profMrText}${etatData.profession_mr && etatData.type_contrat_mr ? ' - ' : ''}${contratMrText}` });
                   }
                   
-                  // Profession MME et type de contrat
-                  const professionMme = professions?.find(p => p.id == histo.profession_madame);
-                  const typeContratMme = typeContrat?.find(t => String(t.id) === String(histo.type_contrat_madame));
-                  if (histo.profession_madame || histo.type_contrat_madame) {
-                    const profMmeText = professionMme ? professionMme.nom : (histo.profession_madame || '-');
-                    const contratMmeText = typeContratMme ? typeContratMme.nom : (histo.type_contrat_madame || '-');
-                    items.push({ label: 'Profession MME et type de contrat', value: `${profMmeText}${histo.profession_madame && histo.type_contrat_madame ? ' - ' : ''}${contratMmeText}` });
+                  const professionMme = professions?.find(p => p.id == etatData.profession_madame);
+                  const typeContratMme = typeContrat?.find(t => String(t.id) === String(etatData.type_contrat_madame));
+                  if (etatData.profession_madame || etatData.type_contrat_madame) {
+                    const profMmeText = professionMme ? professionMme.nom : (etatData.profession_madame || '-');
+                    const contratMmeText = typeContratMme ? typeContratMme.nom : (etatData.type_contrat_madame || '-');
+                    items.push({ label: 'Profession MME et type de contrat', value: `${profMmeText}${etatData.profession_madame && etatData.type_contrat_madame ? ' - ' : ''}${contratMmeText}` });
                   }
                   
-                  if (histo.revenu_foyer) items.push({ label: 'Revenu', value: histo.revenu_foyer });
-                  if (histo.credit_foyer) items.push({ label: 'Crédit', value: histo.credit_foyer });
+                  if (etatData.revenu_foyer) items.push({ label: 'Revenu', value: etatData.revenu_foyer });
+                  if (etatData.credit_foyer) items.push({ label: 'Crédit', value: etatData.credit_foyer });
                   
-                  // Mode de chauffage
-                  if (histo.mode_chauffage) {
-                    const modeChauffageText = modeChauffage?.find(m => m.id == histo.mode_chauffage)?.nom || histo.mode_chauffage;
+                  if (etatData.mode_chauffage) {
+                    const modeChauffageText = modeChauffage?.find(m => m.id == etatData.mode_chauffage)?.nom || etatData.mode_chauffage;
                     items.push({ label: 'Mode de chauffage', value: modeChauffageText });
                   }
                   
-                  // Produit
-                  if (histo.produit) {
-                    const produitText = produits?.find(p => p.id == histo.produit)?.nom || (histo.produit === 1 ? 'PAC' : histo.produit === 2 ? 'PV' : histo.produit);
+                  if (etatData.produit) {
+                    const produitText = produits?.find(p => p.id == etatData.produit)?.nom || (etatData.produit === 1 ? 'PAC' : etatData.produit === 2 ? 'PV' : etatData.produit);
                     items.push({ label: 'Produit', value: produitText });
                   }
                 }
-                    // CONFIRMER (7)
-                    else if (etatId === 7) {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire confirmateur', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.conf_rdv_avec) items.push({ label: 'Entretien avec', value: histo.conf_rdv_avec });
-                      if (histo.date_rdv_time) items.push({ label: 'Date RDV', value: new Date(histo.date_rdv_time).toLocaleString('fr-FR') });
-                      if (histo.date_appel_time) items.push({ label: 'Date appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
-                      
-                      // Profession MR et type de contrat
-                      const professionMr = professions?.find(p => p.id == histo.profession_mr);
-                      const typeContratMr = typeContrat?.find(t => String(t.id) === String(histo.type_contrat_mr));
-                      if (histo.profession_mr || histo.type_contrat_mr) {
-                        const profMrText = professionMr ? professionMr.nom : (histo.profession_mr || '-');
-                        const contratMrText = typeContratMr ? typeContratMr.nom : (histo.type_contrat_mr || '-');
-                        items.push({ label: 'Profession MR et type de contrat', value: `${profMrText}${histo.profession_mr && histo.type_contrat_mr ? ' - ' : ''}${contratMrText}` });
-                      }
-                      
-                      // Profession MME et type de contrat
-                      const professionMme = professions?.find(p => p.id == histo.profession_madame);
-                      const typeContratMme = typeContrat?.find(t => String(t.id) === String(histo.type_contrat_madame));
-                      if (histo.profession_madame || histo.type_contrat_madame) {
-                        const profMmeText = professionMme ? professionMme.nom : (histo.profession_madame || '-');
-                        const contratMmeText = typeContratMme ? typeContratMme.nom : (histo.type_contrat_madame || '-');
-                        items.push({ label: 'Profession MME et type de contrat', value: `${profMmeText}${histo.profession_madame && histo.type_contrat_madame ? ' - ' : ''}${contratMmeText}` });
-                      }
-                      
-                      if (histo.revenu_foyer) items.push({ label: 'Revenu', value: histo.revenu_foyer });
-                      if (histo.credit_foyer) items.push({ label: 'Crédit', value: histo.credit_foyer });
-                      
-                      // Mode de chauffage
-                      if (histo.mode_chauffage) {
-                        const modeChauffageText = modeChauffage?.find(m => m.id == histo.mode_chauffage)?.nom || histo.mode_chauffage;
-                        items.push({ label: 'Mode de chauffage', value: modeChauffageText });
-                      }
-                      
-                      // Produit
-                      if (histo.produit) {
-                        const produitText = produits?.find(p => p.id == histo.produit)?.nom || (histo.produit === 1 ? 'PAC' : histo.produit === 2 ? 'PV' : histo.produit);
-                        items.push({ label: 'Produit', value: produitText });
-                      }
-                    }
-                    // Contrôle qualité - États avec cq_etat et cq_dossier
-                    else if (histo.cq_etat || histo.cq_dossier) {
-                      if (histo.cq_etat) items.push({ label: 'CQ ETAT', value: histo.cq_etat });
-                      if (histo.cq_dossier) items.push({ label: 'CQ DOSSIER', value: histo.cq_dossier });
-                      if (histo.commentaire_qualite) items.push({ label: 'Observation', value: histo.commentaire_qualite, fullWidth: true });
-                    }
-                    // Par défaut : afficher confirmateur, commentaire, date appel
-                    else {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.date_appel_time) items.push({ label: 'Date appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
-                    }
+                // Contrôle qualité
+                else if (etatData.cq_etat || etatData.cq_dossier) {
+                  if (etatData.cq_etat) items.push({ label: 'CQ ETAT', value: etatData.cq_etat });
+                  if (etatData.cq_dossier) items.push({ label: 'CQ DOSSIER', value: etatData.cq_dossier });
+                  if (etatData.commentaire_qualite) items.push({ label: 'Observation', value: etatData.commentaire_qualite, fullWidth: true });
+                }
+                // Par défaut
+                else {
+                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
+                }
                 
                 return items;
               };
               
-              const detailItems = renderHistoDetails(dernierHisto);
+              // Construire l'objet état actuel à partir des données de la fiche
+              const etatActuel = {
+                id_etat: fiche.id_etat_final,
+                etat_titre: fiche.etat_final_titre || etats?.find(e => e.id === fiche.id_etat_final)?.titre || 'État inconnu',
+                etat_color: fiche.etat_final_color || etats?.find(e => e.id === fiche.id_etat_final)?.color || '#3498db',
+                sous_etat_titre: fiche.sous_etat_titre || null,
+                // Utiliser les données actuelles de la fiche
+                confirmateur_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur)?.pseudo || null,
+                confirmateur_2_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_2)?.pseudo || null,
+                confirmateur_3_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_3)?.pseudo || null,
+                conf_commentaire_produit: fiche.conf_commentaire_produit || null,
+                conf_rdv_avec: fiche.conf_rdv_avec || null,
+                date_rdv_time: fiche.date_rdv_time || null,
+                date_appel_time: fiche.date_appel_time || null,
+                date_sign_time: fiche.date_sign_time || null,
+                commercial_pseudo: commerciaux?.find(c => c.id === fiche.id_commercial)?.pseudo || null,
+                installeur_nom: installateurs?.find(i => i.id === fiche.ph3_installateur)?.nom || null,
+                // Phase 3
+                ph3_pac: fiche.ph3_pac || null,
+                ph3_type: fiche.ph3_type || null,
+                ph3_prix: fiche.ph3_prix || null,
+                ph3_puissance: fiche.ph3_puissance || fiche.ph3_puissance_pv || null,
+                ph3_consommation: fiche.conf_consommations || null,
+                ph3_bonus_30: fiche.ph3_bonus_30 || null,
+                ph3_mensualite: fiche.ph3_mensualite || null,
+                ph3_nbr_annee_finance: fiche.nbr_annee_finance || null,
+                ph3_ballon: fiche.ph3_ballon || null,
+                ph3_alimentation: fiche.ph3_alimentation || null,
+                credit_immobilier: fiche.credit_immobilier || null,
+                credit_autre: fiche.credit_autre || null,
+                valeur_mensualite: fiche.valeur_mensualite || null,
+                // Autres
+                profession_mr: fiche.profession_mr || null,
+                profession_madame: fiche.profession_madame || null,
+                type_contrat_mr: fiche.type_contrat_mr || null,
+                type_contrat_madame: fiche.type_contrat_madame || null,
+                revenu_foyer: fiche.revenu_foyer || null,
+                credit_foyer: fiche.credit_foyer || null,
+                mode_chauffage: fiche.mode_chauffage || null,
+                produit: fiche.produit || null,
+                cq_etat: fiche.cq_etat || null,
+                cq_dossier: fiche.cq_dossier || null,
+                commentaire_qualite: fiche.commentaire_qualite || null,
+                date_creation: fiche.date_modif_time || fiche.date_insert_time || new Date().toISOString()
+              };
+              
+              const detailItemsActuel = renderEtatDetails(etatActuel);
               
               return (
-                <div 
-                  className="dernier-statut"
-                  style={{
-                    padding: '15px',
-                    border: `3px solid ${dernierHisto.etat_color || '#3498db'}`,
-                    borderRadius: '4px',
-                    marginBottom: '15px',
-                    backgroundColor: '#f9f9f9'
-                  }}
-                >
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    marginBottom: '15px',
-                    flexWrap: 'wrap',
-                    gap: '10px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      {/* Afficher le sous-état devant l'état s'il existe */}
-                      {dernierHisto.sous_etat_titre && (
-                        <span
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            backgroundColor: '#e0e0e0',
-                            color: '#333',
-                            fontSize: '12px',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          {dernierHisto.sous_etat_titre}
-                        </span>
-                      )}
-                      <span
-                        style={{
-                          padding: '5px 15px',
-                          borderRadius: '4px',
-                          backgroundColor: dernierHisto.etat_color || '#3498db',
-                          color: dernierHisto.etat_color === '#ffffff' || dernierHisto.etat_color === '#fff' ? '#000' : '#fff',
-                          fontWeight: 'bold',
-                          fontSize: '14px'
-                        }}
-                      >
-                        {dernierHisto.etat_titre || 'État inconnu'}
-                      </span>
-                    </div>
-                    <span style={{ color: '#666', fontSize: '13px' }}>
-                      {dernierHisto.date_creation ? new Date(dernierHisto.date_creation).toLocaleString('fr-FR') : '-'}
-                    </span>
-                  </div>
-                  
-                  {/* Afficher les informations complémentaires du dernier statut */}
-                  {detailItems.length > 0 && (
-                    <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #ddd' }}>
-                      <h4 style={{ marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>Informations du changement d'état :</h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
-                        {detailItems.map((item, idx) => (
-                          <div key={idx} style={{ gridColumn: item.fullWidth ? 'span 2' : 'span 1' }}>
-                            <strong>{item.label}:</strong> {item.value || '-'}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-            
-            {/* Afficher l'historique complet si ouvert */}
-            {showHistorique && (
-            <div className="historique-list">
-                {fiche.historique.map((histo, index) => {
-                  // Fonction pour afficher les informations selon l'état
-                  const renderHistoDetails = () => {
-                    const etatId = histo.id_etat;
-                    const confirmateursList = [
-                      histo.confirmateur_pseudo,
-                      histo.confirmateur_2_pseudo,
-                      histo.confirmateur_3_pseudo
-                    ].filter(Boolean).join(', ') || '-';
-                    
-                    const items = [];
-                    
-                    // NRP (2)
-                    if (etatId === 2) {
-                      if (histo.sous_etat_titre) items.push({ label: 'Sous-état', value: histo.sous_etat_titre });
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(histo.date_rdv_time).toLocaleDateString('fr-FR') });
-                      if (histo.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
-                    }
-                    // RAPPEL POUR BUREAU (19)
-                    else if (etatId === 19) {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(histo.date_rdv_time).toLocaleDateString('fr-FR') });
-                      if (histo.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
-                    }
-                    // ANNULER ET A REPROGRAMMER (8)
-                    else if (etatId === 8) {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(histo.date_rdv_time).toLocaleDateString('fr-FR') });
-                      if (histo.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
-                    }
-                    // CLIENT HONORE A SUIVRE (9)
-                    else if (etatId === 9) {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.confirmateur_2_pseudo) items.push({ label: 'Confirmateur 2', value: histo.confirmateur_2_pseudo });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(histo.date_rdv_time).toLocaleDateString('fr-FR') });
-                      if (histo.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
-                    }
-                    // RDV ANNULER (11)
-                    else if (etatId === 11) {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.conf_rdv_avec) items.push({ label: 'Appel avec qui', value: histo.conf_rdv_avec });
-                    }
-                    // RDV ANNULER 2 FOIS (26)
-                    else if (etatId === 26) {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.conf_rdv_avec) items.push({ label: 'Appel avec qui', value: histo.conf_rdv_avec });
-                    }
-                    // REFUSER (12)
-                    else if (etatId === 12) {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.date_appel_time) items.push({ label: 'Date appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
-                    }
-                    // HHC FINANCEMENT A VERIFIER (34)
-                    else if (etatId === 34) {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.date_appel_time) items.push({ label: 'Date appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
-                    }
-                    // HHC TECHNIQUE (35)
-                    else if (etatId === 35) {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.commercial_pseudo) items.push({ label: 'Commercial', value: histo.commercial_pseudo });
-                      if (histo.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
-                    }
-                    // SIGNER, SIGNER RETRACTER, SIGNER COMPLET, SIGNER PM (13, 16, 45, 44) - Phase 3
-                    else if ([13, 16, 45, 44].includes(etatId)) {
-                      // ETAT
-                      if (histo.etat_titre) items.push({ label: 'ETAT', value: histo.etat_titre });
-                      
-                      // SOUS ETAT : COMPLETE / INCOMPLETE
-                      if (histo.sous_etat_titre) {
-                        items.push({ label: 'SOUS ETAT', value: histo.sous_etat_titre });
-                      }
-                      
-                      // PSEUDO (Confirmateur)
-                      if (histo.confirmateur_pseudo) items.push({ label: 'PSEUDO', value: confirmateursList });
-                      
-                      // PAC : R/EAU ; R/R
-                      if (histo.ph3_pac) {
-                        const pacValue = histo.ph3_pac === 'reau' || histo.ph3_pac === 'R/EAU' ? 'R/EAU' : 
-                                         histo.ph3_pac === 'rr' || histo.ph3_pac === 'R/R' ? 'R/R' : histo.ph3_pac;
-                        items.push({ label: 'PAC', value: pacValue });
-                      }
-                      
-                      // Financement
-                      if (histo.ph3_financement || histo.ph3_type) items.push({ label: 'Financement', value: histo.ph3_financement || histo.ph3_type });
-                      
-                      // Prix
-                      if (histo.ph3_prix) items.push({ label: 'Prix', value: histo.ph3_prix });
-                      
-                      // Crédit immobilier
-                      if (histo.credit_immobilier) items.push({ label: 'Crédit immobilier', value: histo.credit_immobilier });
-                      
-                      // Autre crédit
-                      if (histo.credit_autre) items.push({ label: 'Autre crédit', value: histo.credit_autre });
-                      
-                      // Puissance
-                      if (histo.ph3_puissance) items.push({ label: 'Puissance', value: histo.ph3_puissance });
-                      
-                      // Ballon
-                      if (histo.ph3_ballon) {
-                        const ballonValue = histo.ph3_ballon === 'OUI' || histo.ph3_ballon === 1 || histo.ph3_ballon === '1' ? 'OUI' :
-                                            histo.ph3_ballon === 'NON' || histo.ph3_ballon === 0 || histo.ph3_ballon === '0' ? 'NON' : histo.ph3_ballon;
-                        items.push({ label: 'Ballon', value: ballonValue });
-                      }
-                      
-                      // Installateur
-                      if (histo.installeur_nom) items.push({ label: 'Installateur', value: histo.installeur_nom });
-                      
-                      // consommation annuelle ancien système
-                      if (histo.ph3_consommation || histo.conf_consommations) items.push({ label: 'Consommation annuelle ancien système', value: histo.ph3_consommation || histo.conf_consommations });
-                      
-                      // Partie à financer du client (valeur_mensualite ou ph3_mensualite)
-                      if (histo.valeur_mensualite || histo.ph3_mensualite) items.push({ label: 'Partie à financer du client', value: histo.valeur_mensualite || histo.ph3_mensualite });
-                      
-                      // Bonus annoncé
-                      if (histo.ph3_bonus || histo.ph3_bonus_30) items.push({ label: 'Bonus annoncé', value: histo.ph3_bonus || histo.ph3_bonus_30 });
-                      
-                      // Mensualité du crédit
-                      if (histo.ph3_mensualite) items.push({ label: 'Mensualité du crédit', value: histo.ph3_mensualite });
-                      
-                      // Nombre de mois du crédit
-                      if (histo.ph3_nbr_annee_finance || histo.nbr_annee_finance) items.push({ label: 'Nombre de mois du crédit', value: histo.ph3_nbr_annee_finance || histo.nbr_annee_finance });
-                      
-                      // Alimentation
-                      if (histo.ph3_alimentation) items.push({ label: 'Alimentation', value: histo.ph3_alimentation });
-                      
-                      // Type
-                      if (histo.ph3_type) items.push({ label: 'Type', value: histo.ph3_type });
-                      
-                      // DATE SIGNATURE
-                      if (histo.date_sign_time) items.push({ label: 'DATE SIGNATURE', value: new Date(histo.date_sign_time).toLocaleString('fr-FR') });
-                    }
-                    // Contrôle qualité - États avec cq_etat et cq_dossier (groupe 0 ou autres selon logique métier)
-                    else if (histo.cq_etat || histo.cq_dossier) {
-                      if (histo.cq_etat) items.push({ label: 'CQ ETAT', value: histo.cq_etat });
-                      if (histo.cq_dossier) items.push({ label: 'CQ DOSSIER', value: histo.cq_dossier });
-                      if (histo.commentaire_qualite) items.push({ label: 'Observation', value: histo.commentaire_qualite, fullWidth: true });
-                    }
-                    // Par défaut : afficher confirmateur, commentaire, date appel
-                    else {
-                      if (histo.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                      if (histo.conf_commentaire_produit) items.push({ label: 'Commentaire', value: histo.conf_commentaire_produit, fullWidth: true });
-                      if (histo.date_appel_time) items.push({ label: 'Date appel', value: new Date(histo.date_appel_time).toLocaleString('fr-FR') });
-                    }
-                    
-                    return items;
-                  };
-                  
-                  const detailItems = renderHistoDetails();
-                  
-                  return (
-                <div
-                  key={histo.id}
-                  className="historique-item"
-                  style={{
-                        borderLeftColor: histo.etat_color || '#3498db',
-                        padding: '15px',
-                        marginBottom: '15px',
-                        backgroundColor: '#f9f9f9',
-                        borderRadius: '4px'
+                <>
+                  {/* Section État Actuel - Toujours visible en premier plan */}
+                  {fiche.id_etat_final && (
+                    <div 
+                      className="etat-actuel-card"
+                      style={{
+                        padding: '20px',
+                        border: `4px solid ${etatActuel.etat_color}`,
+                        borderRadius: '8px',
+                        marginBottom: '20px',
+                        backgroundColor: '#ffffff',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                        position: 'relative'
                       }}
                     >
-                      <div className="historique-header" style={{ marginBottom: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                          {/* Afficher le sous-état devant l'état s'il existe */}
-                          {histo.sous_etat_titre && (
+                      {/* Badge "État Actuel" */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '-12px',
+                        right: '20px',
+                        backgroundColor: etatActuel.etat_color,
+                        color: etatActuel.etat_color === '#ffffff' || etatActuel.etat_color === '#fff' ? '#000' : '#fff',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        État Actuel
+                      </div>
+                      
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '20px',
+                        flexWrap: 'wrap',
+                        gap: '15px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                          {/* Sous-état */}
+                          {etatActuel.sous_etat_titre && (
                             <span
                               style={{
-                                padding: '4px 10px',
-                                borderRadius: '4px',
-                                backgroundColor: '#e0e0e0',
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                backgroundColor: '#e8e8e8',
                                 color: '#333',
-                                fontSize: '12px',
-                                fontWeight: 'bold'
+                                fontSize: '13px',
+                                fontWeight: 'bold',
+                                border: '1px solid #ccc'
                               }}
                             >
-                              {histo.sous_etat_titre}
+                              {etatActuel.sous_etat_titre}
                             </span>
                           )}
-                    <span
-                      className="historique-etat"
-                      style={{
-                        backgroundColor: histo.etat_color || '#3498db',
-                              color: histo.etat_color === '#ffffff' || histo.etat_color === '#fff' ? '#000' : '#fff',
-                              padding: '5px 15px',
-                              borderRadius: '4px',
+                          {/* État */}
+                          <span
+                            style={{
+                              padding: '8px 18px',
+                              borderRadius: '6px',
+                              backgroundColor: etatActuel.etat_color,
+                              color: etatActuel.etat_color === '#ffffff' || etatActuel.etat_color === '#fff' ? '#000' : '#fff',
                               fontWeight: 'bold',
-                              fontSize: '14px'
-                      }}
-                    >
-                      {histo.etat_titre || 'État inconnu'}
-                    </span>
-                          <span className="historique-date" style={{ color: '#666', fontSize: '13px', marginLeft: 'auto' }}>
-                    {histo.date_creation ? new Date(histo.date_creation).toLocaleString('fr-FR') : '-'}
-                  </span>
-                </div>
+                              fontSize: '16px',
+                              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                            }}
+                          >
+                            {etatActuel.etat_titre}
+                          </span>
+                        </div>
+                        <span style={{ 
+                          color: '#666', 
+                          fontSize: '14px',
+                          fontWeight: '500'
+                        }}>
+                          {etatActuel.date_creation ? new Date(etatActuel.date_creation).toLocaleString('fr-FR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : '-'}
+                        </span>
                       </div>
                       
-                      {/* Afficher les informations complémentaires selon l'état */}
-                      {detailItems.length > 0 && (
-                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #ddd', fontSize: '13px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            {detailItems.map((item, idx) => (
-                              <div key={idx} style={{ gridColumn: item.fullWidth ? 'span 2' : 'span 1' }}>
-                                <strong>{item.label}:</strong> {item.value || '-'}
-              </div>
-              ))}
-            </div>
+                      {/* Détails de l'état actuel */}
+                      {detailItemsActuel.length > 0 && (
+                        <div style={{ 
+                          marginTop: '20px', 
+                          paddingTop: '20px', 
+                          borderTop: '2px solid #e0e0e0',
+                          backgroundColor: '#fafafa',
+                          padding: '15px',
+                          borderRadius: '6px'
+                        }}>
+                          <h4 style={{ 
+                            marginBottom: '15px', 
+                            fontSize: '15px', 
+                            fontWeight: 'bold',
+                            color: '#333',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            <FaInfoCircle style={{ color: etatActuel.etat_color }} />
+                            Détails de l'état actuel
+                          </h4>
+                          <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+                            gap: '12px', 
+                            fontSize: '14px' 
+                          }}>
+                            {detailItemsActuel.map((item, idx) => (
+                              <div 
+                                key={idx} 
+                                style={{ 
+                                  gridColumn: item.fullWidth ? '1 / -1' : 'auto',
+                                  padding: '8px',
+                                  backgroundColor: '#fff',
+                                  borderRadius: '4px',
+                                  border: '1px solid #e0e0e0'
+                                }}
+                              >
+                                <strong style={{ color: '#555', display: 'block', marginBottom: '4px' }}>
+                                  {item.label}:
+                                </strong>
+                                <span style={{ color: '#333' }}>
+                                  {item.value || '-'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  )}
+                  
+                  {/* Section Historique - Pliable */}
+                  {fiche.historique && fiche.historique.length > 0 && (
+                    <>
+                      <div 
+                        className="section-title" 
+                        style={{ 
+                          cursor: 'pointer', 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          userSelect: 'none',
+                          padding: '12px 15px',
+                          backgroundColor: '#f5f5f5',
+                          borderRadius: '6px',
+                          marginBottom: '15px',
+                          border: '1px solid #ddd'
+                        }}
+                        onClick={() => setShowHistorique(!showHistorique)}
+                      >
+                        <span style={{ fontWeight: 'bold', fontSize: '15px' }}>
+                          <FaHistory style={{ marginRight: '8px' }} />
+                          Historique des états ({fiche.historique.length} entrée{fiche.historique.length > 1 ? 's' : ''})
+                        </span>
+                        {showHistorique ? <FaChevronUp /> : <FaChevronDown />}
+                      </div>
+                      
+                      {showHistorique && (
+                        <div className="historique-list" style={{ marginTop: '10px' }}>
+                          {fiche.historique.slice().reverse().map((histo, index) => {
+                            const detailItems = renderEtatDetails(histo);
+                            
+                            return (
+                              <div
+                                key={histo.id}
+                                className="historique-item"
+                                style={{
+                                  borderLeft: `4px solid ${histo.etat_color || '#3498db'}`,
+                                  padding: '15px',
+                                  marginBottom: '15px',
+                                  backgroundColor: '#f9f9f9',
+                                  borderRadius: '4px',
+                                  opacity: index === 0 && fiche.historique.length > 1 ? 0.7 : 1 // Légèrement transparent si c'est le dernier (déjà affiché en état actuel)
+                                }}
+                              >
+                                <div className="historique-header" style={{ marginBottom: '10px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                    {histo.sous_etat_titre && (
+                                      <span
+                                        style={{
+                                          padding: '4px 10px',
+                                          borderRadius: '4px',
+                                          backgroundColor: '#e0e0e0',
+                                          color: '#333',
+                                          fontSize: '12px',
+                                          fontWeight: 'bold'
+                                        }}
+                                      >
+                                        {histo.sous_etat_titre}
+                                      </span>
+                                    )}
+                                    <span
+                                      className="historique-etat"
+                                      style={{
+                                        backgroundColor: histo.etat_color || '#3498db',
+                                        color: histo.etat_color === '#ffffff' || histo.etat_color === '#fff' ? '#000' : '#fff',
+                                        padding: '5px 15px',
+                                        borderRadius: '4px',
+                                        fontWeight: 'bold',
+                                        fontSize: '14px'
+                                      }}
+                                    >
+                                      {histo.etat_titre || 'État inconnu'}
+                                    </span>
+                                    <span className="historique-date" style={{ color: '#666', fontSize: '13px', marginLeft: 'auto' }}>
+                                      {histo.date_creation ? new Date(histo.date_creation).toLocaleString('fr-FR') : '-'}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                {detailItems.length > 0 && (
+                                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #ddd', fontSize: '13px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                      {detailItems.map((item, idx) => (
+                                        <div key={idx} style={{ gridColumn: item.fullWidth ? 'span 2' : 'span 1' }}>
+                                          <strong>{item.label}:</strong> {item.value || '-'}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
