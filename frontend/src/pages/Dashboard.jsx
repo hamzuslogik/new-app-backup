@@ -6,6 +6,7 @@ import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
 import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
 import FicheDetailModal from '../components/FicheDetailModal';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -80,6 +81,7 @@ const Dashboard = () => {
     page: 1,
     limit: 999999,
     fiche_search: false,
+    include_archive: false,
   });
   
   // Lire les paramètres de l'URL et les appliquer aux filtres
@@ -124,6 +126,9 @@ const Dashboard = () => {
   });
   const [showConfirmateursTable, setShowConfirmateursTable] = useState(false); // Fermé par défaut
   const [quickSearch, setQuickSearch] = useState(''); // Recherche rapide
+  const debouncedQuickSearch = useDebouncedValue(quickSearch, 250);
+
+  const normalizeText = (v) => (typeof v === 'string' ? v.trim() : v);
 
   // Récupérer les données de référence
   const { data: centresData } = useQuery('centres', async () => {
@@ -174,7 +179,7 @@ const Dashboard = () => {
   const getQueryParams = () => {
     const { dateStr, timeStart, timeEnd } = getTodayDateRange();
     // Si limit est 999999 (Tout) ou si recherche rapide active, utiliser une valeur très élevée pour récupérer toutes les fiches
-    const isQuickSearchActive = quickSearch.trim() !== '';
+    const isQuickSearchActive = debouncedQuickSearch.trim() !== '';
     const limitParam = isQuickSearchActive ? 999999 : (filters.limit === 999999 ? 999999 : filters.limit);
     const pageParam = isQuickSearchActive ? 1 : (filters.page || 1);
     
@@ -187,11 +192,25 @@ const Dashboard = () => {
         page: pageParam,
         fiche_search: 1
       };
+
+      // Normaliser le critère (enlever espaces avant/après)
+      if (typeof searchParams.critere === 'string') {
+        searchParams.critere = searchParams.critere.trim();
+      }
       
       // Nettoyer les paramètres vides (mais garder page, limit, fiche_search, critere, critere_champ)
       Object.keys(searchParams).forEach(key => {
         if (key === 'page' || key === 'limit' || key === 'fiche_search') {
           return; // Ne pas supprimer ces paramètres
+        }
+        // include_archive: n'envoyer au backend que si activé
+        if (key === 'include_archive') {
+          if (searchParams.include_archive) {
+            searchParams.include_archive = 1;
+          } else {
+            delete searchParams.include_archive;
+          }
+          return;
         }
         // Si critere est rempli, garder critere_champ même s'il est vide (utiliser la valeur par défaut)
         if (key === 'critere_champ' && searchParams.critere) {
@@ -235,6 +254,10 @@ const Dashboard = () => {
       page: pageParam,
       limit: limitParam
     };
+
+    if (filters.include_archive) {
+      baseParams.include_archive = 1;
+    }
     
     // Fiches CONFIRMER (7) uniquement modifiées aujourd'hui
     return {
@@ -264,7 +287,7 @@ const Dashboard = () => {
 
   // Récupérer les fiches
   const { data, isLoading, isFetching, error, refetch } = useQuery(
-    ['fiches', filters, activeTab, quickSearch],
+    ['fiches', filters, activeTab, debouncedQuickSearch],
     async () => {
       console.time('[PERF] Requête API fiches - Total');
       console.log('[PERF] Début chargement fiches - Paramètres:', { filters, activeTab, quickSearch });
@@ -313,9 +336,13 @@ const Dashboard = () => {
   }
 
   const handleFilterChange = (key, value) => {
+    const nextValue =
+      key === 'critere' || key === 'nom' || key === 'prenom' || key === 'cp'
+        ? normalizeText(value)
+        : value;
     setFilters(prev => ({
       ...prev,
-      [key]: value,
+      [key]: nextValue,
       // Reset à la page 1 seulement si ce n'est pas un changement de page
       page: key === 'page' ? value : 1
     }));
@@ -509,11 +536,11 @@ const Dashboard = () => {
     if (processedFichesCount > 0) {
       console.log(`[PERF] === RÉSUMÉ PERFORMANCE ===`);
       console.log(`[PERF] Fiches après traitement: ${processedFichesCount}`);
-      console.log(`[PERF] Recherche rapide active: ${quickSearch.trim() !== '' ? 'Oui (' + quickSearch + ')' : 'Non'}`);
+      console.log(`[PERF] Recherche rapide active: ${debouncedQuickSearch.trim() !== '' ? 'Oui (' + debouncedQuickSearch + ')' : 'Non'}`);
       console.log(`[PERF] Tri actif: ${sortConfig.key ? sortConfig.key + ' (' + sortConfig.direction + ')' : 'Non'}`);
       console.log(`[PERF] ========================`);
     }
-  }, [processedFichesCount, quickSearch, sortConfig.key, sortConfig.direction]);
+  }, [processedFichesCount, debouncedQuickSearch, sortConfig.key, sortConfig.direction]);
 
   if (isLoading && !data) {
     return (
@@ -629,10 +656,10 @@ const Dashboard = () => {
   // Filtrer les fiches selon la recherche rapide
   // Performance: Filtrage des fiches
   const filterStartTime = performance.now();
-  const filteredFiches = quickSearch.trim() === '' 
+  const filteredFiches = debouncedQuickSearch.trim() === '' 
     ? sortedFiches 
     : sortedFiches.filter(fiche => {
-        const searchLower = quickSearch.toLowerCase();
+        const searchLower = debouncedQuickSearch.trim().toLowerCase();
         // Rechercher dans tous les champs
         const searchFields = [
           fiche.nom || '',
@@ -658,8 +685,8 @@ const Dashboard = () => {
         );
       });
   const filterEndTime = performance.now();
-  if (quickSearch.trim() !== '' && sortedFiches.length > 0) {
-    console.log(`[PERF] Filtrage de ${sortedFiches.length} fiches avec "${quickSearch}" effectué en ${(filterEndTime - filterStartTime).toFixed(2)}ms`);
+  if (debouncedQuickSearch.trim() !== '' && sortedFiches.length > 0) {
+    console.log(`[PERF] Filtrage de ${sortedFiches.length} fiches avec "${debouncedQuickSearch}" effectué en ${(filterEndTime - filterStartTime).toFixed(2)}ms`);
     console.log(`[PERF] Résultats après filtrage: ${filteredFiches.length} fiches (${((filteredFiches.length / sortedFiches.length) * 100).toFixed(1)}%)`);
   }
 
@@ -888,6 +915,19 @@ const Dashboard = () => {
                   </div>
                 </div>
 
+                {/* Inclure archives */}
+                <div className="form-group">
+                  <label>Archives</label>
+                  <label className="checkbox-inline">
+                    <input
+                      type="checkbox"
+                      checked={!!filters.include_archive}
+                      onChange={(e) => handleFilterChange('include_archive', e.target.checked)}
+                    />
+                    Inclure les fiches archivées
+                  </label>
+                </div>
+
                 {/* Commercial */}
                 {user?.fonction !== 5 && (
                   <div className="form-group">
@@ -1078,7 +1118,7 @@ const Dashboard = () => {
 
         <div className="results-header">
           <h2>
-            {quickSearch.trim() !== '' 
+            {debouncedQuickSearch.trim() !== '' 
               ? `Résultats de la recherche rapide: ${fiches.length} fiche${fiches.length > 1 ? 's' : ''}`
               : filters.fiche_search 
                 ? `Résultats de la recherche ${pagination.total}` 
@@ -1104,7 +1144,7 @@ const Dashboard = () => {
           </div>
         ) : fiches.length === 0 ? (
           <div className="no-results">
-            <p>Aucune fiche trouvée{quickSearch ? ` pour "${quickSearch}"` : ''}</p>
+            <p>Aucune fiche trouvée{debouncedQuickSearch ? ` pour "${debouncedQuickSearch}"` : ''}</p>
           </div>
         ) : (
           <>

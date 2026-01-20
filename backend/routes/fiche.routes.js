@@ -333,6 +333,7 @@ router.get('/', authenticate, async (req, res) => {
     const {
       page = 1,
       limit = 500,
+      include_archive,
       nom,
       prenom,
       critere,
@@ -369,7 +370,17 @@ router.get('/', authenticate, async (req, res) => {
       tomorrow
     } = req.query;
 
-    let whereConditions = ['fiche.archive = 0', 'fiche.ko = 0', 'fiche.active = 1'];
+    const includeArchive =
+      include_archive === '1' ||
+      include_archive === 1 ||
+      include_archive === true ||
+      include_archive === 'true';
+
+    let whereConditions = ['fiche.ko = 0', 'fiche.active = 1'];
+    if (!includeArchive) {
+      // Par défaut, on exclut les fiches archivées
+      whereConditions.push('(fiche.archive = 0 OR fiche.archive IS NULL)');
+    }
     let params = [];
 
     // Filtres par fonction - Par défaut pour commerciaux : fiches confirmées du jour

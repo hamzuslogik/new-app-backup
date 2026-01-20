@@ -7,6 +7,7 @@ import { FaPlus, FaEdit, FaArchive, FaTimes, FaSearch, FaChevronDown, FaChevronU
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import './Fiches.css';
 
 const Fiches = () => {
@@ -18,11 +19,15 @@ const Fiches = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingFiche, setEditingFiche] = useState(null);
   const [quickSearch, setQuickSearch] = useState(''); // Recherche rapide
+  const debouncedQuickSearch = useDebouncedValue(quickSearch, 250);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 500,
     fiche_search: false,
+    include_archive: false,
   });
+
+  const normalizeText = (v) => (typeof v === 'string' ? v.trim() : v);
 
   // Options de cache communes pour les données de référence (rarement modifiées)
   const referenceDataOptions = {
@@ -94,7 +99,7 @@ const Fiches = () => {
   // Construire les paramètres de requête
   const getQueryParams = () => {
     // Si limit est 999999 (Tout) ou si recherche rapide active, utiliser une valeur très élevée pour récupérer toutes les fiches
-    const isQuickSearchActive = quickSearch.trim() !== '';
+    const isQuickSearchActive = debouncedQuickSearch.trim() !== '';
     const limitParam = isQuickSearchActive ? 999999 : (filters.limit === 999999 ? 999999 : filters.limit);
     const pageParam = isQuickSearchActive ? 1 : (filters.page || 1);
     
@@ -106,11 +111,25 @@ const Fiches = () => {
         page: pageParam,
         fiche_search: 1
       };
+
+      // Normaliser la recherche par critère (enlever espaces avant/après)
+      if (typeof searchParams.critere === 'string') {
+        searchParams.critere = searchParams.critere.trim();
+      }
       
       // Nettoyer les paramètres vides (mais garder page, limit, fiche_search, critere, critere_champ)
       Object.keys(searchParams).forEach(key => {
         if (key === 'page' || key === 'limit' || key === 'fiche_search') {
           return; // Ne pas supprimer ces paramètres
+        }
+        // include_archive: n'envoyer au backend que si activé
+        if (key === 'include_archive') {
+          if (searchParams.include_archive) {
+            searchParams.include_archive = 1;
+          } else {
+            delete searchParams.include_archive;
+          }
+          return;
         }
         // Si critere est rempli, garder critere_champ même s'il est vide (utiliser la valeur par défaut)
         if (key === 'critere_champ' && searchParams.critere) {
@@ -160,6 +179,10 @@ const Fiches = () => {
       time_debut: timeStart,
       time_fin: timeEnd
     };
+
+    if (filters.include_archive) {
+      defaultParams.include_archive = 1;
+    }
     
     // Pour l'agent qualification, filtrer uniquement ses fiches créées aujourd'hui
     if (isAgentQualif && user?.id) {
@@ -181,7 +204,7 @@ const Fiches = () => {
 
   // Récupérer les fiches
   const { data, isLoading, error, refetch } = useQuery(
-    ['fiches', filters, quickSearch],
+    ['fiches', filters, debouncedQuickSearch],
     async () => {
       const params = getQueryParams();
       const response = await api.get('/fiches', { params });
@@ -258,9 +281,10 @@ const Fiches = () => {
   const etats = etatsData || [];
 
   const handleFilterChange = (key, value) => {
+    const nextValue = key === 'critere' ? normalizeText(value) : value;
     setFilters(prev => ({
       ...prev,
-      [key]: value,
+      [key]: nextValue,
       page: 1
     }));
   };
@@ -391,10 +415,10 @@ const Fiches = () => {
   const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
 
   // Filtrer les fiches selon la recherche rapide
-  const fiches = quickSearch.trim() === '' 
+  const fiches = debouncedQuickSearch.trim() === '' 
     ? allFiches 
     : allFiches.filter(fiche => {
-        const searchLower = quickSearch.toLowerCase();
+        const searchLower = debouncedQuickSearch.trim().toLowerCase();
         // Rechercher dans tous les champs
         const searchFields = [
           fiche.nom || '',
@@ -685,6 +709,19 @@ const Fiches = () => {
                     onChange={(e) => handleFilterChange('time_fin', e.target.value)}
                   />
                 </div>
+              </div>
+
+              {/* Inclure archives */}
+              <div className="form-group">
+                <label>Archives</label>
+                <label className="checkbox-inline">
+                  <input
+                    type="checkbox"
+                    checked={!!filters.include_archive}
+                    onChange={(e) => handleFilterChange('include_archive', e.target.checked)}
+                  />
+                  Inclure les fiches archivées
+                </label>
               </div>
             </div>
 

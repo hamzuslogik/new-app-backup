@@ -918,6 +918,19 @@ body.dashboard-page {
   margin-bottom: 4px;
 }
 
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.9px;
+  font-weight: 600;
+  color: var(--input-text, #064E3B);
+}
+
+.checkbox-inline input[type="checkbox"] {
+  width: auto;
+}
+
 /* S'assurer que tous les labels dans le filtre de recherche sont en couleur foncée */
 .search-form label,
 .search-form .form-group label {
