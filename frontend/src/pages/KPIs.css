@@ -597,3 +597,143 @@
   }
 }
 
+/* Styles pour l'onglet Confirmation JWS */
+.section-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.metric-row .metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 15px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+}
+
+.metric-row .metric-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-row .metric-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #9cbfc8;
+}
+
+.rates-section {
+  margin: 25px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.rates-section h4 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  color: #333;
+  text-align: center;
+}
+
+.rates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.rate-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-top: 3px solid #9cbfc8;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.rate-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.rate-card.highlight {
+  border-top-color: #f7a219;
+  background: linear-gradient(135deg, #fff9e6 0%, #fff 100%);
+}
+
+.rate-label {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rate-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #9cbfc8;
+  margin-bottom: 8px;
+}
+
+.rate-card.highlight .rate-value {
+  color: #f7a219;
+}
+
+.rate-description {
+  font-size: 11px;
+  color: #999;
+  font-style: italic;
+}
+
+.top-agent-section {
+  margin-top: 25px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.top-agent-section h4 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.top-agent-section .agent-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.top-agent-section .agent-count {
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+}
+
+@media (max-width: 768px) {
+  .metric-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .rates-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

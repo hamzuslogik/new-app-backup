@@ -18,7 +18,7 @@ import './KPIs.css';
 
 const KPIs = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('qualification'); // qualification, confirmation, centres
+  const [activeTab, setActiveTab] = useState('qualification'); // qualification, confirmation, centres, confirmation-jws
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois
   const [selectedMonth, setSelectedMonth] = useState(''); // Format: YYYY-MM
 
@@ -95,10 +95,30 @@ const KPIs = () => {
     }
   );
 
+  // Récupérer les KPI Confirmation JWS
+  const { data: confirmationJwsData, isLoading: isLoadingConfJws, error: errorConfJws } = useQuery(
+    ['kpis-confirmation-jws', selectedPeriod, selectedMonth],
+    async () => {
+      const params = {};
+      if (selectedPeriod === 'mois' && selectedMonth) {
+        params.month = selectedMonth;
+      }
+      const res = await api.get('/statistiques/kpis-confirmation-jws', { params });
+      return res.data.data;
+    },
+    {
+      enabled: (selectedPeriod !== 'mois' || !!selectedMonth) && activeTab === 'confirmation-jws'
+    }
+  );
+
   const isLoading = activeTab === 'qualification' ? isLoadingQualif : 
-                   activeTab === 'confirmation' ? isLoadingConf : isLoadingCentres;
+                   activeTab === 'confirmation' ? isLoadingConf : 
+                   activeTab === 'confirmation-jws' ? isLoadingConfJws :
+                   isLoadingCentres;
   const error = activeTab === 'qualification' ? errorQualif : 
-                activeTab === 'confirmation' ? errorConf : errorCentres;
+                activeTab === 'confirmation' ? errorConf : 
+                activeTab === 'confirmation-jws' ? errorConfJws :
+                errorCentres;
 
   const periods = [
     { key: 'jour', label: 'Aujourd\'hui', icon: FaCalendarDay },
@@ -110,6 +130,8 @@ const KPIs = () => {
     ? kpiData?.[selectedPeriod] 
     : activeTab === 'confirmation'
     ? confirmationData?.[selectedPeriod]
+    : activeTab === 'confirmation-jws'
+    ? confirmationJwsData?.[selectedPeriod]
     : centresData?.[selectedPeriod];
 
   // Fonction pour formater le pourcentage
@@ -175,6 +197,12 @@ const KPIs = () => {
             onClick={() => setActiveTab('centres')}
           >
             Par Centre
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'confirmation-jws' ? 'active' : ''}`}
+            onClick={() => setActiveTab('confirmation-jws')}
+          >
+            Confirmation JWS
           </button>
         </div>
         <div className="header-controls">
@@ -613,6 +641,116 @@ const KPIs = () => {
             <p className="info-text">
               Les confirmations correspondent aux fiches avec état CONFIRMER (7). Les signatures correspondent aux fiches avec états SIGNER (13, 16, 44, 45).
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Contenu pour l'onglet Confirmation JWS */}
+      {activeTab === 'confirmation-jws' && currentData && (
+        <div className="kpis-content">
+          <div className="kpi-section">
+            <h2 className="section-title">Statistiques Confirmation JWS</h2>
+            <p className="section-description">
+              Statistiques de transformation et performance pour les centres Call_JWS
+            </p>
+            
+            {currentData.centres && currentData.centres.length > 0 ? (
+              <div className="centres-grid">
+                {currentData.centres.map((centre) => (
+                  <div key={centre.centre_id} className="centre-card">
+                    <div className="centre-header">
+                      <h3>{centre.centre_titre}</h3>
+                    </div>
+                    <div className="centre-metrics">
+                      {/* Métriques principales */}
+                      <div className="metric-row">
+                        <div className="metric-item">
+                          <div className="metric-label">Total Fiches</div>
+                          <div className="metric-value">{centre.total_count || 0}</div>
+                        </div>
+                        <div className="metric-item">
+                          <div className="metric-label">Fiches Validées</div>
+                          <div className="metric-value">{centre.validated_count || 0}</div>
+                        </div>
+                        <div className="metric-item">
+                          <div className="metric-label">Fiches Confirmées</div>
+                          <div className="metric-value">{centre.confirmed_count || 0}</div>
+                        </div>
+                        <div className="metric-item">
+                          <div className="metric-label">Fiches Signées</div>
+                          <div className="metric-value">{centre.signed_count || 0}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Taux de transformation */}
+                      <div className="rates-section">
+                        <h4>Taux de Transformation</h4>
+                        <div className="rates-grid">
+                          <div className="rate-card">
+                            <div className="rate-label">Taux de Conversion</div>
+                            <div className="rate-value">{formatPercentage(centre.conversion_rate)}</div>
+                            <div className="rate-description">Validées / Total</div>
+                          </div>
+                          <div className="rate-card">
+                            <div className="rate-label">Taux de Confirmation</div>
+                            <div className="rate-value">{formatPercentage(centre.confirmation_rate)}</div>
+                            <div className="rate-description">Confirmées / Total</div>
+                          </div>
+                          <div className="rate-card">
+                            <div className="rate-label">Taux de Signature</div>
+                            <div className="rate-value">{formatPercentage(centre.signature_rate)}</div>
+                            <div className="rate-description">Signées / Total</div>
+                          </div>
+                          <div className="rate-card highlight">
+                            <div className="rate-label">Taux de Transformation</div>
+                            <div className="rate-value">{formatPercentage(centre.transformation_rate)}</div>
+                            <div className="rate-description">Signées / Confirmées</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Meilleur agent */}
+                      {centre.top_agent && (
+                        <div className="top-agent-section">
+                          <h4>Meilleur Agent</h4>
+                          <div className="agent-info">
+                            {centre.top_agent.photo ? (
+                              <img 
+                                src={centre.top_agent.photo} 
+                                alt={centre.top_agent.pseudo}
+                                className="agent-avatar"
+                              />
+                            ) : (
+                              <div className="agent-avatar placeholder">
+                                {centre.top_agent.pseudo ? centre.top_agent.pseudo.charAt(0).toUpperCase() : '?'}
+                              </div>
+                            )}
+                            <div className="agent-details">
+                              <div className="agent-name">
+                                {centre.top_agent.nom && centre.top_agent.prenom
+                                  ? `${centre.top_agent.nom} ${centre.top_agent.prenom}`
+                                  : centre.top_agent.pseudo || 'N/A'}
+                              </div>
+                              <div className="agent-pseudo">{centre.top_agent.pseudo}</div>
+                              <div className="agent-count">{centre.top_agent.count} fiches validées</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="no-data">Aucune donnée disponible pour cette période</div>
+            )}
+            
+            {/* Informations sur la période */}
+            <div className="period-info">
+              <p>
+                Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
+              </p>
+            </div>
           </div>
         </div>
       )}
