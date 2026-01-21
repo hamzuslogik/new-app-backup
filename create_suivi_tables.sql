@@ -10,11 +10,13 @@ USE `crm`;
 -- =====================================================
 CREATE TABLE IF NOT EXISTS `signature` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_fiche` int(11) DEFAULT NULL,
   `confirmateur` int(11) DEFAULT NULL,
   `ajoute` decimal(10,2) DEFAULT NULL,
   `date_heure` datetime DEFAULT NULL,
   `tel` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   PRIMARY KEY (`id`),
+  KEY `idx_id_fiche` (`id_fiche`),
   KEY `idx_confirmateur` (`confirmateur`),
   KEY `idx_date_heure` (`date_heure`),
   KEY `idx_tel` (`tel`)

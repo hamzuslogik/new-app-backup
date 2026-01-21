@@ -294,8 +294,9 @@ WHERE fh.`date_sign_time` IS NOT NULL
   AND f.`tel` != '';
 
 -- Cas 1 : Un seul confirmateur (id_confirmateur uniquement)
-INSERT INTO `signature` (`confirmateur`, `ajoute`, `date_heure`, `tel`)
+INSERT INTO `signature` (`id_fiche`, `confirmateur`, `ajoute`, `date_heure`, `tel`)
 SELECT 
+    fh.`id_fiche`,
     fh.`id_confirmateur` as `confirmateur`,
     1.0 as `ajoute`,
     fh.`date_sign_time` as `date_heure`,
@@ -312,9 +313,9 @@ WHERE fh.`date_sign_time` IS NOT NULL
   -- Éviter les doublons
   AND NOT EXISTS (
     SELECT 1 FROM `signature` s
-    WHERE s.`confirmateur` = fh.`id_confirmateur`
+    WHERE s.`id_fiche` = fh.`id_fiche`
+      AND s.`confirmateur` = fh.`id_confirmateur`
       AND s.`date_heure` = fh.`date_sign_time`
-      AND s.`tel` = f.`tel`
   );
 
 SELECT 
@@ -323,8 +324,9 @@ SELECT
 
 -- Cas 2 : Deux confirmateurs (id_confirmateur + id_confirmateur_2)
 -- Confirmateur 1
-INSERT INTO `signature` (`confirmateur`, `ajoute`, `date_heure`, `tel`)
+INSERT INTO `signature` (`id_fiche`, `confirmateur`, `ajoute`, `date_heure`, `tel`)
 SELECT 
+    fh.`id_fiche`,
     fh.`id_confirmateur` as `confirmateur`,
     0.5 as `ajoute`,
     fh.`date_sign_time` as `date_heure`,
@@ -342,14 +344,15 @@ WHERE fh.`date_sign_time` IS NOT NULL
   -- Éviter les doublons
   AND NOT EXISTS (
     SELECT 1 FROM `signature` s
-    WHERE s.`confirmateur` = fh.`id_confirmateur`
+    WHERE s.`id_fiche` = fh.`id_fiche`
+      AND s.`confirmateur` = fh.`id_confirmateur`
       AND s.`date_heure` = fh.`date_sign_time`
-      AND s.`tel` = f.`tel`
   );
 
 -- Confirmateur 2
-INSERT INTO `signature` (`confirmateur`, `ajoute`, `date_heure`, `tel`)
+INSERT INTO `signature` (`id_fiche`, `confirmateur`, `ajoute`, `date_heure`, `tel`)
 SELECT 
+    fh.`id_fiche`,
     fh.`id_confirmateur_2` as `confirmateur`,
     0.5 as `ajoute`,
     fh.`date_sign_time` as `date_heure`,
@@ -367,9 +370,9 @@ WHERE fh.`date_sign_time` IS NOT NULL
   -- Éviter les doublons
   AND NOT EXISTS (
     SELECT 1 FROM `signature` s
-    WHERE s.`confirmateur` = fh.`id_confirmateur_2`
+    WHERE s.`id_fiche` = fh.`id_fiche`
+      AND s.`confirmateur` = fh.`id_confirmateur_2`
       AND s.`date_heure` = fh.`date_sign_time`
-      AND s.`tel` = f.`tel`
   );
 
 SELECT 
@@ -378,8 +381,9 @@ SELECT
 
 -- Cas 3 : Trois confirmateurs (id_confirmateur + id_confirmateur_2 + id_confirmateur_3)
 -- Confirmateur 1
-INSERT INTO `signature` (`confirmateur`, `ajoute`, `date_heure`, `tel`)
+INSERT INTO `signature` (`id_fiche`, `confirmateur`, `ajoute`, `date_heure`, `tel`)
 SELECT 
+    fh.`id_fiche`,
     fh.`id_confirmateur` as `confirmateur`,
     0.33 as `ajoute`,
     fh.`date_sign_time` as `date_heure`,
@@ -398,14 +402,15 @@ WHERE fh.`date_sign_time` IS NOT NULL
   -- Éviter les doublons
   AND NOT EXISTS (
     SELECT 1 FROM `signature` s
-    WHERE s.`confirmateur` = fh.`id_confirmateur`
+    WHERE s.`id_fiche` = fh.`id_fiche`
+      AND s.`confirmateur` = fh.`id_confirmateur`
       AND s.`date_heure` = fh.`date_sign_time`
-      AND s.`tel` = f.`tel`
   );
 
 -- Confirmateur 2
-INSERT INTO `signature` (`confirmateur`, `ajoute`, `date_heure`, `tel`)
+INSERT INTO `signature` (`id_fiche`, `confirmateur`, `ajoute`, `date_heure`, `tel`)
 SELECT 
+    fh.`id_fiche`,
     fh.`id_confirmateur_2` as `confirmateur`,
     0.33 as `ajoute`,
     fh.`date_sign_time` as `date_heure`,
@@ -424,14 +429,15 @@ WHERE fh.`date_sign_time` IS NOT NULL
   -- Éviter les doublons
   AND NOT EXISTS (
     SELECT 1 FROM `signature` s
-    WHERE s.`confirmateur` = fh.`id_confirmateur_2`
+    WHERE s.`id_fiche` = fh.`id_fiche`
+      AND s.`confirmateur` = fh.`id_confirmateur_2`
       AND s.`date_heure` = fh.`date_sign_time`
-      AND s.`tel` = f.`tel`
   );
 
 -- Confirmateur 3
-INSERT INTO `signature` (`confirmateur`, `ajoute`, `date_heure`, `tel`)
+INSERT INTO `signature` (`id_fiche`, `confirmateur`, `ajoute`, `date_heure`, `tel`)
 SELECT 
+    fh.`id_fiche`,
     fh.`id_confirmateur_3` as `confirmateur`,
     0.33 as `ajoute`,
     fh.`date_sign_time` as `date_heure`,
@@ -450,9 +456,9 @@ WHERE fh.`date_sign_time` IS NOT NULL
   -- Éviter les doublons
   AND NOT EXISTS (
     SELECT 1 FROM `signature` s
-    WHERE s.`confirmateur` = fh.`id_confirmateur_3`
+    WHERE s.`id_fiche` = fh.`id_fiche`
+      AND s.`confirmateur` = fh.`id_confirmateur_3`
       AND s.`date_heure` = fh.`date_sign_time`
-      AND s.`tel` = f.`tel`
   );
 
 SELECT 

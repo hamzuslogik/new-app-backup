@@ -746,6 +746,119 @@ router.post('/:id/approve', authenticate, async (req, res) => {
       );
     }
 
+    // Récupérer la fiche mise à jour pour vérifier les confirmateurs
+    const ficheMiseAJour = await queryOne('SELECT * FROM fiches WHERE id = ?', [compteRendu.id_fiche]);
+
+    // Si le nouvel état est un état signé (13, 16, 44, 45), ajouter dans la table signature
+    const etatsSignes = [13, 16, 44, 45];
+    if (nouveauEtat && etatsSignes.includes(nouveauEtat) && ficheMiseAJour) {
+      const dateSignTime = ficheMiseAJour.date_sign_time || now;
+      const tel = ficheMiseAJour.tel;
+
+      // Vérifier si une signature existe déjà pour cette fiche avec cette date
+      const signatureExistante = await queryOne(
+        `SELECT COUNT(*) as count 
+         FROM signature s
+         WHERE s.id_fiche = ? 
+           AND s.date_heure = ?`,
+        [compteRendu.id_fiche, dateSignTime]
+      );
+
+      // Si aucune signature n'existe, créer les entrées selon le nombre de confirmateurs
+      if (!signatureExistante || signatureExistante.count === 0) {
+        const idConfirmateur = ficheMiseAJour.id_confirmateur;
+        const idConfirmateur2 = ficheMiseAJour.id_confirmateur_2;
+        const idConfirmateur3 = ficheMiseAJour.id_confirmateur_3;
+
+        // Cas 1 : Un seul confirmateur
+        if (idConfirmateur && idConfirmateur > 0 && 
+            (!idConfirmateur2 || idConfirmateur2 === 0) && 
+            (!idConfirmateur3 || idConfirmateur3 === 0)) {
+          await query(
+            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+             SELECT ?, ?, 1.0, ?, ?
+             WHERE NOT EXISTS (
+               SELECT 1 FROM signature s
+               WHERE s.id_fiche = ?
+                 AND s.confirmateur = ?
+                 AND s.date_heure = ?
+             )`,
+            [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur, dateSignTime]
+          );
+        }
+        // Cas 2 : Deux confirmateurs
+        else if (idConfirmateur && idConfirmateur > 0 && 
+                 idConfirmateur2 && idConfirmateur2 > 0 && 
+                 (!idConfirmateur3 || idConfirmateur3 === 0)) {
+          // Confirmateur 1
+          await query(
+            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+             SELECT ?, ?, 0.5, ?, ?
+             WHERE NOT EXISTS (
+               SELECT 1 FROM signature s
+               WHERE s.id_fiche = ?
+                 AND s.confirmateur = ?
+                 AND s.date_heure = ?
+             )`,
+            [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur, dateSignTime]
+          );
+          // Confirmateur 2
+          await query(
+            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+             SELECT ?, ?, 0.5, ?, ?
+             WHERE NOT EXISTS (
+               SELECT 1 FROM signature s
+               WHERE s.id_fiche = ?
+                 AND s.confirmateur = ?
+                 AND s.date_heure = ?
+             )`,
+            [compteRendu.id_fiche, idConfirmateur2, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur2, dateSignTime]
+          );
+        }
+        // Cas 3 : Trois confirmateurs
+        else if (idConfirmateur && idConfirmateur > 0 && 
+                 idConfirmateur2 && idConfirmateur2 > 0 && 
+                 idConfirmateur3 && idConfirmateur3 > 0) {
+          // Confirmateur 1
+          await query(
+            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+             SELECT ?, ?, 0.33, ?, ?
+             WHERE NOT EXISTS (
+               SELECT 1 FROM signature s
+               WHERE s.id_fiche = ?
+                 AND s.confirmateur = ?
+                 AND s.date_heure = ?
+             )`,
+            [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur, dateSignTime]
+          );
+          // Confirmateur 2
+          await query(
+            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+             SELECT ?, ?, 0.33, ?, ?
+             WHERE NOT EXISTS (
+               SELECT 1 FROM signature s
+               WHERE s.id_fiche = ?
+                 AND s.confirmateur = ?
+                 AND s.date_heure = ?
+             )`,
+            [compteRendu.id_fiche, idConfirmateur2, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur2, dateSignTime]
+          );
+          // Confirmateur 3
+          await query(
+            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+             SELECT ?, ?, 0.33, ?, ?
+             WHERE NOT EXISTS (
+               SELECT 1 FROM signature s
+               WHERE s.id_fiche = ?
+                 AND s.confirmateur = ?
+                 AND s.date_heure = ?
+             )`,
+            [compteRendu.id_fiche, idConfirmateur3, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur3, dateSignTime]
+          );
+        }
+      }
+    }
+
     // Mettre à jour le compte rendu
     // Note: On ne met pas id_commercial à NULL car il y a une contrainte de clé étrangère
     // L'id_commercial reste pour garder l'historique de qui a créé le compte rendu
