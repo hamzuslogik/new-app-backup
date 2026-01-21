@@ -5299,9 +5299,6 @@ const SMSTab = ({ ficheHash, ficheData, confirmateurs }) => {
   const [customMessage, setCustomMessage] = useState('');
   const [idConfirmateur, setIdConfirmateur] = useState('');
   
-  // Bloquer le scroll du body quand le modal RDV est ouvert
-  useModalScrollLock(showRdvModal);
-  
   const queryClient = useQueryClient();
   
   const { data: smsList, isLoading } = useQuery(
@@ -5378,17 +5375,17 @@ Cordialement.`
   };
 
   // Récupérer les numéros disponibles
-  const availableTels = [
+  const availableTels = React.useMemo(() => [
     { value: ficheData?.tel, label: `Téléphone: ${ficheData?.tel}` },
     { value: ficheData?.gsm1, label: `GSM1: ${ficheData?.gsm1}` },
     { value: ficheData?.gsm2, label: `GSM2: ${ficheData?.gsm2}` }
-  ].filter(t => t.value);
+  ].filter(t => t.value), [ficheData?.tel, ficheData?.gsm1, ficheData?.gsm2]);
 
   useEffect(() => {
     if (availableTels.length > 0 && !selectedTel) {
       setSelectedTel(availableTels[0].value);
     }
-  }, [ficheData]);
+  }, [availableTels, selectedTel]);
 
   if (isLoading) return <div className="loading">Chargement...</div>;
 
