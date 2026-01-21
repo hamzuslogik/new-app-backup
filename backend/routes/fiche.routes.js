@@ -4127,70 +4127,66 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
       });
     }
 
-    // Appeler l'API Manivox pour envoyer le SMS
-    const axios = require('axios');
-    const formattedTel = tel.startsWith('0') ? `0033${tel.substring(1)}` : tel;
-    
-    try {
-      const smsResponse = await axios.post('https://www.manivox.com/api_v2/json_api.php', null, {
-        params: {
-          action: 'send_sms',
-          auth_email: 'provoicecc@gmail.com',
-          auth_password: 'x))MTU-e5Ma62y6',
-          from: 'RAPPEL',
-          to: formattedTel,
-          text: message
+    // Récupérer le fournisseur SMS par défaut
+    const { getDefaultSMSProvider, sendSMSViaProvider } = require('../services/sms.service');
+    const provider = await getDefaultSMSProvider();
+
+    if (!provider) {
+      return res.status(500).json({
+        success: false,
+        message: 'Aucun fournisseur SMS actif configuré. Veuillez configurer un fournisseur SMS dans la gestion.'
+      });
+    }
+
+    console.log(`[SMS] Utilisation du fournisseur: ${provider.nom} (ID: ${provider.id})`);
+
+    // Envoyer le SMS via le fournisseur
+    const smsResult = await sendSMSViaProvider(provider, tel, message, 'RAPPEL');
+
+    if (smsResult.success) {
+      // Enregistrer le SMS dans la base
+      const dateModif = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      await query(
+        `INSERT INTO sms (id_fiche, id_confirmateur, tel, message, statut, date_modif_time)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, id_confirmateur, tel, message, smsResult.message || 'successful', dateModif]
+      );
+
+      // Enregistrer dans modifica
+      const lastSms = await queryOne(
+        `SELECT message FROM sms WHERE id_fiche = ? ORDER BY id DESC LIMIT 1, 1`
+      );
+      await query(
+        `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, date_modif_time)
+         VALUES (?, ?, 'SMS', ?, ?, ?)`,
+        [id, req.user.id, lastSms?.message || '', message, dateModif]
+      );
+
+      res.json({
+        success: true,
+        message: 'SMS envoyé avec succès',
+        data: {
+          date_modif_time: dateModif,
+          statut: smsResult.message || 'successful',
+          provider: provider.nom
         }
       });
-
-      const result = smsResponse.data;
-      const isSuccess = result.message === 'successful';
-
-      if (isSuccess) {
-        // Enregistrer le SMS dans la base
-        const dateModif = new Date().toISOString().slice(0, 19).replace('T', ' ');
-        await query(
-          `INSERT INTO sms (id_fiche, id_confirmateur, tel, message, statut, date_modif_time)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [id, id_confirmateur, tel, message, result.message || 'successful', dateModif]
-        );
-
-        // Enregistrer dans modifica
-        const lastSms = await queryOne(
-          `SELECT message FROM sms WHERE id_fiche = ? ORDER BY id DESC LIMIT 1, 1`
-        );
-        await query(
-          `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, date_modif_time)
-           VALUES (?, ?, 'SMS', ?, ?, ?)`,
-          [id, req.user.id, lastSms?.message || '', message, dateModif]
-        );
-
-        res.json({
-          success: true,
-          message: 'SMS envoyé avec succès',
-          data: {
-            date_modif_time: dateModif,
-            statut: result.message || 'successful'
-          }
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          message: 'Erreur lors de l\'envoi du SMS',
-          data: result
-        });
-      }
-    } catch (smsError) {
-      console.error('Erreur API SMS:', smsError);
-      res.status(500).json({
+    } else {
+      console.error('[SMS] Erreur lors de l\'envoi:', smsResult);
+      res.status(400).json({
         success: false,
-        message: 'Erreur lors de l\'envoi du SMS',
-        error: smsError.message
+        message: smsResult.message || 'Erreur lors de l\'envoi du SMS',
+        error: smsResult.error,
+        provider: provider.nom
       });
     }
   } catch (error) {
     console.error('Erreur:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur serveur',
+      error: error.message 
+    });
   }
 });
 
