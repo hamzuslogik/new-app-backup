@@ -4134,11 +4134,11 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
     if (!provider) {
       return res.status(500).json({
         success: false,
-        message: 'Aucun fournisseur SMS actif configuré. Veuillez configurer un fournisseur SMS dans la gestion.'
+        message: 'Aucun fournisseur SMS configuré. Veuillez configurer un fournisseur SMS dans la gestion ou exécutez insert_fournisseur_sms_default.sql'
       });
     }
 
-    console.log(`[SMS] Utilisation du fournisseur: ${provider.nom} (ID: ${provider.id})`);
+    console.log(`[SMS] Utilisation du fournisseur: ${provider.nom} (ID: ${provider.id || 'défaut'})`);
 
     // Envoyer le SMS via le fournisseur
     const smsResult = await sendSMSViaProvider(provider, tel, message, 'RAPPEL');

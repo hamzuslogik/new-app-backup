@@ -16,8 +16,16 @@ async function getDefaultSMSProvider() {
     );
     
     if (!tableExists || tableExists.count === 0) {
-      console.log('[SMS Service] Table fournisseurs_sms n\'existe pas');
-      return null;
+      console.log('[SMS Service] Table fournisseurs_sms n\'existe pas - Utilisation de Manivox par défaut');
+      // Fallback vers Manivox avec les identifiants par défaut
+      return {
+        id: 0,
+        nom: 'Manivox',
+        login: 'provoicecc@gmail.com',
+        api_key: 'x))MTU-e5Ma62y6',
+        api_url: 'https://www.manivox.com/api_v2/json_api.php',
+        actif: 1
+      };
     }
 
     // Récupérer le premier fournisseur actif
@@ -26,14 +34,31 @@ async function getDefaultSMSProvider() {
     );
 
     if (!provider) {
-      console.log('[SMS Service] Aucun fournisseur SMS actif trouvé');
-      return null;
+      console.log('[SMS Service] Aucun fournisseur SMS actif trouvé - Utilisation de Manivox par défaut');
+      // Fallback vers Manivox avec les identifiants par défaut
+      return {
+        id: 0,
+        nom: 'Manivox',
+        login: 'provoicecc@gmail.com',
+        api_key: 'x))MTU-e5Ma62y6',
+        api_url: 'https://www.manivox.com/api_v2/json_api.php',
+        actif: 1
+      };
     }
 
     return provider;
   } catch (error) {
     console.error('[SMS Service] Erreur lors de la récupération du fournisseur SMS:', error);
-    return null;
+    console.log('[SMS Service] Utilisation de Manivox par défaut en cas d\'erreur');
+    // Fallback vers Manivox en cas d'erreur
+    return {
+      id: 0,
+      nom: 'Manivox',
+      login: 'provoicecc@gmail.com',
+      api_key: 'x))MTU-e5Ma62y6',
+      api_url: 'https://www.manivox.com/api_v2/json_api.php',
+      actif: 1
+    };
   }
 }
 

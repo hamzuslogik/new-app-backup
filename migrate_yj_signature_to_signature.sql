@@ -7,10 +7,14 @@
 --
 -- Structure de la table signature :
 -- - id (AUTO_INCREMENT)
+-- - id_fiche (INT) - IGNORÉ dans cette migration (sera rempli par update_signature_id_fiche_from_tel.sql)
 -- - confirmateur (INT)
 -- - ajoute (DECIMAL(10,2))
 -- - date_heure (DATETIME)
 -- - tel (VARCHAR(255))
+--
+-- NOTE: Ce script ignore id_fiche pour optimiser les performances.
+-- Exécutez update_signature_id_fiche_from_tel.sql après pour remplir id_fiche.
 --
 -- =====================================================
 
@@ -44,13 +48,14 @@ SET @has_date = (SELECT COUNT(*) FROM temp_yj_signature_columns WHERE col_name =
 SET @has_tel = (SELECT COUNT(*) FROM temp_yj_signature_columns WHERE col_name = 'tel');
 SET @has_telephone = (SELECT COUNT(*) FROM temp_yj_signature_columns WHERE col_name = 'telephone');
 
--- Vérifier si confirmateur est numérique ou texte
+-- Vérifier si confirmateur est numérique ou texte (optimisé avec LIMIT 1)
 SET @confirmateur_is_numeric = 0;
-SET @test_numeric = (
-    SELECT COUNT(*) 
-    FROM `yj_signature` 
-    WHERE `confirmateur` REGEXP '^[0-9]+$' 
-    LIMIT 1
+SET @test_numeric = IF(@has_confirmateur > 0,
+    (SELECT COUNT(*) 
+     FROM `yj_signature` 
+     WHERE `confirmateur` REGEXP '^[0-9]+$' 
+     LIMIT 1),
+    0
 );
 SET @confirmateur_is_numeric = IF(@has_confirmateur > 0 AND @test_numeric > 0, 1, 0);
 
@@ -107,17 +112,11 @@ SET @where_confirmateur = IF(@need_join_utilisateurs > 0,
 SET @join_utilisateurs_safe = IF(@join_utilisateurs IS NULL OR @join_utilisateurs = '', '', @join_utilisateurs);
 SET @where_confirmateur_safe = IF(@where_confirmateur IS NULL OR @where_confirmateur = '', '', @where_confirmateur);
 
--- Construire la requête INSERT avec sous-requête pour trouver id_fiche
--- On cherche la fiche avec le même tel et la date_sign_time la plus proche de date_heure
+-- Construire la requête INSERT sans id_fiche (sera rempli plus tard par un autre script)
+-- Version optimisée sans sous-requête pour id_fiche
 SET @insert_query = CONCAT(
-    'INSERT INTO `signature` (`id_fiche`, `confirmateur`, `ajoute`, `date_heure`, `tel`)',
+    'INSERT INTO `signature` (`confirmateur`, `ajoute`, `date_heure`, `tel`)',
     ' SELECT ',
-    '(SELECT f2.`id` FROM `fiches` f2 ',
-    ' WHERE f2.`tel` = ', @col_tel,
-    '   AND f2.`date_sign_time` IS NOT NULL',
-    '   AND ABS(TIMESTAMPDIFF(SECOND, f2.`date_sign_time`, ', @col_date_heure, ')) <= 86400',
-    ' ORDER BY ABS(TIMESTAMPDIFF(SECOND, f2.`date_sign_time`, ', @col_date_heure, ')) ASC',
-    ' LIMIT 1) as `id_fiche`,',
     @col_confirmateur, ' as `confirmateur`,',
     @col_ajoute, ' as `ajoute`,',
     @col_date_heure, ' as `date_heure`,',
@@ -134,6 +133,7 @@ SET @insert_query = CONCAT(
     '     WHERE s.`tel` = ', @col_tel,
     '       AND s.`confirmateur` = ', @col_confirmateur,
     '       AND s.`date_heure` = ', @col_date_heure,
+    '     LIMIT 1',
     ' )'
 );
 
@@ -149,6 +149,22 @@ DEALLOCATE PREPARE stmt;
 -- Afficher le résultat
 SELECT 
     CONCAT('✅ Migration terminée: ', @rows_affected, ' ligne(s) insérée(s)') as resultat;
+
+-- Statistiques
+SELECT 
+    '=== STATISTIQUES ===' as info;
+
+SELECT 
+    COUNT(*) as total_signatures_migrees
+FROM `signature`;
+
+SELECT 
+    COUNT(*) as signatures_sans_id_fiche
+FROM `signature`
+WHERE `id_fiche` IS NULL OR `id_fiche` = 0;
+
+SELECT 
+    'NOTE: Pour remplir id_fiche, exécutez le script update_signature_id_fiche_from_tel.sql' as info;
 
 -- Nettoyer
 DROP TEMPORARY TABLE IF EXISTS temp_yj_signature_columns;
