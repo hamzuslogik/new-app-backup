@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from 'react-query';
-import { FaSignature, FaChartLine, FaUsers, FaFileAlt, FaArrowUp, FaArrowDown, FaMinus } from 'react-icons/fa';
+import { FaSignature, FaChartLine, FaUsers, FaFileAlt, FaArrowUp, FaArrowDown, FaMinus, FaSearch } from 'react-icons/fa';
 import api from '../config/api';
 import FicheDetailLink from '../components/FicheDetailLink';
 import './Signatures.css';
@@ -304,7 +304,7 @@ const Signatures = () => {
                       <td>
                         {sig.id_fiche ? (
                           <FicheDetailLink ficheId={sig.id_fiche}>
-                            {sig.fiche_nom} {sig.fiche_prenom}
+                            <FaSearch className="search-icon" />
                           </FicheDetailLink>
                         ) : (
                           <span>-</span>

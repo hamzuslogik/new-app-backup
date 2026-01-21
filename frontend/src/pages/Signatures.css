@@ -288,6 +288,18 @@
   background: #f8f9fa;
 }
 
+.signatures-table .search-icon {
+  color: #9cbfc8;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.signatures-table .search-icon:hover {
+  color: #1a2529;
+  transform: scale(1.1);
+}
+
 /* Signatures List Section */
 .signatures-list-section {
   margin-bottom: 32px;
