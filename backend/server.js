@@ -24,6 +24,7 @@ const importRoutes = require('./routes/import.routes');
 const testImportRoutes = require('./routes/test-import.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const healthRoutes = require('./routes/health.routes');
+const signatureRoutes = require('./routes/signature.routes');
 
 // Créer l'application Express
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/import', importRoutes);
 app.use('/api/import', testImportRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/signature', signatureRoutes);
 
 // Route de test (déplacée vers health.routes.js)
 

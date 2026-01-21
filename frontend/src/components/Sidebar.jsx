@@ -23,6 +23,7 @@ import {
   FaExclamationTriangle,
   FaBell,
   FaSearch,
+  FaSignature,
 } from 'react-icons/fa';
 import './Sidebar.css';
 
@@ -140,6 +141,13 @@ const Sidebar = ({ collapsed }) => {
       label: 'KPIs',
       icon: FaChartLine,
       permission: 'kpis_view',
+      visible: true,
+    },
+    {
+      path: '/signatures',
+      label: 'Signatures',
+      icon: FaSignature,
+      permission: 'signatures_view',
       visible: true,
     },
     {

@@ -38,6 +38,7 @@ import Decalages from './pages/Decalages';
 import Validation from './pages/Validation';
 import DemandesInsertion from './pages/DemandesInsertion';
 import Notifications from './pages/Notifications';
+import Signatures from './pages/Signatures';
 import Layout from './components/Layout';
 import HomeRedirect from './components/HomeRedirect';
 import './App.css';
@@ -89,6 +90,7 @@ function App() {
           <Route path="validation" element={<ProtectedRoute permission="validation_view"><Validation /></ProtectedRoute>} />
           <Route path="demandes-insertion" element={<ProtectedRoute permission="demandes_insertion_view"><DemandesInsertion /></ProtectedRoute>} />
           <Route path="notifications" element={<Notifications />} />
+          <Route path="signatures" element={<ProtectedRoute permission="signatures_view"><Signatures /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<HomeRedirect />} />
       </Routes>
