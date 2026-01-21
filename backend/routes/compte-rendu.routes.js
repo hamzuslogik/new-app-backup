@@ -12,6 +12,14 @@ router.post('/', authenticate, async (req, res) => {
   try {
     const user = req.user;
     
+    // Vérifier que l'utilisateur est bien authentifié
+    if (!user || !user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non authentifié'
+      });
+    }
+    
     // Vérifier que l'utilisateur est un commercial (fonction 5)
     if (user.fonction !== 5) {
       return res.status(403).json({
@@ -189,6 +197,15 @@ router.post('/', authenticate, async (req, res) => {
 router.get('/', authenticate, async (req, res) => {
   try {
     const user = req.user;
+    
+    // Vérifier que l'utilisateur est bien authentifié
+    if (!user || !user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non authentifié'
+      });
+    }
+
     const { statut, id_fiche } = req.query;
 
     console.log('[COMPTE-RENDU] GET /compte-rendu - User:', user.id, 'Fonction:', user.fonction, 'Query:', { statut, id_fiche });
@@ -272,12 +289,28 @@ router.get('/', authenticate, async (req, res) => {
     let comptesRendus;
     try {
       comptesRendus = await query(sqlQuery, params);
-      console.log('[COMPTE-RENDU] Résultat query:', comptesRendus.length, 'comptes rendus trouvés');
+      console.log('[COMPTE-RENDU] Résultat query:', comptesRendus ? comptesRendus.length : 0, 'comptes rendus trouvés');
     } catch (sqlError) {
       console.error('[COMPTE-RENDU] Erreur SQL:', sqlError);
       console.error('[COMPTE-RENDU] SQL Error Code:', sqlError.code);
+      console.error('[COMPTE-RENDU] SQL Error Message:', sqlError.message);
       console.error('[COMPTE-RENDU] SQL Error SQL:', sqlError.sql);
-      throw sqlError;
+      console.error('[COMPTE-RENDU] SQL Error Stack:', sqlError.stack);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur SQL lors de la récupération des comptes rendus',
+        error: sqlError.message,
+        sqlError: process.env.NODE_ENV === 'development' ? {
+          code: sqlError.code,
+          sql: sqlError.sql
+        } : undefined
+      });
+    }
+
+    // Vérifier que comptesRendus est un tableau
+    if (!Array.isArray(comptesRendus)) {
+      console.error('[COMPTE-RENDU] comptesRendus n\'est pas un tableau:', typeof comptesRendus);
+      comptesRendus = [];
     }
 
     // Parser les modifications JSON
@@ -302,13 +335,19 @@ router.get('/', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('[COMPTE-RENDU] Erreur lors de la récupération des comptes rendus:', error);
+    console.error('[COMPTE-RENDU] Error Name:', error.name);
+    console.error('[COMPTE-RENDU] Error Message:', error.message);
     console.error('[COMPTE-RENDU] Stack:', error.stack);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la récupération des comptes rendus',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    
+    // Si la réponse n'a pas encore été envoyée
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la récupération des comptes rendus',
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
   }
 });
 
@@ -319,6 +358,15 @@ router.get('/', authenticate, async (req, res) => {
 router.get('/:id', authenticate, async (req, res) => {
   try {
     const user = req.user;
+    
+    // Vérifier que l'utilisateur est bien authentifié
+    if (!user || !user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non authentifié'
+      });
+    }
+    
     const { id } = req.params;
 
     const compteRendu = await queryOne(
@@ -383,6 +431,15 @@ router.get('/:id', authenticate, async (req, res) => {
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const user = req.user;
+    
+    // Vérifier que l'utilisateur est bien authentifié
+    if (!user || !user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non authentifié'
+      });
+    }
+    
     const { id } = req.params;
     const { 
       modifications,
@@ -544,6 +601,15 @@ router.put('/:id', authenticate, async (req, res) => {
 router.post('/:id/approve', authenticate, async (req, res) => {
   try {
     const user = req.user;
+    
+    // Vérifier que l'utilisateur est bien authentifié
+    if (!user || !user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non authentifié'
+      });
+    }
+    
     const { id } = req.params;
     const { commentaire_admin } = req.body;
 
@@ -774,87 +840,105 @@ router.post('/:id/approve', authenticate, async (req, res) => {
         if (idConfirmateur && idConfirmateur > 0 && 
             (!idConfirmateur2 || idConfirmateur2 === 0) && 
             (!idConfirmateur3 || idConfirmateur3 === 0)) {
-          await query(
-            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-             SELECT ?, ?, 1.0, ?, ?
-             WHERE NOT EXISTS (
-               SELECT 1 FROM signature s
-               WHERE s.id_fiche = ?
-                 AND s.confirmateur = ?
-                 AND s.date_heure = ?
-             )`,
-            [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur, dateSignTime]
+          const existing = await queryOne(
+            `SELECT 1 FROM signature s
+             WHERE s.id_fiche = ?
+               AND s.confirmateur = ?
+               AND s.date_heure = ?`,
+            [compteRendu.id_fiche, idConfirmateur, dateSignTime]
           );
+          if (!existing) {
+            await query(
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+               VALUES (?, ?, 1.0, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel]
+            );
+          }
         }
         // Cas 2 : Deux confirmateurs
         else if (idConfirmateur && idConfirmateur > 0 && 
                  idConfirmateur2 && idConfirmateur2 > 0 && 
                  (!idConfirmateur3 || idConfirmateur3 === 0)) {
           // Confirmateur 1
-          await query(
-            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-             SELECT ?, ?, 0.5, ?, ?
-             WHERE NOT EXISTS (
-               SELECT 1 FROM signature s
-               WHERE s.id_fiche = ?
-                 AND s.confirmateur = ?
-                 AND s.date_heure = ?
-             )`,
-            [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur, dateSignTime]
+          const existing1 = await queryOne(
+            `SELECT 1 FROM signature s
+             WHERE s.id_fiche = ?
+               AND s.confirmateur = ?
+               AND s.date_heure = ?`,
+            [compteRendu.id_fiche, idConfirmateur, dateSignTime]
           );
+          if (!existing1) {
+            await query(
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+               VALUES (?, ?, 0.5, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel]
+            );
+          }
           // Confirmateur 2
-          await query(
-            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-             SELECT ?, ?, 0.5, ?, ?
-             WHERE NOT EXISTS (
-               SELECT 1 FROM signature s
-               WHERE s.id_fiche = ?
-                 AND s.confirmateur = ?
-                 AND s.date_heure = ?
-             )`,
-            [compteRendu.id_fiche, idConfirmateur2, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur2, dateSignTime]
+          const existing2 = await queryOne(
+            `SELECT 1 FROM signature s
+             WHERE s.id_fiche = ?
+               AND s.confirmateur = ?
+               AND s.date_heure = ?`,
+            [compteRendu.id_fiche, idConfirmateur2, dateSignTime]
           );
+          if (!existing2) {
+            await query(
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+               VALUES (?, ?, 0.5, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur2, dateSignTime, tel]
+            );
+          }
         }
         // Cas 3 : Trois confirmateurs
         else if (idConfirmateur && idConfirmateur > 0 && 
                  idConfirmateur2 && idConfirmateur2 > 0 && 
                  idConfirmateur3 && idConfirmateur3 > 0) {
           // Confirmateur 1
-          await query(
-            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-             SELECT ?, ?, 0.33, ?, ?
-             WHERE NOT EXISTS (
-               SELECT 1 FROM signature s
-               WHERE s.id_fiche = ?
-                 AND s.confirmateur = ?
-                 AND s.date_heure = ?
-             )`,
-            [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur, dateSignTime]
+          const existing1 = await queryOne(
+            `SELECT 1 FROM signature s
+             WHERE s.id_fiche = ?
+               AND s.confirmateur = ?
+               AND s.date_heure = ?`,
+            [compteRendu.id_fiche, idConfirmateur, dateSignTime]
           );
+          if (!existing1) {
+            await query(
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+               VALUES (?, ?, 0.33, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel]
+            );
+          }
           // Confirmateur 2
-          await query(
-            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-             SELECT ?, ?, 0.33, ?, ?
-             WHERE NOT EXISTS (
-               SELECT 1 FROM signature s
-               WHERE s.id_fiche = ?
-                 AND s.confirmateur = ?
-                 AND s.date_heure = ?
-             )`,
-            [compteRendu.id_fiche, idConfirmateur2, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur2, dateSignTime]
+          const existing2 = await queryOne(
+            `SELECT 1 FROM signature s
+             WHERE s.id_fiche = ?
+               AND s.confirmateur = ?
+               AND s.date_heure = ?`,
+            [compteRendu.id_fiche, idConfirmateur2, dateSignTime]
           );
+          if (!existing2) {
+            await query(
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+               VALUES (?, ?, 0.33, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur2, dateSignTime, tel]
+            );
+          }
           // Confirmateur 3
-          await query(
-            `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-             SELECT ?, ?, 0.33, ?, ?
-             WHERE NOT EXISTS (
-               SELECT 1 FROM signature s
-               WHERE s.id_fiche = ?
-                 AND s.confirmateur = ?
-                 AND s.date_heure = ?
-             )`,
-            [compteRendu.id_fiche, idConfirmateur3, dateSignTime, tel, compteRendu.id_fiche, idConfirmateur3, dateSignTime]
+          const existing3 = await queryOne(
+            `SELECT 1 FROM signature s
+             WHERE s.id_fiche = ?
+               AND s.confirmateur = ?
+               AND s.date_heure = ?`,
+            [compteRendu.id_fiche, idConfirmateur3, dateSignTime]
           );
+          if (!existing3) {
+            await query(
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+               VALUES (?, ?, 0.33, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur3, dateSignTime, tel]
+            );
+          }
         }
       }
     }
@@ -893,6 +977,15 @@ router.post('/:id/approve', authenticate, async (req, res) => {
 router.post('/:id/reject', authenticate, async (req, res) => {
   try {
     const user = req.user;
+    
+    // Vérifier que l'utilisateur est bien authentifié
+    if (!user || !user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non authentifié'
+      });
+    }
+    
     const { id } = req.params;
     const { commentaire_admin } = req.body;
 

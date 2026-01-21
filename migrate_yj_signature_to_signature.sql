@@ -107,31 +107,31 @@ SET @where_confirmateur = IF(@need_join_utilisateurs > 0,
 SET @join_utilisateurs_safe = IF(@join_utilisateurs IS NULL OR @join_utilisateurs = '', '', @join_utilisateurs);
 SET @where_confirmateur_safe = IF(@where_confirmateur IS NULL OR @where_confirmateur = '', '', @where_confirmateur);
 
--- Construire le JOIN avec fiches pour obtenir id_fiche
-SET @join_fiches = CONCAT(
-    ' LEFT JOIN `fiches` f ON ',
-    @col_tel, ' = f.`tel`',
-    ' AND ', @col_date_heure, ' = f.`date_sign_time`'
-);
-
--- Construire la requête INSERT
+-- Construire la requête INSERT avec sous-requête pour trouver id_fiche
+-- On cherche la fiche avec le même tel et la date_sign_time la plus proche de date_heure
 SET @insert_query = CONCAT(
     'INSERT INTO `signature` (`id_fiche`, `confirmateur`, `ajoute`, `date_heure`, `tel`)',
     ' SELECT ',
-    'f.`id` as `id_fiche`,',
+    '(SELECT f2.`id` FROM `fiches` f2 ',
+    ' WHERE f2.`tel` = ', @col_tel,
+    '   AND f2.`date_sign_time` IS NOT NULL',
+    '   AND ABS(TIMESTAMPDIFF(SECOND, f2.`date_sign_time`, ', @col_date_heure, ')) <= 86400',
+    ' ORDER BY ABS(TIMESTAMPDIFF(SECOND, f2.`date_sign_time`, ', @col_date_heure, ')) ASC',
+    ' LIMIT 1) as `id_fiche`,',
     @col_confirmateur, ' as `confirmateur`,',
     @col_ajoute, ' as `ajoute`,',
     @col_date_heure, ' as `date_heure`,',
     @col_tel, ' as `tel`',
     ' FROM `yj_signature` yj',
     @join_utilisateurs_safe,
-    @join_fiches,
     ' WHERE ',
     @col_date_heure, ' IS NOT NULL',
+    ' AND ', @col_tel, ' IS NOT NULL',
+    ' AND ', @col_tel, ' != ''''',
     @where_confirmateur_safe,
     ' AND NOT EXISTS (',
     '     SELECT 1 FROM `signature` s',
-    '     WHERE s.`id_fiche` = f.`id`',
+    '     WHERE s.`tel` = ', @col_tel,
     '       AND s.`confirmateur` = ', @col_confirmateur,
     '       AND s.`date_heure` = ', @col_date_heure,
     ' )'
