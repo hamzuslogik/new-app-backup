@@ -107,13 +107,15 @@ const CompteRenduPending = () => {
 
   const comptesRendus = comptesRendusData || [];
   const isAdmin = [1, 2, 7].includes(user.fonction);
+  const isRPConfirmation = user.fonction === 15;
+  const canApprove = isAdmin || isRPConfirmation; // Admins et RP Confirmation peuvent approuver
   const isCommercial = user.fonction === 5;
 
   return (
     <div className="compte-rendu-pending-page">
       <div className="page-header">
         <h1>Comptes Rendus en Attente</h1>
-        {isAdmin && (
+        {canApprove && (
           <div className="statut-filters">
             <button
               className={`statut-filter ${selectedStatut === 'all' ? 'active' : ''}`}
@@ -174,7 +176,7 @@ const CompteRenduPending = () => {
                   <FicheDetailLink ficheId={cr.id_fiche} className="btn-icon" title="Voir fiche">
                     <FaEye />
                   </FicheDetailLink>
-                  {isAdmin && cr.statut === 'pending' && (
+                  {canApprove && cr.statut === 'pending' && (
                     <>
                       <button
                         className="btn-icon btn-success"
@@ -339,7 +341,7 @@ const CompteRenduPending = () => {
       )}
 
       {/* Modal d'approbation/rejet */}
-      {selectedCompteRendu && isAdmin && selectedCompteRendu.statut === 'pending' && (
+      {selectedCompteRendu && canApprove && selectedCompteRendu.statut === 'pending' && (
         <div className="modal-overlay" onClick={() => setSelectedCompteRendu(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">

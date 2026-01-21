@@ -2,15 +2,23 @@
 -- Script SQL pour VIDER et RÉGÉNÉRER tous les hash avec le HASH_SECRET actuel
 -- =====================================================
 --
--- Ce script :
+-- ⚠️ ATTENTION IMPORTANTE ⚠️
+-- Ce script SQL utilise une APPROXIMATION du hash car MySQL/MariaDB ne supporte pas
+-- nativement HMAC SHA-256. Le hash généré NE SERA PAS IDENTIQUE à celui généré
+-- par le backend Node.js.
+--
+-- POUR UN HASH EXACT, UTILISEZ LE SCRIPT NODE.JS :
+--   node update_all_fiches_hash_with_current_secret.js
+--
+-- Ce script Node.js utilise exactement la même fonction encodeFicheId que le backend
+-- et générera des hash identiques à ceux vus dans l'URL.
+--
+-- Ce script SQL :
 -- 1. Vide tous les hash existants
--- 2. Régénère tous les hash avec le HASH_SECRET défini ci-dessous
+-- 2. Régénère tous les hash avec le HASH_SECRET défini ci-dessous (approximation)
 --
--- IMPORTANT: Modifiez la valeur de @hash_secret à la ligne 27 pour correspondre
+-- IMPORTANT: Modifiez la valeur de @hash_secret à la ligne 45 pour correspondre
 -- à votre FICHE_HASH_SECRET dans le fichier .env
---
--- ATTENTION: Ce script utilise une approximation du hash car MySQL ne supporte pas
--- nativement HMAC SHA-256. Pour un hash exact, utilisez le script Node.js.
 --
 -- =====================================================
 
@@ -114,8 +122,14 @@ BEGIN
   -- Convertir l'ID en string
   SET id_str = CAST(fiche_id AS CHAR);
   
-  -- Calculer le hash SHA-256 (approximation de HMAC)
-  -- Note: Ce n'est pas exactement HMAC, mais proche
+  -- ⚠️ ATTENTION: Cette approximation n'est PAS identique à HMAC-SHA256
+  -- Le backend Node.js utilise: crypto.createHmac('sha256', secret).update(id).digest('hex')
+  -- Ce qui est DIFFÉRENT de: SHA2(CONCAT(secret, id, secret), 256)
+  -- 
+  -- HMAC utilise: H(K XOR opad, H(K XOR ipad, text))
+  -- Cette approximation utilise: SHA2(CONCAT(secret, id, secret), 256)
+  -- 
+  -- Pour un hash exact, utilisez le script Node.js: update_all_fiches_hash_with_current_secret.js
   SET hash_part = SUBSTRING(SHA2(CONCAT(secret_key, id_str, secret_key), 256), 1, 16);
   
   -- Encoder l'ID en base64 et convertir en URL-safe
@@ -132,7 +146,13 @@ DELIMITER ;
 -- ÉTAPE 4: RÉGÉNÉRER TOUS LES HASH
 -- =====================================================
 
-SELECT '🔄 Régénération des hash en cours...' as message;
+-- ⚠️ AVERTISSEMENT FINAL ⚠️
+SELECT 
+  '⚠️ ATTENTION: Les hash générés par ce script SQL NE SERONT PAS IDENTIQUES' as warning,
+  'aux hash générés par le backend Node.js.' as warning2,
+  'Pour des hash exacts, utilisez: node update_all_fiches_hash_with_current_secret.js' as recommendation;
+
+SELECT '🔄 Régénération des hash en cours (approximation)...' as message;
 
 -- Mettre à jour TOUTES les fiches
 UPDATE `fiches`

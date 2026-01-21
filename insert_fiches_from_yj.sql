@@ -22,6 +22,89 @@
 USE `crm`;
 
 -- =====================================================
+-- CONFIGURATION DU HASH
+-- =====================================================
+-- ⚠️ ATTENTION: MODIFIEZ CETTE LIGNE avec votre HASH_SECRET actuel
+-- Pour trouver votre HASH_SECRET, vérifiez le fichier .env à la racine du projet
+-- ou la variable d'environnement FICHE_HASH_SECRET
+SET @hash_secret = 'crm-jws-group-secret-key-2024-change-in-production';
+
+-- =====================================================
+-- CRÉATION DES FONCTIONS POUR LE HASH (si elles n'existent pas)
+-- =====================================================
+
+DELIMITER $$
+
+-- Fonction helper pour encoder en base64 (compatible MySQL < 8.0)
+DROP FUNCTION IF EXISTS `base64_encode`$$
+
+CREATE FUNCTION `base64_encode`(input_str VARCHAR(255))
+RETURNS VARCHAR(255)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+  DECLARE base64_chars VARCHAR(64) DEFAULT 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  DECLARE result VARCHAR(255) DEFAULT '';
+  DECLARE i INT DEFAULT 1;
+  DECLARE len INT;
+  DECLARE char1, char2, char3 INT;
+  DECLARE enc1, enc2, enc3, enc4 INT;
+  
+  SET len = LENGTH(input_str);
+  
+  WHILE i <= len DO
+    SET char1 = ASCII(SUBSTRING(input_str, i, 1));
+    SET char2 = IF(i + 1 <= len, ASCII(SUBSTRING(input_str, i + 1, 1)), 0);
+    SET char3 = IF(i + 2 <= len, ASCII(SUBSTRING(input_str, i + 2, 1)), 0);
+    
+    SET enc1 = char1 >> 2;
+    SET enc2 = ((char1 & 3) << 4) | (char2 >> 4);
+    SET enc3 = IF(i + 1 <= len, ((char2 & 15) << 2) | (char3 >> 6), 64);
+    SET enc4 = IF(i + 2 <= len, char3 & 63, 64);
+    
+    SET result = CONCAT(result,
+      SUBSTRING(base64_chars, enc1 + 1, 1),
+      SUBSTRING(base64_chars, enc2 + 1, 1),
+      IF(enc3 = 64, '=', SUBSTRING(base64_chars, enc3 + 1, 1)),
+      IF(enc4 = 64, '=', SUBSTRING(base64_chars, enc4 + 1, 1))
+    );
+    
+    SET i = i + 3;
+  END WHILE;
+  
+  RETURN result;
+END$$
+
+DROP FUNCTION IF EXISTS `calculate_fiche_hash`$$
+
+CREATE FUNCTION `calculate_fiche_hash`(fiche_id INT, secret_key VARCHAR(255))
+RETURNS VARCHAR(255)
+READS SQL DATA
+DETERMINISTIC
+BEGIN
+  DECLARE hash_part VARCHAR(16);
+  DECLARE encoded_id VARCHAR(255);
+  DECLARE id_str VARCHAR(20);
+  DECLARE base64_encoded VARCHAR(255);
+  
+  -- Convertir l'ID en string
+  SET id_str = CAST(fiche_id AS CHAR);
+  
+  -- Calculer le hash SHA-256 (approximation de HMAC)
+  -- Note: Ce n'est pas exactement HMAC, mais proche
+  SET hash_part = SUBSTRING(SHA2(CONCAT(secret_key, id_str, secret_key), 256), 1, 16);
+  
+  -- Encoder l'ID en base64 et convertir en URL-safe
+  SET base64_encoded = `base64_encode`(id_str);
+  SET encoded_id = REPLACE(REPLACE(REPLACE(base64_encoded, '+', '-'), '/', '_'), '=', '');
+  
+  -- Retourner la combinaison
+  RETURN CONCAT(hash_part, encoded_id);
+END$$
+
+DELIMITER ;
+
+-- =====================================================
 -- FICHES
 -- =====================================================
 -- Migration depuis yj_fiche vers fiches
@@ -80,7 +163,7 @@ INSERT INTO `fiches` (
   `conf_rdv_avec`, `cq_etat`, `cq_dossier`, `ph3_installateur`, `ph3_pac`, `ph3_puissance`,
   `ph3_puissance_pv`, `ph3_rr_model`, `ph3_ballon`, `ph3_marque_ballon`, `ph3_alimentation`,
   `ph3_type`, `ph3_prix`, `ph3_bonus_30`, `ph3_mensualite`, `ph3_attente`, `nbr_annee_finance`,
-  `credit_immobilier`, `credit_autre`
+  `credit_immobilier`, `credit_autre`, `hash`
 )
 SELECT 
   `id`,
@@ -395,7 +478,9 @@ SELECT
     ELSE NULL
   END as `nbr_annee_finance`,
   NULLIF(`credit_immobilier`, '') as `credit_immobilier`,
-  NULLIF(`credit_autre`, '') as `credit_autre`
+  NULLIF(`credit_autre`, '') as `credit_autre`,
+  -- Hash: calculer automatiquement avec la fonction
+  `calculate_fiche_hash`(`id`, @hash_secret) as `hash`
 FROM `yj_fiche`
 ON DUPLICATE KEY UPDATE 
   `civ` = VALUES(`civ`),

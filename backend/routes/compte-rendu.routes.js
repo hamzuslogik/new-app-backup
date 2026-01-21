@@ -539,7 +539,7 @@ router.put('/:id', authenticate, async (req, res) => {
 
 // =====================================================
 // ROUTE: POST /api/compte-rendu/:id/approve
-// Approuver un compte rendu (admin seulement)
+// Approuver un compte rendu (admin ou RP Confirmation)
 // =====================================================
 router.post('/:id/approve', authenticate, async (req, res) => {
   try {
@@ -547,11 +547,11 @@ router.post('/:id/approve', authenticate, async (req, res) => {
     const { id } = req.params;
     const { commentaire_admin } = req.body;
 
-    // Vérifier que l'utilisateur est admin (fonction 1, 2, ou 7)
-    if (![1, 2, 7].includes(user.fonction)) {
+    // Vérifier que l'utilisateur est admin (fonction 1, 2, ou 7) ou RP Confirmation (fonction 15)
+    if (![1, 2, 7, 15].includes(user.fonction)) {
       return res.status(403).json({
         success: false,
-        message: 'Seuls les administrateurs peuvent approuver des comptes rendus'
+        message: 'Seuls les administrateurs et les RP Confirmation peuvent approuver des comptes rendus'
       });
     }
 
@@ -775,7 +775,7 @@ router.post('/:id/approve', authenticate, async (req, res) => {
 
 // =====================================================
 // ROUTE: POST /api/compte-rendu/:id/reject
-// Rejeter un compte rendu (admin seulement)
+// Rejeter un compte rendu (admin ou RP Confirmation)
 // =====================================================
 router.post('/:id/reject', authenticate, async (req, res) => {
   try {
@@ -783,11 +783,11 @@ router.post('/:id/reject', authenticate, async (req, res) => {
     const { id } = req.params;
     const { commentaire_admin } = req.body;
 
-    // Vérifier que l'utilisateur est admin (fonction 1, 2, ou 7)
-    if (![1, 2, 7].includes(user.fonction)) {
+    // Vérifier que l'utilisateur est admin (fonction 1, 2, ou 7) ou RP Confirmation (fonction 15)
+    if (![1, 2, 7, 15].includes(user.fonction)) {
       return res.status(403).json({
         success: false,
-        message: 'Seuls les administrateurs peuvent rejeter des comptes rendus'
+        message: 'Seuls les administrateurs et les RP Confirmation peuvent rejeter des comptes rendus'
       });
     }
 

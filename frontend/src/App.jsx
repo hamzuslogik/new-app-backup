@@ -77,7 +77,7 @@ function App() {
           <Route path="kpis" element={<ProtectedRoute permission="kpis_view"><KPIs /></ProtectedRoute>} />
           <Route path="controle-qualite" element={<ProtectedRoute permission="controle_qualite_view"><ControleQualite /></ProtectedRoute>} />
           <Route path="compte-rendu" element={<ProtectedRoute permission="compte_rendu_view"><CompteRendu /></ProtectedRoute>} />
-          <Route path="compte-rendu-pending" element={<ProtectedRoute permission={null} customCheck={(item, user) => [1, 2, 5, 7].includes(user?.fonction)}><CompteRenduPending /></ProtectedRoute>} />
+          <Route path="compte-rendu-pending" element={<ProtectedRoute permission={null} customCheck={(item, user) => [1, 2, 5, 7, 15].includes(user?.fonction)}><CompteRenduPending /></ProtectedRoute>} />
           <Route path="phase3" element={<ProtectedRoute permission="phase3_view"><Phase3 /></ProtectedRoute>} />
           <Route path="permissions" element={<ProtectedRoute permission="config_permissions" excludeFunctions={[8]}><Permissions /></ProtectedRoute>} />
           <Route path="import-masse" element={<ProtectedRoute permission="import_masse_view" excludeFunctions={[8]}><ImportMasse /></ProtectedRoute>} />

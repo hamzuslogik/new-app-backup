@@ -123,69 +123,128 @@ SELECT
 --
 
 -- =====================================================
--- REQUÊTES ALTER TABLE À EXÉCUTER
+-- REQUÊTES ALTER TABLE À EXÉCUTER (VERSION AUTOMATIQUE)
 -- =====================================================
+-- 
+-- Cette section ajoute automatiquement les colonnes manquantes
+-- en utilisant des procédures stockées temporaires.
 -- 
 -- INSTRUCTIONS :
 -- 1. Exécutez d'abord la section "ÉTAPE 1" pour voir la structure actuelle
 -- 2. Exécutez la section "ÉTAPE 2" pour voir quelles colonnes existent déjà
--- 3. Décommentez et exécutez UNE PAR UNE les requêtes ALTER TABLE ci-dessous
---    seulement pour les colonnes qui n'existent pas (has_xxx = 0)
--- 4. Si une requête échoue avec "Duplicate column name", c'est normal, passez à la suivante
+-- 3. Exécutez cette section pour ajouter automatiquement les colonnes manquantes
 --
 
--- Colonnes confirmateurs et commentaire (PRIORITÉ HAUTE)
--- Décommentez seulement si @has_id_confirmateur = 0
-/*
-ALTER TABLE `fiches_histo` ADD COLUMN `id_confirmateur` int(11) DEFAULT NULL AFTER `id_etat`;
-ALTER TABLE `fiches_histo` ADD COLUMN `id_confirmateur_2` int(11) DEFAULT NULL AFTER `id_confirmateur`;
-ALTER TABLE `fiches_histo` ADD COLUMN `id_confirmateur_3` int(11) DEFAULT NULL AFTER `id_confirmateur_2`;
-ALTER TABLE `fiches_histo` ADD COLUMN `conf_commentaire_produit` text CHARACTER SET utf8 DEFAULT NULL AFTER `id_confirmateur_3`;
-*/
+-- =====================================================
+-- Ajouter les colonnes manquantes (VERSION AVEC PROCÉDURE)
+-- =====================================================
+-- 
+-- Cette version utilise une procédure stockée qui ne retourne pas de résultats
+-- pour éviter les problèmes de synchronisation.
+-- 
+-- INSTRUCTIONS :
+-- 1. Exécutez d'abord la section "ÉTAPE 1" pour voir la structure actuelle
+-- 2. Exécutez la section "ÉTAPE 2" pour voir quelles colonnes existent déjà
+-- 3. Exécutez cette section pour ajouter automatiquement les colonnes manquantes
+--
 
--- Colonnes dates (PRIORITÉ HAUTE)
--- Décommentez seulement si @has_date_appel_time = 0 ou @has_date_sign_time = 0
-/*
-ALTER TABLE `fiches_histo` ADD COLUMN `date_appel_time` datetime DEFAULT NULL AFTER `date_rdv_time`;
-ALTER TABLE `fiches_histo` ADD COLUMN `date_sign_time` datetime DEFAULT NULL AFTER `date_appel_time`;
-*/
+-- Créer une procédure qui n'exécute que si la colonne n'existe pas (sans retourner de résultats)
+DELIMITER $$
 
--- Colonnes autres (PRIORITÉ HAUTE)
--- Décommentez seulement si les colonnes n'existent pas
-/*
-ALTER TABLE `fiches_histo` ADD COLUMN `id_sous_etat` int(11) DEFAULT NULL AFTER `date_sign_time`;
-ALTER TABLE `fiches_histo` ADD COLUMN `id_commercial` int(11) DEFAULT NULL AFTER `id_sous_etat`;
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_installateur` int(11) DEFAULT NULL AFTER `id_commercial`;
-*/
+DROP PROCEDURE IF EXISTS `add_column_silent`$$
 
--- Colonnes Phase 3 (PRIORITÉ MOYENNE)
--- Décommentez seulement si les colonnes n'existent pas
-/*
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_pac` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_installateur`;
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_type` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_pac`;
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_prix` decimal(10,2) DEFAULT NULL AFTER `ph3_type`;
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_puissance` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_prix`;
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_consommation` decimal(10,2) DEFAULT NULL AFTER `ph3_puissance`;
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_bonus_30` decimal(10,2) DEFAULT NULL AFTER `ph3_consommation`;
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_mensualite` decimal(10,2) DEFAULT NULL AFTER `ph3_bonus_30`;
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_nbr_annee_finance` int(11) DEFAULT NULL AFTER `ph3_mensualite`;
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_ballon` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_nbr_annee_finance`;
-ALTER TABLE `fiches_histo` ADD COLUMN `ph3_alimentation` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_ballon`;
-ALTER TABLE `fiches_histo` ADD COLUMN `credit_immobilier` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_alimentation`;
-ALTER TABLE `fiches_histo` ADD COLUMN `credit_autre` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `credit_immobilier`;
-ALTER TABLE `fiches_histo` ADD COLUMN `valeur_mensualite` decimal(10,2) DEFAULT NULL AFTER `credit_autre`;
-ALTER TABLE `fiches_histo` ADD COLUMN `conf_rdv_avec` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `valeur_mensualite`;
-*/
+CREATE PROCEDURE `add_column_silent`(
+    IN table_name VARCHAR(64),
+    IN column_name VARCHAR(64),
+    IN column_definition TEXT
+)
+BEGIN
+    DECLARE column_exists INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO column_exists
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = table_name
+      AND COLUMN_NAME = column_name;
+    
+    IF column_exists = 0 THEN
+        SET @sql = CONCAT('ALTER TABLE `', table_name, '` ADD COLUMN ', column_definition);
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END$$
+
+DROP PROCEDURE IF EXISTS `add_index_silent`$$
+
+CREATE PROCEDURE `add_index_silent`(
+    IN table_name VARCHAR(64),
+    IN index_name VARCHAR(64),
+    IN column_name VARCHAR(64)
+)
+BEGIN
+    DECLARE index_exists INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO index_exists
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = table_name
+      AND INDEX_NAME = index_name;
+    
+    IF index_exists = 0 THEN
+        SET @sql = CONCAT('ALTER TABLE `', table_name, '` ADD INDEX `', index_name, '` (`', column_name, '`)');
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END$$
+
+DELIMITER ;
+
+SELECT '=== AJOUT DES COLONNES (PRIORITÉ HAUTE) ===' as info;
+
+-- Ajouter les colonnes manquantes (PRIORITÉ HAUTE)
+CALL add_column_silent('fiches_histo', 'id_confirmateur', '`id_confirmateur` int(11) DEFAULT NULL AFTER `id_etat`');
+CALL add_column_silent('fiches_histo', 'id_confirmateur_2', '`id_confirmateur_2` int(11) DEFAULT NULL AFTER `id_confirmateur`');
+CALL add_column_silent('fiches_histo', 'id_confirmateur_3', '`id_confirmateur_3` int(11) DEFAULT NULL AFTER `id_confirmateur_2`');
+CALL add_column_silent('fiches_histo', 'conf_commentaire_produit', '`conf_commentaire_produit` text CHARACTER SET utf8 DEFAULT NULL AFTER `id_confirmateur_3`');
+CALL add_column_silent('fiches_histo', 'date_appel_time', '`date_appel_time` datetime DEFAULT NULL AFTER `date_rdv_time`');
+CALL add_column_silent('fiches_histo', 'date_sign_time', '`date_sign_time` datetime DEFAULT NULL AFTER `date_appel_time`');
+CALL add_column_silent('fiches_histo', 'id_sous_etat', '`id_sous_etat` int(11) DEFAULT NULL AFTER `date_sign_time`');
+CALL add_column_silent('fiches_histo', 'id_commercial', '`id_commercial` int(11) DEFAULT NULL AFTER `id_sous_etat`');
+CALL add_column_silent('fiches_histo', 'ph3_installateur', '`ph3_installateur` int(11) DEFAULT NULL AFTER `id_commercial`');
+
+-- Ajouter les colonnes Phase 3 (PRIORITÉ MOYENNE)
+SELECT '=== AJOUT DES COLONNES PHASE 3 (PRIORITÉ MOYENNE) ===' as info;
+
+CALL add_column_silent('fiches_histo', 'ph3_pac', '`ph3_pac` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_installateur`');
+CALL add_column_silent('fiches_histo', 'ph3_type', '`ph3_type` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_pac`');
+CALL add_column_silent('fiches_histo', 'ph3_prix', '`ph3_prix` decimal(10,2) DEFAULT NULL AFTER `ph3_type`');
+CALL add_column_silent('fiches_histo', 'ph3_puissance', '`ph3_puissance` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_prix`');
+CALL add_column_silent('fiches_histo', 'ph3_consommation', '`ph3_consommation` decimal(10,2) DEFAULT NULL AFTER `ph3_puissance`');
+CALL add_column_silent('fiches_histo', 'ph3_bonus_30', '`ph3_bonus_30` decimal(10,2) DEFAULT NULL AFTER `ph3_consommation`');
+
+CALL add_column_silent('fiches_histo', 'ph3_mensualite', '`ph3_mensualite` decimal(10,2) DEFAULT NULL AFTER `ph3_bonus_30`');
+CALL add_column_silent('fiches_histo', 'ph3_nbr_annee_finance', '`ph3_nbr_annee_finance` int(11) DEFAULT NULL AFTER `ph3_mensualite`');
+CALL add_column_silent('fiches_histo', 'ph3_ballon', '`ph3_ballon` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_nbr_annee_finance`');
+CALL add_column_silent('fiches_histo', 'ph3_alimentation', '`ph3_alimentation` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_ballon`');
+CALL add_column_silent('fiches_histo', 'credit_immobilier', '`credit_immobilier` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `ph3_alimentation`');
+CALL add_column_silent('fiches_histo', 'credit_autre', '`credit_autre` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `credit_immobilier`');
+CALL add_column_silent('fiches_histo', 'valeur_mensualite', '`valeur_mensualite` decimal(10,2) DEFAULT NULL AFTER `credit_autre`');
+CALL add_column_silent('fiches_histo', 'conf_rdv_avec', '`conf_rdv_avec` varchar(255) CHARACTER SET utf8 DEFAULT NULL AFTER `valeur_mensualite`');
 
 -- Ajouter des index pour améliorer les performances
--- Ces requêtes échoueront silencieusement si les index existent déjà (c'est normal)
-/*
-ALTER TABLE `fiches_histo` ADD INDEX `idx_id_confirmateur` (`id_confirmateur`);
-ALTER TABLE `fiches_histo` ADD INDEX `idx_id_commercial` (`id_commercial`);
-ALTER TABLE `fiches_histo` ADD INDEX `idx_id_sous_etat` (`id_sous_etat`);
-ALTER TABLE `fiches_histo` ADD INDEX `idx_date_appel_time` (`date_appel_time`);
-ALTER TABLE `fiches_histo` ADD INDEX `idx_date_sign_time` (`date_sign_time`);
-*/
+SELECT '=== AJOUT DES INDEX ===' as info;
+
+CALL add_index_silent('fiches_histo', 'idx_id_confirmateur', 'id_confirmateur');
+CALL add_index_silent('fiches_histo', 'idx_id_commercial', 'id_commercial');
+CALL add_index_silent('fiches_histo', 'idx_id_sous_etat', 'id_sous_etat');
+CALL add_index_silent('fiches_histo', 'idx_date_appel_time', 'date_appel_time');
+CALL add_index_silent('fiches_histo', 'idx_date_sign_time', 'date_sign_time');
+
+-- Nettoyer les procédures temporaires
+DROP PROCEDURE IF EXISTS `add_column_silent`;
+DROP PROCEDURE IF EXISTS `add_index_silent`;
 
 -- =====================================================
 -- ÉTAPE 3 : Vérifier la nouvelle structure
@@ -208,16 +267,34 @@ ORDER BY ORDINAL_POSITION;
 -- =====================================================
 -- ÉTAPE 4 : Statistiques
 -- =====================================================
+-- 
+-- Cette section affiche des statistiques de base.
+-- Les statistiques sur les nouvelles colonnes seront disponibles
+-- après leur ajout via les ALTER TABLE ci-dessus.
+--
 
 SELECT 
-    '=== STATISTIQUES ===' as info,
+    '=== STATISTIQUES DE BASE ===' as info,
     COUNT(*) as total_lignes,
     COUNT(DISTINCT id_fiche) as total_fiches,
+    COUNT(CASE WHEN id_etat IS NOT NULL THEN 1 END) as lignes_avec_etat,
+    COUNT(CASE WHEN date_rdv_time IS NOT NULL THEN 1 END) as lignes_avec_date_rdv,
+    COUNT(CASE WHEN date_creation IS NOT NULL THEN 1 END) as lignes_avec_date_creation
+FROM `fiches_histo`;
+
+-- Statistiques sur les nouvelles colonnes (uniquement si elles existent)
+-- Décommentez cette section APRÈS avoir ajouté les colonnes
+/*
+SELECT 
+    '=== STATISTIQUES SUR LES NOUVELLES COLONNES ===' as info,
     COUNT(CASE WHEN id_confirmateur IS NOT NULL THEN 1 END) as lignes_avec_confirmateur,
     COUNT(CASE WHEN conf_commentaire_produit IS NOT NULL THEN 1 END) as lignes_avec_commentaire,
     COUNT(CASE WHEN date_appel_time IS NOT NULL THEN 1 END) as lignes_avec_date_appel,
-    COUNT(CASE WHEN date_sign_time IS NOT NULL THEN 1 END) as lignes_avec_date_signature
+    COUNT(CASE WHEN date_sign_time IS NOT NULL THEN 1 END) as lignes_avec_date_signature,
+    COUNT(CASE WHEN id_sous_etat IS NOT NULL THEN 1 END) as lignes_avec_sous_etat,
+    COUNT(CASE WHEN ph3_pac IS NOT NULL THEN 1 END) as lignes_avec_ph3_pac
 FROM `fiches_histo`;
+*/
 
 -- =====================================================
 -- NOTES IMPORTANTES

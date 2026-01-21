@@ -153,6 +153,8 @@ const CompteRendu = () => {
 
   const compteRendusPending = comptesRendusPendingData || [];
   const isAdmin = [1, 2, 7].includes(user.fonction);
+  const isRPConfirmation = user.fonction === 15;
+  const canApprove = isAdmin || isRPConfirmation; // Admins et RP Confirmation peuvent approuver
 
   return (
     <div className="compte-rendu-page">
@@ -163,7 +165,7 @@ const CompteRendu = () => {
       {/* Section Comptes Rendus Pending */}
       <div className="results-section">
           <div className="pending-header">
-            {isAdmin && (
+            {canApprove && (
               <div className="statut-filters">
                 <button
                   className={`statut-filter ${selectedStatutPending === 'all' ? 'active' : ''}`}
@@ -224,7 +226,7 @@ const CompteRendu = () => {
                       <FicheDetailLink ficheId={cr.id_fiche} className="btn-icon" title="Voir fiche">
                         <FaEye />
                       </FicheDetailLink>
-                      {isAdmin && cr.statut === 'pending' && (
+                      {canApprove && cr.statut === 'pending' && (
                         <>
                           <button
                             className="btn-icon btn-edit"
@@ -318,7 +320,7 @@ const CompteRendu = () => {
       </div>
 
       {/* Modal d'approbation/rejet */}
-      {selectedCompteRendu && isAdmin && selectedCompteRendu.statut === 'pending' && (
+      {selectedCompteRendu && canApprove && selectedCompteRendu.statut === 'pending' && (
         <div className="modal-overlay" onClick={() => setSelectedCompteRendu(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -361,7 +363,7 @@ const CompteRendu = () => {
       )}
 
       {/* Modal de modification */}
-      {editingCompteRendu && isAdmin && editingCompteRendu.statut === 'pending' && (
+      {editingCompteRendu && canApprove && editingCompteRendu.statut === 'pending' && (
         <EditCompteRenduModal
           compteRendu={editingCompteRendu}
           etats={etats}
