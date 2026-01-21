@@ -113,6 +113,13 @@ async function sendSMSViaProvider(provider, tel, message, from = 'RAPPEL') {
  */
 async function sendViaManivox(provider, tel, message, from) {
   try {
+    console.log('[SMS Service] Envoi via Manivox:', {
+      tel: tel,
+      from: from,
+      messageLength: message.length,
+      login: provider.login ? '***' : 'non défini'
+    });
+
     const response = await axios.post('https://www.manivox.com/api_v2/json_api.php', null, {
       params: {
         action: 'send_sms',
@@ -121,25 +128,74 @@ async function sendViaManivox(provider, tel, message, from) {
         from: from,
         to: tel,
         text: message
-      }
+      },
+      timeout: 30000 // 30 secondes de timeout
     });
 
     const result = response.data;
+    console.log('[SMS Service] Réponse Manivox:', JSON.stringify(result));
+
     const isSuccess = result.message === 'successful';
+
+    // Construire un message d'erreur détaillé
+    let errorMessage = 'Erreur inconnue';
+    if (!isSuccess) {
+      if (result.error) {
+        errorMessage = `Erreur Manivox: ${result.error}`;
+      } else if (result.message) {
+        errorMessage = `Erreur Manivox: ${result.message}`;
+      } else if (result.status) {
+        errorMessage = `Erreur Manivox: Status ${result.status}`;
+      } else {
+        errorMessage = `Erreur Manivox: Réponse inattendue - ${JSON.stringify(result)}`;
+      }
+    }
 
     return {
       success: isSuccess,
-      message: isSuccess ? 'SMS envoyé avec succès' : result.message || 'Erreur inconnue',
+      message: isSuccess ? 'SMS envoyé avec succès' : errorMessage,
       data: result,
-      provider: provider.nom
+      provider: provider.nom,
+      error: isSuccess ? null : (result.error || result.message || 'Erreur inconnue')
     };
   } catch (error) {
-    console.error('[SMS Service] Erreur Manivox:', error);
+    console.error('[SMS Service] Erreur Manivox complète:', {
+      message: error.message,
+      code: error.code,
+      response: error.response?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText
+    });
+
+    let errorMessage = 'Erreur lors de l\'envoi via Manivox';
+    
+    if (error.response) {
+      // Erreur HTTP avec réponse
+      const responseData = error.response.data;
+      if (responseData && typeof responseData === 'object') {
+        errorMessage = responseData.error || responseData.message || `Erreur HTTP ${error.response.status}: ${error.response.statusText}`;
+      } else if (responseData) {
+        errorMessage = `Erreur HTTP ${error.response.status}: ${responseData}`;
+      } else {
+        errorMessage = `Erreur HTTP ${error.response.status}: ${error.response.statusText}`;
+      }
+    } else if (error.request) {
+      // Requête envoyée mais pas de réponse
+      errorMessage = 'Pas de réponse du serveur Manivox. Vérifiez votre connexion internet.';
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Timeout: Le serveur Manivox n\'a pas répondu dans les temps.';
+    } else {
+      errorMessage = error.message || 'Erreur inconnue lors de l\'envoi';
+    }
+
     return {
       success: false,
-      message: error.response?.data?.message || error.message || 'Erreur lors de l\'envoi via Manivox',
+      message: errorMessage,
       error: error.message,
-      provider: provider.nom
+      errorCode: error.code,
+      statusCode: error.response?.status,
+      provider: provider.nom,
+      details: error.response?.data
     };
   }
 }

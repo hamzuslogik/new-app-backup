@@ -161,7 +161,23 @@ const Signatures = () => {
               </div>
             </div>
 
-            {/* KPI 2: Fiches Signées */}
+            {/* KPI 2: Nombre de Signatures */}
+            <div className="kpi-card">
+              <div className="kpi-header">
+                <FaUsers className="kpi-icon" />
+                <h3>Nombre de Signatures</h3>
+              </div>
+              <div className="kpi-value">{kpiData.nombreSignatures?.current || 0}</div>
+              <div className="kpi-evolution">
+                <span style={{ color: getTrendColor(kpiData.nombreSignatures?.trend, kpiData.nombreSignatures?.evolution) }}>
+                  {getTrendIcon(kpiData.nombreSignatures?.trend)}
+                  {kpiData.nombreSignatures?.evolution > 0 ? '+' : ''}{formatNumber(kpiData.nombreSignatures?.evolution)}%
+                </span>
+                <span className="kpi-previous">vs {kpiData.nombreSignatures?.previous || 0}</span>
+              </div>
+            </div>
+
+            {/* KPI 3: Fiches Signées */}
             <div className="kpi-card">
               <div className="kpi-header">
                 <FaFileAlt className="kpi-icon" />
@@ -177,7 +193,7 @@ const Signatures = () => {
               </div>
             </div>
 
-            {/* KPI 3: Moyenne par Jour */}
+            {/* KPI 4: Moyenne par Jour */}
             <div className="kpi-card">
               <div className="kpi-header">
                 <FaChartLine className="kpi-icon" />
@@ -189,7 +205,7 @@ const Signatures = () => {
               </div>
             </div>
 
-            {/* KPI 4: Top Confirmateur */}
+            {/* KPI 5: Top Confirmateur */}
             {kpiData.top3Confirmateurs && kpiData.top3Confirmateurs.length > 0 && (
               <div className="kpi-card">
                 <div className="kpi-header">

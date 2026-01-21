@@ -4141,7 +4141,18 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
     console.log(`[SMS] Utilisation du fournisseur: ${provider.nom} (ID: ${provider.id || 'défaut'})`);
 
     // Envoyer le SMS via le fournisseur
-    const smsResult = await sendSMSViaProvider(provider, tel, message, 'RAPPEL');
+    let smsResult;
+    try {
+      smsResult = await sendSMSViaProvider(provider, tel, message, 'RAPPEL');
+    } catch (error) {
+      console.error('[SMS Route] Erreur lors de l\'envoi du SMS:', error);
+      return res.status(500).json({
+        success: false,
+        message: `Erreur lors de l'envoi du SMS: ${error.message || 'Erreur inconnue'}`,
+        error: error.message,
+        provider: provider.nom
+      });
+    }
 
     if (smsResult.success) {
       // Enregistrer le SMS dans la base
@@ -4172,12 +4183,27 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
         }
       });
     } else {
-      console.error('[SMS] Erreur lors de l\'envoi:', smsResult);
-      res.status(400).json({
-        success: false,
-        message: smsResult.message || 'Erreur lors de l\'envoi du SMS',
+      // Construire un message d'erreur détaillé
+      const errorMessage = smsResult.message || smsResult.error || 'Erreur inconnue';
+      const statusCode = smsResult.statusCode || 400;
+      
+      console.error('[SMS Route] Échec envoi SMS:', {
+        provider: provider.nom,
+        message: errorMessage,
         error: smsResult.error,
-        provider: provider.nom
+        errorCode: smsResult.errorCode,
+        statusCode: smsResult.statusCode,
+        details: smsResult.details,
+        tel: tel
+      });
+
+      return res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 400).json({
+        success: false,
+        message: `Erreur lors de l'envoi du SMS: ${errorMessage}`,
+        error: smsResult.error,
+        errorCode: smsResult.errorCode,
+        provider: provider.nom,
+        details: smsResult.details
       });
     }
   } catch (error) {

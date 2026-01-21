@@ -252,38 +252,60 @@ router.get('/kpi', authenticate, async (req, res) => {
     const currentStart = `${dateDebut} 00:00:00`;
     const currentEnd = `${dateFin} 23:59:59`;
 
-    // Période précédente (même durée)
+    // Période précédente (même période du mois précédent)
     const startDate = new Date(dateDebut);
     const endDate = new Date(dateFin);
-    const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-    const previousEnd = new Date(startDate);
-    previousEnd.setDate(previousEnd.getDate() - 1);
-    const previousStart = new Date(previousEnd);
-    previousStart.setDate(previousStart.getDate() - daysDiff);
+    const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Calculer la même période du mois précédent
+    const previousStart = new Date(startDate);
+    previousStart.setMonth(previousStart.getMonth() - 1);
+    
+    const previousEnd = new Date(previousStart);
+    previousEnd.setDate(previousEnd.getDate() + daysDiff - 1);
 
     const previousStartStr = previousStart.toISOString().split('T')[0] + ' 00:00:00';
     const previousEndStr = previousEnd.toISOString().split('T')[0] + ' 23:59:59';
 
-    // KPI 1: Total signatures (période actuelle)
+    // KPI 1: Total signatures (score - SUM ajoute) - période actuelle
     const currentTotalResult = await queryOne(
       `SELECT SUM(ajoute) as total FROM signature WHERE date_heure >= ? AND date_heure <= ?`,
       [currentStart, currentEnd]
     );
     const currentTotal = parseFloat(currentTotalResult?.total || 0);
 
-    // KPI 2: Total signatures (période précédente)
+    // KPI 2: Total signatures (score - SUM ajoute) - période précédente
     const previousTotalResult = await queryOne(
       `SELECT SUM(ajoute) as total FROM signature WHERE date_heure >= ? AND date_heure <= ?`,
       [previousStartStr, previousEndStr]
     );
     const previousTotal = parseFloat(previousTotalResult?.total || 0);
 
-    // KPI 3: Évolution
+    // KPI 3: Évolution du score
     const evolution = previousTotal > 0 
       ? ((currentTotal - previousTotal) / previousTotal) * 100 
       : (currentTotal > 0 ? 100 : 0);
 
-    // KPI 4: Nombre de fiches signées uniques (période actuelle)
+    // KPI 4: Nombre de signatures (COUNT) - période actuelle
+    const currentNombreResult = await queryOne(
+      `SELECT COUNT(*) as total FROM signature WHERE date_heure >= ? AND date_heure <= ?`,
+      [currentStart, currentEnd]
+    );
+    const currentNombre = parseInt(currentNombreResult?.total || 0);
+
+    // KPI 5: Nombre de signatures (COUNT) - période précédente
+    const previousNombreResult = await queryOne(
+      `SELECT COUNT(*) as total FROM signature WHERE date_heure >= ? AND date_heure <= ?`,
+      [previousStartStr, previousEndStr]
+    );
+    const previousNombre = parseInt(previousNombreResult?.total || 0);
+
+    // KPI 6: Évolution du nombre
+    const evolutionNombre = previousNombre > 0 
+      ? ((currentNombre - previousNombre) / previousNombre) * 100 
+      : (currentNombre > 0 ? 100 : 0);
+
+    // KPI 7: Nombre de fiches signées uniques (période actuelle)
     const currentFichesResult = await queryOne(
       `SELECT COUNT(DISTINCT id_fiche) as total 
        FROM signature 
@@ -292,7 +314,7 @@ router.get('/kpi', authenticate, async (req, res) => {
     );
     const currentFiches = parseInt(currentFichesResult?.total || 0);
 
-    // KPI 5: Nombre de fiches signées uniques (période précédente)
+    // KPI 8: Nombre de fiches signées uniques (période précédente)
     const previousFichesResult = await queryOne(
       `SELECT COUNT(DISTINCT id_fiche) as total 
        FROM signature 
@@ -301,7 +323,7 @@ router.get('/kpi', authenticate, async (req, res) => {
     );
     const previousFiches = parseInt(previousFichesResult?.total || 0);
 
-    // KPI 6: Évolution fiches
+    // KPI 9: Évolution fiches
     const evolutionFiches = previousFiches > 0 
       ? ((currentFiches - previousFiches) / previousFiches) * 100 
       : (currentFiches > 0 ? 100 : 0);
@@ -340,6 +362,12 @@ router.get('/kpi', authenticate, async (req, res) => {
           evolution: parseFloat(evolution.toFixed(2)),
           trend: evolution > 0 ? 'up' : (evolution < 0 ? 'down' : 'stable')
         },
+        nombreSignatures: {
+          current: currentNombre,
+          previous: previousNombre,
+          evolution: parseFloat(evolutionNombre.toFixed(2)),
+          trend: evolutionNombre > 0 ? 'up' : (evolutionNombre < 0 ? 'down' : 'stable')
+        },
         fichesSignees: {
           current: currentFiches,
           previous: previousFiches,
@@ -351,7 +379,9 @@ router.get('/kpi', authenticate, async (req, res) => {
         periode: {
           debut: dateDebut,
           fin: dateFin,
-          jours: daysDiff
+          jours: daysDiff,
+          previous_debut: previousStart.toISOString().split('T')[0],
+          previous_fin: previousEnd.toISOString().split('T')[0]
         }
       }
     });
