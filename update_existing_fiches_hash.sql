@@ -23,7 +23,7 @@ USE `crm`;
 -- 'your-secret-key-change-in-production' (valeur par défaut)
 --
 -- Si vous avez ajouté FICHE_HASH_SECRET dans votre .env, remplacez la valeur ci-dessous
-SET @hash_secret = 'your-secret-key-change-in-production';
+SET @hash_secret = 'crm-jws-group-secret-key-2024-change-in-production';
 
 -- =====================================================
 -- FONCTION POUR CALCULER LE HASH (approximation)
