@@ -1603,6 +1603,10 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
     for (const period of periods) {
       const startDate = `${period.start} 00:00:00`;
       const endDate = `${period.end} 23:59:59`;
+      
+      // Convertir les dates en timestamps Unix pour date_confirmation (bigint)
+      const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
+      const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
 
       // Calculer les dates de la période précédente pour l'évolution
       let previousStart, previousEnd;
@@ -1628,9 +1632,13 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
 
       const previousStartDate = `${previousStart} 00:00:00`;
       const previousEndDate = `${previousEnd} 23:59:59`;
+      
+      // Convertir les dates précédentes en timestamps Unix pour date_confirmation (bigint)
+      const previousStartTimestamp = Math.floor(new Date(previousStartDate).getTime() / 1000);
+      const previousEndTimestamp = Math.floor(new Date(previousEndDate).getTime() / 1000);
 
       // 1. Top 3 Confirmateurs - Confirmations (état 7)
-      // Compter par date de confirmation (date_confirmation ou date de passage en état 7 dans l'historique)
+      // Compter par date de confirmation (date_confirmation est un bigint timestamp Unix)
       const top3ConfirmationsQuery = `
         SELECT 
           u.id,
@@ -1654,7 +1662,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         ORDER BY count_confirmations DESC
         LIMIT 3
       `;
-      const top3Confirmations = await query(top3ConfirmationsQuery, [startDate, endDate, startDate, endDate]);
+      const top3Confirmations = await query(top3ConfirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate]);
 
       // 2. Top 3 Confirmateurs - Signatures (états 13, 16, 44, 45, mais PAS 38 = retracter 2 fois)
       // Compter les signatures avec le système de score (1 confirmateur = 1, 2 = 0.5 chacun, 3 = 0.33 chacun)
@@ -1734,7 +1742,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       }
 
       // 3. Total confirmations (période actuelle)
-      // Compter par date de confirmation (date_confirmation ou date de passage en état 7 dans l'historique)
+      // Compter par date de confirmation (date_confirmation est un bigint timestamp Unix)
       const confirmationsQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
@@ -1746,7 +1754,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         )
         AND (f.archive = 0 OR f.archive IS NULL)
       `;
-      const confirmationsResult = await queryOne(confirmationsQuery, [startDate, endDate, startDate, endDate]);
+      const confirmationsResult = await queryOne(confirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate]);
       const confirmationsCount = confirmationsResult?.count || 0;
 
       // 4. Total signatures (période actuelle) - avec système de score
@@ -1774,7 +1782,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       const totalCount = totalResult?.count || 0;
 
       // 6. Totaux période précédente
-      const previousConfirmationsResult = await queryOne(confirmationsQuery, [previousStartDate, previousEndDate]);
+      const previousConfirmationsResult = await queryOne(confirmationsQuery, [previousStartTimestamp, previousEndTimestamp, previousStartDate, previousEndDate]);
       const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
 
       // Calculer les signatures de la période précédente
@@ -2227,6 +2235,10 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
     for (const period of periods) {
       const startDate = `${period.start} 00:00:00`;
       const endDate = `${period.end} 23:59:59`;
+      
+      // Convertir les dates en timestamps Unix pour date_confirmation (bigint)
+      const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
+      const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
 
       const baseParams = idsGroupe0.length > 0 
         ? [startDate, endDate, ...idsGroupe0, ...jwsCentreIds]
@@ -2267,6 +2279,7 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
         const validatedCount = validatedResult?.count || 0;
 
         // Fiches confirmées (état 7) - par date de confirmation
+        // date_confirmation est un bigint (timestamp Unix)
         const confirmedQuery = `
           SELECT COUNT(DISTINCT f.id) as count
           FROM fiches f
@@ -2279,7 +2292,7 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
           AND f.id_etat_final = 7
           AND (f.archive = 0 OR f.archive IS NULL)
         `;
-        const confirmedResult = await queryOne(confirmedQuery, [centre.id, startDate, endDate, startDate, endDate]);
+        const confirmedResult = await queryOne(confirmedQuery, [centre.id, startTimestamp, endTimestamp, startDate, endDate]);
         const confirmedCount = confirmedResult?.count || 0;
 
         // Fiches signées (états 13, 16, 44, 45, mais PAS 38 = retracter 2 fois) - par date d'insertion
