@@ -12,11 +12,22 @@ const StatistiquesRDV = () => {
   const { data: statsData, isLoading, error } = useQuery(
     'rdv-stats',
     async () => {
-      const res = await api.get('/statistiques/dashboard');
-      return res.data.data;
+      try {
+        const res = await api.get('/statistiques/dashboard');
+        console.log('Statistiques RDV reçues:', res.data);
+        if (res.data && res.data.success && res.data.data) {
+          return res.data.data;
+        }
+        // Si la structure est différente, retourner les données directement
+        return res.data.data || res.data || {};
+      } catch (err) {
+        console.error('Erreur lors de la récupération des statistiques RDV:', err);
+        throw err;
+      }
     },
     {
       refetchInterval: 60000, // Rafraîchir toutes les minutes
+      retry: 2, // Réessayer 2 fois en cas d'erreur
     }
   );
 
@@ -32,21 +43,32 @@ const StatistiquesRDV = () => {
   }
 
   if (error) {
+    console.error('Erreur dans StatistiquesRDV:', error);
     return (
       <div className="statistiques-rdv-page">
         <div className="error-container">
           <p>Erreur lors du chargement des statistiques</p>
+          <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+            {error.response?.data?.message || error.message || 'Erreur inconnue'}
+          </p>
           <button onClick={() => window.location.reload()}>Réessayer</button>
         </div>
       </div>
     );
   }
 
-  const stats = statsData || {
+  // Extraire les statistiques avec des valeurs par défaut
+  const stats = statsData ? {
+    rdvTodayConfirmed: statsData.rdvTodayConfirmed || 0,
+    rdvTodayAnnuler: statsData.rdvTodayAnnuler || 0,
+    rdvUpcoming: statsData.rdvUpcoming || 0
+  } : {
     rdvTodayConfirmed: 0,
     rdvTodayAnnuler: 0,
     rdvUpcoming: 0
   };
+
+  console.log('Stats affichées:', stats);
 
   return (
     <div className="statistiques-rdv-page">
@@ -63,7 +85,7 @@ const StatistiquesRDV = () => {
             <FaCalendarCheck />
           </div>
           <div className="stat-card-content">
-            <div className="stat-card-value">{stats.rdvTodayConfirmed || 0}</div>
+            <div className="stat-card-value">{stats.rdvTodayConfirmed}</div>
             <div className="stat-card-label">RDV Confirmés Aujourd'hui</div>
           </div>
         </div>
@@ -74,7 +96,7 @@ const StatistiquesRDV = () => {
             <FaCalendarTimes />
           </div>
           <div className="stat-card-content">
-            <div className="stat-card-value">{stats.rdvTodayAnnuler || 0}</div>
+            <div className="stat-card-value">{stats.rdvTodayAnnuler}</div>
             <div className="stat-card-label">RDV Annulés à Reprogrammer Aujourd'hui</div>
           </div>
         </div>
@@ -85,7 +107,7 @@ const StatistiquesRDV = () => {
             <FaCalendarAlt />
           </div>
           <div className="stat-card-content">
-            <div className="stat-card-value">{stats.rdvUpcoming || 0}</div>
+            <div className="stat-card-value">{stats.rdvUpcoming}</div>
             <div className="stat-card-label">RDV à Venir (Confirmés)</div>
           </div>
         </div>
