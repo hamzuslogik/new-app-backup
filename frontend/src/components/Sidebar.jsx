@@ -120,7 +120,7 @@ const Sidebar = ({ collapsed }) => {
       path: '/assistance-ia',
       label: 'Assistance IA',
       icon: FaRobot,
-      permission: 'dashboard_view',
+      permission: 'assistance_ia_view',
       visible: true,
     },
     {
