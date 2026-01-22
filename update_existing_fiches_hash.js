@@ -5,17 +5,35 @@
  * Usage: node update_existing_fiches_hash.js
  */
 
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+
+// Chercher le fichier .env dans le répertoire courant ou dans backend/
+let envPath = path.join(__dirname, '.env');
+if (!fs.existsSync(envPath)) {
+  envPath = path.join(__dirname, 'backend', '.env');
+}
+if (!fs.existsSync(envPath)) {
+  console.warn('⚠️  Fichier .env non trouvé. Utilisation des variables d\'environnement système.');
+} else {
+  require('dotenv').config({ path: envPath });
+  console.log(`✅ Fichier .env chargé depuis: ${envPath}`);
+}
+
 const crypto = require('crypto');
 const mysql = require('mysql2/promise');
 
 // Configuration de la base de données
 const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  charset: 'utf8mb4'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'crm',
+  charset: 'utf8mb4',
+  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
+  // Options pour améliorer les performances
+  multipleStatements: false,
+  connectionLimit: 1
 };
 
 // Clé secrète (identique à celle dans l'application)
@@ -57,29 +75,72 @@ async function updateFichesHash() {
       return;
     }
 
-    // Mettre à jour chaque fiche
+    // Mettre à jour les fiches par lots (batch) pour améliorer les performances
+    console.log('🔄 Calcul des hash et préparation des mises à jour...');
+    
+    // Préparer tous les hash en mémoire
+    const updates = fiches.map(fiche => ({
+      id: fiche.id,
+      hash: encodeFicheId(fiche.id)
+    }));
+    
+    console.log('💾 Mise à jour par lots (optimisé)...');
+    
+    // Mettre à jour par lots de 500 pour optimiser les performances
+    // (1000 peut être trop pour certains serveurs MySQL)
+    const batchSize = 500;
     let updated = 0;
     let errors = 0;
-
-    for (const fiche of fiches) {
-      try {
-        const hash = encodeFicheId(fiche.id);
+    
+    // Démarrer une transaction pour améliorer les performances
+    await connection.beginTransaction();
+    
+    try {
+      for (let i = 0; i < updates.length; i += batchSize) {
+        const batch = updates.slice(i, i + batchSize);
         
-        await connection.execute(
-          'UPDATE fiches SET hash = ? WHERE id = ?',
-          [hash, fiche.id]
-        );
+        // Construire une requête UPDATE multiple avec CASE WHEN pour mettre à jour plusieurs lignes en une seule requête
+        // Format: UPDATE fiches SET hash = CASE id WHEN ? THEN ? WHEN ? THEN ? ... END WHERE id IN (?, ?, ...)
+        const whenClauses = [];
+        const ids = [];
+        const params = [];
         
-        updated++;
-        
-        // Afficher la progression tous les 100 enregistrements
-        if (updated % 100 === 0) {
-          console.log(`⏳ Progression: ${updated}/${fiches.length} fiches mises à jour...`);
+        for (const update of batch) {
+          whenClauses.push('WHEN ? THEN ?');
+          ids.push(update.id);
+          params.push(update.id, update.hash);
         }
-      } catch (error) {
-        console.error(`❌ Erreur pour la fiche ID ${fiche.id}:`, error.message);
-        errors++;
+        
+        // Ajouter les IDs à la fin pour la clause WHERE
+        params.push(...ids);
+        
+        const updateQuery = `
+          UPDATE fiches 
+          SET hash = CASE id 
+            ${whenClauses.join(' ')}
+          END 
+          WHERE id IN (${ids.map(() => '?').join(',')})
+        `;
+        
+        await connection.execute(updateQuery, params);
+        
+        updated += batch.length;
+        
+        // Afficher la progression
+        if (updated % 1000 === 0 || updated === updates.length) {
+          console.log(`⏳ Progression: ${updated}/${updates.length} fiches mises à jour...`);
+        }
       }
+      
+      // Valider la transaction
+      await connection.commit();
+      console.log('✅ Transaction validée');
+      
+    } catch (error) {
+      // Annuler la transaction en cas d'erreur
+      await connection.rollback();
+      console.error('❌ Erreur lors de la mise à jour par lots:', error.message);
+      throw error;
     }
 
     console.log('\n✅ Mise à jour terminée!');
