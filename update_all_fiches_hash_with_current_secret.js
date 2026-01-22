@@ -12,19 +12,42 @@
  * Assurez-vous que le HASH_SECRET dans le fichier .env est le bon avant d'exécuter ce script.
  */
 
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+
+// Chercher le fichier .env dans le répertoire courant ou dans backend/
+let envPath = path.join(__dirname, '.env');
+if (!fs.existsSync(envPath)) {
+  envPath = path.join(__dirname, 'backend', '.env');
+}
+if (!fs.existsSync(envPath)) {
+  console.warn('⚠️  Fichier .env non trouvé. Utilisation des variables d\'environnement système.');
+} else {
+  require('dotenv').config({ path: envPath });
+  console.log(`✅ Fichier .env chargé depuis: ${envPath}`);
+}
+
 const crypto = require('crypto');
 const mysql = require('mysql2/promise');
 const readline = require('readline');
 
 // Configuration de la base de données
 const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  charset: 'utf8mb4'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'crm',
+  charset: 'utf8mb4',
+  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306
 };
+
+// Afficher la configuration (masquée pour sécurité)
+console.log('📋 Configuration de la base de données:');
+console.log(`   Host: ${dbConfig.host}`);
+console.log(`   Port: ${dbConfig.port}`);
+console.log(`   User: ${dbConfig.user}`);
+console.log(`   Database: ${dbConfig.database}`);
+console.log(`   Password: ${dbConfig.password ? '***' : '(vide)'}`);
 
 // Clé secrète actuelle (identique à celle dans l'application)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -64,7 +87,14 @@ async function updateAllFichesHash() {
   
   try {
     console.log('🔌 Connexion à la base de données...');
-    connection = await mysql.createConnection(dbConfig);
+    console.log(`   Tentative de connexion à ${dbConfig.host}:${dbConfig.port}...`);
+    
+    // Test de connexion avec timeout
+    connection = await mysql.createConnection({
+      ...dbConfig,
+      connectTimeout: 10000 // 10 secondes
+    });
+    
     console.log('✅ Connexion réussie');
 
     // Afficher le HASH_SECRET utilisé (masqué pour la sécurité)
@@ -195,7 +225,27 @@ async function updateAllFichesHash() {
     }
 
   } catch (error) {
-    console.error('❌ Erreur:', error);
+    console.error('❌ Erreur:', error.message);
+    
+    if (error.code === 'ECONNREFUSED') {
+      console.error('\n💡 Suggestions pour résoudre l\'erreur de connexion:');
+      console.error('   1. Vérifiez que MySQL/MariaDB est démarré:');
+      console.error('      sudo systemctl status mysql');
+      console.error('      ou');
+      console.error('      sudo systemctl status mariadb');
+      console.error('   2. Vérifiez les paramètres de connexion dans backend/.env:');
+      console.error('      DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME');
+      console.error('   3. Vérifiez que MySQL écoute sur le bon port:');
+      console.error('      sudo netstat -tlnp | grep 3306');
+      console.error('   4. Si MySQL est sur un autre serveur, vérifiez le firewall');
+    } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+      console.error('\n💡 Erreur d\'authentification:');
+      console.error('   Vérifiez DB_USER et DB_PASSWORD dans backend/.env');
+    } else if (error.code === 'ER_BAD_DB_ERROR') {
+      console.error('\n💡 Base de données introuvable:');
+      console.error('   Vérifiez DB_NAME dans backend/.env');
+    }
+    
     process.exit(1);
   } finally {
     if (connection) {
