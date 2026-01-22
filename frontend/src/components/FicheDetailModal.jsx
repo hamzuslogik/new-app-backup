@@ -44,18 +44,28 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
   );
 
   useEffect(() => {
-    // Sauvegarder le chemin actuel
-    previousPath.current = location.pathname;
+    // Détecter si on est déjà sur la route /fiches/:id (accès direct)
+    const isOnFicheRoute = location.pathname === `/fiches/${ficheHash}`;
+    isDirectAccess.current = isOnFicheRoute;
     
-    // Naviguer temporairement vers la route de la fiche (sans changer l'URL visible)
-    // On utilise replace: true pour ne pas ajouter d'entrée dans l'historique
-    window.history.pushState(null, '', `/fiches/${ficheHash}`);
+    // Sauvegarder le chemin actuel seulement si on n'est pas déjà sur /fiches/:id
+    if (!isOnFicheRoute) {
+      previousPath.current = location.pathname;
+      // Mettre à jour l'URL pour refléter le hash de la fiche
+      window.history.pushState(null, '', `/fiches/${ficheHash}`);
+    }
     
     return () => {
       // Restaurer le chemin précédent quand le modal se ferme
-      window.history.pushState(null, '', previousPath.current);
+      // Seulement si on n'était pas déjà sur /fiches/:id (pas d'accès direct)
+      if (!isDirectAccess.current && previousPath.current && previousPath.current !== `/fiches/${ficheHash}`) {
+        window.history.pushState(null, '', previousPath.current);
+      } else if (isDirectAccess.current) {
+        // Si accès direct, naviguer vers le dashboard quand on ferme
+        navigate('/dashboard', { replace: true });
+      }
     };
-  }, [ficheHash]);
+  }, [ficheHash, location.pathname, navigate]);
 
   // Focuser le modal à l'ouverture
   useEffect(() => {
