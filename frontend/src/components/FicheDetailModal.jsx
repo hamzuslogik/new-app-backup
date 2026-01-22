@@ -14,6 +14,7 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
   const location = useLocation();
   const previousPath = React.useRef(location.pathname);
   const modalContentRef = React.useRef(null);
+  const isDirectAccess = React.useRef(false);
 
   // Ne plus bloquer le scroll du body - le modal utilise le scroll de la page
   // useModalScrollLock(!!ficheHash);
