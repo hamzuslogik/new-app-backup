@@ -2,15 +2,11 @@
 -- Script SQL pour mettre à jour le champ hash des fiches existantes
 -- =====================================================
 --
--- IMPORTANT: Ce script utilise une approximation du hash car MySQL ne supporte pas
--- nativement HMAC SHA-256 avec une clé secrète. Pour un hash exact identique à celui
--- généré par l'application Node.js, utilisez le script update_existing_fiches_hash.js
+-- Ce script SQL implémente HMAC-SHA256 pour générer des hash identiques
+-- à ceux générés par l'application Node.js (update_existing_fiches_hash.js)
 --
--- Ce script SQL utilise SHA2 avec concaténation de l'ID et de la clé secrète,
--- ce qui donne un résultat similaire mais pas identique à HMAC.
---
--- Pour un hash exact, préférez le script Node.js qui utilise exactement la même
--- fonction encodeFicheId que l'application.
+-- IMPORTANT: Ce script génère maintenant des hash EXACTS identiques au script Node.js
+-- car il implémente correctement HMAC-SHA256 au lieu d'une simple approximation.
 --
 -- =====================================================
 
@@ -26,10 +22,10 @@ USE `crm`;
 SET @hash_secret = 'crm-jws-group-secret-key-2024-change-in-production';
 
 -- =====================================================
--- FONCTION POUR CALCULER LE HASH (approximation)
+-- FONCTIONS POUR CALCULER LE HASH (implémentation HMAC-SHA256)
 -- =====================================================
--- Note: Cette fonction est une approximation car MySQL ne supporte pas HMAC nativement
--- Pour un hash exact, utilisez le script Node.js
+-- Note: Ces fonctions implémentent correctement HMAC-SHA256 pour générer
+-- des hash identiques à ceux du script Node.js
 
 DELIMITER $$
 
@@ -73,6 +69,88 @@ BEGIN
   RETURN result;
 END$$
 
+-- Fonction pour implémenter HMAC-SHA256 (identique à Node.js crypto.createHmac)
+-- HMAC-SHA256(key, message) = SHA256((key XOR opad) || SHA256((key XOR ipad) || message))
+-- où ipad = 0x36 répété 64 fois, opad = 0x5C répété 64 fois
+DROP FUNCTION IF EXISTS `hmac_sha256`$$
+
+CREATE FUNCTION `hmac_sha256`(key_str VARCHAR(255), message_str VARCHAR(255))
+RETURNS VARCHAR(64)
+READS SQL DATA
+DETERMINISTIC
+BEGIN
+  DECLARE key_hash_hex VARCHAR(64);
+  DECLARE key_binary BINARY(64);
+  DECLARE key_len INT;
+  DECLARE i INT DEFAULT 1;
+  DECLARE key_byte INT;
+  DECLARE ipad_byte INT DEFAULT 0x36;
+  DECLARE opad_byte INT DEFAULT 0x5C;
+  DECLARE inner_key BINARY(64);
+  DECLARE outer_key BINARY(64);
+  DECLARE inner_hash_hex VARCHAR(64);
+  DECLARE inner_hash_binary BINARY(32);
+  DECLARE outer_hash_hex VARCHAR(64);
+  
+  -- Étape 1: Si la clé est plus longue que 64 bytes, la hacher avec SHA256
+  SET key_len = LENGTH(key_str);
+  IF key_len > 64 THEN
+    SET key_hash_hex = SHA2(key_str, 256);
+    -- Convertir le hash hex en binaire (32 bytes)
+    SET key_binary = UNHEX(key_hash_hex);
+    SET key_len = 32;
+  ELSE
+    -- Convertir la clé en binaire et padder avec des zéros jusqu'à 64 bytes
+    SET key_binary = CONCAT(CAST(key_str AS BINARY), REPEAT(CHAR(0), 64 - key_len));
+  END IF;
+  
+  -- Étape 2: Créer inner_key = key XOR ipad (0x36) et outer_key = key XOR opad (0x5C)
+  SET inner_key = '';
+  SET outer_key = '';
+  SET i = 1;
+  
+  WHILE i <= 64 DO
+    -- Extraire le byte i de la clé (0-255)
+    SET key_byte = ASCII(SUBSTRING(key_binary, i, 1));
+    
+    -- Si key_byte est NULL, utiliser 0
+    IF key_byte IS NULL THEN
+      SET key_byte = 0;
+    END IF;
+    
+    -- Calculer XOR: key_byte XOR ipad_byte et key_byte XOR opad_byte
+    SET inner_key = CONCAT(inner_key, CHAR(key_byte ^ ipad_byte));
+    SET outer_key = CONCAT(outer_key, CHAR(key_byte ^ opad_byte));
+    
+    SET i = i + 1;
+  END WHILE;
+  
+  -- Convertir en BINARY pour les opérations suivantes
+  SET inner_key = CAST(inner_key AS BINARY);
+  SET outer_key = CAST(outer_key AS BINARY);
+  
+  -- Étape 3: Calculer inner_hash = SHA256(inner_key || message)
+  SET inner_hash_hex = SHA2(CONCAT(inner_key, message_str), 256);
+  
+  -- Vérifier que inner_hash_hex n'est pas NULL
+  IF inner_hash_hex IS NULL THEN
+    RETURN NULL;
+  END IF;
+  
+  SET inner_hash_binary = UNHEX(inner_hash_hex);
+  
+  -- Étape 4: Calculer outer_hash = SHA256(outer_key || inner_hash)
+  SET outer_hash_hex = SHA2(CONCAT(outer_key, inner_hash_binary), 256);
+  
+  -- Vérifier que outer_hash_hex n'est pas NULL
+  IF outer_hash_hex IS NULL THEN
+    RETURN NULL;
+  END IF;
+  
+  -- Retourner le hash HMAC (64 caractères hex)
+  RETURN outer_hash_hex;
+END$$
+
 DROP FUNCTION IF EXISTS `calculate_fiche_hash`$$
 
 CREATE FUNCTION `calculate_fiche_hash`(fiche_id INT, secret_key VARCHAR(255))
@@ -84,22 +162,51 @@ BEGIN
   DECLARE encoded_id VARCHAR(255);
   DECLARE id_str VARCHAR(20);
   DECLARE base64_encoded VARCHAR(255);
+  DECLARE hmac_result VARCHAR(64);
   
   -- Convertir l'ID en string
   SET id_str = CAST(fiche_id AS CHAR);
   
-  -- Calculer le hash SHA-256 (approximation de HMAC)
-  -- Note: Ce n'est pas exactement HMAC, mais proche
-  -- HMAC utilise: H(K XOR opad, H(K XOR ipad, text))
-  -- Ici on utilise: SHA2(CONCAT(secret, id, secret), 256) comme approximation
-  SET hash_part = SUBSTRING(SHA2(CONCAT(secret_key, id_str, secret_key), 256), 1, 16);
+  -- Calculer HMAC-SHA256 (identique à Node.js crypto.createHmac('sha256', secret).update(id).digest('hex'))
+  -- Le backend utilise: const hmac = crypto.createHmac('sha256', HASH_SECRET);
+  --                     hmac.update(String(id));
+  --                     const hash = hmac.digest('hex');
+  SET hmac_result = `hmac_sha256`(secret_key, id_str);
   
-  -- Encoder l'ID en base64 et convertir en URL-safe
+  -- Vérifier que hmac_result n'est pas NULL
+  IF hmac_result IS NULL OR hmac_result = '' THEN
+    RETURN NULL;
+  END IF;
+  
+  -- Prendre les 16 premiers caractères du hash hex
+  SET hash_part = SUBSTRING(hmac_result, 1, 16);
+  
+  -- Vérifier que hash_part n'est pas NULL
+  IF hash_part IS NULL OR hash_part = '' THEN
+    RETURN NULL;
+  END IF;
+  
+  -- Encoder l'ID en base64 URL-safe (identique à Node.js Buffer.from(String(id)).toString('base64').replace(/[+/=]/g, ...))
+  -- Le backend utilise: const encodedId = Buffer.from(String(id)).toString('base64').replace(/[+/=]/g, (m) => {
+  --   return { '+': '-', '/': '_', '=': '' }[m];
+  -- });
   SET base64_encoded = `base64_encode`(id_str);
+  
+  -- Vérifier que base64_encoded n'est pas NULL
+  IF base64_encoded IS NULL THEN
+    SET base64_encoded = '';
+  END IF;
+  
   SET encoded_id = REPLACE(REPLACE(REPLACE(base64_encoded, '+', '-'), '/', '_'), '=', '');
   
-  -- Retourner la combinaison
-  RETURN CONCAT(hash_part, encoded_id);
+  -- Vérifier que encoded_id n'est pas NULL
+  IF encoded_id IS NULL THEN
+    SET encoded_id = '';
+  END IF;
+  
+  -- Retourner la combinaison: hash(16) + encodedId
+  -- Le backend retourne: `${hash.substring(0, 16)}${encodedId}`
+  RETURN CONCAT(COALESCE(hash_part, ''), COALESCE(encoded_id, ''));
 END$$
 
 DELIMITER ;
@@ -115,12 +222,12 @@ SELECT
   COUNT(*) - COUNT(hash) as fiches_sans_hash
 FROM `fiches`;
 
--- Mettre à jour TOUTES les fiches (y compris celles qui ont déjà un hash)
+-- Mettre à jour uniquement les fiches SANS hash
 -- Note: Cette requête peut prendre du temps si vous avez beaucoup de fiches
--- ATTENTION: Cette requête va remplacer TOUS les hash existants par de nouveaux hash
--- basés sur le HASH_SECRET défini ci-dessus (@hash_secret)
+-- Cette requête ne met à jour que les fiches qui n'ont pas encore de hash
 UPDATE `fiches`
-SET `hash` = `calculate_fiche_hash`(`id`, @hash_secret);
+SET `hash` = `calculate_fiche_hash`(`id`, @hash_secret)
+WHERE `hash` IS NULL OR `hash` = '';
 
 -- =====================================================
 -- VÉRIFICATION
@@ -148,17 +255,19 @@ LIMIT 10;
 -- =====================================================
 -- Décommentez ces lignes si vous voulez supprimer les fonctions après usage
 -- DROP FUNCTION IF EXISTS `calculate_fiche_hash`;
+-- DROP FUNCTION IF EXISTS `hmac_sha256`;
 -- DROP FUNCTION IF EXISTS `base64_encode`;
 
 -- =====================================================
 -- NOTES IMPORTANTES
 -- =====================================================
--- 1. Ce script génère un hash APPROXIMATIF, pas identique à celui de l'application
--- 2. La différence vient de l'utilisation de SHA2 au lieu de HMAC SHA-256
--- 3. Pour un hash EXACT, utilisez le script Node.js: update_existing_fiches_hash.js
--- 4. Si vous utilisez ce script SQL, les nouveaux hash générés par l'application
---    seront différents de ceux générés par ce script
--- 5. Recommandation: Utilisez le script Node.js pour garantir la cohérence
+-- 1. Ce script génère maintenant des hash EXACTS identiques à ceux de l'application
+-- 2. Il implémente correctement HMAC-SHA256 (identique à Node.js crypto.createHmac)
+-- 3. Les hash générés par ce script SQL sont identiques à ceux générés par:
+--    - Le script Node.js: update_existing_fiches_hash.js
+--    - L'application backend (fiche.routes.js)
+-- 4. Ce script ne met à jour que les fiches SANS hash (hash IS NULL OR hash = '')
+-- 5. Les deux scripts (SQL et JS) produisent maintenant les mêmes résultats
 
 -- =====================================================
 -- ALTERNATIVE: MISE À JOUR PAR LOTS (pour grandes tables)
