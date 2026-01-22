@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaCalendarCheck, FaCalendarTimes, FaCalendarAlt } from 'react-icons/fa';
+import { FaCalendarCheck, FaCalendarTimes, FaCalendarAlt, FaEye, FaEyeSlash } from 'react-icons/fa';
 import './StatistiquesRDV.css';
 
 const StatistiquesRDV = () => {
   const { user } = useAuth();
+  const [showConfirmateursTable, setShowConfirmateursTable] = useState(true);
 
   // Récupérer les statistiques des RDV
   const { data: statsData, isLoading, error } = useQuery(
@@ -112,6 +113,79 @@ const StatistiquesRDV = () => {
           </div>
         </div>
       </div>
+
+      {/* Tableau des confirmateurs avec leurs RDV */}
+      {statsData && (
+        <div className="confirmateurs-table-section">
+          <div className="confirmateurs-table-header">
+            <h3 className="confirmateurs-table-title">Confirmateurs et leurs RDV</h3>
+            <button 
+              className="btn-toggle-confirmateurs"
+              onClick={() => setShowConfirmateursTable(!showConfirmateursTable)}
+              title={showConfirmateursTable ? 'Masquer le tableau' : 'Afficher le tableau'}
+            >
+              {showConfirmateursTable ? (
+                <>
+                  <FaEyeSlash /> Masquer
+                </>
+              ) : (
+                <>
+                  <FaEye /> Afficher
+                </>
+              )}
+            </button>
+          </div>
+          {showConfirmateursTable && (
+            <div className="confirmateurs-table-wrapper">
+              {statsData.confirmateurs && Array.isArray(statsData.confirmateurs) && statsData.confirmateurs.length > 0 ? (
+                <div className="confirmateurs-table-container">
+                  <table className="confirmateurs-table">
+                    <thead>
+                      <tr>
+                        <th>Confirmateur</th>
+                        <th>RDV Aujourd'hui</th>
+                        <th>RDV à Venir</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {statsData.confirmateurs.map((conf) => (
+                        <tr key={conf.id}>
+                          <td>
+                            <div className="confirmateur-cell">
+                              {conf.photo ? (
+                                <img src={conf.photo} alt={conf.pseudo} className="confirmateur-avatar-small" />
+                              ) : (
+                                <div className="confirmateur-avatar-small placeholder">
+                                  {conf.pseudo ? conf.pseudo.charAt(0).toUpperCase() : '?'}
+                                </div>
+                              )}
+                              <span className="confirmateur-name">{conf.pseudo || 'N/A'}</span>
+                            </div>
+                          </td>
+                          <td className="rdv-count-cell">
+                            <span className={`rdv-count ${(conf.rdv_today === 0 || !conf.rdv_today) ? 'zero' : ''}`}>
+                              {conf.rdv_today || 0}
+                            </span>
+                          </td>
+                          <td className="rdv-count-cell">
+                            <span className={`rdv-count ${(conf.rdv_upcoming === 0 || !conf.rdv_upcoming) ? 'zero' : ''}`}>
+                              {conf.rdv_upcoming || 0}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p style={{ color: '#666', textAlign: 'center', padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+                  Aucun confirmateur actif trouvé
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
