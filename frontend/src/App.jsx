@@ -39,6 +39,7 @@ import Validation from './pages/Validation';
 import DemandesInsertion from './pages/DemandesInsertion';
 import Notifications from './pages/Notifications';
 import Signatures from './pages/Signatures';
+import AssistanceIA from './pages/AssistanceIA';
 import Layout from './components/Layout';
 import HomeRedirect from './components/HomeRedirect';
 import './App.css';
@@ -69,6 +70,7 @@ function App() {
           <Route path="statistiques" element={<ProtectedRoute permission="statistiques_view"><Statistiques /></ProtectedRoute>} />
           <Route path="statistiques-rdv" element={<ProtectedRoute permission="statistiques_rdv_view"><StatistiquesRDV /></ProtectedRoute>} />
           <Route path="statistiques-fiches" element={<ProtectedRoute permission="statistiques_fiches_view"><StatistiquesFiches /></ProtectedRoute>} />
+          <Route path="assistance-ia" element={<ProtectedRoute permission="dashboard_view"><AssistanceIA /></ProtectedRoute>} />
           <Route path="affectation" element={<ProtectedRoute permission="affectation_view"><Affectation /></ProtectedRoute>} />
           <Route path="suivi-telepro" element={<ProtectedRoute permission="suivi_telepro_view"><SuiviTelepro /></ProtectedRoute>} />
           <Route path="suivi-agents-qualif" element={<ProtectedRoute permission="suivi_agents_view"><SuiviAgentsQualif /></ProtectedRoute>} />

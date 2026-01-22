@@ -24,6 +24,7 @@ import {
   FaBell,
   FaSearch,
   FaSignature,
+  FaRobot,
 } from 'react-icons/fa';
 import './Sidebar.css';
 
@@ -113,6 +114,13 @@ const Sidebar = ({ collapsed }) => {
       label: 'Statistiques Fiches',
       icon: FaChartBar,
       permission: 'statistiques_fiches_view',
+      visible: true,
+    },
+    {
+      path: '/assistance-ia',
+      label: 'Assistance IA',
+      icon: FaRobot,
+      permission: 'dashboard_view',
       visible: true,
     },
     {
