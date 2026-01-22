@@ -479,8 +479,8 @@ SELECT
   END as `nbr_annee_finance`,
   NULLIF(`credit_immobilier`, '') as `credit_immobilier`,
   NULLIF(`credit_autre`, '') as `credit_autre`,
-  -- Hash: calculer automatiquement avec la fonction
-  `calculate_fiche_hash`(`id`, @hash_secret) as `hash`
+  -- Hash: laisser NULL (sera calculé plus tard par les scripts de mise à jour)
+  NULL as `hash`
 FROM `yj_fiche`
 ON DUPLICATE KEY UPDATE 
   `civ` = VALUES(`civ`),
