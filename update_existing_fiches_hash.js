@@ -33,7 +33,10 @@ const dbConfig = {
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
   // Options pour améliorer les performances
   multipleStatements: false,
-  connectionLimit: 1
+  connectionLimit: 1,
+  // Optimisations pour les grandes tables
+  supportBigNumbers: true,
+  bigNumberStrings: true
 };
 
 // Clé secrète (identique à celle dans l'application)
@@ -62,90 +65,115 @@ async function updateFichesHash() {
     connection = await mysql.createConnection(dbConfig);
     console.log('✅ Connexion réussie');
 
-    // Récupérer toutes les fiches sans hash
-    console.log('📋 Récupération des fiches sans hash...');
-    const [fiches] = await connection.execute(
-      'SELECT id FROM fiches WHERE hash IS NULL OR hash = "" ORDER BY id'
+    // Compter le nombre total de fiches sans hash
+    console.log('📋 Comptage des fiches sans hash...');
+    const [countResult] = await connection.execute(
+      'SELECT COUNT(*) as total FROM fiches WHERE hash IS NULL OR hash = ""'
     );
+    const totalFiches = countResult[0].total;
     
-    console.log(`📊 ${fiches.length} fiches à mettre à jour`);
+    console.log(`📊 ${totalFiches} fiches à mettre à jour`);
 
-    if (fiches.length === 0) {
+    if (totalFiches === 0) {
       console.log('✅ Toutes les fiches ont déjà un hash');
       return;
     }
 
-    // Mettre à jour les fiches par lots (batch) pour améliorer les performances
-    console.log('🔄 Calcul des hash et préparation des mises à jour...');
+    // Configuration optimisée pour grandes tables
+    const chunkSize = 10000; // Traiter 10 000 fiches à la fois
+    const batchSize = 2000; // Mettre à jour par lots de 2000 dans chaque transaction
+    let totalUpdated = 0;
+    let offset = 0;
+    const startTime = Date.now();
     
-    // Préparer tous les hash en mémoire
-    const updates = fiches.map(fiche => ({
-      id: fiche.id,
-      hash: encodeFicheId(fiche.id)
-    }));
+    console.log('💾 Mise à jour optimisée (chunks de ' + chunkSize + ', batches de ' + batchSize + ')...');
+    console.log('');
     
-    console.log('💾 Mise à jour par lots (optimisé)...');
-    
-    // Mettre à jour par lots de 500 pour optimiser les performances
-    // (1000 peut être trop pour certains serveurs MySQL)
-    const batchSize = 500;
-    let updated = 0;
-    let errors = 0;
-    
-    // Démarrer une transaction pour améliorer les performances
-    await connection.beginTransaction();
-    
-    try {
+    // Traiter par chunks pour éviter de charger toutes les fiches en mémoire
+    while (offset < totalFiches) {
+      const chunkStartTime = Date.now();
+      
+      // Récupérer un chunk de fiches
+      const [fiches] = await connection.execute(
+        'SELECT id FROM fiches WHERE (hash IS NULL OR hash = "") ORDER BY id LIMIT ? OFFSET ?',
+        [chunkSize, offset]
+      );
+      
+      if (fiches.length === 0) {
+        break;
+      }
+      
+      // Préparer tous les hash pour ce chunk
+      const updates = fiches.map(fiche => ({
+        id: fiche.id,
+        hash: encodeFicheId(fiche.id)
+      }));
+      
+      // Traiter ce chunk par batches avec transactions séparées
       for (let i = 0; i < updates.length; i += batchSize) {
         const batch = updates.slice(i, i + batchSize);
         
-        // Construire une requête UPDATE multiple avec CASE WHEN pour mettre à jour plusieurs lignes en une seule requête
-        // Format: UPDATE fiches SET hash = CASE id WHEN ? THEN ? WHEN ? THEN ? ... END WHERE id IN (?, ?, ...)
-        const whenClauses = [];
-        const ids = [];
-        const params = [];
+        // Démarrer une transaction pour ce batch
+        await connection.beginTransaction();
         
-        for (const update of batch) {
-          whenClauses.push('WHEN ? THEN ?');
-          ids.push(update.id);
-          params.push(update.id, update.hash);
-        }
-        
-        // Ajouter les IDs à la fin pour la clause WHERE
-        params.push(...ids);
-        
-        const updateQuery = `
-          UPDATE fiches 
-          SET hash = CASE id 
-            ${whenClauses.join(' ')}
-          END 
-          WHERE id IN (${ids.map(() => '?').join(',')})
-        `;
-        
-        await connection.execute(updateQuery, params);
-        
-        updated += batch.length;
-        
-        // Afficher la progression
-        if (updated % 1000 === 0 || updated === updates.length) {
-          console.log(`⏳ Progression: ${updated}/${updates.length} fiches mises à jour...`);
+        try {
+          // Construire une requête UPDATE multiple avec CASE WHEN
+          const whenClauses = [];
+          const ids = [];
+          const params = [];
+          
+          for (const update of batch) {
+            whenClauses.push('WHEN ? THEN ?');
+            ids.push(update.id);
+            params.push(update.id, update.hash);
+          }
+          
+          // Ajouter les IDs à la fin pour la clause WHERE
+          params.push(...ids);
+          
+          const updateQuery = `
+            UPDATE fiches 
+            SET hash = CASE id 
+              ${whenClauses.join(' ')}
+            END 
+            WHERE id IN (${ids.map(() => '?').join(',')})
+          `;
+          
+          await connection.execute(updateQuery, params);
+          await connection.commit();
+          
+          totalUpdated += batch.length;
+          
+        } catch (error) {
+          await connection.rollback();
+          console.error(`❌ Erreur lors de la mise à jour du batch (offset ${offset + i}):`, error.message);
+          // Continuer avec le batch suivant au lieu de tout arrêter
         }
       }
       
-      // Valider la transaction
-      await connection.commit();
-      console.log('✅ Transaction validée');
+      const chunkTime = ((Date.now() - chunkStartTime) / 1000).toFixed(2);
+      const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+      const rate = (totalUpdated / (Date.now() - startTime) * 1000).toFixed(0);
+      const remaining = totalFiches - totalUpdated;
+      const estimatedTime = remaining > 0 ? ((remaining / rate) / 60).toFixed(1) : '0';
       
-    } catch (error) {
-      // Annuler la transaction en cas d'erreur
-      await connection.rollback();
-      console.error('❌ Erreur lors de la mise à jour par lots:', error.message);
-      throw error;
+      console.log(`⏳ Progression: ${totalUpdated.toLocaleString()}/${totalFiches.toLocaleString()} (${((totalUpdated/totalFiches)*100).toFixed(1)}%) | ` +
+                  `Vitesse: ${rate} lignes/sec | ` +
+                  `Temps écoulé: ${elapsedTime}s | ` +
+                  `Temps estimé restant: ${estimatedTime} min`);
+      
+      offset += chunkSize;
     }
+    
+    console.log('\n✅ Toutes les transactions validées');
 
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+    const avgRate = (totalUpdated / (Date.now() - startTime) * 1000).toFixed(0);
+    
     console.log('\n✅ Mise à jour terminée!');
-    console.log(`   - Fiches mises à jour: ${updated}`);
-    console.log(`   - Erreurs: ${errors}`);
+    console.log(`   - Fiches mises à jour: ${totalUpdated.toLocaleString()}`);
+    console.log(`   - Temps total: ${totalTime}s (${(totalTime/60).toFixed(1)} min)`);
+    console.log(`   - Vitesse moyenne: ${avgRate} lignes/sec`);
 
     // Vérifier le résultat
     const [stats] = await connection.execute(
