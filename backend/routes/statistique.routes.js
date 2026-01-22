@@ -1431,6 +1431,39 @@ router.get('/kpis', authenticate, async (req, res) => {
       const totalResult = await queryOne(totalQuery, [startDate, endDate]);
       const totalCount = totalResult?.count || 0;
 
+      // 4b. Total fiches générées par agents qualification (période actuelle)
+      // Basé sur la date d'insertion de la fiche
+      const totalQualifQuery = `
+        SELECT COUNT(*) as count
+        FROM fiches f
+        INNER JOIN utilisateurs u ON f.id_agent = u.id
+        WHERE u.fonction = 3
+        AND u.etat > 0
+        AND f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `;
+      const totalQualifResult = await queryOne(totalQualifQuery, [startDate, endDate]);
+      const totalQualifCount = totalQualifResult?.count || 0;
+
+      // 4c. Fiches confirmées (état 7) générées par agents qualification (période actuelle)
+      // Le taux de transformation se calcule quand la fiche est passée en confirmer (état 7),
+      // peu importe ce qui se passe après. La période est basée sur la date d'insertion.
+      // On compte les fiches insérées dans la période qui sont passées en état 7 à un moment donné
+      const confirmedQualifQuery = `
+        SELECT COUNT(DISTINCT f.id) as count
+        FROM fiches f
+        INNER JOIN utilisateurs u ON f.id_agent = u.id
+        WHERE u.fonction = 3
+        AND u.etat > 0
+        AND f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND f.id_etat_final = 7
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `;
+      const confirmedQualifResult = await queryOne(confirmedQualifQuery, [startDate, endDate]);
+      const confirmedQualifCount = confirmedQualifResult?.count || 0;
+
       // 5. Total fiches validées (période précédente)
       const previousValidatedParams = idsGroupe0.length > 0 
         ? [previousStartDate, previousEndDate, ...idsGroupe0]
@@ -1443,10 +1476,26 @@ router.get('/kpis', authenticate, async (req, res) => {
       const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate]);
       const previousTotalCount = previousTotalResult?.count || 0;
 
+      // 6b. Total fiches générées par agents qualification (période précédente)
+      const previousTotalQualifResult = await queryOne(totalQualifQuery, [previousStartDate, previousEndDate]);
+      const previousTotalQualifCount = previousTotalQualifResult?.count || 0;
+
+      // 6c. Fiches confirmées (état 7) générées par agents qualification (période précédente)
+      const previousConfirmedQualifResult = await queryOne(confirmedQualifQuery, [previousStartDate, previousEndDate]);
+      const previousConfirmedQualifCount = previousConfirmedQualifResult?.count || 0;
+
       // Calculer le taux de conversion
       const conversionRate = totalCount > 0 ? (validatedCount / totalCount) * 100 : 0;
       const previousConversionRate = previousTotalCount > 0 ? (previousValidatedCount / previousTotalCount) * 100 : 0;
       const conversionRateChange = conversionRate - previousConversionRate;
+
+      // Calculer le taux de transformation des agents qualification
+      // Taux de transformation = fiches confirmées (état 7) / fiches générées par agents qualification
+      // Se calcule quand la fiche est passée en confirmer (état 7), peu importe ce qui se passe après.
+      // La période est basée sur la date d'insertion (date_insert_time) de la fiche.
+      const transformationRate = totalQualifCount > 0 ? (confirmedQualifCount / totalQualifCount) * 100 : 0;
+      const previousTransformationRate = previousTotalQualifCount > 0 ? (previousConfirmedQualifCount / previousTotalQualifCount) * 100 : 0;
+      const transformationRateChange = transformationRate - previousTransformationRate;
 
       // Calculer l'évolution
       const evolutionChange = previousValidatedCount > 0 
@@ -1461,6 +1510,10 @@ router.get('/kpis', authenticate, async (req, res) => {
         date_end: period.end,
         conversion_rate: conversionRate,
         conversion_rate_change: conversionRateChange,
+        transformation_rate: transformationRate,
+        transformation_rate_change: transformationRateChange,
+        transformation_count: confirmedQualifCount,
+        transformation_total: totalQualifCount,
         top3_agents: top3Agents.map(agent => ({
           id: agent.id,
           pseudo: agent.pseudo,
@@ -1577,6 +1630,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       const previousEndDate = `${previousEnd} 23:59:59`;
 
       // 1. Top 3 Confirmateurs - Confirmations (état 7)
+      // Compter par date de confirmation (date_confirmation ou date de passage en état 7 dans l'historique)
       const top3ConfirmationsQuery = `
         SELECT 
           u.id,
@@ -1590,32 +1644,50 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         WHERE u.fonction = 6
         AND u.etat > 0
         AND f.id_etat_final = 7
-        AND f.date_modif_time >= ?
-        AND f.date_modif_time <= ?
+        AND (
+          (f.date_confirmation IS NOT NULL AND f.date_confirmation >= ? AND f.date_confirmation <= ?)
+          OR 
+          (f.date_confirmation IS NULL AND f.date_modif_time >= ? AND f.date_modif_time <= ?)
+        )
         AND (f.archive = 0 OR f.archive IS NULL)
         GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_confirmations DESC
         LIMIT 3
       `;
-      const top3Confirmations = await query(top3ConfirmationsQuery, [startDate, endDate]);
+      const top3Confirmations = await query(top3ConfirmationsQuery, [startDate, endDate, startDate, endDate]);
 
-      // 2. Top 3 Confirmateurs - Signatures (états 13, 16, 44, 45)
+      // 2. Top 3 Confirmateurs - Signatures (états 13, 16, 44, 45, mais PAS 38 = retracter 2 fois)
       // Compter les signatures avec le système de score (1 confirmateur = 1, 2 = 0.5 chacun, 3 = 0.33 chacun)
       // On doit compter tous les confirmateurs (1, 2, 3) pour chaque fiche
-      const signaturesFiches = await query(`
+      // IMPORTANT: Compter par date de la dernière confirmation (dernière fois que la fiche est passée en état 7)
+      // Récupérer d'abord les fiches signées avec leur date de dernière confirmation
+      const signaturesFichesWithLastConf = await query(`
         SELECT 
           f.id,
           f.id_confirmateur,
           f.id_confirmateur_2,
-          f.id_confirmateur_3
+          f.id_confirmateur_3,
+          f.id_etat_final,
+          COALESCE(
+            f.date_confirmation,
+            (SELECT MAX(h.date_creation) 
+             FROM fiches_histo h 
+             WHERE h.id_fiche = f.id AND h.id_etat = 7)
+          ) as last_confirmation_date
         FROM fiches f
         WHERE f.id_etat_final IN (13, 16, 44, 45)
-        AND f.date_sign_time >= ?
-        AND f.date_sign_time <= ?
-        AND f.date_sign_time IS NOT NULL
-        AND f.date_sign_time != ''
+        AND f.id_etat_final != 38
         AND (f.archive = 0 OR f.archive IS NULL)
-      `, [startDate, endDate]);
+      `);
+      
+      // Filtrer par date de dernière confirmation dans la période
+      const signaturesFiches = signaturesFichesWithLastConf.filter(fiche => {
+        if (!fiche.last_confirmation_date) return false;
+        const confDate = new Date(fiche.last_confirmation_date);
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        return confDate >= start && confDate <= end;
+      });
 
       // Calculer les scores par confirmateur
       const signaturesScores = {};
@@ -1662,15 +1734,19 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       }
 
       // 3. Total confirmations (période actuelle)
+      // Compter par date de confirmation (date_confirmation ou date de passage en état 7 dans l'historique)
       const confirmationsQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
         WHERE f.id_etat_final = 7
-        AND f.date_modif_time >= ?
-        AND f.date_modif_time <= ?
+        AND (
+          (f.date_confirmation IS NOT NULL AND f.date_confirmation >= ? AND f.date_confirmation <= ?)
+          OR 
+          (f.date_confirmation IS NULL AND f.date_modif_time >= ? AND f.date_modif_time <= ?)
+        )
         AND (f.archive = 0 OR f.archive IS NULL)
       `;
-      const confirmationsResult = await queryOne(confirmationsQuery, [startDate, endDate]);
+      const confirmationsResult = await queryOne(confirmationsQuery, [startDate, endDate, startDate, endDate]);
       const confirmationsCount = confirmationsResult?.count || 0;
 
       // 4. Total signatures (période actuelle) - avec système de score
@@ -1686,7 +1762,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         signaturesCount += score;
       });
 
-      // 5. Total fiches créées (période actuelle)
+      // 5. Total fiches créées (période actuelle) - pour le dénominateur du taux de conversion
       const totalQuery = `
         SELECT COUNT(*) as count
         FROM fiches f
@@ -1702,20 +1778,33 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
 
       // Calculer les signatures de la période précédente
-      const previousSignaturesFiches = await query(`
+      // Basé sur la date de la dernière confirmation
+      const previousSignaturesFichesWithLastConf = await query(`
         SELECT 
           f.id,
           f.id_confirmateur,
           f.id_confirmateur_2,
-          f.id_confirmateur_3
+          f.id_confirmateur_3,
+          COALESCE(
+            f.date_confirmation,
+            (SELECT MAX(h.date_creation) 
+             FROM fiches_histo h 
+             WHERE h.id_fiche = f.id AND h.id_etat = 7)
+          ) as last_confirmation_date
         FROM fiches f
         WHERE f.id_etat_final IN (13, 16, 44, 45)
-        AND f.date_sign_time >= ?
-        AND f.date_sign_time <= ?
-        AND f.date_sign_time IS NOT NULL
-        AND f.date_sign_time != ''
+        AND f.id_etat_final != 38
         AND (f.archive = 0 OR f.archive IS NULL)
-      `, [previousStartDate, previousEndDate]);
+      `);
+      
+      // Filtrer par date de dernière confirmation dans la période précédente
+      const previousSignaturesFiches = previousSignaturesFichesWithLastConf.filter(fiche => {
+        if (!fiche.last_confirmation_date) return false;
+        const confDate = new Date(fiche.last_confirmation_date);
+        const start = new Date(previousStartDate);
+        const end = new Date(previousEndDate);
+        return confDate >= start && confDate <= end;
+      });
 
       let previousSignaturesCount = 0;
       previousSignaturesFiches.forEach(fiche => {
@@ -1732,11 +1821,14 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       const previousTotalCount = previousTotalResult?.count || 0;
 
       // Calculer les taux
+      // Taux de conversion = confirmations (comptées par date de confirmation) / total fiches créées
       const confirmationRate = totalCount > 0 ? (confirmationsCount / totalCount) * 100 : 0;
-      const signatureRate = totalCount > 0 ? (signaturesCount / totalCount) * 100 : 0;
+      
+      // Taux de conversion en signature = signatures (comptées par date de dernière confirmation) / confirmations
+      const signatureRate = confirmationsCount > 0 ? (signaturesCount / confirmationsCount) * 100 : 0;
       
       const previousConfirmationRate = previousTotalCount > 0 ? (previousConfirmationsCount / previousTotalCount) * 100 : 0;
-      const previousSignatureRate = previousTotalCount > 0 ? (previousSignaturesCount / previousTotalCount) * 100 : 0;
+      const previousSignatureRate = previousConfirmationsCount > 0 ? (previousSignaturesCount / previousConfirmationsCount) * 100 : 0;
       
       const confirmationRateChange = confirmationRate - previousConfirmationRate;
       const signatureRateChange = signatureRate - previousSignatureRate;
@@ -1911,6 +2003,49 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
         // Taux de conversion
         const conversionRate = totalCount > 0 ? (validatedCount / totalCount) * 100 : 0;
 
+        // Fiches signées (états 13, 16, 44, 45, mais PAS 38 = retracter 2 fois) par date d'insertion
+        const signedQuery = `
+          SELECT COUNT(DISTINCT f.id) as count
+          FROM fiches f
+          WHERE f.id_centre = ?
+          AND f.date_insert_time >= ?
+          AND f.date_insert_time <= ?
+          AND f.id_etat_final IN (13, 16, 44, 45)
+          AND f.id_etat_final != 38
+          AND (f.archive = 0 OR f.archive IS NULL)
+        `;
+        const signedResult = await queryOne(signedQuery, [centre.id, startDate, endDate]);
+        const signedCount = signedResult?.count || 0;
+
+        // Taux de transformation = signatures / total fiches créées (par date d'insertion)
+        const transformationRate = totalCount > 0 ? (signedCount / totalCount) * 100 : 0;
+
+        // Pourcentage de chaque état durant la période (basé sur date_insert_time)
+        const etatsQuery = `
+          SELECT 
+            e.id as etat_id,
+            e.titre as etat_titre,
+            e.color as etat_color,
+            COUNT(DISTINCT f.id) as count,
+            COUNT(DISTINCT f.id) * 100.0 / ? as percentage
+          FROM fiches f
+          INNER JOIN etats e ON f.id_etat_final = e.id
+          WHERE f.id_centre = ?
+          AND f.date_insert_time >= ?
+          AND f.date_insert_time <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
+          GROUP BY e.id, e.titre, e.color
+          ORDER BY count DESC
+        `;
+        const etatsResult = await query(etatsQuery, [totalCount || 1, centre.id, startDate, endDate]);
+        const etatsDistribution = etatsResult.map(etat => ({
+          id: etat.etat_id,
+          titre: etat.etat_titre,
+          color: etat.etat_color,
+          count: etat.count,
+          percentage: parseFloat(etat.percentage.toFixed(2))
+        }));
+
         // Meilleur agent pour ce centre
         const bestAgentQuery = `
           SELECT 
@@ -1970,6 +2105,9 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
           conversion_rate: conversionRate,
           validated_count: validatedCount,
           total_count: totalCount,
+          transformation_rate: transformationRate,
+          signed_count: signedCount,
+          etats_distribution: etatsDistribution,
           top_agent: bestAgent ? {
             id: bestAgent.id,
             pseudo: bestAgent.pseudo,
@@ -2128,20 +2266,23 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
         const validatedResult = await queryOne(validatedQuery, validatedParams);
         const validatedCount = validatedResult?.count || 0;
 
-        // Fiches confirmées (état 7)
+        // Fiches confirmées (état 7) - par date de confirmation
         const confirmedQuery = `
           SELECT COUNT(DISTINCT f.id) as count
           FROM fiches f
           WHERE f.id_centre = ?
-          AND f.date_insert_time >= ?
-          AND f.date_insert_time <= ?
+          AND (
+            (f.date_confirmation IS NOT NULL AND f.date_confirmation >= ? AND f.date_confirmation <= ?)
+            OR 
+            (f.date_confirmation IS NULL AND f.date_modif_time >= ? AND f.date_modif_time <= ?)
+          )
           AND f.id_etat_final = 7
           AND (f.archive = 0 OR f.archive IS NULL)
         `;
-        const confirmedResult = await queryOne(confirmedQuery, [centre.id, startDate, endDate]);
+        const confirmedResult = await queryOne(confirmedQuery, [centre.id, startDate, endDate, startDate, endDate]);
         const confirmedCount = confirmedResult?.count || 0;
 
-        // Fiches signées (états 13, 16, 44, 45)
+        // Fiches signées (états 13, 16, 44, 45, mais PAS 38 = retracter 2 fois) - par date d'insertion
         const signedQuery = `
           SELECT COUNT(DISTINCT f.id) as count
           FROM fiches f
@@ -2149,22 +2290,19 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
           AND f.id_etat_final IN (13, 16, 44, 45)
+          AND f.id_etat_final != 38
           AND (f.archive = 0 OR f.archive IS NULL)
         `;
         const signedResult = await queryOne(signedQuery, [centre.id, startDate, endDate]);
         const signedCount = signedResult?.count || 0;
 
-        // Taux de conversion (validées / totales)
-        const conversionRate = totalCount > 0 ? ((validatedCount / totalCount) * 100).toFixed(2) : 0;
-        
-        // Taux de confirmation (confirmées / totales)
+        // Taux de conversion en confirmer (confirmées / totales)
+        // Confirmées comptées par date de confirmation, totales par date d'insertion
         const confirmationRate = totalCount > 0 ? ((confirmedCount / totalCount) * 100).toFixed(2) : 0;
         
-        // Taux de signature (signées / totales)
+        // Taux de conversion en signatures (signées / totales)
+        // Signées et totales comptées par date d'insertion
         const signatureRate = totalCount > 0 ? ((signedCount / totalCount) * 100).toFixed(2) : 0;
-        
-        // Taux de transformation (signées / confirmées)
-        const transformationRate = confirmedCount > 0 ? ((signedCount / confirmedCount) * 100).toFixed(2) : 0;
 
         // Meilleur agent (par nombre de fiches validées)
         const bestAgentQuery = `
@@ -2194,22 +2332,12 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
         centresKPIs.push({
           centre_id: centre.id,
           centre_titre: centre.titre,
-          conversion_rate: parseFloat(conversionRate),
+          // Uniquement les taux de conversion en confirmer et en signatures
           confirmation_rate: parseFloat(confirmationRate),
           signature_rate: parseFloat(signatureRate),
-          transformation_rate: parseFloat(transformationRate),
-          validated_count: validatedCount,
           confirmed_count: confirmedCount,
           signed_count: signedCount,
-          total_count: totalCount,
-          top_agent: bestAgent ? {
-            id: bestAgent.id,
-            pseudo: bestAgent.pseudo,
-            nom: bestAgent.nom,
-            prenom: bestAgent.prenom,
-            photo: bestAgent.photo,
-            count: bestAgent.count_validated || 0
-          } : null
+          total_count: totalCount
         });
       }
 

@@ -283,6 +283,41 @@ const KPIs = () => {
                 </div>
               </div>
 
+              {/* Taux de Transformation des Agents Qualification */}
+              {currentData.transformation_rate !== undefined && (
+                <div className="kpi-card transformation-rate">
+                  <div className="kpi-card-header">
+                    <FaPercentage className="kpi-icon" />
+                    <h3>Taux de Transformation</h3>
+                  </div>
+                  <div className="kpi-card-body">
+                    <div className="kpi-value-large">
+                      <span className="value">{formatPercentage(currentData.transformation_rate)}</span>
+                      <span className="label">Fiches confirmées / Fiches générées par agents qualification</span>
+                    </div>
+                    {currentData.transformation_rate_change !== undefined && (
+                      <div className="evolution-indicator">
+                        {getTrendIcon(currentData.transformation_rate_change > 0 ? 'up' : (currentData.transformation_rate_change < 0 ? 'down' : 'stable'))}
+                        <span 
+                          className="evolution-value"
+                          style={{ color: getTrendColor(currentData.transformation_rate_change > 0 ? 'up' : (currentData.transformation_rate_change < 0 ? 'down' : 'stable')) }}
+                        >
+                          {currentData.transformation_rate_change > 0 ? '+' : ''}{formatPercentage(currentData.transformation_rate_change)}
+                        </span>
+                        <span className="evolution-label">vs période précédente</span>
+                      </div>
+                    )}
+                    {currentData.transformation_count !== undefined && currentData.transformation_total !== undefined && (
+                      <div className="kpi-details">
+                        <span className="details-text">
+                          {currentData.transformation_count} confirmées sur {currentData.transformation_total} générées
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Évolution */}
               {currentData.evolution && (
                 <div className="kpi-card evolution">
@@ -669,10 +704,6 @@ const KPIs = () => {
                           <div className="metric-value">{centre.total_count || 0}</div>
                         </div>
                         <div className="metric-item">
-                          <div className="metric-label">Fiches Validées</div>
-                          <div className="metric-value">{centre.validated_count || 0}</div>
-                        </div>
-                        <div className="metric-item">
                           <div className="metric-label">Fiches Confirmées</div>
                           <div className="metric-value">{centre.confirmed_count || 0}</div>
                         </div>
@@ -682,61 +713,22 @@ const KPIs = () => {
                         </div>
                       </div>
                       
-                      {/* Taux de transformation */}
+                      {/* Taux de conversion - uniquement confirmer et signatures */}
                       <div className="rates-section">
-                        <h4>Taux de Transformation</h4>
+                        <h4>Taux de Conversion</h4>
                         <div className="rates-grid">
-                          <div className="rate-card">
-                            <div className="rate-label">Taux de Conversion</div>
-                            <div className="rate-value">{formatPercentage(centre.conversion_rate)}</div>
-                            <div className="rate-description">Validées / Total</div>
-                          </div>
-                          <div className="rate-card">
-                            <div className="rate-label">Taux de Confirmation</div>
-                            <div className="rate-value">{formatPercentage(centre.confirmation_rate)}</div>
-                            <div className="rate-description">Confirmées / Total</div>
-                          </div>
-                          <div className="rate-card">
-                            <div className="rate-label">Taux de Signature</div>
-                            <div className="rate-value">{formatPercentage(centre.signature_rate)}</div>
-                            <div className="rate-description">Signées / Total</div>
+                          <div className="rate-card highlight">
+                            <div className="rate-label">Taux de Conversion en Confirmer</div>
+                            <div className="rate-value">{formatPercentage(centre.confirmation_rate || 0)}</div>
+                            <div className="rate-description">Confirmées / Total (par date confirmation)</div>
                           </div>
                           <div className="rate-card highlight">
-                            <div className="rate-label">Taux de Transformation</div>
-                            <div className="rate-value">{formatPercentage(centre.transformation_rate)}</div>
-                            <div className="rate-description">Signées / Confirmées</div>
+                            <div className="rate-label">Taux de Conversion en Signatures</div>
+                            <div className="rate-value">{formatPercentage(centre.signature_rate || 0)}</div>
+                            <div className="rate-description">Signées / Total (par date insertion)</div>
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Meilleur agent */}
-                      {centre.top_agent && (
-                        <div className="top-agent-section">
-                          <h4>Meilleur Agent</h4>
-                          <div className="agent-info">
-                            {centre.top_agent.photo ? (
-                              <img 
-                                src={centre.top_agent.photo} 
-                                alt={centre.top_agent.pseudo}
-                                className="agent-avatar"
-                              />
-                            ) : (
-                              <div className="agent-avatar placeholder">
-                                {centre.top_agent.pseudo ? centre.top_agent.pseudo.charAt(0).toUpperCase() : '?'}
-                              </div>
-                            )}
-                            <div className="agent-details">
-                              <div className="agent-name">
-                                {centre.top_agent.nom && centre.top_agent.prenom
-                                  ? `${centre.top_agent.nom} ${centre.top_agent.prenom}`
-                                  : centre.top_agent.pseudo || 'N/A'}
-                              </div>
-                              <div className="agent-pseudo">{centre.top_agent.pseudo}</div>
-                              <div className="agent-count">{centre.top_agent.count} fiches validées</div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -775,14 +767,56 @@ const KPIs = () => {
                           <span className="metric-value">{formatPercentage(centre.conversion_rate || 0)}</span>
                         </div>
                         <div className="metric-item">
+                          <span className="metric-label">Taux de Transformation</span>
+                          <span className="metric-value">{formatPercentage(centre.transformation_rate || 0)}</span>
+                          <span className="metric-description">Signatures / Total (par date insertion)</span>
+                        </div>
+                        <div className="metric-item">
                           <span className="metric-label">Fiches Validées</span>
                           <span className="metric-value">{centre.validated_count || 0}</span>
+                        </div>
+                        <div className="metric-item">
+                          <span className="metric-label">Fiches Signées</span>
+                          <span className="metric-value">{centre.signed_count || 0}</span>
                         </div>
                         <div className="metric-item">
                           <span className="metric-label">Fiches Total</span>
                           <span className="metric-value">{centre.total_count || 0}</span>
                         </div>
                       </div>
+
+                      {/* Distribution par État */}
+                      {centre.etats_distribution && centre.etats_distribution.length > 0 && (
+                        <div className="etats-distribution">
+                          <h4>Répartition par État</h4>
+                          <div className="etats-list">
+                            {centre.etats_distribution.map((etat) => (
+                              <div key={etat.id} className="etat-item">
+                                <div className="etat-header">
+                                  <span 
+                                    className="etat-color-indicator"
+                                    style={{ backgroundColor: etat.color || '#ccc' }}
+                                  ></span>
+                                  <span className="etat-titre">{etat.titre}</span>
+                                </div>
+                                <div className="etat-stats">
+                                  <span className="etat-count">{etat.count} fiches</span>
+                                  <span className="etat-percentage">{etat.percentage}%</span>
+                                </div>
+                                <div className="etat-bar">
+                                  <div 
+                                    className="etat-bar-fill"
+                                    style={{ 
+                                      width: `${etat.percentage}%`,
+                                      backgroundColor: etat.color || '#ccc'
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Top Agent */}
                       {centre.top_agent && (
