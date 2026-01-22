@@ -512,11 +512,11 @@ const AffectationDep = () => {
                                     ficheHash={rdv.hash}
                                     ficheId={rdv.id}
                                     className="rdv-link"
-                                    title={`RDV ${rdv.id} - CP: ${rdv.cp || '-'} - ${commercialName}`}
+                                    title={`RDV ${rdv.id} - CP: ${rdv.cp && rdv.cp !== '0' && rdv.cp !== 0 ? rdv.cp : '-'} - ${commercialName || 'Non affecté'}`}
                                   >
-                                    {rdv.cp ? String(rdv.cp) : '-'}
+                                    {rdv.cp && rdv.cp !== '0' && rdv.cp !== 0 ? String(rdv.cp) : '-'}
                                   </FicheDetailLink>
-                                  {rdv.id_commercial && rdv.id_commercial > 0 && (
+                                  {(rdv.id_commercial && rdv.id_commercial > 0) ? (
                                     <button
                                       className="btn-desaffecter"
                                       onClick={(e) => handleDesaffecter(rdv.id, e)}
@@ -535,7 +535,7 @@ const AffectationDep = () => {
                                     >
                                       <FaMinus />
                                     </button>
-                                  )}
+                                  ) : null}
                                   <div className="rdv-badges">
                                     {/* Badges visibles uniquement pour les admins (sauf SEUL) */}
                                     {userIsAdmin && rdv.qualification === 'RDV_URGENT' && (
