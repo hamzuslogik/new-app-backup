@@ -269,6 +269,13 @@ const Sidebar = ({ collapsed }) => {
       icon: FaCog,
       permission: 'management_view',
       visible: true,
+      // Visible pour Admin (1, 2, 7) et Backoffice (11)
+      customCheck: (item, user, hasPermission) => {
+        // Si Admin ou Backoffice, toujours visible
+        if ([1, 2, 7, 11].includes(user?.fonction)) return true;
+        // Sinon, vérifier la permission
+        return hasPermission(item.permission);
+      },
     },
     {
       path: '/permissions',
@@ -276,6 +283,13 @@ const Sidebar = ({ collapsed }) => {
       icon: FaShieldAlt,
       permission: 'config_permissions',
       visible: true,
+      // Visible pour Admin (1, 2, 7) et Backoffice (11)
+      customCheck: (item, user, hasPermission) => {
+        // Si Admin ou Backoffice, toujours visible
+        if ([1, 2, 7, 11].includes(user?.fonction)) return true;
+        // Sinon, vérifier la permission
+        return hasPermission(item.permission);
+      },
     },
     {
       path: '/import-masse',

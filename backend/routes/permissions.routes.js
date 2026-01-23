@@ -9,7 +9,7 @@ const { query, queryOne } = require('../config/database');
 
 // GET /api/permissions
 // Récupère toutes les permissions disponibles
-router.get('/', authenticate, checkPermission(1, 7), async (req, res) => {
+router.get('/', authenticate, checkPermission(1, 7, 11), async (req, res) => {
   try {
     const permissions = await query(
       `SELECT * FROM permissions WHERE etat = 1 ORDER BY categorie, ordre ASC`
@@ -23,7 +23,7 @@ router.get('/', authenticate, checkPermission(1, 7), async (req, res) => {
 
 // GET /api/permissions/fonction/:id_fonction
 // Récupère les permissions d'une fonction spécifique
-router.get('/fonction/:id_fonction', authenticate, checkPermission(1, 7), async (req, res) => {
+router.get('/fonction/:id_fonction', authenticate, checkPermission(1, 7, 11), async (req, res) => {
   try {
     const { id_fonction } = req.params;
 
@@ -49,7 +49,7 @@ router.get('/fonction/:id_fonction', authenticate, checkPermission(1, 7), async 
 
 // POST /api/permissions/fonction/:id_fonction
 // Met à jour les permissions d'une fonction
-router.post('/fonction/:id_fonction', authenticate, checkPermission(1, 7), async (req, res) => {
+router.post('/fonction/:id_fonction', authenticate, checkPermission(1, 7, 11), async (req, res) => {
   try {
     const { id_fonction } = req.params;
     const { permissions } = req.body; // Array de { id_permission, autorise }
@@ -238,7 +238,7 @@ router.get('/user', authenticate, async (req, res) => {
 
 // GET /api/permissions/templates
 // Récupère tous les templates de permissions
-router.get('/templates', authenticate, checkPermission(1, 7), async (req, res) => {
+router.get('/templates', authenticate, checkPermission(1, 7, 11), async (req, res) => {
   try {
     const templates = await query(
       `SELECT pt.*, u.pseudo as created_by_name
@@ -255,7 +255,7 @@ router.get('/templates', authenticate, checkPermission(1, 7), async (req, res) =
 
 // GET /api/permissions/templates/:id
 // Récupère un template spécifique avec ses permissions
-router.get('/templates/:id', authenticate, checkPermission(1, 7), async (req, res) => {
+router.get('/templates/:id', authenticate, checkPermission(1, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -294,7 +294,7 @@ router.get('/templates/:id', authenticate, checkPermission(1, 7), async (req, re
 
 // POST /api/permissions/templates
 // Crée un nouveau template de permissions
-router.post('/templates', authenticate, checkPermission(1, 7), async (req, res) => {
+router.post('/templates', authenticate, checkPermission(1, 7, 11), async (req, res) => {
   try {
     const { nom, description, permissions } = req.body;
 
@@ -346,7 +346,7 @@ router.post('/templates', authenticate, checkPermission(1, 7), async (req, res) 
 
 // POST /api/permissions/templates/:id/apply
 // Applique un template à une fonction
-router.post('/templates/:id/apply', authenticate, checkPermission(1, 7), async (req, res) => {
+router.post('/templates/:id/apply', authenticate, checkPermission(1, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { id_fonction } = req.body;
@@ -435,7 +435,7 @@ router.post('/templates/:id/apply', authenticate, checkPermission(1, 7), async (
 
 // DELETE /api/permissions/templates/:id
 // Supprime un template
-router.delete('/templates/:id', authenticate, checkPermission(1, 7), async (req, res) => {
+router.delete('/templates/:id', authenticate, checkPermission(1, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM permission_templates WHERE id = ?', [id]);
@@ -452,7 +452,7 @@ router.delete('/templates/:id', authenticate, checkPermission(1, 7), async (req,
 
 // GET /api/permissions/history/:id_fonction
 // Récupère l'historique des modifications pour une fonction
-router.get('/history/:id_fonction', authenticate, checkPermission(1, 7), async (req, res) => {
+router.get('/history/:id_fonction', authenticate, checkPermission(1, 7, 11), async (req, res) => {
   try {
     const { id_fonction } = req.params;
     const { limit = 50 } = req.query;

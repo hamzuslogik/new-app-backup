@@ -28,7 +28,7 @@ router.get('/centres', authenticate, async (req, res) => {
 });
 
 // Créer un centre
-router.post('/centres', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/centres', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { titre, etat = 1 } = req.body;
     
@@ -53,7 +53,7 @@ router.post('/centres', authenticate, checkPermission(1, 2, 7), async (req, res)
 });
 
 // Mettre à jour un centre
-router.put('/centres/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/centres/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { titre, etat } = req.body;
@@ -75,7 +75,7 @@ router.put('/centres/:id', authenticate, checkPermission(1, 2, 7), async (req, r
 });
 
 // Supprimer un centre
-router.delete('/centres/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/centres/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM centres WHERE id = ?', [id]);
@@ -105,7 +105,7 @@ router.get('/departements', authenticate, async (req, res) => {
 });
 
 // Créer un département
-router.post('/departements', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/departements', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { departement_code, departement_nom, departement_nom_uppercase, etat = 1 } = req.body;
     
@@ -130,7 +130,7 @@ router.post('/departements', authenticate, checkPermission(1, 2, 7), async (req,
 });
 
 // Mettre à jour un département
-router.put('/departements/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/departements/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { departement_code, departement_nom, departement_nom_uppercase, etat } = req.body;
@@ -148,7 +148,7 @@ router.put('/departements/:id', authenticate, checkPermission(1, 2, 7), async (r
 });
 
 // Supprimer un département
-router.delete('/departements/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/departements/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM departements WHERE id = ?', [id]);
@@ -183,7 +183,7 @@ router.get('/fonctions', authenticate, async (req, res) => {
 });
 
 // Créer une fonction
-router.post('/fonctions', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/fonctions', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { titre, etat = 1, page_accueil = '/dashboard', groupes_messages_autorises } = req.body;
     
@@ -215,7 +215,7 @@ router.post('/fonctions', authenticate, checkPermission(1, 2, 7), async (req, re
 });
 
 // Mettre à jour une fonction
-router.put('/fonctions/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/fonctions/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { titre, etat, page_accueil, groupes_messages_autorises } = req.body;
@@ -244,7 +244,7 @@ router.put('/fonctions/:id', authenticate, checkPermission(1, 2, 7), async (req,
 });
 
 // Supprimer une fonction
-router.delete('/fonctions/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/fonctions/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM fonctions WHERE id = ?', [id]);
@@ -280,7 +280,7 @@ router.get('/produits', authenticate, async (req, res) => {
 });
 
 // Créer un produit
-router.post('/produits', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/produits', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { nom } = req.body;
     
@@ -305,7 +305,7 @@ router.post('/produits', authenticate, checkPermission(1, 2, 7), async (req, res
 });
 
 // Mettre à jour un produit
-router.put('/produits/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/produits/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { nom } = req.body;
@@ -327,7 +327,7 @@ router.put('/produits/:id', authenticate, checkPermission(1, 2, 7), async (req, 
 });
 
 // Supprimer un produit
-router.delete('/produits/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/produits/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM produits WHERE id = ?', [id]);
@@ -401,7 +401,7 @@ router.get('/utilisateurs', authenticate, async (req, res) => {
 });
 
 // Créer un utilisateur
-router.post('/utilisateurs', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/utilisateurs', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const {
       nom, prenom, pseudo, login, mdp, mail, tel,
@@ -474,7 +474,7 @@ router.post('/utilisateurs', authenticate, checkPermission(1, 2, 7), async (req,
 });
 
 // Mettre à jour un utilisateur
-router.put('/utilisateurs/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/utilisateurs/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -567,7 +567,7 @@ router.put('/utilisateurs/:id', authenticate, checkPermission(1, 2, 7), async (r
 });
 
 // Supprimer un utilisateur
-router.delete('/utilisateurs/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/utilisateurs/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -677,7 +677,7 @@ router.get('/etats', authenticate, async (req, res) => {
 });
 
 // Créer un état
-router.post('/etats', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/etats', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { titre, color, groupe, ordre, taux, abbreviation } = req.body;
     
@@ -702,7 +702,7 @@ router.post('/etats', authenticate, checkPermission(1, 2, 7), async (req, res) =
 });
 
 // Mettre à jour un état
-router.put('/etats/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/etats/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { titre, color, groupe, ordre, taux, abbreviation } = req.body;
@@ -724,7 +724,7 @@ router.put('/etats/:id', authenticate, checkPermission(1, 2, 7), async (req, res
 });
 
 // Supprimer un état
-router.delete('/etats/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/etats/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -780,7 +780,7 @@ router.get('/professions', authenticate, async (req, res) => {
 });
 
 // Créer une profession
-router.post('/professions', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/professions', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { nom } = req.body;
     
@@ -818,7 +818,7 @@ router.post('/professions', authenticate, checkPermission(1, 2, 7), async (req, 
 });
 
 // Mettre à jour une profession
-router.put('/professions/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/professions/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { nom } = req.body;
@@ -853,7 +853,7 @@ router.put('/professions/:id', authenticate, checkPermission(1, 2, 7), async (re
 });
 
 // Supprimer une profession
-router.delete('/professions/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/professions/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -896,7 +896,7 @@ router.get('/mode-chauffage', authenticate, async (req, res) => {
 });
 
 // Créer un mode de chauffage
-router.post('/mode-chauffage', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/mode-chauffage', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { nom } = req.body;
     
@@ -934,7 +934,7 @@ router.post('/mode-chauffage', authenticate, checkPermission(1, 2, 7), async (re
 });
 
 // Mettre à jour un mode de chauffage
-router.put('/mode-chauffage/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/mode-chauffage/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { nom } = req.body;
@@ -969,7 +969,7 @@ router.put('/mode-chauffage/:id', authenticate, checkPermission(1, 2, 7), async 
 });
 
 // Supprimer un mode de chauffage
-router.delete('/mode-chauffage/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/mode-chauffage/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -1021,7 +1021,7 @@ router.get('/type-contrat', authenticate, async (req, res) => {
 });
 
 // Créer un type de contrat
-router.post('/type-contrat', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/type-contrat', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { nom } = req.body;
     
@@ -1059,7 +1059,7 @@ router.post('/type-contrat', authenticate, checkPermission(1, 2, 7), async (req,
 });
 
 // Mettre à jour un type de contrat
-router.put('/type-contrat/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/type-contrat/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { nom } = req.body;
@@ -1094,7 +1094,7 @@ router.put('/type-contrat/:id', authenticate, checkPermission(1, 2, 7), async (r
 });
 
 // Supprimer un type de contrat
-router.delete('/type-contrat/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/type-contrat/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -1137,7 +1137,7 @@ router.get('/installateurs', authenticate, async (req, res) => {
 });
 
 // Créer un installateur
-router.post('/installateurs', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/installateurs', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { nom, etat = 1 } = req.body;
     
@@ -1175,7 +1175,7 @@ router.post('/installateurs', authenticate, checkPermission(1, 2, 7), async (req
 });
 
 // Mettre à jour un installateur
-router.put('/installateurs/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/installateurs/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { nom, etat } = req.body;
@@ -1210,7 +1210,7 @@ router.put('/installateurs/:id', authenticate, checkPermission(1, 2, 7), async (
 });
 
 // Supprimer un installateur
-router.delete('/installateurs/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/installateurs/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -1299,7 +1299,7 @@ router.get('/sous-etat/:id_etat', authenticate, async (req, res) => {
 });
 
 // Créer un sous-état
-router.post('/sous-etat', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/sous-etat', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id_etat, titre } = req.body;
     
@@ -1337,7 +1337,7 @@ router.post('/sous-etat', authenticate, checkPermission(1, 2, 7), async (req, re
 });
 
 // Mettre à jour un sous-état
-router.put('/sous-etat/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/sous-etat/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { id_etat, titre } = req.body;
@@ -1372,7 +1372,7 @@ router.put('/sous-etat/:id', authenticate, checkPermission(1, 2, 7), async (req,
 });
 
 // Supprimer un sous-état
-router.delete('/sous-etat/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/sous-etat/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -1458,7 +1458,7 @@ router.get('/fournisseurs-sms', authenticate, async (req, res) => {
 });
 
 // Créer un fournisseur SMS
-router.post('/fournisseurs-sms', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/fournisseurs-sms', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { nom, login, api_key, api_url, actif = 1 } = req.body;
     
@@ -1486,7 +1486,7 @@ router.post('/fournisseurs-sms', authenticate, checkPermission(1, 2, 7), async (
 });
 
 // Mettre à jour un fournisseur SMS
-router.put('/fournisseurs-sms/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/fournisseurs-sms/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     const { nom, login, api_key, api_url, actif } = req.body;
@@ -1523,7 +1523,7 @@ router.put('/fournisseurs-sms/:id', authenticate, checkPermission(1, 2, 7), asyn
 });
 
 // Supprimer un fournisseur SMS
-router.delete('/fournisseurs-sms/:id', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/fournisseurs-sms/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
     
