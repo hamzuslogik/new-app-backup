@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
 
 // Fonction pour encoder un ID en hash (réutilisée depuis fiche.routes.js)
@@ -412,8 +412,8 @@ router.patch('/:id/read', authenticate, async (req, res) => {
 // Marquer toutes les notifications comme lues
 router.patch('/read-all', authenticate, async (req, res) => {
   try {
-    // Vérifier que l'utilisateur est admin (fonction 1, 2, 7)
-    if (![1, 2, 7].includes(req.user.fonction)) {
+    // Vérifier que l'utilisateur est admin, backoffice ou RP confirmation
+    if (!isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
       return res.status(403).json({
         success: false,
         message: 'Accès refusé'
@@ -446,11 +446,11 @@ router.post('/:id/accept', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Vérifier que l'utilisateur est admin
-    if (![1, 2, 7].includes(req.user.fonction)) {
+    // Vérifier que l'utilisateur est admin, backoffice ou RP confirmation
+    if (!isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
       return res.status(403).json({
         success: false,
-        message: 'Accès refusé. Seuls les administrateurs peuvent approuver les demandes.'
+        message: 'Accès refusé. Seuls les administrateurs, backoffice et RP confirmation peuvent approuver les demandes.'
       });
     }
 
@@ -549,11 +549,11 @@ router.post('/:id/refuse', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Vérifier que l'utilisateur est admin
-    if (![1, 2, 7].includes(req.user.fonction)) {
+    // Vérifier que l'utilisateur est admin, backoffice ou RP confirmation
+    if (!isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
       return res.status(403).json({
         success: false,
-        message: 'Accès refusé. Seuls les administrateurs peuvent refuser les demandes.'
+        message: 'Accès refusé. Seuls les administrateurs, backoffice et RP confirmation peuvent refuser les demandes.'
       });
     }
 

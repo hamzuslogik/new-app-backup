@@ -6,7 +6,7 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { authenticate, checkPermission } = require('../middleware/auth.middleware');
+const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
 
@@ -2050,9 +2050,9 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
       });
     }
 
-    // Vérifier que l'utilisateur appartient au centre sélectionné (sauf pour les admins)
-    // Les admins (fonction 1, 7) peuvent importer pour n'importe quel centre
-    if (req.user.fonction !== 1 && req.user.fonction !== 7) {
+    // Vérifier que l'utilisateur appartient au centre sélectionné (sauf pour les admins/backoffice/RP confirmation)
+    // Les admins, backoffice et RP confirmation peuvent importer pour n'importe quel centre
+    if (!isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
       if (req.user.centre !== parseInt(centreId)) {
         return res.status(403).json({
           success: false,

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
 
@@ -223,9 +223,9 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
       });
     }
 
-    // Pour les admins (fonctions 1, 2, 7), permettre de sélectionner n'importe quel confirmateur
+    // Pour les admins/backoffice/RP confirmation, permettre de sélectionner n'importe quel confirmateur
     // Pour les autres, vérifier que le destinataire est bien le confirmateur de la fiche
-    if (![1, 2, 7].includes(req.user.fonction)) {
+    if (!isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
       // Récupérer le confirmateur de la fiche
       const ficheConfirmateur = await queryOne(
         'SELECT id_confirmateur FROM fiches WHERE id = ?',
@@ -667,7 +667,7 @@ router.get('/:id', authenticate, async (req, res) => {
 
     // Vérifier les permissions de consultation
     const canView = 
-      [1, 2, 7].includes(req.user.fonction) || // Admins
+      isAdminOrBackofficeOrRPConfirmation(req.user.fonction) || // Admins, Backoffice, RP Confirmation
       decalage.expediteur === req.user.id || // Créateur
       (req.user.fonction === 6 && decalage.destination === req.user.id); // Confirmateur destinataire
 

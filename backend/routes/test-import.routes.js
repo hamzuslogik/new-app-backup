@@ -8,7 +8,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode } = require('../middleware/permissions.middleware');
 const fs = require('fs');
 const path = require('path');
@@ -139,8 +139,8 @@ router.post('/test-contacts/process', authenticate, checkPermissionCode('fiches_
       });
     }
 
-    // Vérifier que l'utilisateur appartient au centre sélectionné (sauf pour les admins)
-    if (req.user.fonction !== 1 && req.user.fonction !== 7) {
+    // Vérifier que l'utilisateur appartient au centre sélectionné (sauf pour les admins/backoffice/RP confirmation)
+    if (!isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
       if (req.user.centre !== parseInt(centreId)) {
         return res.status(403).json({
           success: false,

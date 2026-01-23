@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
 
@@ -484,8 +484,8 @@ router.put('/:id', authenticate, async (req, res) => {
       });
     }
 
-    // Vérifier les permissions : admin ou commercial propriétaire du compte rendu
-    if (![1, 2, 7].includes(user.fonction) && (user.fonction !== 5 || compteRendu.id_commercial !== user.id)) {
+    // Vérifier les permissions : admin/backoffice/RP confirmation ou commercial propriétaire du compte rendu
+    if (!isAdminOrBackofficeOrRPConfirmation(user.fonction) && (user.fonction !== 5 || compteRendu.id_commercial !== user.id)) {
       return res.status(403).json({
         success: false,
         message: 'Vous n\'avez pas la permission de modifier ce compte rendu'
@@ -613,11 +613,11 @@ router.post('/:id/approve', authenticate, async (req, res) => {
     const { id } = req.params;
     const { commentaire_admin } = req.body;
 
-    // Vérifier que l'utilisateur est admin (fonction 1, 2, ou 7) ou RP Confirmation (fonction 15)
-    if (![1, 2, 7, 15].includes(user.fonction)) {
+    // Vérifier que l'utilisateur est admin, backoffice ou RP Confirmation
+    if (!isAdminOrBackofficeOrRPConfirmation(user.fonction)) {
       return res.status(403).json({
         success: false,
-        message: 'Seuls les administrateurs et les RP Confirmation peuvent approuver des comptes rendus'
+        message: 'Seuls les administrateurs, backoffice et RP Confirmation peuvent approuver des comptes rendus'
       });
     }
 
@@ -989,11 +989,11 @@ router.post('/:id/reject', authenticate, async (req, res) => {
     const { id } = req.params;
     const { commentaire_admin } = req.body;
 
-    // Vérifier que l'utilisateur est admin (fonction 1, 2, ou 7) ou RP Confirmation (fonction 15)
-    if (![1, 2, 7, 15].includes(user.fonction)) {
+    // Vérifier que l'utilisateur est admin, backoffice ou RP Confirmation
+    if (!isAdminOrBackofficeOrRPConfirmation(user.fonction)) {
       return res.status(403).json({
         success: false,
-        message: 'Seuls les administrateurs et les RP Confirmation peuvent rejeter des comptes rendus'
+        message: 'Seuls les administrateurs, backoffice et RP Confirmation peuvent rejeter des comptes rendus'
       });
     }
 

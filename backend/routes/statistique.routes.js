@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate, checkPermission } = require('../middleware/auth.middleware');
+const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
 
@@ -272,8 +272,8 @@ router.get('/fiches-par-centre', authenticate, checkPermissionCode('statistiques
     // Déterminer les centres accessibles selon le rôle
     let allowedCentres = null;
     
-    if ([1, 2, 7].includes(req.user.fonction)) {
-      // Administrateurs : voient tous les centres
+    if (isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
+      // Administrateurs, Backoffice et RP Confirmation : voient tous les centres
       allowedCentres = null;
     } else if (req.user.fonction === 9) {
       // Fonction 9 : récupérer les centres assignés depuis utilisateurs_centres
@@ -437,7 +437,8 @@ router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques
     // Déterminer les centres accessibles selon le rôle
     let allowedCentres = null;
     
-    if ([1, 2, 7].includes(req.user.fonction)) {
+    if (isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
+      // Administrateurs, Backoffice et RP Confirmation : voient tous les centres
       allowedCentres = null;
     } else if (req.user.fonction === 9) {
       const userCentres = await query(

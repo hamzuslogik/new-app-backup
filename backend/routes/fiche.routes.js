@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const { authenticate, checkPermission } = require('../middleware/auth.middleware');
+const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
 
@@ -4064,8 +4064,8 @@ router.patch('/:id/archive', authenticate, hashToIdMiddleware, async (req, res) 
       });
     }
 
-    // Vérifier les permissions
-    if (req.user.fonction !== 1 && req.user.fonction !== 2 && req.user.fonction !== 7) {
+    // Vérifier les permissions (Admin, Backoffice, RP Confirmation)
+    if (!isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
       return res.status(403).json({
         success: false,
         message: 'Vous n\'avez pas la permission d\'archiver des fiches'
