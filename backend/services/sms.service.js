@@ -211,14 +211,17 @@ async function sendViaManivox(provider, tel, message, from) {
       throw new Error('Login (auth_email) et API key Manivox requis');
     }
 
+    // Manivox nécessite api-key et api-login dans les headers
     const response = await axios.post('https://www.manivox.com/api_v2/json_api.php', null, {
       params: {
         action: 'send_sms',
-        auth_email: login,
-        auth_key: provider.api_key, // Utiliser auth_key au lieu de auth_password
         from: from,
         to: manivoxTel, // Utiliser le format 0033 pour Manivox
         text: message
+      },
+      headers: {
+        'api-key': provider.api_key,
+        'api-login': login
       },
       timeout: 30000 // 30 secondes de timeout
     });
