@@ -185,22 +185,39 @@ async function sendViaManivox(provider, tel, message, from) {
     // Le login peut être dans 'login' ou 'auth_email'
     const login = provider.login || provider.auth_email || '';
     
+    // Manivox nécessite généralement le format 0033 (sans le +)
+    // Convertir +33 en 0033 si nécessaire
+    let manivoxTel = tel;
+    if (tel.startsWith('+33')) {
+      manivoxTel = `0033${tel.substring(3)}`;
+    } else if (tel.startsWith('+')) {
+      // Pour les autres pays, remplacer + par 00
+      manivoxTel = `00${tel.substring(1)}`;
+    }
+    
     console.log('[SMS Service] Envoi via Manivox:', {
-      tel: tel,
+      telOriginal: tel,
+      telFormatted: manivoxTel,
       from: from,
       messageLength: message.length,
-      login: login ? '***' : 'non défini',
+      login: login ? login.substring(0, 3) + '***' : 'non défini',
+      loginLength: login ? login.length : 0,
       hasAuthEmail: !!provider.auth_email,
-      hasLogin: !!provider.login
+      hasLogin: !!provider.login,
+      apiKeyLength: provider.api_key ? provider.api_key.length : 0
     });
+
+    if (!login || !provider.api_key) {
+      throw new Error('Login (auth_email) et API key Manivox requis');
+    }
 
     const response = await axios.post('https://www.manivox.com/api_v2/json_api.php', null, {
       params: {
         action: 'send_sms',
         auth_email: login,
-        auth_password: provider.api_key || '',
+        auth_password: provider.api_key,
         from: from,
-        to: tel,
+        to: manivoxTel, // Utiliser le format 0033 pour Manivox
         text: message
       },
       timeout: 30000 // 30 secondes de timeout
