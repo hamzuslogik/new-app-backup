@@ -10,8 +10,11 @@ const { getDefaultSMSProvider, sendSMSViaProvider } = require('../sms.service');
 async function executeWorkflow(triggerType, eventData) {
   console.log('[WORKFLOW] ========== executeWorkflow DÉBUT ==========');
   console.log('[WORKFLOW] Trigger type:', triggerType);
-  console.log('[WORKFLOW] Event data:', JSON.stringify({
-    fiche_id: eventData.fiche?.id,
+  console.log('[WORKFLOW] Event data (résumé):', JSON.stringify({
+    has_fiche: !!eventData.fiche,
+    fiche_id: eventData.fiche?.id || eventData.fiche_id,
+    fiche_keys: eventData.fiche ? Object.keys(eventData.fiche).slice(0, 10) : null,
+    has_user: !!eventData.user,
     user_id: eventData.user?.id,
     user_pseudo: eventData.user?.pseudo,
     changes: eventData.changes ? Object.keys(eventData.changes) : null
@@ -282,9 +285,26 @@ async function executeAction(actionType, config, eventData) {
 async function executeNotificationAction(config, eventData) {
   console.log(`[WORKFLOW] ========== executeNotificationAction DÉBUT ==========`);
   console.log(`[WORKFLOW] Config reçue:`, JSON.stringify(config, null, 2));
+  console.log(`[WORKFLOW] EventData reçue:`, JSON.stringify({
+    has_fiche: !!eventData.fiche,
+    fiche_id: eventData.fiche?.id || eventData.fiche_id,
+    has_user: !!eventData.user,
+    user_id: eventData.user?.id
+  }, null, 2));
   
   const { query, queryOne } = require('../../config/database');
   const { type, message, destination } = config;
+  
+  // Si fiche n'existe pas mais fiche_id existe, récupérer la fiche
+  if (!eventData.fiche && eventData.fiche_id) {
+    console.log(`[WORKFLOW] Fiche non trouvée dans eventData, récupération depuis fiche_id=${eventData.fiche_id}...`);
+    eventData.fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [eventData.fiche_id]);
+    if (eventData.fiche) {
+      console.log(`[WORKFLOW] ✅ Fiche récupérée: ID=${eventData.fiche.id}`);
+    } else {
+      console.log(`[WORKFLOW] ⚠️  Fiche non trouvée pour ID=${eventData.fiche_id}`);
+    }
+  }
   
   console.log(`[WORKFLOW] Type:`, type);
   console.log(`[WORKFLOW] Message original:`, message);
@@ -330,41 +350,94 @@ async function executeNotificationAction(config, eventData) {
     
     // Créer une notification pour chaque admin
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    const notificationValues = admins
-      .filter(admin => admin && admin.id) // Filtrer les admins valides
-      .map(admin => [
-        type.trim(),
-        eventData.fiche?.id || null,
-        processedMessage.trim(),
-        admin.id,
-        now,
-        0
-      ]);
+    const finalType = type.trim();
+    const finalMessage = processedMessage.trim();
+    // Récupérer fiche_id depuis fiche.id ou fiche_id directement
+    const finalFicheId = eventData.fiche?.id || eventData.fiche_id || null;
+    console.log(`[WORKFLOW] Fiche ID récupéré:`, finalFicheId, `(depuis fiche.id: ${eventData.fiche?.id}, depuis fiche_id: ${eventData.fiche_id})`);
     
-    if (notificationValues.length > 0) {
-      const placeholders = notificationValues.map(() => '(?, ?, ?, ?, ?, 0)').join(', ');
-      const flatValues = notificationValues.flat();
-      
-      console.log(`[WORKFLOW] Insertion de ${notificationValues.length} notification(s) pour les admins...`);
-      console.log(`[WORKFLOW] Valeurs à insérer:`, notificationValues.map(v => ({
-        type: v[0],
-        id_fiche: v[1],
-        message: v[2]?.substring(0, 50) + '...',
-        destination: v[3],
-        date: v[4]
-      })));
-      
-      const insertResult = await query(`
-        INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
-        VALUES ${placeholders}
-      `, flatValues);
-      
-      console.log(`[WORKFLOW] ✅ ${notificationValues.length} notification(s) créée(s) avec succès`);
-      return { success: true, message: `${notificationValues.length} notification(s) créée(s)`, count: notificationValues.length };
-    } else {
-      console.error(`[WORKFLOW] ❌ Aucune valeur valide à insérer`);
-      throw new Error('Aucune notification valide à créer');
+    // Validation avant de créer les notifications
+    if (!finalType || finalType === '') {
+      console.error(`[WORKFLOW] ❌ Type vide - ABANDON`);
+      throw new Error('Type de notification vide');
     }
+    if (!finalMessage || finalMessage === '') {
+      console.error(`[WORKFLOW] ❌ Message vide - ABANDON`);
+      throw new Error('Message de notification vide');
+    }
+    
+    const validAdmins = admins.filter(admin => admin && admin.id && admin.id > 0);
+    console.log(`[WORKFLOW] Admins valides après filtrage:`, validAdmins.length);
+    
+    if (validAdmins.length === 0) {
+      console.error(`[WORKFLOW] ❌ Aucun admin valide trouvé`);
+      throw new Error('Aucun administrateur valide trouvé');
+    }
+    
+    // Construire les valeurs pour l'insertion en lot
+    const flatValues = [];
+    const placeholders = [];
+    
+    for (const admin of validAdmins) {
+      placeholders.push('(?, ?, ?, ?, ?, 0)');
+      // S'assurer que toutes les valeurs sont définies (pas undefined)
+      flatValues.push(finalType || null);
+      flatValues.push(finalFicheId !== undefined ? finalFicheId : null);
+      flatValues.push(finalMessage || null);
+      flatValues.push(admin.id || null);
+      flatValues.push(now || null);
+    }
+    
+    console.log(`[WORKFLOW] Insertion de ${validAdmins.length} notification(s) pour les admins...`);
+    console.log(`[WORKFLOW] Nombre de placeholders:`, placeholders.length);
+    console.log(`[WORKFLOW] Nombre de valeurs:`, flatValues.length);
+    console.log(`[WORKFLOW] Exemple de valeurs (première notification):`, {
+      type: flatValues[0],
+      id_fiche: flatValues[1],
+      message: flatValues[2]?.substring(0, 50) + '...',
+      destination: flatValues[3],
+      date: flatValues[4]
+    });
+    
+    // Vérifier que le nombre de valeurs correspond aux placeholders
+    const expectedValues = placeholders.length * 5; // 5 valeurs par placeholder (lu est hardcodé à 0)
+    if (flatValues.length !== expectedValues) {
+      console.error(`[WORKFLOW] ❌ Nombre de valeurs incorrect: ${flatValues.length} au lieu de ${expectedValues}`);
+      throw new Error(`Erreur de construction des valeurs: ${flatValues.length} valeurs pour ${expectedValues} attendues`);
+    }
+    
+    // Log détaillé des valeurs avant insertion
+    console.log(`[WORKFLOW] === VALEURS DÉTAILLÉES AVANT INSERTION ===`);
+    for (let i = 0; i < validAdmins.length; i++) {
+      const baseIndex = i * 5;
+      console.log(`[WORKFLOW] Notification ${i + 1}:`, {
+        type: flatValues[baseIndex],
+        type_type: typeof flatValues[baseIndex],
+        id_fiche: flatValues[baseIndex + 1],
+        id_fiche_type: typeof flatValues[baseIndex + 1],
+        message: flatValues[baseIndex + 2]?.substring(0, 50),
+        message_type: typeof flatValues[baseIndex + 2],
+        destination: flatValues[baseIndex + 3],
+        destination_type: typeof flatValues[baseIndex + 3],
+        date_creation: flatValues[baseIndex + 4],
+        date_creation_type: typeof flatValues[baseIndex + 4]
+      });
+    }
+    console.log(`[WORKFLOW] === FIN VALEURS DÉTAILLÉES ===`);
+    
+    const sqlQuery = `
+      INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
+      VALUES ${placeholders.join(', ')}
+    `;
+    console.log(`[WORKFLOW] Requête SQL:`, sqlQuery);
+    console.log(`[WORKFLOW] Nombre de paramètres:`, flatValues.length);
+    
+    const insertResult = await query(sqlQuery, flatValues);
+    
+    console.log(`[WORKFLOW] Résultat de l'INSERT:`, JSON.stringify(insertResult, null, 2));
+    console.log(`[WORKFLOW] ✅ ${validAdmins.length} notification(s) créée(s) avec succès`);
+    
+    return { success: true, message: `${validAdmins.length} notification(s) créée(s)`, count: validAdmins.length };
   }
   
   // Gérer les destinations spécifiques
@@ -409,7 +482,9 @@ async function executeNotificationAction(config, eventData) {
   const finalType = type.trim();
   const finalMessage = processedMessage.trim();
   const finalDestId = destId;
-  const finalFicheId = eventData.fiche?.id || null;
+  // Récupérer fiche_id depuis fiche.id ou fiche_id directement
+  const finalFicheId = eventData.fiche?.id || eventData.fiche_id || null;
+  console.log(`[WORKFLOW] Fiche ID récupéré (destination spécifique):`, finalFicheId, `(depuis fiche.id: ${eventData.fiche?.id}, depuis fiche_id: ${eventData.fiche_id})`);
   
   console.log(`[WORKFLOW] Validation finale avant insertion...`);
   console.log(`[WORKFLOW] Type:`, finalType, `(valide: ${finalType && finalType !== ''})`);
@@ -439,10 +514,27 @@ async function executeNotificationAction(config, eventData) {
     date_creation: now
   });
   
+  // S'assurer que toutes les valeurs sont définies (pas undefined)
+  const insertValues = [
+    finalType || null,
+    finalFicheId !== undefined ? finalFicheId : null,
+    finalMessage || null,
+    finalDestId || null,
+    now || null
+  ];
+  
+  console.log(`[WORKFLOW] Valeurs finales pour insertion:`, {
+    type: insertValues[0],
+    id_fiche: insertValues[1],
+    message: insertValues[2]?.substring(0, 50) + '...',
+    destination: insertValues[3],
+    date_creation: insertValues[4]
+  });
+  
   const insertResult = await query(`
     INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
     VALUES (?, ?, ?, ?, ?, 0)
-  `, [finalType, finalFicheId, finalMessage, finalDestId, now]);
+  `, insertValues);
 
   console.log(`[WORKFLOW] ✅ Notification créée avec succès - ID=${insertResult.insertId}`);
   console.log(`[WORKFLOW] ========== executeNotificationAction FIN ==========`);
