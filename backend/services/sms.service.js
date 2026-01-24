@@ -83,19 +83,27 @@ async function getDefaultSMSProvider() {
 /**
  * Envoie un SMS via un fournisseur
  * @param {Object} provider - Le fournisseur SMS
- * @param {string} tel - Le numéro de téléphone (format: 0033XXXXXXXXX ou 0XXXXXXXXX)
+ * @param {string} tel - Le numéro de téléphone (format: +33XXXXXXXXX, 0033XXXXXXXXX ou 0XXXXXXXXX)
  * @param {string} message - Le message à envoyer
  * @param {string} from - L'expéditeur (optionnel)
  * @returns {Promise<Object>} Résultat de l'envoi
  */
 async function sendSMSViaProvider(provider, tel, message, from = 'RAPPEL') {
   try {
-    // Formater le numéro de téléphone
+    // Formater le numéro de téléphone en format international +33
     let formattedTel = tel;
     if (tel.startsWith('0')) {
-      formattedTel = `0033${tel.substring(1)}`;
+      // Numéro français commençant par 0 : remplacer 0 par +33
+      formattedTel = `+33${tel.substring(1)}`;
+    } else if (tel.startsWith('0033')) {
+      // Numéro déjà en format 0033 : remplacer par +33
+      formattedTel = `+33${tel.substring(4)}`;
     } else if (!tel.startsWith('+') && !tel.startsWith('00')) {
-      formattedTel = `0033${tel}`;
+      // Numéro sans préfixe : ajouter +33
+      formattedTel = `+33${tel}`;
+    } else if (tel.startsWith('+')) {
+      // Numéro déjà en format international : garder tel quel
+      formattedTel = tel;
     }
 
     // Détecter le type de fournisseur par le nom ou l'URL
