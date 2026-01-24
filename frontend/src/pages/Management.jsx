@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms } from 'react-icons/fa';
+import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram } from 'react-icons/fa';
 import CentresTab from '../components/management/CentresTab';
 import UtilisateursTab from '../components/management/UtilisateursTab';
 import DepartementsTab from '../components/management/DepartementsTab';
@@ -12,6 +12,7 @@ import ModeChauffageTab from '../components/management/ModeChauffageTab';
 import InstallateursTab from '../components/management/InstallateursTab';
 import SousEtatTab from '../components/management/SousEtatTab';
 import FournisseursSMSTab from '../components/management/FournisseursSMSTab';
+import WorkflowsTab from '../components/management/WorkflowsTab';
 import GlobalSearch from '../components/management/GlobalSearch';
 import './Management.css';
 
@@ -41,6 +42,7 @@ const Management = () => {
     { id: 'mode-chauffage', label: 'Modes de chauffage', icon: FaFire },
     { id: 'installateurs', label: 'Installateurs', icon: FaTools },
     { id: 'fournisseurs-sms', label: 'Fournisseurs SMS', icon: FaSms },
+    { id: 'workflows', label: 'Workflows', icon: FaProjectDiagram },
   ];
 
   const handleGlobalSearchSelect = (type, item) => {
@@ -75,6 +77,8 @@ const Management = () => {
         return <InstallateursTab />;
       case 'fournisseurs-sms':
         return <FournisseursSMSTab />;
+      case 'workflows':
+        return <WorkflowsTab />;
       default:
         return <CentresTab />;
     }

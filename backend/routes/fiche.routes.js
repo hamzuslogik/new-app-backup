@@ -3,6 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
+const { triggerWorkflowOnFicheCreated, triggerWorkflowOnFicheUpdated, triggerWorkflowOnEtatChanged } = require('../middleware/workflow.middleware');
 const { query, queryOne } = require('../config/database');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
@@ -2848,7 +2849,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
 
 // Créer une nouvelle fiche
 // Permissions : Admin (1, 2), Agents (3), Qualité (4), Commerciaux (5), Confirmateurs (6), Dev (7), Autres (8)
-router.post('/', authenticate, checkPermissionCode('fiches_create'), async (req, res) => {
+router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWorkflowOnFicheCreated, async (req, res) => {
   try {
     const ficheData = req.body;
     
@@ -3221,7 +3222,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), async (req,
 
 // Modification rapide de l'état d'une fiche (pour contrôle qualité)
 // IMPORTANT: Cette route doit être définie AVANT la route PUT /:id pour éviter les conflits
-router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, async (req, res) => {
+router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflowOnEtatChanged, async (req, res) => {
   try {
     const { id } = req.params;
     const { id_etat_final } = req.body;
@@ -3430,7 +3431,7 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, async (re
 });
 
 // Mettre à jour une fiche
-router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches_edit'), async (req, res) => {
+router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches_edit'), triggerWorkflowOnFicheUpdated, async (req, res) => {
   try {
     const { id } = req.params;
     const ficheData = req.body;

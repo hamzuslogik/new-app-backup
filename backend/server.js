@@ -26,6 +26,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const healthRoutes = require('./routes/health.routes');
 const signatureRoutes = require('./routes/signature.routes');
 const iaAssistanceRoutes = require('./routes/ia-assistance.routes');
+const workflowRoutes = require('./routes/workflow.routes');
 
 // Créer l'application Express
 const app = express();
@@ -61,6 +62,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/signature', signatureRoutes);
 app.use('/api/ia-assistance', iaAssistanceRoutes);
+app.use('/api/workflows', workflowRoutes);
 
 // Route de test (déplacée vers health.routes.js)
 

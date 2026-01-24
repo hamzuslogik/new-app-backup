@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
+const { executeWorkflow } = require('../services/workflow/workflow-executor');
 const { query, queryOne } = require('../config/database');
 
 // =====================================================
@@ -180,6 +181,22 @@ router.post('/', authenticate, async (req, res) => {
         id: result.insertId
       }
     });
+
+    // Déclencher les workflows de manière asynchrone
+    try {
+      const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [id_fiche]);
+      if (fiche) {
+        executeWorkflow('compte_rendu_created', {
+          fiche,
+          user,
+          compte_rendu: { id: result.insertId, id_fiche }
+        }).catch(error => {
+          console.error('Erreur lors de l\'exécution des workflows (compte_rendu_created):', error);
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors du déclenchement des workflows:', error);
+    }
   } catch (error) {
     console.error('Erreur lors de la création du compte rendu:', error);
     res.status(500).json({
@@ -960,6 +977,22 @@ router.post('/:id/approve', authenticate, async (req, res) => {
       success: true,
       message: 'Compte rendu approuvé et modifications appliquées avec succès'
     });
+
+    // Déclencher les workflows de manière asynchrone
+    try {
+      const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [compteRendu.id_fiche]);
+      if (fiche) {
+        executeWorkflow('compte_rendu_approved', {
+          fiche,
+          user,
+          compte_rendu: compteRendu
+        }).catch(error => {
+          console.error('Erreur lors de l\'exécution des workflows (compte_rendu_approved):', error);
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors du déclenchement des workflows:', error);
+    }
   } catch (error) {
     console.error('Erreur lors de l\'approbation du compte rendu:', error);
     res.status(500).json({
