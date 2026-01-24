@@ -228,8 +228,9 @@ async function sendViaManivox(provider, tel, message, from) {
 
 /**
  * Envoie un SMS via Octopush
- * Documentation: https://dev.octopush.com/api-sms-documentation/index-des-urls/
- * Endpoint: POST https://api.octopush.com/v1/public/sms-campaign/send
+ * Documentation: https://api.octopush.com/v1/public/multi-channel/send
+ * Endpoint: POST https://api.octopush.com/v1/public/multi-channel/send
+ * Authentification: via headers (api-login et api-key)
  */
 async function sendViaOctopush(provider, tel, message, from) {
   try {
@@ -240,9 +241,9 @@ async function sendViaOctopush(provider, tel, message, from) {
       login: provider.login ? '***' : 'non défini'
     });
 
-    // URL de base selon la documentation officielle
+    // URL selon la documentation officielle
     const baseUrl = 'https://api.octopush.com/v1/public';
-    const endpoint = '/sms-campaign/send';
+    const endpoint = '/multi-channel/send';
     const apiUrl = provider.api_url || `${baseUrl}${endpoint}`;
     
     const login = provider.login || '';
@@ -252,14 +253,18 @@ async function sendViaOctopush(provider, tel, message, from) {
       throw new Error('Login et API key Octopush requis');
     }
 
-    // Selon la documentation Octopush, l'authentification se fait via les paramètres de la requête
-    // et les données du SMS sont dans le body
-    // Format attendu selon la doc: user_login et api_key en paramètres, données SMS dans le body
+    // Format du payload selon la documentation officielle
+    // Documentation: https://api.octopush.com/v1/public/multi-channel/send
     const requestBody = {
+      channel: 'sms',
       text: message,
-      recipients: [tel],
-      type: 'sms_premium', // ou 'sms_low_cost' selon le type souhaité
-      sender: from || 'RAPPEL'
+      recipients: [
+        {
+          phone_number: tel // Format +33XXXXXXXXX
+        }
+      ],
+      sender: from || 'RAPPEL',
+      auto_optimize_text: true
     };
 
     console.log('[SMS Service] Requête Octopush:', {
@@ -268,14 +273,13 @@ async function sendViaOctopush(provider, tel, message, from) {
       hasAuth: !!(login && apiKey)
     });
 
+    // Authentification via headers selon la documentation
     const response = await axios.post(apiUrl, requestBody, {
-      params: {
-        user_login: login,
-        api_key: apiKey
-      },
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'api-login': login,
+        'api-key': apiKey
       },
       timeout: 30000 // 30 secondes de timeout
     });
