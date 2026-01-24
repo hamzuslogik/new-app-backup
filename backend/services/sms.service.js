@@ -215,7 +215,7 @@ async function sendViaManivox(provider, tel, message, from) {
       params: {
         action: 'send_sms',
         auth_email: login,
-        auth_password: provider.api_key,
+        auth_key: provider.api_key, // Utiliser auth_key au lieu de auth_password
         from: from,
         to: manivoxTel, // Utiliser le format 0033 pour Manivox
         text: message
