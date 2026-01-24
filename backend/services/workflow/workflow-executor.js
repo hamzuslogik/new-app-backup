@@ -176,11 +176,25 @@ async function executeAction(actionType, config, eventData) {
  * Action : Notification interne
  */
 async function executeNotificationAction(config, eventData) {
-  const { query } = require('../../config/database');
+  const { query, queryOne } = require('../../config/database');
   const { type, message, destination } = config;
+  
+  // Validation des paramètres requis
+  if (!type || typeof type !== 'string' || type.trim() === '') {
+    throw new Error('Type de notification requis et non vide');
+  }
+  
+  if (!message || typeof message !== 'string' || message.trim() === '') {
+    throw new Error('Message de notification requis et non vide');
+  }
   
   // Remplacer les variables dans le message
   const processedMessage = replaceVariables(message, eventData);
+  
+  // Vérifier que le message final n'est pas vide
+  if (!processedMessage || typeof processedMessage !== 'string' || processedMessage.trim() === '') {
+    throw new Error('Message de notification vide après remplacement des variables');
+  }
   
   // Déterminer le destinataire
   let destId = destination;
@@ -192,15 +206,29 @@ async function executeNotificationAction(config, eventData) {
     destId = eventData.fiche.id_commercial;
   }
 
-  if (!destId) {
-    throw new Error('Destinataire non trouvé pour la notification');
+  // Validation stricte du destinataire
+  if (!destId || (typeof destId !== 'number' && typeof destId !== 'string')) {
+    throw new Error('Destinataire non trouvé ou invalide pour la notification');
+  }
+  
+  // Convertir en nombre si c'est une chaîne
+  destId = typeof destId === 'string' ? parseInt(destId, 10) : destId;
+  
+  if (isNaN(destId) || destId <= 0) {
+    throw new Error(`Destinataire invalide (ID: ${destId})`);
+  }
+  
+  // Vérifier que l'utilisateur destinataire existe
+  const userExists = await queryOne('SELECT id FROM utilisateurs WHERE id = ? AND etat > 0', [destId]);
+  if (!userExists) {
+    throw new Error(`Utilisateur destinataire (ID: ${destId}) non trouvé ou inactif`);
   }
 
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
   await query(`
     INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
     VALUES (?, ?, ?, ?, ?, 0)
-  `, [type || 'workflow', eventData.fiche?.id || null, processedMessage, destId, now]);
+  `, [type.trim(), eventData.fiche?.id || null, processedMessage.trim(), destId, now]);
 
   return { success: true, message: 'Notification créée' };
 }

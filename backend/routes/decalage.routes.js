@@ -348,13 +348,15 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
     });
 
     // Notification pour le confirmateur (destinataire)
-    await query(
-        `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-         VALUES (?, ?, ?, ?, ?, 0, ?)`,
-        ['decalage_request', idFicheNum, notificationMessage, destination, now, metadata]
-    ).catch(err => {
-      console.error('Erreur lors de la création de la notification pour le confirmateur:', err);
-    });
+    if (destination && notificationMessage && notificationMessage.trim() !== '') {
+      await query(
+          `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
+           VALUES (?, ?, ?, ?, ?, 0, ?)`,
+          ['decalage_request', idFicheNum, notificationMessage.trim(), destination, now, metadata]
+      ).catch(err => {
+        console.error('Erreur lors de la création de la notification pour le confirmateur:', err);
+      });
+    }
 
     // Récupérer le superviseur du confirmateur (chef_equipe)
     const confirmateurInfo = await queryOne(
@@ -363,11 +365,11 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
     );
 
     // Créer une notification pour le superviseur du confirmateur s'il existe
-    if (confirmateurInfo?.chef_equipe) {
+    if (confirmateurInfo?.chef_equipe && notificationMessage && notificationMessage.trim() !== '') {
       await query(
         `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
          VALUES (?, ?, ?, ?, ?, 0, ?)`,
-        ['decalage_request', idFicheNum, notificationMessage, confirmateurInfo.chef_equipe, now, metadata]
+        ['decalage_request', idFicheNum, notificationMessage.trim(), confirmateurInfo.chef_equipe, now, metadata]
       ).catch(err => {
         console.error('Erreur lors de la création de la notification pour le superviseur:', err);
       });
@@ -382,26 +384,32 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
     if (admins && admins.length > 0) {
       const adminNotificationMessage = `Nouvelle demande de décalage de RDV créée par ${expediteurInfo?.pseudo || 'un utilisateur'} pour ${ficheInfo?.nom || ''} ${ficheInfo?.prenom || ''} (${ficheInfo?.tel || ''})`;
       
-      const adminValues = admins.map(admin => [
-        'decalage_request',
-        idFicheNum,
-        adminNotificationMessage,
-        admin.id,
-        now,
-        0,
-        metadata
-      ]);
-      
-      const adminPlaceholders = adminValues.map(() => '(?, ?, ?, ?, ?, 0, ?)').join(', ');
-      const adminFlatValues = adminValues.flat();
+      if (adminNotificationMessage && adminNotificationMessage.trim() !== '') {
+        const adminValues = admins
+          .filter(admin => admin && admin.id) // Filtrer les admins valides
+          .map(admin => [
+            'decalage_request',
+            idFicheNum,
+            adminNotificationMessage.trim(),
+            admin.id,
+            now,
+            0,
+            metadata
+          ]);
+        
+        if (adminValues.length > 0) {
+          const adminPlaceholders = adminValues.map(() => '(?, ?, ?, ?, ?, 0, ?)').join(', ');
+          const adminFlatValues = adminValues.flat();
 
-      await query(
-        `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-         VALUES ${adminPlaceholders}`,
-        adminFlatValues
-      ).catch(err => {
-        console.error('Erreur lors de la création des notifications admin:', err);
-      });
+          await query(
+            `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
+             VALUES ${adminPlaceholders}`,
+            adminFlatValues
+          ).catch(err => {
+            console.error('Erreur lors de la création des notifications admin:', err);
+          });
+        }
+      }
     }
 
     res.status(201).json({
@@ -609,11 +617,11 @@ router.put('/:id/statut', authenticate, async (req, res) => {
         });
 
         // Créer la notification pour l'expediteur (commercial)
-        if (decalage.expediteur && notificationMessage) {
+        if (decalage.expediteur && notificationMessage && notificationMessage.trim() !== '') {
           await query(
             `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
              VALUES (?, ?, ?, ?, ?, 0, ?)`,
-            ['decalage_response', decalage.id_fiche, notificationMessage, decalage.expediteur, now, notificationMetadata]
+            ['decalage_response', decalage.id_fiche, notificationMessage.trim(), decalage.expediteur, now, notificationMetadata]
           ).catch(err => {
             console.error('Erreur lors de la création de la notification pour le commercial:', err);
           });

@@ -2154,20 +2154,22 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
         });
         
         // Notification pour l'agent
-        await query(
-          `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-           VALUES (?, ?, ?, ?, ?, 0, ?)`,
-          ['demande_insertion_acceptee', insertId, messageAcceptation, demande.id_agent, now, metadataAcceptation]
-        ).catch(err => {
-          console.error('Erreur lors de la création de la notification pour l\'agent:', err);
-        });
-        
-        // Notification pour le superviseur (si existe)
-        if (agentInfo?.chef_equipe) {
+        if (demande.id_agent && messageAcceptation && messageAcceptation.trim() !== '') {
           await query(
             `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
              VALUES (?, ?, ?, ?, ?, 0, ?)`,
-            ['demande_insertion_acceptee', insertId, messageAcceptation, agentInfo.chef_equipe, now, metadataAcceptation]
+            ['demande_insertion_acceptee', insertId, messageAcceptation.trim(), demande.id_agent, now, metadataAcceptation]
+          ).catch(err => {
+            console.error('Erreur lors de la création de la notification pour l\'agent:', err);
+          });
+        }
+        
+        // Notification pour le superviseur (si existe)
+        if (agentInfo?.chef_equipe && messageAcceptation && messageAcceptation.trim() !== '') {
+          await query(
+            `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
+             VALUES (?, ?, ?, ?, ?, 0, ?)`,
+            ['demande_insertion_acceptee', insertId, messageAcceptation.trim(), agentInfo.chef_equipe, now, metadataAcceptation]
           ).catch(err => {
             console.error('Erreur lors de la création de la notification pour le superviseur:', err);
           });
@@ -2190,20 +2192,22 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
       });
       
       // Notification pour l'agent
-      await query(
-        `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-         VALUES (?, ?, ?, ?, ?, 0, ?)`,
-        ['demande_insertion_refusee', demande.id_fiche_existante, messageRefus, demande.id_agent, now, metadataRefus]
-      ).catch(err => {
-        console.error('Erreur lors de la création de la notification pour l\'agent:', err);
-      });
-      
-      // Notification pour le superviseur (si existe)
-      if (agentInfo?.chef_equipe) {
+      if (demande.id_agent && messageRefus && messageRefus.trim() !== '') {
         await query(
           `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
            VALUES (?, ?, ?, ?, ?, 0, ?)`,
-          ['demande_insertion_refusee', demande.id_fiche_existante, messageRefus, agentInfo.chef_equipe, now, metadataRefus]
+          ['demande_insertion_refusee', demande.id_fiche_existante, messageRefus.trim(), demande.id_agent, now, metadataRefus]
+        ).catch(err => {
+          console.error('Erreur lors de la création de la notification pour l\'agent:', err);
+        });
+      }
+      
+      // Notification pour le superviseur (si existe)
+      if (agentInfo?.chef_equipe && messageRefus && messageRefus.trim() !== '') {
+        await query(
+          `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
+           VALUES (?, ?, ?, ?, ?, 0, ?)`,
+          ['demande_insertion_refusee', demande.id_fiche_existante, messageRefus.trim(), agentInfo.chef_equipe, now, metadataRefus]
         ).catch(err => {
           console.error('Erreur lors de la création de la notification pour le superviseur:', err);
         });

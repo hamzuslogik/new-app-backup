@@ -314,10 +314,18 @@ router.post('/', authenticate, async (req, res) => {
   try {
     const { type, id_fiche, fiche_hash, message, destination, date_rdv_time, metadata } = req.body;
 
-    if (!type || !message) {
+    // Validation stricte
+    if (!type || typeof type !== 'string' || type.trim() === '') {
       return res.status(400).json({
         success: false,
-        message: 'Type et message requis'
+        message: 'Type de notification requis et non vide'
+      });
+    }
+
+    if (!message || typeof message !== 'string' || message.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Message de notification requis et non vide'
       });
     }
 
@@ -336,10 +344,27 @@ router.post('/', authenticate, async (req, res) => {
     // Si destination est spécifiée, créer pour cet utilisateur
     // Sinon, créer pour tous les admins (fonction 1, 2, 7)
     if (destination) {
+      // Valider que le destinataire existe
+      const destId = typeof destination === 'string' ? parseInt(destination, 10) : destination;
+      if (isNaN(destId) || destId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Destinataire invalide'
+        });
+      }
+      
+      const userExists = await queryOne('SELECT id FROM utilisateurs WHERE id = ? AND etat > 0', [destId]);
+      if (!userExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'Destinataire non trouvé ou inactif'
+        });
+      }
+      
       const result = await query(
         `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
          VALUES (?, ?, ?, ?, ?, 0, ?)`,
-        [type, ficheId || null, message, destination, now, metadataStr]
+        [type.trim(), ficheId || null, message.trim(), destId, now, metadataStr]
       );
 
       res.status(201).json({
