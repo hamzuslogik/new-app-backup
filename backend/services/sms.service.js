@@ -220,51 +220,116 @@ async function sendViaManivox(provider, tel, message, from) {
 
 /**
  * Envoie un SMS via Octopush
+ * Documentation: https://dev.octopush.com/api-sms-documentation/index-des-urls/
+ * Endpoint: POST https://api.octopush.com/v1/public/sms-campaign/send
  */
 async function sendViaOctopush(provider, tel, message, from) {
   try {
-    // Octopush API v1 - Format standard
-    const apiUrl = provider.api_url || 'https://api.octopush.com/v1/public/sms-campaign/send';
+    console.log('[SMS Service] Envoi via Octopush:', {
+      tel: tel,
+      from: from,
+      messageLength: message.length,
+      login: provider.login ? '***' : 'non défini'
+    });
+
+    // URL de base selon la documentation officielle
+    const baseUrl = 'https://api.octopush.com/v1/public';
+    const endpoint = '/sms-campaign/send';
+    const apiUrl = provider.api_url || `${baseUrl}${endpoint}`;
     
-    // Construire l'URL avec les paramètres d'authentification
     const login = provider.login || '';
     const apiKey = provider.api_key || '';
     
-    // Octopush utilise généralement l'authentification via paramètres URL ou headers
-    const response = await axios.post(apiUrl, {
+    if (!login || !apiKey) {
+      throw new Error('Login et API key Octopush requis');
+    }
+
+    // Selon la documentation Octopush, l'authentification se fait via les paramètres de la requête
+    // et les données du SMS sont dans le body
+    // Format attendu selon la doc: user_login et api_key en paramètres, données SMS dans le body
+    const requestBody = {
       text: message,
       recipients: [tel],
-      type: 'sms_premium',
-      sender: from
-    }, {
+      type: 'sms_premium', // ou 'sms_low_cost' selon le type souhaité
+      sender: from || 'RAPPEL'
+    };
+
+    console.log('[SMS Service] Requête Octopush:', {
+      url: apiUrl,
+      body: { ...requestBody, text: requestBody.text.substring(0, 50) + '...' },
+      hasAuth: !!(login && apiKey)
+    });
+
+    const response = await axios.post(apiUrl, requestBody, {
       params: {
         user_login: login,
         api_key: apiKey
       },
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timeout: 30000 // 30 secondes de timeout
     });
 
+    console.log('[SMS Service] Réponse Octopush:', JSON.stringify(response.data, null, 2));
+
+    // Vérifier le statut de la réponse
+    const responseData = response.data || {};
     const isSuccess = response.status === 200 || response.status === 201;
     
+    // Octopush retourne généralement un code de statut dans la réponse
+    // Vérifier les codes de retour possibles selon la documentation
+    const statusCode = responseData.code || responseData.status_code;
+    const isSuccessByCode = statusCode === 200 || statusCode === 201 || (statusCode >= 200 && statusCode < 300);
+    
+    const finalSuccess = isSuccess && (isSuccessByCode !== false);
+
     return {
-      success: isSuccess,
-      message: isSuccess ? 'SMS envoyé avec succès' : (response.data?.error || 'Erreur inconnue'),
-      data: response.data,
-      provider: provider.nom
+      success: finalSuccess,
+      message: finalSuccess ? 'SMS envoyé avec succès' : (responseData.message || responseData.error || 'Erreur inconnue'),
+      data: responseData,
+      provider: provider.nom,
+      error: finalSuccess ? null : (responseData.error || responseData.message || 'Erreur inconnue'),
+      statusCode: response.status,
+      apiStatusCode: statusCode
     };
   } catch (error) {
-    console.error('[SMS Service] Erreur Octopush:', error);
-    const errorMessage = error.response?.data?.error || 
-                        error.response?.data?.message || 
-                        error.message || 
-                        'Erreur lors de l\'envoi via Octopush';
+    console.error('[SMS Service] Erreur Octopush complète:', {
+      message: error.message,
+      code: error.code,
+      response: error.response?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText
+    });
+
+    let errorMessage = 'Erreur lors de l\'envoi via Octopush';
+    
+    if (error.response) {
+      // Erreur HTTP avec réponse
+      const responseData = error.response.data;
+      if (responseData && typeof responseData === 'object') {
+        errorMessage = responseData.error || responseData.message || `Erreur HTTP ${error.response.status}: ${error.response.statusText}`;
+      } else if (responseData) {
+        errorMessage = `Erreur HTTP ${error.response.status}: ${responseData}`;
+      } else {
+        errorMessage = `Erreur HTTP ${error.response.status}: ${error.response.statusText}`;
+      }
+    } else if (error.request) {
+      // Requête envoyée mais pas de réponse
+      errorMessage = 'Pas de réponse du serveur Octopush. Vérifiez votre connexion internet.';
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Timeout: Le serveur Octopush n\'a pas répondu dans les temps.';
+    } else {
+      errorMessage = error.message || 'Erreur inconnue lors de l\'envoi';
+    }
     
     return {
       success: false,
       message: errorMessage,
       error: error.message,
+      errorCode: error.code,
+      statusCode: error.response?.status,
       provider: provider.nom,
       details: error.response?.data
     };
