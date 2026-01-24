@@ -64,6 +64,37 @@ async function getDefaultSMSProvider() {
       };
     }
 
+    // Log pour déboguer les données récupérées
+    console.log('[SMS Service] Fournisseur récupéré de la base:', {
+      id: provider.id,
+      nom: provider.nom,
+      hasLogin: !!provider.login,
+      hasApiKey: !!provider.api_key,
+      hasApiUrl: !!provider.api_url,
+      loginLength: provider.login ? provider.login.length : 0,
+      apiKeyLength: provider.api_key ? provider.api_key.length : 0
+    });
+
+    // Vérifier que le login et l'api_key sont présents
+    if (!provider.login || !provider.api_key) {
+      console.warn('[SMS Service] Fournisseur trouvé mais login ou api_key manquant:', {
+        id: provider.id,
+        nom: provider.nom,
+        login: provider.login || 'MANQUANT',
+        api_key: provider.api_key ? 'PRÉSENT' : 'MANQUANT'
+      });
+      console.log('[SMS Service] Utilisation de Manivox par défaut car credentials manquants');
+      // Fallback vers Manivox avec les identifiants par défaut
+      return {
+        id: 0,
+        nom: 'Manivox',
+        login: 'provoicecc@gmail.com',
+        api_key: 'x))MTU-e5Ma62y6',
+        api_url: 'https://www.manivox.com/api_v2/json_api.php',
+        actif: 1
+      };
+    }
+
     return provider;
   } catch (error) {
     console.error('[SMS Service] Erreur lors de la récupération du fournisseur SMS:', error);
