@@ -195,6 +195,17 @@ async function executeWorkflowActions(workflowId, eventData, triggerType) {
         const result = await executeAction(action.type, config, eventData);
         console.log(`[WORKFLOW] ✅ Action ID=${action.id} exécutée avec succès:`, JSON.stringify(result, null, 2));
         
+        // Vérifier que le résultat est valide (surtout pour les notifications)
+        if (action.type === 'notification' && result) {
+          if (result.count && result.count > 0) {
+            console.log(`[WORKFLOW] ✅ ${result.count} notification(s) créée(s) avec succès`);
+          } else if (result.notification_id) {
+            console.log(`[WORKFLOW] ✅ Notification ID=${result.notification_id} créée avec succès`);
+          } else {
+            console.warn(`[WORKFLOW] ⚠️  Résultat de notification sans ID ni count:`, result);
+          }
+        }
+        
         await query(`
           INSERT INTO workflow_action_results 
           (id_execution, id_action, status, result_data, executed_at)
@@ -204,6 +215,7 @@ async function executeWorkflowActions(workflowId, eventData, triggerType) {
         console.error(`[WORKFLOW] ❌ Erreur lors de l'exécution de l'action ID=${action.id}:`, error);
         console.error(`[WORKFLOW] Message d'erreur:`, error.message);
         console.error(`[WORKFLOW] Stack trace:`, error.stack);
+        console.error(`[WORKFLOW] ⚠️  L'action a échoué - AUCUNE notification NULL ne devrait être créée`);
         
         await query(`
           INSERT INTO workflow_action_results 
@@ -211,6 +223,7 @@ async function executeWorkflowActions(workflowId, eventData, triggerType) {
           VALUES (?, ?, 'failed', ?, ?)
         `, [executionId, action.id, error.message, actionStart.toISOString().slice(0, 19).replace('T', ' ')]);
         // Continuer avec les autres actions même en cas d'erreur
+        // IMPORTANT: Si l'action échoue, aucune notification ne devrait être créée
       }
     }
 
@@ -301,8 +314,60 @@ async function executeNotificationAction(config, eventData) {
   
   // Déterminer le destinataire
   let destId = destination;
-  console.log(`[WORKFLOW] Destination initiale:`, destId);
+  console.log(`[WORKFLOW] Destination initiale:`, destId, `(type: ${typeof destId})`);
   
+  // Gérer le cas "Tous les admins" (destination vide, null, ou chaîne vide)
+  if (!destination || destination === '' || destination === 'null' || destination === null) {
+    console.log(`[WORKFLOW] Destination vide/null - Création pour tous les admins`);
+    const admins = await query('SELECT id FROM utilisateurs WHERE fonction IN (1, 2, 7) AND etat > 0');
+    
+    if (!admins || admins.length === 0) {
+      console.error(`[WORKFLOW] ❌ Aucun administrateur trouvé`);
+      throw new Error('Aucun administrateur actif trouvé pour la notification');
+    }
+    
+    console.log(`[WORKFLOW] ${admins.length} administrateur(s) trouvé(s)`);
+    
+    // Créer une notification pour chaque admin
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const notificationValues = admins
+      .filter(admin => admin && admin.id) // Filtrer les admins valides
+      .map(admin => [
+        type.trim(),
+        eventData.fiche?.id || null,
+        processedMessage.trim(),
+        admin.id,
+        now,
+        0
+      ]);
+    
+    if (notificationValues.length > 0) {
+      const placeholders = notificationValues.map(() => '(?, ?, ?, ?, ?, 0)').join(', ');
+      const flatValues = notificationValues.flat();
+      
+      console.log(`[WORKFLOW] Insertion de ${notificationValues.length} notification(s) pour les admins...`);
+      console.log(`[WORKFLOW] Valeurs à insérer:`, notificationValues.map(v => ({
+        type: v[0],
+        id_fiche: v[1],
+        message: v[2]?.substring(0, 50) + '...',
+        destination: v[3],
+        date: v[4]
+      })));
+      
+      const insertResult = await query(`
+        INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
+        VALUES ${placeholders}
+      `, flatValues);
+      
+      console.log(`[WORKFLOW] ✅ ${notificationValues.length} notification(s) créée(s) avec succès`);
+      return { success: true, message: `${notificationValues.length} notification(s) créée(s)`, count: notificationValues.length };
+    } else {
+      console.error(`[WORKFLOW] ❌ Aucune valeur valide à insérer`);
+      throw new Error('Aucune notification valide à créer');
+    }
+  }
+  
+  // Gérer les destinations spécifiques
   if (destination === 'id_confirmateur' && eventData.fiche?.id_confirmateur) {
     destId = eventData.fiche.id_confirmateur;
     console.log(`[WORKFLOW] Destination résolue depuis id_confirmateur:`, destId);
@@ -315,8 +380,8 @@ async function executeNotificationAction(config, eventData) {
   }
 
   // Validation stricte du destinataire
-  if (!destId || (typeof destId !== 'number' && typeof destId !== 'string')) {
-    console.error(`[WORKFLOW] ❌ Destinataire invalide:`, destId);
+  if (!destId || destId === '' || destId === 'null' || destId === null || (typeof destId !== 'number' && typeof destId !== 'string')) {
+    console.error(`[WORKFLOW] ❌ Destinataire invalide:`, destId, `(type: ${typeof destId})`);
     throw new Error('Destinataire non trouvé ou invalide pour la notification');
   }
   
@@ -339,19 +404,45 @@ async function executeNotificationAction(config, eventData) {
   console.log(`[WORKFLOW] ✅ Utilisateur ID=${destId} trouvé et actif`);
 
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  console.log(`[WORKFLOW] Insertion de la notification dans la base de données...`);
-  console.log(`[WORKFLOW] Données:`, {
-    type: type.trim(),
-    id_fiche: eventData.fiche?.id || null,
-    message: processedMessage.trim(),
-    destination: destId,
+  
+  // Validation finale AVANT insertion pour éviter les notifications NULL
+  const finalType = type.trim();
+  const finalMessage = processedMessage.trim();
+  const finalDestId = destId;
+  const finalFicheId = eventData.fiche?.id || null;
+  
+  console.log(`[WORKFLOW] Validation finale avant insertion...`);
+  console.log(`[WORKFLOW] Type:`, finalType, `(valide: ${finalType && finalType !== ''})`);
+  console.log(`[WORKFLOW] Message:`, finalMessage.substring(0, 50) + '...', `(valide: ${finalMessage && finalMessage !== ''})`);
+  console.log(`[WORKFLOW] Destination:`, finalDestId, `(valide: ${finalDestId && finalDestId > 0})`);
+  console.log(`[WORKFLOW] Fiche ID:`, finalFicheId);
+  
+  if (!finalType || finalType === '') {
+    console.error(`[WORKFLOW] ❌ Type vide avant insertion - ABANDON`);
+    throw new Error('Type de notification vide - insertion annulée');
+  }
+  if (!finalMessage || finalMessage === '') {
+    console.error(`[WORKFLOW] ❌ Message vide avant insertion - ABANDON`);
+    throw new Error('Message de notification vide - insertion annulée');
+  }
+  if (!finalDestId || finalDestId <= 0 || isNaN(finalDestId)) {
+    console.error(`[WORKFLOW] ❌ Destination invalide avant insertion - ABANDON:`, finalDestId);
+    throw new Error(`Destination invalide (${finalDestId}) - insertion annulée`);
+  }
+  
+  console.log(`[WORKFLOW] ✅ Toutes les validations passées - Insertion de la notification...`);
+  console.log(`[WORKFLOW] Données finales:`, {
+    type: finalType,
+    id_fiche: finalFicheId,
+    message: finalMessage.substring(0, 50) + '...',
+    destination: finalDestId,
     date_creation: now
   });
   
   const insertResult = await query(`
     INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
     VALUES (?, ?, ?, ?, ?, 0)
-  `, [type.trim(), eventData.fiche?.id || null, processedMessage.trim(), destId, now]);
+  `, [finalType, finalFicheId, finalMessage, finalDestId, now]);
 
   console.log(`[WORKFLOW] ✅ Notification créée avec succès - ID=${insertResult.insertId}`);
   console.log(`[WORKFLOW] ========== executeNotificationAction FIN ==========`);
