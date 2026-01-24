@@ -4160,10 +4160,26 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
     const { id } = req.params;
     const { tel, message, id_confirmateur } = req.body;
     
-    if (!tel || !message || !id_confirmateur) {
+    // Validation des paramètres
+    if (!tel || typeof tel !== 'string' || tel.trim() === '') {
       return res.status(400).json({ 
         success: false, 
-        message: 'Le téléphone, le message et le confirmateur sont requis' 
+        message: 'Le numéro de téléphone est requis' 
+      });
+    }
+    
+    if (!message || typeof message !== 'string' || message.trim() === '') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le message est requis' 
+      });
+    }
+    
+    const confirmateurId = parseInt(id_confirmateur, 10);
+    if (!id_confirmateur || isNaN(confirmateurId) || confirmateurId <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Un confirmateur valide est requis' 
       });
     }
 
@@ -4200,7 +4216,7 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
       await query(
         `INSERT INTO sms (id_fiche, id_confirmateur, tel, message, statut, date_modif_time)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, id_confirmateur, tel, message, smsResult.message || 'successful', dateModif]
+        [id, confirmateurId, tel, message.trim(), smsResult.message || 'successful', dateModif]
       );
 
       // Enregistrer dans modifica
@@ -4210,7 +4226,7 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
       await query(
         `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, date_modif_time)
          VALUES (?, ?, 'SMS', ?, ?, ?)`,
-        [id, req.user.id, lastSms?.message || '', message, dateModif]
+        [id, req.user.id, lastSms?.message || '', message.trim(), dateModif]
       );
 
       res.json({

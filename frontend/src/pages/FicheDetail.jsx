@@ -5354,23 +5354,28 @@ Cordialement.`
   };
 
   const handleSendSMS = () => {
-    if (!selectedTel) {
+    if (!selectedTel || selectedTel.trim() === '') {
       alert('Veuillez sélectionner un numéro de téléphone');
       return;
     }
-    if (!idConfirmateur) {
+    if (!idConfirmateur || idConfirmateur.trim() === '') {
       alert('Veuillez sélectionner un confirmateur');
       return;
     }
+    const confirmateurId = parseInt(idConfirmateur, 10);
+    if (isNaN(confirmateurId) || confirmateurId <= 0) {
+      alert('Veuillez sélectionner un confirmateur valide');
+      return;
+    }
     const message = selectedCategory === '0' ? customMessage : predefinedMessages[selectedCategory];
-    if (!message) {
+    if (!message || message.trim() === '') {
       alert('Veuillez saisir un message');
       return;
     }
     sendSMSMutation.mutate({
-      tel: selectedTel,
-      message: message,
-      id_confirmateur: parseInt(idConfirmateur)
+      tel: selectedTel.trim(),
+      message: message.trim(),
+      id_confirmateur: confirmateurId
     });
   };
 
