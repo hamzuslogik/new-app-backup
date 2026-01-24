@@ -214,17 +214,35 @@ async function sendViaManivox(provider, tel, message, from) {
     // Manivox nécessite api-key et api-login dans les headers
     // Note: provider.api_key (avec underscore) correspond au champ api_key de la table fournisseurs_sms
     // Dans les headers HTTP, on utilise 'api-key' (avec tiret) selon la convention HTTP
+    
+    // ========== LOGS TEMPORAIRES POUR DEBUG ==========
+    const requestParams = {
+      action: 'send_sms',
+      from: from,
+      to: manivoxTel,
+      text: message
+    };
+    
+    const requestHeaders = {
+      'api-key': provider.api_key,
+      'api-login': login
+    };
+    
+    const fullUrl = `https://www.manivox.com/api_v2/json_api.php?action=${encodeURIComponent(requestParams.action)}&from=${encodeURIComponent(requestParams.from)}&to=${encodeURIComponent(requestParams.to)}&text=${encodeURIComponent(requestParams.text)}`;
+    
+    console.log('========== REQUÊTE MANIVOX (TEMPORAIRE) ==========');
+    console.log('URL complète:', fullUrl);
+    console.log('Method: POST');
+    console.log('Headers:', JSON.stringify(requestHeaders, null, 2));
+    console.log('Params (query string):', JSON.stringify(requestParams, null, 2));
+    console.log('api-key (valeur):', provider.api_key);
+    console.log('api-login (valeur):', login);
+    console.log('==================================================');
+    // ========== FIN LOGS TEMPORAIRES ==========
+    
     const response = await axios.post('https://www.manivox.com/api_v2/json_api.php', null, {
-      params: {
-        action: 'send_sms',
-        from: from,
-        to: manivoxTel, // Utiliser le format 0033 pour Manivox
-        text: message
-      },
-      headers: {
-        'api-key': provider.api_key, // api_key (underscore) de la base -> 'api-key' (tiret) dans le header
-        'api-login': login
-      },
+      params: requestParams,
+      headers: requestHeaders,
       timeout: 30000 // 30 secondes de timeout
     });
 
