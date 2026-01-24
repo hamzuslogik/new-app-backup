@@ -122,7 +122,7 @@ async function executeWorkflowActions(workflowId, eventData, triggerType) {
 
   // Créer l'enregistrement d'exécution
   console.log(`[WORKFLOW] Création de l'enregistrement d'exécution...`);
-  const [executionResult] = await query(`
+  const executionResult = await query(`
     INSERT INTO workflow_executions 
     (id_workflow, id_fiche, id_user, trigger_type, status, trigger_data, started_at)
     VALUES (?, ?, ?, ?, 'running', ?, ?)
@@ -134,6 +134,15 @@ async function executeWorkflowActions(workflowId, eventData, triggerType) {
     JSON.stringify(eventData),
     now
   ]);
+  
+  console.log(`[WORKFLOW] Résultat de l'INSERT:`, JSON.stringify(executionResult, null, 2));
+  
+  if (!executionResult || !executionResult.insertId) {
+    console.error(`[WORKFLOW] ❌ Erreur: insertId non trouvé dans le résultat`);
+    console.error(`[WORKFLOW] Structure du résultat:`, executionResult);
+    throw new Error('Impossible de récupérer l\'ID d\'exécution');
+  }
+  
   const executionId = executionResult.insertId;
   console.log(`[WORKFLOW] ✅ Enregistrement d'exécution créé - ID=${executionId}`);
 
