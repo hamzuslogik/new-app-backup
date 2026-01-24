@@ -688,25 +688,60 @@ router.get('/', authenticate, async (req, res) => {
       
       // Appliquer le filtre seulement si on a au moins une date
       if (dateDebut || dateFin) {
-        // S'assurer que la colonne de date n'est pas NULL ou vide
-        whereConditions.push(`fiche.${date_champ} IS NOT NULL`);
-        whereConditions.push(`fiche.${date_champ} != ''`);
-        
         const timeStart = time_debut && String(time_debut).trim() !== '' ? time_debut : '00:00:00';
         const timeEnd = time_fin && String(time_fin).trim() !== '' ? time_fin : '23:59:59';
         
-        if (dateDebut && dateFin) {
-          // Plage de dates complète
-          whereConditions.push(`fiche.${date_champ} >= ? AND fiche.${date_champ} <= ?`);
-          params.push(`${dateDebut} ${timeStart}`, `${dateFin} ${timeEnd}`);
-        } else if (dateDebut) {
-          // Seulement date de début
-          whereConditions.push(`fiche.${date_champ} >= ?`);
-          params.push(`${dateDebut} ${timeStart}`);
-        } else if (dateFin) {
-          // Seulement date de fin
-          whereConditions.push(`fiche.${date_champ} <= ?`);
-          params.push(`${dateFin} ${timeEnd}`);
+        // Gérer date_confirmation qui est un bigint (timestamp Unix)
+        if (date_champ === 'date_confirmation') {
+          // Convertir les dates en timestamps Unix
+          const startTimestamp = Math.floor(new Date(`${dateDebut || dateFin} ${timeStart}`).getTime() / 1000);
+          const endTimestamp = Math.floor(new Date(`${dateFin || dateDebut} ${timeEnd}`).getTime() / 1000);
+          
+          // Vérifier que l'état a changé vers 7 (CONFIRMER) dans l'historique pour la date sélectionnée
+          whereConditions.push(`EXISTS (
+            SELECT 1 FROM fiches_histo h 
+            WHERE h.id_fiche = fiche.id 
+            AND h.id_etat = 7 
+            AND DATE(h.date_creation) = ?
+          )`);
+          params.push(dateDebut || dateFin);
+          
+          // Filtrer par date_confirmation (bigint)
+          if (dateDebut && dateFin) {
+            whereConditions.push(`(fiche.date_confirmation IS NOT NULL AND fiche.date_confirmation >= ? AND fiche.date_confirmation <= ?)`);
+            params.push(startTimestamp, endTimestamp);
+          } else if (dateDebut) {
+            whereConditions.push(`(fiche.date_confirmation IS NOT NULL AND fiche.date_confirmation >= ?)`);
+            params.push(startTimestamp);
+          } else if (dateFin) {
+            whereConditions.push(`(fiche.date_confirmation IS NOT NULL AND fiche.date_confirmation <= ?)`);
+            params.push(endTimestamp);
+          }
+          
+          // Si date_confirmation est NULL, utiliser date_modif_time comme fallback
+          whereConditions.push(`(
+            fiche.date_confirmation IS NOT NULL 
+            OR (fiche.date_confirmation IS NULL AND fiche.date_modif_time IS NOT NULL AND fiche.date_modif_time != '')
+          )`);
+        } else {
+          // Pour les autres champs de date (datetime)
+          // S'assurer que la colonne de date n'est pas NULL ou vide
+          whereConditions.push(`fiche.${date_champ} IS NOT NULL`);
+          whereConditions.push(`fiche.${date_champ} != ''`);
+          
+          if (dateDebut && dateFin) {
+            // Plage de dates complète
+            whereConditions.push(`fiche.${date_champ} >= ? AND fiche.${date_champ} <= ?`);
+            params.push(`${dateDebut} ${timeStart}`, `${dateFin} ${timeEnd}`);
+          } else if (dateDebut) {
+            // Seulement date de début
+            whereConditions.push(`fiche.${date_champ} >= ?`);
+            params.push(`${dateDebut} ${timeStart}`);
+          } else if (dateFin) {
+            // Seulement date de fin
+            whereConditions.push(`fiche.${date_champ} <= ?`);
+            params.push(`${dateFin} ${timeEnd}`);
+          }
         }
       }
     } else if (!isActiveSearch && !date_debut && !date_fin && !date_champ) {

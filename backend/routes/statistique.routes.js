@@ -558,14 +558,22 @@ router.get('/dashboard', authenticate, async (req, res) => {
     const todayStart = `${todayStr} 00:00:00`;
     const todayEnd = `${todayStr} 23:59:59`;
 
-    // 1. Nombre de RDV aujourd'hui confirmés (état CONFIRMER = 7) avec date_modif_time aujourd'hui
+    // 1. Nombre de RDV aujourd'hui confirmés (état CONFIRMER = 7) 
+    // Uniquement si l'état a changé vers 7 aujourd'hui (vérifier dans fiches_histo)
+    // ET si date_confirmation est aujourd'hui OU date_modif_time est aujourd'hui
     const rdvTodayConfirmed = await queryOne(`
-      SELECT COUNT(*) as count
-      FROM fiches
-      WHERE id_etat_final = 7
-      AND DATE(date_modif_time) = ?
-      AND (archive = 0 OR archive IS NULL)
-    `, [todayStr]);
+      SELECT COUNT(DISTINCT f.id) as count
+      FROM fiches f
+      INNER JOIN fiches_histo h ON f.id = h.id_fiche
+      WHERE f.id_etat_final = 7
+      AND h.id_etat = 7
+      AND DATE(h.date_creation) = ?
+      AND (
+        (f.date_confirmation IS NOT NULL AND DATE(FROM_UNIXTIME(f.date_confirmation)) = ?)
+        OR (f.date_confirmation IS NULL AND DATE(f.date_modif_time) = ?)
+      )
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [todayStr, todayStr, todayStr]);
 
     // 2. Nombre de RDV aujourd'hui annulés à reprogrammer (état ANNULER À REPROGRAMMER = 8) avec date_modif_time aujourd'hui
     const rdvTodayAnnuler = await queryOne(`
@@ -597,13 +605,19 @@ router.get('/dashboard', authenticate, async (req, res) => {
         COALESCE((
           SELECT COUNT(DISTINCT f.id)
           FROM fiches f
+          INNER JOIN fiches_histo h ON f.id = h.id_fiche
           WHERE (
             f.id_confirmateur = u.id 
             OR f.id_confirmateur_2 = u.id 
             OR f.id_confirmateur_3 = u.id
           )
           AND f.id_etat_final = 7
-          AND DATE(f.date_modif_time) = ?
+          AND h.id_etat = 7
+          AND DATE(h.date_creation) = ?
+          AND (
+            (f.date_confirmation IS NOT NULL AND DATE(FROM_UNIXTIME(f.date_confirmation)) = ?)
+            OR (f.date_confirmation IS NULL AND DATE(f.date_modif_time) = ?)
+          )
           AND (f.archive = 0 OR f.archive IS NULL)
         ), 0) as rdv_today,
         COALESCE((
@@ -626,7 +640,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
       AND (f.etat > 0 OR f.etat IS NULL)
       AND (c.etat > 0 OR c.etat IS NULL)
       ORDER BY rdv_today DESC, rdv_upcoming DESC, u.pseudo ASC
-    `, [todayStr, todayStr]);
+    `, [todayStr, todayStr, todayStr, todayStr]);
 
     res.json({
       success: true,

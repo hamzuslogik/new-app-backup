@@ -259,11 +259,12 @@ const Dashboard = () => {
       baseParams.include_archive = 1;
     }
     
-    // Fiches CONFIRMER (7) uniquement modifiées aujourd'hui
+    // Fiches CONFIRMER (7) uniquement confirmées aujourd'hui
+    // Utiliser date_confirmation pour filtrer, mais aussi vérifier que l'état a changé vers 7 aujourd'hui
     return {
       ...baseParams,
       id_etat_final: [7], // CONFIRMER uniquement
-      date_champ: 'date_modif_time',
+      date_champ: 'date_confirmation', // Utiliser date_confirmation au lieu de date_modif_time
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: timeStart,
@@ -719,7 +720,7 @@ const Dashboard = () => {
         const todayStr = `${year}-${month}-${day}`;
         
         // URL pour "confirmer de la journée"
-        const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_modif_time&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
+        const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_confirmation&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
         
         // URL pour "annuler à reprogrammer"
         const annulerUrl = `/dashboard?fiche_search=1&id_etat_final=8&date_champ=date_modif_time&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
@@ -1170,6 +1171,11 @@ const Dashboard = () => {
                     <th onClick={() => handleSort('Date RDV')} className="sortable-header">
                       Date RDV {getSortIcon('Date RDV')}
                     </th>
+                    {(filters.id_etat_final === 7 || (Array.isArray(filters.id_etat_final) && filters.id_etat_final.includes(7)) || (!filters.fiche_search && activeTab === 'confirmed')) ? (
+                      <th className="sortable-header">
+                        Date Confirmation
+                      </th>
+                    ) : null}
                     <th onClick={() => handleSort('État Final')} className="sortable-header">
                       État Final {getSortIcon('État Final')}
                     </th>
@@ -1208,6 +1214,20 @@ const Dashboard = () => {
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
                         <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_rdv_time)}</td>
+                        {(filters.id_etat_final === 7 || (Array.isArray(filters.id_etat_final) && filters.id_etat_final.includes(7)) || (!filters.fiche_search && activeTab === 'confirmed')) && (
+                          <td data-label="Date Confirmation:" style={{ textAlign: 'left', fontSize: '0.9em' }}>
+                            {fiche.date_confirmation ? (
+                              <>
+                                <div>{formatDate(new Date(fiche.date_confirmation * 1000).toISOString())}</div>
+                                <div style={{ color: '#666', fontSize: '0.85em' }}>
+                                  Modif: {formatDate(fiche.date_modif_time)}
+                                </div>
+                              </>
+                            ) : (
+                              <div style={{ color: '#666' }}>Modif: {formatDate(fiche.date_modif_time)}</div>
+                            )}
+                          </td>
+                        )}
                         <td data-label="État:">
                           <span 
                             className="etat-badge"
