@@ -28,10 +28,28 @@ async function getDefaultSMSProvider() {
       };
     }
 
-    // Récupérer le premier fournisseur actif
-    const provider = await queryOne(
-      'SELECT * FROM fournisseurs_sms WHERE actif = 1 ORDER BY id ASC LIMIT 1'
+    // Vérifier si la colonne 'actif' existe
+    const columnExists = await queryOne(
+      `SELECT COUNT(*) as count 
+       FROM information_schema.columns 
+       WHERE table_schema = DATABASE() 
+       AND table_name = 'fournisseurs_sms' 
+       AND column_name = 'actif'`
     );
+    
+    let provider;
+    if (columnExists && columnExists.count > 0) {
+      // Récupérer le premier fournisseur actif
+      provider = await queryOne(
+        'SELECT * FROM fournisseurs_sms WHERE actif = 1 ORDER BY id ASC LIMIT 1'
+      );
+    } else {
+      // Si la colonne actif n'existe pas, récupérer le premier fournisseur
+      console.log('[SMS Service] Colonne actif n\'existe pas - Récupération du premier fournisseur');
+      provider = await queryOne(
+        'SELECT * FROM fournisseurs_sms ORDER BY id ASC LIMIT 1'
+      );
+    }
 
     if (!provider) {
       console.log('[SMS Service] Aucun fournisseur SMS actif trouvé - Utilisation de Manivox par défaut');
