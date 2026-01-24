@@ -212,6 +212,8 @@ async function sendViaManivox(provider, tel, message, from) {
     }
 
     // Manivox nécessite api-key et api-login dans les headers
+    // Note: provider.api_key (avec underscore) correspond au champ api_key de la table fournisseurs_sms
+    // Dans les headers HTTP, on utilise 'api-key' (avec tiret) selon la convention HTTP
     const response = await axios.post('https://www.manivox.com/api_v2/json_api.php', null, {
       params: {
         action: 'send_sms',
@@ -220,7 +222,7 @@ async function sendViaManivox(provider, tel, message, from) {
         text: message
       },
       headers: {
-        'api-key': provider.api_key,
+        'api-key': provider.api_key, // api_key (underscore) de la base -> 'api-key' (tiret) dans le header
         'api-login': login
       },
       timeout: 30000 // 30 secondes de timeout
