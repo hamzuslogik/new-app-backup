@@ -48,42 +48,74 @@ const triggerWorkflowOnFicheUpdated = async (req, res, next) => {
   res.json = async function(data) {
     await originalJson(data);
     
+    console.log('[WORKFLOW] triggerWorkflowOnFicheUpdated - Début');
+    console.log('[WORKFLOW] Response data:', JSON.stringify(data, null, 2));
+    console.log('[WORKFLOW] Request params:', req.params);
+    console.log('[WORKFLOW] Request body:', JSON.stringify(req.body, null, 2));
+    
     if (data.success && req.params.id) {
       try {
         const ficheId = req.params.id;
+        console.log('[WORKFLOW] Fiche ID:', ficheId);
+        
         const { queryOne } = require('../config/database');
         const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [ficheId]);
         
         if (fiche) {
+          console.log('[WORKFLOW] Fiche trouvée:', { id: fiche.id, id_etat_final: fiche.id_etat_final });
+          
           // Vérifier si l'état a changé
           const oldEtat = req.body.id_etat_final || req.body.old_etat;
           const newEtat = fiche.id_etat_final;
           
+          console.log('[WORKFLOW] État - Ancien:', oldEtat, 'Nouveau:', newEtat);
+          
           if (oldEtat && newEtat && oldEtat !== newEtat) {
             // Déclencher workflow de changement d'état
+            console.log('[WORKFLOW] Déclenchement workflow: etat_changed');
             executeWorkflow('etat_changed', {
               fiche,
               user: req.user,
               old_etat: oldEtat,
               new_etat: newEtat
+            }).then(result => {
+              console.log('[WORKFLOW] Workflow etat_changed exécuté avec succès:', JSON.stringify(result, null, 2));
             }).catch(error => {
-              console.error('Erreur lors de l\'exécution des workflows (etat_changed):', error);
+              console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (etat_changed):', error);
+              console.error('[WORKFLOW] Stack trace:', error.stack);
             });
           } else {
             // Déclencher workflow de modification générale
+            console.log('[WORKFLOW] Déclenchement workflow: fiche_updated');
+            console.log('[WORKFLOW] Données de l\'événement:', {
+              fiche_id: fiche.id,
+              user_id: req.user?.id,
+              user_pseudo: req.user?.pseudo,
+              changes: Object.keys(req.body)
+            });
+            
             executeWorkflow('fiche_updated', {
               fiche,
               user: req.user,
               changes: req.body
+            }).then(result => {
+              console.log('[WORKFLOW] Workflow fiche_updated exécuté avec succès:', JSON.stringify(result, null, 2));
             }).catch(error => {
-              console.error('Erreur lors de l\'exécution des workflows (fiche_updated):', error);
+              console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (fiche_updated):', error);
+              console.error('[WORKFLOW] Stack trace:', error.stack);
             });
           }
+        } else {
+          console.log('[WORKFLOW] Fiche non trouvée pour ID:', ficheId);
         }
       } catch (error) {
-        console.error('Erreur lors du déclenchement des workflows:', error);
+        console.error('[WORKFLOW] Erreur lors du déclenchement des workflows:', error);
+        console.error('[WORKFLOW] Stack trace:', error.stack);
       }
+    } else {
+      console.log('[WORKFLOW] Conditions non remplies - success:', data.success, 'params.id:', req.params.id);
     }
+    console.log('[WORKFLOW] triggerWorkflowOnFicheUpdated - Fin');
   };
   
   next();

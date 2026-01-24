@@ -8,8 +8,18 @@ const { getDefaultSMSProvider, sendSMSViaProvider } = require('../sms.service');
  * @returns {Promise<Array>} Liste des workflows exécutés
  */
 async function executeWorkflow(triggerType, eventData) {
+  console.log('[WORKFLOW] ========== executeWorkflow DÉBUT ==========');
+  console.log('[WORKFLOW] Trigger type:', triggerType);
+  console.log('[WORKFLOW] Event data:', JSON.stringify({
+    fiche_id: eventData.fiche?.id,
+    user_id: eventData.user?.id,
+    user_pseudo: eventData.user?.pseudo,
+    changes: eventData.changes ? Object.keys(eventData.changes) : null
+  }, null, 2));
+  
   try {
     // Récupérer tous les workflows actifs qui ont ce type de trigger
+    console.log('[WORKFLOW] Recherche des workflows actifs pour trigger:', triggerType);
     const workflows = await query(`
       SELECT DISTINCT w.*
       FROM workflows w
@@ -19,43 +29,86 @@ async function executeWorkflow(triggerType, eventData) {
       ORDER BY w.priorite ASC
     `, [triggerType]);
 
+    console.log('[WORKFLOW] Nombre de workflows trouvés:', workflows.length);
+    if (workflows.length === 0) {
+      console.log('[WORKFLOW] ⚠️  AUCUN WORKFLOW ACTIF TROUVÉ pour le trigger:', triggerType);
+      console.log('[WORKFLOW] Vérifiez que:');
+      console.log('[WORKFLOW]   1. Un workflow existe avec actif = 1');
+      console.log('[WORKFLOW]   2. Le workflow a un trigger de type:', triggerType);
+      console.log('[WORKFLOW] ========== executeWorkflow FIN (aucun workflow) ==========');
+      return [];
+    }
+
+    workflows.forEach((w, index) => {
+      console.log(`[WORKFLOW] Workflow ${index + 1}: ID=${w.id}, Nom="${w.nom}", Priorité=${w.priorite}`);
+    });
+
     const executedWorkflows = [];
 
     for (const workflow of workflows) {
       try {
+        console.log(`[WORKFLOW] --- Traitement workflow ID=${workflow.id}, Nom="${workflow.nom}" ---`);
+        
         // Vérifier les conditions du trigger
         const triggers = await query(
           'SELECT * FROM workflow_triggers WHERE id_workflow = ? AND type = ?',
           [workflow.id, triggerType]
         );
 
+        console.log(`[WORKFLOW] Nombre de triggers trouvés pour ce workflow:`, triggers.length);
+        triggers.forEach((t, index) => {
+          console.log(`[WORKFLOW]   Trigger ${index + 1}: ID=${t.id}, Config=${t.config}, Conditions=${t.conditions}`);
+        });
+
         let shouldExecute = false;
         for (const trigger of triggers) {
           const conditions = trigger.conditions ? JSON.parse(trigger.conditions) : null;
-          if (evaluateConditions(conditions, eventData)) {
+          console.log(`[WORKFLOW] Évaluation des conditions pour trigger ID=${trigger.id}:`, JSON.stringify(conditions, null, 2));
+          
+          const conditionsResult = evaluateConditions(conditions, eventData);
+          console.log(`[WORKFLOW] Résultat de l'évaluation des conditions:`, conditionsResult);
+          
+          if (conditionsResult) {
             shouldExecute = true;
+            console.log(`[WORKFLOW] ✅ Conditions satisfaites - Le workflow sera exécuté`);
             break;
+          } else {
+            console.log(`[WORKFLOW] ❌ Conditions non satisfaites`);
           }
         }
 
         // Si pas de conditions, exécuter par défaut
-        if (triggers.length === 0 || shouldExecute) {
+        if (triggers.length === 0) {
+          console.log(`[WORKFLOW] ⚠️  Aucune condition - exécution par défaut`);
+          shouldExecute = true;
+        }
+
+        if (shouldExecute) {
+          console.log(`[WORKFLOW] 🚀 Exécution du workflow ID=${workflow.id}`);
           const executionId = await executeWorkflowActions(workflow.id, eventData, triggerType);
           executedWorkflows.push({
             workflow_id: workflow.id,
             workflow_nom: workflow.nom,
             execution_id: executionId
           });
+          console.log(`[WORKFLOW] ✅ Workflow ID=${workflow.id} exécuté avec succès, Execution ID=${executionId}`);
+        } else {
+          console.log(`[WORKFLOW] ⏭️  Workflow ID=${workflow.id} ignoré (conditions non satisfaites)`);
         }
       } catch (error) {
-        console.error(`Erreur lors de l'exécution du workflow ${workflow.id}:`, error);
+        console.error(`[WORKFLOW] ❌ Erreur lors de l'exécution du workflow ${workflow.id}:`, error);
+        console.error(`[WORKFLOW] Stack trace:`, error.stack);
         // Continuer avec les autres workflows
       }
     }
 
+    console.log(`[WORKFLOW] Nombre de workflows exécutés:`, executedWorkflows.length);
+    console.log('[WORKFLOW] ========== executeWorkflow FIN ==========');
     return executedWorkflows;
   } catch (error) {
-    console.error('Erreur dans executeWorkflow:', error);
+    console.error('[WORKFLOW] ❌ Erreur dans executeWorkflow:', error);
+    console.error('[WORKFLOW] Stack trace:', error.stack);
+    console.log('[WORKFLOW] ========== executeWorkflow FIN (erreur) ==========');
     return [];
   }
 }
@@ -64,9 +117,11 @@ async function executeWorkflow(triggerType, eventData) {
  * Exécute les actions d'un workflow
  */
 async function executeWorkflowActions(workflowId, eventData, triggerType) {
+  console.log(`[WORKFLOW] ========== executeWorkflowActions DÉBUT (Workflow ID=${workflowId}) ==========`);
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
   // Créer l'enregistrement d'exécution
+  console.log(`[WORKFLOW] Création de l'enregistrement d'exécution...`);
   const [executionResult] = await query(`
     INSERT INTO workflow_executions 
     (id_workflow, id_fiche, id_user, trigger_type, status, trigger_data, started_at)
@@ -80,22 +135,36 @@ async function executeWorkflowActions(workflowId, eventData, triggerType) {
     now
   ]);
   const executionId = executionResult.insertId;
+  console.log(`[WORKFLOW] ✅ Enregistrement d'exécution créé - ID=${executionId}`);
 
   try {
     // Récupérer les actions dans l'ordre
+    console.log(`[WORKFLOW] Récupération des actions pour workflow ID=${workflowId}...`);
     const actions = await query(`
       SELECT * FROM workflow_actions 
       WHERE id_workflow = ?
       ORDER BY ordre ASC, id ASC
     `, [workflowId]);
 
+    console.log(`[WORKFLOW] Nombre d'actions trouvées:`, actions.length);
+    if (actions.length === 0) {
+      console.log(`[WORKFLOW] ⚠️  AUCUNE ACTION TROUVÉE pour le workflow ID=${workflowId}`);
+    }
+
     // Exécuter les actions
-    for (const action of actions) {
+    for (let i = 0; i < actions.length; i++) {
+      const action = actions[i];
+      console.log(`[WORKFLOW] --- Action ${i + 1}/${actions.length}: ID=${action.id}, Type="${action.type}", Ordre=${action.ordre} ---`);
+      
       const config = action.config ? JSON.parse(action.config) : {};
       const conditions = action.conditions ? JSON.parse(action.conditions) : null;
 
+      console.log(`[WORKFLOW] Config de l'action:`, JSON.stringify(config, null, 2));
+      console.log(`[WORKFLOW] Conditions de l'action:`, JSON.stringify(conditions, null, 2));
+
       // Vérifier les conditions de l'action
       if (conditions && !evaluateConditions(conditions, eventData)) {
+        console.log(`[WORKFLOW] ⏭️  Action ID=${action.id} ignorée (conditions non satisfaites)`);
         await query(`
           INSERT INTO workflow_action_results 
           (id_execution, id_action, status, executed_at)
@@ -106,19 +175,27 @@ async function executeWorkflowActions(workflowId, eventData, triggerType) {
 
       // Attendre le délai si nécessaire
       if (action.delay_seconds > 0) {
+        console.log(`[WORKFLOW] ⏳ Attente de ${action.delay_seconds} secondes...`);
         await new Promise(resolve => setTimeout(resolve, action.delay_seconds * 1000));
       }
 
       // Exécuter l'action
       const actionStart = new Date();
+      console.log(`[WORKFLOW] 🚀 Exécution de l'action ID=${action.id}, Type="${action.type}"...`);
       try {
         const result = await executeAction(action.type, config, eventData);
+        console.log(`[WORKFLOW] ✅ Action ID=${action.id} exécutée avec succès:`, JSON.stringify(result, null, 2));
+        
         await query(`
           INSERT INTO workflow_action_results 
           (id_execution, id_action, status, result_data, executed_at)
           VALUES (?, ?, 'completed', ?, ?)
         `, [executionId, action.id, JSON.stringify(result), actionStart.toISOString().slice(0, 19).replace('T', ' ')]);
       } catch (error) {
+        console.error(`[WORKFLOW] ❌ Erreur lors de l'exécution de l'action ID=${action.id}:`, error);
+        console.error(`[WORKFLOW] Message d'erreur:`, error.message);
+        console.error(`[WORKFLOW] Stack trace:`, error.stack);
+        
         await query(`
           INSERT INTO workflow_action_results 
           (id_execution, id_action, status, error_message, executed_at)
@@ -129,14 +206,19 @@ async function executeWorkflowActions(workflowId, eventData, triggerType) {
     }
 
     // Marquer l'exécution comme terminée
+    console.log(`[WORKFLOW] ✅ Toutes les actions exécutées - Marquage de l'exécution comme terminée`);
     await query(`
       UPDATE workflow_executions 
       SET status = 'completed', completed_at = ?
       WHERE id = ?
     `, [now, executionId]);
 
+    console.log(`[WORKFLOW] ========== executeWorkflowActions FIN (Workflow ID=${workflowId}, Execution ID=${executionId}) ==========`);
     return executionId;
   } catch (error) {
+    console.error(`[WORKFLOW] ❌ Erreur fatale dans executeWorkflowActions:`, error);
+    console.error(`[WORKFLOW] Stack trace:`, error.stack);
+    
     // Marquer l'exécution comme échouée
     await query(`
       UPDATE workflow_executions 
@@ -176,61 +258,96 @@ async function executeAction(actionType, config, eventData) {
  * Action : Notification interne
  */
 async function executeNotificationAction(config, eventData) {
+  console.log(`[WORKFLOW] ========== executeNotificationAction DÉBUT ==========`);
+  console.log(`[WORKFLOW] Config reçue:`, JSON.stringify(config, null, 2));
+  
   const { query, queryOne } = require('../../config/database');
   const { type, message, destination } = config;
   
+  console.log(`[WORKFLOW] Type:`, type);
+  console.log(`[WORKFLOW] Message original:`, message);
+  console.log(`[WORKFLOW] Destination:`, destination);
+  
   // Validation des paramètres requis
   if (!type || typeof type !== 'string' || type.trim() === '') {
+    console.error(`[WORKFLOW] ❌ Type de notification manquant ou vide`);
     throw new Error('Type de notification requis et non vide');
   }
   
   if (!message || typeof message !== 'string' || message.trim() === '') {
+    console.error(`[WORKFLOW] ❌ Message de notification manquant ou vide`);
     throw new Error('Message de notification requis et non vide');
   }
   
   // Remplacer les variables dans le message
+  console.log(`[WORKFLOW] Remplacement des variables dans le message...`);
   const processedMessage = replaceVariables(message, eventData);
+  console.log(`[WORKFLOW] Message après remplacement:`, processedMessage);
   
   // Vérifier que le message final n'est pas vide
   if (!processedMessage || typeof processedMessage !== 'string' || processedMessage.trim() === '') {
+    console.error(`[WORKFLOW] ❌ Message vide après remplacement des variables`);
     throw new Error('Message de notification vide après remplacement des variables');
   }
   
   // Déterminer le destinataire
   let destId = destination;
+  console.log(`[WORKFLOW] Destination initiale:`, destId);
+  
   if (destination === 'id_confirmateur' && eventData.fiche?.id_confirmateur) {
     destId = eventData.fiche.id_confirmateur;
+    console.log(`[WORKFLOW] Destination résolue depuis id_confirmateur:`, destId);
   } else if (destination === 'id_agent' && eventData.fiche?.id_agent) {
     destId = eventData.fiche.id_agent;
+    console.log(`[WORKFLOW] Destination résolue depuis id_agent:`, destId);
   } else if (destination === 'id_commercial' && eventData.fiche?.id_commercial) {
     destId = eventData.fiche.id_commercial;
+    console.log(`[WORKFLOW] Destination résolue depuis id_commercial:`, destId);
   }
 
   // Validation stricte du destinataire
   if (!destId || (typeof destId !== 'number' && typeof destId !== 'string')) {
+    console.error(`[WORKFLOW] ❌ Destinataire invalide:`, destId);
     throw new Error('Destinataire non trouvé ou invalide pour la notification');
   }
   
   // Convertir en nombre si c'est une chaîne
   destId = typeof destId === 'string' ? parseInt(destId, 10) : destId;
+  console.log(`[WORKFLOW] Destinataire après conversion:`, destId, `(type: ${typeof destId})`);
   
   if (isNaN(destId) || destId <= 0) {
+    console.error(`[WORKFLOW] ❌ Destinataire invalide (NaN ou <= 0):`, destId);
     throw new Error(`Destinataire invalide (ID: ${destId})`);
   }
   
   // Vérifier que l'utilisateur destinataire existe
+  console.log(`[WORKFLOW] Vérification de l'existence de l'utilisateur ID=${destId}...`);
   const userExists = await queryOne('SELECT id FROM utilisateurs WHERE id = ? AND etat > 0', [destId]);
   if (!userExists) {
+    console.error(`[WORKFLOW] ❌ Utilisateur ID=${destId} non trouvé ou inactif`);
     throw new Error(`Utilisateur destinataire (ID: ${destId}) non trouvé ou inactif`);
   }
+  console.log(`[WORKFLOW] ✅ Utilisateur ID=${destId} trouvé et actif`);
 
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  await query(`
+  console.log(`[WORKFLOW] Insertion de la notification dans la base de données...`);
+  console.log(`[WORKFLOW] Données:`, {
+    type: type.trim(),
+    id_fiche: eventData.fiche?.id || null,
+    message: processedMessage.trim(),
+    destination: destId,
+    date_creation: now
+  });
+  
+  const insertResult = await query(`
     INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
     VALUES (?, ?, ?, ?, ?, 0)
   `, [type.trim(), eventData.fiche?.id || null, processedMessage.trim(), destId, now]);
 
-  return { success: true, message: 'Notification créée' };
+  console.log(`[WORKFLOW] ✅ Notification créée avec succès - ID=${insertResult.insertId}`);
+  console.log(`[WORKFLOW] ========== executeNotificationAction FIN ==========`);
+  
+  return { success: true, message: 'Notification créée', notification_id: insertResult.insertId };
 }
 
 /**
@@ -340,20 +457,37 @@ async function executeWebhookAction(config, eventData) {
  * Évalue les conditions
  */
 function evaluateConditions(conditions, eventData) {
+  console.log(`[WORKFLOW] evaluateConditions - Début`);
+  console.log(`[WORKFLOW] Conditions reçues:`, JSON.stringify(conditions, null, 2));
+  
   if (!conditions || !Array.isArray(conditions) || conditions.length === 0) {
+    console.log(`[WORKFLOW] ✅ Aucune condition - retourne true (toujours vrai)`);
     return true; // Pas de conditions = toujours vrai
   }
 
+  console.log(`[WORKFLOW] Nombre de conditions à évaluer:`, conditions.length);
+
   // Support pour conditions simples (AND logique)
-  for (const condition of conditions) {
+  for (let i = 0; i < conditions.length; i++) {
+    const condition = conditions[i];
     const { field, operator, value } = condition;
+    
+    console.log(`[WORKFLOW] Condition ${i + 1}/${conditions.length}:`, {
+      field,
+      operator,
+      value
+    });
     
     let fieldValue = getFieldValue(field, eventData);
     let compareValue = value;
 
+    console.log(`[WORKFLOW] Valeur du champ "${field}":`, fieldValue, `(type: ${typeof fieldValue})`);
+    console.log(`[WORKFLOW] Valeur de comparaison initiale:`, compareValue, `(type: ${typeof compareValue})`);
+
     // Remplacer les valeurs spéciales
     if (compareValue === 'NOW()') {
       compareValue = new Date();
+      console.log(`[WORKFLOW] Valeur NOW() convertie:`, compareValue);
     } else if (typeof compareValue === 'string' && compareValue.startsWith('NOW()')) {
       // Support pour NOW() + INTERVAL
       const match = compareValue.match(/NOW\(\)\s*([+-])\s*(\d+)\s*(HOUR|DAY|MINUTE)/i);
@@ -367,14 +501,22 @@ function evaluateConditions(conditions, eventData) {
         else if (unit === 'day') interval = amount * 24 * 60 * 60 * 1000;
         else if (unit === 'minute') interval = amount * 60 * 1000;
         compareValue = new Date(now.getTime() + (op === '+' ? interval : -interval));
+        console.log(`[WORKFLOW] Valeur NOW() + INTERVAL convertie:`, compareValue);
       }
     }
 
-    if (!evaluateCondition(fieldValue, operator, compareValue)) {
+    const conditionResult = evaluateCondition(fieldValue, operator, compareValue);
+    console.log(`[WORKFLOW] Résultat de la condition ${i + 1}:`, conditionResult);
+    
+    if (!conditionResult) {
+      console.log(`[WORKFLOW] ❌ Condition ${i + 1} échouée - retourne false`);
       return false;
+    } else {
+      console.log(`[WORKFLOW] ✅ Condition ${i + 1} satisfaite`);
     }
   }
 
+  console.log(`[WORKFLOW] ✅ Toutes les conditions satisfaites - retourne true`);
   return true;
 }
 
@@ -432,18 +574,40 @@ function evaluateCondition(fieldValue, operator, compareValue) {
  * Récupère la valeur d'un champ depuis les données de l'événement
  */
 function getFieldValue(field, eventData) {
+  console.log(`[WORKFLOW] getFieldValue - Champ demandé:`, field);
+  
   // Support pour notation pointée (ex: fiche.id_etat_final)
   const parts = field.split('.');
-  let value = eventData;
+  console.log(`[WORKFLOW] getFieldValue - Parties du champ:`, parts);
   
-  for (const part of parts) {
+  let value = eventData;
+  console.log(`[WORKFLOW] getFieldValue - Valeur initiale (eventData):`, {
+    has_fiche: !!eventData.fiche,
+    fiche_id: eventData.fiche?.id,
+    has_user: !!eventData.user,
+    user_id: eventData.user?.id,
+    has_changes: !!eventData.changes
+  });
+  
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    console.log(`[WORKFLOW] getFieldValue - Partie ${i + 1}/${parts.length}:`, part);
+    console.log(`[WORKFLOW] getFieldValue - Valeur actuelle:`, value, `(type: ${typeof value})`);
+    
     if (value && typeof value === 'object' && part in value) {
       value = value[part];
+      console.log(`[WORKFLOW] getFieldValue - Valeur après accès à "${part}":`, value, `(type: ${typeof value})`);
     } else {
+      console.log(`[WORKFLOW] getFieldValue - ❌ Impossible d'accéder à "${part}" - retourne null`);
+      console.log(`[WORKFLOW] getFieldValue - Valeur actuelle:`, value);
+      console.log(`[WORKFLOW] getFieldValue - Type de valeur:`, typeof value);
+      console.log(`[WORKFLOW] getFieldValue - Est un objet:`, value && typeof value === 'object');
+      console.log(`[WORKFLOW] getFieldValue - Contient la clé "${part}":`, value && typeof value === 'object' && part in value);
       return null;
     }
   }
   
+  console.log(`[WORKFLOW] getFieldValue - ✅ Valeur finale pour "${field}":`, value, `(type: ${typeof value})`);
   return value;
 }
 
