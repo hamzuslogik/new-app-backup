@@ -64,35 +64,47 @@ async function getDefaultSMSProvider() {
       };
     }
 
+    // Le login peut être dans 'login' ou 'auth_email' selon la structure de la table
+    const providerLogin = provider.login || provider.auth_email;
+    
     // Log pour déboguer les données récupérées
     console.log('[SMS Service] Fournisseur récupéré de la base:', {
       id: provider.id,
       nom: provider.nom,
-      hasLogin: !!provider.login,
+      hasLogin: !!providerLogin,
       hasApiKey: !!provider.api_key,
       hasApiUrl: !!provider.api_url,
-      loginLength: provider.login ? provider.login.length : 0,
+      loginField: provider.login ? 'login' : (provider.auth_email ? 'auth_email' : 'AUCUN'),
+      loginLength: providerLogin ? providerLogin.length : 0,
       apiKeyLength: provider.api_key ? provider.api_key.length : 0
     });
 
-    // Vérifier que le login et l'api_key sont présents
-    if (!provider.login || !provider.api_key) {
-      console.warn('[SMS Service] Fournisseur trouvé mais login ou api_key manquant:', {
+    // Vérifier que le login (login ou auth_email) et l'api_key sont présents
+    if (!providerLogin || !provider.api_key) {
+      console.warn('[SMS Service] Fournisseur trouvé mais login/auth_email ou api_key manquant:', {
         id: provider.id,
         nom: provider.nom,
-        login: provider.login || 'MANQUANT',
+        login: providerLogin || 'MANQUANT',
         api_key: provider.api_key ? 'PRÉSENT' : 'MANQUANT'
       });
       console.log('[SMS Service] Utilisation de Manivox par défaut car credentials manquants');
+      console.log('[SMS Service] ⚠️ ATTENTION: Mettez à jour la base de données pour ajouter auth_email au fournisseur Manivox');
+      console.log('[SMS Service] Exécutez: UPDATE fournisseurs_sms SET auth_email = \'provoicecc@gmail.com\' WHERE id = ?');
       // Fallback vers Manivox avec les identifiants par défaut
       return {
         id: 0,
         nom: 'Manivox',
         login: 'provoicecc@gmail.com',
-        api_key: 'x))MTU-e5Ma62y6',
-        api_url: 'https://www.manivox.com/api_v2/json_api.php',
+        auth_email: 'provoicecc@gmail.com',
+        api_key: provider.api_key || 'x))MTU-e5Ma62y6', // Utiliser l'api_key de la base si disponible
+        api_url: provider.api_url || 'https://www.manivox.com/api_v2/json_api.php',
         actif: 1
       };
+    }
+
+    // S'assurer que le provider a le champ login pour la compatibilité
+    if (!provider.login && provider.auth_email) {
+      provider.login = provider.auth_email;
     }
 
     return provider;
@@ -170,17 +182,22 @@ async function sendSMSViaProvider(provider, tel, message, from = 'RAPPEL') {
  */
 async function sendViaManivox(provider, tel, message, from) {
   try {
+    // Le login peut être dans 'login' ou 'auth_email'
+    const login = provider.login || provider.auth_email || '';
+    
     console.log('[SMS Service] Envoi via Manivox:', {
       tel: tel,
       from: from,
       messageLength: message.length,
-      login: provider.login ? '***' : 'non défini'
+      login: login ? '***' : 'non défini',
+      hasAuthEmail: !!provider.auth_email,
+      hasLogin: !!provider.login
     });
 
     const response = await axios.post('https://www.manivox.com/api_v2/json_api.php', null, {
       params: {
         action: 'send_sms',
-        auth_email: provider.login || '',
+        auth_email: login,
         auth_password: provider.api_key || '',
         from: from,
         to: tel,
@@ -277,11 +294,12 @@ async function sendViaOctopush(provider, tel, message, from) {
     const endpoint = '/multi-channel/send';
     const apiUrl = provider.api_url || `${baseUrl}${endpoint}`;
     
-    const login = provider.login || '';
+    // Le login peut être dans 'login' ou 'auth_email'
+    const login = provider.login || provider.auth_email || '';
     const apiKey = provider.api_key || '';
     
     if (!login || !apiKey) {
-      throw new Error('Login et API key Octopush requis');
+      throw new Error('Login (login ou auth_email) et API key Octopush requis');
     }
 
     // Format du payload selon la documentation officielle
