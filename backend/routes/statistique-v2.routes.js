@@ -9,7 +9,7 @@ const { query, queryOne } = require('../config/database');
 
 // GET /api/statistiques-v2/qualification-advanced
 // Métriques avancées pour l'onglet Qualification
-router.get('/qualification-advanced', authenticate, async (req, res) => {
+router.get('/qualification-advanced', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
   try {
     const { date_debut, date_fin, id_agent, id_equipe, id_centre, id_departement } = req.query;
     
@@ -162,7 +162,7 @@ router.get('/qualification-advanced', authenticate, async (req, res) => {
 
 // GET /api/statistiques-v2/confirmation-advanced
 // Métriques avancées pour l'onglet Confirmation
-router.get('/confirmation-advanced', authenticate, async (req, res) => {
+router.get('/confirmation-advanced', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
   try {
     const { date_debut, date_fin, id_confirmateur, id_centre } = req.query;
     
@@ -292,7 +292,7 @@ router.get('/confirmation-advanced', authenticate, async (req, res) => {
 
 // GET /api/statistiques-v2/centres-advanced
 // Métriques avancées pour l'onglet Centres
-router.get('/centres-advanced', authenticate, async (req, res) => {
+router.get('/centres-advanced', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
   try {
     const { date_debut, date_fin, id_centre } = req.query;
     
@@ -397,7 +397,7 @@ router.get('/centres-advanced', authenticate, async (req, res) => {
 
 // GET /api/statistiques-v2/temporal-performance
 // Performance temporelle (évolution sur plusieurs mois)
-router.get('/temporal-performance', authenticate, async (req, res) => {
+router.get('/temporal-performance', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
   try {
     const { months = 6, metric_type = 'all' } = req.query; // metric_type: all, qualification, confirmation, signatures
     
@@ -491,7 +491,7 @@ router.get('/temporal-performance', authenticate, async (req, res) => {
 
 // GET /api/statistiques-v2/comparison
 // Comparaison multi-périodes
-router.get('/comparison', authenticate, async (req, res) => {
+router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
   try {
     const { 
       period1_start, period1_end, 
@@ -606,7 +606,7 @@ router.get('/comparison', authenticate, async (req, res) => {
 
 // GET /api/statistiques-v2/heatmap
 // Heatmap par jour de la semaine / heure
-router.get('/heatmap', authenticate, async (req, res) => {
+router.get('/heatmap', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
   try {
     const { date_debut, date_fin, metric_type = 'creation' } = req.query; // creation, confirmation, signature
     
@@ -675,7 +675,7 @@ router.get('/heatmap', authenticate, async (req, res) => {
 
 // GET /api/statistiques-v2/export
 // Export des données en CSV/Excel
-router.get('/export', authenticate, async (req, res) => {
+router.get('/export', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
   try {
     const { 
       type, date_debut, date_fin, 

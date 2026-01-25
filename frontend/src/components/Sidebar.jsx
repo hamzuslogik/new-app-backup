@@ -155,7 +155,7 @@ const Sidebar = ({ collapsed }) => {
       path: '/statistiques-v2',
       label: 'Statistiques V2',
       icon: FaChartBar,
-      permission: 'statistiques_view',
+      permission: 'statistiques_v2_view',
       visible: true,
     },
     {
