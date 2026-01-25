@@ -152,6 +152,13 @@ const Sidebar = ({ collapsed }) => {
       visible: true,
     },
     {
+      path: '/statistiques-v2',
+      label: 'Statistiques V2',
+      icon: FaChartBar,
+      permission: 'statistiques_view',
+      visible: true,
+    },
+    {
       path: '/signatures',
       label: 'Signatures',
       icon: FaSignature,
