@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
+const { checkPermissionCode } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
 
 // =====================================================
