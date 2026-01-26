@@ -74,10 +74,20 @@ async function getDefaultSMSProvider() {
       hasLogin: !!providerLogin,
       hasApiKey: !!provider.api_key,
       hasApiUrl: !!provider.api_url,
+      apiUrl: provider.api_url,
       loginField: provider.login ? 'login' : (provider.auth_email ? 'auth_email' : 'AUCUN'),
       loginLength: providerLogin ? providerLogin.length : 0,
-      apiKeyLength: provider.api_key ? provider.api_key.length : 0
+      apiKeyLength: provider.api_key ? provider.api_key.length : 0,
+      actif: provider.actif
     });
+    
+    // Avertissement si ce n'est pas Octopush
+    if (!provider.nom.toLowerCase().includes('octopush') && !provider.api_url?.includes('octopush')) {
+      console.log('[SMS Service] ⚠️ ATTENTION: Le fournisseur sélectionné n\'est pas Octopush');
+      console.log('[SMS Service] Pour utiliser Octopush, assurez-vous que:');
+      console.log('[SMS Service] 1. Octopush est le premier fournisseur actif dans la table fournisseurs_sms');
+      console.log('[SMS Service] 2. Ou modifiez la requête pour prioriser Octopush');
+    }
 
     // Vérifier que le login (login ou auth_email) et l'api_key sont présents
     if (!providerLogin || !provider.api_key) {
@@ -154,15 +164,26 @@ async function sendSMSViaProvider(provider, tel, message, from = 'RAPPEL', fiche
     const providerName = (provider.nom || '').toLowerCase();
     const apiUrl = provider.api_url || '';
 
+    console.log('[SMS Service] Détection du fournisseur:', {
+      nom: provider.nom,
+      providerName: providerName,
+      apiUrl: apiUrl,
+      id: provider.id
+    });
+
     // Manivox
     if (providerName.includes('manivox') || apiUrl.includes('manivox')) {
+      console.log('[SMS Service] ✅ Fournisseur détecté: Manivox');
       return await sendViaManivox(provider, formattedTel, message, from);
     }
     
     // Octopush
     if (providerName.includes('octopush') || apiUrl.includes('octopush')) {
+      console.log('[SMS Service] ✅ Fournisseur détecté: Octopush');
       return await sendViaOctopush(provider, formattedTel, message, from, ficheData);
     }
+    
+    console.log('[SMS Service] ⚠️ Fournisseur non reconnu, tentative avec Manivox par défaut');
 
     // Twilio
     if (providerName.includes('twilio') || apiUrl.includes('twilio')) {
