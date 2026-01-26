@@ -1555,4 +1555,154 @@ router.delete('/fournisseurs-sms/:id', authenticate, checkPermission(1, 2, 7, 11
   }
 });
 
+// =====================================================
+// CATÉGORIES DE MESSAGES SMS
+// =====================================================
+
+// Récupérer toutes les catégories SMS
+router.get('/sms-categories', authenticate, async (req, res) => {
+  try {
+    // Vérifier si la table existe
+    const tableExists = await queryOne(
+      `SELECT COUNT(*) as count 
+       FROM information_schema.tables 
+       WHERE table_schema = DATABASE() 
+       AND table_name = 'sms_categories'`
+    );
+
+    if (!tableExists || tableExists.count === 0) {
+      console.log('Table sms_categories n\'existe pas');
+      return res.json({ success: true, data: [] });
+    }
+
+    const categories = await query(
+      'SELECT * FROM sms_categories WHERE actif = 1 ORDER BY ordre ASC, id ASC'
+    );
+    res.json({ success: true, data: categories });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Récupérer toutes les catégories SMS (y compris inactives) pour la gestion
+router.get('/sms-categories/all', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    // Vérifier si la table existe
+    const tableExists = await queryOne(
+      `SELECT COUNT(*) as count 
+       FROM information_schema.tables 
+       WHERE table_schema = DATABASE() 
+       AND table_name = 'sms_categories'`
+    );
+
+    if (!tableExists || tableExists.count === 0) {
+      console.log('Table sms_categories n\'existe pas');
+      return res.json({ success: true, data: [] });
+    }
+
+    const categories = await query(
+      'SELECT * FROM sms_categories ORDER BY ordre ASC, id ASC'
+    );
+    res.json({ success: true, data: categories });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Créer une catégorie SMS
+router.post('/sms-categories', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const { code, titre, message, ordre = 0, actif = 1 } = req.body;
+    
+    if (!code || !titre || !message) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le code, le titre et le message sont requis' 
+      });
+    }
+
+    // Vérifier si le code existe déjà
+    const existing = await queryOne(
+      'SELECT id FROM sms_categories WHERE code = ?',
+      [code]
+    );
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'Une catégorie avec ce code existe déjà'
+      });
+    }
+
+    await query(
+      'INSERT INTO sms_categories (code, titre, message, ordre, actif, date_creation) VALUES (?, ?, ?, ?, ?, NOW())',
+      [code, titre, message, ordre, actif]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Catégorie SMS créée avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la création' });
+  }
+});
+
+// Modifier une catégorie SMS
+router.put('/sms-categories/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { code, titre, message, ordre, actif } = req.body;
+    
+    if (!code || !titre || !message) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le code, le titre et le message sont requis' 
+      });
+    }
+
+    // Vérifier si le code existe déjà pour un autre enregistrement
+    const existing = await queryOne(
+      'SELECT id FROM sms_categories WHERE code = ? AND id != ?',
+      [code, id]
+    );
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'Une catégorie avec ce code existe déjà'
+      });
+    }
+
+    await query(
+      'UPDATE sms_categories SET code = ?, titre = ?, message = ?, ordre = ?, actif = ?, date_modif = NOW() WHERE id = ?',
+      [code, titre, message, ordre !== undefined ? ordre : 0, actif !== undefined ? actif : 1, id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Catégorie SMS mise à jour avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la mise à jour' });
+  }
+});
+
+// Supprimer une catégorie SMS
+router.delete('/sms-categories/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await query('DELETE FROM sms_categories WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Catégorie SMS supprimée avec succès' });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la suppression' });
+  }
+});
+
 module.exports = router;

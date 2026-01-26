@@ -567,13 +567,15 @@ async function executeSMSAction(config, eventData) {
   }
 
   // Passer les données de la fiche pour les variables Octopush
+  // La colonne s'appelle 'civ' et non 'civilite'
+  const civ = fiche.civ || fiche.civilite || '';
   const ficheData = {
     nom: fiche.nom || '',
     prenom: fiche.prenom || '',
-    civilite: fiche.civilite || '',
+    civilite: civ,
     first_name: fiche.prenom || '',
     last_name: fiche.nom || '',
-    param3: fiche.civilite || ''
+    param3: civ
   };
   const result = await sendSMSViaProvider(provider, tel, processedMessage, 'RAPPEL', ficheData);
   

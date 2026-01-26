@@ -4877,7 +4877,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         <SMSTab
           ficheHash={hash}
           ficheData={ficheData}
-          confirmateurs={confirmateurs}
         />
       )}
 
@@ -5293,13 +5292,27 @@ const PlanningTab = ({
 };
 
 // Composant pour l'onglet SMS
-const SMSTab = ({ ficheHash, ficheData, confirmateurs }) => {
+const SMSTab = ({ ficheHash, ficheData }) => {
+  const { user } = useAuth();
   const [selectedTel, setSelectedTel] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('0');
   const [customMessage, setCustomMessage] = useState('');
-  const [idConfirmateur, setIdConfirmateur] = useState('');
   
   const queryClient = useQueryClient();
+  
+  // Récupérer les catégories SMS depuis l'API
+  const { data: smsCategories, isLoading: loadingCategories } = useQuery(
+    'sms_categories',
+    async () => {
+      const res = await api.get('/management/sms-categories');
+      return res.data.data || [];
+    },
+    {
+      onError: (error) => {
+        console.error('Erreur lors du chargement des catégories SMS:', error);
+      }
+    }
+  );
   
   const { data: smsList, isLoading } = useQuery(
     ['sms', ficheHash],
@@ -5329,45 +5342,57 @@ const SMSTab = ({ ficheHash, ficheData, confirmateurs }) => {
     }
   );
 
-  // Messages prédéfinis
-  const predefinedMessages = {
-    '0': '', // Message personnalisé
-    '1': `Cher(e) Mr/Mme ${ficheData?.prenom?.toUpperCase() || ''} ${ficheData?.nom?.toUpperCase() || ''},
+  // Fonction pour remplacer les variables dans le message
+  const replaceVariables = React.useCallback((message) => {
+    if (!message || !ficheData) return message;
+    
+    const dateRdv = ficheData?.date_rdv_time ? new Date(ficheData.date_rdv_time) : null;
+    const dateRdvStr = dateRdv ? dateRdv.toLocaleDateString('fr-FR') : '';
+    const heureRdvStr = dateRdv ? dateRdv.toTimeString().slice(0, 5) : '';
+    
+    return message
+      .replace(/\{\{prenom\}\}/g, ficheData.prenom?.toUpperCase() || '')
+      .replace(/\{\{nom\}\}/g, ficheData.nom?.toUpperCase() || '')
+      .replace(/\{\{date_rdv\}\}/g, dateRdvStr)
+      .replace(/\{\{heure_rdv\}\}/g, heureRdvStr)
+      .replace(/\{\{civ\}\}/g, ficheData.civ || '');
+  }, [ficheData]);
 
-Suite à notre appel téléphonique, Bureau central Environnement confirme votre rendez-vous prévu le ${ficheData?.date_rdv_time ? new Date(ficheData.date_rdv_time).toLocaleDateString('fr-FR') : ''} à ${ficheData?.date_rdv_time ? new Date(ficheData.date_rdv_time).toTimeString().slice(0, 5) : ''} avec l'un de nos techniciens, en présence de votre conjoint(e).
-
-Restant à votre disposition pour tous renseignements complémentaires, nous vous prions d'agréer, Madame, Monsieur, nos salutations distinguées.`,
-    '2': `Cher(e) Mr/Mme ${ficheData?.prenom?.toUpperCase() || ''} ${ficheData?.nom?.toUpperCase() || ''},
-
-Nous vous informons que des pièces manquantes sont nécessaires pour finaliser votre dossier.
-
-Veuillez nous contacter au plus vite pour compléter votre dossier.
-
-Cordialement.`,
-    '3': `Cher(e) Mr/Mme ${ficheData?.prenom?.toUpperCase() || ''} ${ficheData?.nom?.toUpperCase() || ''},
-
-Nous vous rappelons qu'il est important de signer votre contrat NRP.
-
-Veuillez nous contacter pour finaliser votre dossier.
-
-Cordialement.`
-  };
+  // Construire les messages prédéfinis à partir des catégories
+  const predefinedMessages = React.useMemo(() => {
+    const messages = { '0': '' }; // Message personnalisé
+    
+    if (smsCategories && Array.isArray(smsCategories)) {
+      smsCategories.forEach((cat) => {
+        messages[String(cat.id)] = replaceVariables(cat.message);
+      });
+    }
+    
+    return messages;
+  }, [smsCategories, replaceVariables]);
 
   const handleSendSMS = () => {
     if (!selectedTel || selectedTel.trim() === '') {
       alert('Veuillez sélectionner un numéro de téléphone');
       return;
     }
-    if (!idConfirmateur || idConfirmateur.trim() === '') {
-      alert('Veuillez sélectionner un confirmateur');
+    if (!user || !user.id) {
+      alert('Utilisateur non connecté');
       return;
     }
-    const confirmateurId = parseInt(idConfirmateur, 10);
-    if (isNaN(confirmateurId) || confirmateurId <= 0) {
-      alert('Veuillez sélectionner un confirmateur valide');
-      return;
+    let message = '';
+    if (selectedCategory === '0') {
+      message = customMessage;
+    } else {
+      // Trouver la catégorie sélectionnée
+      const selectedCat = smsCategories?.find(cat => String(cat.id) === selectedCategory);
+      if (selectedCat) {
+        message = replaceVariables(selectedCat.message);
+      } else {
+        message = predefinedMessages[selectedCategory] || '';
+      }
     }
-    const message = selectedCategory === '0' ? customMessage : predefinedMessages[selectedCategory];
+    
     if (!message || message.trim() === '') {
       alert('Veuillez saisir un message');
       return;
@@ -5375,7 +5400,7 @@ Cordialement.`
     sendSMSMutation.mutate({
       tel: selectedTel.trim(),
       message: message.trim(),
-      id_confirmateur: confirmateurId
+      id_confirmateur: user.id
     });
   };
 
@@ -5411,20 +5436,6 @@ Cordialement.`
           </select>
         </div>
         <div className="form-group">
-          <label>Confirmateur :</label>
-          <select
-            value={idConfirmateur}
-            onChange={(e) => setIdConfirmateur(e.target.value)}
-            className="form-control"
-            required
-          >
-            <option value="">Sélectionner un confirmateur</option>
-            {confirmateurs?.map(conf => (
-              <option key={conf.id} value={conf.id}>{conf.pseudo}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
           <label>Catégorie de message :</label>
           <select
             value={selectedCategory}
@@ -5435,9 +5446,9 @@ Cordialement.`
             className="form-control"
           >
             <option value="0">Message personnalisé</option>
-            <option value="1">RAPPEL RDV</option>
-            <option value="2">PIÉCES MANQUANTES</option>
-            <option value="3">SIGNER NRP</option>
+            {smsCategories && smsCategories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.titre}</option>
+            ))}
           </select>
         </div>
         <div className="form-group">
@@ -5452,10 +5463,11 @@ Cordialement.`
             />
           ) : (
             <textarea
-              value={predefinedMessages[selectedCategory]}
+              value={predefinedMessages[selectedCategory] || ''}
               readOnly
               className="form-control"
               rows="6"
+              placeholder={loadingCategories ? 'Chargement des catégories...' : 'Message de la catégorie sélectionnée'}
             />
           )}
         </div>

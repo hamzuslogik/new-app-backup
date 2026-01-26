@@ -4158,7 +4158,7 @@ router.get('/:id/sms', authenticate, hashToIdMiddleware, async (req, res) => {
 router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('fiche_sms_send'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { tel, message, id_confirmateur } = req.body;
+    const { tel, message } = req.body;
     
     // Validation des paramètres
     if (!tel || typeof tel !== 'string' || tel.trim() === '') {
@@ -4175,11 +4175,12 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
       });
     }
     
-    const confirmateurId = parseInt(id_confirmateur, 10);
-    if (!id_confirmateur || isNaN(confirmateurId) || confirmateurId <= 0) {
-      return res.status(400).json({ 
+    // Utiliser l'utilisateur connecté comme confirmateur
+    const confirmateurId = req.user.id;
+    if (!confirmateurId) {
+      return res.status(401).json({ 
         success: false, 
-        message: 'Un confirmateur valide est requis' 
+        message: 'Utilisateur non authentifié' 
       });
     }
 
@@ -4197,10 +4198,16 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
     console.log(`[SMS] Utilisation du fournisseur: ${provider.nom} (ID: ${provider.id || 'défaut'})`);
 
     // Récupérer les données de la fiche pour les variables Octopush
+    // La colonne s'appelle 'civ' et non 'civilite'
     const fiche = await queryOne(
-      `SELECT nom, prenom, civilite FROM fiches WHERE id = ?`,
+      `SELECT nom, prenom, civ FROM fiches WHERE id = ?`,
       [id]
     );
+    
+    // Mapper civ vers civilite pour compatibilité avec le code Octopush
+    if (fiche) {
+      fiche.civilite = fiche.civ || null;
+    }
 
     // Envoyer le SMS via le fournisseur
     let smsResult;
