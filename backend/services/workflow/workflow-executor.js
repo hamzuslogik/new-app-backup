@@ -566,7 +566,16 @@ async function executeSMSAction(config, eventData) {
     throw new Error('Aucun fournisseur SMS configuré');
   }
 
-  const result = await sendSMSViaProvider(provider, tel, processedMessage, 'RAPPEL');
+  // Passer les données de la fiche pour les variables Octopush
+  const ficheData = {
+    nom: fiche.nom || '',
+    prenom: fiche.prenom || '',
+    civilite: fiche.civilite || '',
+    first_name: fiche.prenom || '',
+    last_name: fiche.nom || '',
+    param3: fiche.civilite || ''
+  };
+  const result = await sendSMSViaProvider(provider, tel, processedMessage, 'RAPPEL', ficheData);
   
   return { success: result.success, message: result.message };
 }

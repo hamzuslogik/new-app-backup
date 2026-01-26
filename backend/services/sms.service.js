@@ -129,9 +129,10 @@ async function getDefaultSMSProvider() {
  * @param {string} tel - Le numéro de téléphone (format: +33XXXXXXXXX, 0033XXXXXXXXX ou 0XXXXXXXXX)
  * @param {string} message - Le message à envoyer
  * @param {string} from - L'expéditeur (optionnel)
+ * @param {Object} ficheData - Données optionnelles de la fiche (nom, prenom, etc.)
  * @returns {Promise<Object>} Résultat de l'envoi
  */
-async function sendSMSViaProvider(provider, tel, message, from = 'RAPPEL') {
+async function sendSMSViaProvider(provider, tel, message, from = 'RAPPEL', ficheData = null) {
   try {
     // Formater le numéro de téléphone en format international +33
     let formattedTel = tel;
@@ -160,7 +161,7 @@ async function sendSMSViaProvider(provider, tel, message, from = 'RAPPEL') {
     
     // Octopush
     if (providerName.includes('octopush') || apiUrl.includes('octopush')) {
-      return await sendViaOctopush(provider, formattedTel, message, from);
+      return await sendViaOctopush(provider, formattedTel, message, from, ficheData);
     }
 
     // Twilio
@@ -316,17 +317,18 @@ async function sendViaManivox(provider, tel, message, from) {
 
 /**
  * Envoie un SMS via Octopush
- * Documentation: https://api.octopush.com/v1/public/multi-channel/send
+ * Format fonctionnel testé avec Postman
  * Endpoint: POST https://api.octopush.com/v1/public/multi-channel/send
  * Authentification: via headers (api-login et api-key)
  */
-async function sendViaOctopush(provider, tel, message, from) {
+async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
   try {
     console.log('[SMS Service] Envoi via Octopush:', {
       tel: tel,
       from: from,
       messageLength: message.length,
-      login: provider.login ? '***' : 'non défini'
+      login: provider.login ? '***' : 'non défini',
+      hasFicheData: !!ficheData
     });
 
     // URL selon la documentation officielle
@@ -342,33 +344,48 @@ async function sendViaOctopush(provider, tel, message, from) {
       throw new Error('Login (login ou auth_email) et API key Octopush requis');
     }
 
-    // Format du payload selon la documentation officielle
-    // Documentation: https://api.octopush.com/v1/public/multi-channel/send
+    // Extraire les données de la fiche si disponibles
+    const firstName = ficheData?.prenom || ficheData?.first_name || '';
+    const lastName = ficheData?.nom || ficheData?.last_name || '';
+    // Déterminer la civilité (Mme, M, etc.) - peut être dans ficheData.civilite ou déduire
+    const param3 = ficheData?.civilite || ficheData?.param3 || '';
+
+    // Format du payload selon l'exemple fonctionnel testé avec Postman
+    const recipient = {
+      phone_number: tel // Format +33XXXXXXXXX ou +216XXXXXXXXX
+    };
+
+    // Ajouter les paramètres optionnels si disponibles
+    if (firstName) {
+      recipient.first_name = firstName;
+    }
+    if (lastName) {
+      recipient.last_name = lastName;
+    }
+    if (param3) {
+      recipient.param3 = param3;
+    }
+
     const requestBody = {
-      channel: 'sms',
-      text: message,
-      recipients: [
-        {
-          phone_number: tel // Format +33XXXXXXXXX
-        }
-      ],
-      sender: from || 'RAPPEL',
-      auto_optimize_text: true
+      recipients: [recipient],
+      text: message, // Le message peut contenir {{param3}}, {{first_name}}, {{last_name}}
+      sender: from || 'RAPPEL'
     };
 
     console.log('[SMS Service] Requête Octopush:', {
       url: apiUrl,
       body: { ...requestBody, text: requestBody.text.substring(0, 50) + '...' },
-      hasAuth: !!(login && apiKey)
+      hasAuth: !!(login && apiKey),
+      recipient: recipient
     });
 
-    // Authentification via headers selon la documentation
+    // Headers selon l'exemple fonctionnel
     const response = await axios.post(apiUrl, requestBody, {
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
         'api-login': login,
-        'api-key': apiKey
+        'api-key': apiKey,
+        'cache-control': 'no-cache'
       },
       timeout: 30000 // 30 secondes de timeout
     });

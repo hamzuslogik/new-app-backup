@@ -4196,10 +4196,16 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
 
     console.log(`[SMS] Utilisation du fournisseur: ${provider.nom} (ID: ${provider.id || 'défaut'})`);
 
+    // Récupérer les données de la fiche pour les variables Octopush
+    const fiche = await queryOne(
+      `SELECT nom, prenom, civilite FROM fiches WHERE id = ?`,
+      [id]
+    );
+
     // Envoyer le SMS via le fournisseur
     let smsResult;
     try {
-      smsResult = await sendSMSViaProvider(provider, tel, message, 'RAPPEL');
+      smsResult = await sendSMSViaProvider(provider, tel.trim(), message.trim(), 'RAPPEL', fiche || null);
     } catch (error) {
       console.error('[SMS Route] Erreur lors de l\'envoi du SMS:', error);
       return res.status(500).json({
