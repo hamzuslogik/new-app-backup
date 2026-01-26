@@ -4233,13 +4233,16 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
       );
 
       // Enregistrer dans modifica
-      const lastSms = await queryOne(
-        `SELECT message FROM sms WHERE id_fiche = ? ORDER BY id DESC LIMIT 1, 1`
+      // Récupérer le dernier SMS avant celui qu'on vient d'insérer (pour avoir l'ancien_valeur)
+      const previousSms = await queryOne(
+        `SELECT message FROM sms WHERE id_fiche = ? ORDER BY id DESC LIMIT 1 OFFSET 1`,
+        [id]
       );
+      
       await query(
         `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, date_modif_time)
          VALUES (?, ?, 'SMS', ?, ?, ?)`,
-        [id, req.user.id, lastSms?.message || '', message.trim(), dateModif]
+        [id, req.user.id, previousSms?.message || '', message.trim(), dateModif]
       );
 
       res.json({
