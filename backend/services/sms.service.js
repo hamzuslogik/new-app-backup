@@ -326,7 +326,7 @@ async function sendViaManivox(provider, tel, message, from) {
 /**
  * Envoie un SMS via Octopush
  * Format fonctionnel testé avec Postman
- * Endpoint: POST https://api.octopush.com/v1/public/multi-channel/send
+ * Endpoint: POST https://api.octopush.com/v1/public/sms-campaign/send
  * Authentification: via headers (api-login et api-key)
  */
 async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
@@ -341,7 +341,7 @@ async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
 
     // URL selon la documentation officielle
     const baseUrl = 'https://api.octopush.com/v1/public';
-    const endpoint = '/multi-channel/send';
+    const endpoint = '/sms-campaign/send';
     const apiUrl = provider.api_url || `${baseUrl}${endpoint}`;
     
     // Le login peut être dans 'login' ou 'auth_email'
