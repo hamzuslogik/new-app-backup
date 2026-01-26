@@ -655,10 +655,14 @@ router.get('/heatmap', authenticate, checkPermissionCode('statistiques_v2_view')
       }
     }
 
+    // Calculer le maximum pour l'intensité
+    const max_count = Math.max(...formattedData.map(d => d.count), 1);
+
     res.json({
       success: true,
       data: {
         heatmap: formattedData,
+        max_count: max_count,
         date_start: dateDebut,
         date_end: dateFin,
         metric_type: metric_type
@@ -746,6 +750,276 @@ router.get('/export', authenticate, checkPermissionCode('statistiques_v2_view'),
     });
   } catch (error) {
     console.error('Erreur lors de la préparation de l\'export:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/statistiques-v2/drill-down
+// Drill-down pour voir les détails d'un élément cliqué
+router.get('/drill-down', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  try {
+    const { drill_type, id_agent, date, id_centre, date_debut, date_fin } = req.query;
+    
+    let result = {};
+
+    if (drill_type === 'agent' && id_agent) {
+      // Détails des fiches d'un agent
+      const fiches = await query(`
+        SELECT 
+          f.id,
+          f.nom,
+          f.prenom,
+          f.date_insert_time,
+          e.titre as etat_titre,
+          TIMESTAMPDIFF(HOUR, f.date_insert_time, f.date_modif_time) as processing_hours
+        FROM fiches f
+        LEFT JOIN etats e ON f.id_etat_final = e.id
+        WHERE f.id_agent = ?
+        AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+        ORDER BY f.date_insert_time DESC
+        LIMIT 100
+      `, [parseInt(id_agent), `${date_debut} 00:00:00`, `${date_fin} 23:59:59`]);
+      
+      result.fiches = fiches || [];
+    } else if (drill_type === 'date' && date) {
+      // Résumé d'une date spécifique
+      const summary = await queryOne(`
+        SELECT 
+          COUNT(*) as total,
+          COUNT(CASE WHEN e.groupe IN ('1', '2', '3') THEN 1 END) as validated,
+          ROUND(COUNT(CASE WHEN e.groupe IN ('1', '2', '3') THEN 1 END) * 100.0 / COUNT(*), 2) as validation_rate
+        FROM fiches f
+        LEFT JOIN etats e ON f.id_etat_final = e.id
+        WHERE DATE(f.date_insert_time) = ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `, [date]);
+      
+      result.summary = summary || {};
+    } else if (drill_type === 'centre' && id_centre) {
+      // Métriques d'un centre
+      const metrics = await queryOne(`
+        SELECT 
+          COUNT(*) as total_fiches,
+          COUNT(CASE WHEN f.id_etat_final = 7 THEN 1 END) as confirmations,
+          COUNT(CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN 1 END) as signatures
+        FROM fiches f
+        WHERE f.id_centre = ?
+        AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `, [parseInt(id_centre), `${date_debut} 00:00:00`, `${date_fin} 23:59:59`]);
+      
+      result.metrics = metrics || {};
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Erreur lors du drill-down:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/statistiques-v2/comparison
+// Comparaison entre deux périodes
+router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  try {
+    const { period1_start, period1_end, period2_start, period2_end } = req.query;
+    
+    if (!period1_start || !period1_end || !period2_start || !period2_end) {
+      return res.status(400).json({
+        success: false,
+        message: 'Les dates des deux périodes sont requises'
+      });
+    }
+
+    const start1 = `${period1_start} 00:00:00`;
+    const end1 = `${period1_end} 23:59:59`;
+    const start2 = `${period2_start} 00:00:00`;
+    const end2 = `${period2_end} 23:59:59`;
+
+    // Calculer les métriques pour la période 1
+    const period1Data = await queryOne(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN e.groupe IN ('1', '2', '3') THEN 1 END) as qualified,
+        COUNT(CASE WHEN f.id_etat_final = 7 THEN 1 END) as confirmed,
+        COUNT(CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN 1 END) as signed,
+        ROUND(COUNT(CASE WHEN e.groupe IN ('1', '2', '3') THEN 1 END) * 100.0 / COUNT(*), 2) as qualification_rate,
+        ROUND(COUNT(CASE WHEN f.id_etat_final = 7 THEN 1 END) * 100.0 / COUNT(*), 2) as confirmation_rate,
+        ROUND(COUNT(CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN 1 END) * 100.0 / COUNT(*), 2) as signature_rate
+      FROM fiches f
+      LEFT JOIN etats e ON f.id_etat_final = e.id
+      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [start1, end1]);
+
+    // Calculer les métriques pour la période 2
+    const period2Data = await queryOne(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN e.groupe IN ('1', '2', '3') THEN 1 END) as qualified,
+        COUNT(CASE WHEN f.id_etat_final = 7 THEN 1 END) as confirmed,
+        COUNT(CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN 1 END) as signed,
+        ROUND(COUNT(CASE WHEN e.groupe IN ('1', '2', '3') THEN 1 END) * 100.0 / COUNT(*), 2) as qualification_rate,
+        ROUND(COUNT(CASE WHEN f.id_etat_final = 7 THEN 1 END) * 100.0 / COUNT(*), 2) as confirmation_rate,
+        ROUND(COUNT(CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN 1 END) * 100.0 / COUNT(*), 2) as signature_rate
+      FROM fiches f
+      LEFT JOIN etats e ON f.id_etat_final = e.id
+      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [start2, end2]);
+
+    // Calculer les différences
+    const diff = {
+      qualification: (period2Data?.qualification_rate || 0) - (period1Data?.qualification_rate || 0),
+      confirmation: (period2Data?.confirmation_rate || 0) - (period1Data?.confirmation_rate || 0),
+      signature: (period2Data?.signature_rate || 0) - (period1Data?.signature_rate || 0)
+    };
+
+    // Données pour le graphique
+    const chart_data = [
+      {
+        metric: 'Qualification',
+        period1: period1Data?.qualification_rate || 0,
+        period2: period2Data?.qualification_rate || 0
+      },
+      {
+        metric: 'Confirmation',
+        period1: period1Data?.confirmation_rate || 0,
+        period2: period2Data?.confirmation_rate || 0
+      },
+      {
+        metric: 'Signature',
+        period1: period1Data?.signature_rate || 0,
+        period2: period2Data?.signature_rate || 0
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: {
+        period1: period1Data || {},
+        period2: period2Data || {},
+        diff: diff,
+        chart_data: chart_data
+      }
+    });
+  } catch (error) {
+    console.error('Erreur lors de la comparaison:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/statistiques-v2/alerts
+// Alertes de performance
+router.get('/alerts', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  try {
+    const { date_debut, date_fin } = req.query;
+    
+    const startDate = `${date_debut} 00:00:00`;
+    const endDate = `${date_fin} 23:59:59`;
+
+    const alerts = [];
+
+    // Alerte: Taux de rejet élevé
+    const rejectionRate = await queryOne(`
+      SELECT 
+        COUNT(CASE WHEN f.id_etat_final = 2 THEN 1 END) * 100.0 / COUNT(*) as rejection_rate
+      FROM fiches f
+      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [startDate, endDate]);
+
+    if (rejectionRate?.rejection_rate > 20) {
+      alerts.push({
+        severity: 'warning',
+        title: 'Taux de rejet élevé',
+        message: `Le taux de rejet est de ${rejectionRate.rejection_rate.toFixed(1)}%, ce qui est supérieur au seuil recommandé de 20%.`,
+        metric: {
+          label: 'Taux de rejet',
+          value: `${rejectionRate.rejection_rate.toFixed(1)}%`
+        }
+      });
+    }
+
+    // Alerte: Temps de traitement moyen élevé
+    const avgProcessingTime = await queryOne(`
+      SELECT AVG(TIMESTAMPDIFF(HOUR, f.date_insert_time, f.date_modif_time)) as avg_hours
+      FROM fiches f
+      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
+      AND f.date_modif_time IS NOT NULL
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [startDate, endDate]);
+
+    if (avgProcessingTime?.avg_hours > 48) {
+      alerts.push({
+        severity: 'warning',
+        title: 'Temps de traitement élevé',
+        message: `Le temps moyen de traitement est de ${avgProcessingTime.avg_hours.toFixed(1)} heures, ce qui est supérieur à 48 heures.`,
+        metric: {
+          label: 'Temps moyen',
+          value: `${avgProcessingTime.avg_hours.toFixed(1)}h`
+        }
+      });
+    }
+
+    // Alerte: Baisse de productivité
+    const today = new Date();
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    const lastWeekStart = lastWeek.toISOString().split('T')[0];
+    const lastWeekEnd = today.toISOString().split('T')[0];
+
+    const currentWeekCount = await queryOne(`
+      SELECT COUNT(*) as count
+      FROM fiches f
+      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [`${date_debut} 00:00:00`, `${date_fin} 23:59:59`]);
+
+    const lastWeekCount = await queryOne(`
+      SELECT COUNT(*) as count
+      FROM fiches f
+      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [`${lastWeekStart} 00:00:00`, `${lastWeekEnd} 23:59:59`]);
+
+    if (lastWeekCount?.count > 0) {
+      const decline = ((currentWeekCount?.count || 0) - (lastWeekCount?.count || 0)) / lastWeekCount.count * 100;
+      if (decline < -20) {
+        alerts.push({
+          severity: 'error',
+          title: 'Baisse de productivité',
+          message: `La productivité a baissé de ${Math.abs(decline).toFixed(1)}% par rapport à la semaine dernière.`,
+          metric: {
+            label: 'Baisse',
+            value: `${Math.abs(decline).toFixed(1)}%`
+          }
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: alerts
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des alertes:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',

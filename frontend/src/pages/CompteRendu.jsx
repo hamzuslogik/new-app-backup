@@ -226,35 +226,40 @@ const CompteRendu = () => {
                       <FicheDetailLink ficheId={cr.id_fiche} className="btn-icon" title="Voir fiche">
                         <FaEye />
                       </FicheDetailLink>
-                      {canApprove && cr.statut === 'pending' && (
+                      {canApprove && (
                         <>
                           <button
                             className="btn-icon btn-edit"
                             onClick={() => setEditingCompteRendu(cr)}
                             title="Modifier"
+                            disabled={cr.statut === 'approved'}
                           >
                             <FaEdit />
                           </button>
-                          <button
-                            className="btn-icon btn-success"
-                            onClick={() => {
-                              setSelectedCompteRendu(cr);
-                              setCommentaireAdmin('');
-                            }}
-                            title="Approuver"
-                          >
-                            <FaCheck />
-                          </button>
-                          <button
-                            className="btn-icon btn-danger"
-                            onClick={() => {
-                              setSelectedCompteRendu(cr);
-                              setCommentaireAdmin('');
-                            }}
-                            title="Rejeter"
-                          >
-                            <FaTimes />
-                          </button>
+                          {cr.statut === 'pending' && (
+                            <>
+                              <button
+                                className="btn-icon btn-success"
+                                onClick={() => {
+                                  setSelectedCompteRendu(cr);
+                                  setCommentaireAdmin('');
+                                }}
+                                title="Approuver"
+                              >
+                                <FaCheck />
+                              </button>
+                              <button
+                                className="btn-icon btn-danger"
+                                onClick={() => {
+                                  setSelectedCompteRendu(cr);
+                                  setCommentaireAdmin('');
+                                }}
+                                title="Rejeter"
+                              >
+                                <FaTimes />
+                              </button>
+                            </>
+                          )}
                         </>
                       )}
                     </div>
@@ -363,7 +368,7 @@ const CompteRendu = () => {
       )}
 
       {/* Modal de modification */}
-      {editingCompteRendu && canApprove && editingCompteRendu.statut === 'pending' && (
+      {editingCompteRendu && canApprove && (
         <EditCompteRenduModal
           compteRendu={editingCompteRendu}
           etats={etats}
@@ -372,6 +377,7 @@ const CompteRendu = () => {
             updatePendingMutation.mutate({ id: editingCompteRendu.id, data });
           }}
           isLoading={updatePendingMutation.isLoading}
+          readOnly={editingCompteRendu.statut === 'approved'}
         />
       )}
     </div>

@@ -12,7 +12,7 @@ import {
   FaCalendarAlt, FaArrowUp, FaArrowDown, FaMinus, FaPercentage, FaDownload,
   FaFilter, FaTimes, FaUsers, FaBuilding, FaMapMarkerAlt, FaUserTie,
   FaClock, FaExclamationTriangle, FaCheckCircle, FaFileExcel, FaFilePdf,
-  FaExpand, FaCompress, FaEye, FaEyeSlash
+  FaExpand, FaCompress, FaEye, FaEyeSlash, FaBell, FaInfoCircle, FaWindowClose
 } from 'react-icons/fa';
 import './StatistiquesV2.css';
 
@@ -43,6 +43,15 @@ const StatistiquesV2 = () => {
     area: true,
     radar: false
   });
+
+  // État pour le drill-down (modal de détails)
+  const [drillDownData, setDrillDownData] = useState(null);
+  const [showDrillDown, setShowDrillDown] = useState(false);
+  const [drillDownLoading, setDrillDownLoading] = useState(false);
+
+  // État pour les alertes de performance
+  const [alerts, setAlerts] = useState([]);
+  const [showAlerts, setShowAlerts] = useState(true);
 
   // Générer les dates selon la période
   const getPeriodDates = () => {
@@ -159,6 +168,86 @@ const StatistiquesV2 = () => {
     },
     { enabled: activeTab === 'heatmap' }
   );
+
+  // Récupérer les données de comparaison
+  const [comparisonPeriod, setComparisonPeriod] = useState({
+    period1: { start: '', end: '' },
+    period2: { start: '', end: '' }
+  });
+  const { data: comparisonData, isLoading: loadingComparison } = useQuery(
+    ['comparison-v2', comparisonPeriod],
+    async () => {
+      if (!comparisonPeriod.period1.start || !comparisonPeriod.period2.start) return null;
+      const params = {
+        period1_start: comparisonPeriod.period1.start,
+        period1_end: comparisonPeriod.period1.end,
+        period2_start: comparisonPeriod.period2.start,
+        period2_end: comparisonPeriod.period2.end
+      };
+      const res = await api.get('/statistiques-v2/comparison', { params });
+      return res.data.data;
+    },
+    { enabled: activeTab === 'comparison' && !!comparisonPeriod.period1.start && !!comparisonPeriod.period2.start }
+  );
+
+  // Récupérer les alertes de performance
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const params = {
+          date_debut: periodDates.start,
+          date_fin: periodDates.end
+        };
+        const res = await api.get('/statistiques-v2/alerts', { params });
+        if (res.data.success && res.data.data) {
+          setAlerts(res.data.data);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération des alertes:', error);
+      }
+    };
+    fetchAlerts();
+  }, [periodDates, activeTab]);
+
+  // Fonction pour gérer le clic sur un graphique (drill-down)
+  const handleChartClick = async (data, type) => {
+    setDrillDownLoading(true);
+    setShowDrillDown(true);
+    
+    try {
+      let params = {
+        date_debut: periodDates.start,
+        date_fin: periodDates.end,
+        ...filters
+      };
+
+      // Ajouter les paramètres spécifiques selon le type de clic
+      if (type === 'agent' && data.id) {
+        params.id_agent = data.id;
+        params.drill_type = 'agent';
+      } else if (type === 'date' && data.date) {
+        params.date = data.date;
+        params.drill_type = 'date';
+      } else if (type === 'centre' && data.centre_id) {
+        params.id_centre = data.centre_id;
+        params.drill_type = 'centre';
+      }
+
+      const res = await api.get('/statistiques-v2/drill-down', { params });
+      if (res.data.success) {
+        setDrillDownData({
+          ...res.data.data,
+          clickedData: data,
+          type: type
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors du drill-down:', error);
+      alert('Erreur lors du chargement des détails');
+    } finally {
+      setDrillDownLoading(false);
+    }
+  };
 
   // Fonction d'export
   const handleExport = async (format) => {
@@ -403,6 +492,36 @@ const StatistiquesV2 = () => {
         </div>
       </div>
 
+      {/* Alertes de performance */}
+      {showAlerts && alerts.length > 0 && (
+        <div className="alerts-container">
+          <div className="alerts-header">
+            <FaBell className="alerts-icon" />
+            <h3>Alertes de Performance</h3>
+            <button className="btn-close-alerts" onClick={() => setShowAlerts(false)}>
+              <FaWindowClose />
+            </button>
+          </div>
+          <div className="alerts-list">
+            {alerts.map((alert, index) => (
+              <div key={index} className={`alert-item alert-${alert.severity || 'info'}`}>
+                <FaExclamationTriangle className="alert-icon" />
+                <div className="alert-content">
+                  <div className="alert-title">{alert.title}</div>
+                  <div className="alert-message">{alert.message}</div>
+                  {alert.metric && (
+                    <div className="alert-metric">
+                      <span className="metric-label">{alert.metric.label}:</span>
+                      <span className="metric-value">{alert.metric.value}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Contenu selon l'onglet actif */}
       {isLoading && (
         <div className="loading-container">
@@ -477,13 +596,20 @@ const StatistiquesV2 = () => {
             <div className="section-card">
               <h2 className="section-title">Taux de Rejet par Agent</h2>
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={qualifAdvanced.rejection_rates}>
+                <BarChart 
+                  data={qualifAdvanced.rejection_rates}
+                  onClick={(data) => {
+                    if (data && data.activePayload && data.activePayload[0]) {
+                      handleChartClick(data.activePayload[0].payload, 'agent');
+                    }
+                  }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="pseudo" />
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="rejection_rate" fill="#dc3545" name="Taux de rejet (%)" />
+                  <Bar dataKey="rejection_rate" fill="#dc3545" name="Taux de rejet (%)" cursor="pointer" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -494,14 +620,38 @@ const StatistiquesV2 = () => {
             <div className="section-card">
               <h2 className="section-title">Évolution Quotidienne</h2>
               <ResponsiveContainer width="100%" height={400}>
-                <AreaChart data={formatDailyEvolution(qualifAdvanced)}>
+                <AreaChart 
+                  data={formatDailyEvolution(qualifAdvanced)}
+                  onClick={(data) => {
+                    if (data && data.activePayload && data.activePayload[0]) {
+                      const clickedData = data.activePayload[0].payload;
+                      handleChartClick({ date: clickedData.date }, 'date');
+                    }
+                  }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Area type="monotone" dataKey="total" stackId="1" stroke="#8884d8" fill="#8884d8" name="Total fiches" />
-                  <Area type="monotone" dataKey="validated" stackId="2" stroke="#82ca9d" fill="#82ca9d" name="Fiches validées" />
+                  <Area 
+                    type="monotone" 
+                    dataKey="total" 
+                    stackId="1" 
+                    stroke="#8884d8" 
+                    fill="#8884d8" 
+                    name="Total fiches"
+                    cursor="pointer"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="validated" 
+                    stackId="2" 
+                    stroke="#82ca9d" 
+                    fill="#82ca9d" 
+                    name="Fiches validées"
+                    cursor="pointer"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -653,8 +803,45 @@ const StatistiquesV2 = () => {
           <div className="section-card">
             <h2 className="section-title">Heatmap d'Activité</h2>
             <div className="heatmap-container">
-              {/* La heatmap sera implémentée avec un composant dédié */}
-              <p>Heatmap en cours de développement</p>
+              <div className="heatmap-grid">
+                <div className="heatmap-header">
+                  <div className="heatmap-time-label"></div>
+                  {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
+                    <div key={day} className="heatmap-day-header">{day}</div>
+                  ))}
+                </div>
+                {Array.from({ length: 24 }, (_, hour) => (
+                  <div key={hour} className="heatmap-row">
+                    <div className="heatmap-time-label">{hour}h</div>
+                    {[1, 2, 3, 4, 5, 6, 0].map(dayOfWeek => {
+                      const item = heatmapData.heatmap?.find(
+                        d => d.dayOfWeek === dayOfWeek && d.hour === hour
+                      );
+                      const count = item?.count || 0;
+                      const intensity = Math.min(count / (heatmapData.max_count || 1), 1);
+                      return (
+                        <div
+                          key={`${dayOfWeek}-${hour}`}
+                          className="heatmap-cell"
+                          style={{
+                            backgroundColor: `rgba(156, 191, 200, ${intensity * 0.8 + 0.2})`,
+                            cursor: count > 0 ? 'pointer' : 'default'
+                          }}
+                          title={`${count} activité(s) - ${['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][dayOfWeek]} ${hour}h`}
+                          onClick={() => count > 0 && handleChartClick({ dayOfWeek, hour, count }, 'heatmap')}
+                        >
+                          {count > 0 && <span className="heatmap-count">{count}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div className="heatmap-legend">
+                <span>Faible</span>
+                <div className="heatmap-gradient"></div>
+                <span>Élevé</span>
+              </div>
             </div>
           </div>
         </div>
@@ -664,7 +851,111 @@ const StatistiquesV2 = () => {
         <div className="stats-content">
           <div className="section-card">
             <h2 className="section-title">Comparaison de Périodes</h2>
-            <p>Fonctionnalité de comparaison en cours de développement</p>
+            <div className="comparison-periods">
+              <div className="period-selector-comparison">
+                <div className="period-group">
+                  <h3>Période 1</h3>
+                  <input
+                    type="date"
+                    value={comparisonPeriod.period1.start}
+                    onChange={(e) => setComparisonPeriod({
+                      ...comparisonPeriod,
+                      period1: { ...comparisonPeriod.period1, start: e.target.value }
+                    })}
+                    className="date-input"
+                  />
+                  <span>au</span>
+                  <input
+                    type="date"
+                    value={comparisonPeriod.period1.end}
+                    onChange={(e) => setComparisonPeriod({
+                      ...comparisonPeriod,
+                      period1: { ...comparisonPeriod.period1, end: e.target.value }
+                    })}
+                    className="date-input"
+                  />
+                </div>
+                <div className="period-group">
+                  <h3>Période 2</h3>
+                  <input
+                    type="date"
+                    value={comparisonPeriod.period2.start}
+                    onChange={(e) => setComparisonPeriod({
+                      ...comparisonPeriod,
+                      period2: { ...comparisonPeriod.period2, start: e.target.value }
+                    })}
+                    className="date-input"
+                  />
+                  <span>au</span>
+                  <input
+                    type="date"
+                    value={comparisonPeriod.period2.end}
+                    onChange={(e) => setComparisonPeriod({
+                      ...comparisonPeriod,
+                      period2: { ...comparisonPeriod.period2, end: e.target.value }
+                    })}
+                    className="date-input"
+                  />
+                </div>
+              </div>
+
+              {loadingComparison && (
+                <div className="loading-container">
+                  <div className="spinner"></div>
+                  <p>Chargement de la comparaison...</p>
+                </div>
+              )}
+
+              {!loadingComparison && comparisonData && (
+                <div className="comparison-results">
+                  <div className="comparison-metrics">
+                    {comparisonData.qualification && (
+                      <div className="comparison-metric">
+                        <h4>Qualification</h4>
+                        <div className="metric-comparison">
+                          <div className="period-value period1">
+                            <span className="label">Période 1</span>
+                            <span className="value">{parseFloat(comparisonData.qualification.period1?.rate || 0).toFixed(1)}%</span>
+                          </div>
+                          <div className="period-value period2">
+                            <span className="label">Période 2</span>
+                            <span className="value">{parseFloat(comparisonData.qualification.period2?.rate || 0).toFixed(1)}%</span>
+                          </div>
+                          <div className="comparison-diff">
+                            <span className={`diff ${parseFloat(comparisonData.qualification.evolution || 0) >= 0 ? 'positive' : 'negative'}`}>
+                              {getTrendIcon(parseFloat(comparisonData.qualification.evolution || 0))}
+                              {Math.abs(parseFloat(comparisonData.qualification.evolution || 0)).toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {comparisonData.confirmation && (
+                      <div className="comparison-metric">
+                        <h4>Confirmation</h4>
+                        <div className="metric-comparison">
+                          <div className="period-value period1">
+                            <span className="label">Période 1</span>
+                            <span className="value">{parseFloat(comparisonData.confirmation.period1?.rate || 0).toFixed(1)}%</span>
+                          </div>
+                          <div className="period-value period2">
+                            <span className="label">Période 2</span>
+                            <span className="value">{parseFloat(comparisonData.confirmation.period2?.rate || 0).toFixed(1)}%</span>
+                          </div>
+                          <div className="comparison-diff">
+                            <span className={`diff ${parseFloat(comparisonData.confirmation.evolution || 0) >= 0 ? 'positive' : 'negative'}`}>
+                              {getTrendIcon(parseFloat(comparisonData.confirmation.evolution || 0))}
+                              {Math.abs(parseFloat(comparisonData.confirmation.evolution || 0)).toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -5,7 +5,7 @@ import { FaTimes } from 'react-icons/fa';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './EditCompteRenduModal.css';
 
-const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }) => {
+const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, readOnly = false }) => {
   // Bloquer le scroll du body quand le modal est ouvert
   useModalScrollLock(true);
   const [formData, setFormData] = useState({
@@ -103,7 +103,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Modifier le compte rendu</h2>
+          <h2>{readOnly ? 'Voir le compte rendu' : 'Modifier le compte rendu'}</h2>
           <button className="btn-close" onClick={onClose}>
             <FaTimes />
           </button>
@@ -116,6 +116,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
               onChange={(e) => {
                 setFormData({ ...formData, id_etat_final: e.target.value, id_sous_etat: '' });
               }}
+              disabled={readOnly}
             >
               <option value="">Sélectionner un état</option>
               {etats.map(etat => (
@@ -130,6 +131,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
               <select
                 value={formData.id_sous_etat}
                 onChange={(e) => setFormData({ ...formData, id_sous_etat: e.target.value })}
+                disabled={readOnly}
               >
                 <option value="">Sélectionner un sous-état</option>
                 {sousEtatsData.map(sousEtat => (
@@ -145,6 +147,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
               value={formData.commentaire}
               onChange={(e) => setFormData({ ...formData, commentaire: e.target.value })}
               rows={4}
+              disabled={readOnly}
             />
           </div>
 
@@ -156,6 +159,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                 <select
                   value={formData.ph3_installateur}
                   onChange={(e) => setFormData({ ...formData, ph3_installateur: e.target.value })}
+                  disabled={readOnly}
                 >
                   <option value="">Sélectionner</option>
                   {installateursData.map(inst => (
@@ -169,6 +173,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                   type="text"
                   value={formData.ph3_pac}
                   onChange={(e) => setFormData({ ...formData, ph3_pac: e.target.value })}
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -179,6 +184,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                   type="text"
                   value={formData.ph3_puissance}
                   onChange={(e) => setFormData({ ...formData, ph3_puissance: e.target.value })}
+                  disabled={readOnly}
                 />
               </div>
               <div className="form-group">
@@ -187,6 +193,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                   type="text"
                   value={formData.ph3_puissance_pv}
                   onChange={(e) => setFormData({ ...formData, ph3_puissance_pv: e.target.value })}
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -198,6 +205,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                   step="0.01"
                   value={formData.ph3_prix}
                   onChange={(e) => setFormData({ ...formData, ph3_prix: e.target.value })}
+                  disabled={readOnly}
                 />
               </div>
               <div className="form-group">
@@ -207,6 +215,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                   step="0.01"
                   value={formData.ph3_mensualite}
                   onChange={(e) => setFormData({ ...formData, ph3_mensualite: e.target.value })}
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -218,6 +227,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                   step="0.01"
                   value={formData.ph3_bonus_30}
                   onChange={(e) => setFormData({ ...formData, ph3_bonus_30: e.target.value })}
+                  disabled={readOnly}
                 />
               </div>
               <div className="form-group">
@@ -226,6 +236,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                   type="number"
                   value={formData.nbr_annee_finance}
                   onChange={(e) => setFormData({ ...formData, nbr_annee_finance: e.target.value })}
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -236,6 +247,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                   type="text"
                   value={formData.credit_immobilier}
                   onChange={(e) => setFormData({ ...formData, credit_immobilier: e.target.value })}
+                  disabled={readOnly}
                 />
               </div>
               <div className="form-group">
@@ -244,6 +256,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                   type="text"
                   value={formData.credit_autre}
                   onChange={(e) => setFormData({ ...formData, credit_autre: e.target.value })}
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -261,14 +274,17 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
                       value={value}
                       onChange={(e) => handleModificationChange(key, e.target.value)}
                       className="modification-input"
+                      disabled={readOnly}
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveModification(key)}
-                      className="btn-remove"
-                    >
-                      <FaTimes />
-                    </button>
+                    {!readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveModification(key)}
+                        className="btn-remove"
+                      >
+                        <FaTimes />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -279,11 +295,13 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading }
 
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isLoading}>
-              Annuler
+              {readOnly ? 'Fermer' : 'Annuler'}
             </button>
-            <button type="submit" className="btn btn-primary" disabled={isLoading}>
-              {isLoading ? 'Enregistrement...' : 'Enregistrer les modifications'}
-            </button>
+            {!readOnly && (
+              <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                {isLoading ? 'Enregistrement...' : 'Enregistrer les modifications'}
+              </button>
+            )}
           </div>
         </form>
       </div>

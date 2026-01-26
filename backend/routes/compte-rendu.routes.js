@@ -494,10 +494,12 @@ router.put('/:id', authenticate, async (req, res) => {
       });
     }
 
-    if (compteRendu.statut !== 'pending') {
+    // Permettre la modification des comptes rendus rejetés pour les admins et RP Confirmation
+    // Les comptes rendus approuvés ne peuvent pas être modifiés
+    if (compteRendu.statut === 'approved') {
       return res.status(400).json({
         success: false,
-        message: 'Seuls les comptes rendus en attente peuvent être modifiés'
+        message: 'Les comptes rendus approuvés ne peuvent pas être modifiés'
       });
     }
 
