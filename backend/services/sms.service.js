@@ -225,8 +225,11 @@ async function sendViaManivox(provider, tel, message, from) {
     };
     
     const requestHeaders = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
       'api-key': provider.api_key,
-      'api-login': login
+      'api-login': login,
+      'cache-control': 'no-cache'
     };
     
     const fullUrl = `https://www.manivox.com/api_v2/json_api.php?action=${encodeURIComponent(requestParams.action)}&from=${encodeURIComponent(requestParams.from)}&to=${encodeURIComponent(requestParams.to)}&text=${encodeURIComponent(requestParams.text)}`;
@@ -235,9 +238,14 @@ async function sendViaManivox(provider, tel, message, from) {
     console.log('URL complète:', fullUrl);
     console.log('Method: POST');
     console.log('Headers:', JSON.stringify(requestHeaders, null, 2));
+    console.log('Headers (valeurs en clair):', {
+      'Content-Type': requestHeaders['Content-Type'],
+      'Accept': requestHeaders['Accept'],
+      'api-key': provider.api_key,
+      'api-login': login,
+      'cache-control': requestHeaders['cache-control']
+    });
     console.log('Params (query string):', JSON.stringify(requestParams, null, 2));
-    console.log('api-key (valeur):', provider.api_key);
-    console.log('api-login (valeur):', login);
     console.log('==================================================');
     // ========== FIN LOGS TEMPORAIRES ==========
     
