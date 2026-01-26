@@ -4197,10 +4197,10 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
 
     console.log(`[SMS] Utilisation du fournisseur: ${provider.nom} (ID: ${provider.id || 'défaut'})`);
 
-    // Récupérer les données de la fiche pour les variables Octopush
+    // Récupérer les données de la fiche pour les variables Octopush et le remplacement des variables
     // La colonne s'appelle 'civ' et non 'civilite'
     const fiche = await queryOne(
-      `SELECT nom, prenom, civ FROM fiches WHERE id = ?`,
+      `SELECT nom, prenom, civ, date_rdv_time FROM fiches WHERE id = ?`,
       [id]
     );
     
@@ -4209,10 +4209,48 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
       fiche.civilite = fiche.civ || null;
     }
 
+    // Remplacer les variables dans le message si nécessaire
+    let processedMessage = message.trim();
+    if (fiche) {
+      // Remplacer {{prenom}}, {{nom}}, {{civ}}
+      processedMessage = processedMessage
+        .replace(/\{\{prenom\}\}/g, (fiche.prenom || '').toUpperCase())
+        .replace(/\{\{nom\}\}/g, (fiche.nom || '').toUpperCase())
+        .replace(/\{\{civ\}\}/g, fiche.civ || '');
+      
+      // Remplacer {{date_rdv}} et {{heure_rdv}} si date_rdv_time est disponible
+      if (fiche.date_rdv_time) {
+        try {
+          const dateRdv = new Date(fiche.date_rdv_time);
+          const dateRdvStr = dateRdv.toLocaleDateString('fr-FR', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+          });
+          const heureRdvStr = dateRdv.toTimeString().slice(0, 5);
+          
+          processedMessage = processedMessage
+            .replace(/\{\{date_rdv\}\}/g, dateRdvStr)
+            .replace(/\{\{heure_rdv\}\}/g, heureRdvStr);
+        } catch (error) {
+          console.error('[SMS Route] Erreur lors du formatage de date_rdv_time:', error);
+          // En cas d'erreur, remplacer par des chaînes vides
+          processedMessage = processedMessage
+            .replace(/\{\{date_rdv\}\}/g, '')
+            .replace(/\{\{heure_rdv\}\}/g, '');
+        }
+      } else {
+        // Si pas de date_rdv_time, remplacer par des chaînes vides
+        processedMessage = processedMessage
+          .replace(/\{\{date_rdv\}\}/g, '')
+          .replace(/\{\{heure_rdv\}\}/g, '');
+      }
+    }
+
     // Envoyer le SMS via le fournisseur
     let smsResult;
     try {
-      smsResult = await sendSMSViaProvider(provider, tel.trim(), message.trim(), 'RAPPEL', fiche || null);
+      smsResult = await sendSMSViaProvider(provider, tel.trim(), processedMessage, 'RAPPEL', fiche || null);
     } catch (error) {
       console.error('[SMS Route] Erreur lors de l\'envoi du SMS:', error);
       return res.status(500).json({
