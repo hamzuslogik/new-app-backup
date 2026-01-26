@@ -4211,6 +4211,16 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
 
     // Remplacer les variables dans le message si nécessaire
     let processedMessage = message.trim();
+    
+    console.log('[SMS Route] Message original:', processedMessage.substring(0, 100));
+    console.log('[SMS Route] Fiche data:', {
+      hasFiche: !!fiche,
+      hasDateRdv: !!fiche?.date_rdv_time,
+      dateRdvValue: fiche?.date_rdv_time,
+      nom: fiche?.nom,
+      prenom: fiche?.prenom
+    });
+    
     if (fiche) {
       // Remplacer {{prenom}}, {{nom}}, {{civ}}
       processedMessage = processedMessage
@@ -4221,31 +4231,62 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
       // Remplacer {{date_rdv}} et {{heure_rdv}} si date_rdv_time est disponible
       if (fiche.date_rdv_time) {
         try {
-          const dateRdv = new Date(fiche.date_rdv_time);
-          const dateRdvStr = dateRdv.toLocaleDateString('fr-FR', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric' 
-          });
-          const heureRdvStr = dateRdv.toTimeString().slice(0, 5);
+          // date_rdv_time peut être au format datetime MySQL (YYYY-MM-DD HH:MM:SS)
+          // ou au format timestamp
+          let dateRdv;
+          if (typeof fiche.date_rdv_time === 'string') {
+            // Si c'est une chaîne, essayer de la parser
+            dateRdv = new Date(fiche.date_rdv_time);
+          } else if (typeof fiche.date_rdv_time === 'number') {
+            // Si c'est un nombre (timestamp)
+            dateRdv = new Date(fiche.date_rdv_time * 1000);
+          } else {
+            dateRdv = new Date(fiche.date_rdv_time);
+          }
           
-          processedMessage = processedMessage
-            .replace(/\{\{date_rdv\}\}/g, dateRdvStr)
-            .replace(/\{\{heure_rdv\}\}/g, heureRdvStr);
+          // Vérifier que la date est valide
+          if (isNaN(dateRdv.getTime())) {
+            console.error('[SMS Route] Date invalide:', fiche.date_rdv_time);
+            processedMessage = processedMessage
+              .replace(/\{\{date_rdv\}\}/g, '')
+              .replace(/\{\{heure_rdv\}\}/g, '');
+          } else {
+            const dateRdvStr = dateRdv.toLocaleDateString('fr-FR', { 
+              day: '2-digit', 
+              month: '2-digit', 
+              year: 'numeric' 
+            });
+            const heureRdvStr = dateRdv.toTimeString().slice(0, 5);
+            
+            console.log('[SMS Route] Date RDV formatée:', { dateRdvStr, heureRdvStr });
+            
+            processedMessage = processedMessage
+              .replace(/\{\{date_rdv\}\}/g, dateRdvStr)
+              .replace(/\{\{heure_rdv\}\}/g, heureRdvStr);
+          }
         } catch (error) {
-          console.error('[SMS Route] Erreur lors du formatage de date_rdv_time:', error);
+          console.error('[SMS Route] Erreur lors du formatage de date_rdv_time:', error, fiche.date_rdv_time);
           // En cas d'erreur, remplacer par des chaînes vides
           processedMessage = processedMessage
             .replace(/\{\{date_rdv\}\}/g, '')
             .replace(/\{\{heure_rdv\}\}/g, '');
         }
       } else {
+        console.log('[SMS Route] Pas de date_rdv_time dans la fiche');
         // Si pas de date_rdv_time, remplacer par des chaînes vides
         processedMessage = processedMessage
           .replace(/\{\{date_rdv\}\}/g, '')
           .replace(/\{\{heure_rdv\}\}/g, '');
       }
     }
+    
+    console.log('[SMS Route] Message après remplacement des variables:', processedMessage.substring(0, 150));
+    console.log('[SMS Route] Variables restantes:', {
+      hasDateRdv: /\{\{date_rdv\}\}/.test(processedMessage),
+      hasHeureRdv: /\{\{heure_rdv\}\}/.test(processedMessage),
+      hasPrenom: /\{\{prenom\}\}/.test(processedMessage),
+      hasNom: /\{\{nom\}\}/.test(processedMessage)
+    });
 
     // Envoyer le SMS via le fournisseur
     let smsResult;

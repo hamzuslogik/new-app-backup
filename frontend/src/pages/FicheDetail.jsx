@@ -5381,18 +5381,87 @@ const SMSTab = ({ ficheHash, ficheData }) => {
 
   // Fonction pour remplacer les variables dans le message
   const replaceVariables = React.useCallback((message) => {
-    if (!message || !ficheData) return message;
+    if (!message || !ficheData) {
+      console.log('[SMS Frontend] replaceVariables: message ou ficheData manquant', { 
+        hasMessage: !!message, 
+        hasFicheData: !!ficheData 
+      });
+      return message;
+    }
     
-    const dateRdv = ficheData?.date_rdv_time ? new Date(ficheData.date_rdv_time) : null;
-    const dateRdvStr = dateRdv ? dateRdv.toLocaleDateString('fr-FR') : '';
-    const heureRdvStr = dateRdv ? dateRdv.toTimeString().slice(0, 5) : '';
+    console.log('[SMS Frontend] replaceVariables: Données ficheData', {
+      hasDateRdv: !!ficheData.date_rdv_time,
+      dateRdvValue: ficheData.date_rdv_time,
+      nom: ficheData.nom,
+      prenom: ficheData.prenom,
+      civ: ficheData.civ
+    });
     
-    return message
+    let dateRdv = null;
+    let dateRdvStr = '';
+    let heureRdvStr = '';
+    
+    if (ficheData?.date_rdv_time) {
+      try {
+        // date_rdv_time peut être au format datetime MySQL (YYYY-MM-DD HH:MM:SS)
+        // ou au format timestamp
+        let dateRdvValue = ficheData.date_rdv_time;
+        
+        // Si c'est une chaîne au format MySQL datetime, la parser directement
+        if (typeof dateRdvValue === 'string') {
+          // Format MySQL: "2026-01-26 14:30:00"
+          dateRdv = new Date(dateRdvValue.replace(' ', 'T')); // Convertir en format ISO
+        } else if (typeof dateRdvValue === 'number') {
+          // Si c'est un nombre (timestamp Unix en secondes)
+          dateRdv = new Date(dateRdvValue * 1000);
+        } else {
+          dateRdv = new Date(dateRdvValue);
+        }
+        
+        // Vérifier que la date est valide
+        if (!isNaN(dateRdv.getTime())) {
+          dateRdvStr = dateRdv.toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          });
+          heureRdvStr = dateRdv.toTimeString().slice(0, 5);
+          console.log('[SMS Frontend] Date RDV formatée:', { 
+            original: dateRdvValue,
+            parsed: dateRdv.toISOString(),
+            dateRdvStr, 
+            heureRdvStr 
+          });
+        } else {
+          console.error('[SMS Frontend] Date invalide après parsing:', {
+            original: dateRdvValue,
+            type: typeof dateRdvValue,
+            parsed: dateRdv
+          });
+        }
+      } catch (error) {
+        console.error('[SMS Frontend] Erreur lors du formatage de date_rdv_time:', error, ficheData.date_rdv_time);
+      }
+    } else {
+      console.log('[SMS Frontend] Pas de date_rdv_time dans ficheData', {
+        ficheDataKeys: ficheData ? Object.keys(ficheData) : 'ficheData is null'
+      });
+    }
+    
+    const processedMessage = message
       .replace(/\{\{prenom\}\}/g, ficheData.prenom?.toUpperCase() || '')
       .replace(/\{\{nom\}\}/g, ficheData.nom?.toUpperCase() || '')
       .replace(/\{\{date_rdv\}\}/g, dateRdvStr)
       .replace(/\{\{heure_rdv\}\}/g, heureRdvStr)
       .replace(/\{\{civ\}\}/g, ficheData.civ || '');
+    
+    console.log('[SMS Frontend] Variables restantes après remplacement:', {
+      hasDateRdv: /\{\{date_rdv\}\}/.test(processedMessage),
+      hasHeureRdv: /\{\{heure_rdv\}\}/.test(processedMessage),
+      messagePreview: processedMessage.substring(0, 150)
+    });
+    
+    return processedMessage;
   }, [ficheData]);
 
   // Construire les messages prédéfinis à partir des catégories
