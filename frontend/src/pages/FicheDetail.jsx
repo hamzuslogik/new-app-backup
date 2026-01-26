@@ -5361,15 +5361,20 @@ const SMSTab = ({ ficheHash, ficheData }) => {
       return res.data;
     },
     {
-      onSuccess: () => {
+      onSuccess: (data) => {
         queryClient.invalidateQueries(['sms', ficheHash]);
         queryClient.invalidateQueries(['modifica', ficheHash]);
-        alert('SMS envoyé avec succès!');
+        const message = data?.message || data?.data?.message || 'SMS envoyé avec succès!';
+        alert(message);
         setCustomMessage('');
       },
       onError: (error) => {
         console.error('Erreur:', error);
-        alert('Erreur lors de l\'envoi du SMS: ' + (error.response?.data?.message || error.message));
+        const errorMessage = error.response?.data?.message || 
+                            error.response?.data?.error || 
+                            error.message || 
+                            'Erreur lors de l\'envoi du SMS';
+        alert('Erreur lors de l\'envoi du SMS: ' + errorMessage);
       }
     }
   );

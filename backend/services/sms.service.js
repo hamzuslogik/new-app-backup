@@ -490,14 +490,23 @@ async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
       responseDataKeys: Object.keys(responseData)
     });
 
+    // Construire le message de succès avec les détails
+    let successMessage = 'SMS envoyé avec succès';
+    if (finalSuccess && responseData.sms_ticket) {
+      successMessage = `SMS envoyé avec succès (Ticket: ${responseData.sms_ticket})`;
+      if (responseData.number_of_sms_needed) {
+        successMessage += ` - ${responseData.number_of_sms_needed} SMS`;
+      }
+    }
+
     return {
       success: finalSuccess,
-      message: finalSuccess ? 'SMS envoyé avec succès' : (responseData.message || responseData.error || 'Erreur inconnue'),
+      message: finalSuccess ? successMessage : (responseData.message || responseData.error || 'Erreur inconnue'),
       data: responseData,
       provider: provider.nom,
       error: finalSuccess ? null : (responseData.error || responseData.message || 'Erreur inconnue'),
       statusCode: response.status,
-      apiStatusCode: statusCode
+      apiStatusCode: errorCode || null
     };
   } catch (error) {
     console.error('[SMS Service] Erreur Octopush complète:', {
