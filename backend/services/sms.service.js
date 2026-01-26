@@ -467,12 +467,28 @@ async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
     const responseData = response.data || {};
     const isSuccess = response.status === 200 || response.status === 201;
     
-    // Octopush retourne généralement un code de statut dans la réponse
-    // Vérifier les codes de retour possibles selon la documentation
-    const statusCode = responseData.code || responseData.status_code;
-    const isSuccessByCode = statusCode === 200 || statusCode === 201 || (statusCode >= 200 && statusCode < 300);
+    // Octopush retourne un sms_ticket en cas de succès
+    // Si sms_ticket est présent, c'est un succès (même si le statut HTTP est 200)
+    const hasSmsTicket = !!responseData.sms_ticket;
     
-    const finalSuccess = isSuccess && (isSuccessByCode !== false);
+    // Octopush peut aussi retourner un code d'erreur dans la réponse (code 121, etc.)
+    const errorCode = responseData.code;
+    const hasError = errorCode && (errorCode < 200 || errorCode >= 300);
+    
+    // Le succès est confirmé si :
+    // 1. Le statut HTTP est 200/201 ET
+    // 2. Il y a un sms_ticket (indicateur principal de succès) OU
+    // 3. Il n'y a pas de code d'erreur
+    const finalSuccess = isSuccess && (hasSmsTicket || (!hasError && !responseData.error));
+    
+    console.log('[SMS Service] Analyse de la réponse Octopush:', {
+      httpStatus: response.status,
+      hasSmsTicket: hasSmsTicket,
+      errorCode: errorCode,
+      hasError: hasError,
+      finalSuccess: finalSuccess,
+      responseDataKeys: Object.keys(responseData)
+    });
 
     return {
       success: finalSuccess,
