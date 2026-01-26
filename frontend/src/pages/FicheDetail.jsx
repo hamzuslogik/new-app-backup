@@ -5297,8 +5297,40 @@ const SMSTab = ({ ficheHash, ficheData }) => {
   const [selectedTel, setSelectedTel] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('0');
   const [customMessage, setCustomMessage] = useState('');
+  const [selectedCountryCode, setSelectedCountryCode] = useState('+33'); // France par défaut
   
   const queryClient = useQueryClient();
+  
+  // Liste des indicatifs téléphoniques
+  const countryCodes = [
+    { code: '+33', country: 'France', flag: '🇫🇷' },
+    { code: '+216', country: 'Tunisie', flag: '🇹🇳' },
+    { code: '+212', country: 'Maroc', flag: '🇲🇦' },
+    { code: '+213', country: 'Algérie', flag: '🇩🇿' },
+    { code: '+1', country: 'États-Unis/Canada', flag: '🇺🇸' },
+    { code: '+32', country: 'Belgique', flag: '🇧🇪' },
+    { code: '+41', country: 'Suisse', flag: '🇨🇭' },
+    { code: '+44', country: 'Royaume-Uni', flag: '🇬🇧' },
+    { code: '+49', country: 'Allemagne', flag: '🇩🇪' },
+    { code: '+34', country: 'Espagne', flag: '🇪🇸' },
+    { code: '+39', country: 'Italie', flag: '🇮🇹' },
+    { code: '+351', country: 'Portugal', flag: '🇵🇹' },
+    { code: '+352', country: 'Luxembourg', flag: '🇱🇺' },
+    { code: '+377', country: 'Monaco', flag: '🇲🇨' },
+    { code: '+221', country: 'Sénégal', flag: '🇸🇳' },
+    { code: '+225', country: 'Côte d\'Ivoire', flag: '🇨🇮' },
+    { code: '+229', country: 'Bénin', flag: '🇧🇯' },
+    { code: '+226', country: 'Burkina Faso', flag: '🇧🇫' },
+    { code: '+227', country: 'Niger', flag: '🇳🇪' },
+    { code: '+228', country: 'Togo', flag: '🇹🇬' },
+    { code: '+230', country: 'Maurice', flag: '🇲🇺' },
+    { code: '+262', country: 'La Réunion', flag: '🇷🇪' },
+    { code: '+590', country: 'Guadeloupe', flag: '🇬🇵' },
+    { code: '+594', country: 'Guyane', flag: '🇬🇫' },
+    { code: '+596', country: 'Martinique', flag: '🇲🇶' },
+    { code: '+687', country: 'Nouvelle-Calédonie', flag: '🇳🇨' },
+    { code: '+689', country: 'Polynésie française', flag: '🇵🇫' }
+  ];
   
   // Récupérer les catégories SMS depuis l'API
   const { data: smsCategories, isLoading: loadingCategories } = useQuery(
@@ -5397,8 +5429,20 @@ const SMSTab = ({ ficheHash, ficheData }) => {
       alert('Veuillez saisir un message');
       return;
     }
+    
+    // Formater le numéro avec l'indicatif
+    let formattedTel = selectedTel.trim();
+    // Si le numéro ne commence pas déjà par un indicatif, ajouter celui sélectionné
+    if (!formattedTel.startsWith('+') && !formattedTel.startsWith('00')) {
+      // Supprimer le 0 initial pour la France si présent
+      if (selectedCountryCode === '+33' && formattedTel.startsWith('0')) {
+        formattedTel = formattedTel.substring(1);
+      }
+      formattedTel = selectedCountryCode + formattedTel;
+    }
+    
     sendSMSMutation.mutate({
-      tel: selectedTel.trim(),
+      tel: formattedTel,
       message: message.trim(),
       id_confirmateur: user.id
     });
@@ -5424,6 +5468,21 @@ const SMSTab = ({ ficheHash, ficheData }) => {
       <h2>Envoyer un SMS</h2>
       <div className="sms-form">
         <div className="form-group">
+          <label>Indicatif téléphonique :</label>
+          <select
+            value={selectedCountryCode}
+            onChange={(e) => setSelectedCountryCode(e.target.value)}
+            className="form-control"
+            style={{ marginBottom: '10px' }}
+          >
+            {countryCodes.map(country => (
+              <option key={country.code} value={country.code}>
+                {country.flag} {country.code} - {country.country}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
           <label>Numéro de téléphone :</label>
           <select
             value={selectedTel}
@@ -5434,6 +5493,20 @@ const SMSTab = ({ ficheHash, ficheData }) => {
               <option key={tel.value} value={tel.value}>{tel.label}</option>
             ))}
           </select>
+          {selectedTel && (
+            <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
+              Numéro formaté : {(() => {
+                let formatted = selectedTel.trim();
+                if (!formatted.startsWith('+') && !formatted.startsWith('00')) {
+                  if (selectedCountryCode === '+33' && formatted.startsWith('0')) {
+                    formatted = formatted.substring(1);
+                  }
+                  formatted = selectedCountryCode + formatted;
+                }
+                return formatted;
+              })()}
+            </div>
+          )}
         </div>
         <div className="form-group">
           <label>Catégorie de message :</label>
