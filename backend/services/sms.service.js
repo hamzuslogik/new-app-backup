@@ -396,12 +396,13 @@ async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
     }
 
     // Octopush exige une mention STOP dans le message (obligatoire légalement en France)
+    // Format requis: STOP au 30101 (sans crochets, directement après la fin du SMS)
     // Vérifier si le message contient déjà une mention STOP
     const stopPatterns = [
+      /STOP\s+au\s+30101/i,
       /STOP\s+au\s+\d+/i,
       /STOP\s+\d+/i,
       /STOP\s+au/i,
-      /\[STOP\s+au\s+\d+\]/i,
       /STOP/i
     ];
     
@@ -409,10 +410,12 @@ async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
     const hasStopMention = stopPatterns.some(pattern => pattern.test(message));
     
     if (!hasStopMention) {
-      // Ajouter la mention STOP à la fin du message
-      // Format standard: "STOP au 36184" (numéro court Octopush)
-      processedMessage = message.trim() + '\n\nSTOP au 36184';
+      // Ajouter la mention STOP directement après la fin du SMS (sans crochets)
+      processedMessage = message.trim() + ' STOP au 30101';
       console.log('[SMS Service] Mention STOP ajoutée automatiquement au message');
+      console.log('[SMS Service] Fin du message (30 derniers caractères):', processedMessage.substring(Math.max(0, processedMessage.length - 30)));
+    } else {
+      console.log('[SMS Service] Message contient déjà une mention STOP');
     }
 
     const requestBody = {
@@ -421,12 +424,31 @@ async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
       sender: from || 'RAPPEL'
     };
 
+    // Log détaillé pour vérifier que la mention STOP est bien présente
+    const messageEnd = processedMessage.substring(Math.max(0, processedMessage.length - 50));
+    const hasStopInFinal = /STOP\s+au\s+30101/i.test(processedMessage);
+    
     console.log('[SMS Service] Requête Octopush:', {
       url: apiUrl,
-      body: { ...requestBody, text: requestBody.text.substring(0, 50) + '...' },
+      body: { 
+        ...requestBody, 
+        text: requestBody.text.length > 100 
+          ? requestBody.text.substring(0, 100) + '...' 
+          : requestBody.text 
+      },
       hasAuth: !!(login && apiKey),
-      recipient: recipient
+      recipient: recipient,
+      messageLength: processedMessage.length,
+      messageEnd: messageEnd,
+      hasStopInFinal: hasStopInFinal,
+      originalMessageLength: message.length,
+      processedMessageLength: processedMessage.length
     });
+    
+    if (!hasStopInFinal) {
+      console.error('[SMS Service] ⚠️ ATTENTION: La mention STOP n\'est pas présente dans le message final!');
+      console.error('[SMS Service] Message final complet:', processedMessage);
+    }
 
     // Headers selon l'exemple fonctionnel
     const response = await axios.post(apiUrl, requestBody, {
