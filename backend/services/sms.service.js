@@ -395,9 +395,29 @@ async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
       recipient.param3 = param3;
     }
 
+    // Octopush exige une mention STOP dans le message (obligatoire légalement en France)
+    // Vérifier si le message contient déjà une mention STOP
+    const stopPatterns = [
+      /STOP\s+au\s+\d+/i,
+      /STOP\s+\d+/i,
+      /STOP\s+au/i,
+      /\[STOP\s+au\s+\d+\]/i,
+      /STOP/i
+    ];
+    
+    let processedMessage = message;
+    const hasStopMention = stopPatterns.some(pattern => pattern.test(message));
+    
+    if (!hasStopMention) {
+      // Ajouter la mention STOP à la fin du message
+      // Format standard: "STOP au 36184" (numéro court Octopush)
+      processedMessage = message.trim() + '\n\nSTOP au 36184';
+      console.log('[SMS Service] Mention STOP ajoutée automatiquement au message');
+    }
+
     const requestBody = {
       recipients: [recipient],
-      text: message, // Le message peut contenir {{param3}}, {{first_name}}, {{last_name}}
+      text: processedMessage, // Le message avec mention STOP si nécessaire
       sender: from || 'RAPPEL'
     };
 
