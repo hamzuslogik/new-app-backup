@@ -45,15 +45,15 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
   );
 
   useEffect(() => {
-    // Détecter si on est déjà sur la route /fiches/:id (accès direct)
+    // Détecter si on est déjà sur la route /fiches/:id (accès direct, sans overlay)
     const isOnFicheRoute = location.pathname === `/fiches/${ficheHash}`;
     isDirectAccess.current = isOnFicheRoute;
     
     // Sauvegarder le chemin actuel seulement si on n'est pas déjà sur /fiches/:id
     if (!isOnFicheRoute) {
       previousPath.current = location.pathname;
-      // Mettre à jour l'URL pour refléter le hash de la fiche
-      window.history.pushState(null, '', `/fiches/${ficheHash}`);
+      // Mettre à jour l'URL avec ?overlay=1 pour qu'un refresh rouvre le modal (pas la page plein écran)
+      window.history.pushState(null, '', `/fiches/${ficheHash}?overlay=1`);
     }
     
     return () => {

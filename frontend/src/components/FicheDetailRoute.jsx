@@ -14,21 +14,29 @@ const FicheDetailRoute = () => {
   useEffect(() => {
     if (id && !hasOpened.current) {
       hasOpened.current = true;
-      
+
+      // Si l'URL contient ?overlay=1, c'était un modal avant refresh → rouvrir en modal sur le dashboard
+      const searchParams = new URLSearchParams(location.search);
+      if (searchParams.get('overlay') === '1') {
+        openFicheDetail(id);
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+
       // Vérifier si on accède directement à l'URL (tape dans la barre d'adresse ou lien externe)
       // vs depuis un lien dans l'application
       const referrer = document.referrer;
       const currentOrigin = window.location.origin;
-      
+
       // Si pas de referrer OU referrer externe OU referrer ne contient pas de route de l'app
-      // => accès direct
-      const directAccess = !referrer || 
+      // => accès direct (page plein écran)
+      const directAccess = !referrer ||
                           !referrer.startsWith(currentOrigin) ||
-                          (referrer.startsWith(currentOrigin) && 
+                          (referrer.startsWith(currentOrigin) &&
                            !referrer.match(/\/(dashboard|fiches|planning|statistiques|kpis|compte-rendu|validation|notifications|signatures)/));
-      
+
       setIsDirectAccess(directAccess);
-      
+
       if (directAccess) {
         // Si accès direct, ne pas ouvrir le modal, afficher directement la page
         // L'URL reste /fiches/:id et la page s'affiche normalement
@@ -46,14 +54,14 @@ const FicheDetailRoute = () => {
         }, 100);
       }
     }
-  }, [id, openFicheDetail, navigate]);
+  }, [id, openFicheDetail, navigate, location.search]);
 
-  // Si accès direct, afficher la page FicheDetail directement (pas en modal)
+  // Si accès direct (sans overlay=1), afficher la page FicheDetail directement (pas en modal)
   if (isDirectAccess && id) {
     return <FicheDetail ficheHash={id} isModal={false} />;
   }
-  
-  // Sinon, ne rien afficher - le modal sera rendu par le contexte
+
+  // Sinon, ne rien afficher - le modal sera rendu par le contexte (ou on redirige)
   return null;
 };
 
