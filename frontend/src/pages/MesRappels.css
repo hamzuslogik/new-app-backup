@@ -1,0 +1,132 @@
+.mes-rappels-page {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.mes-rappels-header {
+  margin-bottom: 1.5rem;
+}
+
+.mes-rappels-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  color: #333;
+}
+
+.mes-rappels-description {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.mes-rappels-filters {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.mes-rappels-filters .form-group {
+  margin: 0;
+}
+
+.mes-rappels-filters label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 500;
+  color: #444;
+}
+
+.mes-rappels-filters .form-control {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.mes-rappels-content {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.mes-rappels-loading,
+.mes-rappels-error,
+.mes-rappels-empty {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+.mes-rappels-error {
+  color: #c00;
+}
+
+.mes-rappels-table-wrapper {
+  overflow-x: auto;
+}
+
+.mes-rappels-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.mes-rappels-table th,
+.mes-rappels-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.mes-rappels-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.mes-rappels-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.mes-rappels-table .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem;
+  background: #3498db;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.mes-rappels-table .btn-icon:hover {
+  background: #2980b9;
+}
+
+@media (max-width: 768px) {
+  .mes-rappels-table th {
+    display: none;
+  }
+
+  .mes-rappels-table td {
+    display: block;
+    padding: 0.5rem 1rem;
+  }
+
+  .mes-rappels-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #555;
+  }
+
+  .mes-rappels-table tr {
+    border-bottom: 1px solid #ddd;
+  }
+}

@@ -264,6 +264,14 @@ const Sidebar = ({ collapsed }) => {
       visible: true,
     },
     {
+      path: '/mes-rappels',
+      label: 'Mes rappels',
+      icon: FaClock,
+      permission: 'dashboard_view',
+      visible: true,
+      customCheck: (item, user) => user?.fonction === 6,
+    },
+    {
       path: '/users',
       label: 'Utilisateurs',
       icon: FaUsers,
