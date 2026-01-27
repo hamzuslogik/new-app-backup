@@ -1457,7 +1457,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           id_sous_etat: '',
           conf_commentaire_produit: ''
         });
-        alert('État de la fiche mis à jour avec succès');
+        // Ne pas afficher "État fiche modifié" après la création d'un compte rendu (message déjà affiché pour le compte rendu)
+        if (!res.data.data?.id_compte_rendu) {
+          alert('État de la fiche mis à jour avec succès');
+        }
       }
     } catch (error) {
       console.error('Erreur lors du changement d\'état:', error);

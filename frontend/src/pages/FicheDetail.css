@@ -395,6 +395,15 @@
   background: #1a2529;
 }
 
+/* Bouton Modifier compte rendu toujours visible dans la section comptes rendus (pas seulement au survol) */
+.compte-rendu-item .btn-edit,
+.compte-rendu-section .btn-edit,
+.fiche-section.compte-rendu-section .btn-edit {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: inline-flex !important;
+}
+
 .btn-save {
   background: #2ecc71;
   color: white;

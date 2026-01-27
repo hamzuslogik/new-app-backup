@@ -142,6 +142,15 @@
   gap: 8px;
 }
 
+/* Bouton Modifier compte rendu toujours visible (pas seulement au survol) */
+.compte-rendu-card .cr-actions,
+.compte-rendu-card .cr-actions .btn-icon,
+.compte-rendu-card .cr-actions .btn-edit {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+}
+
 .btn-icon {
   padding: 8px;
   border: none;
