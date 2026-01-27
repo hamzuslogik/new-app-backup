@@ -106,8 +106,8 @@ const CompteRenduPending = () => {
   };
 
   const comptesRendus = comptesRendusData || [];
-  const isAdmin = [1, 2, 7].includes(user.fonction);
-  const isRPConfirmation = user.fonction === 15;
+  const isAdmin = [1, 2, 7].includes(Number(user.fonction));
+  const isRPConfirmation = Number(user.fonction) === 13; // RP Confirmation = fonction 13
   const canApprove = isAdmin || isRPConfirmation; // Admins et RP Confirmation peuvent approuver
   const isCommercial = user.fonction === 5;
 

@@ -390,23 +390,23 @@ const Decalages = () => {
                         - Admins (1, 2, 7) : peuvent changer vers tous les états
                         - Confirmateurs (6) : peuvent refuser ou valider, mais pas annuler
                         - RE Confirmation (14) : peuvent refuser ou valider, mais pas annuler
-                        - RP Confirmation (15) : peuvent refuser ou valider, mais pas annuler
+                        - RP Confirmation (13) : peuvent refuser ou valider, mais pas annuler
                         - Commerciaux (5) : peuvent seulement annuler leurs propres décalages */}
-                    {([1, 2, 7].includes(user?.fonction) || 
-                      (user?.fonction === 6) ||
-                      (user?.fonction === 14) ||
-                      (user?.fonction === 15) ||
-                      (user?.fonction === 5 && decalage.expediteur === user?.id)) && (
+                    {([1, 2, 7].includes(Number(user?.fonction)) || 
+                      Number(user?.fonction) === 6 ||
+                      Number(user?.fonction) === 14 ||
+                      Number(user?.fonction) === 13 ||
+                      (Number(user?.fonction) === 5 && decalage.expediteur === user?.id)) && (
                       <div className="action-buttons">
                         {etatsDecalage?.filter(etat => {
                           // Filtrer les états selon les permissions
-                          if ([1, 2, 7].includes(user?.fonction)) {
+                          if ([1, 2, 7].includes(Number(user?.fonction))) {
                             // Admins : tous les états
                             return true;
-                          } else if (user?.fonction === 6 || user?.fonction === 14 || user?.fonction === 15) {
-                            // Confirmateurs, RE Confirmation, RP Confirmation : pas d'annulation (id_etat = 6)
+                          } else if (Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13) {
+                            // Confirmateurs, RE Confirmation, RP Confirmation (13) : pas d'annulation (id_etat = 6)
                             return etat.id !== 6;
-                          } else if (user?.fonction === 5) {
+                          } else if (Number(user?.fonction) === 5) {
                             // Commerciaux : seulement annulation (id_etat = 6)
                             return etat.id === 6;
                           }

@@ -104,9 +104,9 @@ const checkPermission = (...allowedFunctions) => {
 // Helper pour vérifier si l'utilisateur est admin, backoffice ou RP confirmation
 // Admin : fonctions 1, 2, 7
 // Backoffice : fonction 11
-// RP Confirmation : fonctions 13 (Mes rappels / fiches), 15 (compte rendu)
+// RP Confirmation : fonction 13 (valeur officielle)
 const isAdminOrBackofficeOrRPConfirmation = (fonction) => {
-  return [1, 2, 7, 11, 13, 15].includes(Number(fonction));
+  return [1, 2, 7, 11, 13].includes(Number(fonction));
 };
 
 module.exports = {
