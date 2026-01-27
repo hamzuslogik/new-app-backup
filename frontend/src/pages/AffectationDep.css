@@ -401,7 +401,7 @@
   padding: 10px 12px;
   border: 2px solid;
   border-radius: 5px;
-  color: white;
+  color: #000000 !important;
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
