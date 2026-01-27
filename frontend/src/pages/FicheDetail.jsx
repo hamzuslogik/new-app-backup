@@ -6198,7 +6198,21 @@ const CreateRdvModal = ({
         <div className="modal-body">
           <div className="rdv-form-info">
             <p><strong>Date et heure :</strong> {dateFormatted}</p>
-            <p><strong>Fiche :</strong> {ficheData?.nom || ''} {ficheData?.prenom || ''} ({ficheData?.tel || ''})</p>
+            {ficheData && (
+              <div className="rdv-fiche-info-block">
+                <strong>Informations de la fiche</strong>
+                <div className="rdv-fiche-info-grid">
+                  <p><span className="rdv-fiche-label">Nom :</span> {ficheData.nom || '-'} {ficheData.prenom || '-'}</p>
+                  <p><span className="rdv-fiche-label">Tél :</span> {ficheData.tel || '-'}</p>
+                  {(ficheData.gsm1 || ficheData.gsm2) && (
+                    <p><span className="rdv-fiche-label">GSM :</span> {[ficheData.gsm1, ficheData.gsm2].filter(Boolean).join(' / ')}</p>
+                  )}
+                  <p><span className="rdv-fiche-label">Adresse :</span> {ficheData.adresse || '-'}</p>
+                  <p><span className="rdv-fiche-label">CP :</span> {ficheData.cp || '-'} <span className="rdv-fiche-label">Ville :</span> {ficheData.ville || '-'}</p>
+                  {ficheData.produit && <p><span className="rdv-fiche-label">Produit :</span> {ficheData.produit}</p>}
+                </div>
+              </div>
+            )}
           </div>
 
           <form className="rdv-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
