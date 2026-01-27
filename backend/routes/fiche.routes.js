@@ -1289,8 +1289,8 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
   }
 });
 
-// Audit Rendez-vous - Liste des RDV (fiches) créés dans la journée, pour Qualité Confirmation (4) et RP Confirmation (13)
-// Permet de renseigner le commentaire_qualite.
+// Audit Rendez-vous - Fiches état Confirmer (7) où le RDV a été créé à la date choisie (pas par date de planning)
+// "RDV créé aujourd'hui" = date_rdv_time a été enregistré ce jour-là (via modifica). Pour Qualité Confirmation (4) et RP Confirmation (13).
 router.get('/audit-rdv', authenticate, async (req, res) => {
   try {
     const allowed = [4, 13]; // Qualité Confirmation, RP Confirmation
@@ -1306,39 +1306,120 @@ router.get('/audit-rdv', authenticate, async (req, res) => {
 
     const [dateDebut, dateFin] = [`${date} 00:00:00`, `${date} 23:59:59`];
 
-    const totalResult = await queryOne(
-      `SELECT COUNT(*) as total FROM fiches fiche
-       WHERE (fiche.archive = 0 OR fiche.archive IS NULL)
-         AND fiche.date_insert_time >= ?
-         AND fiche.date_insert_time <= ?`,
-      [dateDebut, dateFin]
-    );
-    const total = totalResult?.total || 0;
+    // Utiliser modifica pour "RDV créé à cette date" (date_rdv_time enregistré ce jour). Fallback : date_modif_time ce jour.
+    let useModifica = false;
+    let modificaFieldCol = 'type';
+    let modificaDateCol = 'date_modif_time';
+    try {
+      const modExists = await queryOne(
+        `SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'modifica'`
+      );
+      if (modExists) {
+        const modCols = await query(
+          `SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'modifica'`
+        );
+        const names = (modCols || []).map((c) => c.COLUMN_NAME);
+        if (names.includes('champ') && !names.includes('type')) modificaFieldCol = 'champ';
+        if (names.includes('date') && !names.includes('date_modif_time')) modificaDateCol = 'date';
+        useModifica = names.includes('id_fiche') && (names.includes(modificaFieldCol) && names.includes(modificaDateCol));
+      }
+    } catch (_) {}
 
-    const fiches = await query(
-      `SELECT
-        fiche.id,
-        fiche.nom,
-        fiche.prenom,
-        fiche.tel,
-        fiche.cp,
-        fiche.ville,
-        fiche.date_insert_time,
-        fiche.commentaire_qualite,
-        agent.pseudo as agent_pseudo,
-        centre.titre as centre_nom,
-        etat.titre as etat_titre
-       FROM fiches fiche
-       LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
-       LEFT JOIN centres centre ON fiche.id_centre = centre.id
-       LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
-       WHERE (fiche.archive = 0 OR fiche.archive IS NULL)
-         AND fiche.date_insert_time >= ?
-         AND fiche.date_insert_time <= ?
-       ORDER BY fiche.date_insert_time DESC
-       LIMIT ? OFFSET ?`,
-      [dateDebut, dateFin, parseInt(limit), offset]
-    );
+    let total = 0;
+    let fiches = [];
+
+    if (useModifica) {
+      const totalResult = await queryOne(
+        `SELECT COUNT(*) as total
+         FROM fiches fiche
+         INNER JOIN (
+           SELECT id_fiche FROM modifica
+           WHERE \`${modificaFieldCol}\` = 'date_rdv_time'
+             AND \`${modificaDateCol}\` >= ?
+             AND \`${modificaDateCol}\` <= ?
+           GROUP BY id_fiche
+         ) m ON m.id_fiche = fiche.id
+         WHERE (fiche.archive = 0 OR fiche.archive IS NULL)
+           AND fiche.id_etat_final = 7
+           AND fiche.date_rdv_time IS NOT NULL`,
+        [dateDebut, dateFin]
+      );
+      total = totalResult?.total || 0;
+
+      fiches = await query(
+        `SELECT
+          fiche.id,
+          fiche.nom,
+          fiche.prenom,
+          fiche.tel,
+          fiche.cp,
+          fiche.ville,
+          fiche.date_rdv_time,
+          m.rdv_created_at as date_creation_rdv,
+          fiche.commentaire_qualite,
+          agent.pseudo as agent_pseudo,
+          centre.titre as centre_nom,
+          etat.titre as etat_titre
+         FROM fiches fiche
+         INNER JOIN (
+           SELECT id_fiche, MAX(\`${modificaDateCol}\`) as rdv_created_at
+           FROM modifica
+           WHERE \`${modificaFieldCol}\` = 'date_rdv_time'
+             AND \`${modificaDateCol}\` >= ?
+             AND \`${modificaDateCol}\` <= ?
+           GROUP BY id_fiche
+         ) m ON m.id_fiche = fiche.id
+         LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
+         LEFT JOIN centres centre ON fiche.id_centre = centre.id
+         LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
+         WHERE (fiche.archive = 0 OR fiche.archive IS NULL)
+           AND fiche.id_etat_final = 7
+           AND fiche.date_rdv_time IS NOT NULL
+         ORDER BY m.rdv_created_at DESC
+         LIMIT ? OFFSET ?`,
+        [dateDebut, dateFin, parseInt(limit), offset]
+      );
+    } else {
+      // Fallback : fiches état Confirmer (7) modifiées à cette date (proxy pour "RDV créé ce jour")
+      const totalResult = await queryOne(
+        `SELECT COUNT(*) as total FROM fiches fiche
+         WHERE (fiche.archive = 0 OR fiche.archive IS NULL)
+           AND fiche.id_etat_final = 7
+           AND fiche.date_rdv_time IS NOT NULL
+           AND fiche.date_modif_time >= ?
+           AND fiche.date_modif_time <= ?`,
+        [dateDebut, dateFin]
+      );
+      total = totalResult?.total || 0;
+
+      fiches = await query(
+        `SELECT
+          fiche.id,
+          fiche.nom,
+          fiche.prenom,
+          fiche.tel,
+          fiche.cp,
+          fiche.ville,
+          fiche.date_rdv_time,
+          fiche.date_modif_time as date_creation_rdv,
+          fiche.commentaire_qualite,
+          agent.pseudo as agent_pseudo,
+          centre.titre as centre_nom,
+          etat.titre as etat_titre
+         FROM fiches fiche
+         LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
+         LEFT JOIN centres centre ON fiche.id_centre = centre.id
+         LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
+         WHERE (fiche.archive = 0 OR fiche.archive IS NULL)
+           AND fiche.id_etat_final = 7
+           AND fiche.date_rdv_time IS NOT NULL
+           AND fiche.date_modif_time >= ?
+           AND fiche.date_modif_time <= ?
+         ORDER BY fiche.date_modif_time DESC
+         LIMIT ? OFFSET ?`,
+        [dateDebut, dateFin, parseInt(limit), offset]
+      );
+    }
 
     const fichesWithHash = fiches.map((f) => ({
       ...f,

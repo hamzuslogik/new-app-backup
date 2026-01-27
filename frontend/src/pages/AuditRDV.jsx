@@ -105,7 +105,7 @@ const AuditRDV = () => {
 
       <div className="results-info">
         <p>
-          Total : <strong>{pagination.total}</strong> fiche(s) créée(s) le {date}
+          Total : <strong>{pagination.total}</strong> RDV créé(s) le {date}
           {pagination.pages > 1 && (
             <> | Page <strong>{pagination.page}</strong> / <strong>{pagination.pages}</strong></>
           )}
@@ -120,7 +120,7 @@ const AuditRDV = () => {
           <button onClick={() => refetch()}>Réessayer</button>
         </div>
       ) : fiches.length === 0 ? (
-        <div className="no-results">Aucune fiche créée à cette date.</div>
+        <div className="no-results">Aucun RDV créé à cette date.</div>
       ) : (
         <div className="audit-rdv-table-wrap">
           <table className="audit-rdv-table">
@@ -133,7 +133,8 @@ const AuditRDV = () => {
                 <th>Ville</th>
                 <th>Agent</th>
                 <th>Centre</th>
-                <th>Date création</th>
+                <th>Date création RDV</th>
+                <th>Date / Heure RDV</th>
                 <th>État</th>
                 <th>Commentaire Qualité</th>
                 <th>Détail</th>
@@ -153,7 +154,8 @@ const AuditRDV = () => {
                     <td>{fiche.ville || '-'}</td>
                     <td>{fiche.agent_pseudo || '-'}</td>
                     <td>{fiche.centre_nom || '-'}</td>
-                    <td>{formatDate(fiche.date_insert_time)}</td>
+                    <td>{formatDate(fiche.date_creation_rdv)}</td>
+                    <td>{formatDate(fiche.date_rdv_time)}</td>
                     <td>{fiche.etat_titre || '-'}</td>
                     <td>
                       <div className="comment-quick-edit-container">
