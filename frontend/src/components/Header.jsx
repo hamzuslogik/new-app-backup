@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { useSidebar } from '../contexts/SidebarContext';
 import { FaBars, FaBell, FaUser, FaSignOutAlt, FaTimes, FaCheck, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import api from '../config/api';
+import useLocalStorage from '../hooks/useLocalStorage';
 import './Header.css';
 
 const Header = () => {
@@ -16,6 +17,8 @@ const Header = () => {
   const notificationRef = useRef(null);
   const [isBlinking, setIsBlinking] = useState(false);
   const previousCountRef = useRef(0);
+  const [soundEnabled, setSoundEnabled] = useLocalStorage('notification-sound-enabled', true);
+  const audioContextRef = useRef(null);
 
   // Récupérer les notifications (pour les admins, backoffice, confirmateurs et RE Confirmation)
   const { data: notificationsData } = useQuery(
@@ -150,11 +153,74 @@ const Header = () => {
   // Afficher le badge pour tous les utilisateurs qui ont des notifications non lues
   const shouldShowBadge = unreadCount > 0;
 
+  // Fonction pour jouer un son de notification
+  const playNotificationSound = useCallback(() => {
+    if (!soundEnabled) return;
+    
+    try {
+      // Créer un contexte audio si nécessaire
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      
+      const audioContext = audioContextRef.current;
+      
+      // Fonction pour créer et jouer le son
+      const playSound = (frequency, delay = 0) => {
+        setTimeout(() => {
+          try {
+            // Reprendre le contexte audio s'il est suspendu
+            if (audioContext.state === 'suspended') {
+              audioContext.resume().then(() => {
+                createAndPlayTone(audioContext, frequency);
+              }).catch(err => {
+                console.warn('Impossible de reprendre le contexte audio:', err);
+              });
+            } else {
+              createAndPlayTone(audioContext, frequency);
+            }
+          } catch (error) {
+            console.warn('Erreur lors de la lecture du son:', error);
+          }
+        }, delay);
+      };
+      
+      // Fonction pour créer et jouer une note
+      const createAndPlayTone = (ctx, freq) => {
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        oscillator.frequency.value = freq;
+        oscillator.type = 'sine';
+        
+        const now = ctx.currentTime;
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.1, now + 0.1);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        
+        oscillator.start(now);
+        oscillator.stop(now + 0.3);
+      };
+      
+      // Jouer deux notes pour un effet "ding-dong"
+      playSound(800, 0);
+      playSound(600, 150);
+    } catch (error) {
+      console.warn('Impossible de jouer le son de notification:', error);
+    }
+  }, [soundEnabled]);
+
   // Détecter quand une nouvelle notification arrive
   useEffect(() => {
     if (unreadCount > previousCountRef.current && previousCountRef.current > 0) {
       // Une nouvelle notification est arrivée
       setIsBlinking(true);
+      // Jouer le son de notification
+      playNotificationSound();
       // Arrêter le clignotement après 5 secondes
       const timer = setTimeout(() => {
         setIsBlinking(false);
@@ -162,7 +228,7 @@ const Header = () => {
       return () => clearTimeout(timer);
     }
     previousCountRef.current = unreadCount;
-  }, [unreadCount]);
+  }, [unreadCount, playNotificationSound]);
 
   // Arrêter le clignotement quand l'utilisateur ouvre les notifications
   useEffect(() => {
@@ -217,6 +283,28 @@ const Header = () => {
                 <div className="notifications-header">
                   <h3>Notifications</h3>
                   <div className="notifications-header-actions">
+                    <button
+                      className="sound-toggle-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSoundEnabled(!soundEnabled);
+                      }}
+                      title={soundEnabled ? 'Désactiver le son' : 'Activer le son'}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        border: 'none',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '10.2px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      {soundEnabled ? '🔔' : '🔕'}
+                    </button>
                     <Link 
                       to="/notifications" 
                       className="view-all-notifications-btn"
