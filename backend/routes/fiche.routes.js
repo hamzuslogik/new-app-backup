@@ -610,9 +610,37 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push('(fiche.id_commercial = ? OR fiche.id_commercial_2 = ?)');
       params.push(id_commercial, id_commercial);
     }
-    if (id_confirmateur) {
-      whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
-      params.push(id_confirmateur, id_confirmateur, id_confirmateur);
+    // RE Confirmation (14) : rappels équipe (id_etat_final=19) sans filtre confirmateur = tous les confirmateurs de l'équipe
+    if (req.user.fonction === 14 && (id_etat_final == 19 || id_etat_final === '19') && (!id_confirmateur || id_confirmateur === 'all')) {
+      const confirmateursEquipe = await query(
+        'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
+        [req.user.id]
+      );
+      const idsEquipe = confirmateursEquipe.map(c => c.id);
+      if (idsEquipe.length > 0) {
+        const placeholders = idsEquipe.map(() => '?').join(',');
+        whereConditions.push(`(fiche.id_confirmateur IN (${placeholders}) OR fiche.id_confirmateur_2 IN (${placeholders}) OR fiche.id_confirmateur_3 IN (${placeholders}))`);
+        params.push(...idsEquipe, ...idsEquipe, ...idsEquipe);
+      } else {
+        whereConditions.push('1 = 0');
+      }
+    } else if (id_confirmateur && id_confirmateur !== 'all') {
+      if (req.user.fonction === 14) {
+        const equipeRE = await query(
+          'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
+          [req.user.id]
+        );
+        const idsEquipe = equipeRE.map((c) => c.id);
+        if (idsEquipe.length > 0 && !idsEquipe.includes(parseInt(id_confirmateur, 10))) {
+          whereConditions.push('1 = 0');
+        } else {
+          whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
+          params.push(id_confirmateur, id_confirmateur, id_confirmateur);
+        }
+      } else {
+        whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
+        params.push(id_confirmateur, id_confirmateur, id_confirmateur);
+      }
     }
     if (id_centre) {
       whereConditions.push('fiche.id_centre = ?');

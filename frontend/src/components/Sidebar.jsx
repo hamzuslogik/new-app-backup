@@ -269,7 +269,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaClock,
       permission: 'dashboard_view',
       visible: true,
-      customCheck: (item, user) => user?.fonction === 6,
+      customCheck: (item, user) => user?.fonction === 6 || user?.fonction === 14,
     },
     {
       path: '/users',
