@@ -236,8 +236,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   });
 
-  // États regroupés par groupe d'états (0,1,2,3), ordre BDD, pour la liste déroulante "Changer l'état"
-  const etatsList = Array.isArray(etats) ? etats : (etats?.data || []);
+  // États regroupés par phase (0,1,2,3), ordre BDD, pour les selects
+  const etatsList = etats || [];
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etatsList);
 
   // Récupérer les sous-états dynamiquement selon l'état sélectionné
@@ -3824,7 +3824,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 >
                   <option value="">Sélectionner un état</option>
                   {etatsPhase0.length > 0 && (
-                    <optgroup label="Groupe 0 – États spéciaux">
+                    <optgroup label="PHASE 0">
                       {etatsPhase0.map(etat => (
                         <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
                           {etat.titre}
@@ -3833,7 +3833,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     </optgroup>
                   )}
                   {etatsPhase1.length > 0 && (
-                    <optgroup label="Groupe 1 – États initiaux">
+                    <optgroup label="PHASE 1">
                       {etatsPhase1.map(etat => (
                         <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
                           {etat.titre}
@@ -3842,7 +3842,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     </optgroup>
                   )}
                   {etatsPhase2.length > 0 && (
-                    <optgroup label="Groupe 2 – États de rendez-vous">
+                    <optgroup label="PHASE 2">
                       {etatsPhase2.map(etat => (
                         <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
                           {etat.titre}
@@ -3851,7 +3851,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     </optgroup>
                   )}
                   {etatsPhase3.length > 0 && (
-                    <optgroup label="Groupe 3 – États finaux">
+                    <optgroup label="PHASE 3">
                       {etatsPhase3.map(etat => (
                         <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
                           {etat.titre}
