@@ -1289,14 +1289,15 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
   }
 });
 
-// Audit Rendez-vous - Liste des RDV (fiches) créés dans la journée, pour Qualité Confirmation (fonction 4)
-// Permet de renseigner le commentaire_qualite. Réservé à la fonction 4.
+// Audit Rendez-vous - Liste des RDV (fiches) créés dans la journée, pour Qualité Confirmation (4) et RP Confirmation (13)
+// Permet de renseigner le commentaire_qualite.
 router.get('/audit-rdv', authenticate, async (req, res) => {
   try {
-    if (req.user.fonction !== 4) {
+    const allowed = [4, 13]; // Qualité Confirmation, RP Confirmation
+    if (!allowed.includes(req.user.fonction)) {
       return res.status(403).json({
         success: false,
-        message: 'Accès réservé à la Qualité Confirmation (fonction 4)'
+        message: 'Accès réservé à la Qualité Confirmation (fonction 4) et au RP Confirmation (fonction 13)'
       });
     }
     const { page = 1, limit = 100, date: dateParam } = req.query;

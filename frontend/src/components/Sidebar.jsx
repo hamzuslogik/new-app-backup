@@ -213,7 +213,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaCalendarAlt,
       permission: null,
       visible: false,
-      customCheck: (item, user) => Number(user?.fonction) === 4,
+      customCheck: (item, user) => [4, 13].includes(Number(user?.fonction)),
     },
     {
       path: '/stats-agents-qualite',

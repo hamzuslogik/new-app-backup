@@ -74,12 +74,13 @@ const AuditRDV = () => {
     }
   };
 
-  if (user?.fonction !== 4) {
+  const allowedFonctions = [4, 13]; // Qualité Confirmation, RP Confirmation
+  if (!allowedFonctions.includes(Number(user?.fonction))) {
     return (
       <div className="audit-rdv">
         <div className="audit-rdv-forbidden">
           <h2>Accès réservé</h2>
-          <p>Cette page est réservée à la Qualité Confirmation (fonction 4).</p>
+          <p>Cette page est réservée à la Qualité Confirmation (fonction 4) et au RP Confirmation (fonction 13).</p>
         </div>
       </div>
     );

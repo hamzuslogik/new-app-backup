@@ -83,7 +83,7 @@ function App() {
           <Route path="kpis" element={<ProtectedRoute permission="kpis_view"><KPIs /></ProtectedRoute>} />
           <Route path="statistiques-v2" element={<ProtectedRoute permission="statistiques_v2_view"><StatistiquesV2 /></ProtectedRoute>} />
           <Route path="controle-qualite" element={<ProtectedRoute permission="controle_qualite_view"><ControleQualite /></ProtectedRoute>} />
-          <Route path="audit-rdv" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[4]}><AuditRDV /></ProtectedRoute>} />
+          <Route path="audit-rdv" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[4, 13]}><AuditRDV /></ProtectedRoute>} />
           <Route path="compte-rendu" element={<ProtectedRoute permission="compte_rendu_view"><CompteRendu /></ProtectedRoute>} />
           <Route path="compte-rendu-pending" element={<ProtectedRoute permission={null} customCheck={(item, user) => [1, 2, 5, 7, 13].includes(Number(user?.fonction))}><CompteRenduPending /></ProtectedRoute>} />
           <Route path="phase3" element={<ProtectedRoute permission="phase3_view"><Phase3 /></ProtectedRoute>} />
