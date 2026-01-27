@@ -269,7 +269,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaClock,
       permission: 'dashboard_view',
       visible: true,
-      customCheck: (item, user) => [6, 14, 15].includes(user?.fonction),
+      customCheck: (item, user) => [6, 14, 15].includes(Number(user?.fonction)),
     },
     {
       path: '/users',
