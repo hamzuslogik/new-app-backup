@@ -19,6 +19,12 @@
   will-change: transform;
 }
 
+/* Annuler l'héritage de couleur du header pour le dropdown de notifications */
+.header .notifications-dropdown,
+.header .notification-container .notifications-dropdown {
+  color: #000000 !important;
+}
+
 
 .header-left {
   display: flex;
@@ -238,6 +244,7 @@ header.header .user-info span {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  color: #000000 !important;
 }
 
 
@@ -326,6 +333,11 @@ header.header .user-info span {
 
 .notification-content {
   flex: 1;
+  color: #000000 !important;
+}
+
+.notification-content * {
+  color: #000000 !important;
 }
 
 .notification-message {
@@ -334,8 +346,22 @@ header.header .user-info span {
   color: #000000 !important;
 }
 
+.notification-message,
+.notifications-dropdown .notification-message,
+.notification-item .notification-message,
+.notification-content .notification-message {
+  color: #000000 !important;
+}
+
 .notification-date {
   font-size: 9.4px;
+  color: #000000 !important;
+}
+
+.notification-date,
+.notifications-dropdown .notification-date,
+.notification-item .notification-date,
+.notification-content .notification-date {
   color: #000000 !important;
 }
 
@@ -344,6 +370,20 @@ header.header .user-info span {
 }
 
 .notification-metadata div {
+  color: #000000 !important;
+}
+
+.notifications-dropdown * {
+  color: #000000 !important;
+}
+
+.notifications-dropdown .notification-item,
+.notifications-dropdown .notification-item * {
+  color: #000000 !important;
+}
+
+.notifications-dropdown .notification-content,
+.notifications-dropdown .notification-content * {
   color: #000000 !important;
 }
 

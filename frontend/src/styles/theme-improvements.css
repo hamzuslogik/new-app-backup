@@ -446,6 +446,22 @@ table.availability-table td.time-slot-header span {
   color: #ffffff !important;
 }
 
+/* Exception pour le dropdown de notifications - texte noir */
+.header-right .notifications-dropdown,
+.header-right .notifications-dropdown *,
+.header-right .notification-container .notifications-dropdown,
+.header-right .notification-container .notifications-dropdown *,
+.notifications-dropdown,
+.notifications-dropdown *,
+.notifications-dropdown .notification-message,
+.notifications-dropdown .notification-date,
+.notifications-dropdown .notification-content,
+.notifications-dropdown .notification-content *,
+.notifications-dropdown .notification-metadata,
+.notifications-dropdown .notification-metadata * {
+  color: #000000 !important;
+}
+
 /* Header affectation par département - texte blanc sur fond sombre */
 .affectation-dep-header,
 .affectation-dep-header *,
