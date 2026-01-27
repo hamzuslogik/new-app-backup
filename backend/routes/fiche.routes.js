@@ -345,6 +345,7 @@ router.get('/', authenticate, async (req, res) => {
       id_etat_final,
       id_commercial,
       id_confirmateur,
+      id_re,
       id_centre,
       id_agent,
       date_debut,
@@ -610,8 +611,43 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push('(fiche.id_commercial = ? OR fiche.id_commercial_2 = ?)');
       params.push(id_commercial, id_commercial);
     }
+    // RP Confirmation (15) : rappels par RE (id_etat_final=19), filtre par id_re (Tous = tous les RE sous le RP)
+    if (req.user.fonction === 15 && (id_etat_final == 19 || id_etat_final === '19')) {
+      const reSousRP = await query(
+        'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 14 AND etat > 0',
+        [req.user.id]
+      );
+      const reIds = reSousRP.map((r) => r.id);
+      let idsConfirmateurs = [];
+      if (id_re && id_re !== 'all') {
+        if (!reIds.includes(parseInt(id_re, 10))) {
+          whereConditions.push('1 = 0');
+        } else {
+          const confs = await query(
+            'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
+            [id_re]
+          );
+          idsConfirmateurs = confs.map((c) => c.id);
+        }
+      } else {
+        if (reIds.length > 0) {
+          const placeholders = reIds.map(() => '?').join(',');
+          const confs = await query(
+            `SELECT id FROM utilisateurs WHERE chef_equipe IN (${placeholders}) AND fonction = 6 AND etat > 0`,
+            reIds
+          );
+          idsConfirmateurs = confs.map((c) => c.id);
+        }
+      }
+      if (idsConfirmateurs.length > 0) {
+        const ph = idsConfirmateurs.map(() => '?').join(',');
+        whereConditions.push(`(fiche.id_confirmateur IN (${ph}) OR fiche.id_confirmateur_2 IN (${ph}) OR fiche.id_confirmateur_3 IN (${ph}))`);
+        params.push(...idsConfirmateurs, ...idsConfirmateurs, ...idsConfirmateurs);
+      } else if (!(id_re && id_re !== 'all' && !reIds.includes(parseInt(id_re, 10)))) {
+        whereConditions.push('1 = 0');
+      }
+    } else if (req.user.fonction === 14 && (id_etat_final == 19 || id_etat_final === '19') && (!id_confirmateur || id_confirmateur === 'all')) {
     // RE Confirmation (14) : rappels équipe (id_etat_final=19) sans filtre confirmateur = tous les confirmateurs de l'équipe
-    if (req.user.fonction === 14 && (id_etat_final == 19 || id_etat_final === '19') && (!id_confirmateur || id_confirmateur === 'all')) {
       const confirmateursEquipe = await query(
         'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
         [req.user.id]
