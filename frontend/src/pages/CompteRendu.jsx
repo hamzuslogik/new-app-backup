@@ -152,9 +152,9 @@ const CompteRendu = () => {
   const etats = etatsData || [];
 
   const compteRendusPending = comptesRendusPendingData || [];
-  const isAdmin = [1, 2, 7].includes(user.fonction);
-  const isRPConfirmation = user.fonction === 15;
-  const canApprove = isAdmin || isRPConfirmation; // Admins et RP Confirmation peuvent approuver
+  const isAdmin = [1, 2, 7].includes(Number(user.fonction));
+  const isRPConfirmation = [13, 15].includes(Number(user.fonction)); // RP Confirmation (13 Mes rappels, 15 compte rendu)
+  const canApprove = isAdmin || isRPConfirmation; // Admins et RP Confirmation peuvent approuver / modifier
 
   return (
     <div className="compte-rendu-page">
