@@ -2604,6 +2604,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           cq_etat: cq_etat || null,
           cq_dossier: cq_dossier || null,
           commentaire_qualite: fiche.commentaire_qualite || null,
+          observations_cq: fiche.observations_cq || null,
           commentaire_commercial: fiche.commentaire_commercial || null,
           installeur_nom: installeur || null,
           commercial_pseudo: commercial?.pseudo || null,
@@ -2899,7 +2900,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'date_rdv_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final',
       'rdv_urgent', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'type_contrat_mr', 'type_contrat_madame',
-      'cq_etat', 'cq_dossier'
+      'cq_etat', 'cq_dossier', 'observations_cq'
     ];
 
     if (!allowedFields.includes(field)) {
@@ -2952,10 +2953,11 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
 });
 
 // Contrôle Qualité : enregistrer CQ ETAT, CQ DOSSIER et OBSERVATIONS (états signer uniquement)
+// Utilise le champ dédié observations_cq (pas commentaire_qualite)
 router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const { cq_etat, cq_dossier, commentaire_qualite } = req.body;
+    const { cq_etat, cq_dossier, observations_cq } = req.body;
 
     const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
     if (!fiche) {
@@ -2974,11 +2976,11 @@ router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const cqEtatVal = cq_etat !== undefined && cq_etat !== '' ? parseInt(cq_etat) || null : fiche.cq_etat;
     const cqDossierVal = cq_dossier !== undefined && cq_dossier !== '' ? parseInt(cq_dossier) || null : fiche.cq_dossier;
-    const commentaireVal = commentaire_qualite !== undefined ? (commentaire_qualite || null) : fiche.commentaire_qualite;
+    const observationsVal = observations_cq !== undefined ? (observations_cq || null) : (fiche.observations_cq ?? null);
 
     await query(
-      `UPDATE fiches SET cq_etat = ?, cq_dossier = ?, commentaire_qualite = ?, date_modif_time = ? WHERE id = ?`,
-      [cqEtatVal, cqDossierVal, commentaireVal, now, id]
+      `UPDATE fiches SET cq_etat = ?, cq_dossier = ?, observations_cq = ?, date_modif_time = ? WHERE id = ?`,
+      [cqEtatVal, cqDossierVal, observationsVal, now, id]
     );
 
     if (cqEtatVal !== fiche.cq_etat) {
@@ -2987,8 +2989,8 @@ router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req
     if (cqDossierVal !== fiche.cq_dossier) {
       await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'cq_dossier', fiche.cq_dossier, cqDossierVal);
     }
-    if (String(commentaireVal || '') !== String(fiche.commentaire_qualite || '')) {
-      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'commentaire_qualite', fiche.commentaire_qualite, commentaireVal);
+    if (String(observationsVal || '') !== String(fiche.observations_cq || '')) {
+      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'observations_cq', fiche.observations_cq, observationsVal);
     }
 
     res.json({ success: true, message: 'Contrôle qualité enregistré avec succès' });

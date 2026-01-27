@@ -609,13 +609,13 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   );
 
-  // Mutation Contrôle Qualité (CQ ETAT, CQ DOSSIER, OBSERVATIONS) pour états signer
+  // Mutation Contrôle Qualité (CQ ETAT, CQ DOSSIER, OBSERVATIONS) pour états signer — champ dédié observations_cq
   const controleQualiteMutation = useMutation(
-    async ({ cq_etat, cq_dossier, commentaire_qualite }) => {
+    async ({ cq_etat, cq_dossier, observations_cq }) => {
       const res = await api.put(`/fiches/${hash}/controle-qualite`, {
         cq_etat: cq_etat || null,
         cq_dossier: cq_dossier || null,
-        commentaire_qualite: commentaire_qualite || null
+        observations_cq: observations_cq || null
       });
       return res.data;
     },
@@ -2723,11 +2723,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Produit', value: produitText });
                   }
                 }
-                // Contrôle qualité
+                // Contrôle qualité (observations_cq = champ dédié CQ signature)
                 else if (etatData.cq_etat || etatData.cq_dossier) {
                   if (etatData.cq_etat) items.push({ label: 'CQ ETAT', value: etatData.cq_etat });
                   if (etatData.cq_dossier) items.push({ label: 'CQ DOSSIER', value: etatData.cq_dossier });
-                  if (etatData.commentaire_qualite) items.push({ label: 'Observation', value: etatData.commentaire_qualite, fullWidth: true });
+                  if (etatData.observations_cq) items.push({ label: 'Observation', value: etatData.observations_cq, fullWidth: true });
                 }
                 // Par défaut
                 else {
@@ -2781,7 +2781,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 produit: fiche.produit || null,
                 cq_etat: fiche.cq_etat || null,
                 cq_dossier: fiche.cq_dossier || null,
-                commentaire_qualite: fiche.commentaire_qualite || null,
+                observations_cq: fiche.observations_cq || null,
                 date_creation: fiche.date_modif_time || fiche.date_insert_time || new Date().toISOString()
               };
               
@@ -2939,7 +2939,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         const form = cqFormByHash[ficheHash] || {};
                         const vCqEtat = form.cq_etat !== undefined ? form.cq_etat : String(fiche.cq_etat ?? '');
                         const vCqDossier = form.cq_dossier !== undefined ? form.cq_dossier : String(fiche.cq_dossier ?? '');
-                        const vObs = form.observations !== undefined ? form.observations : String(fiche.commentaire_qualite ?? '');
+                        const vObs = form.observations !== undefined ? form.observations : String(fiche.observations_cq ?? '');
                         return (
                           <>
                             <div className="form-group" style={{ marginBottom: '12px' }}>
@@ -2997,7 +2997,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                 onClick={() => controleQualiteMutation.mutate({
                                   cq_etat: vCqEtat || null,
                                   cq_dossier: vCqDossier || null,
-                                  commentaire_qualite: vObs || null
+                                  observations_cq: vObs || null
                                 })}
                               >
                                 {controleQualiteMutation.isLoading ? 'Enregistrement...' : 'Valider'}
