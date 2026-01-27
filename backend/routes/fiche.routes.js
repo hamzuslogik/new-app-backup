@@ -2898,7 +2898,8 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
       'date_rdv_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final',
-      'rdv_urgent', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'type_contrat_mr', 'type_contrat_madame'
+      'rdv_urgent', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'type_contrat_mr', 'type_contrat_madame',
+      'cq_etat', 'cq_dossier'
     ];
 
     if (!allowedFields.includes(field)) {
@@ -2945,6 +2946,57 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la mise à jour du champ',
+      error: error.message
+    });
+  }
+});
+
+// Contrôle Qualité : enregistrer CQ ETAT, CQ DOSSIER et OBSERVATIONS (états signer uniquement)
+router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cq_etat, cq_dossier, commentaire_qualite } = req.body;
+
+    const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
+    if (!fiche) {
+      return res.status(404).json({ success: false, message: 'Fiche non trouvée' });
+    }
+
+    // États signer : 13, 16, 44, 45
+    const etatsSigner = [13, 16, 44, 45];
+    if (!etatsSigner.includes(fiche.id_etat_final)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le contrôle qualité n\'est disponible que pour les fiches en état signé (SIGNER, SIGNER RETRACTER, SIGNER PM, SIGNER COMPLET)'
+      });
+    }
+
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const cqEtatVal = cq_etat !== undefined && cq_etat !== '' ? parseInt(cq_etat) || null : fiche.cq_etat;
+    const cqDossierVal = cq_dossier !== undefined && cq_dossier !== '' ? parseInt(cq_dossier) || null : fiche.cq_dossier;
+    const commentaireVal = commentaire_qualite !== undefined ? (commentaire_qualite || null) : fiche.commentaire_qualite;
+
+    await query(
+      `UPDATE fiches SET cq_etat = ?, cq_dossier = ?, commentaire_qualite = ?, date_modif_time = ? WHERE id = ?`,
+      [cqEtatVal, cqDossierVal, commentaireVal, now, id]
+    );
+
+    if (cqEtatVal !== fiche.cq_etat) {
+      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'cq_etat', fiche.cq_etat, cqEtatVal);
+    }
+    if (cqDossierVal !== fiche.cq_dossier) {
+      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'cq_dossier', fiche.cq_dossier, cqDossierVal);
+    }
+    if (String(commentaireVal || '') !== String(fiche.commentaire_qualite || '')) {
+      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'commentaire_qualite', fiche.commentaire_qualite, commentaireVal);
+    }
+
+    res.json({ success: true, message: 'Contrôle qualité enregistré avec succès' });
+  } catch (error) {
+    console.error('Erreur contrôle qualité:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'enregistrement du contrôle qualité',
       error: error.message
     });
   }

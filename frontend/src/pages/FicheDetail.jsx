@@ -164,6 +164,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const [confPresenceCoupleValue, setConfPresenceCoupleValue] = useState('');
   const [showHistorique, setShowHistorique] = useState(false); // État pour contrôler l'affichage de l'historique
 
+  // Contrôle Qualité (états signer) : formulaire par fiche (clé = hash)
+  const [cqFormByHash, setCqFormByHash] = useState({});
+
   // Récupérer les données de référence
   const { data: centres } = useQuery('centres', async () => {
     const res = await api.get('/management/centres');
@@ -602,6 +605,34 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         }
         
         alert(errorMessage);
+      }
+    }
+  );
+
+  // Mutation Contrôle Qualité (CQ ETAT, CQ DOSSIER, OBSERVATIONS) pour états signer
+  const controleQualiteMutation = useMutation(
+    async ({ cq_etat, cq_dossier, commentaire_qualite }) => {
+      const res = await api.put(`/fiches/${hash}/controle-qualite`, {
+        cq_etat: cq_etat || null,
+        cq_dossier: cq_dossier || null,
+        commentaire_qualite: commentaire_qualite || null
+      });
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['fiche', hash]);
+        queryClient.invalidateQueries(['fiches']);
+        setCqFormByHash(prev => {
+          const next = { ...prev };
+          delete next[hash];
+          return next;
+        });
+        alert('Contrôle qualité enregistré avec succès.');
+      },
+      onError: (error) => {
+        const msg = error.response?.data?.message || error.message || 'Erreur lors de l\'enregistrement du contrôle qualité';
+        alert(msg);
       }
     }
   );
@@ -2894,6 +2925,87 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                           </div>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Contrôle Qualité (états signer : 13, 16, 44, 45) */}
+                  {[13, 16, 44, 45].includes(fiche.id_etat_final) && (
+                    <div className="fiche-section" style={{ marginTop: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+                      <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '15px', fontWeight: 'bold' }}>
+                        Contrôle Qualité
+                      </h3>
+                      {(() => {
+                        const ficheHash = fiche.hash || hash;
+                        const form = cqFormByHash[ficheHash] || {};
+                        const vCqEtat = form.cq_etat !== undefined ? form.cq_etat : String(fiche.cq_etat ?? '');
+                        const vCqDossier = form.cq_dossier !== undefined ? form.cq_dossier : String(fiche.cq_dossier ?? '');
+                        const vObs = form.observations !== undefined ? form.observations : String(fiche.commentaire_qualite ?? '');
+                        return (
+                          <>
+                            <div className="form-group" style={{ marginBottom: '12px' }}>
+                              <label htmlFor="cq_etat_signer">CQ ETAT :</label>
+                              <select
+                                id="cq_etat_signer"
+                                className="form-control"
+                                value={vCqEtat}
+                                onChange={(e) => setCqFormByHash(prev => ({
+                                  ...prev,
+                                  [ficheHash]: { ...(prev[ficheHash] || {}), cq_etat: e.target.value }
+                                }))}
+                              >
+                                <option value="">Sélectionnez</option>
+                                <option value="1">NRP / INJOIGNABLE</option>
+                                <option value="2">RAS</option>
+                                <option value="3">NEGATIF</option>
+                              </select>
+                            </div>
+                            <div className="form-group" style={{ marginBottom: '12px' }}>
+                              <label htmlFor="cq_dossier_signer">CQ DOSSIER :</label>
+                              <select
+                                id="cq_dossier_signer"
+                                className="form-control"
+                                value={vCqDossier}
+                                onChange={(e) => setCqFormByHash(prev => ({
+                                  ...prev,
+                                  [ficheHash]: { ...(prev[ficheHash] || {}), cq_dossier: e.target.value }
+                                }))}
+                              >
+                                <option value="">Sélectionnez</option>
+                                <option value="1">COMPLET</option>
+                                <option value="2">INCOMPLET</option>
+                              </select>
+                            </div>
+                            <div className="form-group" style={{ marginBottom: '12px' }}>
+                              <label htmlFor="cq_observations_signer">OBSERVATIONS :</label>
+                              <textarea
+                                id="cq_observations_signer"
+                                className="form-control"
+                                rows={3}
+                                value={vObs}
+                                onChange={(e) => setCqFormByHash(prev => ({
+                                  ...prev,
+                                  [ficheHash]: { ...(prev[ficheHash] || {}), observations: e.target.value }
+                                }))}
+                                placeholder="Commentaires..."
+                              />
+                            </div>
+                            <div style={{ marginTop: '12px' }}>
+                              <button
+                                type="button"
+                                className="btn-confirm"
+                                disabled={controleQualiteMutation.isLoading}
+                                onClick={() => controleQualiteMutation.mutate({
+                                  cq_etat: vCqEtat || null,
+                                  cq_dossier: vCqDossier || null,
+                                  commentaire_qualite: vObs || null
+                                })}
+                              >
+                                {controleQualiteMutation.isLoading ? 'Enregistrement...' : 'Valider'}
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                   
