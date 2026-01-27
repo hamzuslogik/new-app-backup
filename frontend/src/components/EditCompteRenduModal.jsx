@@ -3,6 +3,7 @@ import { useQuery } from 'react-query';
 import api from '../config/api';
 import { FaTimes } from 'react-icons/fa';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import './EditCompteRenduModal.css';
 
 const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, readOnly = false }) => {
@@ -32,6 +33,8 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
   });
 
   const [modifications, setModifications] = useState(compteRendu.modifications || {});
+
+  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etats || []);
 
   const etatsAvecSousEtats = [2, 8, 13, 16, 19, 44, 45];
   const { data: sousEtatsData = [] } = useQuery(
@@ -119,9 +122,34 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
               disabled={readOnly}
             >
               <option value="">Sélectionner un état</option>
-              {etats.map(etat => (
-                <option key={etat.id} value={etat.id}>{etat.titre}</option>
-              ))}
+              {etatsPhase0.length > 0 && (
+                <optgroup label="PHASE 0">
+                  {etatsPhase0.map(etat => (
+                    <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>{etat.titre}</option>
+                  ))}
+                </optgroup>
+              )}
+              {etatsPhase1.length > 0 && (
+                <optgroup label="PHASE 1">
+                  {etatsPhase1.map(etat => (
+                    <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>{etat.titre}</option>
+                  ))}
+                </optgroup>
+              )}
+              {etatsPhase2.length > 0 && (
+                <optgroup label="PHASE 2">
+                  {etatsPhase2.map(etat => (
+                    <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>{etat.titre}</option>
+                  ))}
+                </optgroup>
+              )}
+              {etatsPhase3.length > 0 && (
+                <optgroup label="PHASE 3">
+                  {etatsPhase3.map(etat => (
+                    <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>{etat.titre}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
 

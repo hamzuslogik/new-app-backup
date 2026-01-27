@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-toastify';
 import api from '../../config/api';
+import { getEtatsGroupedByPhase } from '../../utils/etatsByPhase';
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle } from 'react-icons/fa';
 import LoadingSpinner from '../common/LoadingSpinner';
 import Tooltip from '../common/Tooltip';
@@ -45,6 +46,8 @@ const SousEtatTab = () => {
     const response = await api.get('/management/etats');
     return response.data.data || [];
   });
+
+  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etatsData || []);
 
   // Filtrer les données selon le terme de recherche
   const filteredData = useMemo(() => {
@@ -196,11 +199,42 @@ const SousEtatTab = () => {
                   required
                 >
                   <option value="">Sélectionner un état...</option>
-                  {etatsData && etatsData.map(etat => (
-                    <option key={etat.id} value={etat.id}>
-                      {etat.titre}
-                    </option>
-                  ))}
+                  {etatsPhase0.length > 0 && (
+                    <optgroup label="PHASE 0">
+                      {etatsPhase0.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase1.length > 0 && (
+                    <optgroup label="PHASE 1">
+                      {etatsPhase1.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase2.length > 0 && (
+                    <optgroup label="PHASE 2">
+                      {etatsPhase2.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase3.length > 0 && (
+                    <optgroup label="PHASE 3">
+                      {etatsPhase3.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               <div className="form-group">

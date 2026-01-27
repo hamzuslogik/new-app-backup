@@ -6,6 +6,7 @@ import api from '../config/api';
 import { FaCalendarAlt, FaUser, FaFileAlt, FaMapMarkerAlt, FaSearch, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import './PlanningCommercial.css';
 
 const PlanningCommercial = () => {
@@ -141,17 +142,16 @@ const PlanningCommercial = () => {
   const confirmateurs = usersData ? usersData.filter(u => u.fonction === 6 && u.etat > 0) : [];
   const centres = centresData ? centresData.filter(c => c.etat > 0) : [];
   const etats = etatsData || [];
-
-  // Pour les commerciaux : filtrer uniquement les états de Phase 3 + CONFIRMER (état 7)
-  // Note: groupe est un VARCHAR dans la base, donc on compare avec des chaînes
-  const etatsPhase3 = etats.filter(e => String(e.groupe) === '3' || e.groupe === 3);
+  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etats);
   const etatConfirmer = etats.find(e => e.id === 7); // CONFIRMER (état 7) - Phase 2
-  const etatsFiltres = user?.fonction === 5 
-    ? [...(etatConfirmer ? [etatConfirmer] : []), ...etatsPhase3] // CONFIRMER + Phase 3
+  const isCommercial = user?.fonction === 5;
+  // Pour les commerciaux : uniquement CONFIRMER + Phase 3 (liste plate pour etatsFiltres, affichage par phase dans le select)
+  const etatsFiltres = isCommercial
+    ? [...(etatConfirmer ? [etatConfirmer] : []), ...etatsPhase3]
     : etats;
-  
+
   // Pour les commerciaux : pré-sélectionner l'état CONFIRMER (7) par défaut
-  const etatParDefaut = user?.fonction === 5 ? '7' : '';
+  const etatParDefaut = isCommercial ? '7' : '';
 
   // Construire les paramètres de requête
   const getQueryParams = () => {
@@ -491,7 +491,7 @@ const PlanningCommercial = () => {
                   </div>
                 )}
 
-                {/* État final */}
+                {/* État final - regroupé par phase (0,1,2,3), ordre BDD, couleur BDD */}
                 <div className="form-group">
                   <label>État final</label>
                   <select
@@ -499,11 +499,65 @@ const PlanningCommercial = () => {
                     onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
                   >
                     <option value="">Tous</option>
-                    {etatsFiltres.map(etat => (
-                      <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color }}>
-                        {etat.titre}
-                      </option>
-                    ))}
+                    {isCommercial ? (
+                      <>
+                        {etatConfirmer && (
+                          <optgroup label="PHASE 2">
+                            <option key={etatConfirmer.id} value={etatConfirmer.id} style={{ backgroundColor: etatConfirmer.color || '#cccccc' }}>
+                              {etatConfirmer.titre}
+                            </option>
+                          </optgroup>
+                        )}
+                        {etatsPhase3.length > 0 && (
+                          <optgroup label="PHASE 3">
+                            {etatsPhase3.map(etat => (
+                              <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                                {etat.titre}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {etatsPhase0.length > 0 && (
+                          <optgroup label="PHASE 0">
+                            {etatsPhase0.map(etat => (
+                              <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                                {etat.titre}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {etatsPhase1.length > 0 && (
+                          <optgroup label="PHASE 1">
+                            {etatsPhase1.map(etat => (
+                              <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                                {etat.titre}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {etatsPhase2.length > 0 && (
+                          <optgroup label="PHASE 2">
+                            {etatsPhase2.map(etat => (
+                              <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                                {etat.titre}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {etatsPhase3.length > 0 && (
+                          <optgroup label="PHASE 3">
+                            {etatsPhase3.map(etat => (
+                              <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                                {etat.titre}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </>
+                    )}
                   </select>
                 </div>
 

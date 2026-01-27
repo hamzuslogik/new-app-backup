@@ -6,6 +6,7 @@ import api from '../config/api';
 import { FaSearch, FaChevronDown, FaChevronUp, FaCheckCircle, FaFilter, FaUserCheck, FaCheck, FaComment, FaTimes, FaSave } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import './ControleQualite.css';
 
 const ControleQualite = () => {
@@ -233,6 +234,8 @@ const ControleQualite = () => {
   const pagination = fichesData?.pagination || { page: 1, limit: 50, total: 0, pages: 1 };
   const agents = agentsData || [];
   const etats = etatsData || [];
+  const allEtats = allEtatsData || [];
+  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(allEtats);
 
   return (
     <div className="controle-qualite">
@@ -271,11 +274,42 @@ const ControleQualite = () => {
                 onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
               >
                 <option value="">Tous les états</option>
-                {etats.map(etat => (
-                  <option key={etat.id} value={etat.id}>
-                    {etat.titre}
-                  </option>
-                ))}
+                {etatsPhase0.length > 0 && (
+                  <optgroup label="PHASE 0">
+                    {etatsPhase0.map(etat => (
+                      <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                        {etat.titre}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {etatsPhase1.length > 0 && (
+                  <optgroup label="PHASE 1">
+                    {etatsPhase1.map(etat => (
+                      <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                        {etat.titre}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {etatsPhase2.length > 0 && (
+                  <optgroup label="PHASE 2">
+                    {etatsPhase2.map(etat => (
+                      <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                        {etat.titre}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {etatsPhase3.length > 0 && (
+                  <optgroup label="PHASE 3">
+                    {etatsPhase3.map(etat => (
+                      <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                        {etat.titre}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
 
@@ -377,11 +411,42 @@ const ControleQualite = () => {
                         disabled={updateEtatMutation.isLoading}
                       >
                         <option value="">-- Sélectionner --</option>
-                        {etats.map(etat => (
-                          <option key={etat.id} value={etat.id}>
-                            {etat.titre}
-                          </option>
-                        ))}
+                        {etatsPhase0.length > 0 && (
+                          <optgroup label="PHASE 0">
+                            {etatsPhase0.map(etat => (
+                              <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                                {etat.titre}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {etatsPhase1.length > 0 && (
+                          <optgroup label="PHASE 1">
+                            {etatsPhase1.map(etat => (
+                              <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                                {etat.titre}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {etatsPhase2.length > 0 && (
+                          <optgroup label="PHASE 2">
+                            {etatsPhase2.map(etat => (
+                              <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                                {etat.titre}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {etatsPhase3.length > 0 && (
+                          <optgroup label="PHASE 3">
+                            {etatsPhase3.map(etat => (
+                              <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                                {etat.titre}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                     </td>
                     <td>

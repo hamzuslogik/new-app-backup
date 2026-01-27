@@ -7,6 +7,7 @@ import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouteParams } from '../contexts/RouteParamsContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import './FicheDetail.css';
 
 // Créneaux horaires
@@ -234,6 +235,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       return [];
     }
   });
+
+  // États regroupés par phase (0,1,2,3), ordre BDD, pour les selects
+  const etatsList = etats || [];
+  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etatsList);
 
   // Récupérer les sous-états dynamiquement selon l'état sélectionné
   // États qui ont des sous-états : 2 (NRP), 8 (ANNULER À REPROGRAMMER), 13 (SIGNER), 16 (SIGNER RETRACTER), 19 (RAPPEL POUR BUREAU), 44 (SIGNER PM), 45 (SIGNER COMPLET)
@@ -3818,16 +3823,42 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   onChange={(e) => handleEtatChange(e.target.value ? parseInt(e.target.value) : null)}
                 >
                   <option value="">Sélectionner un état</option>
-                  {/* Pour admins, agents et confirmateurs : afficher tous les états */}
-                  {etats?.map(etat => (
-                    <option 
-                      key={etat.id} 
-                      value={etat.id}
-                      style={{ backgroundColor: etat.color || '#cccccc', color: etat.color === '#ffffff' || etat.color === '#fff' ? '#000' : '#fff' }}
-                    >
-                      {etat.titre}
-                    </option>
-                  ))}
+                  {etatsPhase0.length > 0 && (
+                    <optgroup label="PHASE 0">
+                      {etatsPhase0.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase1.length > 0 && (
+                    <optgroup label="PHASE 1">
+                      {etatsPhase1.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase2.length > 0 && (
+                    <optgroup label="PHASE 2">
+                      {etatsPhase2.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase3.length > 0 && (
+                    <optgroup label="PHASE 3">
+                      {etatsPhase3.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
             </div>
 

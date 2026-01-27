@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import './Fiches.css';
 
 const Fiches = () => {
@@ -279,6 +280,7 @@ const Fiches = () => {
   const agents = usersData ? usersData.filter(u => u.fonction === 3 && u.etat > 0) : [];
   const centres = centresData ? centresData.filter(c => c.etat > 0) : [];
   const etats = etatsData || [];
+  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etats);
 
   const handleFilterChange = (key, value) => {
     const nextValue = key === 'critere' ? normalizeText(value) : value;
@@ -644,7 +646,7 @@ const Fiches = () => {
                 </div>
               )}
 
-              {/* État final */}
+              {/* État final - regroupé par phase (0,1,2,3), ordre BDD, couleur BDD */}
               <div className="form-group">
                 <label>État final</label>
                 <select
@@ -652,11 +654,49 @@ const Fiches = () => {
                   onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
                 >
                   <option value="">Tous</option>
-                  {etats.map(etat => (
-                    <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color }}>
-                      {etat.titre}
-                    </option>
-                  ))}
+                  {etatsPhase0.length > 0 && (
+                    <optgroup label="PHASE 0">
+                      {etatsPhase0.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase1.length > 0 && (
+                    <optgroup label="PHASE 1">
+                      {etatsPhase1.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase2.length > 0 && (
+                    <optgroup label="PHASE 2">
+                      {etatsPhase2.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase3.length > 0 && (
+                    <optgroup label="PHASE 3">
+                      {etatsPhase3.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase0.length === 0 && etatsPhase1.length === 0 && etatsPhase2.length === 0 && etatsPhase3.length === 0 && etats.length > 0 && (
+                    etats.map(etat => (
+                      <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                        {etat.titre}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -1419,9 +1459,39 @@ const FicheFormModal = ({
                 <div className="form-group">
                   <label>État final</label>
                   <select name="id_etat_final" value={formData.id_etat_final} onChange={handleChange}>
-                    {etats.map(etat => (
-                      <option key={etat.id} value={etat.id}>{etat.titre}</option>
-                    ))}
+                    {etatsPhase0.length > 0 && (
+                      <optgroup label="PHASE 0">
+                        {etatsPhase0.map(etat => (
+                          <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>{etat.titre}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {etatsPhase1.length > 0 && (
+                      <optgroup label="PHASE 1">
+                        {etatsPhase1.map(etat => (
+                          <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>{etat.titre}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {etatsPhase2.length > 0 && (
+                      <optgroup label="PHASE 2">
+                        {etatsPhase2.map(etat => (
+                          <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>{etat.titre}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {etatsPhase3.length > 0 && (
+                      <optgroup label="PHASE 3">
+                        {etatsPhase3.map(etat => (
+                          <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>{etat.titre}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {etatsPhase0.length === 0 && etatsPhase1.length === 0 && etatsPhase2.length === 0 && etatsPhase3.length === 0 && etats.length > 0 && (
+                      etats.map(etat => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>{etat.titre}</option>
+                      ))
+                    )}
                   </select>
                 </div>
                 <div className="form-group">
