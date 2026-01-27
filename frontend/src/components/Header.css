@@ -331,12 +331,20 @@ header.header .user-info span {
 .notification-message {
   margin: 0 0 4px 0;
   font-size: 11.9px;
-  color: var(--text-primary, #333);
+  color: #000000 !important;
 }
 
 .notification-date {
   font-size: 9.4px;
-  color: var(--text-secondary, #666);
+  color: #000000 !important;
+}
+
+.notification-metadata {
+  color: #000000 !important;
+}
+
+.notification-metadata div {
+  color: #000000 !important;
 }
 
 .mark-read-btn {

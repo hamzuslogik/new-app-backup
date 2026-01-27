@@ -275,7 +275,8 @@ const Header = () => {
                                 padding: '8px', 
                                 background: '#f0f0f0', 
                                 borderRadius: '4px',
-                                fontSize: '10.2px'
+                                fontSize: '10.2px',
+                                color: '#000000'
                               }}>
                                 {decalageInfo.date_rdv_original && (
                                   <div><strong>RDV original :</strong> {new Date(decalageInfo.date_rdv_original).toLocaleString('fr-FR')}</div>
