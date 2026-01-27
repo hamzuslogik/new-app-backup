@@ -11,7 +11,7 @@ import './MesRappels.css';
 const ETAT_RAPPEL_BUREAU = 19;
 const FONCTION_CONFIRMATEUR = 6;
 const FONCTION_RE_CONFIRMATION = 14;
-const FONCTION_RP_CONFIRMATION = 15;
+const FONCTION_RP_CONFIRMATION = 13;
 
 const MesRappels = () => {
   const { user } = useAuth();

@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const ProtectedRoute = ({ children, permission, excludeFunctions = [] }) => {
+const ProtectedRoute = ({ children, permission, excludeFunctions = [], allowFunctions = [] }) => {
   const { isAuthenticated, loading, hasPermission, user } = useAuth();
 
   if (loading) {
@@ -43,8 +43,10 @@ const ProtectedRoute = ({ children, permission, excludeFunctions = [] }) => {
   // Admin (1, 2, 7) et Backoffice (11) ont accès à toutes les pages de permissions et gestion
   const isAdminOrBackoffice = [1, 2, 7, 11].includes(user?.fonction);
   const isPermissionsOrManagementPage = permission === 'config_permissions' || permission === 'management_view';
-  
-  if (permission && !hasPermission(permission)) {
+  // allowFunctions : accès direct pour certains rôles (ex. Mes rappels pour Confirmateur 6, RE Confirmation 14, RP Confirmation 13)
+  const isAllowedByFunction = allowFunctions.length > 0 && user?.fonction != null && allowFunctions.includes(Number(user.fonction));
+
+  if (permission && !hasPermission(permission) && !isAllowedByFunction) {
     // Autoriser Admin et Backoffice pour les pages Permissions et Management
     if (isAdminOrBackoffice && isPermissionsOrManagementPage) {
       // Autoriser l'accès

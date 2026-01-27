@@ -394,7 +394,7 @@ router.get('/', authenticate, async (req, res) => {
                           req.query.critere || req.query.nom || req.query.prenom || 
                           req.query.tel || req.query.cp || req.query.produit || 
                           req.query.id_etat_final || req.query.id_commercial || 
-                          req.query.id_confirmateur || req.query.id_centre;
+                          req.query.id_confirmateur || req.query.id_re || req.query.id_centre;
     
     if (!isActiveSearch) {
       if (req.user.fonction === 5) {
@@ -611,8 +611,8 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push('(fiche.id_commercial = ? OR fiche.id_commercial_2 = ?)');
       params.push(id_commercial, id_commercial);
     }
-    // RP Confirmation (15) : rappels par RE (id_etat_final=19), filtre par id_re (Tous = tous les RE sous le RP)
-    if (req.user.fonction === 15 && (id_etat_final == 19 || id_etat_final === '19')) {
+    // RP Confirmation (13) : rappels par RE (id_etat_final=19), filtre par id_re (Tous = tous les RE sous le RP)
+    if (req.user.fonction === 13 && (id_etat_final == 19 || id_etat_final === '19')) {
       const reSousRP = await query(
         'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 14 AND etat > 0',
         [req.user.id]
