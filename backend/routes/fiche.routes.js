@@ -1289,6 +1289,81 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
   }
 });
 
+// Audit Rendez-vous - Liste des RDV (fiches) créés dans la journée, pour Qualité Confirmation (fonction 4)
+// Permet de renseigner le commentaire_qualite. Réservé à la fonction 4.
+router.get('/audit-rdv', authenticate, async (req, res) => {
+  try {
+    if (req.user.fonction !== 4) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès réservé à la Qualité Confirmation (fonction 4)'
+      });
+    }
+    const { page = 1, limit = 100, date: dateParam } = req.query;
+    const date = dateParam || new Date().toISOString().split('T')[0]; // YYYY-MM-DD, défaut = aujourd'hui
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const [dateDebut, dateFin] = [`${date} 00:00:00`, `${date} 23:59:59`];
+
+    const totalResult = await queryOne(
+      `SELECT COUNT(*) as total FROM fiches fiche
+       WHERE (fiche.archive = 0 OR fiche.archive IS NULL)
+         AND fiche.date_insert_time >= ?
+         AND fiche.date_insert_time <= ?`,
+      [dateDebut, dateFin]
+    );
+    const total = totalResult?.total || 0;
+
+    const fiches = await query(
+      `SELECT
+        fiche.id,
+        fiche.nom,
+        fiche.prenom,
+        fiche.tel,
+        fiche.cp,
+        fiche.ville,
+        fiche.date_insert_time,
+        fiche.commentaire_qualite,
+        agent.pseudo as agent_pseudo,
+        centre.titre as centre_nom,
+        etat.titre as etat_titre
+       FROM fiches fiche
+       LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
+       LEFT JOIN centres centre ON fiche.id_centre = centre.id
+       LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
+       WHERE (fiche.archive = 0 OR fiche.archive IS NULL)
+         AND fiche.date_insert_time >= ?
+         AND fiche.date_insert_time <= ?
+       ORDER BY fiche.date_insert_time DESC
+       LIMIT ? OFFSET ?`,
+      [dateDebut, dateFin, parseInt(limit), offset]
+    );
+
+    const fichesWithHash = fiches.map((f) => ({
+      ...f,
+      hash: encodeFicheId(f.id)
+    }));
+
+    res.json({
+      success: true,
+      data: fichesWithHash,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit)) || 1
+      }
+    });
+  } catch (error) {
+    console.error('Erreur audit RDV:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération de l\'audit RDV',
+      error: error.message
+    });
+  }
+});
+
 // Contrôle Qualité - Récupérer les fiches BRUT pour audit
 // IMPORTANT: Cette route doit être AVANT la route /:id sinon Express va matcher "controle-qualite" comme un ID
 router.get('/controle-qualite', authenticate, async (req, res) => {

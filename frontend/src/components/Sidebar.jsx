@@ -208,6 +208,14 @@ const Sidebar = ({ collapsed }) => {
       visible: true,
     },
     {
+      path: '/audit-rdv',
+      label: 'Audit Rendez-vous',
+      icon: FaCalendarAlt,
+      permission: null,
+      visible: false,
+      customCheck: (item, user) => Number(user?.fonction) === 4,
+    },
+    {
       path: '/stats-agents-qualite',
       label: 'Stats Agents Qualité',
       icon: FaChartBar,
