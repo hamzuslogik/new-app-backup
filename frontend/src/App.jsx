@@ -43,6 +43,7 @@ import Notifications from './pages/Notifications';
 import Signatures from './pages/Signatures';
 import AssistanceIA from './pages/AssistanceIA';
 import MesRappels from './pages/MesRappels';
+import RappelsBureau from './pages/RappelsBureau';
 import Layout from './components/Layout';
 import HomeRedirect from './components/HomeRedirect';
 import './App.css';
@@ -96,6 +97,7 @@ function App() {
           <Route path="decalages" element={<ProtectedRoute permission="decalage_view"><Decalages /></ProtectedRoute>} />
           <Route path="validation" element={<ProtectedRoute permission="validation_view"><Validation /></ProtectedRoute>} />
           <Route path="mes-rappels" element={<ProtectedRoute permission="dashboard_view" allowFunctions={[6, 13, 14]}><MesRappels /></ProtectedRoute>} />
+          <Route path="rappels-bureau" element={<ProtectedRoute permission={null} allowFunctions={[13]}><RappelsBureau /></ProtectedRoute>} />
           <Route path="demandes-insertion" element={<ProtectedRoute permission="demandes_insertion_view"><DemandesInsertion /></ProtectedRoute>} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="signatures" element={<ProtectedRoute permission="signatures_view"><Signatures /></ProtectedRoute>} />
