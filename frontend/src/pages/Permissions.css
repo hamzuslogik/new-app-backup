@@ -384,3 +384,142 @@
   }
 }
 
+/* Liste des pages avec permissions */
+.pages-permissions-list {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px solid #eee;
+}
+
+.pages-permissions-list h2 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.pages-description {
+  margin: 0 0 16px 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.pages-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.pages-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.pages-table thead {
+  background: #f8f9fa;
+}
+
+.pages-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+  border-bottom: 2px solid #ddd;
+}
+
+.pages-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.pages-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.pages-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.page-path {
+  display: block;
+  font-size: 11px;
+  color: #999;
+  font-family: monospace;
+  margin-top: 4px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge.status-authorized {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.status-denied {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.status-badge.status-missing {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.status-badge.status-special {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.status-badge.status-no-permission {
+  background-color: #f5f5f5;
+  color: #757575;
+}
+
+.status-badge.status-na {
+  background-color: #f5f5f5;
+  color: #999;
+}
+
+.remarks-cell {
+  font-size: 12px;
+  color: #666;
+}
+
+.remarks-list {
+  margin: 0;
+  padding-left: 20px;
+  list-style-type: disc;
+}
+
+.remarks-list li {
+  margin-bottom: 4px;
+}
+
+@media (max-width: 768px) {
+  .pages-table {
+    font-size: 12px;
+  }
+  
+  .pages-table th,
+  .pages-table td {
+    padding: 8px;
+  }
+  
+  .pages-table th:nth-child(3),
+  .pages-table td:nth-child(3),
+  .pages-table th:nth-child(4),
+  .pages-table td:nth-child(4) {
+    display: none;
+  }
+}
+

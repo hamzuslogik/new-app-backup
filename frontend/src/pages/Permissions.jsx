@@ -148,6 +148,68 @@ const Permissions = () => {
     permissionsByCategory[perm.categorie].push(perm);
   });
 
+  // Liste de toutes les pages avec leur permission correspondante
+  const pagesList = [
+    { path: '/dashboard', name: 'Dashboard', permission: 'dashboard_view' },
+    { path: '/recherche-fiches', name: 'Recherche Fiches', permission: 'dashboard_view' },
+    { path: '/fiches', name: 'Fiches', permission: 'fiches_view' },
+    { path: '/fiches/:id', name: 'Détail Fiche', permission: 'fiches_detail' },
+    { path: '/planning', name: 'Planning', permission: 'planning_view' },
+    { path: '/planning-dep', name: 'Planning Dép', permission: 'planning_view' },
+    { path: '/planning-commercial', name: 'Planning Commercial', permission: 'planning_commercial_view' },
+    { path: '/planning-hebdomadaire', name: 'Planning Hebdomadaire', permission: 'planning_view' },
+    { path: '/affectation-dep', name: 'Affectation Dép', permission: 'affectation_view' },
+    { path: '/statistiques', name: 'Statistiques', permission: 'statistiques_view' },
+    { path: '/statistiques-rdv', name: 'Statistiques RDV', permission: 'statistiques_rdv_view' },
+    { path: '/statistiques-fiches', name: 'Statistiques Fiches', permission: 'statistiques_fiches_view' },
+    { path: '/assistance-ia', name: 'Assistance IA', permission: 'assistance_ia_view' },
+    { path: '/affectation', name: 'Affectation', permission: 'affectation_view' },
+    { path: '/suivi-telepro', name: 'Suivi Télépro', permission: 'suivi_telepro_view' },
+    { path: '/suivi-agents-qualif', name: 'Suivi Agents Qualif', permission: 'suivi_agents_view' },
+    { path: '/suivi-agents', name: 'Suivi Agents', permission: 'suivi_agents_view' },
+    { path: '/production-qualif', name: 'Production Qualif', permission: 'production_qualif_view' },
+    { path: '/kpi-qualification', name: 'KPI Qualification', permission: 'kpi_qualification_view' },
+    { path: '/kpis', name: 'KPIs', permission: 'kpis_view' },
+    { path: '/statistiques-v2', name: 'Statistiques V2', permission: 'statistiques_v2_view' },
+    { path: '/controle-qualite', name: 'Contrôle Qualité', permission: 'controle_qualite_view' },
+    { path: '/audit-rdv', name: 'Audit RDV', permission: 'controle_qualite_view', allowFunctions: [4, 13] },
+    { path: '/compte-rendu', name: 'Compte Rendu', permission: 'compte_rendu_view' },
+    { path: '/compte-rendu-pending', name: 'Compte Rendu Pending', permission: null, allowFunctions: [1, 2, 5, 7, 13] },
+    { path: '/phase3', name: 'Phase 3', permission: 'phase3_view' },
+    { path: '/permissions', name: 'Permissions', permission: 'config_permissions', excludeFunctions: [8] },
+    { path: '/import-masse', name: 'Import Masse', permission: 'import_masse_view', excludeFunctions: [8] },
+    { path: '/messages', name: 'Messages', permission: 'messages_view' },
+    { path: '/users', name: 'Utilisateurs', permission: 'users_view' },
+    { path: '/stats-agents-qualite', name: 'Stats Agents Qualité', permission: 'stats_agents_qualite_view' },
+    { path: '/management', name: 'Management', permission: 'management_view', excludeFunctions: [8] },
+    { path: '/decalages', name: 'Décalages', permission: 'decalage_view' },
+    { path: '/validation', name: 'Validation', permission: 'validation_view' },
+    { path: '/mes-rappels', name: 'Mes Rappels', permission: 'dashboard_view', allowFunctions: [6, 13, 14] },
+    { path: '/rappels-bureau', name: 'Rappels Bureau', permission: null, allowFunctions: [13] },
+    { path: '/demandes-insertion', name: 'Demandes Insertion', permission: 'demandes_insertion_view' },
+    { path: '/notifications', name: 'Notifications', permission: null },
+    { path: '/signatures', name: 'Signatures', permission: 'signatures_view' },
+  ];
+
+  // Fonction pour obtenir le statut de permission d'une page
+  const getPagePermissionStatus = (page) => {
+    if (!selectedFonction || !permissionsList.length) return null;
+    
+    // Si la page n'a pas de permission (allowFunctions uniquement)
+    if (!page.permission) {
+      return page.allowFunctions ? 'special' : 'no-permission';
+    }
+    
+    // Chercher la permission dans la liste
+    const perm = permissionsList.find(p => p.code === page.permission);
+    if (!perm) {
+      return 'missing'; // Permission n'existe pas dans la base de données
+    }
+    
+    // Vérifier si autorisée
+    return permissions[perm.id] === true ? 'authorized' : 'denied';
+  };
+
   // Calculer les statistiques par catégorie
   const categoryStats = useMemo(() => {
     const stats = {};
@@ -344,6 +406,74 @@ const Permissions = () => {
         {!selectedFonction && (
           <div className="no-selection">
             <p>Veuillez sélectionner une fonction pour gérer ses permissions</p>
+          </div>
+        )}
+
+        {/* Liste des pages avec leur statut de permission */}
+        {selectedFonction && (
+          <div className="pages-permissions-list">
+            <h2>Liste des Pages et Permissions</h2>
+            <p className="pages-description">
+              Vue d'ensemble de toutes les pages de l'application avec leur permission correspondante et leur statut pour la fonction sélectionnée.
+            </p>
+            <div className="pages-table-wrapper">
+              <table className="pages-table">
+                <thead>
+                  <tr>
+                    <th>Page</th>
+                    <th>Permission</th>
+                    <th>Statut</th>
+                    <th>Remarques</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagesList.map((page, index) => {
+                    const status = getPagePermissionStatus(page);
+                    const statusLabels = {
+                      'authorized': { text: 'Autorisé', class: 'status-authorized' },
+                      'denied': { text: 'Refusé', class: 'status-denied' },
+                      'missing': { text: 'Permission manquante', class: 'status-missing' },
+                      'special': { text: 'Accès spécial', class: 'status-special' },
+                      'no-permission': { text: 'Sans permission', class: 'status-no-permission' },
+                      null: { text: 'N/A', class: 'status-na' }
+                    };
+                    const statusInfo = statusLabels[status] || statusLabels.null;
+                    
+                    let remarks = [];
+                    if (page.allowFunctions) {
+                      remarks.push(`Accès pour fonctions: ${page.allowFunctions.join(', ')}`);
+                    }
+                    if (page.excludeFunctions) {
+                      remarks.push(`Exclu pour fonctions: ${page.excludeFunctions.join(', ')}`);
+                    }
+                    if (!page.permission && !page.allowFunctions) {
+                      remarks.push('Page publique');
+                    }
+                    
+                    return (
+                      <tr key={index}>
+                        <td><strong>{page.name}</strong><br /><span className="page-path">{page.path}</span></td>
+                        <td>{page.permission || '–'}</td>
+                        <td>
+                          <span className={`status-badge ${statusInfo.class}`}>
+                            {statusInfo.text}
+                          </span>
+                        </td>
+                        <td className="remarks-cell">
+                          {remarks.length > 0 ? (
+                            <ul className="remarks-list">
+                              {remarks.map((remark, i) => (
+                                <li key={i}>{remark}</li>
+                              ))}
+                            </ul>
+                          ) : '–'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
