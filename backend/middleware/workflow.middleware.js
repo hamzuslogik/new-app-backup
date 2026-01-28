@@ -118,8 +118,6 @@ const triggerWorkflowOnFicheUpdated = async (req, res, next) => {
               console.error('[WORKFLOW] Stack trace:', error.stack);
             });
           } else {
-            console.log('[WORKFLOW] Pas de changement d\'état détecté ou valeurs invalides');
-          } else {
             // Déclencher workflow de modification générale seulement si pas de changement d'état ni de RDV créé
             if (!hasRdvCreated) {
               console.log('[WORKFLOW] Déclenchement workflow: fiche_updated');
