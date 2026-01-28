@@ -787,7 +787,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     const dateTime = `${dateStr} ${timeStr}`;
     
     // Initialiser le formulaire avec les données de la fiche
-    setRdvFormData({
+    const nextRdvFormData = {
       date_rdv_time: `${dateStr} ${timeStr}`,
       id_etat_final: 7, // CONFIRMER par défaut
       is_urgent: ficheData?.rdv_urgent === 1 || ficheData?.rdv_urgent === true || ficheData?.qualification_code === 'RDV_URGENT', // RDV_URGENT
@@ -808,7 +808,27 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       mode_chauffage: ficheData?.mode_chauffage ? String(ficheData.mode_chauffage) : '',
       annee_systeme_chauffage: ficheData?.annee_systeme_chauffage || '',
       conf_commentaire_produit: ficheData?.conf_commentaire_produit || ficheData?.commentaire || ''
-    });
+    };
+
+    // Session confirmateur (fonction 6) :
+    // - forcer le confirmateur connecté
+    // - interdire d'assigner un autre confirmateur
+    if (Number(user?.fonction) === 6 && user?.id) {
+      const uid = String(user.id);
+      const a = nextRdvFormData.id_confirmateur;
+      const b = nextRdvFormData.id_confirmateur_2;
+      const c = nextRdvFormData.id_confirmateur_3;
+
+      // Si déjà présent en 1/2/3 -> ne rien changer
+      if (![a, b, c].includes(uid)) {
+        // Sinon, s'ajouter automatiquement en 1, sinon 2, sinon 3
+        if (!a) nextRdvFormData.id_confirmateur = uid;
+        else if (!b) nextRdvFormData.id_confirmateur_2 = uid;
+        else if (!c) nextRdvFormData.id_confirmateur_3 = uid;
+      }
+    }
+
+    setRdvFormData(nextRdvFormData);
     
     setSelectedSlot({ date, hour });
     setShowRdvModal(true);
@@ -5083,6 +5103,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       {showRdvModal && selectedSlot && (
         <CreateRdvModal
           ficheData={ficheData}
+          user={user}
           selectedSlot={selectedSlot}
           rdvFormData={rdvFormData}
           setRdvFormData={setRdvFormData}
@@ -6134,6 +6155,7 @@ const PlanningViewForModal = ({
 // Composant Modal pour créer un RDV
 const CreateRdvModal = ({ 
   ficheData, 
+  user,
   selectedSlot, 
   rdvFormData, 
   setRdvFormData, 
@@ -6141,6 +6163,32 @@ const CreateRdvModal = ({
   onClose, 
   onSubmit 
 }) => {
+  const isConfirmateurSession = Number(user?.fonction) === 6;
+
+  const getConfirmateurLabel = (id) => {
+    if (!id) return '';
+    const found = confirmateurs?.find(c => String(c.id) === String(id));
+    return found?.pseudo || `ID: ${id}`;
+  };
+
+  // En session confirmateur : s'ajouter automatiquement en 1/2/3 si nécessaire
+  useEffect(() => {
+    if (!isConfirmateurSession || !user?.id) return;
+    const uid = String(user.id);
+
+    setRdvFormData((prev) => {
+      const a = prev?.id_confirmateur || '';
+      const b = prev?.id_confirmateur_2 || '';
+      const c = prev?.id_confirmateur_3 || '';
+
+      if ([a, b, c].includes(uid)) return prev;
+      if (!a) return { ...prev, id_confirmateur: uid };
+      if (!b) return { ...prev, id_confirmateur_2: uid };
+      if (!c) return { ...prev, id_confirmateur_3: uid };
+      return prev;
+    });
+  }, [isConfirmateurSession, user?.id, setRdvFormData]);
+
   // Récupérer les modes de chauffage pour les champs PAC
   const { data: modeChauffage } = useQuery('mode-chauffage', async () => {
     const res = await api.get('/management/mode-chauffage');
@@ -6198,21 +6246,7 @@ const CreateRdvModal = ({
         <div className="modal-body">
           <div className="rdv-form-info">
             <p><strong>Date et heure :</strong> {dateFormatted}</p>
-            {ficheData && (
-              <div className="rdv-fiche-info-block">
-                <strong>Informations de la fiche</strong>
-                <div className="rdv-fiche-info-grid">
-                  <p><span className="rdv-fiche-label">Nom :</span> {ficheData.nom || '-'} {ficheData.prenom || '-'}</p>
-                  <p><span className="rdv-fiche-label">Tél :</span> {ficheData.tel || '-'}</p>
-                  {(ficheData.gsm1 || ficheData.gsm2) && (
-                    <p><span className="rdv-fiche-label">GSM :</span> {[ficheData.gsm1, ficheData.gsm2].filter(Boolean).join(' / ')}</p>
-                  )}
-                  <p><span className="rdv-fiche-label">Adresse :</span> {ficheData.adresse || '-'}</p>
-                  <p><span className="rdv-fiche-label">CP :</span> {ficheData.cp || '-'} <span className="rdv-fiche-label">Ville :</span> {ficheData.ville || '-'}</p>
-                  {ficheData.produit && <p><span className="rdv-fiche-label">Produit :</span> {ficheData.produit}</p>}
-                </div>
-              </div>
-            )}
+            <p><strong>Fiche :</strong> {ficheData?.nom || ''} {ficheData?.prenom || ''} ({ficheData?.tel || ''})</p>
           </div>
 
           <form className="rdv-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
@@ -6338,14 +6372,23 @@ const CreateRdvModal = ({
                   className="form-control"
                   value={rdvFormData.id_confirmateur}
                   onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur: e.target.value})}
+                  disabled={isConfirmateurSession}
                   required
                 >
-                  <option value="">Sélectionner</option>
-                  {confirmateurs?.map(conf => (
-                    <option key={conf.id} value={conf.id}>
-                      {conf.pseudo}
-                    </option>
-                  ))}
+                  <option value="">{isConfirmateurSession ? '—' : 'Sélectionner'}</option>
+                  {isConfirmateurSession ? (
+                    rdvFormData.id_confirmateur ? (
+                      <option value={rdvFormData.id_confirmateur}>
+                        {getConfirmateurLabel(rdvFormData.id_confirmateur)}
+                      </option>
+                    ) : null
+                  ) : (
+                    confirmateurs?.map(conf => (
+                      <option key={conf.id} value={conf.id}>
+                        {conf.pseudo}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
               <div className="form-group">
@@ -6355,13 +6398,22 @@ const CreateRdvModal = ({
                   className="form-control"
                   value={rdvFormData.id_confirmateur_2}
                   onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur_2: e.target.value})}
+                  disabled={isConfirmateurSession}
                 >
                   <option value="">Aucun</option>
-                  {confirmateurs?.map(conf => (
-                    <option key={conf.id} value={conf.id}>
-                      {conf.pseudo}
-                    </option>
-                  ))}
+                  {isConfirmateurSession ? (
+                    rdvFormData.id_confirmateur_2 ? (
+                      <option value={rdvFormData.id_confirmateur_2}>
+                        {getConfirmateurLabel(rdvFormData.id_confirmateur_2)}
+                      </option>
+                    ) : null
+                  ) : (
+                    confirmateurs?.map(conf => (
+                      <option key={conf.id} value={conf.id}>
+                        {conf.pseudo}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>
@@ -6373,13 +6425,22 @@ const CreateRdvModal = ({
                 className="form-control"
                 value={rdvFormData.id_confirmateur_3}
                 onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur_3: e.target.value})}
+                disabled={isConfirmateurSession}
               >
                 <option value="">Aucun</option>
-                {confirmateurs?.map(conf => (
-                  <option key={conf.id} value={conf.id}>
-                    {conf.pseudo}
-                  </option>
-                ))}
+                {isConfirmateurSession ? (
+                  rdvFormData.id_confirmateur_3 ? (
+                    <option value={rdvFormData.id_confirmateur_3}>
+                      {getConfirmateurLabel(rdvFormData.id_confirmateur_3)}
+                    </option>
+                  ) : null
+                ) : (
+                  confirmateurs?.map(conf => (
+                    <option key={conf.id} value={conf.id}>
+                      {conf.pseudo}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 

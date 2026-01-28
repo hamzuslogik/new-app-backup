@@ -1477,35 +1477,6 @@
   color: #666;
 }
 
-.rdv-fiche-info-block {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.rdv-fiche-info-block strong {
-  display: block;
-  margin-bottom: 8px;
-  color: #333;
-}
-
-.rdv-fiche-info-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.rdv-fiche-info-grid p {
-  margin: 0;
-  font-size: 0.9em;
-}
-
-.rdv-fiche-info-grid .rdv-fiche-label {
-  font-weight: 600;
-  color: #555;
-  margin-right: 4px;
-}
-
 .rdv-form {
   padding: 0;
 }

@@ -3898,6 +3898,54 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     } else if (req.user.fonction === 6) {
       // Confirmateurs : peuvent modifier toutes les fiches (pas de restriction)
       // Pas de vérification d'assignation nécessaire
+      //
+      // IMPORTANT (sécurité) : un confirmateur ne doit pas pouvoir assigner un autre confirmateur.
+      // Il peut uniquement s'ajouter lui-même en confirmateur 1/2/3 si une place est libre.
+      if (ficheData && (ficheData.id_confirmateur !== undefined || ficheData.id_confirmateur_2 !== undefined || ficheData.id_confirmateur_3 !== undefined)) {
+        const uid = Number(req.user.id);
+        const current = [
+          fiche.id_confirmateur ? Number(fiche.id_confirmateur) : null,
+          fiche.id_confirmateur_2 ? Number(fiche.id_confirmateur_2) : null,
+          fiche.id_confirmateur_3 ? Number(fiche.id_confirmateur_3) : null
+        ];
+
+        const already = current.includes(uid);
+        if (!already) {
+          // Demande explicite d'ajout de soi-même ?
+          const requested = [
+            ficheData.id_confirmateur != null ? Number(ficheData.id_confirmateur) : null,
+            ficheData.id_confirmateur_2 != null ? Number(ficheData.id_confirmateur_2) : null,
+            ficheData.id_confirmateur_3 != null ? Number(ficheData.id_confirmateur_3) : null
+          ];
+
+          const wantsSelf = requested.includes(uid);
+          if (wantsSelf) {
+            // Ajouter le confirmateur connecté dans le 1er slot libre
+            if (!current[0]) {
+              ficheData.id_confirmateur = uid;
+            } else if (!current[1]) {
+              ficheData.id_confirmateur_2 = uid;
+            } else if (!current[2]) {
+              ficheData.id_confirmateur_3 = uid;
+            } else {
+              // Pas de place -> ne pas modifier
+              ficheData.id_confirmateur = fiche.id_confirmateur;
+              ficheData.id_confirmateur_2 = fiche.id_confirmateur_2;
+              ficheData.id_confirmateur_3 = fiche.id_confirmateur_3;
+            }
+          } else {
+            // Toute tentative d'assigner quelqu'un d'autre est ignorée
+            ficheData.id_confirmateur = fiche.id_confirmateur;
+            ficheData.id_confirmateur_2 = fiche.id_confirmateur_2;
+            ficheData.id_confirmateur_3 = fiche.id_confirmateur_3;
+          }
+        } else {
+          // Déjà assigné : ne pas permettre de modifier les confirmateurs
+          ficheData.id_confirmateur = fiche.id_confirmateur;
+          ficheData.id_confirmateur_2 = fiche.id_confirmateur_2;
+          ficheData.id_confirmateur_3 = fiche.id_confirmateur_3;
+        }
+      }
     }
 
     // Mettre à jour la date de modification
