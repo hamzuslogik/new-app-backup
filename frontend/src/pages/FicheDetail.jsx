@@ -807,7 +807,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       consommation_chauffage: ficheData?.consommation_chauffage || '',
       mode_chauffage: ficheData?.mode_chauffage ? String(ficheData.mode_chauffage) : '',
       annee_systeme_chauffage: ficheData?.annee_systeme_chauffage || '',
-      conf_commentaire_produit: ficheData?.conf_commentaire_produit || ficheData?.commentaire || ''
+      conf_commentaire_produit: '' // Vide par défaut pour le modal de création RDV
     };
 
     // Session confirmateur (fonction 6) :
@@ -6694,7 +6694,7 @@ const CreateRdvModal = ({
 
             {/* Commentaire */}
             <div className="form-group">
-              <label htmlFor="rdv_commentaire">Commentaire produit</label>
+              <label htmlFor="rdv_commentaire">Commentaire Confirmation</label>
               <textarea
                 id="rdv_commentaire"
                 className="form-control"
