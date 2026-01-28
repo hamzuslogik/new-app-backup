@@ -44,6 +44,7 @@ import Signatures from './pages/Signatures';
 import AssistanceIA from './pages/AssistanceIA';
 import MesRappels from './pages/MesRappels';
 import RappelsBureau from './pages/RappelsBureau';
+import SystemMessages from './pages/SystemMessages';
 import Layout from './components/Layout';
 import HomeRedirect from './components/HomeRedirect';
 import './App.css';
@@ -101,6 +102,7 @@ function App() {
           <Route path="demandes-insertion" element={<ProtectedRoute permission="demandes_insertion_view"><DemandesInsertion /></ProtectedRoute>} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="signatures" element={<ProtectedRoute permission="signatures_view"><Signatures /></ProtectedRoute>} />
+          <Route path="system-messages" element={<ProtectedRoute permission="management_view"><SystemMessages /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<HomeRedirect />} />
       </Routes>

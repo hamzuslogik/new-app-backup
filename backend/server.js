@@ -28,6 +28,7 @@ const signatureRoutes = require('./routes/signature.routes');
 const iaAssistanceRoutes = require('./routes/ia-assistance.routes');
 const workflowRoutes = require('./routes/workflow.routes');
 const statistiqueV2Routes = require('./routes/statistique-v2.routes');
+const systemMessagesRoutes = require('./routes/systemMessages.routes');
 
 // Créer l'application Express
 const app = express();
@@ -65,6 +66,7 @@ app.use('/api/signature', signatureRoutes);
 app.use('/api/ia-assistance', iaAssistanceRoutes);
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/statistiques-v2', statistiqueV2Routes);
+app.use('/api/system-messages', systemMessagesRoutes);
 
 // Route de test (déplacée vers health.routes.js)
 

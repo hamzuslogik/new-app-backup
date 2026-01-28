@@ -25,6 +25,7 @@ import {
   FaSearch,
   FaSignature,
   FaRobot,
+  FaBullhorn,
 } from 'react-icons/fa';
 import './Sidebar.css';
 
@@ -298,6 +299,20 @@ const Sidebar = ({ collapsed }) => {
       path: '/management',
       label: 'Gestion',
       icon: FaCog,
+      permission: 'management_view',
+      visible: true,
+      // Visible pour Admin (1, 2, 7) et Backoffice (11)
+      customCheck: (item, user, hasPermission) => {
+        // Si Admin ou Backoffice, toujours visible
+        if ([1, 2, 7, 11].includes(user?.fonction)) return true;
+        // Sinon, vérifier la permission
+        return hasPermission(item.permission);
+      },
+    },
+    {
+      path: '/system-messages',
+      label: 'Messages Système',
+      icon: FaBullhorn,
       permission: 'management_view',
       visible: true,
       // Visible pour Admin (1, 2, 7) et Backoffice (11)
