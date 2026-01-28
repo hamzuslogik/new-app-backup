@@ -54,25 +54,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const userFonction = user?.fonction != null ? Number(user.fonction) : null;
   const isQualiteQualif = userFonction === 2 || userFonction === 8 || userFonction === 12;
   
-  // Vérifier si l'utilisateur est un commercial (fonction 5)
-  const isCommercial = userFonction === 5;
-  
-  // Vérifier si c'est un R2 (deuxième commercial assigné)
-  const isR2 = isCommercial && ficheData && Number(ficheData.id_commercial_2) === Number(user?.id);
-  
   // Rediriger vers l'onglet fiches si l'utilisateur qualité qualification est sur un onglet masqué
   useEffect(() => {
     if (isQualiteQualif && (activeTab === 'planning' || activeTab === 'sms')) {
       setActiveTab('fiches');
     }
   }, [isQualiteQualif, activeTab]);
-  
-  // Rediriger vers l'onglet fiches si un commercial est sur un onglet désactivé
-  useEffect(() => {
-    if (isCommercial && (activeTab === 'modifica' || activeTab === 'planning' || activeTab === 'sms')) {
-      setActiveTab('fiches');
-    }
-  }, [isCommercial, activeTab]);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [planningWeek, setPlanningWeek] = useState(null);
@@ -318,6 +305,19 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       refetchOnReconnect: isModal // Rafraîchir quand la connexion est rétablie (modal uniquement)
     }
   );
+  
+  // Vérifier si l'utilisateur est un commercial (fonction 5)
+  const isCommercial = userFonction === 5;
+  
+  // Vérifier si c'est un R2 (deuxième commercial assigné)
+  const isR2 = isCommercial && ficheData && Number(ficheData.id_commercial_2) === Number(user?.id);
+  
+  // Rediriger vers l'onglet fiches si un commercial est sur un onglet désactivé
+  useEffect(() => {
+    if (isCommercial && (activeTab === 'modifica' || activeTab === 'planning' || activeTab === 'sms')) {
+      setActiveTab('fiches');
+    }
+  }, [isCommercial, activeTab, ficheData]);
 
   // Récupérer les décalages existants pour cette fiche
   const { data: decalagesData } = useQuery(
