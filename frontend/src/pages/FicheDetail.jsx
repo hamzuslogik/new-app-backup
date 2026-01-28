@@ -797,11 +797,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       produit: ficheData?.produit ? String(ficheData.produit) : '',
       conf_rdv_avec: ficheData?.conf_rdv_avec || '',
       // Champs spécifiques PV
-      conf_orientation_toiture: ficheData?.conf_orientation_toiture || ficheData?.orientation_toiture || '',
-      conf_zones_ombres: ficheData?.conf_zones_ombres || ficheData?.zones_ombres || '',
-      conf_site_classe: ficheData?.conf_site_classe || ficheData?.site_classe || '',
-      conf_consommation_electricite: ficheData?.conf_consommation_electricite || ficheData?.consommation_electricite || '',
-      nb_pans: ficheData?.nb_pans ? String(ficheData.nb_pans) : '',
+      conf_orientation_toiture: (ficheData?.conf_orientation_toiture || ficheData?.orientation_toiture || '').toString(),
+      conf_zones_ombres: (ficheData?.conf_zones_ombres || ficheData?.zones_ombres || '').toString(),
+      conf_site_classe: (ficheData?.conf_site_classe || ficheData?.site_classe || '').toString(),
+      conf_consommation_electricite: (ficheData?.conf_consommation_electricite != null ? String(ficheData.conf_consommation_electricite) : (ficheData?.consommation_electricite != null ? String(ficheData.consommation_electricite) : '')),
+      nb_pans: ficheData?.nb_pans != null ? String(ficheData.nb_pans) : '',
       // Champs spécifiques PAC
       surface_chauffee: ficheData?.surface_chauffee || '',
       consommation_chauffage: ficheData?.consommation_chauffage || '',
@@ -6188,6 +6188,48 @@ const CreateRdvModal = ({
       return prev;
     });
   }, [isConfirmateurSession, user?.id, setRdvFormData]);
+
+  // Préremplir les champs PV depuis ficheData si ils sont vides dans rdvFormData
+  useEffect(() => {
+    if (!ficheData) return;
+    
+    setRdvFormData((prev) => {
+      const updates = {};
+      let hasChanges = false;
+
+      // Orientation toiture
+      if (!prev.conf_orientation_toiture && (ficheData.conf_orientation_toiture || ficheData.orientation_toiture)) {
+        updates.conf_orientation_toiture = (ficheData.conf_orientation_toiture || ficheData.orientation_toiture).toString();
+        hasChanges = true;
+      }
+
+      // Zones ombres
+      if (!prev.conf_zones_ombres && (ficheData.conf_zones_ombres || ficheData.zones_ombres)) {
+        updates.conf_zones_ombres = (ficheData.conf_zones_ombres || ficheData.zones_ombres).toString();
+        hasChanges = true;
+      }
+
+      // Site classé
+      if (!prev.conf_site_classe && (ficheData.conf_site_classe || ficheData.site_classe)) {
+        updates.conf_site_classe = (ficheData.conf_site_classe || ficheData.site_classe).toString();
+        hasChanges = true;
+      }
+
+      // Consommation électricité
+      if (!prev.conf_consommation_electricite && (ficheData.conf_consommation_electricite != null || ficheData.consommation_electricite != null)) {
+        updates.conf_consommation_electricite = String(ficheData.conf_consommation_electricite != null ? ficheData.conf_consommation_electricite : ficheData.consommation_electricite);
+        hasChanges = true;
+      }
+
+      // Nombre de pans
+      if (!prev.nb_pans && ficheData.nb_pans != null) {
+        updates.nb_pans = String(ficheData.nb_pans);
+        hasChanges = true;
+      }
+
+      return hasChanges ? { ...prev, ...updates } : prev;
+    });
+  }, [ficheData, setRdvFormData]);
 
   // Récupérer les modes de chauffage pour les champs PAC
   const { data: modeChauffage } = useQuery('mode-chauffage', async () => {
