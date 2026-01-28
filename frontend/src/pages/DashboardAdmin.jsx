@@ -1130,7 +1130,7 @@ const DashboardAdmin = () => {
                       Date RDV {getSortIcon('Date RDV')}
                     </th>
                     <th onClick={() => handleSort('État Final')} className="sortable-header">
-                      État Final {getSortIcon('État Final')}
+                      {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
                     </th>
                     <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
                       Confirmateur {getSortIcon('Confirmateur')}
@@ -1167,7 +1167,7 @@ const DashboardAdmin = () => {
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
                         <td data-label="Date RDV:">{formatDate(fiche.date_rdv_time)}</td>
-                        <td data-label="État:">
+                        <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}>
                           <span 
                             className="etat-badge"
                             style={{ backgroundColor: etatColor }}
