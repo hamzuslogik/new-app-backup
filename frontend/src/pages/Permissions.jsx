@@ -127,6 +127,17 @@ const Permissions = () => {
   const fonctions = fonctionsData || [];
   const permissionsList = fonctionPermissionsData || [];
 
+  // Fonction helper pour convertir les IDs de fonctions en noms
+  const getFonctionNames = (functionIds) => {
+    if (!functionIds || !Array.isArray(functionIds) || functionIds.length === 0) return [];
+    return functionIds
+      .map(id => {
+        const fonction = fonctions.find(f => f.id === id);
+        return fonction ? `${fonction.titre} (${id})` : `Fonction ${id}`;
+      })
+      .join(', ');
+  };
+
   // Filtrer les permissions selon le terme de recherche
   const filteredPermissionsList = useMemo(() => {
     if (!searchTerm.trim()) return permissionsList;
@@ -441,10 +452,12 @@ const Permissions = () => {
                     
                     let remarks = [];
                     if (page.allowFunctions) {
-                      remarks.push(`Accès pour fonctions: ${page.allowFunctions.join(', ')}`);
+                      const fonctionNames = getFonctionNames(page.allowFunctions);
+                      remarks.push(`Accès pour fonctions: ${fonctionNames}`);
                     }
                     if (page.excludeFunctions) {
-                      remarks.push(`Exclu pour fonctions: ${page.excludeFunctions.join(', ')}`);
+                      const fonctionNames = getFonctionNames(page.excludeFunctions);
+                      remarks.push(`Exclu pour fonctions: ${fonctionNames}`);
                     }
                     if (!page.permission && !page.allowFunctions) {
                       remarks.push('Page publique');
