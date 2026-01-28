@@ -311,6 +311,11 @@ const PlanningCommercial = () => {
     if (fiche.commercial_2_pseudo) names.push(fiche.commercial_2_pseudo);
     return names.length > 0 ? names.join(' / ') : '-';
   };
+  
+  // Vérifier si c'est un R2 (deuxième commercial assigné)
+  const isR2 = (fiche) => {
+    return user?.fonction === 5 && fiche && Number(fiche.id_commercial_2) === Number(user?.id);
+  };
 
   if (isLoading && !data) {
     return (
@@ -760,6 +765,20 @@ const PlanningCommercial = () => {
                         <td data-label="Commercial:">
                           <span style={{ fontWeight: '500' }}>
                             {getCommercialName(fiche)}
+                            {isR2(fiche) && (
+                              <span style={{ 
+                                marginLeft: '8px', 
+                                fontSize: '0.85em',
+                                color: '#e74c3c',
+                                fontWeight: 'bold',
+                                backgroundColor: '#fff',
+                                padding: '2px 6px',
+                                borderRadius: '3px',
+                                border: '1px solid #e74c3c'
+                              }}>
+                                R2
+                              </span>
+                            )}
                           </span>
                         </td>
                         <td data-label="Produit:">
