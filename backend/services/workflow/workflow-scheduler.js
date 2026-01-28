@@ -17,7 +17,8 @@ const lastExecutionTimes = new Map(); // Pour éviter les exécutions multiples
  * - "0 * * * *" : toutes les heures à minute 0
  * - "0 9 * * *" : tous les jours à 9h00
  * - "0 9 * * 1" : tous les lundis à 9h00
- * - Pour toutes les 15 minutes: utiliser l'expression "*/15 * * * *"
+ * - Pour un intervalle: utiliser "X/Y" où X est le début et Y l'intervalle
+ *   Exemple: toutes les 15 minutes = "0/15 * * * *" ou utiliser le format avec astérisque
  */
 function shouldRunNow(cronExpression) {
   try {
