@@ -3954,10 +3954,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 <select
                   id="id_etat_final"
                   className="form-control"
-                  value={selectedEtat !== null ? selectedEtat : (fiche.id_etat_final || '')}
+                  value={selectedEtat !== null ? selectedEtat : ''}
                   onChange={(e) => handleEtatChange(e.target.value ? parseInt(e.target.value) : null)}
                 >
-                  <option value="">Sélectionner un état</option>
+                  <option value="">{fiche.id_etat_final ? `État actuel: ${etats?.find(e => e.id === fiche.id_etat_final)?.titre || fiche.id_etat_final}` : 'Sélectionner un état'}</option>
                   {etatsPhase0.length > 0 && (
                     <optgroup label="PHASE 0">
                       {etatsPhase0.map(etat => (
