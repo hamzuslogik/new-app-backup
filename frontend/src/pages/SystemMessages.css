@@ -168,6 +168,28 @@
   color: #dc3545;
 }
 
+.warning-text {
+  color: #ff9800;
+  font-weight: normal;
+  font-size: 12px;
+}
+
+.form-info-box {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 20px;
+  color: #856404;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.form-info-box strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
 .form-group input[type="text"],
 .form-group input[type="datetime-local"],
 .form-group textarea,
@@ -390,6 +412,12 @@
   color: #666;
   border-radius: 10px;
   font-size: 11px;
+}
+
+.cible-badge-warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
 }
 
 .message-creator {

@@ -147,6 +147,14 @@ const SystemMessages = () => {
       return;
     }
 
+    // Vérifier qu'au moins un critère de ciblage est sélectionné
+    if (formData.cibles_fonctions.length === 0 && 
+        formData.cibles_centres.length === 0 && 
+        formData.cibles_utilisateurs.length === 0) {
+      toast.error('Veuillez sélectionner au moins un critère de ciblage (fonctions, centres ou utilisateurs)');
+      return;
+    }
+
     const dataToSend = {
       ...formData,
       date_debut: formData.date_debut || null,
@@ -332,7 +340,12 @@ const SystemMessages = () => {
               </div>
 
               <div className="form-group">
-                <label>Fonctions ciblées (laisser vide pour toutes)</label>
+                <label>
+                  Fonctions ciblées <span className="required">*</span>
+                  {formData.cibles_fonctions.length === 0 && formData.cibles_centres.length === 0 && formData.cibles_utilisateurs.length === 0 && (
+                    <span className="warning-text"> (Au moins un critère requis)</span>
+                  )}
+                </label>
                 <select
                   multiple
                   value={formData.cibles_fonctions.map(String)}
@@ -346,11 +359,16 @@ const SystemMessages = () => {
                     <option key={f.id} value={f.id}>{f.titre}</option>
                   ))}
                 </select>
-                <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs fonctions</small>
+                <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs fonctions. Sélectionnez au moins une fonction, un centre ou un utilisateur.</small>
               </div>
 
               <div className="form-group">
-                <label>Centres ciblés (laisser vide pour tous)</label>
+                <label>
+                  Centres ciblés
+                  {formData.cibles_fonctions.length === 0 && formData.cibles_centres.length === 0 && formData.cibles_utilisateurs.length === 0 && (
+                    <span className="warning-text"> (Au moins un critère requis)</span>
+                  )}
+                </label>
                 <select
                   multiple
                   value={formData.cibles_centres.map(String)}
@@ -364,11 +382,16 @@ const SystemMessages = () => {
                     <option key={c.id} value={c.id}>{c.titre}</option>
                   ))}
                 </select>
-                <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs centres</small>
+                <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs centres. Sélectionnez au moins une fonction, un centre ou un utilisateur.</small>
               </div>
 
               <div className="form-group">
-                <label>Utilisateurs ciblés (laisser vide pour tous)</label>
+                <label>
+                  Utilisateurs ciblés
+                  {formData.cibles_fonctions.length === 0 && formData.cibles_centres.length === 0 && formData.cibles_utilisateurs.length === 0 && (
+                    <span className="warning-text"> (Au moins un critère requis)</span>
+                  )}
+                </label>
                 <select
                   multiple
                   value={formData.cibles_utilisateurs.map(String)}
@@ -382,7 +405,12 @@ const SystemMessages = () => {
                     <option key={u.id} value={u.id}>{u.nom} {u.prenom} ({u.login})</option>
                   ))}
                 </select>
-                <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs utilisateurs</small>
+                <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs utilisateurs. Sélectionnez au moins une fonction, un centre ou un utilisateur.</small>
+              </div>
+              
+              <div className="form-info-box">
+                <strong>⚠️ Important :</strong> Le message ne sera envoyé que si au moins un critère de ciblage est sélectionné. 
+                Si plusieurs critères sont sélectionnés, l'utilisateur doit correspondre à TOUS les critères sélectionnés.
               </div>
 
               <div className="form-actions">
@@ -471,17 +499,35 @@ const SystemMessages = () => {
                   )}
                 </div>
                 <div className="message-cibles">
-                  {message.cibles_fonctions && (
-                    <span className="cible-badge">Fonctions ciblées</span>
-                  )}
-                  {message.cibles_centres && (
-                    <span className="cible-badge">Centres ciblés</span>
-                  )}
-                  {message.cibles_utilisateurs && (
-                    <span className="cible-badge">Utilisateurs ciblés</span>
-                  )}
+                  {message.cibles_fonctions && (() => {
+                    try {
+                      const fonctions = JSON.parse(message.cibles_fonctions);
+                      if (Array.isArray(fonctions) && fonctions.length > 0) {
+                        return <span className="cible-badge">Fonctions ciblées ({fonctions.length})</span>;
+                      }
+                    } catch (e) {}
+                    return null;
+                  })()}
+                  {message.cibles_centres && (() => {
+                    try {
+                      const centres = JSON.parse(message.cibles_centres);
+                      if (Array.isArray(centres) && centres.length > 0) {
+                        return <span className="cible-badge">Centres ciblés ({centres.length})</span>;
+                      }
+                    } catch (e) {}
+                    return null;
+                  })()}
+                  {message.cibles_utilisateurs && (() => {
+                    try {
+                      const utilisateurs = JSON.parse(message.cibles_utilisateurs);
+                      if (Array.isArray(utilisateurs) && utilisateurs.length > 0) {
+                        return <span className="cible-badge">Utilisateurs ciblés ({utilisateurs.length})</span>;
+                      }
+                    } catch (e) {}
+                    return null;
+                  })()}
                   {!message.cibles_fonctions && !message.cibles_centres && !message.cibles_utilisateurs && (
-                    <span className="cible-badge">Tous les utilisateurs</span>
+                    <span className="cible-badge cible-badge-warning">⚠️ Aucun ciblage - Message non envoyé</span>
                   )}
                 </div>
                 {message.createur_nom && (

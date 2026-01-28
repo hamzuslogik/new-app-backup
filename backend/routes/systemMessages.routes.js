@@ -39,14 +39,21 @@ router.get('/', authenticate, async (req, res) => {
         return false;
       }
 
+      // Vérifier si au moins un critère de ciblage est défini
+      let hasFonctionsCibles = false;
+      let hasCentresCibles = false;
+      let hasUtilisateursCibles = false;
+      let matchesFonctions = false;
+      let matchesCentres = false;
+      let matchesUtilisateurs = false;
+
       // Vérifier les fonctions ciblées
       if (message.cibles_fonctions) {
         try {
           const fonctionsCibles = JSON.parse(message.cibles_fonctions);
           if (Array.isArray(fonctionsCibles) && fonctionsCibles.length > 0) {
-            if (!fonctionsCibles.includes(userFonction)) {
-              return false;
-            }
+            hasFonctionsCibles = true;
+            matchesFonctions = fonctionsCibles.includes(userFonction);
           }
         } catch (e) {
           console.error('Erreur parsing cibles_fonctions:', e);
@@ -58,9 +65,8 @@ router.get('/', authenticate, async (req, res) => {
         try {
           const centresCibles = JSON.parse(message.cibles_centres);
           if (Array.isArray(centresCibles) && centresCibles.length > 0) {
-            if (!centresCibles.includes(userCentre)) {
-              return false;
-            }
+            hasCentresCibles = true;
+            matchesCentres = centresCibles.includes(userCentre);
           }
         } catch (e) {
           console.error('Erreur parsing cibles_centres:', e);
@@ -72,16 +78,47 @@ router.get('/', authenticate, async (req, res) => {
         try {
           const utilisateursCibles = JSON.parse(message.cibles_utilisateurs);
           if (Array.isArray(utilisateursCibles) && utilisateursCibles.length > 0) {
-            if (!utilisateursCibles.includes(userId)) {
-              return false;
-            }
+            hasUtilisateursCibles = true;
+            matchesUtilisateurs = utilisateursCibles.includes(userId);
           }
         } catch (e) {
           console.error('Erreur parsing cibles_utilisateurs:', e);
         }
       }
 
-      return true;
+      // Si aucun critère de ciblage n'est défini, exclure le message
+      if (!hasFonctionsCibles && !hasCentresCibles && !hasUtilisateursCibles) {
+        return false;
+      }
+
+      // Si au moins un critère est défini, vérifier que l'utilisateur correspond à au moins un critère
+      // Si plusieurs critères sont définis, l'utilisateur doit correspondre à TOUS les critères définis (ET logique)
+      let shouldInclude = false;
+
+      if (hasFonctionsCibles && hasCentresCibles && hasUtilisateursCibles) {
+        // Tous les critères sont définis : l'utilisateur doit correspondre à tous
+        shouldInclude = matchesFonctions && matchesCentres && matchesUtilisateurs;
+      } else if (hasFonctionsCibles && hasCentresCibles) {
+        // Fonctions et centres définis
+        shouldInclude = matchesFonctions && matchesCentres;
+      } else if (hasFonctionsCibles && hasUtilisateursCibles) {
+        // Fonctions et utilisateurs définis
+        shouldInclude = matchesFonctions && matchesUtilisateurs;
+      } else if (hasCentresCibles && hasUtilisateursCibles) {
+        // Centres et utilisateurs définis
+        shouldInclude = matchesCentres && matchesUtilisateurs;
+      } else if (hasFonctionsCibles) {
+        // Seulement fonctions définies
+        shouldInclude = matchesFonctions;
+      } else if (hasCentresCibles) {
+        // Seulement centres définis
+        shouldInclude = matchesCentres;
+      } else if (hasUtilisateursCibles) {
+        // Seulement utilisateurs définis
+        shouldInclude = matchesUtilisateurs;
+      }
+
+      return shouldInclude;
     });
 
     res.json({ success: true, data: messages });

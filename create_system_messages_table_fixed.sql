@@ -1,11 +1,12 @@
 -- =====================================================
--- Script pour créer la table des messages système
+-- Script pour créer la table des messages système (Version corrigée)
 -- Base de données: crm
 -- =====================================================
 -- 
 -- Cette table permet de stocker les messages système qui seront
 -- affichés aux utilisateurs lors de leur connexion
 --
+-- Version corrigée pour éviter l'erreur #1067 avec CURRENT_TIMESTAMP
 -- =====================================================
 
 USE `crm`;
@@ -54,56 +55,6 @@ CREATE TABLE IF NOT EXISTS `system_messages_lus` (
   CONSTRAINT `fk_sml_message` FOREIGN KEY (`id_message`) REFERENCES `system_messages` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_sml_utilisateur` FOREIGN KEY (`id_utilisateur`) REFERENCES `utilisateurs` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- =====================================================
--- Insertion d'un message exemple (optionnel)
--- =====================================================
--- INSERT INTO `system_messages` (`titre`, `message`, `type`, `priorite`, `actif`, `afficher_une_seule_fois`) VALUES
--- ('Bienvenue', 'Bienvenue sur la plateforme CRM. N''hésitez pas à consulter l''aide si vous avez des questions.', 'info', 1, 1, 0);
-
--- =====================================================
--- Créer des triggers pour gérer automatiquement les dates
--- =====================================================
-
--- Supprimer les triggers s'ils existent déjà
-DROP TRIGGER IF EXISTS `trg_system_messages_insert`;
-DROP TRIGGER IF EXISTS `trg_system_messages_update`;
-DROP TRIGGER IF EXISTS `trg_system_messages_lus_insert`;
-
-DELIMITER $$
-
--- Trigger pour date_creation et date_modification lors de l'insertion
-CREATE TRIGGER `trg_system_messages_insert` 
-BEFORE INSERT ON `system_messages`
-FOR EACH ROW
-BEGIN
-  IF NEW.date_creation IS NULL THEN
-    SET NEW.date_creation = NOW();
-  END IF;
-  IF NEW.date_modification IS NULL THEN
-    SET NEW.date_modification = NOW();
-  END IF;
-END$$
-
--- Trigger pour date_modification lors de la mise à jour
-CREATE TRIGGER `trg_system_messages_update` 
-BEFORE UPDATE ON `system_messages`
-FOR EACH ROW
-BEGIN
-  SET NEW.date_modification = NOW();
-END$$
-
--- Trigger pour date_lecture lors de l'insertion
-CREATE TRIGGER `trg_system_messages_lus_insert` 
-BEFORE INSERT ON `system_messages_lus`
-FOR EACH ROW
-BEGIN
-  IF NEW.date_lecture IS NULL THEN
-    SET NEW.date_lecture = NOW();
-  END IF;
-END$$
-
-DELIMITER ;
 
 -- =====================================================
 -- Créer des triggers pour gérer automatiquement les dates
@@ -162,3 +113,14 @@ FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = DATABASE() 
   AND TABLE_NAME IN ('system_messages', 'system_messages_lus')
 ORDER BY TABLE_NAME;
+
+-- Vérifier que les triggers existent
+SELECT 
+    TRIGGER_NAME as trigger_name,
+    EVENT_MANIPULATION as event,
+    EVENT_OBJECT_TABLE as table_name,
+    '✓ Créé' as statut
+FROM INFORMATION_SCHEMA.TRIGGERS 
+WHERE TRIGGER_SCHEMA = DATABASE() 
+  AND TRIGGER_NAME LIKE 'trg_system_messages%'
+ORDER BY TRIGGER_NAME;

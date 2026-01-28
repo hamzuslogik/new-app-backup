@@ -38,9 +38,11 @@ Le serveur backend doit être redémarré pour charger les nouvelles routes.
    - **Date de fin** (optionnel) : Date jusqu'à laquelle le message sera affiché
    - **Message actif** : Activer/désactiver le message
    - **Afficher une seule fois** : Si coché, le message ne sera affiché qu'une seule fois par utilisateur
-   - **Fonctions ciblées** : Sélectionner les fonctions concernées (laisser vide pour toutes)
-   - **Centres ciblés** : Sélectionner les centres concernés (laisser vide pour tous)
-   - **Utilisateurs ciblés** : Sélectionner les utilisateurs concernés (laisser vide pour tous)
+   - **Fonctions ciblées** : Sélectionner les fonctions concernées (⚠️ **Requis** : au moins un critère doit être sélectionné)
+   - **Centres ciblés** : Sélectionner les centres concernés (optionnel, mais au moins un critère doit être sélectionné)
+   - **Utilisateurs ciblés** : Sélectionner les utilisateurs concernés (optionnel, mais au moins un critère doit être sélectionné)
+   
+   ⚠️ **Important** : Le message ne sera envoyé que si au moins un critère de ciblage est sélectionné. Si plusieurs critères sont sélectionnés, l'utilisateur doit correspondre à TOUS les critères sélectionnés (logique ET).
 3. Cliquez sur "Enregistrer"
 
 ### Modifier un message
@@ -60,8 +62,10 @@ Les messages système sont automatiquement affichés aux utilisateurs lors de le
 
 1. **Message actif** : Le message doit être actif (`actif = 1`)
 2. **Dates** : La date actuelle doit être entre la date de début et la date de fin (si définies)
-3. **Ciblage** : Le message doit correspondre aux critères de ciblage (fonction, centre, utilisateur)
+3. **Ciblage** : ⚠️ **Le message doit avoir au moins un critère de ciblage défini** (fonction, centre ou utilisateur). Si plusieurs critères sont définis, l'utilisateur doit correspondre à TOUS les critères (logique ET).
 4. **Affichage unique** : Si "Afficher une seule fois" est activé, le message ne sera affiché qu'une seule fois par utilisateur
+
+**Note importante** : Un message sans aucun critère de ciblage ne sera jamais envoyé. Vous devez sélectionner au moins une fonction, un centre ou un utilisateur pour que le message soit distribué.
 
 ### Types de messages
 
