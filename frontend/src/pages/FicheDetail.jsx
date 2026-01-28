@@ -54,12 +54,25 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const userFonction = user?.fonction != null ? Number(user.fonction) : null;
   const isQualiteQualif = userFonction === 2 || userFonction === 8 || userFonction === 12;
   
+  // Vérifier si l'utilisateur est un commercial (fonction 5)
+  const isCommercial = userFonction === 5;
+  
+  // Vérifier si c'est un R2 (deuxième commercial assigné)
+  const isR2 = isCommercial && ficheData && Number(ficheData.id_commercial_2) === Number(user?.id);
+  
   // Rediriger vers l'onglet fiches si l'utilisateur qualité qualification est sur un onglet masqué
   useEffect(() => {
     if (isQualiteQualif && (activeTab === 'planning' || activeTab === 'sms')) {
       setActiveTab('fiches');
     }
   }, [isQualiteQualif, activeTab]);
+  
+  // Rediriger vers l'onglet fiches si un commercial est sur un onglet désactivé
+  useEffect(() => {
+    if (isCommercial && (activeTab === 'modifica' || activeTab === 'planning' || activeTab === 'sms')) {
+      setActiveTab('fiches');
+    }
+  }, [isCommercial, activeTab]);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [planningWeek, setPlanningWeek] = useState(null);
@@ -2104,7 +2117,19 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         }}>
           {fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : 'PV')}
         </div>
-        <h1><FaInfoCircle /> Détail de la fiche</h1>
+        <h1>
+          <FaInfoCircle /> Détail de la fiche
+          {isR2 && <span style={{ 
+            marginLeft: '10px', 
+            fontSize: '0.7em', 
+            fontWeight: 'normal',
+            color: '#e74c3c',
+            backgroundColor: '#fff',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            border: '1px solid #e74c3c'
+          }}>R2</span>}
+        </h1>
       </div>
 
       {/* Onglets */}
@@ -2115,14 +2140,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         >
           <FaFileAlt /> Fiches
         </button>
-        <button
-          className={`fiche-tab ${activeTab === 'modifica' ? 'active' : ''}`}
-          onClick={() => setActiveTab('modifica')}
-        >
-          <FaListAlt /> Modifica
-        </button>
-        {/* Masquer les onglets Planning et SMS pour les utilisateurs qualité qualification (fonction 2, 8, 12) */}
-        {!isQualiteQualif && (
+        {/* Désactiver l'onglet Modifica pour les commerciaux */}
+        {!isCommercial && (
+          <button
+            className={`fiche-tab ${activeTab === 'modifica' ? 'active' : ''}`}
+            onClick={() => setActiveTab('modifica')}
+          >
+            <FaListAlt /> Modifica
+          </button>
+        )}
+        {/* Masquer les onglets Planning et SMS pour les utilisateurs qualité qualification (fonction 2, 8, 12) et commerciaux */}
+        {!isQualiteQualif && !isCommercial && (
           <>
             <button
               className={`fiche-tab ${activeTab === 'planning' ? 'active' : ''}`}
