@@ -38,11 +38,10 @@ Le serveur backend doit être redémarré pour charger les nouvelles routes.
    - **Date de fin** (optionnel) : Date jusqu'à laquelle le message sera affiché
    - **Message actif** : Activer/désactiver le message
    - **Afficher une seule fois** : Si coché, le message ne sera affiché qu'une seule fois par utilisateur
-   - **Fonctions ciblées** : Sélectionner les fonctions concernées (⚠️ **Requis** : au moins un critère doit être sélectionné)
-   - **Centres ciblés** : Sélectionner les centres concernés (optionnel, mais au moins un critère doit être sélectionné)
+   - **Fonctions ciblées** : Sélectionner les fonctions concernées (optionnel, mais au moins un critère doit être sélectionné)
    - **Utilisateurs ciblés** : Sélectionner les utilisateurs concernés (optionnel, mais au moins un critère doit être sélectionné)
    
-   ⚠️ **Important** : Le message ne sera envoyé que si au moins un critère de ciblage est sélectionné. Si plusieurs critères sont sélectionnés, l'utilisateur doit correspondre à TOUS les critères sélectionnés (logique ET).
+   ⚠️ **Important** : Le message ne sera envoyé que si au moins un critère de ciblage est sélectionné (fonction ou utilisateur). Si les deux critères sont sélectionnés, l'utilisateur doit correspondre aux deux (logique ET).
 3. Cliquez sur "Enregistrer"
 
 ### Modifier un message
@@ -62,10 +61,10 @@ Les messages système sont automatiquement affichés aux utilisateurs lors de le
 
 1. **Message actif** : Le message doit être actif (`actif = 1`)
 2. **Dates** : La date actuelle doit être entre la date de début et la date de fin (si définies)
-3. **Ciblage** : ⚠️ **Le message doit avoir au moins un critère de ciblage défini** (fonction, centre ou utilisateur). Si plusieurs critères sont définis, l'utilisateur doit correspondre à TOUS les critères (logique ET).
+3. **Ciblage** : ⚠️ **Le message doit avoir au moins un critère de ciblage défini** (fonction ou utilisateur). Si les deux critères sont définis, l'utilisateur doit correspondre aux deux (logique ET).
 4. **Affichage unique** : Si "Afficher une seule fois" est activé, le message ne sera affiché qu'une seule fois par utilisateur
 
-**Note importante** : Un message sans aucun critère de ciblage ne sera jamais envoyé. Vous devez sélectionner au moins une fonction, un centre ou un utilisateur pour que le message soit distribué.
+**Note importante** : Un message sans aucun critère de ciblage ne sera jamais envoyé. Vous devez sélectionner au moins une fonction ou un utilisateur pour que le message soit distribué.
 
 ### Types de messages
 
@@ -96,7 +95,6 @@ Les messages système sont automatiquement affichés aux utilisateurs lors de le
 | actif | TINYINT(1) | 1=actif, 0=inactif |
 | afficher_une_seule_fois | TINYINT(1) | 1=afficher une seule fois, 0=toujours afficher |
 | cibles_fonctions | TEXT | IDs des fonctions ciblées (JSON array) |
-| cibles_centres | TEXT | IDs des centres ciblés (JSON array) |
 | cibles_utilisateurs | TEXT | IDs des utilisateurs ciblés (JSON array) |
 | date_creation | DATETIME | Date de création |
 | date_modification | DATETIME | Date de modification |
@@ -156,7 +154,6 @@ Crée un nouveau message système (admin uniquement).
   "actif": 1,
   "afficher_une_seule_fois": 0,
   "cibles_fonctions": [1, 2, 7],
-  "cibles_centres": null,
   "cibles_utilisateurs": null
 }
 ```
@@ -220,5 +217,5 @@ La page de gestion des messages système nécessite la permission `management_vi
 ### Le message s'affiche pour tous les utilisateurs alors qu'il devrait être ciblé
 
 1. Vérifier que les critères de ciblage sont correctement définis dans le formulaire
-2. Vérifier que les IDs des fonctions/centres/utilisateurs sont corrects
+2. Vérifier que les IDs des fonctions/utilisateurs sont corrects
 3. Vérifier que les données sont bien sauvegardées en JSON dans la base de données
