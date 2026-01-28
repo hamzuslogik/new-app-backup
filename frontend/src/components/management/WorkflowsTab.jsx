@@ -230,6 +230,20 @@ const WorkflowsTab = () => {
     }
   };
 
+  const toDateTimeLocalValue = (value) => {
+    if (!value || typeof value !== 'string') return '';
+    // attend un datetime MySQL "YYYY-MM-DD HH:MM:SS" (ou sans secondes)
+    const normalized = value.replace(' ', 'T');
+    return normalized.length >= 16 ? normalized.slice(0, 16) : normalized;
+  };
+
+  const fromDateTimeLocalValue = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    // input datetime-local => "YYYY-MM-DDTHH:MM"
+    const normalized = value.replace('T', ' ');
+    return normalized.length === 16 ? `${normalized}:00` : normalized;
+  };
+
   // Fonction pour formater l'affichage des déclencheurs
   const formatTriggerDetails = (trigger, etatsData) => {
     const parts = [];
@@ -891,6 +905,55 @@ const WorkflowsTab = () => {
                             </select>
                           </div>
                         </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div className="form-group">
+                            <label>Date début (optionnel)</label>
+                            <input
+                              type="datetime-local"
+                              value={toDateTimeLocalValue(action.config?.date_debut)}
+                              onChange={(e) => updateAction(index, 'config', { ...action.config, date_debut: fromDateTimeLocalValue(e.target.value) })}
+                            />
+                            <small>Si vide: affichage immédiat.</small>
+                          </div>
+                          <div className="form-group">
+                            <label>Date fin (optionnel)</label>
+                            <input
+                              type="datetime-local"
+                              value={toDateTimeLocalValue(action.config?.date_fin)}
+                              onChange={(e) => updateAction(index, 'config', { ...action.config, date_fin: fromDateTimeLocalValue(e.target.value) })}
+                            />
+                            <small>Si vide: pas de date de fin.</small>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div className="form-group">
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={(action.config?.actif ?? 1) === 1}
+                                onChange={(e) => updateAction(index, 'config', { ...action.config, actif: e.target.checked ? 1 : 0 })}
+                                style={{ marginRight: '8px' }}
+                              />
+                              Actif
+                            </label>
+                            <small>Si désactivé, le message ne s'affichera pas.</small>
+                          </div>
+                          <div className="form-group">
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={(action.config?.afficher_une_seule_fois ?? 0) === 1}
+                                onChange={(e) => updateAction(index, 'config', { ...action.config, afficher_une_seule_fois: e.target.checked ? 1 : 0 })}
+                                style={{ marginRight: '8px' }}
+                              />
+                              Afficher une seule fois
+                            </label>
+                            <small>Si coché, le message disparaît après lecture.</small>
+                          </div>
+                        </div>
+
                         <div className="form-group">
                           <label>Fonctions ciblées</label>
                           <select
