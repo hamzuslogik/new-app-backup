@@ -7,6 +7,9 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   animation: slideDown 0.3s ease;
   z-index: 100;
+  display: block;
+  visibility: visible;
+  opacity: 1;
 }
 
 @keyframes slideDown {

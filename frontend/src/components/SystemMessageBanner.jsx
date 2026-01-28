@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +14,8 @@ const SystemMessageBanner = () => {
   const [messages, setMessages] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissedMessages, setDismissedMessages] = useState(new Set());
+  const messagesRef = useRef([]);
+  const isInitializedRef = useRef(false);
 
   // Récupérer les données de la fonction pour déterminer la page d'accueil
   const { data: fonctionData } = useQuery(
@@ -77,25 +79,73 @@ const SystemMessageBanner = () => {
     if (messagesData && messagesData.length > 0 && isOnHomePage) {
       // Filtrer les messages déjà fermés
       const visibleMessages = messagesData.filter(msg => !dismissedMessages.has(msg.id));
-      setMessages(visibleMessages);
+      
       if (visibleMessages.length > 0) {
-        setCurrentIndex(0);
-        // Marquer le premier message comme lu s'il doit être affiché une seule fois
-        if (visibleMessages[0].afficher_une_seule_fois === 1) {
-          markAsReadMutation.mutate(visibleMessages[0].id);
+        // Vérifier si les messages ont réellement changé avant de mettre à jour
+        const currentMessageIds = messagesRef.current.map(m => m.id).sort().join(',');
+        const newMessageIds = visibleMessages.map(m => m.id).sort().join(',');
+        
+        // Ne mettre à jour que si les messages ont changé ou si c'est la première initialisation
+        if (!isInitializedRef.current || currentMessageIds !== newMessageIds) {
+          messagesRef.current = visibleMessages;
+          setMessages(visibleMessages);
+          isInitializedRef.current = true;
+          
+          // Ne réinitialiser l'index que si le message actuel n'est plus dans la liste
+          if (!visibleMessages.find(m => m.id === messagesRef.current[currentIndex]?.id)) {
+            setCurrentIndex(0);
+          }
+          
+          // Marquer le premier message comme lu s'il doit être affiché une seule fois
+          if (visibleMessages[0] && visibleMessages[0].afficher_une_seule_fois === 1) {
+            markAsReadMutation.mutate(visibleMessages[0].id);
+          }
         }
+      } else if (messagesRef.current.length > 0) {
+        // Si tous les messages ont été fermés, vider la liste
+        messagesRef.current = [];
+        setMessages([]);
+        setCurrentIndex(0);
       }
-    } else {
+    } else if (!isOnHomePage && messagesRef.current.length > 0) {
+      // Vider les messages seulement si on quitte la page d'accueil
+      messagesRef.current = [];
       setMessages([]);
+      setCurrentIndex(0);
+      isInitializedRef.current = false;
     }
   }, [messagesData, isOnHomePage, dismissedMessages]);
 
   const handleDismiss = (messageId) => {
-    setDismissedMessages(prev => new Set([...prev, messageId]));
+    // Ajouter le message aux messages fermés
+    setDismissedMessages(prev => {
+      const newSet = new Set([...prev, messageId]);
+      return newSet;
+    });
+    
     // Marquer comme lu si nécessaire
-    const message = messages.find(m => m.id === messageId);
+    const message = messagesRef.current.find(m => m.id === messageId);
     if (message && message.afficher_une_seule_fois === 1) {
       markAsReadMutation.mutate(messageId);
+    }
+    
+    // Filtrer le message fermé de la liste actuelle
+    const remainingMessages = messagesRef.current.filter(m => m.id !== messageId);
+    messagesRef.current = remainingMessages;
+    setMessages(remainingMessages);
+    
+    // Si c'est le message actuel qui est fermé, passer au suivant ou fermer
+    if (messages[currentIndex]?.id === messageId) {
+      if (remainingMessages.length > 0) {
+        // Si on n'est pas au dernier message, rester sur le même index
+        // Sinon, passer au précédent
+        if (currentIndex >= remainingMessages.length) {
+          setCurrentIndex(Math.max(0, remainingMessages.length - 1));
+        }
+      } else {
+        // Plus de messages, réinitialiser
+        setCurrentIndex(0);
+      }
     }
   };
 
