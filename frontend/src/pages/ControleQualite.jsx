@@ -7,6 +7,7 @@ import { FaSearch, FaChevronDown, FaChevronUp, FaCheckCircle, FaFilter, FaUserCh
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
+import SystemMessageBanner from '../components/SystemMessageBanner';
 import './ControleQualite.css';
 
 const ControleQualite = () => {
@@ -239,6 +240,7 @@ const ControleQualite = () => {
 
   return (
     <div className="controle-qualite">
+      <SystemMessageBanner />
       <div className="page-header">
         <h1><FaUserCheck /> Contrôle Qualité</h1>
         <button 

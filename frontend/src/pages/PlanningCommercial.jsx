@@ -7,6 +7,7 @@ import { FaCalendarAlt, FaUser, FaFileAlt, FaMapMarkerAlt, FaSearch, FaChevronDo
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
+import SystemMessageBanner from '../components/SystemMessageBanner';
 import './PlanningCommercial.css';
 
 const PlanningCommercial = () => {
@@ -340,6 +341,7 @@ const PlanningCommercial = () => {
 
   return (
     <div className="planning-commercial">
+      <SystemMessageBanner />
       <div className="planning-commercial-header">
         <div className="planning-commercial-header-left">
           <h1><FaCalendarAlt /> Planning Commercial</h1>

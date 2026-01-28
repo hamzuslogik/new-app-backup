@@ -6,6 +6,7 @@ import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
 import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
 import FicheDetailModal from '../components/FicheDetailModal';
+import SystemMessageBanner from '../components/SystemMessageBanner';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import './Dashboard.css';
 
@@ -715,6 +716,7 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
+      <SystemMessageBanner />
       <div className="dashboard-header">
         <div className="dashboard-header-left">
           <button 

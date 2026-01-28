@@ -3,7 +3,6 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import GlobalKeyboardShortcuts from './common/GlobalKeyboardShortcuts';
-import SystemMessageModal from './SystemMessageModal';
 import { FicheDetailModalProvider } from '../contexts/FicheDetailModalContext';
 import { SidebarProvider, useSidebar } from '../contexts/SidebarContext';
 import './Layout.css';
@@ -63,7 +62,6 @@ const LayoutContent = () => {
     <FicheDetailModalProvider>
       <div className="app">
         <GlobalKeyboardShortcuts />
-        <SystemMessageModal />
         {!sidebarCollapsed && (isMobile || isTablet) && (
           <div 
             ref={overlayRef}

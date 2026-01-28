@@ -7,6 +7,7 @@ import { FaChartBar, FaFilter, FaPrint, FaList, FaSearch, FaFileAlt, FaFileExcel
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import SystemMessageBanner from '../components/SystemMessageBanner';
 import './ProductionQualif.css';
 
 const ProductionQualif = () => {
@@ -484,6 +485,7 @@ const ProductionQualif = () => {
 
   return (
     <div className="production-qualif">
+      <SystemMessageBanner />
       <div className="production-header">
         <h1><FaChartBar /> Production Qualification</h1>
         <div className="header-actions">

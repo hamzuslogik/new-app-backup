@@ -945,14 +945,15 @@ router.get('/alerts', authenticate, checkPermissionCode('statistiques_v2_view'),
       AND (f.archive = 0 OR f.archive IS NULL)
     `, [startDate, endDate]);
 
-    if (rejectionRate?.rejection_rate > 20) {
+    const rejectionRateValue = parseFloat(rejectionRate?.rejection_rate) || 0;
+    if (rejectionRateValue > 20) {
       alerts.push({
         severity: 'warning',
         title: 'Taux de rejet élevé',
-        message: `Le taux de rejet est de ${rejectionRate.rejection_rate.toFixed(1)}%, ce qui est supérieur au seuil recommandé de 20%.`,
+        message: `Le taux de rejet est de ${rejectionRateValue.toFixed(1)}%, ce qui est supérieur au seuil recommandé de 20%.`,
         metric: {
           label: 'Taux de rejet',
-          value: `${rejectionRate.rejection_rate.toFixed(1)}%`
+          value: `${rejectionRateValue.toFixed(1)}%`
         }
       });
     }
@@ -966,14 +967,15 @@ router.get('/alerts', authenticate, checkPermissionCode('statistiques_v2_view'),
       AND (f.archive = 0 OR f.archive IS NULL)
     `, [startDate, endDate]);
 
-    if (avgProcessingTime?.avg_hours > 48) {
+    const avgHoursValue = parseFloat(avgProcessingTime?.avg_hours) || 0;
+    if (avgHoursValue > 48) {
       alerts.push({
         severity: 'warning',
         title: 'Temps de traitement élevé',
-        message: `Le temps moyen de traitement est de ${avgProcessingTime.avg_hours.toFixed(1)} heures, ce qui est supérieur à 48 heures.`,
+        message: `Le temps moyen de traitement est de ${avgHoursValue.toFixed(1)} heures, ce qui est supérieur à 48 heures.`,
         metric: {
           label: 'Temps moyen',
-          value: `${avgProcessingTime.avg_hours.toFixed(1)}h`
+          value: `${avgHoursValue.toFixed(1)}h`
         }
       });
     }

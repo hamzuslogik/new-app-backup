@@ -5,6 +5,7 @@ import api from '../config/api';
 import { FaUserTie, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes, FaSave } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import SystemMessageBanner from '../components/SystemMessageBanner';
 import './SuiviAgentsQualif.css';
 
 const SuiviAgentsQualif = () => {
@@ -460,6 +461,7 @@ const SuiviAgentsQualif = () => {
 
   return (
     <div className="suivi-agents-qualif">
+      <SystemMessageBanner />
       <div className="suivi-header">
         <h1><FaUserTie /> Suivi Agents Qualification</h1>
         <div className="header-actions">

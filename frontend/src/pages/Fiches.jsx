@@ -9,6 +9,7 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
+import SystemMessageBanner from '../components/SystemMessageBanner';
 import './Fiches.css';
 
 const Fiches = () => {
@@ -447,6 +448,7 @@ const Fiches = () => {
 
   return (
     <div className="fiches-page">
+      <SystemMessageBanner />
       <div className="fiches-header">
         <h1><FaFileAlt /> Gestion des Fiches</h1>
         {/* Permissions : Admin (1, 2), Agents (3), Qualité (4), Commerciaux (5), Confirmateurs (6), Dev (7), Autres (8) */}
