@@ -49,6 +49,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const { user, hasPermission, permissions } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('fiches'); // 'fiches', 'modifica', 'planning', 'sms', 'pdf'
+  
+  // Vérifier si l'utilisateur est qualité qualification (fonction 2, 8, 12)
+  const userFonction = user?.fonction != null ? Number(user.fonction) : null;
+  const isQualiteQualif = userFonction === 2 || userFonction === 8 || userFonction === 12;
+  
+  // Rediriger vers l'onglet fiches si l'utilisateur qualité qualification est sur un onglet masqué
+  useEffect(() => {
+    if (isQualiteQualif && (activeTab === 'planning' || activeTab === 'sms')) {
+      setActiveTab('fiches');
+    }
+  }, [isQualiteQualif, activeTab]);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [planningWeek, setPlanningWeek] = useState(null);
@@ -2110,18 +2121,23 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         >
           <FaListAlt /> Modifica
         </button>
-        <button
-          className={`fiche-tab ${activeTab === 'planning' ? 'active' : ''}`}
-          onClick={() => setActiveTab('planning')}
-        >
-          <FaCalendar /> Planning
-        </button>
-        <button
-          className={`fiche-tab ${activeTab === 'sms' ? 'active' : ''}`}
-          onClick={() => setActiveTab('sms')}
-        >
-          <FaSms /> SMS
-        </button>
+        {/* Masquer les onglets Planning et SMS pour les utilisateurs qualité qualification (fonction 2, 8, 12) */}
+        {!isQualiteQualif && (
+          <>
+            <button
+              className={`fiche-tab ${activeTab === 'planning' ? 'active' : ''}`}
+              onClick={() => setActiveTab('planning')}
+            >
+              <FaCalendar /> Planning
+            </button>
+            <button
+              className={`fiche-tab ${activeTab === 'sms' ? 'active' : ''}`}
+              onClick={() => setActiveTab('sms')}
+            >
+              <FaSms /> SMS
+            </button>
+          </>
+        )}
         <button
           className={`fiche-tab ${activeTab === 'pdf' ? 'active' : ''}`}
           onClick={() => setActiveTab('pdf')}
@@ -2628,21 +2644,36 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 if (etatId === 2) {
                   if (etatData.sous_etat_titre) items.push({ label: 'Sous-état', value: etatData.sous_etat_titre });
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  // Afficher le commentaire commercial en priorité s'il existe
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  } else if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
                   if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RAPPEL POUR BUREAU (19)
                 else if (etatId === 19) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  // Afficher le commentaire commercial en priorité s'il existe
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  } else if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
                   if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // ANNULER ET A REPROGRAMMER (8)
                 else if (etatId === 8) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  // Afficher le commentaire commercial en priorité s'il existe
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  } else if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
                   if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
@@ -2650,38 +2681,68 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 else if (etatId === 9) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
                   if (etatData.confirmateur_2_pseudo) items.push({ label: 'Confirmateur 2', value: etatData.confirmateur_2_pseudo });
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  // Afficher le commentaire commercial en priorité s'il existe
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  } else if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
                   if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RDV ANNULER (11)
                 else if (etatId === 11) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  // Afficher le commentaire commercial en priorité s'il existe
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  } else if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  }
                   if (etatData.conf_rdv_avec) items.push({ label: 'Appel avec qui', value: etatData.conf_rdv_avec });
                 }
                 // RDV ANNULER 2 FOIS (26)
                 else if (etatId === 26) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  // Afficher le commentaire commercial en priorité s'il existe
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  } else if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  }
                   if (etatData.conf_rdv_avec) items.push({ label: 'Appel avec qui', value: etatData.conf_rdv_avec });
                 }
                 // REFUSER (12)
                 else if (etatId === 12) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  // Afficher le commentaire commercial en priorité s'il existe
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  } else if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  }
                   if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // HHC FINANCEMENT A VERIFIER (34)
                 else if (etatId === 34) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  // Afficher le commentaire commercial en priorité s'il existe
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  } else if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  }
                   if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // HHC TECHNIQUE (35)
                 else if (etatId === 35) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  // Afficher le commentaire commercial en priorité s'il existe
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  } else if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  }
                   if (etatData.commercial_pseudo) items.push({ label: 'Commercial', value: etatData.commercial_pseudo });
                   if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
@@ -2689,6 +2750,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 else if ([13, 16, 45, 44].includes(etatId)) {
                   if (etatData.sous_etat_titre) items.push({ label: 'SOUS ETAT', value: etatData.sous_etat_titre });
                   if (etatData.confirmateur_pseudo) items.push({ label: 'PSEUDO', value: confirmateursList });
+                  // Afficher le commentaire commercial s'il existe (après création d'un compte rendu approuvé)
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  }
                   if (etatData.ph3_pac) {
                     const pacValue = etatData.ph3_pac === 'reau' || etatData.ph3_pac === 'R/EAU' ? 'R/EAU' : 
                                      etatData.ph3_pac === 'rr' || etatData.ph3_pac === 'R/R' ? 'R/R' : etatData.ph3_pac;
@@ -2717,6 +2782,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 // CONFIRMER (7)
                 else if (etatId === 7) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  // Afficher le commentaire commercial s'il existe (après création d'un compte rendu approuvé)
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  }
                   if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire confirmateur', value: etatData.conf_commentaire_produit, fullWidth: true });
                   if (etatData.conf_rdv_avec) items.push({ label: 'Entretien avec', value: etatData.conf_rdv_avec });
                   if (etatData.date_rdv_time) items.push({ label: 'Date RDV', value: new Date(etatData.date_rdv_time).toLocaleString('fr-FR') });
@@ -2760,10 +2829,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 // Par défaut
                 else {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  // Afficher le commentaire commercial s'il existe (après création d'un compte rendu approuvé)
+                  if (etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  }
                   // Pour les états non confirmés, afficher commentaire_qualite s'il existe, sinon conf_commentaire_produit
                   if (etatData.commentaire_qualite) {
                     items.push({ label: 'Commentaire', value: etatData.commentaire_qualite, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit) {
+                  } else if (etatData.conf_commentaire_produit && !etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
@@ -2784,6 +2857,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 confirmateur_3_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_3)?.pseudo || null,
                 conf_commentaire_produit: fiche.conf_commentaire_produit || null,
                 commentaire_qualite: fiche.commentaire_qualite || null,
+                commentaire_commercial: fiche.commentaire_commercial || null,
                 conf_rdv_avec: fiche.conf_rdv_avec || null,
                 date_rdv_time: fiche.date_rdv_time || null,
                 date_appel_time: fiche.date_appel_time || null,
@@ -5057,8 +5131,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         <ModificaTab ficheHash={hash} />
       )}
 
-      {/* Onglet Planning */}
-      {activeTab === 'planning' && (
+      {/* Onglet Planning - Masqué pour qualité qualification */}
+      {activeTab === 'planning' && !isQualiteQualif && (
         <PlanningTab
           ficheHash={hash}
           ficheData={ficheData}
@@ -5077,8 +5151,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         />
       )}
 
-      {/* Onglet SMS */}
-      {activeTab === 'sms' && (
+      {/* Onglet SMS - Masqué pour qualité qualification */}
+      {activeTab === 'sms' && !isQualiteQualif && (
         <SMSTab
           ficheHash={hash}
           ficheData={ficheData}
@@ -6589,7 +6663,7 @@ const CreateRdvModal = ({
                             <option value="">Sélectionner</option>
                             {modeChauffage?.map(mode => (
                               <option key={mode.id} value={mode.id}>
-                                {mode.titre}
+                                {mode.nom || mode.titre || `Mode ${mode.id}`}
                               </option>
                             ))}
                           </select>

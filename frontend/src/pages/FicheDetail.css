@@ -1481,6 +1481,23 @@
   padding: 0;
 }
 
+/* Styles pour les selects dans le modal RDV */
+.rdv-form select.form-control {
+  color: #333;
+  background-color: #fff;
+}
+
+.rdv-form select.form-control option {
+  color: #333;
+  background-color: #fff;
+  padding: 8px;
+}
+
+.rdv-form select.form-control:focus {
+  color: #333;
+  background-color: #fff;
+}
+
 .rdv-etat-radio {
   display: flex;
   gap: 16px;
