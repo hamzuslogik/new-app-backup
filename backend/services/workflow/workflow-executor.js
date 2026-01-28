@@ -88,10 +88,11 @@ async function executeWorkflow(triggerType, eventData) {
             console.log(`[WORKFLOW] Config etat_from:`, config.etat_from);
             console.log(`[WORKFLOW] Config etat_to:`, config.etat_to);
             
-            // Vérifier etat_from seulement si défini et non vide
-            if (config.etat_from !== undefined && config.etat_from !== null && 
-                !(Array.isArray(config.etat_from) && config.etat_from.length === 0) &&
-                config.etat_from !== '') {
+            // Vérifier etat_from
+            if (Array.isArray(config.etat_from) && config.etat_from.length === 0) {
+              console.log(`[WORKFLOW] ❌ État source: liste vide (aucun état sélectionné)`);
+              triggerMatches = false;
+            } else if (config.etat_from !== undefined && config.etat_from !== null && config.etat_from !== '') {
               const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
               // Convertir tous les IDs en nombres pour la comparaison
               const etatFromNums = etatFrom.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
@@ -106,10 +107,11 @@ async function executeWorkflow(triggerType, eventData) {
               console.log(`[WORKFLOW] ✅ État source: Tous les états acceptés (etat_from non défini ou vide)`);
             }
             
-            // Vérifier etat_to seulement si défini et non vide
-            if (config.etat_to !== undefined && config.etat_to !== null && 
-                !(Array.isArray(config.etat_to) && config.etat_to.length === 0) &&
-                config.etat_to !== '') {
+            // Vérifier etat_to
+            if (Array.isArray(config.etat_to) && config.etat_to.length === 0) {
+              console.log(`[WORKFLOW] ❌ État cible: liste vide (aucun état sélectionné)`);
+              triggerMatches = false;
+            } else if (config.etat_to !== undefined && config.etat_to !== null && config.etat_to !== '') {
               const etatTo = Array.isArray(config.etat_to) ? config.etat_to : [config.etat_to];
               // Convertir tous les IDs en nombres pour la comparaison
               const etatToNums = etatTo.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
@@ -125,7 +127,7 @@ async function executeWorkflow(triggerType, eventData) {
             }
             
             // Support pour l'ancien format etat_id (compatibilité) - seulement si etat_to n'est pas défini
-            if ((!config.etat_to || (Array.isArray(config.etat_to) && config.etat_to.length === 0)) &&
+            if ((config.etat_to === undefined || config.etat_to === null) &&
                 config.etat_id !== undefined && config.etat_id !== null && config.etat_id !== '') {
               const etatId = Array.isArray(config.etat_id) ? config.etat_id : [config.etat_id];
               const etatIdNums = etatId.map(id => parseInt(id, 10)).filter(id => !isNaN(id));

@@ -507,11 +507,21 @@ const WorkflowsTab = () => {
                           <label>
                             <input
                               type="checkbox"
-                              checked={!trigger.config?.etat_from || (Array.isArray(trigger.config.etat_from) && trigger.config.etat_from.length === 0)}
+                              checked={(() => {
+                                const cfg = trigger.config || {};
+                                if (cfg.etat_from_any !== undefined) return !!cfg.etat_from_any;
+                                // Compat: ancien comportement = null/undefined => tous
+                                return cfg.etat_from === null || cfg.etat_from === undefined;
+                              })()}
                               onChange={(e) => {
                                 const newConfig = { ...trigger.config };
                                 if (e.target.checked) {
+                                  newConfig.etat_from_any = true;
                                   newConfig.etat_from = null;
+                                } else {
+                                  newConfig.etat_from_any = false;
+                                  // mode sélection spécifique (liste vide au départ)
+                                  newConfig.etat_from = [];
                                 }
                                 updateTrigger(index, 'config', newConfig);
                               }}
@@ -519,7 +529,11 @@ const WorkflowsTab = () => {
                             />
                             Depuis n'importe quel état (tous les états)
                           </label>
-                          {(!trigger.config?.etat_from || (Array.isArray(trigger.config.etat_from) && trigger.config.etat_from.length === 0)) ? (
+                          {(() => {
+                            const cfg = trigger.config || {};
+                            const fromAny = cfg.etat_from_any !== undefined ? !!cfg.etat_from_any : (cfg.etat_from === null || cfg.etat_from === undefined);
+                            return fromAny;
+                          })() ? (
                             <div style={{ padding: '8px', background: '#e8f5e9', borderRadius: '4px', fontSize: '12px', marginTop: '8px' }}>
                               ✓ Le workflow se déclenchera depuis n'importe quel état
                             </div>
@@ -530,7 +544,7 @@ const WorkflowsTab = () => {
                                 value={Array.isArray(trigger.config?.etat_from) ? trigger.config.etat_from.map(String) : (trigger.config?.etat_from ? [String(trigger.config.etat_from)] : [])}
                                 onChange={(e) => {
                                   const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
-                                  updateTrigger(index, 'config', { ...trigger.config, etat_from: selected.length > 0 ? selected : null });
+                                  updateTrigger(index, 'config', { ...trigger.config, etat_from_any: false, etat_from: selected.length > 0 ? selected : [] });
                                 }}
                                 size={5}
                                 style={{ marginTop: '8px' }}
@@ -539,7 +553,7 @@ const WorkflowsTab = () => {
                                   <option key={e.id} value={e.id}>{e.id} - {e.titre}</option>
                                 ))}
                               </select>
-                              <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états sources.</small>
+                              <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états sources. (Si aucun état n'est sélectionné, le trigger ne matchera pas.)</small>
                             </>
                           )}
                         </div>
@@ -547,11 +561,23 @@ const WorkflowsTab = () => {
                           <label>
                             <input
                               type="checkbox"
-                              checked={!trigger.config?.etat_to && !trigger.config?.etat_id}
+                              checked={(() => {
+                                const cfg = trigger.config || {};
+                                if (cfg.etat_to_any !== undefined) return !!cfg.etat_to_any;
+                                // Compat: ancien comportement = null/undefined => tous
+                                const hasTo = cfg.etat_to !== null && cfg.etat_to !== undefined;
+                                const hasId = cfg.etat_id !== null && cfg.etat_id !== undefined;
+                                return !hasTo && !hasId;
+                              })()}
                               onChange={(e) => {
                                 const newConfig = { ...trigger.config };
                                 if (e.target.checked) {
+                                  newConfig.etat_to_any = true;
                                   newConfig.etat_to = null;
+                                  delete newConfig.etat_id;
+                                } else {
+                                  newConfig.etat_to_any = false;
+                                  newConfig.etat_to = [];
                                   delete newConfig.etat_id;
                                 }
                                 updateTrigger(index, 'config', newConfig);
@@ -560,7 +586,13 @@ const WorkflowsTab = () => {
                             />
                             Vers n'importe quel état (tous les états)
                           </label>
-                          {(!trigger.config?.etat_to && !trigger.config?.etat_id) ? (
+                          {(() => {
+                            const cfg = trigger.config || {};
+                            const toAny = cfg.etat_to_any !== undefined
+                              ? !!cfg.etat_to_any
+                              : ((cfg.etat_to === null || cfg.etat_to === undefined) && (cfg.etat_id === null || cfg.etat_id === undefined));
+                            return toAny;
+                          })() ? (
                             <div style={{ padding: '8px', background: '#e8f5e9', borderRadius: '4px', fontSize: '12px', marginTop: '8px' }}>
                               ✓ Le workflow se déclenchera vers n'importe quel état
                             </div>
@@ -574,9 +606,11 @@ const WorkflowsTab = () => {
                                   const newConfig = { ...trigger.config };
                                   if (selected.length > 0) {
                                     newConfig.etat_to = selected;
+                                    newConfig.etat_to_any = false;
                                     delete newConfig.etat_id; // Supprimer l'ancien format pour compatibilité
                                   } else {
-                                    newConfig.etat_to = null;
+                                    newConfig.etat_to_any = false;
+                                    newConfig.etat_to = [];
                                   }
                                   updateTrigger(index, 'config', newConfig);
                                 }}
@@ -587,28 +621,40 @@ const WorkflowsTab = () => {
                                   <option key={e.id} value={e.id}>{e.id} - {e.titre}</option>
                                 ))}
                               </select>
-                              <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états cibles.</small>
+                              <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états cibles. (Si aucun état n'est sélectionné, le trigger ne matchera pas.)</small>
                             </>
                           )}
                         </div>
                         <div style={{ padding: '8px', background: '#e3f2fd', borderRadius: '4px', fontSize: '12px' }}>
                           <strong>Configuration actuelle :</strong><br />
-                          État source : {(!trigger.config?.etat_from || (Array.isArray(trigger.config.etat_from) && trigger.config.etat_from.length === 0)) 
-                            ? 'Tous les états' 
-                            : Array.isArray(trigger.config.etat_from) 
-                              ? trigger.config.etat_from.map(id => {
-                                  const etat = etatsData?.find(e => e.id === id);
-                                  return etat ? `${etat.id}(${etat.titre})` : id;
-                                }).join(', ')
-                              : trigger.config.etat_from}<br />
-                          État cible : {(!trigger.config?.etat_to && !trigger.config?.etat_id)
-                            ? 'Tous les états'
-                            : Array.isArray(trigger.config?.etat_to) 
-                              ? trigger.config.etat_to.map(id => {
-                                  const etat = etatsData?.find(e => e.id === id);
-                                  return etat ? `${etat.id}(${etat.titre})` : id;
-                                }).join(', ')
-                              : (trigger.config?.etat_to || trigger.config?.etat_id)}
+                          {(() => {
+                            const cfg = trigger.config || {};
+                            const fromAny = cfg.etat_from_any !== undefined ? !!cfg.etat_from_any : (cfg.etat_from === null || cfg.etat_from === undefined);
+                            const toAny = cfg.etat_to_any !== undefined ? !!cfg.etat_to_any : ((cfg.etat_to === null || cfg.etat_to === undefined) && (cfg.etat_id === null || cfg.etat_id === undefined));
+                            const fromLabel = fromAny
+                              ? 'Tous les états'
+                              : (Array.isArray(cfg.etat_from) && cfg.etat_from.length > 0)
+                                ? cfg.etat_from.map(id => {
+                                    const etat = etatsData?.find(e => e.id === id);
+                                    return etat ? `${etat.id}(${etat.titre})` : id;
+                                  }).join(', ')
+                                : '(aucun état sélectionné)';
+                            const toIds = Array.isArray(cfg.etat_to) ? cfg.etat_to : (cfg.etat_to ? [cfg.etat_to] : (cfg.etat_id ? [cfg.etat_id] : []));
+                            const toLabel = toAny
+                              ? 'Tous les états'
+                              : (toIds.length > 0)
+                                ? toIds.map(id => {
+                                    const etat = etatsData?.find(e => e.id === id);
+                                    return etat ? `${etat.id}(${etat.titre})` : id;
+                                  }).join(', ')
+                                : '(aucun état sélectionné)';
+                            return (
+                              <>
+                                État source : {fromLabel}<br />
+                                État cible : {toLabel}
+                              </>
+                            );
+                          })()}
                         </div>
                       </>
                     )}
