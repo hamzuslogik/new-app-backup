@@ -3954,10 +3954,35 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 <select
                   id="id_etat_final"
                   className="form-control"
-                  value={selectedEtat !== null ? selectedEtat : ''}
+                  value={selectedEtat !== null ? selectedEtat : (Number(user?.fonction) === 6 && fiche.id_etat_final ? fiche.id_etat_final : '')}
                   onChange={(e) => handleEtatChange(e.target.value ? parseInt(e.target.value) : null)}
                 >
                   <option value="">{fiche.id_etat_final ? `État actuel: ${etats?.find(e => e.id === fiche.id_etat_final)?.titre || fiche.id_etat_final}` : 'Sélectionner un état'}</option>
+                  {/* Afficher l'état actuel comme option visible dans la liste (surtout pour les confirmateurs) */}
+                  {fiche.id_etat_final && (() => {
+                    const etatActuel = etats?.find(e => e.id === fiche.id_etat_final);
+                    if (!etatActuel) return null;
+                    // Vérifier si l'état actuel n'est pas déjà dans les listes de phases
+                    const isInPhases = [...etatsPhase0, ...etatsPhase1, ...etatsPhase2, ...etatsPhase3].some(e => e.id === etatActuel.id);
+                    // Si l'état actuel n'est pas dans les phases, l'afficher dans un groupe séparé pour qu'il soit toujours visible
+                    if (!isInPhases) {
+                      return (
+                        <optgroup label="État actuel">
+                          <option 
+                            value={etatActuel.id} 
+                            style={{ 
+                              backgroundColor: etatActuel.color || '#cccccc', 
+                              color: (etatActuel.color === '#ffffff' || etatActuel.color === '#fff') ? '#000' : '#fff',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            {etatActuel.titre} (actuel)
+                          </option>
+                        </optgroup>
+                      );
+                    }
+                    return null; // Déjà affiché dans les phases
+                  })()}
                   {etatsPhase0.length > 0 && (
                     <optgroup label="PHASE 0">
                       {etatsPhase0.map(etat => (
