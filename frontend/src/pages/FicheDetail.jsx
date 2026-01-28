@@ -2176,10 +2176,18 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   { id: 1, nom: 'PAC' },
                   { id: 2, nom: 'PV' }
                 ])}
-              {renderField('Commentaire', 'commentaire', fiche.commentaire || '-', 'textarea')}
-              {/* Afficher le commentaire qualité uniquement pour les utilisateurs qualité (fonction 2, 8 et 12) */}
+              {/* Commentaire agent qualification : visible uniquement pour les agents qualité qualification (fonction 2, 8, 12) */}
               {((Number(user?.fonction) === 2 || Number(user?.fonction) === 8 || Number(user?.fonction) === 12)) && 
-                renderField('Commentaire Qualité', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')}
+                renderField('Commentaire (Agent Qualification)', 'commentaire', fiche.commentaire || '-', 'textarea')}
+              
+              {/* Logique d'affichage selon l'état de la fiche :
+                  - Si fiche confirmée (état 7) : afficher conf_commentaire_produit (commentaire confirmateur)
+                  - Sinon : afficher commentaire_qualite (commentaire qualité) */}
+              {fiche.id_etat_final === 7 ? (
+                renderField('Commentaire', 'conf_commentaire_produit', fiche.conf_commentaire_produit || '-', 'textarea')
+              ) : (
+                renderField('Commentaire', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')
+              )}
               {renderField('A déjà fait une étude', 'etude', fiche.etude || 'NON', 'select', [
                 { value: 'OUI', label: 'Oui' },
                 { value: 'NON', label: 'Non' }
@@ -2752,7 +2760,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 // Par défaut
                 else {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  // Pour les états non confirmés, afficher commentaire_qualite s'il existe, sinon conf_commentaire_produit
+                  if (etatData.commentaire_qualite) {
+                    items.push({ label: 'Commentaire', value: etatData.commentaire_qualite, fullWidth: true });
+                  } else if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  }
                   if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 
@@ -2770,6 +2783,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 confirmateur_2_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_2)?.pseudo || null,
                 confirmateur_3_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_3)?.pseudo || null,
                 conf_commentaire_produit: fiche.conf_commentaire_produit || null,
+                commentaire_qualite: fiche.commentaire_qualite || null,
                 conf_rdv_avec: fiche.conf_rdv_avec || null,
                 date_rdv_time: fiche.date_rdv_time || null,
                 date_appel_time: fiche.date_appel_time || null,
