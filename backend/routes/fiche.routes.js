@@ -3637,7 +3637,8 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
 
 // Valider une fiche qualité (passer en état En-Attente)
 // IMPORTANT: Cette route doit être définie AVANT la route PUT /:id pour éviter les conflits
-router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, async (req, res) => {
+// NOTE: triggerWorkflowOnEtatChanged intercepte la réponse pour déclencher etat_changed
+router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWorkflowOnEtatChanged, async (req, res) => {
   try {
     // Le middleware hashToIdMiddleware devrait avoir converti req.params.hash en req.params.id
     const id = req.params.id ? parseInt(req.params.id, 10) : null;
