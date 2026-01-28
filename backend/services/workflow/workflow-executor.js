@@ -80,36 +80,61 @@ async function executeWorkflow(triggerType, eventData) {
             const oldEtat = eventData.old_etat;
             const newEtat = eventData.new_etat || eventData.fiche?.id_etat_final;
             
-            console.log(`[WORKFLOW] État - Ancien: ${oldEtat}, Nouveau: ${newEtat}`);
+            // Convertir en nombres pour la comparaison
+            const oldEtatNum = oldEtat ? parseInt(oldEtat, 10) : null;
+            const newEtatNum = newEtat ? parseInt(newEtat, 10) : null;
             
-            if (config.etat_from !== undefined && config.etat_from !== null && config.etat_from !== '') {
+            console.log(`[WORKFLOW] État - Ancien: ${oldEtat} (${oldEtatNum}), Nouveau: ${newEtat} (${newEtatNum})`);
+            console.log(`[WORKFLOW] Config etat_from:`, config.etat_from);
+            console.log(`[WORKFLOW] Config etat_to:`, config.etat_to);
+            
+            // Vérifier etat_from seulement si défini et non vide
+            if (config.etat_from !== undefined && config.etat_from !== null && 
+                !(Array.isArray(config.etat_from) && config.etat_from.length === 0) &&
+                config.etat_from !== '') {
               const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
-              if (!etatFrom.includes(oldEtat)) {
-                console.log(`[WORKFLOW] ❌ État source ne correspond pas: ${oldEtat} n'est pas dans [${etatFrom.join(', ')}]`);
+              // Convertir tous les IDs en nombres pour la comparaison
+              const etatFromNums = etatFrom.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+              
+              if (oldEtatNum === null || !etatFromNums.includes(oldEtatNum)) {
+                console.log(`[WORKFLOW] ❌ État source ne correspond pas: ${oldEtatNum} n'est pas dans [${etatFromNums.join(', ')}]`);
                 triggerMatches = false;
               } else {
-                console.log(`[WORKFLOW] ✅ État source correspond: ${oldEtat}`);
+                console.log(`[WORKFLOW] ✅ État source correspond: ${oldEtatNum}`);
               }
+            } else {
+              console.log(`[WORKFLOW] ✅ État source: Tous les états acceptés (etat_from non défini ou vide)`);
             }
             
-            if (config.etat_to !== undefined && config.etat_to !== null && config.etat_to !== '') {
+            // Vérifier etat_to seulement si défini et non vide
+            if (config.etat_to !== undefined && config.etat_to !== null && 
+                !(Array.isArray(config.etat_to) && config.etat_to.length === 0) &&
+                config.etat_to !== '') {
               const etatTo = Array.isArray(config.etat_to) ? config.etat_to : [config.etat_to];
-              if (!etatTo.includes(newEtat)) {
-                console.log(`[WORKFLOW] ❌ État cible ne correspond pas: ${newEtat} n'est pas dans [${etatTo.join(', ')}]`);
+              // Convertir tous les IDs en nombres pour la comparaison
+              const etatToNums = etatTo.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+              
+              if (newEtatNum === null || !etatToNums.includes(newEtatNum)) {
+                console.log(`[WORKFLOW] ❌ État cible ne correspond pas: ${newEtatNum} n'est pas dans [${etatToNums.join(', ')}]`);
                 triggerMatches = false;
               } else {
-                console.log(`[WORKFLOW] ✅ État cible correspond: ${newEtat}`);
+                console.log(`[WORKFLOW] ✅ État cible correspond: ${newEtatNum}`);
               }
+            } else {
+              console.log(`[WORKFLOW] ✅ État cible: Tous les états acceptés (etat_to non défini ou vide)`);
             }
             
-            // Support pour l'ancien format etat_id (compatibilité)
-            if (config.etat_id !== undefined && config.etat_id !== null && config.etat_id !== '') {
+            // Support pour l'ancien format etat_id (compatibilité) - seulement si etat_to n'est pas défini
+            if ((!config.etat_to || (Array.isArray(config.etat_to) && config.etat_to.length === 0)) &&
+                config.etat_id !== undefined && config.etat_id !== null && config.etat_id !== '') {
               const etatId = Array.isArray(config.etat_id) ? config.etat_id : [config.etat_id];
-              if (!etatId.includes(newEtat)) {
-                console.log(`[WORKFLOW] ❌ État ID ne correspond pas: ${newEtat} n'est pas dans [${etatId.join(', ')}]`);
+              const etatIdNums = etatId.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+              
+              if (newEtatNum === null || !etatIdNums.includes(newEtatNum)) {
+                console.log(`[WORKFLOW] ❌ État ID ne correspond pas: ${newEtatNum} n'est pas dans [${etatIdNums.join(', ')}]`);
                 triggerMatches = false;
               } else {
-                console.log(`[WORKFLOW] ✅ État ID correspond: ${newEtat}`);
+                console.log(`[WORKFLOW] ✅ État ID correspond: ${newEtatNum}`);
               }
             }
           }

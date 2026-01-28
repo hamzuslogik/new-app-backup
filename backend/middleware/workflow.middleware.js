@@ -97,22 +97,28 @@ const triggerWorkflowOnFicheUpdated = async (req, res, next) => {
           const oldEtat = req.body.id_etat_final || req.body.old_etat || oldFiche?.id_etat_final;
           const newEtat = fiche.id_etat_final;
           
-          console.log('[WORKFLOW] État - Ancien:', oldEtat, 'Nouveau:', newEtat);
+          // Convertir en nombres pour comparaison cohérente
+          const oldEtatNum = oldEtat ? parseInt(oldEtat, 10) : null;
+          const newEtatNum = newEtat ? parseInt(newEtat, 10) : null;
           
-          if (oldEtat && newEtat && oldEtat !== newEtat) {
+          console.log('[WORKFLOW] État - Ancien:', oldEtat, '(', oldEtatNum, ') Nouveau:', newEtat, '(', newEtatNum, ')');
+          
+          if (oldEtatNum !== null && newEtatNum !== null && oldEtatNum !== newEtatNum) {
             // Déclencher workflow de changement d'état
             console.log('[WORKFLOW] Déclenchement workflow: etat_changed');
             executeWorkflow('etat_changed', {
               fiche,
               user: req.user,
-              old_etat: oldEtat,
-              new_etat: newEtat
+              old_etat: oldEtatNum, // Passer en nombre
+              new_etat: newEtatNum  // Passer en nombre
             }).then(result => {
               console.log('[WORKFLOW] Workflow etat_changed exécuté avec succès:', JSON.stringify(result, null, 2));
             }).catch(error => {
               console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (etat_changed):', error);
               console.error('[WORKFLOW] Stack trace:', error.stack);
             });
+          } else {
+            console.log('[WORKFLOW] Pas de changement d\'état détecté ou valeurs invalides');
           } else {
             // Déclencher workflow de modification générale seulement si pas de changement d'état ni de RDV créé
             if (!hasRdvCreated) {
@@ -167,12 +173,17 @@ const triggerWorkflowOnEtatChanged = async (req, res, next) => {
         const { queryOne } = require('../config/database');
         const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
         
-        if (fiche && old_etat && id_etat_final && old_etat !== id_etat_final) {
+        // Convertir en nombres pour comparaison cohérente
+        const oldEtatNum = old_etat ? parseInt(old_etat, 10) : null;
+        const newEtatNum = id_etat_final ? parseInt(id_etat_final, 10) : null;
+        
+        if (fiche && oldEtatNum !== null && newEtatNum !== null && oldEtatNum !== newEtatNum) {
+          console.log('[WORKFLOW] Déclenchement workflow: etat_changed (via etat rapide)');
           executeWorkflow('etat_changed', {
             fiche,
             user: req.user,
-            old_etat,
-            new_etat: id_etat_final
+            old_etat: oldEtatNum, // Passer en nombre
+            new_etat: newEtatNum   // Passer en nombre
           }).catch(error => {
             console.error('Erreur lors de l\'exécution des workflows (etat_changed):', error);
           });
