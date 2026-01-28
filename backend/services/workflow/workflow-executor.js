@@ -66,8 +66,60 @@ async function executeWorkflow(triggerType, eventData) {
         let shouldExecute = false;
         for (const trigger of triggers) {
           const conditions = trigger.conditions ? JSON.parse(trigger.conditions) : null;
-          console.log(`[WORKFLOW] Évaluation des conditions pour trigger ID=${trigger.id}:`, JSON.stringify(conditions, null, 2));
+          const config = trigger.config ? JSON.parse(trigger.config) : {};
           
+          console.log(`[WORKFLOW] Évaluation du trigger ID=${trigger.id}`);
+          console.log(`[WORKFLOW] Config:`, JSON.stringify(config, null, 2));
+          console.log(`[WORKFLOW] Conditions:`, JSON.stringify(conditions, null, 2));
+          
+          // Vérifier les conditions spécifiques au type de trigger
+          let triggerMatches = true;
+          
+          // Pour etat_changed, vérifier etat_from et etat_to si spécifiés
+          if (triggerType === 'etat_changed') {
+            const oldEtat = eventData.old_etat;
+            const newEtat = eventData.new_etat || eventData.fiche?.id_etat_final;
+            
+            console.log(`[WORKFLOW] État - Ancien: ${oldEtat}, Nouveau: ${newEtat}`);
+            
+            if (config.etat_from !== undefined && config.etat_from !== null && config.etat_from !== '') {
+              const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
+              if (!etatFrom.includes(oldEtat)) {
+                console.log(`[WORKFLOW] ❌ État source ne correspond pas: ${oldEtat} n'est pas dans [${etatFrom.join(', ')}]`);
+                triggerMatches = false;
+              } else {
+                console.log(`[WORKFLOW] ✅ État source correspond: ${oldEtat}`);
+              }
+            }
+            
+            if (config.etat_to !== undefined && config.etat_to !== null && config.etat_to !== '') {
+              const etatTo = Array.isArray(config.etat_to) ? config.etat_to : [config.etat_to];
+              if (!etatTo.includes(newEtat)) {
+                console.log(`[WORKFLOW] ❌ État cible ne correspond pas: ${newEtat} n'est pas dans [${etatTo.join(', ')}]`);
+                triggerMatches = false;
+              } else {
+                console.log(`[WORKFLOW] ✅ État cible correspond: ${newEtat}`);
+              }
+            }
+            
+            // Support pour l'ancien format etat_id (compatibilité)
+            if (config.etat_id !== undefined && config.etat_id !== null && config.etat_id !== '') {
+              const etatId = Array.isArray(config.etat_id) ? config.etat_id : [config.etat_id];
+              if (!etatId.includes(newEtat)) {
+                console.log(`[WORKFLOW] ❌ État ID ne correspond pas: ${newEtat} n'est pas dans [${etatId.join(', ')}]`);
+                triggerMatches = false;
+              } else {
+                console.log(`[WORKFLOW] ✅ État ID correspond: ${newEtat}`);
+              }
+            }
+          }
+          
+          if (!triggerMatches) {
+            console.log(`[WORKFLOW] ❌ Trigger ne correspond pas aux critères spécifiés`);
+            continue;
+          }
+          
+          // Vérifier les conditions générales
           const conditionsResult = evaluateConditions(conditions, eventData);
           console.log(`[WORKFLOW] Résultat de l'évaluation des conditions:`, conditionsResult);
           
@@ -273,6 +325,9 @@ async function executeAction(actionType, config, eventData) {
     
     case 'webhook':
       return await executeWebhookAction(config, eventData);
+    
+    case 'system_message':
+      return await executeSystemMessageAction(config, eventData);
     
     default:
       throw new Error(`Type d'action non supporté: ${actionType}`);
@@ -654,6 +709,79 @@ async function executeWebhookAction(config, eventData) {
   });
 
   return { success: true, status: response.status, data: response.data };
+}
+
+/**
+ * Action : Message système
+ */
+async function executeSystemMessageAction(config, eventData) {
+  console.log(`[WORKFLOW] ========== executeSystemMessageAction DÉBUT ==========`);
+  console.log(`[WORKFLOW] Config reçue:`, JSON.stringify(config, null, 2));
+  
+  const { query } = require('../../config/database');
+  const { titre, message, type = 'info', priorite = 1, date_debut, date_fin, actif = 1, afficher_une_seule_fois = 0, cibles_fonctions, cibles_utilisateurs } = config;
+  
+  // Validation
+  if (!message || typeof message !== 'string' || message.trim() === '') {
+    throw new Error('Le message est requis pour un message système');
+  }
+  
+  // Vérifier qu'au moins un critère de ciblage est défini
+  if ((!cibles_fonctions || (Array.isArray(cibles_fonctions) && cibles_fonctions.length === 0)) &&
+      (!cibles_utilisateurs || (Array.isArray(cibles_utilisateurs) && cibles_utilisateurs.length === 0))) {
+    throw new Error('Au moins un critère de ciblage doit être sélectionné (fonctions ou utilisateurs)');
+  }
+  
+  // Remplacer les variables dans le message et le titre
+  const processedMessage = replaceVariables(message, eventData);
+  const processedTitre = titre ? replaceVariables(titre, eventData) : null;
+  
+  // Convertir les tableaux en JSON
+  const ciblesFonctionsJson = (cibles_fonctions && Array.isArray(cibles_fonctions) && cibles_fonctions.length > 0) 
+    ? JSON.stringify(cibles_fonctions) 
+    : null;
+  const ciblesUtilisateursJson = (cibles_utilisateurs && Array.isArray(cibles_utilisateurs) && cibles_utilisateurs.length > 0) 
+    ? JSON.stringify(cibles_utilisateurs) 
+    : null;
+  
+  // Traitement des dates
+  let processedDateDebut = null;
+  let processedDateFin = null;
+  
+  if (date_debut) {
+    const dateDebutValue = replaceVariables(date_debut, eventData);
+    processedDateDebut = dateDebutValue || null;
+  }
+  
+  if (date_fin) {
+    const dateFinValue = replaceVariables(date_fin, eventData);
+    processedDateFin = dateFinValue || null;
+  }
+  
+  const result = await query(
+    `INSERT INTO system_messages 
+      (titre, message, type, priorite, date_debut, date_fin, actif, afficher_une_seule_fois, 
+       cibles_fonctions, cibles_utilisateurs, id_createur)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      processedTitre,
+      processedMessage,
+      type,
+      priorite,
+      processedDateDebut,
+      processedDateFin,
+      actif,
+      afficher_une_seule_fois,
+      ciblesFonctionsJson,
+      ciblesUtilisateursJson,
+      eventData.user?.id || null
+    ]
+  );
+  
+  console.log(`[WORKFLOW] ✅ Message système créé avec succès - ID=${result.insertId}`);
+  console.log(`[WORKFLOW] ========== executeSystemMessageAction FIN ==========`);
+  
+  return { success: true, message: 'Message système créé', system_message_id: result.insertId };
 }
 
 /**

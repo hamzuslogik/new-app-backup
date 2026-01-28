@@ -54,6 +54,24 @@ const WorkflowsTab = () => {
     }
   );
 
+  // Récupérer les états pour les sélecteurs
+  const { data: etatsData } = useQuery('etats-workflows', async () => {
+    const res = await api.get('/management/etats');
+    return res.data.data || [];
+  });
+
+  // Récupérer les fonctions pour les messages système
+  const { data: fonctionsData } = useQuery('fonctions-workflows', async () => {
+    const res = await api.get('/management/fonctions');
+    return res.data.data || [];
+  });
+
+  // Récupérer les utilisateurs pour les messages système
+  const { data: utilisateursData } = useQuery('utilisateurs-workflows', async () => {
+    const res = await api.get('/management/utilisateurs');
+    return res.data.data || [];
+  });
+
   const filteredData = useMemo(() => {
     if (!data) return [];
     if (!searchTerm.trim()) return data;
@@ -210,6 +228,98 @@ const WorkflowsTab = () => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer le workflow "${nom}" ?`)) {
       deleteMutation.mutate(id);
     }
+  };
+
+  // Fonction pour formater l'affichage des déclencheurs
+  const formatTriggerDetails = (trigger, etatsData) => {
+    const parts = [];
+    parts.push(trigger.type.replace('_', ' '));
+    
+    if (trigger.type === 'etat_changed') {
+      const config = trigger.config || {};
+      if (config.etat_from) {
+        const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
+        const etatFromNames = etatFrom.map(id => {
+          const etat = etatsData?.find(e => e.id === id);
+          return etat ? `${etat.id}(${etat.titre})` : id;
+        });
+        parts.push(`de: ${etatFromNames.join(', ')}`);
+      }
+      if (config.etat_to || config.etat_id) {
+        const etatTo = Array.isArray(config.etat_to) ? config.etat_to : (config.etat_to ? [config.etat_to] : (config.etat_id ? [config.etat_id] : []));
+        const etatToNames = etatTo.map(id => {
+          const etat = etatsData?.find(e => e.id === id);
+          return etat ? `${etat.id}(${etat.titre})` : id;
+        });
+        parts.push(`vers: ${etatToNames.join(', ')}`);
+      }
+    } else if (trigger.type === 'scheduled' && trigger.config?.cron) {
+      parts.push(`cron: ${trigger.config.cron}`);
+    }
+    
+    return parts.join(' | ');
+  };
+
+  // Fonction pour formater l'affichage des actions
+  const formatActionDetails = (action, fonctionsData, utilisateursData) => {
+    const parts = [];
+    parts.push(action.type.replace('_', ' '));
+    
+    const config = action.config || {};
+    
+    if (action.type === 'notification') {
+      if (config.destination) {
+        const destMap = {
+          'id_confirmateur': 'Confirmateur',
+          'id_agent': 'Agent',
+          'id_commercial': 'Commercial'
+        };
+        parts.push(`→ ${destMap[config.destination] || config.destination}`);
+      } else {
+        parts.push('→ Tous les admins');
+      }
+      if (config.message) {
+        const msgPreview = config.message.substring(0, 30);
+        parts.push(`"${msgPreview}${config.message.length > 30 ? '...' : ''}"`);
+      }
+    } else if (action.type === 'sms') {
+      if (config.tel_field) {
+        parts.push(`champ: ${config.tel_field}`);
+      }
+    } else if (action.type === 'update_field') {
+      if (config.field) {
+        parts.push(`champ: ${config.field}`);
+      }
+    } else if (action.type === 'change_etat') {
+      if (config.etat_id) {
+        parts.push(`état: ${config.etat_id}`);
+      }
+    } else if (action.type === 'webhook') {
+      if (config.url) {
+        const urlPreview = config.url.substring(0, 30);
+        parts.push(`${config.method || 'POST'} ${urlPreview}${config.url.length > 30 ? '...' : ''}`);
+      }
+    } else if (action.type === 'system_message') {
+      if (config.cibles_fonctions && Array.isArray(config.cibles_fonctions)) {
+        const fonctionNames = config.cibles_fonctions.map(id => {
+          const f = fonctionsData?.find(f => f.id === id);
+          return f ? f.titre : id;
+        });
+        parts.push(`fonctions: ${fonctionNames.join(', ')}`);
+      }
+      if (config.cibles_utilisateurs && Array.isArray(config.cibles_utilisateurs)) {
+        parts.push(`utilisateurs: ${config.cibles_utilisateurs.length}`);
+      }
+      if (config.type) {
+        parts.push(`type: ${config.type}`);
+      }
+    }
+    
+    if (action.delay_seconds > 0) {
+      parts.push(`délai: ${action.delay_seconds}s`);
+    }
+    
+    return parts.join(' | ');
   };
 
   const addTrigger = () => {
@@ -379,15 +489,65 @@ const WorkflowsTab = () => {
                       </select>
                     </div>
                     {trigger.type === 'etat_changed' && (
-                      <div className="form-group">
-                        <label>État cible (optionnel)</label>
-                        <input
-                          type="number"
-                          placeholder="ID de l'état"
-                          value={trigger.config?.etat_id || ''}
-                          onChange={(e) => updateTrigger(index, 'config', { ...trigger.config, etat_id: e.target.value ? parseInt(e.target.value) : null })}
-                        />
-                      </div>
+                      <>
+                        <div className="form-group">
+                          <label>État source (optionnel)</label>
+                          <select
+                            multiple
+                            value={Array.isArray(trigger.config?.etat_from) ? trigger.config.etat_from.map(String) : (trigger.config?.etat_from ? [String(trigger.config.etat_from)] : [])}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                              updateTrigger(index, 'config', { ...trigger.config, etat_from: selected.length > 0 ? selected : null });
+                            }}
+                            size={5}
+                          >
+                            <option value="">-- Tous les états --</option>
+                            {etatsData?.map(e => (
+                              <option key={e.id} value={e.id}>{e.id} - {e.titre}</option>
+                            ))}
+                          </select>
+                          <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états. Si vide, tous les états sources sont acceptés.</small>
+                        </div>
+                        <div className="form-group">
+                          <label>État cible (optionnel)</label>
+                          <select
+                            multiple
+                            value={Array.isArray(trigger.config?.etat_to) ? trigger.config.etat_to.map(String) : (trigger.config?.etat_to ? [String(trigger.config.etat_to)] : (trigger.config?.etat_id ? [String(trigger.config.etat_id)] : []))}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                              const newConfig = { ...trigger.config };
+                              if (selected.length > 0) {
+                                newConfig.etat_to = selected;
+                                delete newConfig.etat_id; // Supprimer l'ancien format pour compatibilité
+                              } else {
+                                newConfig.etat_to = null;
+                              }
+                              updateTrigger(index, 'config', newConfig);
+                            }}
+                            size={5}
+                          >
+                            <option value="">-- Tous les états --</option>
+                            {etatsData?.map(e => (
+                              <option key={e.id} value={e.id}>{e.id} - {e.titre}</option>
+                            ))}
+                          </select>
+                          <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états. Si vide, tous les états cibles sont acceptés.</small>
+                        </div>
+                        {(trigger.config?.etat_from || trigger.config?.etat_to || trigger.config?.etat_id) && (
+                          <div style={{ padding: '8px', background: '#e3f2fd', borderRadius: '4px', fontSize: '12px' }}>
+                            <strong>Détails du déclencheur :</strong><br />
+                            {trigger.config?.etat_from && (
+                              <>État source : {Array.isArray(trigger.config.etat_from) ? trigger.config.etat_from.join(', ') : trigger.config.etat_from}<br /></>
+                            )}
+                            {trigger.config?.etat_to && (
+                              <>État cible : {Array.isArray(trigger.config.etat_to) ? trigger.config.etat_to.join(', ') : trigger.config.etat_to}<br /></>
+                            )}
+                            {trigger.config?.etat_id && !trigger.config?.etat_to && (
+                              <>État cible (ancien format) : {trigger.config.etat_id}</>
+                            )}
+                          </div>
+                        )}
+                      </>
                     )}
                     {trigger.type === 'scheduled' && (
                       <div className="form-group">
@@ -431,6 +591,7 @@ const WorkflowsTab = () => {
                           <option value="update_field">Mettre à jour un champ</option>
                           <option value="change_etat">Changer l'état</option>
                           <option value="webhook">Webhook HTTP</option>
+                          <option value="system_message">Message système</option>
                         </select>
                       </div>
                       <div className="form-group">
@@ -470,11 +631,12 @@ const WorkflowsTab = () => {
                             value={action.config?.destination || ''}
                             onChange={(e) => updateAction(index, 'config', { ...action.config, destination: e.target.value })}
                           >
-                            <option value="id_confirmateur">Confirmateur de la fiche</option>
-                            <option value="id_agent">Agent de la fiche</option>
-                            <option value="id_commercial">Commercial de la fiche</option>
+                            <option value="id_confirmateur">Confirmateur de la fiche ({'{fiche.id_confirmateur}'})</option>
+                            <option value="id_agent">Agent de la fiche ({'{fiche.id_agent}'})</option>
+                            <option value="id_commercial">Commercial de la fiche ({'{fiche.id_commercial}'})</option>
                             <option value="">Tous les admins</option>
                           </select>
+                          <small>Le destinataire sera résolu dynamiquement selon la fiche concernée</small>
                         </div>
                       </>
                     )}
@@ -568,6 +730,100 @@ const WorkflowsTab = () => {
                         </div>
                       </>
                     )}
+
+                    {action.type === 'system_message' && (
+                      <>
+                        <div className="form-group">
+                          <label>Titre (optionnel)</label>
+                          <input
+                            type="text"
+                            value={action.config?.titre || ''}
+                            onChange={(e) => updateAction(index, 'config', { ...action.config, titre: e.target.value })}
+                            placeholder="Titre du message système"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Message *</label>
+                          <textarea
+                            value={action.config?.message || ''}
+                            onChange={(e) => updateAction(index, 'config', { ...action.config, message: e.target.value })}
+                            rows="3"
+                            placeholder="Message système. Variables: {fiche.nom}, {fiche.prenom}, {user.pseudo}"
+                            required
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div className="form-group">
+                            <label>Type</label>
+                            <select
+                              value={action.config?.type || 'info'}
+                              onChange={(e) => updateAction(index, 'config', { ...action.config, type: e.target.value })}
+                            >
+                              <option value="info">Information</option>
+                              <option value="success">Succès</option>
+                              <option value="warning">Avertissement</option>
+                              <option value="error">Erreur</option>
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label>Priorité</label>
+                            <select
+                              value={action.config?.priorite || 1}
+                              onChange={(e) => updateAction(index, 'config', { ...action.config, priorite: parseInt(e.target.value) })}
+                            >
+                              <option value={1}>Normal</option>
+                              <option value={2}>Important</option>
+                              <option value={3}>Urgent</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label>Fonctions ciblées</label>
+                          <select
+                            multiple
+                            value={Array.isArray(action.config?.cibles_fonctions) ? action.config.cibles_fonctions.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                              updateAction(index, 'config', { ...action.config, cibles_fonctions: selected.length > 0 ? selected : null });
+                            }}
+                            size={5}
+                          >
+                            {fonctionsData?.map(f => (
+                              <option key={f.id} value={f.id}>{f.id} - {f.titre}</option>
+                            ))}
+                          </select>
+                          <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs fonctions. Au moins une fonction ou un utilisateur doit être sélectionné.</small>
+                        </div>
+                        <div className="form-group">
+                          <label>Utilisateurs ciblés</label>
+                          <select
+                            multiple
+                            value={Array.isArray(action.config?.cibles_utilisateurs) ? action.config.cibles_utilisateurs.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                              updateAction(index, 'config', { ...action.config, cibles_utilisateurs: selected.length > 0 ? selected : null });
+                            }}
+                            size={5}
+                          >
+                            {utilisateursData?.map(u => (
+                              <option key={u.id} value={u.id}>{u.nom} {u.prenom} ({u.login})</option>
+                            ))}
+                          </select>
+                          <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs utilisateurs. Au moins une fonction ou un utilisateur doit être sélectionné.</small>
+                        </div>
+                        {(action.config?.cibles_fonctions || action.config?.cibles_utilisateurs) && (
+                          <div style={{ padding: '8px', background: '#e8f5e9', borderRadius: '4px', fontSize: '12px' }}>
+                            <strong>Destinataires :</strong><br />
+                            {action.config?.cibles_fonctions && (
+                              <>Fonctions : {Array.isArray(action.config.cibles_fonctions) ? action.config.cibles_fonctions.length : 1} sélectionnée(s)<br /></>
+                            )}
+                            {action.config?.cibles_utilisateurs && (
+                              <>Utilisateurs : {Array.isArray(action.config.cibles_utilisateurs) ? action.config.cibles_utilisateurs.length : 1} sélectionné(s)</>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 ))}
                 <button type="button" className="btn-secondary" onClick={addAction}>
@@ -615,8 +871,62 @@ const WorkflowsTab = () => {
                   <td>{workflow.id}</td>
                   <td><strong>{workflow.nom}</strong></td>
                   <td>{workflow.description || '-'}</td>
-                  <td>{workflow.triggers_count || 0}</td>
-                  <td>{workflow.actions_count || 0}</td>
+                  <td>
+                    <div style={{ fontSize: '12px' }}>
+                      {workflow.triggers?.map((t, idx) => (
+                        <div key={idx} style={{ marginBottom: '4px', padding: '4px', background: '#f5f5f5', borderRadius: '3px' }}>
+                          <strong>{t.type.replace('_', ' ')}</strong>
+                          {t.type === 'etat_changed' && (t.config?.etat_from || t.config?.etat_to || t.config?.etat_id) && (
+                            <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                              {t.config?.etat_from && (
+                                <>De: {Array.isArray(t.config.etat_from) ? t.config.etat_from.join(', ') : t.config.etat_from} </>
+                              )}
+                              {(t.config?.etat_to || t.config?.etat_id) && (
+                                <>Vers: {Array.isArray(t.config?.etat_to) ? t.config.etat_to.join(', ') : (t.config?.etat_to || t.config?.etat_id)}</>
+                              )}
+                            </div>
+                          )}
+                          {t.type === 'scheduled' && t.config?.cron && (
+                            <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                              Cron: {t.config.cron}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {(!workflow.triggers || workflow.triggers.length === 0) && <span style={{ color: '#999' }}>-</span>}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ fontSize: '12px' }}>
+                      {workflow.actions?.map((a, idx) => (
+                        <div key={idx} style={{ marginBottom: '4px', padding: '4px', background: '#e8f5e9', borderRadius: '3px' }}>
+                          <strong>{a.type.replace('_', ' ')}</strong>
+                          {a.type === 'notification' && (
+                            <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                              {a.config?.destination ? `→ ${a.config.destination}` : '→ Tous les admins'}
+                            </div>
+                          )}
+                          {a.type === 'system_message' && (
+                            <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                              {a.config?.type && `Type: ${a.config.type} `}
+                              {a.config?.cibles_fonctions && Array.isArray(a.config.cibles_fonctions) && (
+                                <>Fonctions: {a.config.cibles_fonctions.length} </>
+                              )}
+                              {a.config?.cibles_utilisateurs && Array.isArray(a.config.cibles_utilisateurs) && (
+                                <>Utilisateurs: {a.config.cibles_utilisateurs.length}</>
+                              )}
+                            </div>
+                          )}
+                          {a.delay_seconds > 0 && (
+                            <div style={{ fontSize: '11px', color: '#ff9800', marginTop: '2px' }}>
+                              Délai: {a.delay_seconds}s
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {(!workflow.actions || workflow.actions.length === 0) && <span style={{ color: '#999' }}>-</span>}
+                    </div>
+                  </td>
                   <td>{workflow.priorite}</td>
                   <td>
                     <button
