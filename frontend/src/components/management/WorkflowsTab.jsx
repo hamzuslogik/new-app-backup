@@ -237,21 +237,29 @@ const WorkflowsTab = () => {
     
     if (trigger.type === 'etat_changed') {
       const config = trigger.config || {};
-      if (config.etat_from) {
+      if (config.etat_from && Array.isArray(config.etat_from) && config.etat_from.length > 0) {
         const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
         const etatFromNames = etatFrom.map(id => {
           const etat = etatsData?.find(e => e.id === id);
           return etat ? `${etat.id}(${etat.titre})` : id;
         });
         parts.push(`de: ${etatFromNames.join(', ')}`);
+      } else {
+        parts.push('de: Tous les états');
       }
       if (config.etat_to || config.etat_id) {
         const etatTo = Array.isArray(config.etat_to) ? config.etat_to : (config.etat_to ? [config.etat_to] : (config.etat_id ? [config.etat_id] : []));
-        const etatToNames = etatTo.map(id => {
-          const etat = etatsData?.find(e => e.id === id);
-          return etat ? `${etat.id}(${etat.titre})` : id;
-        });
-        parts.push(`vers: ${etatToNames.join(', ')}`);
+        if (etatTo.length > 0) {
+          const etatToNames = etatTo.map(id => {
+            const etat = etatsData?.find(e => e.id === id);
+            return etat ? `${etat.id}(${etat.titre})` : id;
+          });
+          parts.push(`vers: ${etatToNames.join(', ')}`);
+        } else {
+          parts.push('vers: Tous les états');
+        }
+      } else {
+        parts.push('vers: Tous les états');
       }
     } else if (trigger.type === 'scheduled' && trigger.config?.cron) {
       parts.push(`cron: ${trigger.config.cron}`);
@@ -496,62 +504,112 @@ const WorkflowsTab = () => {
                     {trigger.type === 'etat_changed' && (
                       <>
                         <div className="form-group">
-                          <label>État source (optionnel)</label>
-                          <select
-                            multiple
-                            value={Array.isArray(trigger.config?.etat_from) ? trigger.config.etat_from.map(String) : (trigger.config?.etat_from ? [String(trigger.config.etat_from)] : [])}
-                            onChange={(e) => {
-                              const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
-                              updateTrigger(index, 'config', { ...trigger.config, etat_from: selected.length > 0 ? selected : null });
-                            }}
-                            size={5}
-                          >
-                            <option value="">-- Tous les états --</option>
-                            {etatsData?.map(e => (
-                              <option key={e.id} value={e.id}>{e.id} - {e.titre}</option>
-                            ))}
-                          </select>
-                          <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états. Si vide, tous les états sources sont acceptés.</small>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={!trigger.config?.etat_from || (Array.isArray(trigger.config.etat_from) && trigger.config.etat_from.length === 0)}
+                              onChange={(e) => {
+                                const newConfig = { ...trigger.config };
+                                if (e.target.checked) {
+                                  newConfig.etat_from = null;
+                                }
+                                updateTrigger(index, 'config', newConfig);
+                              }}
+                              style={{ marginRight: '8px' }}
+                            />
+                            Depuis n'importe quel état (tous les états)
+                          </label>
+                          {(!trigger.config?.etat_from || (Array.isArray(trigger.config.etat_from) && trigger.config.etat_from.length === 0)) ? (
+                            <div style={{ padding: '8px', background: '#e8f5e9', borderRadius: '4px', fontSize: '12px', marginTop: '8px' }}>
+                              ✓ Le workflow se déclenchera depuis n'importe quel état
+                            </div>
+                          ) : (
+                            <>
+                              <select
+                                multiple
+                                value={Array.isArray(trigger.config?.etat_from) ? trigger.config.etat_from.map(String) : (trigger.config?.etat_from ? [String(trigger.config.etat_from)] : [])}
+                                onChange={(e) => {
+                                  const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                                  updateTrigger(index, 'config', { ...trigger.config, etat_from: selected.length > 0 ? selected : null });
+                                }}
+                                size={5}
+                                style={{ marginTop: '8px' }}
+                              >
+                                {etatsData?.map(e => (
+                                  <option key={e.id} value={e.id}>{e.id} - {e.titre}</option>
+                                ))}
+                              </select>
+                              <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états sources.</small>
+                            </>
+                          )}
                         </div>
                         <div className="form-group">
-                          <label>État cible (optionnel)</label>
-                          <select
-                            multiple
-                            value={Array.isArray(trigger.config?.etat_to) ? trigger.config.etat_to.map(String) : (trigger.config?.etat_to ? [String(trigger.config.etat_to)] : (trigger.config?.etat_id ? [String(trigger.config.etat_id)] : []))}
-                            onChange={(e) => {
-                              const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
-                              const newConfig = { ...trigger.config };
-                              if (selected.length > 0) {
-                                newConfig.etat_to = selected;
-                                delete newConfig.etat_id; // Supprimer l'ancien format pour compatibilité
-                              } else {
-                                newConfig.etat_to = null;
-                              }
-                              updateTrigger(index, 'config', newConfig);
-                            }}
-                            size={5}
-                          >
-                            <option value="">-- Tous les états --</option>
-                            {etatsData?.map(e => (
-                              <option key={e.id} value={e.id}>{e.id} - {e.titre}</option>
-                            ))}
-                          </select>
-                          <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états. Si vide, tous les états cibles sont acceptés.</small>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={!trigger.config?.etat_to && !trigger.config?.etat_id}
+                              onChange={(e) => {
+                                const newConfig = { ...trigger.config };
+                                if (e.target.checked) {
+                                  newConfig.etat_to = null;
+                                  delete newConfig.etat_id;
+                                }
+                                updateTrigger(index, 'config', newConfig);
+                              }}
+                              style={{ marginRight: '8px' }}
+                            />
+                            Vers n'importe quel état (tous les états)
+                          </label>
+                          {(!trigger.config?.etat_to && !trigger.config?.etat_id) ? (
+                            <div style={{ padding: '8px', background: '#e8f5e9', borderRadius: '4px', fontSize: '12px', marginTop: '8px' }}>
+                              ✓ Le workflow se déclenchera vers n'importe quel état
+                            </div>
+                          ) : (
+                            <>
+                              <select
+                                multiple
+                                value={Array.isArray(trigger.config?.etat_to) ? trigger.config.etat_to.map(String) : (trigger.config?.etat_to ? [String(trigger.config.etat_to)] : (trigger.config?.etat_id ? [String(trigger.config.etat_id)] : []))}
+                                onChange={(e) => {
+                                  const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                                  const newConfig = { ...trigger.config };
+                                  if (selected.length > 0) {
+                                    newConfig.etat_to = selected;
+                                    delete newConfig.etat_id; // Supprimer l'ancien format pour compatibilité
+                                  } else {
+                                    newConfig.etat_to = null;
+                                  }
+                                  updateTrigger(index, 'config', newConfig);
+                                }}
+                                size={5}
+                                style={{ marginTop: '8px' }}
+                              >
+                                {etatsData?.map(e => (
+                                  <option key={e.id} value={e.id}>{e.id} - {e.titre}</option>
+                                ))}
+                              </select>
+                              <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états cibles.</small>
+                            </>
+                          )}
                         </div>
-                        {(trigger.config?.etat_from || trigger.config?.etat_to || trigger.config?.etat_id) && (
-                          <div style={{ padding: '8px', background: '#e3f2fd', borderRadius: '4px', fontSize: '12px' }}>
-                            <strong>Détails du déclencheur :</strong><br />
-                            {trigger.config?.etat_from && (
-                              <>État source : {Array.isArray(trigger.config.etat_from) ? trigger.config.etat_from.join(', ') : trigger.config.etat_from}<br /></>
-                            )}
-                            {trigger.config?.etat_to && (
-                              <>État cible : {Array.isArray(trigger.config.etat_to) ? trigger.config.etat_to.join(', ') : trigger.config.etat_to}<br /></>
-                            )}
-                            {trigger.config?.etat_id && !trigger.config?.etat_to && (
-                              <>État cible (ancien format) : {trigger.config.etat_id}</>
-                            )}
-                          </div>
-                        )}
+                        <div style={{ padding: '8px', background: '#e3f2fd', borderRadius: '4px', fontSize: '12px' }}>
+                          <strong>Configuration actuelle :</strong><br />
+                          État source : {(!trigger.config?.etat_from || (Array.isArray(trigger.config.etat_from) && trigger.config.etat_from.length === 0)) 
+                            ? 'Tous les états' 
+                            : Array.isArray(trigger.config.etat_from) 
+                              ? trigger.config.etat_from.map(id => {
+                                  const etat = etatsData?.find(e => e.id === id);
+                                  return etat ? `${etat.id}(${etat.titre})` : id;
+                                }).join(', ')
+                              : trigger.config.etat_from}<br />
+                          État cible : {(!trigger.config?.etat_to && !trigger.config?.etat_id)
+                            ? 'Tous les états'
+                            : Array.isArray(trigger.config?.etat_to) 
+                              ? trigger.config.etat_to.map(id => {
+                                  const etat = etatsData?.find(e => e.id === id);
+                                  return etat ? `${etat.id}(${etat.titre})` : id;
+                                }).join(', ')
+                              : (trigger.config?.etat_to || trigger.config?.etat_id)}
+                        </div>
                       </>
                     )}
                     {trigger.type === 'scheduled' && (
