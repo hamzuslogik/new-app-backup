@@ -270,9 +270,14 @@ const WorkflowsTab = () => {
     if (action.type === 'notification') {
       if (config.destination) {
         const destMap = {
-          'id_confirmateur': 'Confirmateur',
+          'id_insert': 'Agent créateur',
           'id_agent': 'Agent',
-          'id_commercial': 'Commercial'
+          'id_confirmateur': 'Confirmateur',
+          'id_confirmateur_2': 'Confirmateur 2',
+          'id_confirmateur_3': 'Confirmateur 3',
+          'id_qualite': 'Agent qualité',
+          'id_commercial': 'Commercial',
+          'id_commercial_2': 'Commercial 2'
         };
         parts.push(`→ ${destMap[config.destination] || config.destination}`);
       } else {
@@ -631,10 +636,15 @@ const WorkflowsTab = () => {
                             value={action.config?.destination || ''}
                             onChange={(e) => updateAction(index, 'config', { ...action.config, destination: e.target.value })}
                           >
-                            <option value="id_confirmateur">Confirmateur de la fiche ({'{fiche.id_confirmateur}'})</option>
-                            <option value="id_agent">Agent de la fiche ({'{fiche.id_agent}'})</option>
-                            <option value="id_commercial">Commercial de la fiche ({'{fiche.id_commercial}'})</option>
                             <option value="">Tous les admins</option>
+                            <option value="id_insert">Agent qui a créé la fiche ({'{fiche.id_insert}'})</option>
+                            <option value="id_agent">Agent assigné à la fiche ({'{fiche.id_agent}'})</option>
+                            <option value="id_confirmateur">Confirmateur principal ({'{fiche.id_confirmateur}'})</option>
+                            <option value="id_confirmateur_2">Confirmateur secondaire ({'{fiche.id_confirmateur_2}'})</option>
+                            <option value="id_confirmateur_3">Confirmateur tertiaire ({'{fiche.id_confirmateur_3}'})</option>
+                            <option value="id_qualite">Agent qualité qui a audité ({'{fiche.id_qualite}'})</option>
+                            <option value="id_commercial">Commercial principal ({'{fiche.id_commercial}'})</option>
+                            <option value="id_commercial_2">Commercial secondaire ({'{fiche.id_commercial_2}'})</option>
                           </select>
                           <small>Le destinataire sera résolu dynamiquement selon la fiche concernée</small>
                         </div>
@@ -800,16 +810,36 @@ const WorkflowsTab = () => {
                             multiple
                             value={Array.isArray(action.config?.cibles_utilisateurs) ? action.config.cibles_utilisateurs.map(String) : []}
                             onChange={(e) => {
-                              const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                              const selected = Array.from(e.target.selectedOptions, option => {
+                                const value = option.value;
+                                // Si c'est une variable (commence par {), garder comme chaîne
+                                if (value.startsWith('{')) {
+                                  return value;
+                                }
+                                // Sinon, convertir en nombre
+                                return parseInt(value);
+                              });
                               updateAction(index, 'config', { ...action.config, cibles_utilisateurs: selected.length > 0 ? selected : null });
                             }}
-                            size={5}
+                            size={8}
                           >
-                            {utilisateursData?.map(u => (
-                              <option key={u.id} value={u.id}>{u.nom} {u.prenom} ({u.login})</option>
-                            ))}
+                            <optgroup label="Destinataires dynamiques (basés sur la fiche)">
+                              <option value="{fiche.id_insert}">Agent qui a créé la fiche ({'{fiche.id_insert}'})</option>
+                              <option value="{fiche.id_agent}">Agent assigné ({'{fiche.id_agent}'})</option>
+                              <option value="{fiche.id_confirmateur}">Confirmateur principal ({'{fiche.id_confirmateur}'})</option>
+                              <option value="{fiche.id_confirmateur_2}">Confirmateur secondaire ({'{fiche.id_confirmateur_2}'})</option>
+                              <option value="{fiche.id_confirmateur_3}">Confirmateur tertiaire ({'{fiche.id_confirmateur_3}'})</option>
+                              <option value="{fiche.id_qualite}">Agent qualité ({'{fiche.id_qualite}'})</option>
+                              <option value="{fiche.id_commercial}">Commercial principal ({'{fiche.id_commercial}'})</option>
+                              <option value="{fiche.id_commercial_2}">Commercial secondaire ({'{fiche.id_commercial_2}'})</option>
+                            </optgroup>
+                            <optgroup label="Utilisateurs spécifiques">
+                              {utilisateursData?.map(u => (
+                                <option key={u.id} value={u.id}>{u.nom} {u.prenom} ({u.login})</option>
+                              ))}
+                            </optgroup>
                           </select>
-                          <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs utilisateurs. Au moins une fonction ou un utilisateur doit être sélectionné.</small>
+                          <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs utilisateurs. Les destinataires dynamiques seront résolus selon la fiche concernée. Au moins une fonction ou un utilisateur doit être sélectionné.</small>
                         </div>
                         {(action.config?.cibles_fonctions || action.config?.cibles_utilisateurs) && (
                           <div style={{ padding: '8px', background: '#e8f5e9', borderRadius: '4px', fontSize: '12px' }}>

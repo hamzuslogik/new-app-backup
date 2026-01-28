@@ -499,12 +499,27 @@ async function executeNotificationAction(config, eventData) {
   if (destination === 'id_confirmateur' && eventData.fiche?.id_confirmateur) {
     destId = eventData.fiche.id_confirmateur;
     console.log(`[WORKFLOW] Destination résolue depuis id_confirmateur:`, destId);
+  } else if (destination === 'id_confirmateur_2' && eventData.fiche?.id_confirmateur_2) {
+    destId = eventData.fiche.id_confirmateur_2;
+    console.log(`[WORKFLOW] Destination résolue depuis id_confirmateur_2:`, destId);
+  } else if (destination === 'id_confirmateur_3' && eventData.fiche?.id_confirmateur_3) {
+    destId = eventData.fiche.id_confirmateur_3;
+    console.log(`[WORKFLOW] Destination résolue depuis id_confirmateur_3:`, destId);
   } else if (destination === 'id_agent' && eventData.fiche?.id_agent) {
     destId = eventData.fiche.id_agent;
     console.log(`[WORKFLOW] Destination résolue depuis id_agent:`, destId);
+  } else if (destination === 'id_insert' && eventData.fiche?.id_insert) {
+    destId = eventData.fiche.id_insert;
+    console.log(`[WORKFLOW] Destination résolue depuis id_insert (agent créateur):`, destId);
   } else if (destination === 'id_commercial' && eventData.fiche?.id_commercial) {
     destId = eventData.fiche.id_commercial;
     console.log(`[WORKFLOW] Destination résolue depuis id_commercial:`, destId);
+  } else if (destination === 'id_commercial_2' && eventData.fiche?.id_commercial_2) {
+    destId = eventData.fiche.id_commercial_2;
+    console.log(`[WORKFLOW] Destination résolue depuis id_commercial_2:`, destId);
+  } else if (destination === 'id_qualite' && eventData.fiche?.id_qualite) {
+    destId = eventData.fiche.id_qualite;
+    console.log(`[WORKFLOW] Destination résolue depuis id_qualite (agent qualité):`, destId);
   }
 
   // Validation stricte du destinataire
@@ -726,22 +741,41 @@ async function executeSystemMessageAction(config, eventData) {
     throw new Error('Le message est requis pour un message système');
   }
   
-  // Vérifier qu'au moins un critère de ciblage est défini
-  if ((!cibles_fonctions || (Array.isArray(cibles_fonctions) && cibles_fonctions.length === 0)) &&
-      (!cibles_utilisateurs || (Array.isArray(cibles_utilisateurs) && cibles_utilisateurs.length === 0))) {
-    throw new Error('Au moins un critère de ciblage doit être sélectionné (fonctions ou utilisateurs)');
-  }
-  
   // Remplacer les variables dans le message et le titre
   const processedMessage = replaceVariables(message, eventData);
   const processedTitre = titre ? replaceVariables(titre, eventData) : null;
+  
+  // Traiter cibles_utilisateurs : remplacer les variables dynamiques par les IDs réels
+  let processedCiblesUtilisateurs = cibles_utilisateurs;
+  if (processedCiblesUtilisateurs && Array.isArray(processedCiblesUtilisateurs)) {
+    processedCiblesUtilisateurs = processedCiblesUtilisateurs.map(userId => {
+      // Si c'est une variable (chaîne commençant par {), la remplacer
+      if (typeof userId === 'string' && userId.startsWith('{') && userId.endsWith('}')) {
+        const fieldPath = userId.slice(1, -1); // Enlever les accolades
+        const resolvedValue = getFieldValue(fieldPath, eventData);
+        if (resolvedValue && !isNaN(parseInt(resolvedValue))) {
+          return parseInt(resolvedValue);
+        }
+        // Si la variable ne peut pas être résolue, retourner null (sera filtré)
+        return null;
+      }
+      // Sinon, retourner tel quel (ID numérique)
+      return userId;
+    }).filter(id => id !== null && id !== undefined); // Filtrer les valeurs nulles
+  }
+  
+  // Vérifier qu'au moins un critère de ciblage est défini (après traitement des variables)
+  if ((!cibles_fonctions || (Array.isArray(cibles_fonctions) && cibles_fonctions.length === 0)) &&
+      (!processedCiblesUtilisateurs || (Array.isArray(processedCiblesUtilisateurs) && processedCiblesUtilisateurs.length === 0))) {
+    throw new Error('Au moins un critère de ciblage doit être sélectionné (fonctions ou utilisateurs)');
+  }
   
   // Convertir les tableaux en JSON
   const ciblesFonctionsJson = (cibles_fonctions && Array.isArray(cibles_fonctions) && cibles_fonctions.length > 0) 
     ? JSON.stringify(cibles_fonctions) 
     : null;
-  const ciblesUtilisateursJson = (cibles_utilisateurs && Array.isArray(cibles_utilisateurs) && cibles_utilisateurs.length > 0) 
-    ? JSON.stringify(cibles_utilisateurs) 
+  const ciblesUtilisateursJson = (processedCiblesUtilisateurs && Array.isArray(processedCiblesUtilisateurs) && processedCiblesUtilisateurs.length > 0) 
+    ? JSON.stringify(processedCiblesUtilisateurs) 
     : null;
   
   // Traitement des dates

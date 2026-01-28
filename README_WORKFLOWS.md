@@ -27,7 +27,14 @@ Déclenché lorsqu'une fiche est modifiée.
 
 ### 3. État changé (`etat_changed`)
 Déclenché lorsqu'un changement d'état se produit.
-- **Configuration optionnelle** : `etat_id` - ID de l'état cible
+- **Configuration optionnelle** :
+  - `etat_from` : ID(s) de l'état source (peut être un tableau pour plusieurs états)
+  - `etat_to` : ID(s) de l'état cible (peut être un tableau pour plusieurs états)
+  - `etat_id` : ID de l'état cible (ancien format, toujours supporté pour compatibilité)
+  
+**Exemple** : Pour déclencher uniquement lors du passage de l'état 1 à l'état 7 :
+- `etat_from` : `[1]`
+- `etat_to` : `[7]`
 
 ### 4. RDV créé (`rdv_created`)
 Déclenché lorsqu'un rendez-vous est créé.
@@ -97,6 +104,23 @@ Envoie une requête HTTP à une URL externe.
 - `method` : Méthode HTTP ('POST', 'GET', 'PUT', 'PATCH')
 - `headers` : Headers HTTP (optionnel)
 - `body` : Corps de la requête (optionnel, peut contenir des variables)
+
+### 7. Message système (`system_message`)
+Crée un message système qui sera affiché aux utilisateurs ciblés.
+
+**Configuration** :
+- `titre` : Titre du message (optionnel, peut contenir des variables)
+- `message` : Contenu du message (requis, peut contenir des variables)
+- `type` : Type de message ('info', 'success', 'warning', 'error')
+- `priorite` : Priorité (1=normal, 2=important, 3=urgent)
+- `cibles_fonctions` : Tableau d'IDs de fonctions ciblées (au moins une fonction ou un utilisateur requis)
+- `cibles_utilisateurs` : Tableau d'IDs d'utilisateurs ciblés (au moins une fonction ou un utilisateur requis)
+- `date_debut` : Date de début d'affichage (optionnel, format ISO)
+- `date_fin` : Date de fin d'affichage (optionnel, format ISO)
+- `actif` : Actif (1) ou inactif (0)
+- `afficher_une_seule_fois` : Afficher une seule fois (1) ou toujours (0)
+
+**Variables disponibles** : `{fiche.nom}`, `{fiche.prenom}`, `{user.pseudo}`, `{old_etat}`, `{new_etat}`, etc.
 
 ## Variables Disponibles
 
@@ -204,14 +228,40 @@ L'interface permet de tester un workflow sans l'exécuter réellement. Le test m
 
 1. **Conditions** : Les conditions sur les déclencheurs et actions ne sont pas encore implémentées dans l'interface (mais supportées dans le code)
 2. **Email** : L'action email nécessite la configuration d'un service SMTP
-3. **Scheduled** : Les workflows programmés nécessitent un cron job (à implémenter)
+3. **Scheduled** : Les workflows programmés sont automatiquement exécutés par le planificateur intégré (vérifie toutes les minutes)
 4. **Webhooks** : Les webhooks sont exécutés de manière synchrone (peut ralentir la réponse)
+
+## Système Automatique
+
+**Tous les workflows sont maintenant automatiques** - Aucun code supplémentaire n'est nécessaire pour qu'ils fonctionnent !
+
+### Déclencheurs Automatiques
+
+Tous les déclencheurs suivants sont automatiquement gérés par des middlewares :
+
+1. **fiche_created** : Déclenché automatiquement lors de la création d'une fiche
+2. **fiche_updated** : Déclenché automatiquement lors de la modification d'une fiche (sauf changement d'état ou création RDV)
+3. **etat_changed** : Déclenché automatiquement lors d'un changement d'état (avec support de `etat_from` et `etat_to`)
+4. **rdv_created** : Déclenché automatiquement quand `date_rdv_time` passe de NULL/vide à une valeur
+5. **rdv_validated** : Déclenché automatiquement quand `valider` passe de 0/NULL à 1
+6. **compte_rendu_created** : Déclenché automatiquement lors de la création d'un compte rendu
+7. **compte_rendu_approved** : Déclenché automatiquement lors de l'approbation d'un compte rendu
+8. **scheduled** : Déclenché automatiquement par le planificateur intégré (vérifie toutes les minutes)
+
+### Planificateur Intégré
+
+Le planificateur de workflows (`workflow-scheduler.js`) :
+- Démarre automatiquement avec le serveur
+- Vérifie toutes les minutes si des workflows programmés doivent être exécutés
+- Supporte les expressions cron standard (format: `minute hour day month weekday`)
+- Évite les exécutions multiples grâce à un système de cache
+
+Pour désactiver le planificateur, définir `ENABLE_WORKFLOW_SCHEDULER=false` dans les variables d'environnement.
 
 ## Prochaines Améliorations
 
 - Interface graphique pour créer des workflows (drag & drop)
 - Conditions visuelles dans l'interface
-- Planificateur de tâches pour les workflows programmés
 - Templates de workflows
 - Export/Import de workflows
 - Logs détaillés avec visualisation

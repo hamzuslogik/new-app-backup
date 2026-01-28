@@ -96,5 +96,12 @@ app.listen(PORT, () => {
   console.log(`🔗 API disponible sur: http://localhost:${PORT}/api`);
 });
 
+// Démarrer le planificateur de workflows (scheduled)
+if (process.env.ENABLE_WORKFLOW_SCHEDULER !== 'false') {
+  const { startScheduler } = require('./services/workflow/workflow-scheduler');
+  startScheduler();
+  console.log('⏰ Planificateur de workflows démarré');
+}
+
 module.exports = app;
 

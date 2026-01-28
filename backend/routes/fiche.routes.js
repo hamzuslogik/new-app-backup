@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
-const { triggerWorkflowOnFicheCreated, triggerWorkflowOnFicheUpdated, triggerWorkflowOnEtatChanged } = require('../middleware/workflow.middleware');
+const { triggerWorkflowOnFicheCreated, triggerWorkflowOnFicheUpdated, triggerWorkflowOnEtatChanged, triggerWorkflowOnRdvValidated } = require('../middleware/workflow.middleware');
 const { query, queryOne } = require('../config/database');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
@@ -4803,7 +4803,7 @@ router.get('/:id/modifica', authenticate, hashToIdMiddleware, async (req, res) =
 });
 
 // Valider/Dévalider une fiche confirmée
-router.post('/:id/valider', authenticate, hashToIdMiddleware, checkPermissionCode('fiche_validate'), async (req, res) => {
+router.post('/:id/valider', authenticate, hashToIdMiddleware, checkPermissionCode('fiche_validate'), triggerWorkflowOnRdvValidated, async (req, res) => {
   try {
     const { id } = req.params;
     const { type_valid, conf_rdv_avec, conf_presence_couple } = req.body; // type_valid: "0" pour annuler, "1-Y" pour valider avec Y = conf_rdv_avec
