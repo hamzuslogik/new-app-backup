@@ -27,6 +27,7 @@ const Fiches = () => {
     limit: 500,
     fiche_search: false,
     include_archive: false,
+    affichage_complet: false, // RE Confirmation : afficher toutes les fiches (pas seulement l'équipe)
   });
 
   const normalizeText = (v) => (typeof v === 'string' ? v.trim() : v);
@@ -161,6 +162,15 @@ const Fiches = () => {
               return;
             }
           }
+        }
+        // RE Confirmation : affichage_complet = 1 pour voir toutes les fiches
+        if (key === 'affichage_complet') {
+          if (user?.fonction === 14 && searchParams.affichage_complet) {
+            searchParams.affichage_complet = 1;
+          } else {
+            delete searchParams.affichage_complet;
+          }
+          return;
         }
         if (searchParams[key] === '' || searchParams[key] === null || searchParams[key] === undefined) {
           delete searchParams[key];
@@ -609,6 +619,21 @@ const Fiches = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {/* RE Confirmation : afficher le résultat complet (pas seulement l'équipe) */}
+              {user?.fonction === 14 && (
+                <div className="form-group form-group-checkbox">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={!!filters.affichage_complet}
+                      onChange={(e) => handleFilterChange('affichage_complet', e.target.checked)}
+                    />
+                    <span>Résultat complet (toutes les fiches)</span>
+                  </label>
+                  <small className="filter-hint">Sans cette option, seules les fiches de votre équipe sont affichées.</small>
                 </div>
               )}
 

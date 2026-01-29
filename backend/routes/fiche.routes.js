@@ -369,7 +369,8 @@ router.get('/', authenticate, async (req, res) => {
       sgn_week,
       sgn_month,
       yesterday,
-      tomorrow
+      tomorrow,
+      affichage_complet
     } = req.query;
 
     const includeArchive =
@@ -646,8 +647,14 @@ router.get('/', authenticate, async (req, res) => {
       } else if (!(id_re && id_re !== 'all' && !reIds.includes(parseInt(id_re, 10)))) {
         whereConditions.push('1 = 0');
       }
-    } else if (req.user.fonction === 14 && (id_etat_final == 19 || id_etat_final === '19') && (!id_confirmateur || id_confirmateur === 'all')) {
-    // RE Confirmation (14) : rappels équipe (id_etat_final=19) sans filtre confirmateur = tous les confirmateurs de l'équipe
+    } else if (
+      req.user.fonction === 14 &&
+      !(affichage_complet === '1' || affichage_complet === 1) &&
+      (id_etat_final == 19 || id_etat_final === '19') &&
+      (!id_confirmateur || id_confirmateur === 'all')
+    ) {
+      // RE Confirmation (14) : rappels équipe (id_etat_final=19) sans filtre confirmateur = tous les confirmateurs de l'équipe
+      // (ignoré si affichage_complet=1 : le RE voit alors le résultat complet)
       const confirmateursEquipe = await query(
         'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
         [req.user.id]
@@ -661,7 +668,8 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('1 = 0');
       }
     } else if (id_confirmateur && id_confirmateur !== 'all') {
-      if (req.user.fonction === 14) {
+      const reAffichageComplet = req.user.fonction === 14 && (affichage_complet === '1' || affichage_complet === 1);
+      if (req.user.fonction === 14 && !reAffichageComplet) {
         const equipeRE = await query(
           'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
           [req.user.id]
@@ -673,10 +681,11 @@ router.get('/', authenticate, async (req, res) => {
           whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
           params.push(id_confirmateur, id_confirmateur, id_confirmateur);
         }
-      } else {
+      } else if (!reAffichageComplet) {
         whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
         params.push(id_confirmateur, id_confirmateur, id_confirmateur);
       }
+      // Si RE avec affichage_complet=1, on n'ajoute pas de filtre confirmateur (résultat complet)
     }
     if (id_centre) {
       whereConditions.push('fiche.id_centre = ?');
