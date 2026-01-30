@@ -1186,11 +1186,6 @@ const Dashboard = () => {
                     <th onClick={() => handleSort('Date RDV')} className="sortable-header">
                       Date RDV {getSortIcon('Date RDV')}
                     </th>
-                    {(filters.id_etat_final === 7 || (Array.isArray(filters.id_etat_final) && filters.id_etat_final.includes(7)) || (!filters.fiche_search && activeTab === 'confirmed')) ? (
-                      <th className="sortable-header">
-                        Date Confirmation
-                      </th>
-                    ) : null}
                     <th onClick={() => handleSort('État Final')} className="sortable-header">
                       {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
                     </th>
@@ -1229,20 +1224,6 @@ const Dashboard = () => {
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
                         <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_rdv_time)}</td>
-                        {(filters.id_etat_final === 7 || (Array.isArray(filters.id_etat_final) && filters.id_etat_final.includes(7)) || (!filters.fiche_search && activeTab === 'confirmed')) && (
-                          <td data-label="Date Confirmation:" style={{ textAlign: 'left', fontSize: '0.9em' }}>
-                            {fiche.date_confirmation ? (
-                              <>
-                                <div>{formatDate(new Date(fiche.date_confirmation * 1000).toISOString())}</div>
-                                <div style={{ color: '#666', fontSize: '0.85em' }}>
-                                  Modif: {formatDate(fiche.date_modif_time)}
-                                </div>
-                              </>
-                            ) : (
-                              <div style={{ color: '#666' }}>Modif: {formatDate(fiche.date_modif_time)}</div>
-                            )}
-                          </td>
-                        )}
                         <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}>
                           <span 
                             className="etat-badge"
