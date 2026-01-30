@@ -68,7 +68,7 @@ function App() {
           <Route path="fiches" element={<ProtectedRoute permission="fiches_view"><Fiches /></ProtectedRoute>} />
           <Route path="fiches/:id" element={<ProtectedRoute permission="fiches_detail"><FicheDetailRoute /></ProtectedRoute>} />
           <Route path="planning" element={<ProtectedRoute permission="planning_view"><Planning /></ProtectedRoute>} />
-          <Route path="planning-dep" element={<ProtectedRoute permission="planning_view"><PlanningDep /></ProtectedRoute>} />
+          <Route path="planning-dep" element={<ProtectedRoute permission="planning_dep_view"><PlanningDep /></ProtectedRoute>} />
           <Route path="planning-commercial" element={<ProtectedRoute permission="planning_commercial_view"><PlanningCommercial /></ProtectedRoute>} />
           <Route path="planning-hebdomadaire" element={<ProtectedRoute permission="planning_view"><PlanningHebdomadaire /></ProtectedRoute>} />
           <Route path="affectation-dep" element={<ProtectedRoute permission="affectation_view"><AffectationDep /></ProtectedRoute>} />

@@ -255,7 +255,7 @@ const Sidebar = ({ collapsed }) => {
       path: '/planning-dep',
       label: 'Planning Dép',
       icon: FaCalendarAlt,
-      permission: 'planning_view',
+      permission: 'planning_dep_view',
       visible: true,
       // Visible pour Confirmateurs (fonction 6), RE Confirmation (fonction 14) et autres utilisateurs avec permission
       customCheck: (item, user, hasPermission) => {

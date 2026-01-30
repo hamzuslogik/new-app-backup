@@ -166,7 +166,7 @@ const Permissions = () => {
     { path: '/fiches', name: 'Fiches', permission: 'fiches_view' },
     { path: '/fiches/:id', name: 'Détail Fiche', permission: 'fiches_detail' },
     { path: '/planning', name: 'Planning', permission: 'planning_view' },
-    { path: '/planning-dep', name: 'Planning Dép', permission: 'planning_view' },
+    { path: '/planning-dep', name: 'Planning Dép', permission: 'planning_dep_view' },
     { path: '/planning-commercial', name: 'Planning Commercial', permission: 'planning_commercial_view' },
     { path: '/planning-hebdomadaire', name: 'Planning Hebdomadaire', permission: 'planning_view' },
     { path: '/affectation-dep', name: 'Affectation Dép', permission: 'affectation_view' },
