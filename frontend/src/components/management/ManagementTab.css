@@ -128,6 +128,14 @@
   color: #a01515;
 }
 
+.btn-icon.btn-success {
+  color: var(--success-color, #28a745);
+}
+
+.btn-icon.btn-success:hover {
+  color: #1e7e34;
+}
+
 .form-modal {
   position: fixed;
   top: 0;

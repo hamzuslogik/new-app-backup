@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-toastify';
 import api from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle, FaKey, FaCopy, FaCheck } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle, FaKey, FaCopy, FaCheck, FaPowerOff, FaCheckCircle } from 'react-icons/fa';
 import LoadingSpinner from '../common/LoadingSpinner';
 import Tooltip from '../common/Tooltip';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
@@ -56,8 +56,8 @@ const UtilisateursTab = () => {
     }
   }, [showForm]);
 
-  const { data: utilisateurs, isLoading: loadingUsers } = useQuery('utilisateurs', async () => {
-    const response = await api.get('/management/utilisateurs');
+  const { data: utilisateurs, isLoading: loadingUsers } = useQuery('utilisateurs-management', async () => {
+    const response = await api.get('/management/utilisateurs', { params: { include_inactive: 1 } });
     return response.data.data;
   });
 
@@ -95,6 +95,7 @@ const UtilisateursTab = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('utilisateurs');
+        queryClient.invalidateQueries('utilisateurs-management');
         toast.success('Utilisateur créé avec succès');
         setShowForm(false);
         resetForm();
@@ -118,6 +119,7 @@ const UtilisateursTab = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('utilisateurs');
+        queryClient.invalidateQueries('utilisateurs-management');
         toast.success('Utilisateur mis à jour avec succès');
         setShowForm(false);
         setEditingId(null);
@@ -142,6 +144,7 @@ const UtilisateursTab = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('utilisateurs');
+        queryClient.invalidateQueries('utilisateurs-management');
         toast.success('Utilisateur supprimé avec succès');
       },
       onError: (error) => {
@@ -173,6 +176,15 @@ const UtilisateursTab = () => {
       chef_equipe: '',
       id_rp_qualif: ''
     });
+  };
+
+  const handleToggleEtat = (user) => {
+    if (user.id === currentUser?.id) {
+      toast.error('Vous ne pouvez pas désactiver votre propre compte');
+      return;
+    }
+    const newEtat = user.etat === 1 ? 0 : 1;
+    updateMutation.mutate({ id: user.id, data: { etat: newEtat } });
   };
 
   const handleEdit = (user) => {
@@ -799,6 +811,14 @@ const UtilisateursTab = () => {
                   </td>
                   <td data-label="">
                     <div className="action-buttons">
+                      <button
+                        className={`btn-icon ${user.etat === 1 ? '' : 'btn-success'}`}
+                        onClick={() => handleToggleEtat(user)}
+                        title={user.etat === 1 ? 'Désactiver' : 'Activer'}
+                        disabled={user.id === currentUser?.id}
+                      >
+                        {user.etat === 1 ? <FaPowerOff /> : <FaCheckCircle />}
+                      </button>
                       <button className="btn-icon" onClick={() => handleEdit(user)} title="Modifier">
                         <FaEdit />
                       </button>

@@ -345,7 +345,8 @@ router.delete('/produits/:id', authenticate, checkPermission(1, 2, 7, 11), async
 // Récupérer tous les utilisateurs avec leurs relations (accessible à tous pour les filtres)
 router.get('/utilisateurs', authenticate, async (req, res) => {
   try {
-    const { pseudo } = req.query;
+    const { pseudo, include_inactive } = req.query;
+    const withInactive = include_inactive === '1' || include_inactive === 1 || include_inactive === true || include_inactive === 'true';
     
     // Construire la requête avec ou sans filtre par pseudo
     let sql = `SELECT u.*, 
@@ -358,9 +359,14 @@ router.get('/utilisateurs', authenticate, async (req, res) => {
        LEFT JOIN centres c ON u.centre = c.id
        LEFT JOIN utilisateurs supervisor ON u.chef_equipe = supervisor.id
        LEFT JOIN utilisateurs rp ON u.id_rp_qualif = rp.id
-       WHERE u.etat > 0`;
+       WHERE 1=1`;
     
     const params = [];
+    
+    // Inclure les inactifs uniquement si demandé (ex. page Gestion > Utilisateurs)
+    if (!withInactive) {
+      sql += ` AND u.etat > 0`;
+    }
     
     // Si un pseudo est fourni, filtrer par pseudo (insensible à la casse)
     if (pseudo) {
