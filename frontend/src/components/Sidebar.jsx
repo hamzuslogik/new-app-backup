@@ -257,13 +257,6 @@ const Sidebar = ({ collapsed }) => {
       icon: FaCalendarAlt,
       permission: 'planning_dep_view',
       visible: true,
-      // Visible pour Confirmateurs (fonction 6), RE Confirmation (fonction 14) et autres utilisateurs avec permission
-      customCheck: (item, user, hasPermission) => {
-        // Si Confirmateur (fonction 6) ou RE Confirmation (fonction 14), toujours visible
-        if (user?.fonction === 6 || user?.fonction === 14) return true;
-        // Sinon, vérifier la permission
-        return hasPermission(item.permission);
-      },
     },
     {
       path: '/validation',
