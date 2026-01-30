@@ -273,7 +273,7 @@ const Header = () => {
           >
             <FaBell />
             {shouldShowBadge && (
-              <span className={`badge ${isBlinking ? 'blinking' : ''}`}>
+              <span className={`badge badge-pulse ${isBlinking ? 'blinking' : ''}`}>
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
