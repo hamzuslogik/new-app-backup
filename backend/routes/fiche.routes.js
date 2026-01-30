@@ -415,16 +415,10 @@ router.get('/', authenticate, async (req, res) => {
         )`);
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id);
       } else if (req.user.fonction === 6) {
-        // Confirmateurs : Vérifier la permission VIEW_ALL_FICHES
-        const hasViewAllPermission = await hasPermission(req.user.fonction, 'VIEW_ALL_FICHES');
-        
-        if (!hasViewAllPermission) {
-          // Si pas de permission, filtrer uniquement les fiches assignées au confirmateur
-          whereConditions.push('fiche.date_modif_time >= ? AND fiche.date_modif_time <= ?');
-          whereConditions.push(`(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)`);
-          params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id, req.user.id, req.user.id);
-        }
-        // Si la permission existe, pas de filtre supplémentaire (voit toutes les fiches)
+        // Confirmateurs : toujours uniquement les fiches où ils sont assignés (pas de VIEW_ALL_FICHES pour la liste)
+        whereConditions.push('fiche.date_modif_time >= ? AND fiche.date_modif_time <= ?');
+        whereConditions.push(`(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)`);
+        params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id, req.user.id, req.user.id);
       }
     } else {
       // Filtres par fonction quand recherche active
@@ -436,15 +430,9 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_commercial = ?');
         params.push(req.user.id);
       } else if (req.user.fonction === 6) {
-        // Confirmateurs : Vérifier la permission VIEW_ALL_FICHES
-        const hasViewAllPermission = await hasPermission(req.user.fonction, 'VIEW_ALL_FICHES');
-        
-        if (!hasViewAllPermission) {
-          // Si pas de permission, filtrer uniquement les fiches assignées au confirmateur
-          whereConditions.push(`(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)`);
-          params.push(req.user.id, req.user.id, req.user.id);
-        }
-        // Si la permission existe, pas de filtre supplémentaire (voit toutes les fiches)
+        // Confirmateurs : en recherche, uniquement les fiches où ils sont assignés (confirmateur 1, 2 ou 3)
+        whereConditions.push(`(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)`);
+        params.push(req.user.id, req.user.id, req.user.id);
       }
     }
 
