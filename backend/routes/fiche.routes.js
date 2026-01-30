@@ -721,33 +721,33 @@ router.get('/', authenticate, async (req, res) => {
           // Convertir les dates en timestamps Unix
           const startTimestamp = Math.floor(new Date(`${dateDebut || dateFin} ${timeStart}`).getTime() / 1000);
           const endTimestamp = Math.floor(new Date(`${dateFin || dateDebut} ${timeEnd}`).getTime() / 1000);
-          
-          // Vérifier que l'état a changé vers 7 (CONFIRMER) dans l'historique pour la date sélectionnée
-          whereConditions.push(`EXISTS (
-            SELECT 1 FROM fiches_histo h 
-            WHERE h.id_fiche = fiche.id 
-            AND h.id_etat = 7 
-            AND DATE(h.date_creation) = ?
-          )`);
-          params.push(dateDebut || dateFin);
-          
-          // Filtrer par date_confirmation (bigint)
+          const histoDate = dateDebut || dateFin;
+          // Inclure si : date_confirmation dans la plage OU (date_confirmation NULL et passage à l'état 7 dans l'historique à cette date)
           if (dateDebut && dateFin) {
-            whereConditions.push(`(fiche.date_confirmation IS NOT NULL AND fiche.date_confirmation >= ? AND fiche.date_confirmation <= ?)`);
-            params.push(startTimestamp, endTimestamp);
+            whereConditions.push(`(
+              (fiche.date_confirmation IS NOT NULL AND fiche.date_confirmation >= ? AND fiche.date_confirmation <= ?)
+              OR (fiche.date_confirmation IS NULL AND EXISTS (
+                SELECT 1 FROM fiches_histo h WHERE h.id_fiche = fiche.id AND h.id_etat = 7 AND DATE(h.date_creation) = ?
+              ))
+            )`);
+            params.push(startTimestamp, endTimestamp, histoDate);
           } else if (dateDebut) {
-            whereConditions.push(`(fiche.date_confirmation IS NOT NULL AND fiche.date_confirmation >= ?)`);
-            params.push(startTimestamp);
+            whereConditions.push(`(
+              (fiche.date_confirmation IS NOT NULL AND fiche.date_confirmation >= ?)
+              OR (fiche.date_confirmation IS NULL AND EXISTS (
+                SELECT 1 FROM fiches_histo h WHERE h.id_fiche = fiche.id AND h.id_etat = 7 AND DATE(h.date_creation) = ?
+              ))
+            )`);
+            params.push(startTimestamp, histoDate);
           } else if (dateFin) {
-            whereConditions.push(`(fiche.date_confirmation IS NOT NULL AND fiche.date_confirmation <= ?)`);
-            params.push(endTimestamp);
+            whereConditions.push(`(
+              (fiche.date_confirmation IS NOT NULL AND fiche.date_confirmation <= ?)
+              OR (fiche.date_confirmation IS NULL AND EXISTS (
+                SELECT 1 FROM fiches_histo h WHERE h.id_fiche = fiche.id AND h.id_etat = 7 AND DATE(h.date_creation) = ?
+              ))
+            )`);
+            params.push(endTimestamp, histoDate);
           }
-          
-          // Si date_confirmation est NULL, utiliser date_modif_time comme fallback
-          whereConditions.push(`(
-            fiche.date_confirmation IS NOT NULL 
-            OR (fiche.date_confirmation IS NULL AND fiche.date_modif_time IS NOT NULL AND fiche.date_modif_time != '')
-          )`);
         } else {
           // Pour les autres champs de date (datetime)
           // S'assurer que la colonne de date n'est pas NULL ou vide
@@ -4892,6 +4892,7 @@ router.get('/confirmees-aujourdhui', authenticate, async (req, res) => {
     const endTimestamp = Math.floor(new Date(`${y_m_d} 23:59:59`).getTime() / 1000);
 
     // Récupérer les fiches confirmées aujourd'hui (état 7 - CONFIRMER)
+    // Inclure : date_confirmation dans la plage OU date_confirmation NULL avec entrée fiches_histo id_etat=7 aujourd'hui
     const fiches = await query(
       `SELECT 
         f.*,
@@ -4908,12 +4909,16 @@ router.get('/confirmees-aujourdhui', authenticate, async (req, res) => {
        LEFT JOIN etats e ON f.id_etat_final = e.id
        LEFT JOIN produits p ON f.produit = p.id
        WHERE f.id_etat_final = 7
-       AND f.date_confirmation >= ?
-       AND f.date_confirmation <= ?
+       AND (
+         (f.date_confirmation IS NOT NULL AND f.date_confirmation >= ? AND f.date_confirmation <= ?)
+         OR (f.date_confirmation IS NULL AND EXISTS (
+           SELECT 1 FROM fiches_histo h WHERE h.id_fiche = f.id AND h.id_etat = 7 AND DATE(h.date_creation) = ?
+         ))
+       )
        AND (f.archive = 0 OR f.archive IS NULL)
-       ORDER BY f.date_confirmation DESC
+       ORDER BY COALESCE(f.date_confirmation, 0) DESC, f.date_modif_time DESC
        LIMIT 1000`,
-      [startTimestamp, endTimestamp]
+      [startTimestamp, endTimestamp, y_m_d]
     );
 
     // Calculer les stats par confirmateur
