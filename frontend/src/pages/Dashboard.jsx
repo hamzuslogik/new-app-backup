@@ -260,23 +260,16 @@ const Dashboard = () => {
       baseParams.include_archive = 1;
     }
     
-    // Pour les confirmateurs (fonction 6) : afficher uniquement les fiches de la phase 2 traitées dans la journée
+    // Pour les confirmateurs (fonction 6) : afficher uniquement les fiches modifiées dans la journée (date en cours) et assignées au confirmateur connecté
     if (isConfirmateur && user?.id) {
-      // Calculer les états de la phase 2 depuis etatsData
-      const etatsFiltered = (etatsData || []).filter(e => String(e.groupe) !== '0' && e.groupe !== 0);
-      const etatsPhase2Filtered = etatsFiltered.filter(e => String(e.groupe) === '2' || e.groupe === 2);
-      const etatsPhase2Ids = etatsPhase2Filtered.map(e => e.id);
-      
       return {
         ...baseParams,
-        fiche_search: 1, // Forcer l'utilisation des filtres explicites plutôt que les filtres par défaut
-        id_etat_final: etatsPhase2Ids.length > 0 ? etatsPhase2Ids : [], // Tous les états de la phase 2
-        id_confirmateur: user.id, // Filtrer par le confirmateur connecté (le backend filtre sur id_confirmateur, id_confirmateur_2, id_confirmateur_3)
-        date_champ: 'date_modif_time', // Filtrer par date de modification
-        date_debut: dateStr, // Date d'aujourd'hui
-        date_fin: dateStr, // Date d'aujourd'hui
-        time_debut: timeStart, // Début de journée
-        time_fin: timeEnd, // Fin de journée
+        fiche_search: 1,
+        date_champ: 'date_modif_time',
+        date_debut: dateStr,
+        date_fin: dateStr,
+        time_debut: timeStart,
+        time_fin: timeEnd,
       };
     }
     
