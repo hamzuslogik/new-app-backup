@@ -567,27 +567,28 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
     
-    if (id_etat_final) {
+    if (id_etat_final !== undefined && id_etat_final !== null && id_etat_final !== '') {
       if (id_etat_final === 't_s') {
         whereConditions.push('(fiche.id_etat_final = 13 OR fiche.id_etat_final = 45 OR fiche.id_etat_final = 44 OR fiche.id_etat_final = 16 OR fiche.id_etat_final = 38)');
-      } else if (Array.isArray(id_etat_final)) {
-        // Support pour plusieurs états
-        // Si qualification_code est aussi fourni, utiliser OR
-        if (qualificationCondition) {
-          whereConditions.push(`(fiche.id_etat_final IN (${id_etat_final.map(() => '?').join(',')}) OR ${qualificationCondition})`);
-          params.push(...id_etat_final, req.query.qualification_code);
-        } else {
-          whereConditions.push(`fiche.id_etat_final IN (${id_etat_final.map(() => '?').join(',')})`);
-          params.push(...id_etat_final);
-        }
       } else {
-        // Si qualification_code est aussi fourni, utiliser OR
-        if (qualificationCondition) {
-          whereConditions.push(`(fiche.id_etat_final = ? OR ${qualificationCondition})`);
-          params.push(id_etat_final, req.query.qualification_code);
-        } else {
-          whereConditions.push('fiche.id_etat_final = ?');
-          params.push(id_etat_final);
+        const etatFinal = Array.isArray(id_etat_final) ? id_etat_final : [id_etat_final];
+        const etatIds = etatFinal.map(e => parseInt(e, 10)).filter(n => !Number.isNaN(n));
+        if (etatIds.length === 1) {
+          if (qualificationCondition) {
+            whereConditions.push(`(fiche.id_etat_final = ? OR ${qualificationCondition})`);
+            params.push(etatIds[0], req.query.qualification_code);
+          } else {
+            whereConditions.push('fiche.id_etat_final = ?');
+            params.push(etatIds[0]);
+          }
+        } else if (etatIds.length > 1) {
+          if (qualificationCondition) {
+            whereConditions.push(`(fiche.id_etat_final IN (${etatIds.map(() => '?').join(',')}) OR ${qualificationCondition})`);
+            params.push(...etatIds, req.query.qualification_code);
+          } else {
+            whereConditions.push(`fiche.id_etat_final IN (${etatIds.map(() => '?').join(',')})`);
+            params.push(...etatIds);
+          }
         }
       }
     } else if (qualificationCondition) {

@@ -355,10 +355,13 @@ const Dashboard = () => {
       key === 'critere' || key === 'nom' || key === 'prenom' || key === 'cp'
         ? normalizeText(value)
         : value;
+    // Activer la recherche (fiche_search) quand un filtre de recherche est modifié pour que les paramètres soient bien envoyés (ex: état NRP)
+    const searchFilterKeys = ['id_etat_final', 'date_debut', 'date_fin', 'date_champ', 'time_debut', 'time_fin', 'id_confirmateur', 'id_commercial', 'id_centre', 'nom', 'prenom', 'critere', 'critere_champ', 'cp', 'produit'];
+    const enableFicheSearch = searchFilterKeys.includes(key);
     setFilters(prev => ({
       ...prev,
       [key]: nextValue,
-      // Reset à la page 1 seulement si ce n'est pas un changement de page
+      ...(enableFicheSearch ? { fiche_search: true } : {}),
       page: key === 'page' ? value : 1
     }));
   };
