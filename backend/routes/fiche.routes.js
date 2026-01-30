@@ -879,7 +879,10 @@ router.get('/', authenticate, async (req, res) => {
         LIMIT 100) as id_etat_histo,
        decale.message as decale_message,
        decale.expediteur as decale_expediteur,
-       decale_etat.titre as etat_dec
+       decale_etat.titre as etat_dec,
+       u1.pseudo as confirmateur_pseudo,
+       u2.pseudo as confirmateur_2_pseudo,
+       u3.pseudo as confirmateur_3_pseudo
        ${qualifSelect}
        FROM fiches fiche
        LEFT JOIN cq_etat cq_e ON fiche.cq_etat = cq_e.id
@@ -887,6 +890,9 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN installateurs install ON fiche.ph3_installateur = install.id
        LEFT JOIN decalages decale ON fiche.id = decale.id_fiche
        LEFT JOIN etat_decalage decale_etat ON decale.id_etat = decale_etat.id
+       LEFT JOIN utilisateurs u1 ON fiche.id_confirmateur = u1.id
+       LEFT JOIN utilisateurs u2 ON fiche.id_confirmateur_2 = u2.id
+       LEFT JOIN utilisateurs u3 ON fiche.id_confirmateur_3 = u3.id
        ${qualifJoin}
        ${whereClause}
        GROUP BY fiche.id

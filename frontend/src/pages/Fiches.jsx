@@ -375,21 +375,22 @@ const Fiches = () => {
   };
 
   // Obtenir les confirmateurs formatés (avec confirmateur 2 et 3 si existent)
+  // Priorité aux pseudos renvoyés par l'API (pour RE Confirmation : afficher le nom même si hors équipe)
   const getConfirmateursFormatted = (fiche) => {
     const confirmateursList = [];
     
     if (fiche.id_confirmateur) {
-      const conf1 = getUserName(fiche.id_confirmateur);
+      const conf1 = fiche.confirmateur_pseudo || getUserName(fiche.id_confirmateur);
       if (conf1) confirmateursList.push(conf1);
     }
     
     if (fiche.id_confirmateur_2) {
-      const conf2 = getUserName(fiche.id_confirmateur_2);
+      const conf2 = fiche.confirmateur_2_pseudo || getUserName(fiche.id_confirmateur_2);
       if (conf2) confirmateursList.push(conf2);
     }
     
     if (fiche.id_confirmateur_3) {
-      const conf3 = getUserName(fiche.id_confirmateur_3);
+      const conf3 = fiche.confirmateur_3_pseudo || getUserName(fiche.id_confirmateur_3);
       if (conf3) confirmateursList.push(conf3);
     }
     
