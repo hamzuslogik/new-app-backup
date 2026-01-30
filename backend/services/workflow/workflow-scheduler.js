@@ -7,90 +7,67 @@ const { executeWorkflow } = require('./workflow-executor');
  */
 
 let schedulerInterval = null;
-
-/** Parse config du trigger (string JSON ou objet selon le driver MySQL) */
-function parseTriggerConfig(config) {
-  if (config == null) return {};
-  if (typeof config === 'object') return config;
-  try {
-    return typeof config === 'string' && config.trim() ? JSON.parse(config) : {};
-  } catch (e) {
-    console.error('[WORKFLOW SCHEDULER] Erreur parse config trigger:', e.message);
-    return {};
-  }
-}
 let isRunning = false;
 const lastExecutionTimes = new Map(); // Pour éviter les exécutions multiples
 
 /**
  * Parse une expression cron simple et vérifie si elle correspond à maintenant
- * Formats supportés:
- * - 5 champs: minute hour day month weekday
- * - 6 champs: second minute hour day month weekday (secondes en premier)
+ * Format supporté: minute hour day month weekday
  * Exemples:
  * - "0 * * * *" : toutes les heures à minute 0
  * - "0 9 * * *" : tous les jours à 9h00
  * - "0 9 * * 1" : tous les lundis à 9h00
- * - "*/15 * * * *" ou "0/15 * * * *" : toutes les 15 minutes
+ * - Pour un intervalle: utiliser "X/Y" où X est le début et Y l'intervalle
+ *   Exemple: toutes les 15 minutes = "0/15 * * * *" ou utiliser le format avec astérisque
  */
 function shouldRunNow(cronExpression) {
   try {
     const now = new Date();
-    const rawParts = cronExpression.trim().split(/\s+/).filter(Boolean);
+    const parts = cronExpression.trim().split(/\s+/);
     
-    if (rawParts.length !== 5 && rawParts.length !== 6) {
-      console.error('[WORKFLOW SCHEDULER] Expression cron invalide (5 ou 6 parties attendues):', cronExpression);
+    if (parts.length !== 5) {
+      console.error('[WORKFLOW SCHEDULER] Expression cron invalide (doit avoir 5 parties):', cronExpression);
       return false;
     }
     
-    // 6 parties = second minute hour day month weekday ; 5 parties = minute hour day month weekday
-    const [minute, hour, day, month, weekday] = rawParts.length === 6 ? rawParts.slice(1) : rawParts;
-    const secondPart = rawParts.length === 6 ? rawParts[0] : '0';
+    const [minute, hour, day, month, weekday] = parts;
     
+    // Vérifier chaque partie
     const checkPart = (value, current, max) => {
       if (value === '*') return true;
       
-      // Intervalles */Y
+      // Gérer les intervalles (ex: */15 pour toutes les 15 minutes)
       if (value.startsWith('*/')) {
-        const interval = parseInt(value.substring(2), 10);
+        const interval = parseInt(value.substring(2));
         if (isNaN(interval) || interval <= 0) return false;
         return current % interval === 0;
       }
       
-      // Intervalles X/Y (ex: 0/15 = toutes les 15 à partir de 0)
-      if (value.includes('/')) {
-        const [startStr, intervalStr] = value.split('/');
-        const start = parseInt(startStr.trim(), 10);
-        const interval = parseInt(intervalStr.trim(), 10);
-        if (isNaN(start) || isNaN(interval) || interval <= 0) return false;
-        return (current - start) % interval === 0 && current >= start;
-      }
-      
-      // Plages (ex: 0-5)
-      if (value.includes('-') && !value.startsWith('-')) {
-        const [start, end] = value.split('-').map(v => parseInt(v.trim(), 10));
+      // Gérer les plages (ex: 0-5 pour 0 à 5)
+      if (value.includes('-')) {
+        const [start, end] = value.split('-').map(v => parseInt(v));
         if (isNaN(start) || isNaN(end)) return false;
         return current >= start && current <= end;
       }
       
-      // Listes (ex: 1,3,5)
+      // Gérer les listes (ex: 1,3,5 pour 1, 3 ou 5)
       if (value.includes(',')) {
-        const values = value.split(',').map(v => parseInt(v.trim(), 10));
+        const values = value.split(',').map(v => parseInt(v.trim()));
         return values.some(v => !isNaN(v) && v === current);
       }
       
-      const numValue = parseInt(value, 10);
+      // Valeur unique
+      const numValue = parseInt(value);
       return !isNaN(numValue) && numValue === current;
     };
     
-    const currentSecond = now.getSeconds();
     const currentMinute = now.getMinutes();
     const currentHour = now.getHours();
     const currentDay = now.getDate();
-    const currentMonth = now.getMonth() + 1;
-    const currentWeekday = now.getDay();
+    const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+    const currentWeekday = now.getDay(); // 0 = Sunday, 6 = Saturday
     
-    if (rawParts.length === 6 && !checkPart(secondPart, currentSecond, 59)) return false;
+    // Vérifier chaque partie de l'expression cron
     if (!checkPart(minute, currentMinute, 59)) return false;
     if (!checkPart(hour, currentHour, 23)) return false;
     if (!checkPart(day, currentDay, 31)) return false;
@@ -138,11 +115,11 @@ async function checkAndExecuteScheduledWorkflows() {
         );
         
         for (const trigger of triggers) {
-          const config = parseTriggerConfig(trigger.config);
-          const cronExpression = config && config.cron ? String(config.cron).trim() : null;
+          const config = trigger.config ? JSON.parse(trigger.config) : {};
+          const cronExpression = config.cron;
           
           if (!cronExpression) {
-            console.log(`[WORKFLOW SCHEDULER] Workflow ${workflow.id}: pas d'expression cron définie (config: ${typeof trigger.config})`);
+            console.log(`[WORKFLOW SCHEDULER] Workflow ${workflow.id}: pas d'expression cron définie`);
             continue;
           }
           
