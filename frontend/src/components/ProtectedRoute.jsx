@@ -40,8 +40,8 @@ const ProtectedRoute = ({ children, permission, excludeFunctions = [], allowFunc
   }
 
   // Si une permission est requise, vérifier qu'elle est accordée
-  // Admin (1, 2, 7) et Backoffice (11) ont accès à toutes les pages de permissions et gestion
-  const isAdminOrBackoffice = [1, 2, 7, 11].includes(user?.fonction);
+  // Admin (1, 7) et Backoffice (11) ont accès aux pages permissions/gestion ; Superviseur qualification (2) uniquement si permission accordée
+  const isAdminOrBackoffice = [1, 7, 11].includes(user?.fonction);
   const isPermissionsOrManagementPage = permission === 'config_permissions' || permission === 'management_view';
   // allowFunctions : accès direct pour certains rôles (ex. Mes rappels pour Confirmateur 6, RE Confirmation 14, RP Confirmation 13)
   const isAllowedByFunction = allowFunctions.length > 0 && user?.fonction != null && allowFunctions.includes(Number(user.fonction));

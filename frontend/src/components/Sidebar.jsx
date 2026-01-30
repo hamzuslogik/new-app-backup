@@ -294,11 +294,9 @@ const Sidebar = ({ collapsed }) => {
       icon: FaCog,
       permission: 'management_view',
       visible: true,
-      // Visible pour Admin (1, 2, 7) et Backoffice (11)
+      // Visible pour Admin (1, 7) et Backoffice (11) ; Superviseur qualification (2) uniquement si permission accordée
       customCheck: (item, user, hasPermission) => {
-        // Si Admin ou Backoffice, toujours visible
-        if ([1, 2, 7, 11].includes(user?.fonction)) return true;
-        // Sinon, vérifier la permission
+        if ([1, 7, 11].includes(user?.fonction)) return true;
         return hasPermission(item.permission);
       },
     },
@@ -308,11 +306,8 @@ const Sidebar = ({ collapsed }) => {
       icon: FaBullhorn,
       permission: 'management_view',
       visible: true,
-      // Visible pour Admin (1, 2, 7) et Backoffice (11)
       customCheck: (item, user, hasPermission) => {
-        // Si Admin ou Backoffice, toujours visible
-        if ([1, 2, 7, 11].includes(user?.fonction)) return true;
-        // Sinon, vérifier la permission
+        if ([1, 7, 11].includes(user?.fonction)) return true;
         return hasPermission(item.permission);
       },
     },
@@ -322,11 +317,8 @@ const Sidebar = ({ collapsed }) => {
       icon: FaShieldAlt,
       permission: 'config_permissions',
       visible: true,
-      // Visible pour Admin (1, 2, 7) et Backoffice (11)
       customCheck: (item, user, hasPermission) => {
-        // Si Admin ou Backoffice, toujours visible
-        if ([1, 2, 7, 11].includes(user?.fonction)) return true;
-        // Sinon, vérifier la permission
+        if ([1, 7, 11].includes(user?.fonction)) return true;
         return hasPermission(item.permission);
       },
     },
