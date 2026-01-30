@@ -3145,8 +3145,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     </div>
                   )}
                   
-                  {/* Section Historique - Pliable */}
-                  {fiche.historique && fiche.historique.length > 0 && (
+                  {/* Section Historique - Pliable (masquée en session commercial) */}
+                  {user?.fonction !== 5 && fiche.historique && fiche.historique.length > 0 && (
                     <>
                       <div 
                         className="section-title" 
