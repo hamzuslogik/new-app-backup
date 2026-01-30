@@ -1151,7 +1151,7 @@ const Dashboard = () => {
           )}
         </div>
 
-        {(isLoading || isSearching) && fiches.length === 0 ? (
+        {(isLoading || isSearching || isFetching) && fiches.length === 0 ? (
           <div className="dashboard-loading">
             <div className="spinner"></div>
             <p>Chargement des résultats de recherche...</p>
@@ -1161,7 +1161,7 @@ const Dashboard = () => {
               ))}
             </div>
           </div>
-        ) : fiches.length === 0 ? (
+        ) : !isLoading && !isFetching && !isSearching && fiches.length === 0 ? (
           <div className="no-results">
             <p>Aucune fiche trouvée{debouncedQuickSearch ? ` pour "${debouncedQuickSearch}"` : ''}</p>
           </div>
