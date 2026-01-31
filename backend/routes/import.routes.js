@@ -1061,13 +1061,41 @@ const insertFiche = async (contact, mapping, userId, idCentre, produitId = null)
         }
         
         // Convertir les valeurs numériques (après nettoyage des téléphones)
-        if (dbField.includes('id_') || dbField === 'produit' || dbField === 'etude' || dbField === 'archive' || 
-            dbField === 'nb_pieces' || dbField === 'annee_systeme_chauffage') {
+        const intFields = ['produit', 'etude', 'archive', 'nb_pieces', 'nb_pans', 'annee_systeme_chauffage',
+          'ko', 'hc', 'active', 'valider', 'cq_etat', 'cq_dossier', 'ph3_installateur', 'nbr_annee_finance'];
+        if (dbField.includes('id_') || intFields.includes(dbField)) {
           if (value !== '' && value !== 'null' && value !== 'undefined' && value !== 'N/A') {
             value = parseInt(value);
             if (isNaN(value)) {
               value = null;
             }
+          } else {
+            value = null;
+          }
+        }
+        
+        // Champs décimaux (ph3_prix, ph3_bonus_30, ph3_mensualite)
+        if (dbField === 'ph3_prix' || dbField === 'ph3_bonus_30' || dbField === 'ph3_mensualite') {
+          if (value !== '' && value !== 'null' && value !== 'undefined' && value !== 'N/A') {
+            value = parseFloat(String(value).replace(',', '.'));
+            if (isNaN(value)) value = null;
+          } else {
+            value = null;
+          }
+        }
+        
+        // Colonnes datetime (date_*_time) : convertir chaîne -> format MySQL datetime
+        if (dbField.includes('date_') && dbField.endsWith('_time')) {
+          if (value && typeof value === 'string' && value !== '' && value !== 'null' && value !== 'undefined') {
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              value = date.toISOString().slice(0, 19).replace('T', ' ');
+            } else {
+              value = null;
+            }
+          } else if (value && typeof value === 'number') {
+            const date = new Date(value * 1000);
+            value = date.toISOString().slice(0, 19).replace('T', ' ');
           } else {
             value = null;
           }
@@ -1221,6 +1249,10 @@ const insertFiche = async (contact, mapping, userId, idCentre, produitId = null)
     throw new Error(errorMessage);
   }
   
+  // Ne jamais insérer id ni hash (id = auto, hash = calculé après INSERT)
+  delete ficheData.id;
+  delete ficheData.hash;
+  
   // Construire et exécuter la requête
   const fields = Object.keys(ficheData);
   const values = fields.map(field => ficheData[field]);
@@ -1361,13 +1393,13 @@ router.post('/preview', authenticate, checkPermissionCode('fiches_create'), uplo
     
     console.log('Colonnes détectées dans le fichier:', fileColumns);
     
-    // Récupérer les champs disponibles de la table fiches
+    // Récupérer les champs disponibles de la table fiches (exclure id, hash, colonnes auto / non importables)
     const ficheFields = await query(`
       SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT
       FROM INFORMATION_SCHEMA.COLUMNS
       WHERE TABLE_SCHEMA = SCHEMA()
       AND TABLE_NAME = 'fiches'
-      AND COLUMN_NAME NOT IN ('id', 'date_insert', 'date_insert_time', 'date_modif', 'date_modif_time', 'archive')
+      AND COLUMN_NAME NOT IN ('id', 'hash', 'date_insert', 'date_insert_time', 'date_modif', 'date_modif_time', 'archive')
       ORDER BY ORDINAL_POSITION
     `);
     
