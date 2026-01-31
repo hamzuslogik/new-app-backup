@@ -8,6 +8,16 @@ import axios from 'axios';
 import './ImportMasse.css';
 
 const SESSION_STORAGE_JOB_KEY = 'import_masse_job_id';
+const SESSION_STORAGE_RESULT_KEY = 'import_masse_last_result';
+
+function getStoredImportResult() {
+  try {
+    const s = sessionStorage.getItem(SESSION_STORAGE_RESULT_KEY);
+    return s ? JSON.parse(s) : null;
+  } catch {
+    return null;
+  }
+}
 
 // Construit l'objet "résultat" attendu par l'UI à partir de la réponse progression
 function progressToResult(data) {
@@ -32,7 +42,7 @@ const ImportMasse = () => {
   const [fileColumns, setFileColumns] = useState([]);
   const [dbFields, setDbFields] = useState([]);
   const [tempFile, setTempFile] = useState(null);
-  const [importResult, setImportResult] = useState(null);
+  const [importResult, setImportResult] = useState(() => getStoredImportResult());
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedCentre, setSelectedCentre] = useState(user?.centre || '');
   const [selectedProduit, setSelectedProduit] = useState('');
@@ -79,13 +89,19 @@ const ImportMasse = () => {
     }
   }, [activeJobId, progressError, progressErr]);
 
-  // Quand le job est terminé (completed / cancelled / failed), afficher le résultat et nettoyer
+  // Quand le job est terminé (completed / cancelled / failed), afficher le résultat, le persister et nettoyer
   useEffect(() => {
     if (!activeJobId || !progressData) return;
     const status = progressData.status;
     if (status !== 'completed' && status !== 'cancelled' && status !== 'failed') return;
 
-    setImportResult(progressToResult(progressData));
+    const result = progressToResult(progressData);
+    setImportResult(result);
+    try {
+      sessionStorage.setItem(SESSION_STORAGE_RESULT_KEY, JSON.stringify(result));
+    } catch (e) {
+      console.warn('Impossible de sauvegarder le résultat d\'import', e);
+    }
     sessionStorage.removeItem(SESSION_STORAGE_JOB_KEY);
     setActiveJobId(null);
     setIsProcessing(false);
@@ -260,6 +276,7 @@ const ImportMasse = () => {
     setIsProcessing(false);
     setActiveJobId(null);
     sessionStorage.removeItem(SESSION_STORAGE_JOB_KEY);
+    sessionStorage.removeItem(SESSION_STORAGE_RESULT_KEY);
     setSelectedCentre(user?.centre || '');
     setSelectedProduit('');
   };
