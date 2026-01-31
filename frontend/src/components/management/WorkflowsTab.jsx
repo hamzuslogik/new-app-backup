@@ -759,8 +759,51 @@ const WorkflowsTab = () => {
                             required
                           />
                         </div>
+
+                        <div className="form-group" style={{ marginTop: '16px', padding: '10px', background: '#f5f5f5', borderRadius: '6px' }}>
+                          <strong>Destinataires</strong>
+                          <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#555' }}>
+                            Choisir <strong>un utilisateur</strong>, <strong>plusieurs utilisateurs</strong> et/ou <strong>une ou plusieurs fonctions</strong>. Si au moins un destinataire est choisi ci-dessous, il remplace l’option « Rôle sur la fiche ».
+                          </p>
+                        </div>
+
                         <div className="form-group">
-                          <label>Destinataire (si aucune fonction/utilisateur ci-dessous)</label>
+                          <label>Un ou plusieurs utilisateurs</label>
+                          <select
+                            multiple
+                            value={Array.isArray(action.config?.destination_utilisateurs) ? action.config.destination_utilisateurs.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
+                              updateAction(index, 'config', { ...action.config, destination_utilisateurs: selected.length > 0 ? selected : null });
+                            }}
+                            size={6}
+                          >
+                            {utilisateursData?.map(u => (
+                              <option key={u.id} value={u.id}>{u.pseudo || u.login} — {u.nom} {u.prenom}</option>
+                            ))}
+                          </select>
+                          <small>Un utilisateur = sélectionner une ligne. Plusieurs = Ctrl/Cmd + clic. Peut être combiné avec les fonctions.</small>
+                        </div>
+                        <div className="form-group">
+                          <label>Une ou plusieurs fonctions</label>
+                          <select
+                            multiple
+                            value={Array.isArray(action.config?.destination_fonctions) ? action.config.destination_fonctions.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
+                              updateAction(index, 'config', { ...action.config, destination_fonctions: selected.length > 0 ? selected : null });
+                            }}
+                            size={5}
+                          >
+                            {fonctionsData?.map(f => (
+                              <option key={f.id} value={f.id}>{f.id} — {f.titre}</option>
+                            ))}
+                          </select>
+                          <small>Envoi à tous les utilisateurs ayant cette fonction. Ctrl/Cmd pour multi-sélection.</small>
+                        </div>
+
+                        <div className="form-group">
+                          <label>Sinon : rôle sur la fiche ou tous les admins</label>
                           <select
                             value={action.config?.destination || ''}
                             onChange={(e) => updateAction(index, 'config', { ...action.config, destination: e.target.value })}
@@ -775,41 +818,7 @@ const WorkflowsTab = () => {
                             <option value="id_commercial">Commercial principal ({'{fiche.id_commercial}'})</option>
                             <option value="id_commercial_2">Commercial secondaire ({'{fiche.id_commercial_2}'})</option>
                           </select>
-                          <small>Utilisé si « Fonctions ciblées » et « Utilisateurs ciblés » sont vides</small>
-                        </div>
-                        <div className="form-group">
-                          <label>Fonctions ciblées (optionnel)</label>
-                          <select
-                            multiple
-                            value={Array.isArray(action.config?.destination_fonctions) ? action.config.destination_fonctions.map(String) : []}
-                            onChange={(e) => {
-                              const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
-                              updateAction(index, 'config', { ...action.config, destination_fonctions: selected.length > 0 ? selected : null });
-                            }}
-                            size={4}
-                          >
-                            {fonctionsData?.map(f => (
-                              <option key={f.id} value={f.id}>{f.id} - {f.titre}</option>
-                            ))}
-                          </select>
-                          <small>Envoyer à tous les utilisateurs de ces fonctions. Ctrl/Cmd pour multi-sélection.</small>
-                        </div>
-                        <div className="form-group">
-                          <label>Utilisateurs ciblés (optionnel)</label>
-                          <select
-                            multiple
-                            value={Array.isArray(action.config?.destination_utilisateurs) ? action.config.destination_utilisateurs.map(String) : []}
-                            onChange={(e) => {
-                              const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
-                              updateAction(index, 'config', { ...action.config, destination_utilisateurs: selected.length > 0 ? selected : null });
-                            }}
-                            size={5}
-                          >
-                            {utilisateursData?.map(u => (
-                              <option key={u.id} value={u.id}>{u.pseudo || u.login} ({u.nom} {u.prenom})</option>
-                            ))}
-                          </select>
-                          <small>Envoyer à ces utilisateurs. Peut être combiné avec les fonctions.</small>
+                          <small>Utilisé uniquement si aucun utilisateur ni fonction n’est sélectionné ci-dessus.</small>
                         </div>
                         <div className="form-group">
                           <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
