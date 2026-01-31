@@ -20,7 +20,7 @@ const Header = () => {
   const [soundEnabled, setSoundEnabled] = useLocalStorage('notification-sound-enabled', true);
   const audioContextRef = useRef(null);
 
-  // Récupérer les notifications (pour les admins, backoffice, confirmateurs et RE Confirmation)
+  // Récupérer les notifications (admins, backoffice, confirmateurs, RE Confirmation, commerciaux)
   const { data: notificationsData } = useQuery(
     'notifications',
     async () => {
@@ -28,7 +28,7 @@ const Header = () => {
       return res.data.data || [];
     },
     {
-      enabled: user && ([1, 2, 7, 11].includes(user.fonction) || user.fonction === 6 || user.fonction === 14),
+      enabled: !!user,
       refetchInterval: 20000, // Rafraîchir toutes les 20 secondes
     }
   );
@@ -149,7 +149,8 @@ const Header = () => {
   const isBackoffice = user && (user.fonction === 11);
   const isConfirmateur = user && (user.fonction === 6);
   const isREConfirmation = user && (user.fonction === 14);
-  const canSeeNotifications = isAdmin || isBackoffice || isConfirmateur || isREConfirmation;
+  const isCommercial = user && (user.fonction === 5);
+  const canSeeNotifications = isAdmin || isBackoffice || isConfirmateur || isREConfirmation || isCommercial;
   // Afficher le badge pour tous les utilisateurs qui ont des notifications non lues
   const shouldShowBadge = unreadCount > 0;
 
