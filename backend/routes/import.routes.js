@@ -13,6 +13,14 @@ const { query, queryOne } = require('../config/database');
 // Clé secrète pour encoder les IDs (doit correspondre à celle dans fiche.routes.js)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
 
+// Store des jobs d'import en cours (progression visible même après navigation)
+const importJobs = new Map();
+const IMPORT_JOB_TTL_MS = 60 * 60 * 1000; // 1h puis suppression du job
+
+function generateJobId() {
+  return crypto.randomBytes(8).toString('hex');
+}
+
 // Fonction pour encoder un ID en hash (identique à celle dans fiche.routes.js)
 const encodeFicheId = (id) => {
   if (!id) return null;
@@ -1460,340 +1468,166 @@ router.post('/preview', authenticate, checkPermissionCode('fiches_create'), uplo
   }
 });
 
-// POST /api/import/process
-// Traiter l'import avec le mapping fourni
+// Exécuter l'import en arrière-plan (mise à jour de la progression dans importJobs)
+async function runImportJob(jobId, params) {
+  const { validContacts, mapping, userId, centreId, produit, tempFilePath, tempFile, data, duplicates, fileColumns } = params;
+  const job = importJobs.get(jobId);
+  if (!job || job.status !== 'running') return;
+
+  const startTime = Date.now();
+  resetInsertFicheLog();
+
+  for (let i = 0; i < validContacts.length; i++) {
+    if (job.cancelRequested) {
+      job.status = 'cancelled';
+      job.cancelled = true;
+      console.log('⏹ Import annulé par l\'utilisateur');
+      break;
+    }
+    const contact = validContacts[i];
+    try {
+      await insertFiche(contact, mapping, userId, centreId, produit);
+      job.inserted++;
+      job.processed = i + 1;
+      const progressInterval = validContacts.length > 100 ? 100 : 10;
+      if ((i + 1) % progressInterval === 0 || i === validContacts.length - 1) {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`📊 [Job ${jobId}] Progression: ${i + 1}/${validContacts.length} (${job.inserted} insérés, ${job.errorsList.length} erreurs)`);
+      }
+    } catch (error) {
+      console.error(`❌ Erreur lors de l'insertion du contact ${i + 1}:`, error.message);
+      let contactInfo = { nom: '', prenom: '', tel: '', cp: '', ville: '' };
+      if (mapping.nom) { const foundKey = findKeyInObject(contact, mapping.nom); contactInfo.nom = foundKey ? (contact[foundKey] || '') : (contact[mapping.nom] || ''); }
+      if (mapping.prenom) { const foundKey = findKeyInObject(contact, mapping.prenom); contactInfo.prenom = foundKey ? (contact[foundKey] || '') : (contact[mapping.prenom] || ''); }
+      if (mapping.tel) { const foundKey = findKeyInObject(contact, mapping.tel); contactInfo.tel = foundKey ? (contact[foundKey] || '') : (contact[mapping.tel] || ''); } else if (mapping.gsm1) { const foundKey = findKeyInObject(contact, mapping.gsm1); contactInfo.tel = foundKey ? (contact[foundKey] || '') : (contact[mapping.gsm1] || ''); }
+      if (mapping.cp) { const foundKey = findKeyInObject(contact, mapping.cp); contactInfo.cp = foundKey ? (contact[foundKey] || '') : (contact[mapping.cp] || ''); }
+      if (mapping.ville) { const foundKey = findKeyInObject(contact, mapping.ville); contactInfo.ville = foundKey ? (contact[foundKey] || '') : (contact[mapping.ville] || ''); }
+      if (error.message.includes('Code postal invalide')) {
+        job.invalidPostalCodes.push({ ...contactInfo, contact, reason: error.message, reasonType: 'invalid_postal_code' });
+      } else {
+        job.otherErrors.push({ ...contactInfo, contact, reason: error.message, reasonType: 'other_error' });
+      }
+      job.errorsList.push({ index: i + 1, contact: contactInfo, error: error.message, reasonType: error.message.includes('Code postal invalide') ? 'invalid_postal_code' : 'other_error' });
+      job.processed = i + 1;
+    }
+  }
+
+  if (job.status === 'running') job.status = 'completed';
+  job.finishedAt = Date.now();
+  const totalTime = ((job.finishedAt - job.startTime) / 1000).toFixed(1);
+  console.log(`\n✅ [Job ${jobId}] Terminé: ${job.inserted} insérés, ${job.errorsList.length} erreurs, ${totalTime}s`);
+
+  try {
+    if (fs.existsSync(tempFilePath)) { fs.unlinkSync(tempFilePath); console.log(`✓ Fichier temporaire supprimé: ${tempFile}`); }
+  } catch (cleanupError) {
+    console.error('Erreur suppression fichier temporaire:', cleanupError);
+  }
+
+  const notInserted = [];
+  (job.duplicatesList || []).forEach(dup => {
+    notInserted.push({ nom: dup._extractedNom || dup.nom || '', prenom: dup._extractedPrenom || dup.prenom || '', tel: dup._extractedTel || dup.tel || dup.gsm1 || dup.gsm2 || '', cp: dup._extractedCp || dup.cp || '', ville: dup._extractedVille || dup.ville || '', raison: dup.reason || 'Doublon', typeRaison: dup.reasonType || 'duplicate', ficheExistante: dup.existingFiche || null });
+  });
+  job.invalidPostalCodes.forEach(err => {
+    notInserted.push({ nom: err.nom || '', prenom: err.prenom || '', tel: err.tel || '', cp: err.cp || '', ville: err.ville || '', raison: err.reason || 'Code postal invalide', typeRaison: err.reasonType || 'invalid_postal_code', ficheExistante: null });
+  });
+  job.otherErrors.forEach(err => {
+    notInserted.push({ nom: err.nom || '', prenom: err.prenom || '', tel: err.tel || '', cp: err.cp || '', ville: err.ville || '', raison: err.reason || 'Erreur lors de l\'insertion', typeRaison: err.reasonType || 'other_error', ficheExistante: null });
+  });
+  job.notInserted = { total: notInserted.length, list: notInserted };
+}
+
+// POST /api/import/process — Démarre l'import et retourne immédiatement un jobId (l'import continue en arrière-plan)
 router.post('/process', authenticate, checkPermissionCode('fiches_create'), async (req, res) => {
   try {
     const { mapping, tempFile, skipDuplicates, id_centre, produit } = req.body;
-    
+
     if (!mapping || !tempFile) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mapping et fichier temporaire requis'
-      });
+      return res.status(400).json({ success: false, message: 'Mapping et fichier temporaire requis' });
     }
-
-    // Vérifier que le centre est fourni
     const centreId = id_centre || req.user.centre;
-    if (!centreId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Centre requis'
-      });
-    }
+    if (!centreId) return res.status(400).json({ success: false, message: 'Centre requis' });
+    if (!produit) return res.status(400).json({ success: false, message: 'Produit requis' });
 
-    // Vérifier que le produit est fourni
-    if (!produit) {
-      return res.status(400).json({
-        success: false,
-        message: 'Produit requis'
-      });
-    }
-
-    // Vérifier que le centre existe et est actif
     const centre = await queryOne('SELECT id, etat FROM centres WHERE id = ?', [centreId]);
-    if (!centre || centre.etat === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Centre invalide ou désactivé'
-      });
-    }
-
-    // Vérifier que le produit existe
+    if (!centre || centre.etat === 0) return res.status(400).json({ success: false, message: 'Centre invalide ou désactivé' });
     const produitData = await queryOne('SELECT id FROM produits WHERE id = ?', [parseInt(produit)]);
-    if (!produitData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Produit invalide'
-      });
-    }
+    if (!produitData) return res.status(400).json({ success: false, message: 'Produit invalide' });
 
-    // Charger les données du fichier temporaire
     const tempFilePath = path.join(__dirname, '../../uploads', tempFile);
-    if (!fs.existsSync(tempFilePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Fichier temporaire non trouvé'
-      });
-    }
+    if (!fs.existsSync(tempFilePath)) return res.status(404).json({ success: false, message: 'Fichier temporaire non trouvé' });
 
-    // Le fichier temporaire est maintenant en format JSONL (converti automatiquement)
     let data = [];
     if (tempFile.endsWith('.jsonl')) {
-      // Parser le fichier JSONL
       data = parseJSONL(tempFilePath);
-      console.log(`✓ Fichier JSONL chargé: ${data.length} lignes`);
     } else {
-      // Compatibilité avec les anciens fichiers JSON
       data = JSON.parse(fs.readFileSync(tempFilePath, 'utf8'));
-      console.log(`✓ Fichier JSON chargé (ancien format): ${data.length} lignes`);
     }
-    
-    // Récupérer les colonnes du fichier depuis le mapping (pour détecter les en-têtes)
+
     const fileColumns = Object.values(mapping).filter(col => col && col !== '');
-    
-    // Filtrer les lignes vides ou invalides avant de vérifier les doublons
-    // Les données viennent déjà du fichier temporaire qui a été filtré lors de la prévisualisation
-    // Mais on refait un filtrage léger pour s'assurer
     const filteredData = data.filter((contact, index) => {
-      // Ignorer les lignes complètement vides
-      const hasAnyValue = Object.values(contact).some(v => {
-        const val = String(v || '').trim();
-        return val !== '' && val !== 'null' && val !== 'undefined';
-      });
-      
-      if (!hasAnyValue) {
-        if (index < 3) {
-          console.log(`Ligne ${index} ignorée lors du process: complètement vide`);
-        }
-        return false;
-      }
-      
-      // Pour les fichiers JSON/JSONL, on ne filtre pas les en-têtes car ils n'en ont généralement pas
-      // On vérifie seulement si c'est un objet valide
-      if (typeof contact !== 'object' || contact === null || Array.isArray(contact)) {
-        if (index < 3) {
-          console.log(`Ligne ${index} ignorée: n'est pas un objet valide`);
-        }
-        return false;
-      }
-      
-      // Pour CSV/Excel, détecter si c'est une ligne d'en-têtes (mais moins agressif)
+      const hasAnyValue = Object.values(contact).some(v => { const val = String(v || '').trim(); return val !== '' && val !== 'null' && val !== 'undefined'; });
+      if (!hasAnyValue) return false;
+      if (typeof contact !== 'object' || contact === null || Array.isArray(contact)) return false;
       const keys = Object.keys(contact);
-      if (keys.length < 2) {
-        // Si moins de 2 clés, probablement pas une ligne valide
-        return false;
-      }
-      
-      // Détecter les en-têtes seulement si on a au moins 3 colonnes et que 90%+ correspondent
-      // (plus strict pour éviter les faux positifs)
+      if (keys.length < 2) return false;
       if (keys.length >= 3) {
         let matchingKeys = 0;
         for (const key of keys) {
           const value = String(contact[key] || '').trim();
           const normalizedKey = normalizeKey(key);
           const normalizedValue = normalizeKey(value);
-          // Si la valeur correspond exactement à la clé (après normalisation), c'est probablement un en-tête
-          if (normalizedValue === normalizedKey || value === key) {
-            matchingKeys++;
-          }
+          if (normalizedValue === normalizedKey || value === key) matchingKeys++;
         }
-        
-        // Si plus de 90% des valeurs correspondent aux clés ET qu'on a au moins 3 colonnes, c'est une ligne d'en-têtes
-        if (matchingKeys > keys.length * 0.9) {
-          if (index < 3) {
-            console.log(`Ligne ${index} détectée comme en-tête lors du process (${matchingKeys}/${keys.length} correspondances)`);
-          }
-          return false;
-        }
+        if (matchingKeys > keys.length * 0.9) return false;
       }
-      
       return true;
     });
-    
-    console.log(`Données filtrées: ${filteredData.length} lignes valides sur ${data.length} lignes totales`);
-    
-    // Vérifier les doublons si demandé
+
     let duplicates = [];
     let validContacts = filteredData;
-    
     if (!skipDuplicates) {
       const duplicateCheck = await checkDuplicates(validContacts, fileColumns);
       duplicates = duplicateCheck.duplicates;
       validContacts = duplicateCheck.validContacts;
-      console.log(`${duplicates.length} doublons détectés, ${validContacts.length} contacts valides à insérer`);
-    } else {
-      console.log('Vérification des doublons ignorée (skipDuplicates = true)');
     }
-    
-    // Réinitialiser le flag de log pour le premier contact
-    resetInsertFicheLog();
-    
-    // Détecter l'annulation par le client (fermeture de la connexion / AbortController)
-    let cancelled = false;
-    req.on('close', () => { cancelled = true; });
-    req.on('aborted', () => { cancelled = true; });
-    
-    // Log pour le premier contact avant insertion
-    if (validContacts.length > 0) {
-      console.log('\n=== PREMIER CONTACT AVANT INSERTION ===');
-      console.log('Contact:', JSON.stringify(validContacts[0], null, 2));
-      console.log('Mapping:', JSON.stringify(mapping, null, 2));
-      console.log('Clés du contact:', Object.keys(validContacts[0]));
-      console.log('=== FIN PREMIER CONTACT ===\n');
-    }
-    
-    // Insérer les contacts valides
-    console.log(`\n🚀 Début de l'insertion de ${validContacts.length} contacts dans la base de données...`);
-    let inserted = 0;
-    const errors = [];
-    const invalidPostalCodes = []; // Contacts avec code postal invalide
-    const otherErrors = []; // Autres erreurs
-    const startTime = Date.now();
-    
-    for (let i = 0; i < validContacts.length; i++) {
-      if (cancelled) {
-        console.log('⏹ Import annulé par le client');
-        break;
-      }
-      const contact = validContacts[i];
-      try {
-        await insertFiche(contact, mapping, req.user.id, centreId, produit);
-        inserted++;
-        
-        // Afficher la progression tous les 100 contacts (ou tous les 10 pour les petits imports)
-        const progressInterval = validContacts.length > 100 ? 100 : 10;
-        if ((i + 1) % progressInterval === 0 || i === validContacts.length - 1) {
-          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-          const rate = ((i + 1) / elapsed).toFixed(1);
-          const remaining = validContacts.length - (i + 1);
-          const estimatedTime = remaining > 0 ? ((remaining / rate) / 60).toFixed(1) : 0;
-          console.log(`📊 Progression: ${i + 1}/${validContacts.length} contacts insérés (${inserted} réussis, ${errors.length} erreurs) - ${rate} contacts/sec - Temps estimé restant: ${estimatedTime} min`);
-        }
-      } catch (error) {
-        console.error(`❌ Erreur lors de l'insertion du contact ${i + 1}:`, error.message);
-        
-        // Extraire les informations du contact pour l'affichage
-        let contactInfo = {
-          nom: '',
-          prenom: '',
-          tel: '',
-          cp: '',
-          ville: ''
-        };
-        
-        // Essayer de récupérer les infos via le mapping
-        if (mapping.nom) {
-          const foundKey = findKeyInObject(contact, mapping.nom);
-          contactInfo.nom = foundKey ? (contact[foundKey] || '') : (contact[mapping.nom] || '');
-        }
-        if (mapping.prenom) {
-          const foundKey = findKeyInObject(contact, mapping.prenom);
-          contactInfo.prenom = foundKey ? (contact[foundKey] || '') : (contact[mapping.prenom] || '');
-        }
-        if (mapping.tel) {
-          const foundKey = findKeyInObject(contact, mapping.tel);
-          contactInfo.tel = foundKey ? (contact[foundKey] || '') : (contact[mapping.tel] || '');
-        } else if (mapping.gsm1) {
-          const foundKey = findKeyInObject(contact, mapping.gsm1);
-          contactInfo.tel = foundKey ? (contact[foundKey] || '') : (contact[mapping.gsm1] || '');
-        }
-        if (mapping.cp) {
-          const foundKey = findKeyInObject(contact, mapping.cp);
-          contactInfo.cp = foundKey ? (contact[foundKey] || '') : (contact[mapping.cp] || '');
-        }
-        if (mapping.ville) {
-          const foundKey = findKeyInObject(contact, mapping.ville);
-          contactInfo.ville = foundKey ? (contact[foundKey] || '') : (contact[mapping.ville] || '');
-        }
-        
-        // Catégoriser les erreurs
-        if (error.message.includes('Code postal invalide')) {
-          invalidPostalCodes.push({
-            ...contactInfo,
-            contact: contact,
-            reason: error.message,
-            reasonType: 'invalid_postal_code'
-          });
-        } else {
-          otherErrors.push({
-            ...contactInfo,
-            contact: contact,
-            reason: error.message,
-            reasonType: 'other_error'
-          });
-        }
-        
-        errors.push({
-          index: i + 1,
-          contact: contactInfo,
-          error: error.message,
-          reasonType: error.message.includes('Code postal invalide') ? 'invalid_postal_code' : 'other_error'
-        });
-        
-        // Afficher aussi la progression en cas d'erreur pour montrer que ça avance
-        if ((i + 1) % 100 === 0 || i === validContacts.length - 1) {
-          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-          console.log(`📊 Progression: ${i + 1}/${validContacts.length} contacts traités (${inserted} réussis, ${errors.length} erreurs) - ${elapsed}s écoulés`);
-        }
-      }
-    }
-    
-    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`\n✅ Insertion terminée: ${inserted} contacts insérés, ${errors.length} erreurs, ${totalTime}s total`);
-    
-    // Supprimer le fichier temporaire
-    try {
-      fs.unlinkSync(tempFilePath);
-      console.log(`✓ Fichier temporaire supprimé: ${tempFile}`);
-    } catch (cleanupError) {
-      console.error('Erreur lors de la suppression du fichier temporaire:', cleanupError);
-    }
-    
-    // Préparer le tableau des contacts non insérés
-    const notInserted = [];
-    
-    // Ajouter les doublons
-    duplicates.forEach(dup => {
-      // Utiliser les valeurs extraites si disponibles, sinon chercher dans le contact original
-      notInserted.push({
-        nom: dup._extractedNom || dup.nom || '',
-        prenom: dup._extractedPrenom || dup.prenom || '',
-        tel: dup._extractedTel || dup.tel || dup.gsm1 || dup.gsm2 || '',
-        cp: dup._extractedCp || dup.cp || '',
-        ville: dup._extractedVille || dup.ville || '',
-        raison: dup.reason || 'Doublon',
-        typeRaison: dup.reasonType || 'duplicate',
-        ficheExistante: dup.existingFiche || null
+
+    const jobId = generateJobId();
+    const job = {
+      status: 'running',
+      cancelRequested: false,
+      cancelled: false,
+      inserted: 0,
+      processed: 0,
+      total: validContacts.length,
+      duplicates: duplicates.length,
+      duplicatesList: duplicates,
+      errorsList: [],
+      invalidPostalCodes: [],
+      otherErrors: [],
+      startTime: Date.now(),
+      userId: req.user.id
+    };
+    importJobs.set(jobId, job);
+
+    res.json({ success: true, jobId });
+
+    setImmediate(() => {
+      runImportJob(jobId, {
+        validContacts,
+        mapping,
+        userId: req.user.id,
+        centreId,
+        produit,
+        tempFilePath,
+        tempFile,
+        data,
+        duplicates,
+        fileColumns
+      }).catch(err => {
+        console.error(`[Job ${jobId}] Erreur:`, err);
+        const j = importJobs.get(jobId);
+        if (j) { j.status = 'failed'; j.error = err.message; }
       });
-    });
-    
-    // Ajouter les erreurs de code postal
-    invalidPostalCodes.forEach(err => {
-      notInserted.push({
-        nom: err.nom || '',
-        prenom: err.prenom || '',
-        tel: err.tel || '',
-        cp: err.cp || '',
-        ville: err.ville || '',
-        raison: err.reason || 'Code postal invalide',
-        typeRaison: err.reasonType || 'invalid_postal_code',
-        ficheExistante: null
-      });
-    });
-    
-    // Ajouter les autres erreurs
-    otherErrors.forEach(err => {
-      notInserted.push({
-        nom: err.nom || '',
-        prenom: err.prenom || '',
-        tel: err.tel || '',
-        cp: err.cp || '',
-        ville: err.ville || '',
-        raison: err.reason || 'Erreur lors de l\'insertion',
-        typeRaison: err.reasonType || 'other_error',
-        ficheExistante: null
-      });
-    });
-    
-    res.json({
-      success: true,
-      data: {
-        total: data.length,
-        inserted,
-        duplicates: duplicates.length,
-        duplicatesList: duplicates,
-        errors: errors.length,
-        errorsList: errors,
-        invalidPostalCodes: invalidPostalCodes.length,
-        otherErrors: otherErrors.length,
-        cancelled: cancelled,
-        // Nouveau tableau structuré des contacts non insérés
-        notInserted: {
-          total: notInserted.length,
-          list: notInserted
-        }
-      }
     });
   } catch (error) {
     console.error('❌ Erreur lors du traitement de l\'import:', error);
@@ -1817,6 +1651,55 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
+});
+
+// GET /api/import/progress/:jobId — Progression d'un import (affichage même après navigation)
+router.get('/progress/:jobId', authenticate, checkPermissionCode('fiches_create'), (req, res) => {
+  const { jobId } = req.params;
+  const job = importJobs.get(jobId);
+  if (!job) {
+    return res.status(404).json({ success: false, message: 'Job d\'import introuvable' });
+  }
+  if (job.userId !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'Accès refusé à ce job' });
+  }
+  const payload = {
+    status: job.status,
+    cancelled: job.cancelled || false,
+    inserted: job.inserted,
+    processed: job.processed,
+    total: job.total,
+    duplicates: job.duplicates,
+    errors: job.errorsList ? job.errorsList.length : 0,
+    startTime: job.startTime,
+    finishedAt: job.finishedAt,
+    error: job.error
+  };
+  if (job.status === 'completed' || job.status === 'cancelled' || job.status === 'failed') {
+    payload.duplicatesList = job.duplicatesList;
+    payload.errorsList = job.errorsList;
+    payload.invalidPostalCodes = job.invalidPostalCodes;
+    payload.otherErrors = job.otherErrors;
+    payload.notInserted = job.notInserted;
+  }
+  res.json({ success: true, data: payload });
+});
+
+// POST /api/import/cancel/:jobId — Annuler un import en cours
+router.post('/cancel/:jobId', authenticate, checkPermissionCode('fiches_create'), (req, res) => {
+  const { jobId } = req.params;
+  const job = importJobs.get(jobId);
+  if (!job) {
+    return res.status(404).json({ success: false, message: 'Job d\'import introuvable' });
+  }
+  if (job.userId !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'Accès refusé à ce job' });
+  }
+  if (job.status !== 'running') {
+    return res.json({ success: true, message: 'L\'import est déjà terminé' });
+  }
+  job.cancelRequested = true;
+  res.json({ success: true, message: 'Annulation demandée' });
 });
 
 // POST /api/import/diagnose

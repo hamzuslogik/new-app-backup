@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -6,6 +6,23 @@ import { FaUpload, FaFileExcel, FaFileCsv, FaCheck, FaTimes, FaDownload, FaSpinn
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import './ImportMasse.css';
+
+const SESSION_STORAGE_JOB_KEY = 'import_masse_job_id';
+
+// Construit l'objet "résultat" attendu par l'UI à partir de la réponse progression
+function progressToResult(data) {
+  if (!data) return null;
+  return {
+    inserted: data.inserted ?? 0,
+    duplicates: data.duplicates ?? 0,
+    errors: data.errors ?? (data.errorsList?.length ?? 0),
+    total: data.total ?? 0,
+    duplicatesList: data.duplicatesList ?? [],
+    errorsList: data.errorsList ?? [],
+    notInserted: data.notInserted ?? { total: 0, list: [] },
+    cancelled: data.cancelled ?? false
+  };
+}
 
 const ImportMasse = () => {
   const { user, hasPermission } = useAuth();
@@ -19,6 +36,7 @@ const ImportMasse = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedCentre, setSelectedCentre] = useState(user?.centre || '');
   const [selectedProduit, setSelectedProduit] = useState('');
+  const [activeJobId, setActiveJobId] = useState(() => sessionStorage.getItem(SESSION_STORAGE_JOB_KEY) || null);
   const abortControllerRef = useRef(null);
 
   // Récupérer la liste des centres
@@ -32,6 +50,57 @@ const ImportMasse = () => {
     const res = await api.get('/management/produits');
     return res.data.data || [];
   });
+
+  // Polling de la progression d'un import en cours (persisté via sessionStorage)
+  const { data: progressResponse, isError: progressError, error: progressErr } = useQuery(
+    ['importProgress', activeJobId],
+    async () => {
+      const res = await api.get(`/import/progress/${activeJobId}`);
+      return res.data;
+    },
+    {
+      enabled: !!activeJobId,
+      refetchInterval: (query) => {
+        const status = query.state.data?.data?.status;
+        return status === 'running' ? 1500 : false;
+      },
+      retry: false,
+      refetchOnWindowFocus: true
+    }
+  );
+
+  const progressData = progressResponse?.data;
+
+  // Si le job n'existe plus (ex. serveur redémarré), nettoyer
+  useEffect(() => {
+    if (!activeJobId || !progressError) return;
+    const status = progressErr?.response?.status;
+    if (status === 404 || status === 403) {
+      sessionStorage.removeItem(SESSION_STORAGE_JOB_KEY);
+      setActiveJobId(null);
+      toast.warn('Import introuvable ou terminé (session expirée).');
+    }
+  }, [activeJobId, progressError, progressErr]);
+
+  // Quand le job est terminé (completed / cancelled / failed), afficher le résultat et nettoyer
+  useEffect(() => {
+    if (!activeJobId || !progressData) return;
+    const status = progressData.status;
+    if (status !== 'completed' && status !== 'cancelled' && status !== 'failed') return;
+
+    setImportResult(progressToResult(progressData));
+    sessionStorage.removeItem(SESSION_STORAGE_JOB_KEY);
+    setActiveJobId(null);
+    setIsProcessing(false);
+
+    if (status === 'cancelled') {
+      toast.info(`Import annulé. ${progressData.inserted ?? 0} fiche(s) insérée(s) avant annulation.`);
+    } else if (status === 'completed') {
+      toast.success(`Import terminé: ${progressData.inserted ?? 0} fiches insérées`);
+    } else if (status === 'failed') {
+      toast.error(progressData.error || 'Erreur lors de l\'import');
+    }
+  }, [activeJobId, progressData]);
 
   // Mutation pour prévisualiser le fichier
   const previewMutation = useMutation(
@@ -77,7 +146,7 @@ const ImportMasse = () => {
     }
   );
 
-  // Mutation pour traiter l'import (avec support annulation via AbortController)
+  // Mutation pour traiter l'import (retourne immédiatement un jobId, progression via polling)
   const importMutation = useMutation(
     async (data) => {
       abortControllerRef.current = new AbortController();
@@ -88,14 +157,11 @@ const ImportMasse = () => {
     },
     {
       onSuccess: (data) => {
-        if (data.success) {
-          setImportResult(data.data);
+        if (data.success && data.jobId) {
+          sessionStorage.setItem(SESSION_STORAGE_JOB_KEY, data.jobId);
+          setActiveJobId(data.jobId);
           setIsProcessing(false);
-          if (data.data.cancelled) {
-            toast.info(`Import annulé. ${data.data.inserted} fiche(s) insérée(s) avant annulation.`);
-          } else {
-            toast.success(`Import terminé: ${data.data.inserted} fiches insérées`);
-          }
+          toast.info('Import démarré. Vous pouvez quitter la page ; la progression sera conservée.');
         }
       },
       onError: (error) => {
@@ -170,10 +236,18 @@ const ImportMasse = () => {
     });
   };
 
-  const handleCancelImport = () => {
+  const handleCancelImport = async () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
+    }
+    if (activeJobId) {
+      try {
+        await api.post(`/import/cancel/${activeJobId}`);
+        toast.info('Annulation demandée…');
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'Erreur lors de l\'annulation');
+      }
     }
     setIsProcessing(false);
   };
@@ -187,6 +261,8 @@ const ImportMasse = () => {
     setTempFile(null);
     setImportResult(null);
     setIsProcessing(false);
+    setActiveJobId(null);
+    sessionStorage.removeItem(SESSION_STORAGE_JOB_KEY);
     setSelectedCentre(user?.centre || '');
     setSelectedProduit('');
   };
@@ -202,6 +278,8 @@ const ImportMasse = () => {
     );
   }
 
+  const isJobRunning = progressData?.status === 'running';
+
   return (
     <div className="import-masse-page">
       <div className="import-header">
@@ -209,7 +287,49 @@ const ImportMasse = () => {
         <p className="subtitle">Importez des fiches depuis un fichier CSV ou Excel</p>
       </div>
 
-      {!previewData && (
+      {/* Progression de l'import (visible même après avoir quitté la page) */}
+      {activeJobId && (
+        <div className="import-progress-section">
+          <h2>Progression de l'import</h2>
+          {!progressData ? (
+            <div className="progress-loading">
+              <FaSpinner className="spinner" /> Chargement de la progression…
+            </div>
+          ) : (
+            <>
+              <div className="progress-stats">
+                <span className="progress-stat">
+                  Traité: <strong>{progressData.processed ?? 0}</strong> / {progressData.total ?? 0}
+                </span>
+                <span className="progress-stat">
+                  Insérées: <strong>{progressData.inserted ?? 0}</strong>
+                </span>
+                <span className="progress-stat">
+                  Erreurs: <strong>{progressData.errors ?? 0}</strong>
+                </span>
+                <span className="progress-stat progress-status">
+                  Statut: {isJobRunning ? 'En cours…' : progressData.status === 'cancelled' ? 'Annulé' : progressData.status === 'completed' ? 'Terminé' : progressData.status === 'failed' ? 'Échec' : progressData.status}
+                </span>
+              </div>
+              <div className="progress-bar-container">
+                <div
+                  className="progress-bar-fill"
+                  style={{ width: `${progressData.total ? Math.min(100, (100 * (progressData.processed ?? 0)) / progressData.total) : 0}%` }}
+                />
+              </div>
+              {isJobRunning && (
+                <div className="progress-actions">
+                  <button type="button" className="btn-cancel-import" onClick={handleCancelImport}>
+                    <FaTimes /> Annuler l'import
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {!previewData && !activeJobId && (
         <div className="upload-section">
           <div className="upload-box">
             <FaUpload className="upload-icon" />
@@ -387,11 +507,15 @@ const ImportMasse = () => {
             <button
               className="btn-import"
               onClick={handleImport}
-              disabled={isProcessing || !(mapping.tel || mapping.gsm1 || mapping.gsm2) || !selectedCentre || !selectedProduit}
+              disabled={isProcessing || !!activeJobId || !(mapping.tel || mapping.gsm1 || mapping.gsm2) || !selectedCentre || !selectedProduit}
             >
               {isProcessing ? (
                 <>
-                  <FaSpinner className="spinner" /> Traitement en cours...
+                  <FaSpinner className="spinner" /> Démarrage...
+                </>
+              ) : activeJobId ? (
+                <>
+                  <FaSpinner className="spinner" /> Import en cours (voir ci-dessus)
                 </>
               ) : (
                 <>
@@ -399,7 +523,7 @@ const ImportMasse = () => {
                 </>
               )}
             </button>
-            {isProcessing ? (
+            {isProcessing || activeJobId ? (
               <button
                 type="button"
                 className="btn-cancel-import"
