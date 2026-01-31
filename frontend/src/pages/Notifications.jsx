@@ -244,6 +244,9 @@ const Notifications = () => {
                 </div>
 
                 <div className="notification-body">
+                  {notification.afficher_expediteur !== 0 && notification.expediteur_pseudo && (
+                    <p className="notification-expediteur">De : {notification.expediteur_pseudo}</p>
+                  )}
                   <p className="notification-message">{notification.message}</p>
 
                   {/* Métadonnées pour les décalages */}

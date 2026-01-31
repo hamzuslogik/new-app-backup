@@ -213,6 +213,9 @@ const SystemMessageBanner = () => {
             <div className="banner-title">{currentMessage.titre}</div>
           )}
           <div className="banner-message">{currentMessage.message}</div>
+          {currentMessage.afficher_expediteur !== 0 && currentMessage.createur_pseudo && (
+            <div className="banner-expediteur">De : {currentMessage.createur_pseudo}</div>
+          )}
         </div>
         <div className="banner-actions">
           {messages.length > 1 && (

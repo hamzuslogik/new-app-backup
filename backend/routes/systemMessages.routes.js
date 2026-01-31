@@ -32,12 +32,16 @@ router.get('/', authenticate, async (req, res) => {
         sm.afficher_une_seule_fois,
         sm.cibles_fonctions,
         sm.cibles_utilisateurs,
+        sm.id_createur,
+        sm.afficher_expediteur,
+        u_c.pseudo as createur_pseudo,
         CASE 
           WHEN sml.id IS NOT NULL THEN 1 
           ELSE 0 
         END as deja_lu
       FROM system_messages sm
       LEFT JOIN system_messages_lus sml ON sm.id = sml.id_message AND sml.id_utilisateur = ?
+      LEFT JOIN utilisateurs u_c ON sm.id_createur = u_c.id
       WHERE sm.actif = 1
         AND (sm.date_debut IS NULL OR sm.date_debut <= ?)
         AND (sm.date_fin IS NULL OR sm.date_fin >= ?)
@@ -94,7 +98,9 @@ router.get('/', authenticate, async (req, res) => {
             message: msg.message,
             type: msg.type,
             priorite: msg.priorite,
-            afficher_une_seule_fois: msg.afficher_une_seule_fois
+            afficher_une_seule_fois: msg.afficher_une_seule_fois,
+            afficher_expediteur: msg.afficher_expediteur,
+            createur_pseudo: msg.createur_pseudo
           });
         }
       } else if (msg.cibles_fonctions) {
@@ -106,7 +112,9 @@ router.get('/', authenticate, async (req, res) => {
             message: msg.message,
             type: msg.type,
             priorite: msg.priorite,
-            afficher_une_seule_fois: msg.afficher_une_seule_fois
+            afficher_une_seule_fois: msg.afficher_une_seule_fois,
+            afficher_expediteur: msg.afficher_expediteur,
+            createur_pseudo: msg.createur_pseudo
           });
         }
       } else if (msg.cibles_utilisateurs) {
@@ -118,7 +126,9 @@ router.get('/', authenticate, async (req, res) => {
             message: msg.message,
             type: msg.type,
             priorite: msg.priorite,
-            afficher_une_seule_fois: msg.afficher_une_seule_fois
+            afficher_une_seule_fois: msg.afficher_une_seule_fois,
+            afficher_expediteur: msg.afficher_expediteur,
+            createur_pseudo: msg.createur_pseudo
           });
         }
       }

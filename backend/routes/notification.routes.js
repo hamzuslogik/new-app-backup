@@ -98,9 +98,11 @@ router.get('/', authenticate, async (req, res) => {
       notifications = await query(
         `SELECT n.*, n.id_fiche as notification_fiche_id,
          f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
-         f.archive, f.ko, f.active
+         f.archive, f.ko, f.active,
+         u_exp.pseudo as expediteur_pseudo
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
+         LEFT JOIN utilisateurs u_exp ON n.id_expediteur = u_exp.id
          WHERE n.destination = ?
          ${luCondition}
          ORDER BY n.date_creation DESC
@@ -113,9 +115,11 @@ router.get('/', authenticate, async (req, res) => {
       notifications = await query(
         `SELECT n.*, n.id_fiche as notification_fiche_id,
          f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
-         f.archive, f.ko, f.active
+         f.archive, f.ko, f.active,
+         u_exp.pseudo as expediteur_pseudo
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
+         LEFT JOIN utilisateurs u_exp ON n.id_expediteur = u_exp.id
          WHERE n.destination = ?
          ${luCondition}
          AND (n.type = 'decalage_request' OR n.type LIKE 'demande_insertion_%')
@@ -138,9 +142,11 @@ router.get('/', authenticate, async (req, res) => {
         notifications = await query(
           `SELECT n.*, n.id_fiche as notification_fiche_id,
            f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
-           f.archive, f.ko, f.active
+           f.archive, f.ko, f.active,
+           u_exp.pseudo as expediteur_pseudo
            FROM notifications n
            LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
+           LEFT JOIN utilisateurs u_exp ON n.id_expediteur = u_exp.id
            WHERE n.destination = ?
            ${luCondition}
            AND n.type = 'decalage_request'
@@ -154,9 +160,11 @@ router.get('/', authenticate, async (req, res) => {
       notifications = await query(
         `SELECT n.*, n.id_fiche as notification_fiche_id,
          f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
-         f.archive, f.ko, f.active
+         f.archive, f.ko, f.active,
+         u_exp.pseudo as expediteur_pseudo
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
+         LEFT JOIN utilisateurs u_exp ON n.id_expediteur = u_exp.id
          WHERE n.destination = ?
          ${luCondition}
          AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response')

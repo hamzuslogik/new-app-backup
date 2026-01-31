@@ -290,7 +290,17 @@ const WorkflowsTab = () => {
     const config = action.config || {};
     
     if (action.type === 'notification') {
-      if (config.destination) {
+      const hasFonctions = Array.isArray(config.destination_fonctions) && config.destination_fonctions.length > 0;
+      const hasUtilisateurs = Array.isArray(config.destination_utilisateurs) && config.destination_utilisateurs.length > 0;
+      if (hasFonctions || hasUtilisateurs) {
+        if (hasFonctions) {
+          const noms = config.destination_fonctions.map(id => fonctionsData?.find(f => f.id === id)?.titre || id);
+          parts.push(`→ Fonctions: ${noms.join(', ')}`);
+        }
+        if (hasUtilisateurs) {
+          parts.push(`→ ${config.destination_utilisateurs.length} utilisateur(s)`);
+        }
+      } else if (config.destination) {
         const destMap = {
           'id_insert': 'Agent créateur',
           'id_agent': 'Agent',
@@ -305,6 +315,7 @@ const WorkflowsTab = () => {
       } else {
         parts.push('→ Tous les admins');
       }
+      if (config.afficher_expediteur === false) parts.push('(sans expéditeur)');
       if (config.message) {
         const msgPreview = config.message.substring(0, 30);
         parts.push(`"${msgPreview}${config.message.length > 30 ? '...' : ''}"`);
@@ -749,7 +760,7 @@ const WorkflowsTab = () => {
                           />
                         </div>
                         <div className="form-group">
-                          <label>Destinataire</label>
+                          <label>Destinataire (si aucune fonction/utilisateur ci-dessous)</label>
                           <select
                             value={action.config?.destination || ''}
                             onChange={(e) => updateAction(index, 'config', { ...action.config, destination: e.target.value })}
@@ -764,7 +775,52 @@ const WorkflowsTab = () => {
                             <option value="id_commercial">Commercial principal ({'{fiche.id_commercial}'})</option>
                             <option value="id_commercial_2">Commercial secondaire ({'{fiche.id_commercial_2}'})</option>
                           </select>
-                          <small>Le destinataire sera résolu dynamiquement selon la fiche concernée</small>
+                          <small>Utilisé si « Fonctions ciblées » et « Utilisateurs ciblés » sont vides</small>
+                        </div>
+                        <div className="form-group">
+                          <label>Fonctions ciblées (optionnel)</label>
+                          <select
+                            multiple
+                            value={Array.isArray(action.config?.destination_fonctions) ? action.config.destination_fonctions.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
+                              updateAction(index, 'config', { ...action.config, destination_fonctions: selected.length > 0 ? selected : null });
+                            }}
+                            size={4}
+                          >
+                            {fonctionsData?.map(f => (
+                              <option key={f.id} value={f.id}>{f.id} - {f.titre}</option>
+                            ))}
+                          </select>
+                          <small>Envoyer à tous les utilisateurs de ces fonctions. Ctrl/Cmd pour multi-sélection.</small>
+                        </div>
+                        <div className="form-group">
+                          <label>Utilisateurs ciblés (optionnel)</label>
+                          <select
+                            multiple
+                            value={Array.isArray(action.config?.destination_utilisateurs) ? action.config.destination_utilisateurs.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
+                              updateAction(index, 'config', { ...action.config, destination_utilisateurs: selected.length > 0 ? selected : null });
+                            }}
+                            size={5}
+                          >
+                            {utilisateursData?.map(u => (
+                              <option key={u.id} value={u.id}>{u.pseudo || u.login} ({u.nom} {u.prenom})</option>
+                            ))}
+                          </select>
+                          <small>Envoyer à ces utilisateurs. Peut être combiné avec les fonctions.</small>
+                        </div>
+                        <div className="form-group">
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                              type="checkbox"
+                              checked={action.config?.afficher_expediteur !== false}
+                              onChange={(e) => updateAction(index, 'config', { ...action.config, afficher_expediteur: e.target.checked })}
+                            />
+                            Afficher l&apos;expéditeur
+                          </label>
+                          <small>Si décoché, le nom de l&apos;expéditeur ne sera pas affiché dans la notification.</small>
                         </div>
                       </>
                     )}
@@ -940,18 +996,30 @@ const WorkflowsTab = () => {
                             </label>
                             <small>Si désactivé, le message ne s'affichera pas.</small>
                           </div>
-                          <div className="form-group">
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={(action.config?.afficher_une_seule_fois ?? 0) === 1}
-                                onChange={(e) => updateAction(index, 'config', { ...action.config, afficher_une_seule_fois: e.target.checked ? 1 : 0 })}
-                                style={{ marginRight: '8px' }}
-                              />
-                              Afficher une seule fois
-                            </label>
-                            <small>Si coché, le message disparaît après lecture.</small>
-                          </div>
+                        <div className="form-group">
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={(action.config?.afficher_une_seule_fois ?? 0) === 1}
+                              onChange={(e) => updateAction(index, 'config', { ...action.config, afficher_une_seule_fois: e.target.checked ? 1 : 0 })}
+                              style={{ marginRight: '8px' }}
+                            />
+                            Afficher une seule fois
+                          </label>
+                          <small>Si coché, le message disparaît après lecture.</small>
+                        </div>
+                        <div className="form-group">
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={action.config?.afficher_expediteur !== false}
+                              onChange={(e) => updateAction(index, 'config', { ...action.config, afficher_expediteur: e.target.checked })}
+                              style={{ marginRight: '8px' }}
+                            />
+                            Afficher l&apos;expéditeur
+                          </label>
+                          <small>Si décoché, le nom du créateur du message ne sera pas affiché.</small>
+                        </div>
                         </div>
 
                         <div className="form-group">

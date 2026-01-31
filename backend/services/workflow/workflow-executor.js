@@ -375,7 +375,9 @@ async function executeNotificationAction(config, eventData) {
   }, null, 2));
   
   const { query, queryOne } = require('../../config/database');
-  const { type, message, destination } = config;
+  const { type, message, destination, destination_type, destination_fonctions, destination_utilisateurs, afficher_expediteur } = config;
+  const idExpediteur = eventData.user?.id ?? null;
+  const showExpediteur = afficher_expediteur !== false ? 1 : 0;
   
   // Si fiche n'existe pas mais fiche_id existe, récupérer la fiche
   if (!eventData.fiche && eventData.fiche_id) {
@@ -413,8 +415,47 @@ async function executeNotificationAction(config, eventData) {
     console.error(`[WORKFLOW] ❌ Message vide après remplacement des variables`);
     throw new Error('Message de notification vide après remplacement des variables');
   }
+
+  const finalType = type.trim();
+  const finalMessage = processedMessage.trim();
+  const finalFicheId = eventData.fiche?.id || eventData.fiche_id || null;
+
+  // Destinataires par fonction(s) et/ou utilisateur(s) explicites
+  const hasFonctions = Array.isArray(destination_fonctions) && destination_fonctions.length > 0;
+  const hasUtilisateurs = Array.isArray(destination_utilisateurs) && destination_utilisateurs.length > 0;
+  if (hasFonctions || hasUtilisateurs) {
+    const userIds = new Set();
+    if (hasFonctions) {
+      const placeholders = destination_fonctions.map(() => '?').join(',');
+      const rows = await query(`SELECT id FROM utilisateurs WHERE fonction IN (${placeholders}) AND etat > 0`, destination_fonctions);
+      rows.forEach(r => { if (r && r.id) userIds.add(parseInt(r.id, 10)); });
+    }
+    if (hasUtilisateurs) {
+      const ids = destination_utilisateurs.map(id => parseInt(id, 10)).filter(id => !isNaN(id) && id > 0);
+      if (ids.length > 0) {
+        const placeholders = ids.map(() => '?').join(',');
+        const rows = await query(`SELECT id FROM utilisateurs WHERE id IN (${placeholders}) AND etat > 0`, ids);
+        rows.forEach(r => { if (r && r.id) userIds.add(parseInt(r.id, 10)); });
+      }
+    }
+    const recipientIds = Array.from(userIds);
+    if (recipientIds.length === 0) {
+      console.warn('[WORKFLOW] Aucun utilisateur actif trouvé pour les fonctions/utilisateurs sélectionnés');
+      return { success: true, message: 'Aucun destinataire actif', count: 0 };
+    }
+    console.log(`[WORKFLOW] ${recipientIds.length} destinataire(s) (fonctions/utilisateurs)`);
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    for (const uid of recipientIds) {
+      await query(
+        `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
+         VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
+        [finalType, finalFicheId, finalMessage, uid, now, idExpediteur, showExpediteur]
+      );
+    }
+    return { success: true, message: `${recipientIds.length} notification(s) créée(s)`, count: recipientIds.length };
+  }
   
-  // Déterminer le destinataire
+  // Déterminer le destinataire (mode admins ou rôle sur la fiche)
   let destId = destination;
   console.log(`[WORKFLOW] Destination initiale:`, destId, `(type: ${typeof destId})`);
   
@@ -432,10 +473,7 @@ async function executeNotificationAction(config, eventData) {
     
     // Créer une notification pour chaque admin
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    const finalType = type.trim();
-    const finalMessage = processedMessage.trim();
-    // Récupérer fiche_id depuis fiche.id ou fiche_id directement
-    const finalFicheId = eventData.fiche?.id || eventData.fiche_id || null;
+    // finalType, finalMessage, finalFicheId déjà définis plus haut
     console.log(`[WORKFLOW] Fiche ID récupéré:`, finalFicheId, `(depuis fiche.id: ${eventData.fiche?.id}, depuis fiche_id: ${eventData.fiche_id})`);
     
     // Validation avant de créer les notifications
@@ -456,18 +494,19 @@ async function executeNotificationAction(config, eventData) {
       throw new Error('Aucun administrateur valide trouvé');
     }
     
-    // Construire les valeurs pour l'insertion en lot
+    // Construire les valeurs pour l'insertion en lot (avec id_expediteur, afficher_expediteur si colonnes présentes)
     const flatValues = [];
     const placeholders = [];
     
     for (const admin of validAdmins) {
-      placeholders.push('(?, ?, ?, ?, ?, 0)');
-      // S'assurer que toutes les valeurs sont définies (pas undefined)
+      placeholders.push('(?, ?, ?, ?, ?, 0, ?, ?)');
       flatValues.push(finalType || null);
       flatValues.push(finalFicheId !== undefined ? finalFicheId : null);
       flatValues.push(finalMessage || null);
       flatValues.push(admin.id || null);
       flatValues.push(now || null);
+      flatValues.push(idExpediteur);
+      flatValues.push(showExpediteur);
     }
     
     console.log(`[WORKFLOW] Insertion de ${validAdmins.length} notification(s) pour les admins...`);
@@ -481,34 +520,15 @@ async function executeNotificationAction(config, eventData) {
       date: flatValues[4]
     });
     
-    // Vérifier que le nombre de valeurs correspond aux placeholders
-    const expectedValues = placeholders.length * 5; // 5 valeurs par placeholder (lu est hardcodé à 0)
+    // Vérifier que le nombre de valeurs correspond aux placeholders (7 par ligne : type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
+    const expectedValues = placeholders.length * 7;
     if (flatValues.length !== expectedValues) {
       console.error(`[WORKFLOW] ❌ Nombre de valeurs incorrect: ${flatValues.length} au lieu de ${expectedValues}`);
       throw new Error(`Erreur de construction des valeurs: ${flatValues.length} valeurs pour ${expectedValues} attendues`);
     }
     
-    // Log détaillé des valeurs avant insertion
-    console.log(`[WORKFLOW] === VALEURS DÉTAILLÉES AVANT INSERTION ===`);
-    for (let i = 0; i < validAdmins.length; i++) {
-      const baseIndex = i * 5;
-      console.log(`[WORKFLOW] Notification ${i + 1}:`, {
-        type: flatValues[baseIndex],
-        type_type: typeof flatValues[baseIndex],
-        id_fiche: flatValues[baseIndex + 1],
-        id_fiche_type: typeof flatValues[baseIndex + 1],
-        message: flatValues[baseIndex + 2]?.substring(0, 50),
-        message_type: typeof flatValues[baseIndex + 2],
-        destination: flatValues[baseIndex + 3],
-        destination_type: typeof flatValues[baseIndex + 3],
-        date_creation: flatValues[baseIndex + 4],
-        date_creation_type: typeof flatValues[baseIndex + 4]
-      });
-    }
-    console.log(`[WORKFLOW] === FIN VALEURS DÉTAILLÉES ===`);
-    
     const sqlQuery = `
-      INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
+      INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
       VALUES ${placeholders.join(', ')}
     `;
     console.log(`[WORKFLOW] Requête SQL:`, sqlQuery);
@@ -629,9 +649,9 @@ async function executeNotificationAction(config, eventData) {
   });
   
   const insertResult = await query(`
-    INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
-    VALUES (?, ?, ?, ?, ?, 0)
-  `, insertValues);
+    INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
+    VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+  `, [...insertValues, idExpediteur, showExpediteur]);
 
   console.log(`[WORKFLOW] ✅ Notification créée avec succès - ID=${insertResult.insertId}`);
   console.log(`[WORKFLOW] ========== executeNotificationAction FIN ==========`);
@@ -761,7 +781,8 @@ async function executeSystemMessageAction(config, eventData) {
   console.log(`[WORKFLOW] Config reçue:`, JSON.stringify(config, null, 2));
   
   const { query } = require('../../config/database');
-  const { titre, message, type = 'info', priorite = 1, date_debut, date_fin, actif = 1, afficher_une_seule_fois = 0, cibles_fonctions, cibles_utilisateurs } = config;
+  const { titre, message, type = 'info', priorite = 1, date_debut, date_fin, actif = 1, afficher_une_seule_fois = 0, cibles_fonctions, cibles_utilisateurs, afficher_expediteur } = config;
+  const showExpediteurMsg = afficher_expediteur !== false ? 1 : 0;
   
   // Validation
   if (!message || typeof message !== 'string' || message.trim() === '') {
@@ -822,8 +843,8 @@ async function executeSystemMessageAction(config, eventData) {
   const result = await query(
     `INSERT INTO system_messages 
       (titre, message, type, priorite, date_debut, date_fin, actif, afficher_une_seule_fois, 
-       cibles_fonctions, cibles_utilisateurs, id_createur)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       cibles_fonctions, cibles_utilisateurs, id_createur, afficher_expediteur)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       processedTitre,
       processedMessage,
@@ -835,7 +856,8 @@ async function executeSystemMessageAction(config, eventData) {
       afficher_une_seule_fois,
       ciblesFonctionsJson,
       ciblesUtilisateursJson,
-      eventData.user?.id || null
+      eventData.user?.id || null,
+      showExpediteurMsg
     ]
   );
   
