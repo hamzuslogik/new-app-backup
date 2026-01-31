@@ -145,11 +145,12 @@ const Header = () => {
 
   const notifications = notificationsData || [];
   const unreadCount = notificationsCount || 0;
-  const isAdmin = user && ([1, 2, 7].includes(user.fonction));
-  const isBackoffice = user && (user.fonction === 11);
-  const isConfirmateur = user && (user.fonction === 6);
-  const isREConfirmation = user && (user.fonction === 14);
-  const isCommercial = user && (user.fonction === 5);
+  const userFonction = user ? Number(user.fonction) : null;
+  const isAdmin = user && [1, 2, 7].includes(userFonction);
+  const isBackoffice = user && userFonction === 11;
+  const isConfirmateur = user && userFonction === 6;
+  const isREConfirmation = user && userFonction === 14;
+  const isCommercial = user && userFonction === 5;
   const canSeeNotifications = isAdmin || isBackoffice || isConfirmateur || isREConfirmation || isCommercial;
   // Afficher le badge pour tous les utilisateurs qui ont des notifications non lues
   const shouldShowBadge = unreadCount > 0;
@@ -352,9 +353,9 @@ const Header = () => {
                       return (
                         <div
                           key={notification.id}
-                          className={`notification-item ${notification.lu === 0 ? 'unread' : ''} ${canAction ? 'has-actions' : ''} ${!notification.fiche_id || !notification.hash ? 'no-fiche' : ''} ${user?.fonction === 5 ? 'no-click' : ''}`}
-                          onClick={() => !canAction && notification.fiche_id && notification.hash && user?.fonction !== 5 && handleNotificationClick(notification)}
-                          style={!notification.fiche_id || !notification.hash || user?.fonction === 5 ? { cursor: 'default', opacity: 0.7 } : {}}
+                          className={`notification-item ${notification.lu === 0 ? 'unread' : ''} ${canAction ? 'has-actions' : ''} ${!notification.fiche_id || !notification.hash ? 'no-fiche' : ''} ${isCommercial ? 'no-click' : ''}`}
+                          onClick={() => !canAction && notification.fiche_id && notification.hash && !isCommercial && handleNotificationClick(notification)}
+                          style={!notification.fiche_id || !notification.hash || isCommercial ? { cursor: 'default', opacity: 0.7 } : {}}
                         >
                           <div className="notification-content">
                             <p className="notification-message">{notification.message}</p>

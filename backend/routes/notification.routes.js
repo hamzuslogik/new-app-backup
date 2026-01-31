@@ -103,11 +103,11 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const { all } = req.query;
     const includeRead = all === 'true' || all === '1';
-    
+    const userFonction = Number(req.user.fonction);
     const luCondition = includeRead ? '' : 'AND n.lu = 0';
     let notifications = [];
     
-    if ([1, 2, 7, 11].includes(req.user.fonction)) {
+    if ([1, 2, 7, 11].includes(userFonction)) {
       const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
@@ -120,7 +120,7 @@ router.get('/', authenticate, async (req, res) => {
          WHERE n.destination = ? ${luCondition}
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
-    } else if (req.user.fonction === 6) {
+    } else if (userFonction === 6) {
       const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
@@ -135,7 +135,7 @@ router.get('/', authenticate, async (req, res) => {
          AND (n.type = 'decalage_request' OR n.type LIKE 'demande_insertion_%')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
-    } else if (req.user.fonction === 14) {
+    } else if (userFonction === 14) {
       const confirmateursIds = await query(
         'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
         [req.user.id]
@@ -158,6 +158,22 @@ router.get('/', authenticate, async (req, res) => {
            ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
         notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
       }
+    } else if (userFonction === 5) {
+      // Commerciaux : demandes d'insertion, décalages (demande + réponse)
+      const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
+         FROM notifications n
+         LEFT JOIN fiches f ON n.id_fiche = f.id
+         ${NOTIF_JOIN_EXP}
+         WHERE n.destination = ? ${luCondition}
+         AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response')
+         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+      const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
+         FROM notifications n
+         LEFT JOIN fiches f ON n.id_fiche = f.id
+         WHERE n.destination = ? ${luCondition}
+         AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response')
+         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+      notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     } else {
       const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
          FROM notifications n
@@ -225,8 +241,9 @@ router.get('/', authenticate, async (req, res) => {
 router.get('/count', authenticate, async (req, res) => {
   try {
     let count = 0;
+    const userFonction = Number(req.user.fonction);
     
-    if ([1, 2, 7, 11].includes(req.user.fonction)) {
+    if ([1, 2, 7, 11].includes(userFonction)) {
       // Admins et Backoffice : compter toutes les notifications
       const result = await queryOne(
         `SELECT COUNT(*) as count
@@ -236,7 +253,7 @@ router.get('/count', authenticate, async (req, res) => {
         [req.user.id]
       );
       count = result?.count || 0;
-    } else if (req.user.fonction === 6) {
+    } else if (userFonction === 6) {
       // Confirmateurs : compter les notifications de décalage et demandes d'insertion
       const result = await queryOne(
         `SELECT COUNT(*) as count
@@ -247,7 +264,7 @@ router.get('/count', authenticate, async (req, res) => {
         [req.user.id]
       );
       count = result?.count || 0;
-    } else if (req.user.fonction === 14) {
+    } else if (userFonction === 14) {
       // RE Confirmation (superviseur des confirmateurs) : compter les notifications de décalage pour leurs confirmateurs
       const confirmateursIds = await query(
         'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
@@ -267,6 +284,17 @@ router.get('/count', authenticate, async (req, res) => {
         );
         count = result?.count || 0;
       }
+    } else if (userFonction === 5) {
+      // Commerciaux : compter demandes d'insertion, décalages et réponses de décalages
+      const result = await queryOne(
+        `SELECT COUNT(*) as count
+         FROM notifications
+         WHERE destination = ?
+         AND lu = 0
+         AND (type LIKE 'demande_insertion_%' OR type = 'decalage_request' OR type = 'decalage_response')`,
+        [req.user.id]
+      );
+      count = result?.count || 0;
     } else {
       // Autres utilisateurs : compter les notifications de demandes d'insertion, décalages et réponses de décalages
       const result = await queryOne(
@@ -443,17 +471,9 @@ router.patch('/:id/read', authenticate, async (req, res) => {
   }
 });
 
-// Marquer toutes les notifications comme lues
+// Marquer toutes les notifications comme lues (tout utilisateur connecté peut marquer les siennes)
 router.patch('/read-all', authenticate, async (req, res) => {
   try {
-    // Vérifier que l'utilisateur est admin, backoffice ou RP confirmation
-    if (!isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès refusé'
-      });
-    }
-
     await query(
       `UPDATE notifications 
        SET lu = 1 
