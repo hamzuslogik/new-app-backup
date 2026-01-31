@@ -60,10 +60,7 @@ const ImportMasse = () => {
     },
     {
       enabled: !!activeJobId,
-      refetchInterval: (query) => {
-        const status = query.state.data?.data?.status;
-        return status === 'running' ? 1500 : false;
-      },
+      refetchInterval: 1500,
       retry: false,
       refetchOnWindowFocus: true
     }
