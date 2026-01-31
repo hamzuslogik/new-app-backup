@@ -76,102 +76,103 @@ const encodeFicheId = (id) => {
   return `${hash.substring(0, 16)}${encodedId}`;
 };
 
+// Requêtes avec et sans colonnes expéditeur (si migration non exécutée)
+const NOTIF_SELECT_WITH_EXP = `n.*, n.id_fiche as notification_fiche_id,
+         f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
+         f.archive, f.ko, f.active,
+         u_exp.pseudo as expediteur_pseudo`;
+const NOTIF_SELECT_WITHOUT_EXP = `n.*, n.id_fiche as notification_fiche_id,
+         f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
+         f.archive, f.ko, f.active`;
+const NOTIF_JOIN_EXP = 'LEFT JOIN utilisateurs u_exp ON n.id_expediteur = u_exp.id';
+
+async function runNotificationsQuery(query, sqlWithExp, sqlWithoutExp, params) {
+  try {
+    return await query(sqlWithExp, params);
+  } catch (err) {
+    const unknownColumn = err.errno === 1054 || err.code === 'ER_BAD_FIELD_ERROR' || (err.message && String(err.message).includes('Unknown column'));
+    if (unknownColumn) {
+      return await query(sqlWithoutExp, params);
+    }
+    throw err;
+  }
+}
+
 // Récupérer les notifications pour l'utilisateur connecté
 router.get('/', authenticate, async (req, res) => {
   try {
     const { all } = req.query;
     const includeRead = all === 'true' || all === '1';
     
-    // Construire la condition WHERE pour lu
     const luCondition = includeRead ? '' : 'AND n.lu = 0';
-    
-    // Récupérer les notifications pour :
-    // - Admins (fonction 1, 2, 7) et Backoffice (fonction 11) : toutes les notifications
-    // - Confirmateurs (fonction 6) : notifications où ils sont destinataires
-    // - Autres utilisateurs : notifications où ils sont destinataires (pour les demandes d'insertion)
-    
     let notifications = [];
     
     if ([1, 2, 7, 11].includes(req.user.fonction)) {
-      // Admins et Backoffice : toutes les notifications (même si la fiche n'existe plus)
-      // IMPORTANT: Utiliser n.id_fiche pour garantir qu'on a toujours l'ID même si la fiche est supprimée
-      notifications = await query(
-        `SELECT n.*, n.id_fiche as notification_fiche_id,
-         f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
-         f.archive, f.ko, f.active,
-         u_exp.pseudo as expediteur_pseudo
+      const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-         LEFT JOIN utilisateurs u_exp ON n.id_expediteur = u_exp.id
-         WHERE n.destination = ?
-         ${luCondition}
-         ORDER BY n.date_creation DESC
-         LIMIT ${includeRead ? 200 : 50}`,
-        [req.user.id]
-      );
+         ${NOTIF_JOIN_EXP}
+         WHERE n.destination = ? ${luCondition}
+         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+      const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
+         FROM notifications n
+         LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
+         WHERE n.destination = ? ${luCondition}
+         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+      notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     } else if (req.user.fonction === 6) {
-      // Confirmateurs : notifications où ils sont destinataires (même si la fiche n'existe plus)
-      // IMPORTANT: Utiliser n.id_fiche pour garantir qu'on a toujours l'ID même si la fiche est supprimée
-      notifications = await query(
-        `SELECT n.*, n.id_fiche as notification_fiche_id,
-         f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
-         f.archive, f.ko, f.active,
-         u_exp.pseudo as expediteur_pseudo
+      const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-         LEFT JOIN utilisateurs u_exp ON n.id_expediteur = u_exp.id
-         WHERE n.destination = ?
-         ${luCondition}
+         ${NOTIF_JOIN_EXP}
+         WHERE n.destination = ? ${luCondition}
          AND (n.type = 'decalage_request' OR n.type LIKE 'demande_insertion_%')
-         ORDER BY n.date_creation DESC
-         LIMIT ${includeRead ? 200 : 50}`,
-        [req.user.id]
-      );
+         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+      const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
+         FROM notifications n
+         LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
+         WHERE n.destination = ? ${luCondition}
+         AND (n.type = 'decalage_request' OR n.type LIKE 'demande_insertion_%')
+         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+      notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     } else if (req.user.fonction === 14) {
-      // RE Confirmation (superviseur des confirmateurs) : notifications de décalage pour leurs confirmateurs
-      // Récupérer les IDs des confirmateurs sous responsabilité
       const confirmateursIds = await query(
         'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
         [req.user.id]
       );
-      
       if (confirmateursIds.length === 0) {
         notifications = [];
       } else {
-        const ids = confirmateursIds.map(c => c.id);
-        notifications = await query(
-          `SELECT n.*, n.id_fiche as notification_fiche_id,
-           f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
-           f.archive, f.ko, f.active,
-           u_exp.pseudo as expediteur_pseudo
+        const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
            FROM notifications n
            LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-           LEFT JOIN utilisateurs u_exp ON n.id_expediteur = u_exp.id
-           WHERE n.destination = ?
-           ${luCondition}
+           ${NOTIF_JOIN_EXP}
+           WHERE n.destination = ? ${luCondition}
            AND n.type = 'decalage_request'
-           ORDER BY n.date_creation DESC
-           LIMIT ${includeRead ? 200 : 50}`,
-          [req.user.id]
-        );
+           ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+        const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
+           FROM notifications n
+           LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
+           WHERE n.destination = ? ${luCondition}
+           AND n.type = 'decalage_request'
+           ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+        notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
       }
     } else {
-      // Autres utilisateurs : notifications où ils sont destinataires (pour les demandes d'insertion et réponses de décalages)
-      notifications = await query(
-        `SELECT n.*, n.id_fiche as notification_fiche_id,
-         f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
-         f.archive, f.ko, f.active,
-         u_exp.pseudo as expediteur_pseudo
+      const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
-         LEFT JOIN utilisateurs u_exp ON n.id_expediteur = u_exp.id
-         WHERE n.destination = ?
-         ${luCondition}
+         ${NOTIF_JOIN_EXP}
+         WHERE n.destination = ? ${luCondition}
          AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response')
-         ORDER BY n.date_creation DESC
-         LIMIT ${includeRead ? 200 : 50}`,
-        [req.user.id]
-      );
+         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+      const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
+         FROM notifications n
+         LEFT JOIN fiches f ON n.id_fiche = f.id
+         WHERE n.destination = ? ${luCondition}
+         AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response')
+         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+      notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     }
 
     // Ajouter le hash et parser les métadonnées pour chaque notification

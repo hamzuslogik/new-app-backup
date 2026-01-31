@@ -362,6 +362,38 @@ async function executeAction(actionType, config, eventData) {
 }
 
 /**
+ * Insère une notification. Tente d'abord avec id_expediteur et afficher_expediteur ;
+ * si la table n'a pas ces colonnes (migration non exécutée), réessaie sans.
+ */
+async function insertNotification(query, type, id_fiche, message, destination, date_creation, idExpediteur, showExpediteur) {
+  const withExpediteur = async () => {
+    await query(
+      `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
+      [type, id_fiche, message, destination, date_creation, idExpediteur, showExpediteur]
+    );
+  };
+  const withoutExpediteur = async () => {
+    await query(
+      `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
+       VALUES (?, ?, ?, ?, ?, 0)`,
+      [type, id_fiche, message, destination, date_creation]
+    );
+  };
+  try {
+    await withExpediteur();
+  } catch (err) {
+    const unknownColumn = err.errno === 1054 || (err.code === 'ER_BAD_FIELD_ERROR') || (err.message && String(err.message).includes('Unknown column'));
+    if (unknownColumn) {
+      console.log('[WORKFLOW] Colonnes id_expediteur/afficher_expediteur absentes, insertion sans expéditeur');
+      await withoutExpediteur();
+    } else {
+      throw err;
+    }
+  }
+}
+
+/**
  * Action : Notification interne
  */
 async function executeNotificationAction(config, eventData) {
@@ -446,11 +478,7 @@ async function executeNotificationAction(config, eventData) {
     console.log(`[WORKFLOW] ${recipientIds.length} destinataire(s) (fonctions/utilisateurs)`);
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     for (const uid of recipientIds) {
-      await query(
-        `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
-         VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
-        [finalType, finalFicheId, finalMessage, uid, now, idExpediteur, showExpediteur]
-      );
+      await insertNotification(query, finalType, finalFicheId, finalMessage, uid, now, idExpediteur, showExpediteur);
     }
     return { success: true, message: `${recipientIds.length} notification(s) créée(s)`, count: recipientIds.length };
   }
@@ -527,18 +555,31 @@ async function executeNotificationAction(config, eventData) {
       throw new Error(`Erreur de construction des valeurs: ${flatValues.length} valeurs pour ${expectedValues} attendues`);
     }
     
-    const sqlQuery = `
+    const sqlQueryWithExpediteur = `
       INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
       VALUES ${placeholders.join(', ')}
     `;
-    console.log(`[WORKFLOW] Requête SQL:`, sqlQuery);
     console.log(`[WORKFLOW] Nombre de paramètres:`, flatValues.length);
-    
-    const insertResult = await query(sqlQuery, flatValues);
-    
-    console.log(`[WORKFLOW] Résultat de l'INSERT:`, JSON.stringify(insertResult, null, 2));
+    try {
+      await query(sqlQueryWithExpediteur, flatValues);
+    } catch (err) {
+      const unknownColumn = err.errno === 1054 || (err.code === 'ER_BAD_FIELD_ERROR') || (err.message && String(err.message).includes('Unknown column'));
+      if (unknownColumn) {
+        console.log('[WORKFLOW] Colonnes id_expediteur/afficher_expediteur absentes, insertion sans expéditeur');
+        const placeholdersLegacy = validAdmins.map(() => '(?, ?, ?, ?, ?, 0)').join(', ');
+        const flatValuesLegacy = [];
+        for (const admin of validAdmins) {
+          flatValuesLegacy.push(finalType || null, finalFicheId !== undefined ? finalFicheId : null, finalMessage || null, admin.id || null, now || null);
+        }
+        await query(`
+          INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
+          VALUES ${placeholdersLegacy}
+        `, flatValuesLegacy);
+      } else {
+        throw err;
+      }
+    }
     console.log(`[WORKFLOW] ✅ ${validAdmins.length} notification(s) créée(s) avec succès`);
-    
     return { success: true, message: `${validAdmins.length} notification(s) créée(s)`, count: validAdmins.length };
   }
   
@@ -627,32 +668,22 @@ async function executeNotificationAction(config, eventData) {
     date_creation: now
   });
   
-  // S'assurer que toutes les valeurs sont définies (pas undefined)
-  const insertValues = [
-    finalType || null,
-    finalFicheId !== undefined ? finalFicheId : null,
-    finalMessage || null,
-    finalDestId || null,
-    now || null
-  ];
-  
   console.log(`[WORKFLOW] Valeurs finales pour insertion:`, {
-    type: insertValues[0],
-    id_fiche: insertValues[1],
-    message: insertValues[2]?.substring(0, 50) + '...',
-    destination: insertValues[3],
-    date_creation: insertValues[4]
+    type: finalType,
+    id_fiche: finalFicheId,
+    message: finalMessage?.substring(0, 50) + '...',
+    destination: finalDestId,
+    date_creation: now
   });
-  
-  const insertResult = await query(`
-    INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
-    VALUES (?, ?, ?, ?, ?, 0, ?, ?)
-  `, [...insertValues, idExpediteur, showExpediteur]);
 
-  console.log(`[WORKFLOW] ✅ Notification créée avec succès - ID=${insertResult.insertId}`);
+  await insertNotification(query, finalType, finalFicheId, finalMessage, finalDestId, now, idExpediteur, showExpediteur);
+  const insertResult = await queryOne('SELECT LAST_INSERT_ID() as id');
+  const notificationId = insertResult?.id || insertResult?.LAST_INSERT_ID?.();
+
+  console.log(`[WORKFLOW] ✅ Notification créée avec succès - ID=${notificationId}`);
   console.log(`[WORKFLOW] ========== executeNotificationAction FIN ==========`);
   
-  return { success: true, message: 'Notification créée', notification_id: insertResult.insertId };
+  return { success: true, message: 'Notification créée', notification_id: notificationId };
 }
 
 /**
