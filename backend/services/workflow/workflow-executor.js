@@ -595,12 +595,8 @@ async function executeNotificationAction(config, eventData) {
 
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
   
-  // Validation finale AVANT insertion pour éviter les notifications NULL
-  const finalType = type.trim();
-  const finalMessage = processedMessage.trim();
+  // Validation finale AVANT insertion pour éviter les notifications NULL (finalType, finalMessage, finalFicheId déjà définis plus haut)
   const finalDestId = destId;
-  // Récupérer fiche_id depuis fiche.id ou fiche_id directement
-  const finalFicheId = eventData.fiche?.id || eventData.fiche_id || null;
   console.log(`[WORKFLOW] Fiche ID récupéré (destination spécifique):`, finalFicheId, `(depuis fiche.id: ${eventData.fiche?.id}, depuis fiche_id: ${eventData.fiche_id})`);
   
   console.log(`[WORKFLOW] Validation finale avant insertion...`);
