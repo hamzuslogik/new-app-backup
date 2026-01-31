@@ -1609,6 +1609,11 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
     // Réinitialiser le flag de log pour le premier contact
     resetInsertFicheLog();
     
+    // Détecter l'annulation par le client (fermeture de la connexion / AbortController)
+    let cancelled = false;
+    req.on('close', () => { cancelled = true; });
+    req.on('aborted', () => { cancelled = true; });
+    
     // Log pour le premier contact avant insertion
     if (validContacts.length > 0) {
       console.log('\n=== PREMIER CONTACT AVANT INSERTION ===');
@@ -1627,6 +1632,10 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
     const startTime = Date.now();
     
     for (let i = 0; i < validContacts.length; i++) {
+      if (cancelled) {
+        console.log('⏹ Import annulé par le client');
+        break;
+      }
       const contact = validContacts[i];
       try {
         await insertFiche(contact, mapping, req.user.id, centreId, produit);
@@ -1778,6 +1787,7 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
         errorsList: errors,
         invalidPostalCodes: invalidPostalCodes.length,
         otherErrors: otherErrors.length,
+        cancelled: cancelled,
         // Nouveau tableau structuré des contacts non insérés
         notInserted: {
           total: notInserted.length,

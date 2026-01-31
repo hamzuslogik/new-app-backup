@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useMutation, useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaUpload, FaFileExcel, FaFileCsv, FaCheck, FaTimes, FaDownload, FaSpinner } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 import './ImportMasse.css';
 
 const ImportMasse = () => {
@@ -18,6 +19,7 @@ const ImportMasse = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedCentre, setSelectedCentre] = useState(user?.centre || '');
   const [selectedProduit, setSelectedProduit] = useState('');
+  const abortControllerRef = useRef(null);
 
   // Récupérer la liste des centres
   const { data: centresData } = useQuery('centres', async () => {
@@ -75,10 +77,13 @@ const ImportMasse = () => {
     }
   );
 
-  // Mutation pour traiter l'import
+  // Mutation pour traiter l'import (avec support annulation via AbortController)
   const importMutation = useMutation(
     async (data) => {
-      const res = await api.post('/import/process', data);
+      abortControllerRef.current = new AbortController();
+      const res = await api.post('/import/process', data, {
+        signal: abortControllerRef.current.signal
+      });
       return res.data;
     },
     {
@@ -86,11 +91,19 @@ const ImportMasse = () => {
         if (data.success) {
           setImportResult(data.data);
           setIsProcessing(false);
-          toast.success(`Import terminé: ${data.data.inserted} fiches insérées`);
+          if (data.data.cancelled) {
+            toast.info(`Import annulé. ${data.data.inserted} fiche(s) insérée(s) avant annulation.`);
+          } else {
+            toast.success(`Import terminé: ${data.data.inserted} fiches insérées`);
+          }
         }
       },
       onError: (error) => {
         setIsProcessing(false);
+        if (axios.isCancel(error)) {
+          toast.info('Import annulé');
+          return;
+        }
         const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Erreur lors de l\'import';
         toast.error(errorMessage);
         console.error('Erreur import:', error.response?.data || error);
@@ -147,6 +160,7 @@ const ImportMasse = () => {
     }
 
     setIsProcessing(true);
+    setImportResult(null);
     importMutation.mutate({
       mapping,
       tempFile,
@@ -154,6 +168,14 @@ const ImportMasse = () => {
       id_centre: selectedCentre,
       produit: selectedProduit
     });
+  };
+
+  const handleCancelImport = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsProcessing(false);
   };
 
   const handleReset = () => {
@@ -377,13 +399,22 @@ const ImportMasse = () => {
                 </>
               )}
             </button>
-            <button
-              className="btn-reset"
-              onClick={handleReset}
-              disabled={isProcessing}
-            >
-              <FaTimes /> Annuler
-            </button>
+            {isProcessing ? (
+              <button
+                type="button"
+                className="btn-cancel-import"
+                onClick={handleCancelImport}
+              >
+                <FaTimes /> Annuler l'import
+              </button>
+            ) : (
+              <button
+                className="btn-reset"
+                onClick={handleReset}
+              >
+                <FaTimes /> Réinitialiser
+              </button>
+            )}
           </div>
         </div>
       )}
