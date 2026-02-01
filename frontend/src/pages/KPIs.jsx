@@ -18,7 +18,7 @@ import './KPIs.css';
 
 const KPIs = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('qualification'); // qualification, confirmation, centres, confirmation-jws
+  const [activeTab, setActiveTab] = useState('qualification'); // qualification, confirmation, confirmation-jws (tous filtrés par centre CALL_JWS)
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois
   const [selectedMonth, setSelectedMonth] = useState(''); // Format: YYYY-MM
 
@@ -79,23 +79,7 @@ const KPIs = () => {
     }
   );
 
-  // Récupérer les KPI Par Centre
-  const { data: centresData, isLoading: isLoadingCentres, error: errorCentres } = useQuery(
-    ['kpis-centres', selectedPeriod, selectedMonth],
-    async () => {
-      const params = {};
-      if (selectedPeriod === 'mois' && selectedMonth) {
-        params.month = selectedMonth;
-      }
-      const res = await api.get('/statistiques/kpis-centres', { params });
-      return res.data.data;
-    },
-    {
-      enabled: (selectedPeriod !== 'mois' || !!selectedMonth) && activeTab === 'centres'
-    }
-  );
-
-  // Récupérer les KPI Confirmation JWS
+  // Récupérer les KPI Confirmation JWS (centre CALL_JWS uniquement)
   const { data: confirmationJwsData, isLoading: isLoadingConfJws, error: errorConfJws } = useQuery(
     ['kpis-confirmation-jws', selectedPeriod, selectedMonth],
     async () => {
@@ -113,12 +97,10 @@ const KPIs = () => {
 
   const isLoading = activeTab === 'qualification' ? isLoadingQualif : 
                    activeTab === 'confirmation' ? isLoadingConf : 
-                   activeTab === 'confirmation-jws' ? isLoadingConfJws :
-                   isLoadingCentres;
+                   isLoadingConfJws;
   const error = activeTab === 'qualification' ? errorQualif : 
                 activeTab === 'confirmation' ? errorConf : 
-                activeTab === 'confirmation-jws' ? errorConfJws :
-                errorCentres;
+                errorConfJws;
 
   const periods = [
     { key: 'jour', label: 'Aujourd\'hui', icon: FaCalendarDay },
@@ -130,9 +112,7 @@ const KPIs = () => {
     ? kpiData?.[selectedPeriod] 
     : activeTab === 'confirmation'
     ? confirmationData?.[selectedPeriod]
-    : activeTab === 'confirmation-jws'
-    ? confirmationJwsData?.[selectedPeriod]
-    : centresData?.[selectedPeriod];
+    : confirmationJwsData?.[selectedPeriod];
 
   // Fonction pour formater le pourcentage
   const formatPercentage = (value) => {
@@ -191,12 +171,6 @@ const KPIs = () => {
             onClick={() => setActiveTab('confirmation')}
           >
             Confirmation
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'centres' ? 'active' : ''}`}
-            onClick={() => setActiveTab('centres')}
-          >
-            Par Centre
           </button>
           <button
             className={`tab-btn ${activeTab === 'confirmation-jws' ? 'active' : ''}`}
@@ -747,141 +721,6 @@ const KPIs = () => {
         </div>
       )}
 
-      {/* Contenu pour l'onglet Par Centre */}
-      {activeTab === 'centres' && currentData && (
-        <div className="kpis-content">
-          <div className="kpi-section">
-            <h2 className="section-title">KPIs par Centre</h2>
-            {currentData.centres && currentData.centres.length > 0 ? (
-              <div className="centres-grid">
-                {currentData.centres.map((centre) => (
-                  <div key={centre.centre_id} className="centre-card">
-                    <div className="centre-header">
-                      <h3>{centre.centre_titre || `Centre #${centre.centre_id}`}</h3>
-                    </div>
-                    <div className="centre-body">
-                      {/* Métriques Globales */}
-                      <div className="centre-metrics">
-                        <div className="metric-item">
-                          <span className="metric-label">Taux de Conversion</span>
-                          <span className="metric-value">{formatPercentage(centre.conversion_rate || 0)}</span>
-                        </div>
-                        <div className="metric-item">
-                          <span className="metric-label">Taux de Transformation</span>
-                          <span className="metric-value">{formatPercentage(centre.transformation_rate || 0)}</span>
-                          <span className="metric-description">Signatures / Total (par date insertion)</span>
-                        </div>
-                        <div className="metric-item">
-                          <span className="metric-label">Fiches Validées</span>
-                          <span className="metric-value">{centre.validated_count || 0}</span>
-                        </div>
-                        <div className="metric-item">
-                          <span className="metric-label">Fiches Signées</span>
-                          <span className="metric-value">{centre.signed_count || 0}</span>
-                        </div>
-                        <div className="metric-item">
-                          <span className="metric-label">Fiches Total</span>
-                          <span className="metric-value">{centre.total_count || 0}</span>
-                        </div>
-                      </div>
-
-                      {/* Distribution par État */}
-                      {centre.etats_distribution && centre.etats_distribution.length > 0 && (
-                        <div className="etats-distribution">
-                          <h4>Répartition par État</h4>
-                          <div className="etats-list">
-                            {centre.etats_distribution.map((etat) => (
-                              <div key={etat.id} className="etat-item">
-                                <div className="etat-header">
-                                  <span 
-                                    className="etat-color-indicator"
-                                    style={{ backgroundColor: etat.color || '#ccc' }}
-                                  ></span>
-                                  <span className="etat-titre">{etat.titre}</span>
-                                </div>
-                                <div className="etat-stats">
-                                  <span className="etat-count">{etat.count} fiches</span>
-                                  <span className="etat-percentage">{etat.percentage}%</span>
-                                </div>
-                                <div className="etat-bar">
-                                  <div 
-                                    className="etat-bar-fill"
-                                    style={{ 
-                                      width: `${etat.percentage}%`,
-                                      backgroundColor: etat.color || '#ccc'
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Top Agent */}
-                      {centre.top_agent && (
-                        <div className="centre-top-agent">
-                          <h4>Meilleur Agent</h4>
-                          <div className="agent-info">
-                            {centre.top_agent.photo ? (
-                              <img 
-                                src={centre.top_agent.photo} 
-                                alt={centre.top_agent.pseudo}
-                                className="agent-avatar"
-                              />
-                            ) : (
-                              <div className="agent-avatar placeholder">
-                                {centre.top_agent.pseudo ? centre.top_agent.pseudo.charAt(0).toUpperCase() : '?'}
-                              </div>
-                            )}
-                            <div className="agent-details">
-                              <div className="agent-name">
-                                {centre.top_agent.nom && centre.top_agent.prenom
-                                  ? `${centre.top_agent.nom} ${centre.top_agent.prenom}`
-                                  : centre.top_agent.pseudo || 'N/A'}
-                              </div>
-                              <div className="agent-pseudo">{centre.top_agent.pseudo}</div>
-                              <div className="agent-count">{centre.top_agent.count} fiches</div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Top Équipe */}
-                      {centre.top_team && (
-                        <div className="centre-top-team">
-                          <h4>Meilleure Équipe</h4>
-                          <div className="team-info">
-                            <div className="superviseur-name">
-                              {centre.top_team.superviseur.nom && centre.top_team.superviseur.prenom
-                                ? `${centre.top_team.superviseur.nom} ${centre.top_team.superviseur.prenom}`
-                                : centre.top_team.superviseur.pseudo || 'N/A'}
-                            </div>
-                            <div className="superviseur-pseudo">{centre.top_team.superviseur.pseudo}</div>
-                            <div className="team-count">{centre.top_team.count} fiches</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-data">Aucun centre trouvé pour cette période</div>
-            )}
-
-            {/* Informations sur la période */}
-            <div className="period-info">
-              <p>
-                Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
-              </p>
-              <p className="info-text">
-                Les KPIs sont calculés par centre pour la période sélectionnée.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
