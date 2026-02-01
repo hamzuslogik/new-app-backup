@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
-import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSignature, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
 import FicheDetailModal from '../components/FicheDetailModal';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
@@ -78,11 +78,25 @@ const Dashboard = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 999999,
-    fiche_search: false,
-    include_archive: false,
+  // Par défaut : RDV créés dans la journée (fiches CONFIRMER modifiées aujourd'hui)
+  const getDefaultDateStr = () => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  };
+  const [filters, setFilters] = useState(() => {
+    const dateStr = getDefaultDateStr();
+    return {
+      page: 1,
+      limit: 999999,
+      fiche_search: true,
+      id_etat_final: 7,
+      date_champ: 'date_modif_time',
+      date_debut: dateStr,
+      date_fin: dateStr,
+      time_debut: '00:00:00',
+      time_fin: '23:59:59',
+      include_archive: false,
+    };
   });
   
   // Lire les paramètres de l'URL et les appliquer aux filtres
@@ -260,25 +274,13 @@ const Dashboard = () => {
       baseParams.include_archive = 1;
     }
     
-    // Pour les confirmateurs (fonction 6) : afficher uniquement les fiches modifiées dans la journée (date en cours) et assignées au confirmateur connecté
-    if (isConfirmateur && user?.id) {
-      return {
-        ...baseParams,
-        fiche_search: 1,
-        date_champ: 'date_modif_time',
-        date_debut: dateStr,
-        date_fin: dateStr,
-        time_debut: timeStart,
-        time_fin: timeEnd,
-      };
-    }
-    
-    // Fiches CONFIRMER (7) uniquement confirmées aujourd'hui
-    // Utiliser date_confirmation pour filtrer, mais aussi vérifier que l'état a changé vers 7 aujourd'hui
+    // Par défaut : RDV créés dans la journée (fiches CONFIRMER modifiées aujourd'hui = RDV enregistrés aujourd'hui)
+    // Pour les confirmateurs : idem, fiches modifiées aujourd'hui (assignation gérée côté backend par user)
     return {
       ...baseParams,
-      id_etat_final: [7], // CONFIRMER uniquement
-      date_champ: 'date_confirmation', // Utiliser date_confirmation au lieu de date_modif_time
+      fiche_search: 1,
+      id_etat_final: 7,
+      date_champ: 'date_modif_time',
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: timeStart,
@@ -740,12 +742,6 @@ const Dashboard = () => {
         // URL pour "confirmer de la journée"
         const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_confirmation&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
         
-        // URL pour "annuler à reprogrammer"
-        const annulerUrl = `/dashboard?fiche_search=1&id_etat_final=8&date_champ=date_modif_time&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
-        
-        // URL pour "rdv à venir"
-        const rdvVenirUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_rdv_time&date_debut=${todayStr}&time_debut=00:00:00`;
-        
         return (
           <div className="dashboard-stats-section">
             <div className="stats-cards">
@@ -760,19 +756,19 @@ const Dashboard = () => {
                 </div>
               </Link>
 
-              {/* Annuler à reprogrammer */}
-              <Link to={annulerUrl} className="stat-card stat-card-warning">
+              {/* Signatures (aujourd'hui) */}
+              <Link to="/signatures" className="stat-card stat-card-warning">
                 <div className="stat-card-icon">
-                  <FaCalendarTimes />
+                  <FaSignature />
                 </div>
                 <div className="stat-card-content">
-                  <div className="stat-card-value">{dashboardStats.rdvTodayAnnuler || 0}</div>
-                  <div className="stat-card-label">Annuler à reprogrammer</div>
+                  <div className="stat-card-value">{dashboardStats.signaturesToday || 0}</div>
+                  <div className="stat-card-label">Signatures</div>
                 </div>
               </Link>
 
               {/* RDV à venir */}
-              <Link to={rdvVenirUrl} className="stat-card stat-card-info">
+              <Link to={`/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_rdv_time&date_debut=${todayStr}&time_debut=00:00:00`} className="stat-card stat-card-info">
                 <div className="stat-card-icon">
                   <FaCalendarAlt />
                 </div>

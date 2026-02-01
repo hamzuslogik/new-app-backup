@@ -575,13 +575,11 @@ router.get('/dashboard', authenticate, async (req, res) => {
       AND (f.archive = 0 OR f.archive IS NULL)
     `, [todayStr, todayStr, todayStr]);
 
-    // 2. Nombre de RDV aujourd'hui annulés à reprogrammer (état ANNULER À REPROGRAMMER = 8) avec date_modif_time aujourd'hui
-    const rdvTodayAnnuler = await queryOne(`
+    // 2. Nombre de signatures enregistrées aujourd'hui (table signature)
+    const signaturesToday = await queryOne(`
       SELECT COUNT(*) as count
-      FROM fiches
-      WHERE id_etat_final = 8
-      AND DATE(date_modif_time) = ?
-      AND (archive = 0 OR archive IS NULL)
+      FROM signature
+      WHERE DATE(date_heure) = ?
     `, [todayStr]);
 
     // 3. Nombre de RDV à venir (état CONFIRMER = 7) avec date_rdv_time >= aujourd'hui
@@ -646,7 +644,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
       success: true,
       data: {
         rdvTodayConfirmed: rdvTodayConfirmed?.count || 0,
-        rdvTodayAnnuler: rdvTodayAnnuler?.count || 0,
+        signaturesToday: signaturesToday?.count || 0,
         rdvUpcoming: rdvUpcoming?.count || 0,
         confirmateurs: confirmateursWithRdv.map(conf => ({
           id: conf.id,
