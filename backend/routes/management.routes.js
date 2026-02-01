@@ -1126,6 +1126,98 @@ router.delete('/type-contrat/:id', authenticate, checkPermission(1, 2, 7, 11), a
 });
 
 // =====================================================
+// TYPES FINANCEMENT (à saisir lors de la signature)
+// =====================================================
+
+// Récupérer tous les types de financement
+router.get('/financement', authenticate, async (req, res) => {
+  try {
+    const data = await query(
+      'SELECT * FROM types_financement ORDER BY ordre ASC, nom ASC'
+    );
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Créer un type de financement
+router.post('/financement', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const { nom, ordre, etat } = req.body;
+
+    if (!nom || !String(nom).trim()) {
+      return res.status(400).json({ success: false, message: 'Le nom est requis' });
+    }
+
+    const existing = await queryOne(
+      'SELECT id FROM types_financement WHERE TRIM(nom) = TRIM(?)',
+      [nom]
+    );
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Ce type de financement existe déjà' });
+    }
+
+    const ordreVal = ordre != null ? parseInt(ordre, 10) : 0;
+    const etatVal = etat != null ? (etat ? 1 : 0) : 1;
+
+    const result = await query(
+      'INSERT INTO types_financement (nom, ordre, etat) VALUES (?, ?, ?)',
+      [String(nom).trim(), ordreVal, etatVal]
+    );
+    res.status(201).json({ success: true, message: 'Type de financement créé avec succès', data: { id: result.insertId } });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la création' });
+  }
+});
+
+// Mettre à jour un type de financement
+router.put('/financement/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nom, ordre, etat } = req.body;
+
+    if (!nom || !String(nom).trim()) {
+      return res.status(400).json({ success: false, message: 'Le nom est requis' });
+    }
+
+    const existing = await queryOne(
+      'SELECT id FROM types_financement WHERE TRIM(nom) = TRIM(?) AND id != ?',
+      [nom, id]
+    );
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Un type de financement avec ce nom existe déjà' });
+    }
+
+    const ordreVal = ordre != null ? parseInt(ordre, 10) : 0;
+    const etatVal = etat != null ? (etat ? 1 : 0) : 1;
+
+    await query(
+      'UPDATE types_financement SET nom = ?, ordre = ?, etat = ? WHERE id = ?',
+      [String(nom).trim(), ordreVal, etatVal, id]
+    );
+    res.json({ success: true, message: 'Type de financement mis à jour avec succès' });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la mise à jour' });
+  }
+});
+
+// Supprimer un type de financement
+router.delete('/financement/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query('DELETE FROM types_financement WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Type de financement supprimé avec succès' });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la suppression' });
+  }
+});
+
+// =====================================================
 // INSTALLATEURS
 // =====================================================
 

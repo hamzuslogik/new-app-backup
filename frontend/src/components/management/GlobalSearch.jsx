@@ -49,6 +49,11 @@ const GlobalSearch = ({ onSelect, activeTab }) => {
     return response.data.data || [];
   }, { enabled: isOpen });
 
+  const { data: financement } = useQuery('financement', async () => {
+    const response = await api.get('/management/financement');
+    return response.data.data || [];
+  }, { enabled: isOpen });
+
   const { data: modeChauffage } = useQuery('mode-chauffage', async () => {
     const response = await api.get('/management/mode-chauffage');
     return response.data.data || [];
@@ -124,6 +129,13 @@ const GlobalSearch = ({ onSelect, activeTab }) => {
       }
     });
 
+    // Financement
+    financement?.forEach(item => {
+      if (item.nom?.toLowerCase().includes(term) || item.id?.toString().includes(term)) {
+        results.push({ type: 'financement', label: 'Financement', item, display: item.nom });
+      }
+    });
+
     // Modes de chauffage
     modeChauffage?.forEach(item => {
       if (item.nom?.toLowerCase().includes(term) || item.id?.toString().includes(term)) {
@@ -139,7 +151,7 @@ const GlobalSearch = ({ onSelect, activeTab }) => {
     });
 
     return results.slice(0, 20); // Limiter à 20 résultats
-  }, [searchTerm, isOpen, centres, utilisateurs, departements, produits, fonctions, etats, professions, typeContrat, modeChauffage, installateurs]);
+  }, [searchTerm, isOpen, centres, utilisateurs, departements, produits, fonctions, etats, professions, typeContrat, financement, modeChauffage, installateurs]);
 
   const handleSelect = (result) => {
     if (onSelect) {

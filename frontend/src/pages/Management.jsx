@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope } from 'react-icons/fa';
+import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave } from 'react-icons/fa';
 import CentresTab from '../components/management/CentresTab';
+import FinancementTab from '../components/management/FinancementTab';
 import UtilisateursTab from '../components/management/UtilisateursTab';
 import DepartementsTab from '../components/management/DepartementsTab';
 import ProduitsTab from '../components/management/ProduitsTab';
@@ -40,6 +41,7 @@ const Management = () => {
     { id: 'sous-etat', label: 'Sous-états', icon: FaList },
     { id: 'professions', label: 'Professions', icon: FaBriefcase },
     { id: 'type-contrat', label: 'Types de contrat', icon: FaFileContract },
+    { id: 'financement', label: 'Financement', icon: FaMoneyBillWave },
     { id: 'mode-chauffage', label: 'Modes de chauffage', icon: FaFire },
     { id: 'installateurs', label: 'Installateurs', icon: FaTools },
     { id: 'fournisseurs-sms', label: 'Fournisseurs SMS', icon: FaSms },
@@ -73,6 +75,8 @@ const Management = () => {
         return <ProfessionsTab />;
       case 'type-contrat':
         return <TypeContratTab />;
+      case 'financement':
+        return <FinancementTab />;
       case 'mode-chauffage':
         return <ModeChauffageTab />;
       case 'installateurs':
