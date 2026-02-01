@@ -1719,38 +1719,27 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       `;
       const top3Confirmations = await query(top3ConfirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate, ...callJwsCentreIds]);
 
-      // 2. Top 3 Confirmateurs - Signatures (états 13, 16, 44, 45, mais PAS 38 = retracter 2 fois)
-      // Compter les signatures avec le système de score (1 confirmateur = 1, 2 = 0.5 chacun, 3 = 0.33 chacun)
-      // On doit compter tous les confirmateurs (1, 2, 3) pour chaque fiche
-      // IMPORTANT: Compter par date de la dernière confirmation (dernière fois que la fiche est passée en état 7)
-      // Récupérer d'abord les fiches signées avec leur date de dernière confirmation
-      const signaturesFichesWithLastConf = await query(`
+      // 2. Top 3 Confirmateurs - Signatures : uniquement fiches dont la dernière confirmation est dans la période (JOIN + filtre SQL)
+      const signaturesFichesQuery = `
         SELECT 
           f.id,
           f.id_confirmateur,
           f.id_confirmateur_2,
-          f.id_confirmateur_3,
-          f.id_etat_final,
-          COALESCE(
-            f.date_confirmation,
-            (SELECT MAX(h.date_creation) 
-             FROM fiches_histo h 
-             WHERE h.id_fiche = f.id AND h.id_etat = 7)
-          ) as last_confirmation_date
+          f.id_confirmateur_3
         FROM fiches f
+        LEFT JOIN (
+          SELECT id_fiche, MAX(date_creation) as last_conf
+          FROM fiches_histo
+          WHERE id_etat = 7
+          GROUP BY id_fiche
+        ) histo ON f.id = histo.id_fiche
         WHERE f.id_etat_final IN (13, 16, 44, 45)
-        AND f.id_etat_final != 38
         AND (f.archive = 0 OR f.archive IS NULL)
-      `);
-      
-      // Filtrer par date de dernière confirmation dans la période
-      const signaturesFiches = signaturesFichesWithLastConf.filter(fiche => {
-        if (!fiche.last_confirmation_date) return false;
-        const confDate = new Date(fiche.last_confirmation_date);
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        return confDate >= start && confDate <= end;
-      });
+        ${centreCondition}
+        AND COALESCE(f.date_confirmation, UNIX_TIMESTAMP(histo.last_conf)) >= ?
+        AND COALESCE(f.date_confirmation, UNIX_TIMESTAMP(histo.last_conf)) <= ?
+      `;
+      const signaturesFiches = await query(signaturesFichesQuery, [...callJwsCentreIds, startTimestamp, endTimestamp]);
 
       // Calculer les scores par confirmateur
       const signaturesScores = {};
@@ -1841,34 +1830,8 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       const previousConfirmationsResult = await queryOne(confirmationsQuery, [previousStartTimestamp, previousEndTimestamp, previousStartDate, previousEndDate, ...callJwsCentreIds]);
       const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
 
-      // Calculer les signatures de la période précédente
-      const previousSignaturesFichesWithLastConf = await query(`
-        SELECT 
-          f.id,
-          f.id_confirmateur,
-          f.id_confirmateur_2,
-          f.id_confirmateur_3,
-          COALESCE(
-            f.date_confirmation,
-            (SELECT MAX(h.date_creation) 
-             FROM fiches_histo h 
-             WHERE h.id_fiche = f.id AND h.id_etat = 7)
-          ) as last_confirmation_date
-        FROM fiches f
-        WHERE f.id_etat_final IN (13, 16, 44, 45)
-        AND f.id_etat_final != 38
-        AND (f.archive = 0 OR f.archive IS NULL)
-        ${centreCondition}
-      `, [...callJwsCentreIds]);
-      
-      // Filtrer par date de dernière confirmation dans la période précédente
-      const previousSignaturesFiches = previousSignaturesFichesWithLastConf.filter(fiche => {
-        if (!fiche.last_confirmation_date) return false;
-        const confDate = new Date(fiche.last_confirmation_date);
-        const start = new Date(previousStartDate);
-        const end = new Date(previousEndDate);
-        return confDate >= start && confDate <= end;
-      });
+      // Calculer les signatures de la période précédente (même requête optimisée, filtre en SQL)
+      const previousSignaturesFiches = await query(signaturesFichesQuery, [...callJwsCentreIds, previousStartTimestamp, previousEndTimestamp]);
 
       let previousSignaturesCount = 0;
       previousSignaturesFiches.forEach(fiche => {
