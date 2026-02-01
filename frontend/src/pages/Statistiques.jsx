@@ -8,7 +8,7 @@ import './Statistiques.css';
 const Statistiques = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('centre'); // centre, confirmateur, commercial, agent
-  const [statType, setStatType] = useState('net'); // net ou taux
+  const [statType, setStatType] = useState('net'); // net, taux, repartition, part_total, barres
   
   // États pour les filtres
   const [filters, setFilters] = useState({
@@ -97,7 +97,9 @@ const Statistiques = () => {
     ['statistiques', activeTab, statType, filters],
     async () => {
       const params = getQueryParams();
-      const res = await api.get('/statistiques/all-stat', { params });
+      // Backend n'accepte que 'net' ou 'taux' ; pour les autres formats on demande les chiffres bruts
+      const apiStat = (statType === 'taux') ? 'taux' : 'net';
+      const res = await api.get('/statistiques/all-stat', { params: { ...params, stat: apiStat } });
       return res.data.data;
     },
     { enabled: false } // Ne pas charger automatiquement
@@ -241,6 +243,9 @@ const Statistiques = () => {
             >
               <option value="net">EN CHIFFRE</option>
               <option value="taux">EN TAUX</option>
+              <option value="repartition">RÉPARTITION % (par ligne)</option>
+              <option value="part_total">PART DU TOTAL %</option>
+              <option value="barres">BARRES</option>
             </select>
           </div>
 
@@ -312,7 +317,175 @@ const Statistiques = () => {
           </tbody>
         </table>
       );
-    } else {
+    }
+
+    if (statType === 'repartition') {
+      // Répartition % : chaque ligne = 100 %, valeur = part de l'état dans le total de la ligne
+      return (
+        <div className="table-responsive">
+          <table className="stats-table stats-table-repartition">
+            <thead>
+              <tr>
+                <th>{statsData.name_stat}</th>
+                {etats.map(etat => (
+                  <th key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                    {etat.abbreviation} %
+                  </th>
+                ))}
+                <th>TOTAL</th>
+                <th>TAUX %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((item, idx) => (
+                <tr key={idx}>
+                  <td>{item.name}</td>
+                  {etats.map(etat => {
+                    const count = item.stats[etat.id] || 0;
+                    const pct = item.total > 0 ? ((count * 100) / item.total).toFixed(1) : '0';
+                    return (
+                      <td key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                        {pct}%
+                      </td>
+                    );
+                  })}
+                  <td className="stat-total">{item.total}</td>
+                  <td className="stat-taux">{item.taux_reussite}%</td>
+                </tr>
+              ))}
+              <tr className="total-row">
+                <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>TOTAL</td>
+                {etats.map(etat => {
+                  const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
+                  const pct = total > 0 ? ((colTotal * 100) / total).toFixed(1) : '0';
+                  return (
+                    <td key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                      <strong>{pct}%</strong>
+                    </td>
+                  );
+                })}
+                <td className="stat-total"><strong>{total}</strong></td>
+                <td className="stat-taux">
+                  <strong>
+                    {(() => {
+                      const totPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
+                      const totNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
+                      return totPos + totNeg > 0 ? ((totPos * 100) / (totPos + totNeg)).toFixed(2) : 0;
+                    })()}%
+                  </strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (statType === 'part_total') {
+      // Part du total % : chaque cellule = part de ce count dans le total général
+      return (
+        <div className="table-responsive">
+          <table className="stats-table stats-table-part-total">
+            <thead>
+              <tr>
+                <th>{statsData.name_stat}</th>
+                {etats.map(etat => (
+                  <th key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                    {etat.abbreviation} %
+                  </th>
+                ))}
+                <th>TOTAL</th>
+                <th>TAUX %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((item, idx) => (
+                <tr key={idx}>
+                  <td>{item.name}</td>
+                  {etats.map(etat => {
+                    const count = item.stats[etat.id] || 0;
+                    const pct = total > 0 ? ((count * 100) / total).toFixed(1) : '0';
+                    return (
+                      <td key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                        {pct}%
+                      </td>
+                    );
+                  })}
+                  <td className="stat-total">
+                    {total > 0 ? ((item.total * 100) / total).toFixed(1) : '0'}%
+                  </td>
+                  <td className="stat-taux">{item.taux_reussite}%</td>
+                </tr>
+              ))}
+              <tr className="total-row">
+                <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>TOTAL</td>
+                {etats.map(etat => {
+                  const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
+                  const pct = total > 0 ? ((colTotal * 100) / total).toFixed(1) : '0';
+                  return (
+                    <td key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                      <strong>{pct}%</strong>
+                    </td>
+                  );
+                })}
+                <td className="stat-total"><strong>100%</strong></td>
+                <td className="stat-taux">
+                  <strong>
+                    {(() => {
+                      const totPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
+                      const totNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
+                      return totPos + totNeg > 0 ? ((totPos * 100) / (totPos + totNeg)).toFixed(2) : 0;
+                    })()}%
+                  </strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (statType === 'barres') {
+      // Barres : une barre horizontale par ligne (segments proportionnels aux états)
+      return (
+        <div className="stats-barres-container">
+          <div className="stats-barres-legend">
+            {etats.map(etat => (
+              <span key={etat.id} className="stats-barres-legend-item" style={{ backgroundColor: etat.color }}>
+                {etat.abbreviation}
+              </span>
+            ))}
+          </div>
+          <div className="stats-barres-list">
+            {data.map((item, idx) => (
+              <div key={idx} className="stats-barres-row">
+                <div className="stats-barres-label" title={item.name}>
+                  {item.name}
+                </div>
+                <div className="stats-barres-track">
+                  {item.total > 0 && etats.map(etat => {
+                    const count = item.stats[etat.id] || 0;
+                    const pct = (count * 100) / item.total;
+                    if (pct <= 0) return null;
+                    return (
+                      <div
+                        key={etat.id}
+                        className="stats-barres-segment"
+                        style={{ width: `${pct}%`, backgroundColor: etat.color }}
+                        title={`${etat.abbreviation}: ${count} (${pct.toFixed(1)}%)`}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="stats-barres-total">{item.total}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Affichage en mode NET (chiffres)
       // Affichage en mode NET (chiffres)
       return (
         <div className="table-responsive">
