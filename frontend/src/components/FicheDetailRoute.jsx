@@ -15,11 +15,15 @@ const FicheDetailRoute = () => {
     if (id && !hasOpened.current) {
       hasOpened.current = true;
 
-      // Si l'URL contient ?overlay=1, c'était un modal avant refresh → rouvrir en modal sur le dashboard
+      // Si l'URL contient ?overlay=1, ouvrir en modal et revenir à la page précédente (ou dashboard si refresh)
       const searchParams = new URLSearchParams(location.search);
       if (searchParams.get('overlay') === '1') {
         openFicheDetail(id);
-        navigate('/dashboard', { replace: true });
+        if (window.history.length > 1) {
+          navigate(-1);
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
         return;
       }
 
