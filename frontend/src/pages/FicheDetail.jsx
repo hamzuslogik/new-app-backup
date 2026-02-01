@@ -239,6 +239,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   });
 
+  const { data: typesFinancement = [] } = useQuery('financement', async () => {
+    try {
+      const res = await api.get('/management/financement');
+      return res.data?.data ?? [];
+    } catch (error) {
+      console.warn('Impossible de charger les types de financement:', error);
+      return [];
+    }
+  });
+
   // Récupérer les qualifications (peut être vide si la table n'existe pas)
   const { data: qualifications = [] } = useQuery('qualifications', async () => {
     try {
@@ -2787,7 +2797,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                      etatData.ph3_pac === 'rr' || etatData.ph3_pac === 'R/R' ? 'R/R' : etatData.ph3_pac;
                     items.push({ label: 'PAC', value: pacValue });
                   }
-                  if (etatData.ph3_type) items.push({ label: 'Financement', value: etatData.ph3_type });
+                  if (etatData.ph3_attente) items.push({ label: 'Financement', value: etatData.ph3_attente });
+                  if (etatData.ph3_type) items.push({ label: 'Type', value: etatData.ph3_type });
                   if (etatData.ph3_prix) items.push({ label: 'Prix', value: etatData.ph3_prix });
                   if (etatData.credit_immobilier) items.push({ label: 'Crédit immobilier', value: etatData.credit_immobilier });
                   if (etatData.credit_autre) items.push({ label: 'Autre crédit', value: etatData.credit_autre });
@@ -2804,7 +2815,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   if (etatData.ph3_mensualite) items.push({ label: 'Mensualité du crédit', value: etatData.ph3_mensualite });
                   if (etatData.ph3_nbr_annee_finance) items.push({ label: 'Nombre de mois du crédit', value: etatData.ph3_nbr_annee_finance });
                   if (etatData.ph3_alimentation) items.push({ label: 'Alimentation', value: etatData.ph3_alimentation });
-                  if (etatData.ph3_type) items.push({ label: 'Type', value: etatData.ph3_type });
                   if (etatData.date_sign_time) items.push({ label: 'DATE SIGNATURE', value: new Date(etatData.date_sign_time).toLocaleString('fr-FR') });
                 }
                 // CONFIRMER (7)
@@ -3862,11 +3872,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                       onChange={(e) => setEtatFormData({...etatFormData, ph3_attente: e.target.value})}
                     >
                       <option value="">Sélectionner</option>
-                      <option value="franfinance">franfinance</option>
-                      <option value="domo">domo</option>
-                      <option value="sofinco">sofinco</option>
-                      <option value="projexio">projexio</option>
-                      <option value="cetelem">cetelem</option>
+                      {typesFinancement.filter(t => t.etat !== 0).map(t => (
+                        <option key={t.id} value={t.nom}>{t.nom}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -4874,11 +4882,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     onChange={(e) => setEtatFormData({...etatFormData, ph3_attente: e.target.value})}
                   >
                     <option value="">Sélectionner</option>
-                    <option value="franfinance">franfinance</option>
-                    <option value="domo">domo</option>
-                    <option value="sofinco">sofinco</option>
-                    <option value="projexio">projexio</option>
-                    <option value="cetelem">cetelem</option>
+                    {typesFinancement.filter(t => t.etat !== 0).map(t => (
+                      <option key={t.id} value={t.nom}>{t.nom}</option>
+                    ))}
                   </select>
                 </div>
 
