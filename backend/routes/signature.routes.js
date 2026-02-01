@@ -144,7 +144,7 @@ router.get('/stats', authenticate, async (req, res) => {
     );
     const fichesUniques = fichesUniquesResult?.total || 0;
 
-    // Top 10 confirmateurs par score
+    // Top 10 confirmateurs par score (nb_signatures = nombre de lignes signature)
     const topConfirmateurs = await query(
       `SELECT 
         s.confirmateur,
@@ -152,7 +152,8 @@ router.get('/stats', authenticate, async (req, res) => {
         u.nom as confirmateur_nom,
         u.prenom as confirmateur_prenom,
         SUM(s.ajoute) as total_score,
-        COUNT(DISTINCT s.id_fiche) as nb_fiches
+        COUNT(DISTINCT s.id_fiche) as nb_fiches,
+        COUNT(*) as nb_signatures
       FROM signature s
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
       ${whereClause}
