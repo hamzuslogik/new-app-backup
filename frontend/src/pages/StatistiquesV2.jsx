@@ -141,34 +141,6 @@ const StatistiquesV2 = () => {
     { enabled: activeTab === 'centres' }
   );
 
-  // Récupérer la performance temporelle
-  const { data: temporalData, isLoading: loadingTemporal } = useQuery(
-    ['temporal-v2', activeTab],
-    async () => {
-      const res = await api.get('/statistiques-v2/temporal-performance', {
-        params: { months: 6, metric_type: activeTab }
-      });
-      return res.data.data;
-    },
-    { enabled: activeTab === 'temporal' }
-  );
-
-  // Récupérer la heatmap
-  const { data: heatmapData, isLoading: loadingHeatmap } = useQuery(
-    ['heatmap-v2', periodDates, activeTab],
-    async () => {
-      const params = {
-        date_debut: periodDates.start,
-        date_fin: periodDates.end,
-        metric_type: activeTab === 'qualification' ? 'creation' : 
-                     activeTab === 'confirmation' ? 'confirmation' : 'signature'
-      };
-      const res = await api.get('/statistiques-v2/heatmap', { params });
-      return res.data.data;
-    },
-    { enabled: activeTab === 'heatmap' }
-  );
-
   // Récupérer les données de comparaison
   const [comparisonPeriod, setComparisonPeriod] = useState({
     period1: { start: '', end: '' },
@@ -305,22 +277,6 @@ const StatistiquesV2 = () => {
     }));
   };
 
-  const formatHeatmapData = (data) => {
-    if (!data || !data.heatmap) return [];
-    const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-    const result = [];
-    
-    for (let day = 0; day < 7; day++) {
-      const dayData = { day: days[day] };
-      for (let hour = 0; hour < 24; hour++) {
-        const item = data.heatmap.find(d => d.dayOfWeek === day + 1 && d.hour === hour);
-        dayData[`h${hour}`] = item?.count || 0;
-      }
-      result.push(dayData);
-    }
-    return result;
-  };
-
   const formatPercentage = (value) => {
     if (value === null || value === undefined || isNaN(value)) return '0%';
     return `${parseFloat(value).toFixed(1)}%`;
@@ -334,9 +290,7 @@ const StatistiquesV2 = () => {
 
   const isLoading = activeTab === 'qualification' ? loadingQualif :
                    activeTab === 'confirmation' ? loadingConf :
-                   activeTab === 'centres' ? loadingCentres :
-                   activeTab === 'temporal' ? loadingTemporal :
-                   loadingHeatmap;
+                   activeTab === 'centres' ? loadingCentres : false;
 
   return (
     <div className="statistiques-v2-page">
@@ -371,18 +325,6 @@ const StatistiquesV2 = () => {
           onClick={() => setActiveTab('centres')}
         >
           Centres
-        </button>
-        <button
-          className={`tab-btn-v2 ${activeTab === 'temporal' ? 'active' : ''}`}
-          onClick={() => setActiveTab('temporal')}
-        >
-          Performance Temporelle
-        </button>
-        <button
-          className={`tab-btn-v2 ${activeTab === 'heatmap' ? 'active' : ''}`}
-          onClick={() => setActiveTab('heatmap')}
-        >
-          Heatmap
         </button>
         <button
           className={`tab-btn-v2 ${activeTab === 'comparison' ? 'active' : ''}`}
@@ -454,16 +396,18 @@ const StatistiquesV2 = () => {
               ))}
             </select>
 
-            <select
-              value={filters.id_confirmateur}
-              onChange={(e) => setFilters({ ...filters, id_confirmateur: e.target.value })}
-              className="filter-select"
-            >
-              <option value="">Tous les confirmateurs</option>
-              {confirmateursData?.map(conf => (
-                <option key={conf.id} value={conf.id}>{conf.pseudo}</option>
-              ))}
-            </select>
+            {activeTab !== 'qualification' && (
+              <select
+                value={filters.id_confirmateur}
+                onChange={(e) => setFilters({ ...filters, id_confirmateur: e.target.value })}
+                className="filter-select"
+              >
+                <option value="">Tous les confirmateurs</option>
+                {confirmateursData?.map(conf => (
+                  <option key={conf.id} value={conf.id}>{conf.pseudo}</option>
+                ))}
+              </select>
+            )}
 
             <select
               value={filters.id_centre}
@@ -534,17 +478,6 @@ const StatistiquesV2 = () => {
         <div className="stats-content">
           {/* Métriques principales */}
           <div className="metrics-grid">
-            <div className="metric-card">
-              <div className="metric-header">
-                <FaClock className="metric-icon" />
-                <h3>Temps Moyen de Traitement</h3>
-              </div>
-              <div className="metric-value">
-                {qualifAdvanced.avg_processing_time_hours?.toFixed(1) || 0} heures
-              </div>
-              <div className="metric-description">De la création à la validation</div>
-            </div>
-
             <div className="metric-card">
               <div className="metric-header">
                 <FaUsers className="metric-icon" />
@@ -665,6 +598,32 @@ const StatistiquesV2 = () => {
           <div className="metrics-grid">
             <div className="metric-card">
               <div className="metric-header">
+                <FaCheckCircle className="metric-icon" />
+                <h3>Taux de Conversion en Fiche Confirmée</h3>
+              </div>
+              <div className="metric-value">
+                {formatPercentage(confAdvanced.confirmation_rate)}
+              </div>
+              <div className="metric-description">
+                {confAdvanced.confirmed_count} confirmées sur {confAdvanced.total_count} total
+              </div>
+            </div>
+
+            <div className="metric-card">
+              <div className="metric-header">
+                <FaCheckCircle className="metric-icon" />
+                <h3>Nombre de Signatures</h3>
+              </div>
+              <div className="metric-value">
+                {confAdvanced.signatures_count || 0}
+              </div>
+              <div className="metric-description">
+                Fiches signées sur la période
+              </div>
+            </div>
+
+            <div className="metric-card">
+              <div className="metric-header">
                 <FaClock className="metric-icon" />
                 <h3>Délai Confirmation → Signature</h3>
               </div>
@@ -772,81 +731,6 @@ const StatistiquesV2 = () => {
         </div>
       )}
 
-      {!isLoading && activeTab === 'temporal' && temporalData && (
-        <div className="stats-content">
-          <div className="section-card">
-            <h2 className="section-title">Performance sur 6 Mois</h2>
-            <ResponsiveContainer width="100%" height={500}>
-              <LineChart data={temporalData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="label" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                {temporalData[0]?.qualification && (
-                  <Line type="monotone" dataKey="qualification.rate" stroke="#8884d8" strokeWidth={2} name="Taux Qualification (%)" />
-                )}
-                {temporalData[0]?.confirmation && (
-                  <Line type="monotone" dataKey="confirmation.rate" stroke="#82ca9d" strokeWidth={2} name="Taux Confirmation (%)" />
-                )}
-                {temporalData[0]?.signatures && (
-                  <Line type="monotone" dataKey="signatures.rate" stroke="#ffc107" strokeWidth={2} name="Taux Signatures (%)" />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
-      {!isLoading && activeTab === 'heatmap' && heatmapData && (
-        <div className="stats-content">
-          <div className="section-card">
-            <h2 className="section-title">Heatmap d'Activité</h2>
-            <div className="heatmap-container">
-              <div className="heatmap-grid">
-                <div className="heatmap-header">
-                  <div className="heatmap-time-label"></div>
-                  {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
-                    <div key={day} className="heatmap-day-header">{day}</div>
-                  ))}
-                </div>
-                {Array.from({ length: 24 }, (_, hour) => (
-                  <div key={hour} className="heatmap-row">
-                    <div className="heatmap-time-label">{hour}h</div>
-                    {[1, 2, 3, 4, 5, 6, 0].map(dayOfWeek => {
-                      const item = heatmapData.heatmap?.find(
-                        d => d.dayOfWeek === dayOfWeek && d.hour === hour
-                      );
-                      const count = item?.count || 0;
-                      const intensity = Math.min(count / (heatmapData.max_count || 1), 1);
-                      return (
-                        <div
-                          key={`${dayOfWeek}-${hour}`}
-                          className="heatmap-cell"
-                          style={{
-                            backgroundColor: `rgba(156, 191, 200, ${intensity * 0.8 + 0.2})`,
-                            cursor: count > 0 ? 'pointer' : 'default'
-                          }}
-                          title={`${count} activité(s) - ${['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][dayOfWeek]} ${hour}h`}
-                          onClick={() => count > 0 && handleChartClick({ dayOfWeek, hour, count }, 'heatmap')}
-                        >
-                          {count > 0 && <span className="heatmap-count">{count}</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-              <div className="heatmap-legend">
-                <span>Faible</span>
-                <div className="heatmap-gradient"></div>
-                <span>Élevé</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {!isLoading && activeTab === 'comparison' && (
         <div className="stats-content">
           <div className="section-card">
@@ -909,44 +793,118 @@ const StatistiquesV2 = () => {
               {!loadingComparison && comparisonData && (
                 <div className="comparison-results">
                   <div className="comparison-metrics">
-                    {comparisonData.qualification && (
+                    {comparisonData.fiches_generes && (
                       <div className="comparison-metric">
-                        <h4>Qualification</h4>
+                        <h4>Fiches générées</h4>
                         <div className="metric-comparison">
                           <div className="period-value period1">
                             <span className="label">Période 1</span>
-                            <span className="value">{parseFloat(comparisonData.qualification.period1?.rate || 0).toFixed(1)}%</span>
+                            <span className="value">{comparisonData.fiches_generes.period1?.count ?? 0}</span>
                           </div>
                           <div className="period-value period2">
                             <span className="label">Période 2</span>
-                            <span className="value">{parseFloat(comparisonData.qualification.period2?.rate || 0).toFixed(1)}%</span>
+                            <span className="value">{comparisonData.fiches_generes.period2?.count ?? 0}</span>
                           </div>
                           <div className="comparison-diff">
-                            <span className={`diff ${parseFloat(comparisonData.qualification.evolution || 0) >= 0 ? 'positive' : 'negative'}`}>
-                              {getTrendIcon(parseFloat(comparisonData.qualification.evolution || 0))}
-                              {Math.abs(parseFloat(comparisonData.qualification.evolution || 0)).toFixed(1)}%
+                            <span className={`diff ${parseFloat(comparisonData.fiches_generes.evolution || 0) >= 0 ? 'positive' : 'negative'}`}>
+                              {getTrendIcon(parseFloat(comparisonData.fiches_generes.evolution || 0))}
+                              {Math.abs(parseFloat(comparisonData.fiches_generes.evolution || 0)).toFixed(1)}%
                             </span>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {comparisonData.confirmation && (
+                    {comparisonData.fiches_qualifiees && (
                       <div className="comparison-metric">
-                        <h4>Confirmation</h4>
+                        <h4>Fiches qualifiées</h4>
                         <div className="metric-comparison">
                           <div className="period-value period1">
                             <span className="label">Période 1</span>
-                            <span className="value">{parseFloat(comparisonData.confirmation.period1?.rate || 0).toFixed(1)}%</span>
+                            <span className="value">{comparisonData.fiches_qualifiees.period1?.count ?? 0}</span>
+                            <span className="sub">({comparisonData.fiches_qualifiees.period1?.rate ?? 0}%)</span>
                           </div>
                           <div className="period-value period2">
                             <span className="label">Période 2</span>
-                            <span className="value">{parseFloat(comparisonData.confirmation.period2?.rate || 0).toFixed(1)}%</span>
+                            <span className="value">{comparisonData.fiches_qualifiees.period2?.count ?? 0}</span>
+                            <span className="sub">({comparisonData.fiches_qualifiees.period2?.rate ?? 0}%)</span>
                           </div>
                           <div className="comparison-diff">
-                            <span className={`diff ${parseFloat(comparisonData.confirmation.evolution || 0) >= 0 ? 'positive' : 'negative'}`}>
-                              {getTrendIcon(parseFloat(comparisonData.confirmation.evolution || 0))}
-                              {Math.abs(parseFloat(comparisonData.confirmation.evolution || 0)).toFixed(1)}%
+                            <span className={`diff ${parseFloat(comparisonData.fiches_qualifiees.evolution || 0) >= 0 ? 'positive' : 'negative'}`}>
+                              {getTrendIcon(parseFloat(comparisonData.fiches_qualifiees.evolution || 0))}
+                              {Math.abs(parseFloat(comparisonData.fiches_qualifiees.evolution || 0)).toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {comparisonData.fiches_confirmees && (
+                      <div className="comparison-metric">
+                        <h4>Fiches confirmées</h4>
+                        <div className="metric-comparison">
+                          <div className="period-value period1">
+                            <span className="label">Période 1</span>
+                            <span className="value">{comparisonData.fiches_confirmees.period1?.count ?? 0}</span>
+                            <span className="sub">({comparisonData.fiches_confirmees.period1?.rate ?? 0}%)</span>
+                          </div>
+                          <div className="period-value period2">
+                            <span className="label">Période 2</span>
+                            <span className="value">{comparisonData.fiches_confirmees.period2?.count ?? 0}</span>
+                            <span className="sub">({comparisonData.fiches_confirmees.period2?.rate ?? 0}%)</span>
+                          </div>
+                          <div className="comparison-diff">
+                            <span className={`diff ${parseFloat(comparisonData.fiches_confirmees.evolution || 0) >= 0 ? 'positive' : 'negative'}`}>
+                              {getTrendIcon(parseFloat(comparisonData.fiches_confirmees.evolution || 0))}
+                              {Math.abs(parseFloat(comparisonData.fiches_confirmees.evolution || 0)).toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {comparisonData.signatures && (
+                      <div className="comparison-metric">
+                        <h4>Nombre de signatures</h4>
+                        <div className="metric-comparison">
+                          <div className="period-value period1">
+                            <span className="label">Période 1</span>
+                            <span className="value">{comparisonData.signatures.period1?.count ?? 0}</span>
+                            <span className="sub">({comparisonData.signatures.period1?.rate ?? 0}%)</span>
+                          </div>
+                          <div className="period-value period2">
+                            <span className="label">Période 2</span>
+                            <span className="value">{comparisonData.signatures.period2?.count ?? 0}</span>
+                            <span className="sub">({comparisonData.signatures.period2?.rate ?? 0}%)</span>
+                          </div>
+                          <div className="comparison-diff">
+                            <span className={`diff ${parseFloat(comparisonData.signatures.evolution || 0) >= 0 ? 'positive' : 'negative'}`}>
+                              {getTrendIcon(parseFloat(comparisonData.signatures.evolution || 0))}
+                              {Math.abs(parseFloat(comparisonData.signatures.evolution || 0)).toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {comparisonData.retractees && (
+                      <div className="comparison-metric">
+                        <h4>Rétractées</h4>
+                        <div className="metric-comparison">
+                          <div className="period-value period1">
+                            <span className="label">Période 1</span>
+                            <span className="value">{comparisonData.retractees.period1?.count ?? 0}</span>
+                            <span className="sub">({comparisonData.retractees.period1?.rate ?? 0}%)</span>
+                          </div>
+                          <div className="period-value period2">
+                            <span className="label">Période 2</span>
+                            <span className="value">{comparisonData.retractees.period2?.count ?? 0}</span>
+                            <span className="sub">({comparisonData.retractees.period2?.rate ?? 0}%)</span>
+                          </div>
+                          <div className="comparison-diff">
+                            <span className={`diff ${parseFloat(comparisonData.retractees.evolution || 0) >= 0 ? 'positive' : 'negative'}`}>
+                              {getTrendIcon(parseFloat(comparisonData.retractees.evolution || 0))}
+                              {Math.abs(parseFloat(comparisonData.retractees.evolution || 0)).toFixed(1)}%
                             </span>
                           </div>
                         </div>

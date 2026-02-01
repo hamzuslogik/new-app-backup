@@ -214,16 +214,23 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
       ${whereClause}
     `, params);
 
-    // 2. Taux de rétractation (état 38)
+    // 2. Taux de rétractation (état 38) + Taux de conversion + Nombre de signatures
     const retractionRate = await queryOne(`
       SELECT 
         COUNT(DISTINCT CASE WHEN f.id_etat_final = 38 THEN f.id END) as retracted_count,
         COUNT(DISTINCT f.id) as total_count,
+        COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmed_count,
+        COUNT(DISTINCT CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN f.id END) as signatures_count,
         CASE 
           WHEN COUNT(DISTINCT f.id) > 0 
           THEN (COUNT(DISTINCT CASE WHEN f.id_etat_final = 38 THEN f.id END) / COUNT(DISTINCT f.id)) * 100
           ELSE 0
-        END as retraction_rate
+        END as retraction_rate,
+        CASE 
+          WHEN COUNT(DISTINCT f.id) > 0 
+          THEN (COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) / COUNT(DISTINCT f.id)) * 100
+          ELSE 0
+        END as confirmation_rate
       FROM fiches f
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
@@ -277,6 +284,9 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
         retraction_rate: parseFloat(retractionRate?.retraction_rate || 0),
         retracted_count: parseInt(retractionRate?.retracted_count || 0),
         total_count: parseInt(retractionRate?.total_count || 0),
+        confirmed_count: parseInt(retractionRate?.confirmed_count || 0),
+        signatures_count: parseInt(retractionRate?.signatures_count || 0),
+        confirmation_rate: parseFloat(retractionRate?.confirmation_rate || 0),
         top10_confirmateurs: top10Confirmateurs || [],
         daily_evolution: dailyConfirmationEvolution || []
       }
@@ -316,28 +326,28 @@ router.get('/centres-advanced', authenticate, checkPermissionCode('statistiques_
     
     const whereClause = conditions.length > 0 ? `AND ${conditions.join(' AND ')}` : '';
 
-    // Récupérer tous les centres
+    // Récupérer tous les centres actifs
     const centres = await query(`
-      SELECT id, titre FROM centres WHERE etat > 0 ORDER BY titre ASC
+      SELECT id, titre FROM centres WHERE etat = 1 ORDER BY titre ASC
     `);
 
     const centresData = [];
 
     for (const centre of centres) {
-      const centreParams = [...params, centre.id];
-
       // Métriques de base
       const totalCount = await queryOne(`
         SELECT COUNT(*) as count
         FROM fiches f
-        WHERE f.id_centre = ? AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+        WHERE f.id_centre = ?
+        AND f.date_insert_time >= ? AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
       `, [centre.id, startDate, endDate]);
 
       const signedCount = await queryOne(`
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
-        WHERE f.id_centre = ? AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+        WHERE f.id_centre = ?
+        AND f.date_insert_time >= ? AND f.date_insert_time <= ?
         AND f.id_etat_final IN (13, 16, 44, 45)
         AND f.id_etat_final != 38
         AND (f.archive = 0 OR f.archive IS NULL)
@@ -355,7 +365,8 @@ router.get('/centres-advanced', authenticate, checkPermissionCode('statistiques_
       const prevSignedCount = await queryOne(`
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
-        WHERE f.id_centre = ? AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+        WHERE f.id_centre = ?
+        AND f.date_insert_time >= ? AND f.date_insert_time <= ?
         AND f.id_etat_final IN (13, 16, 44, 45)
         AND f.id_etat_final != 38
         AND (f.archive = 0 OR f.archive IS NULL)
@@ -368,14 +379,18 @@ router.get('/centres-advanced', authenticate, checkPermissionCode('statistiques_
       // Productivité (fiches/jour)
       const productivity = daysDiff > 0 ? (totalCount?.count || 0) / daysDiff : 0;
 
-      centresData.push({
-        centre_id: centre.id,
-        centre_titre: centre.titre,
-        total_count: parseInt(totalCount?.count || 0),
-        signed_count: parseInt(signedCount?.count || 0),
-        growth_rate: parseFloat(growthRate.toFixed(2)),
-        productivity_per_day: parseFloat(productivity.toFixed(2))
-      });
+      // N'inclure que les centres avec au moins une fiche sur la période
+      const total = parseInt(totalCount?.count || 0);
+      if (total > 0) {
+        centresData.push({
+          centre_id: centre.id,
+          centre_titre: centre.titre,
+          total_count: total,
+          signed_count: parseInt(signedCount?.count || 0),
+          growth_rate: parseFloat(growthRate.toFixed(2)),
+          productivity_per_day: parseFloat(productivity.toFixed(2))
+        });
+      }
     }
 
     res.json({
@@ -491,14 +506,10 @@ router.get('/temporal-performance', authenticate, checkPermissionCode('statistiq
 });
 
 // GET /api/statistiques-v2/comparison
-// Comparaison multi-périodes
+// Comparaison multi-périodes : toutes les métriques (fiches générées, qualifiées, confirmées, signatures, rétractées)
 router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
   try {
-    const { 
-      period1_start, period1_end, 
-      period2_start, period2_end,
-      metric_type = 'all'
-    } = req.query;
+    const { period1_start, period1_end, period2_start, period2_end } = req.query;
 
     if (!period1_start || !period1_end || !period2_start || !period2_end) {
       return res.status(400).json({
@@ -512,84 +523,73 @@ router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_vie
     const period2Start = `${period2_start} 00:00:00`;
     const period2End = `${period2_end} 23:59:59`;
 
+    // Période 1 : total, qualifiées (groupe 1,2,3), confirmées (état 7), signatures (13,16,44,45), rétractées (38)
+    const p1 = await queryOne(`
+      SELECT 
+        COUNT(DISTINCT f.id) as total,
+        COUNT(DISTINCT CASE WHEN e.groupe IN ('1', '2', '3') THEN f.id END) as validated,
+        COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmed,
+        COUNT(DISTINCT CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN f.id END) as signatures_count,
+        COUNT(DISTINCT CASE WHEN f.id_etat_final = 38 THEN f.id END) as retracted_count
+      FROM fiches f
+      LEFT JOIN etats e ON f.id_etat_final = e.id
+      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [period1Start, period1End]);
+
+    const p2 = await queryOne(`
+      SELECT 
+        COUNT(DISTINCT f.id) as total,
+        COUNT(DISTINCT CASE WHEN e.groupe IN ('1', '2', '3') THEN f.id END) as validated,
+        COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmed,
+        COUNT(DISTINCT CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN f.id END) as signatures_count,
+        COUNT(DISTINCT CASE WHEN f.id_etat_final = 38 THEN f.id END) as retracted_count
+      FROM fiches f
+      LEFT JOIN etats e ON f.id_etat_final = e.id
+      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [period2Start, period2End]);
+
+    const t1 = parseInt(p1?.total || 0);
+    const t2 = parseInt(p2?.total || 0);
+    const v1 = parseInt(p1?.validated || 0);
+    const v2 = parseInt(p2?.validated || 0);
+    const c1 = parseInt(p1?.confirmed || 0);
+    const c2 = parseInt(p2?.confirmed || 0);
+    const s1 = parseInt(p1?.signatures_count || 0);
+    const s2 = parseInt(p2?.signatures_count || 0);
+    const r1 = parseInt(p1?.retracted_count || 0);
+    const r2 = parseInt(p2?.retracted_count || 0);
+
     const comparison = {
       period1: { start: period1_start, end: period1_end },
-      period2: { start: period2_start, end: period2_end }
+      period2: { start: period2_start, end: period2_end },
+      fiches_generes: {
+        period1: { count: t1 },
+        period2: { count: t2 },
+        evolution: t1 > 0 ? (((t2 - t1) / t1) * 100).toFixed(1) : (t2 > 0 ? '100' : '0')
+      },
+      fiches_qualifiees: {
+        period1: { count: v1, rate: t1 > 0 ? ((v1 / t1) * 100).toFixed(1) : '0' },
+        period2: { count: v2, rate: t2 > 0 ? ((v2 / t2) * 100).toFixed(1) : '0' },
+        evolution: t1 > 0 ? (((v2 - v1) / t1) * 100).toFixed(1) : (v2 > 0 ? '100' : '0')
+      },
+      fiches_confirmees: {
+        period1: { count: c1, rate: t1 > 0 ? ((c1 / t1) * 100).toFixed(1) : '0' },
+        period2: { count: c2, rate: t2 > 0 ? ((c2 / t2) * 100).toFixed(1) : '0' },
+        evolution: t1 > 0 ? (((c2 - c1) / t1) * 100).toFixed(1) : (c2 > 0 ? '100' : '0')
+      },
+      signatures: {
+        period1: { count: s1, rate: t1 > 0 ? ((s1 / t1) * 100).toFixed(1) : '0' },
+        period2: { count: s2, rate: t2 > 0 ? ((s2 / t2) * 100).toFixed(1) : '0' },
+        evolution: t1 > 0 ? (((s2 - s1) / t1) * 100).toFixed(1) : (s2 > 0 ? '100' : '0')
+      },
+      retractees: {
+        period1: { count: r1, rate: t1 > 0 ? ((r1 / t1) * 100).toFixed(1) : '0' },
+        period2: { count: r2, rate: t2 > 0 ? ((r2 / t2) * 100).toFixed(1) : '0' },
+        evolution: t1 > 0 ? (((r2 - r1) / t1) * 100).toFixed(1) : (r2 > 0 ? '100' : '0')
+      }
     };
-
-    if (metric_type === 'all' || metric_type === 'qualification') {
-      const period1Data = await queryOne(`
-        SELECT 
-          COUNT(DISTINCT f.id) as total,
-          COUNT(DISTINCT CASE WHEN e.groupe IN ('1', '2', '3') THEN f.id END) as validated
-        FROM fiches f
-        LEFT JOIN etats e ON f.id_etat_final = e.id
-        WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
-        AND (f.archive = 0 OR f.archive IS NULL)
-      `, [period1Start, period1End]);
-
-      const period2Data = await queryOne(`
-        SELECT 
-          COUNT(DISTINCT f.id) as total,
-          COUNT(DISTINCT CASE WHEN e.groupe IN ('1', '2', '3') THEN f.id END) as validated
-        FROM fiches f
-        LEFT JOIN etats e ON f.id_etat_final = e.id
-        WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
-        AND (f.archive = 0 OR f.archive IS NULL)
-      `, [period2Start, period2End]);
-
-      comparison.qualification = {
-        period1: {
-          total: parseInt(period1Data?.total || 0),
-          validated: parseInt(period1Data?.validated || 0),
-          rate: period1Data?.total > 0 ? ((period1Data.validated / period1Data.total) * 100).toFixed(2) : 0
-        },
-        period2: {
-          total: parseInt(period2Data?.total || 0),
-          validated: parseInt(period2Data?.validated || 0),
-          rate: period2Data?.total > 0 ? ((period2Data.validated / period2Data.total) * 100).toFixed(2) : 0
-        },
-        evolution: period1Data?.total > 0 
-          ? (((period2Data?.validated || 0) - (period1Data?.validated || 0)) / period1Data.total * 100).toFixed(2)
-          : 0
-      };
-    }
-
-    if (metric_type === 'all' || metric_type === 'confirmation') {
-      const period1Data = await queryOne(`
-        SELECT 
-          COUNT(DISTINCT f.id) as total,
-          COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmed
-        FROM fiches f
-        WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
-        AND (f.archive = 0 OR f.archive IS NULL)
-      `, [period1Start, period1End]);
-
-      const period2Data = await queryOne(`
-        SELECT 
-          COUNT(DISTINCT f.id) as total,
-          COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmed
-        FROM fiches f
-        WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
-        AND (f.archive = 0 OR f.archive IS NULL)
-      `, [period2Start, period2End]);
-
-      comparison.confirmation = {
-        period1: {
-          total: parseInt(period1Data?.total || 0),
-          confirmed: parseInt(period1Data?.confirmed || 0),
-          rate: period1Data?.total > 0 ? ((period1Data.confirmed / period1Data.total) * 100).toFixed(2) : 0
-        },
-        period2: {
-          total: parseInt(period2Data?.total || 0),
-          confirmed: parseInt(period2Data?.confirmed || 0),
-          rate: period2Data?.total > 0 ? ((period2Data.confirmed / period2Data.total) * 100).toFixed(2) : 0
-        },
-        evolution: period1Data?.total > 0 
-          ? (((period2Data?.confirmed || 0) - (period1Data?.confirmed || 0)) / period1Data.total * 100).toFixed(2)
-          : 0
-      };
-    }
 
     res.json({
       success: true,
