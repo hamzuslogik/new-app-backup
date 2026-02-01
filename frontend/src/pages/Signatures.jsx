@@ -268,8 +268,9 @@ const Signatures = () => {
                       <th>Rang</th>
                       <th>Confirmateur</th>
                       <th>Score Total</th>
-                      <th>Fiches</th>
+                      <th>Fiches confirmées (RDV)</th>
                       <th>Signatures</th>
+                      <th>Taux de signature</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -278,8 +279,9 @@ const Signatures = () => {
                         <td>{index + 1}</td>
                         <td>{conf.confirmateur_pseudo || 'Inconnu'}</td>
                         <td>{formatNumber(conf.total_score)}</td>
-                        <td>{conf.nb_fiches || 0}</td>
+                        <td>{conf.nb_fiches ?? 0}</td>
                         <td>{conf.nb_signatures || 0}</td>
+                        <td>{conf.taux_signature != null ? `${conf.taux_signature.toFixed(1)}%` : '-'}</td>
                       </tr>
                     ))}
                   </tbody>

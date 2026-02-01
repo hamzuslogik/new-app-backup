@@ -127,6 +127,12 @@ router.get('/stats', authenticate, async (req, res) => {
       ? 'WHERE ' + whereConditions.join(' AND ')
       : '';
 
+    // Timestamps et dates pour la période (fiches confirmées = état 7)
+    const startDateStr = date_debut ? `${date_debut} 00:00:00` : null;
+    const endDateStr = date_fin ? `${date_fin} 23:59:59` : null;
+    const startTs = startDateStr ? Math.floor(new Date(startDateStr).getTime() / 1000) : 0;
+    const endTs = endDateStr ? Math.floor(new Date(endDateStr).getTime() / 1000) : 0;
+
     // Total signatures (somme des scores)
     const totalResult = await queryOne(
       `SELECT SUM(s.ajoute) as total FROM signature s ${whereClause}`,
@@ -163,6 +169,28 @@ router.get('/stats', authenticate, async (req, res) => {
       LIMIT 10`,
       params
     );
+
+    // Nombre de fiches confirmées (RDV, état 7) par confirmateur sur la période
+    let fichesConfirmeesByConfirmateur = {};
+    if (date_debut && date_fin) {
+      const dateCond = `((f.date_confirmation IS NOT NULL AND f.date_confirmation >= ? AND f.date_confirmation <= ?) OR (f.date_confirmation IS NULL AND f.date_modif_time >= ? AND f.date_modif_time <= ?))`;
+      const fcParams = [startTs, endTs, startDateStr, endDateStr, startTs, endTs, startDateStr, endDateStr, startTs, endTs, startDateStr, endDateStr];
+      const fcRows = await query(
+        `SELECT confirmateur_id, COUNT(DISTINCT id_fiche) as nb_fiches_confirmees
+         FROM (
+           SELECT f.id_confirmateur as confirmateur_id, f.id as id_fiche FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND ${dateCond}
+           UNION ALL
+           SELECT f.id_confirmateur_2, f.id FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur_2 IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND ${dateCond}
+           UNION ALL
+           SELECT f.id_confirmateur_3, f.id FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur_3 IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND ${dateCond}
+         ) t
+         GROUP BY confirmateur_id`,
+        fcParams
+      );
+      (fcRows || []).forEach(row => {
+        fichesConfirmeesByConfirmateur[row.confirmateur_id] = parseInt(row.nb_fiches_confirmees || 0);
+      });
+    }
 
     // Statistiques par jour (derniers 30 jours)
     const statsParJour = await query(
@@ -203,12 +231,21 @@ router.get('/stats', authenticate, async (req, res) => {
       data: {
         totalSignatures,
         fichesUniques,
-        topConfirmateurs: topConfirmateurs.map(c => ({
-          ...c,
-          total_score: parseFloat(c.total_score || 0),
-          nb_fiches: parseInt(c.nb_fiches || 0),
-          nb_signatures: parseInt(c.nb_signatures || 0)
-        })),
+        topConfirmateurs: topConfirmateurs.map(c => {
+          const nb_fiches_confirmees = fichesConfirmeesByConfirmateur[c.confirmateur] ?? 0;
+          const total_score = parseFloat(c.total_score || 0);
+          const taux_signature = nb_fiches_confirmees > 0
+            ? (total_score / nb_fiches_confirmees) * 100
+            : null;
+          return {
+            ...c,
+            total_score,
+            nb_fiches: nb_fiches_confirmees,
+            nb_fiches_confirmees,
+            nb_signatures: parseInt(c.nb_signatures || 0),
+            taux_signature: taux_signature !== null ? parseFloat(taux_signature.toFixed(1)) : null
+          };
+        }),
         statsParJour: statsParJour.map(s => ({
           date: s.date,
           total_score: parseFloat(s.total_score || 0),
