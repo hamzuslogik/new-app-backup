@@ -3,12 +3,13 @@ import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaChartBar } from 'react-icons/fa';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './Statistiques.css';
 
 const Statistiques = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('centre'); // centre, confirmateur, commercial, agent
-  const [statType, setStatType] = useState('net'); // net, taux, repartition, part_total, barres
+  const [statType, setStatType] = useState('net'); // net, taux, repartition, part_total, barres, camembert
   
   // États pour les filtres
   const [filters, setFilters] = useState({
@@ -246,6 +247,7 @@ const Statistiques = () => {
               <option value="repartition">RÉPARTITION % (par ligne)</option>
               <option value="part_total">PART DU TOTAL %</option>
               <option value="barres">BARRES</option>
+              <option value="camembert">CAMEMBERT</option>
             </select>
           </div>
 
@@ -276,24 +278,25 @@ const Statistiques = () => {
         <table className="stats-table">
           <thead>
             <tr>
+              <th>N°</th>
               <th>{statsData.name_stat}</th>
               <th>NEUTRE</th>
               <th>POSITIVE</th>
               <th>NEGATIVE</th>
-              <th>TAUX %</th>
             </tr>
           </thead>
           <tbody>
             {data.map((item, idx) => (
               <tr key={idx}>
+                <td className="stat-numero">{idx + 1}</td>
                 <td>{item.name}</td>
                 <td className="stat-neutre">{item.totals.neutre}</td>
                 <td className="stat-positive">{item.totals.positive}</td>
                 <td className="stat-negative">{item.totals.negative}</td>
-                <td className="stat-taux">{item.taux_reussite}%</td>
               </tr>
             ))}
             <tr className="total-row">
+              <td className="stat-numero">—</td>
               <td><strong>TOTAL</strong></td>
               <td className="stat-neutre">
                 <strong>{data.reduce((sum, item) => sum + item.totals.neutre, 0)}</strong>
@@ -303,15 +306,6 @@ const Statistiques = () => {
               </td>
               <td className="stat-negative">
                 <strong>{data.reduce((sum, item) => sum + item.totals.negative, 0)}</strong>
-              </td>
-              <td className="stat-taux">
-                <strong>
-                  {(() => {
-                    const totPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
-                    const totNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
-                    return totPos + totNeg > 0 ? ((totPos * 100) / (totPos + totNeg)).toFixed(2) : 0;
-                  })()}%
-                </strong>
               </td>
             </tr>
           </tbody>
@@ -326,6 +320,7 @@ const Statistiques = () => {
           <table className="stats-table stats-table-repartition">
             <thead>
               <tr>
+                <th>N°</th>
                 <th>{statsData.name_stat}</th>
                 {etats.map(etat => (
                   <th key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
@@ -333,12 +328,12 @@ const Statistiques = () => {
                   </th>
                 ))}
                 <th>TOTAL</th>
-                <th>TAUX %</th>
               </tr>
             </thead>
             <tbody>
               {data.map((item, idx) => (
                 <tr key={idx}>
+                  <td className="stat-numero">{idx + 1}</td>
                   <td>{item.name}</td>
                   {etats.map(etat => {
                     const count = item.stats[etat.id] || 0;
@@ -350,10 +345,10 @@ const Statistiques = () => {
                     );
                   })}
                   <td className="stat-total">{item.total}</td>
-                  <td className="stat-taux">{item.taux_reussite}%</td>
                 </tr>
               ))}
               <tr className="total-row">
+                <td className="stat-numero">—</td>
                 <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>TOTAL</td>
                 {etats.map(etat => {
                   const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
@@ -365,15 +360,6 @@ const Statistiques = () => {
                   );
                 })}
                 <td className="stat-total"><strong>{total}</strong></td>
-                <td className="stat-taux">
-                  <strong>
-                    {(() => {
-                      const totPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
-                      const totNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
-                      return totPos + totNeg > 0 ? ((totPos * 100) / (totPos + totNeg)).toFixed(2) : 0;
-                    })()}%
-                  </strong>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -388,6 +374,7 @@ const Statistiques = () => {
           <table className="stats-table stats-table-part-total">
             <thead>
               <tr>
+                <th>N°</th>
                 <th>{statsData.name_stat}</th>
                 {etats.map(etat => (
                   <th key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
@@ -395,12 +382,12 @@ const Statistiques = () => {
                   </th>
                 ))}
                 <th>TOTAL</th>
-                <th>TAUX %</th>
               </tr>
             </thead>
             <tbody>
               {data.map((item, idx) => (
                 <tr key={idx}>
+                  <td className="stat-numero">{idx + 1}</td>
                   <td>{item.name}</td>
                   {etats.map(etat => {
                     const count = item.stats[etat.id] || 0;
@@ -414,10 +401,10 @@ const Statistiques = () => {
                   <td className="stat-total">
                     {total > 0 ? ((item.total * 100) / total).toFixed(1) : '0'}%
                   </td>
-                  <td className="stat-taux">{item.taux_reussite}%</td>
                 </tr>
               ))}
               <tr className="total-row">
+                <td className="stat-numero">—</td>
                 <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>TOTAL</td>
                 {etats.map(etat => {
                   const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
@@ -429,15 +416,6 @@ const Statistiques = () => {
                   );
                 })}
                 <td className="stat-total"><strong>100%</strong></td>
-                <td className="stat-taux">
-                  <strong>
-                    {(() => {
-                      const totPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
-                      const totNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
-                      return totPos + totNeg > 0 ? ((totPos * 100) / (totPos + totNeg)).toFixed(2) : 0;
-                    })()}%
-                  </strong>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -485,12 +463,58 @@ const Statistiques = () => {
       );
     }
 
+    if (statType === 'camembert') {
+      // Camembert : répartition par état (total par état)
+      const pieData = etats.map(etat => {
+        const value = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
+        return {
+          name: etat.abbreviation,
+          value,
+          color: etat.color
+        };
+      }).filter(d => d.value > 0);
+
+      return (
+        <div className="stats-camembert-container">
+          <div className="stats-camembert-chart">
+            <ResponsiveContainer width="100%" height={360}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={120}
+                  paddingAngle={2}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value, name) => [value, name]}
+                  contentStyle={{ borderRadius: 8 }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="stats-camembert-total">
+            Total : <strong>{total}</strong> fiches
+          </div>
+        </div>
+      );
+    }
+
     // Affichage en mode NET (chiffres)
     return (
       <div className="table-responsive">
         <table className="stats-table">
           <thead>
             <tr>
+              <th>N°</th>
               <th>{statsData.name_stat}</th>
               {etats.map(etat => (
                 <th
@@ -505,12 +529,12 @@ const Statistiques = () => {
                 </th>
               ))}
               <th>TOTAL</th>
-              <th>TAUX %</th>
             </tr>
           </thead>
           <tbody>
             {data.map((item, idx) => (
               <tr key={idx}>
+                <td className="stat-numero">{idx + 1}</td>
                 <td>{item.name}</td>
                 {etats.map(etat => {
                   const count = item.stats[etat.id] || 0;
@@ -528,10 +552,10 @@ const Statistiques = () => {
                   );
                 })}
                 <td className="stat-total">{item.total}</td>
-                <td className="stat-taux">{item.taux_reussite}%</td>
               </tr>
             ))}
             <tr className="total-row">
+              <td className="stat-numero">—</td>
               <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>
                 TOTAL
               </td>
@@ -552,15 +576,6 @@ const Statistiques = () => {
               })}
               <td className="stat-total">
                 <strong>{total}</strong>
-              </td>
-              <td className="stat-taux">
-                <strong>
-                  {(() => {
-                    const totPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
-                    const totNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
-                    return totPos + totNeg > 0 ? ((totPos * 100) / (totPos + totNeg)).toFixed(2) : 0;
-                  })()}%
-                </strong>
               </td>
             </tr>
           </tbody>
