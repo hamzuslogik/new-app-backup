@@ -1719,71 +1719,45 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       `;
       const top3Confirmations = await query(top3ConfirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate, ...callJwsCentreIds]);
 
-      // 2. Top 3 Confirmateurs - Signatures : uniquement fiches dont la dernière confirmation est dans la période (JOIN + filtre SQL)
-      const signaturesFichesQuery = `
+      // 2. Top 3 Confirmateurs - Signatures : table signature (rapide, indexée)
+      const top3SignaturesQuery = `
         SELECT 
-          f.id,
-          f.id_confirmateur,
-          f.id_confirmateur_2,
-          f.id_confirmateur_3
-        FROM fiches f
-        LEFT JOIN (
-          SELECT id_fiche, MAX(date_creation) as last_conf
-          FROM fiches_histo
-          WHERE id_etat = 7
-          GROUP BY id_fiche
-        ) histo ON f.id = histo.id_fiche
-        WHERE f.id_etat_final IN (13, 16, 44, 45)
-        AND (f.archive = 0 OR f.archive IS NULL)
-        ${centreCondition}
-        AND COALESCE(f.date_confirmation, UNIX_TIMESTAMP(histo.last_conf)) >= ?
-        AND COALESCE(f.date_confirmation, UNIX_TIMESTAMP(histo.last_conf)) <= ?
+          s.confirmateur as id,
+          u.pseudo,
+          u.nom,
+          u.prenom,
+          u.photo,
+          SUM(s.ajoute) as count_signatures
+        FROM signature s
+        INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+        INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
+        WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
+        AND s.date_heure >= ?
+        AND s.date_heure <= ?
+        GROUP BY s.confirmateur, u.pseudo, u.nom, u.prenom, u.photo
+        ORDER BY count_signatures DESC
+        LIMIT 3
       `;
-      const signaturesFiches = await query(signaturesFichesQuery, [...callJwsCentreIds, startTimestamp, endTimestamp]);
+      const top3SignaturesRows = await query(top3SignaturesQuery, [...callJwsCentreIds, startDate, endDate]);
+      const top3Signatures = (top3SignaturesRows || []).map(conf => ({
+        id: conf.id,
+        pseudo: conf.pseudo,
+        nom: conf.nom,
+        prenom: conf.prenom,
+        photo: conf.photo,
+        count_signatures: parseFloat(conf.count_signatures || 0)
+      }));
 
-      // Calculer les scores par confirmateur
-      const signaturesScores = {};
-      signaturesFiches.forEach(fiche => {
-        const confirmateurs = [];
-        if (fiche.id_confirmateur) confirmateurs.push(fiche.id_confirmateur);
-        if (fiche.id_confirmateur_2) confirmateurs.push(fiche.id_confirmateur_2);
-        if (fiche.id_confirmateur_3) confirmateurs.push(fiche.id_confirmateur_3);
-        
-        const score = confirmateurs.length === 1 ? 1.0 : (confirmateurs.length === 2 ? 0.5 : (1.0 / 3.0));
-        
-        confirmateurs.forEach(confId => {
-          if (!signaturesScores[confId]) {
-            signaturesScores[confId] = 0;
-          }
-          signaturesScores[confId] += score;
-        });
-      });
-
-      // Récupérer les informations des confirmateurs et trier
-      const top3SignaturesIds = Object.entries(signaturesScores)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([id]) => parseInt(id));
-
-      let top3Signatures = [];
-      if (top3SignaturesIds.length > 0) {
-        const confirmateursInfo = await query(`
-          SELECT id, pseudo, nom, prenom, photo
-          FROM utilisateurs
-          WHERE id IN (${top3SignaturesIds.map(() => '?').join(',')})
-          AND fonction = 6
-          AND etat > 0
-        `, top3SignaturesIds);
-
-        top3Signatures = confirmateursInfo.map(conf => ({
-          id: conf.id,
-          pseudo: conf.pseudo,
-          nom: conf.nom,
-          prenom: conf.prenom,
-          photo: conf.photo,
-          count_signatures: signaturesScores[conf.id] || 0
-        })).sort((a, b) => b.count_signatures - a.count_signatures);
-      }
+      // Total signatures (score) période actuelle - table signature
+      const signaturesTotalResult = await queryOne(
+        `SELECT COALESCE(SUM(s.ajoute), 0) as total
+         FROM signature s
+         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+         WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
+         AND s.date_heure >= ? AND s.date_heure <= ?`,
+        [...callJwsCentreIds, startDate, endDate]
+      );
+      const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
 
       // 3. Total confirmations (période actuelle)
       const confirmationsQuery = `
@@ -1801,19 +1775,6 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       const confirmationsResult = await queryOne(confirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate, ...callJwsCentreIds]);
       const confirmationsCount = confirmationsResult?.count || 0;
 
-      // 4. Total signatures (période actuelle) - avec système de score
-      // Utiliser les mêmes fiches que pour le top 3
-      let signaturesCount = 0;
-      signaturesFiches.forEach(fiche => {
-        const confirmateurs = [];
-        if (fiche.id_confirmateur) confirmateurs.push(fiche.id_confirmateur);
-        if (fiche.id_confirmateur_2) confirmateurs.push(fiche.id_confirmateur_2);
-        if (fiche.id_confirmateur_3) confirmateurs.push(fiche.id_confirmateur_3);
-        
-        const score = confirmateurs.length === 1 ? 1.0 : (confirmateurs.length === 2 ? 0.5 : (1.0 / 3.0));
-        signaturesCount += score;
-      });
-
       // 5. Total fiches créées (période actuelle) - pour le dénominateur du taux de conversion
       const totalQuery = `
         SELECT COUNT(*) as count
@@ -1830,19 +1791,16 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       const previousConfirmationsResult = await queryOne(confirmationsQuery, [previousStartTimestamp, previousEndTimestamp, previousStartDate, previousEndDate, ...callJwsCentreIds]);
       const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
 
-      // Calculer les signatures de la période précédente (même requête optimisée, filtre en SQL)
-      const previousSignaturesFiches = await query(signaturesFichesQuery, [...callJwsCentreIds, previousStartTimestamp, previousEndTimestamp]);
-
-      let previousSignaturesCount = 0;
-      previousSignaturesFiches.forEach(fiche => {
-        const confirmateurs = [];
-        if (fiche.id_confirmateur) confirmateurs.push(fiche.id_confirmateur);
-        if (fiche.id_confirmateur_2) confirmateurs.push(fiche.id_confirmateur_2);
-        if (fiche.id_confirmateur_3) confirmateurs.push(fiche.id_confirmateur_3);
-        
-        const score = confirmateurs.length === 1 ? 1.0 : (confirmateurs.length === 2 ? 0.5 : (1.0 / 3.0));
-        previousSignaturesCount += score;
-      });
+      // Signatures période précédente - table signature
+      const previousSignaturesTotalResult = await queryOne(
+        `SELECT COALESCE(SUM(s.ajoute), 0) as total
+         FROM signature s
+         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+         WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
+         AND s.date_heure >= ? AND s.date_heure <= ?`,
+        [...callJwsCentreIds, previousStartDate, previousEndDate]
+      );
+      const previousSignaturesCount = parseFloat(previousSignaturesTotalResult?.total || 0);
 
       const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...callJwsCentreIds]);
       const previousTotalCount = previousTotalResult?.count || 0;
