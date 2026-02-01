@@ -486,58 +486,34 @@ const Statistiques = () => {
     }
 
     // Affichage en mode NET (chiffres)
-      // Affichage en mode NET (chiffres)
-      return (
-        <div className="table-responsive">
-          <table className="stats-table">
-            <thead>
-              <tr>
-                <th>{statsData.name_stat}</th>
-                {etats.map(etat => (
-                  <th
-                    key={etat.id}
-                    style={{
-                      backgroundColor: etat.color,
-                      color: etat.id === 1 ? 'black' : 'white',
-                      fontWeight: 800
-                    }}
-                  >
-                    {etat.abbreviation}
-                  </th>
-                ))}
-                <th>TOTAL</th>
-                <th>TAUX %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((item, idx) => (
-                <tr key={idx}>
-                  <td>{item.name}</td>
-                  {etats.map(etat => {
-                    const count = item.stats[etat.id] || 0;
-                    return (
-                      <td
-                        key={etat.id}
-                        style={{
-                          backgroundColor: etat.color,
-                          color: etat.id === 1 ? 'black' : 'white',
-                          fontWeight: 800
-                        }}
-                      >
-                        {count}
-                      </td>
-                    );
-                  })}
-                  <td className="stat-total">{item.total}</td>
-                  <td className="stat-taux">{item.taux_reussite}%</td>
-                </tr>
+    return (
+      <div className="table-responsive">
+        <table className="stats-table">
+          <thead>
+            <tr>
+              <th>{statsData.name_stat}</th>
+              {etats.map(etat => (
+                <th
+                  key={etat.id}
+                  style={{
+                    backgroundColor: etat.color,
+                    color: etat.id === 1 ? 'black' : 'white',
+                    fontWeight: 800
+                  }}
+                >
+                  {etat.abbreviation}
+                </th>
               ))}
-              <tr className="total-row">
-                <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>
-                  TOTAL
-                </td>
+              <th>TOTAL</th>
+              <th>TAUX %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item, idx) => (
+              <tr key={idx}>
+                <td>{item.name}</td>
                 {etats.map(etat => {
-                  const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
+                  const count = item.stats[etat.id] || 0;
                   return (
                     <td
                       key={etat.id}
@@ -547,28 +523,50 @@ const Statistiques = () => {
                         fontWeight: 800
                       }}
                     >
-                      {colTotal}
+                      {count}
                     </td>
                   );
                 })}
-                <td className="stat-total">
-                  <strong>{total}</strong>
-                </td>
-                <td className="stat-taux">
-                  <strong>
-                    {(() => {
-                      const totPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
-                      const totNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
-                      return totPos + totNeg > 0 ? ((totPos * 100) / (totPos + totNeg)).toFixed(2) : 0;
-                    })()}%
-                  </strong>
-                </td>
+                <td className="stat-total">{item.total}</td>
+                <td className="stat-taux">{item.taux_reussite}%</td>
               </tr>
-            </tbody>
-          </table>
-        </div>
-      );
-    }
+            ))}
+            <tr className="total-row">
+              <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>
+                TOTAL
+              </td>
+              {etats.map(etat => {
+                const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
+                return (
+                  <td
+                    key={etat.id}
+                    style={{
+                      backgroundColor: etat.color,
+                      color: etat.id === 1 ? 'black' : 'white',
+                      fontWeight: 800
+                    }}
+                  >
+                    {colTotal}
+                  </td>
+                );
+              })}
+              <td className="stat-total">
+                <strong>{total}</strong>
+              </td>
+              <td className="stat-taux">
+                <strong>
+                  {(() => {
+                    const totPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
+                    const totNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
+                    return totPos + totNeg > 0 ? ((totPos * 100) / (totPos + totNeg)).toFixed(2) : 0;
+                  })()}%
+                </strong>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   return (
