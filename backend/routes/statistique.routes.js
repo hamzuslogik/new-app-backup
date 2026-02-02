@@ -176,7 +176,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Récupérer les noms des entités (centres, utilisateurs)
     let entitiesMap = {};
     if (name_stat === 'CENTRE') {
-      const centres = await query('SELECT id, titre FROM centres WHERE etat > 0');
+      const centres = await query('SELECT id, titre FROM centres');
       centres.forEach(centre => {
         entitiesMap[centre.id] = centre.titre;
       });
