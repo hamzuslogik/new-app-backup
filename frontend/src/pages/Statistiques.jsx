@@ -95,6 +95,7 @@ const Statistiques = () => {
 
     if (func_id) params.func_id = func_id;
     if (id_filter) params[type_id] = id_filter;
+    if (activeTab === 'statko') params.ko = 1;
 
     return params;
   };

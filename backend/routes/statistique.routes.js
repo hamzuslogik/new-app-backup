@@ -53,6 +53,11 @@ router.get('/all-stat', authenticate, async (req, res) => {
       queryParams.push(parseInt(id_agent));
     }
 
+    // Onglet Stat KO : uniquement les fiches avec ko = 1
+    if (ko === '1' || ko === 1) {
+      conditions.push('ko = 1');
+    }
+
     const additionalConditions = conditions.length > 0 ? ' AND ' + conditions.join(' AND ') : '';
 
     // Récupérer les états avec leurs taux et couleurs
