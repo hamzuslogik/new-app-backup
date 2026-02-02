@@ -369,7 +369,8 @@ router.get('/', authenticate, async (req, res) => {
       sgn_week,
       sgn_month,
       yesterday,
-      tomorrow
+      tomorrow,
+      include_ko
     } = req.query;
 
     const includeArchive =
@@ -386,17 +387,18 @@ router.get('/', authenticate, async (req, res) => {
       koForWhere = 1;
     }
 
-    // ko : si fourni (ex. ko=1 pour fiches KO), on filtre par ko ; sinon par défaut fiches non-KO (ko=0 ou NULL)
+    // ko : si fourni (ex. ko=1 pour fiches KO), on filtre par ko ; sinon on affiche toutes les fiches (pas de filtre ko=0 par défaut)
     const hasKoFilter = koForWhere !== undefined && koForWhere !== null && koForWhere !== '';
     let whereConditions = ['fiche.active = 1'];
-    if (!hasKoFilter) {
-      whereConditions.push('(fiche.ko = 0 OR fiche.ko IS NULL)');
+    let params = [];
+    if (hasKoFilter) {
+      whereConditions.push('(fiche.ko = ? OR (fiche.ko IS NULL AND ? = 0))');
+      params.push(koForWhere, koForWhere);
     }
     if (!includeArchive) {
       // Par défaut, on exclut les fiches archivées
       whereConditions.push('(fiche.archive = 0 OR fiche.archive IS NULL)');
     }
-    let params = [];
 
     // Filtres par fonction - Par défaut pour commerciaux : fiches confirmées du jour
     const today = new Date().toISOString().split('T')[0];
@@ -661,10 +663,7 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push('fiche.id_agent = ?');
       params.push(id_agent);
     }
-    if (hasKoFilter) {
-      whereConditions.push('fiche.ko = ?');
-      params.push(koForWhere);
-    }
+    // ko : filtre déjà appliqué en début de route (lignes 393-396)
     if (hc !== undefined && hc !== '') {
       whereConditions.push('fiche.hc = ?');
       params.push(hc);
