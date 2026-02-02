@@ -515,14 +515,17 @@ router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques
         f.cp,
         f.date_insert_time,
         f.date_rdv_time,
+        f.id_agent,
         f.id_confirmateur,
         f.id_commercial,
         f.id_etat_final,
+        agent.pseudo as agent_nom,
         conf.pseudo as confirmateur_nom,
         com.pseudo as commercial_nom,
         e.titre as etat_titre,
         e.color as etat_color
        FROM fiches f
+       LEFT JOIN utilisateurs agent ON f.id_agent = agent.id
        LEFT JOIN utilisateurs conf ON f.id_confirmateur = conf.id
        LEFT JOIN utilisateurs com ON f.id_commercial = com.id
        LEFT JOIN etats e ON f.id_etat_final = e.id
