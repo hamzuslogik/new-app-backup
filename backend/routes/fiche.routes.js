@@ -3713,6 +3713,87 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
   }
 });
 
+// Valider une fiche qualité en KO : état En-Attente + ko = 1 (fiche utilisée mais non comptabilisée pour l'agent)
+router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, triggerWorkflowOnEtatChanged, async (req, res) => {
+  try {
+    const id = req.params.id ? parseInt(req.params.id, 10) : null;
+    if (!id || isNaN(id) || id <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Identifiant de fiche invalide ou manquant'
+      });
+    }
+    const hasControleQualitePermission = await hasPermission(req.user.fonction, 'controle_qualite_view');
+    if (!hasControleQualitePermission) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'avez pas la permission de valider des fiches qualité'
+      });
+    }
+    const fiche = await queryOne('SELECT id_etat_final, id_qualite FROM fiches WHERE id = ?', [id]);
+    if (!fiche) {
+      return res.status(404).json({
+        success: false,
+        message: 'Fiche non trouvée'
+      });
+    }
+    const etatEnAttente = await queryOne(
+      'SELECT id, titre FROM etats WHERE id = 1 OR (titre = ? OR titre = ? OR titre = ?) LIMIT 1',
+      ['EN-ATTENTE', 'En-Attente', 'EN ATTENTE']
+    );
+    if (!etatEnAttente) {
+      return res.status(400).json({
+        success: false,
+        message: 'L\'état "En-Attente" n\'a pas été trouvé dans la base de données'
+      });
+    }
+    const oldEtatId = fiche.id_etat_final;
+    const newEtatId = etatEnAttente.id;
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
+    if (isQualiteUser && !fiche.id_qualite) {
+      await query('UPDATE fiches SET id_qualite = ? WHERE id = ?', [req.user.id, id]);
+    }
+    await query(
+      'UPDATE fiches SET id_etat_final = ?, ko = 1, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
+      [newEtatId, now, now, id]
+    );
+    if (oldEtatId !== newEtatId) {
+      await query(
+        'INSERT INTO fiches_histo (id_fiche, id_etat, date_creation) VALUES (?, ?, ?)',
+        [id, newEtatId, now]
+      );
+      await logModification(
+        id,
+        req.user.id,
+        req.user.pseudo || 'Utilisateur',
+        'id_etat_final',
+        oldEtatId,
+        newEtatId
+      );
+    }
+    await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'ko', null, 1);
+    res.json({
+      success: true,
+      message: 'Fiche validée (KO) : En-Attente, non comptabilisée pour l\'agent',
+      data: {
+        id,
+        id_etat_final: newEtatId,
+        ko: 1,
+        old_etat: oldEtatId,
+        etat_titre: etatEnAttente.titre
+      }
+    });
+  } catch (error) {
+    console.error('Erreur lors de la validation qualité KO:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la validation qualité KO',
+      error: error.message
+    });
+  }
+});
+
 // Mettre à jour une fiche
 router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches_edit'), triggerWorkflowOnFicheUpdated, async (req, res) => {
   try {

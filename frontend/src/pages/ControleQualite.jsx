@@ -119,13 +119,30 @@ const ControleQualite = () => {
     },
     {
       onSuccess: () => {
-        // Invalider et rafraîchir immédiatement pour tous les utilisateurs
         queryClient.invalidateQueries(['controle-qualite']);
         refetch();
         toast.success('Fiche validée et passée en état "En-Attente"');
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de la validation');
+      }
+    }
+  );
+
+  // Mutation pour valider en KO : En-Attente + ko = 1 (fiche utilisée mais non comptabilisée pour l'agent)
+  const validateQualiteKoMutation = useMutation(
+    async (hash) => {
+      const res = await api.put(`/fiches/${hash}/valider-qualite-ko`);
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['controle-qualite']);
+        refetch();
+        toast.success('Fiche validée (KO) : En-Attente, non comptabilisée pour l\'agent');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de la validation KO');
       }
     }
   );
@@ -474,6 +491,14 @@ const ControleQualite = () => {
                           title="Valider et passer en En-Attente"
                         >
                           <FaCheckCircle />
+                        </button>
+                        <button
+                          className="btn-validate-ko"
+                          onClick={() => validateQualiteKoMutation.mutate(fiche.hash)}
+                          disabled={validateQualiteKoMutation.isLoading}
+                          title="Valider (KO) : En-Attente, fiche non comptabilisée pour l'agent"
+                        >
+                          Valider
                         </button>
                         <FicheDetailLink 
                           ficheHash={fiche.hash}
