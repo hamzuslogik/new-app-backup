@@ -42,13 +42,16 @@ router.get('/all-stat', authenticate, async (req, res) => {
     if (id_centre) {
       conditions.push('id_centre = ?');
       queryParams.push(parseInt(id_centre));
-    } else if (id_confirmateur) {
+    }
+    if (id_confirmateur) {
       conditions.push('id_confirmateur = ?');
       queryParams.push(parseInt(id_confirmateur));
-    } else if (id_commercial) {
+    }
+    if (id_commercial) {
       conditions.push('id_commercial = ?');
       queryParams.push(parseInt(id_commercial));
-    } else if (id_agent) {
+    }
+    if (id_agent) {
       conditions.push('id_agent = ?');
       queryParams.push(parseInt(id_agent));
     }
@@ -56,6 +59,9 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Onglet Stat KO : uniquement les fiches avec ko = 1
     if (ko === '1' || ko === 1) {
       conditions.push('ko = 1');
+    } else if (name_stat === 'AGENT') {
+      // Onglet Agent : exclure les fiches KO, compter uniquement les non-KO
+      conditions.push('(ko = 0 OR ko IS NULL)');
     }
 
     const additionalConditions = conditions.length > 0 ? ' AND ' + conditions.join(' AND ') : '';
@@ -327,7 +333,6 @@ router.get('/fiches-par-centre', authenticate, checkPermissionCode('statistiques
     // Construire les conditions
     const conditions = [
       'f.archive = 0',
-      'f.ko = 0',
       `${dateField} >= ?`,
       `${dateField} <= ?`
     ];
@@ -490,7 +495,6 @@ router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques
     // Construire les conditions
     const conditions = [
       'f.archive = 0',
-      'f.ko = 0',
       `${dateField} >= ?`,
       `${dateField} <= ?`
     ];
@@ -597,7 +601,6 @@ router.get('/dashboard', authenticate, async (req, res) => {
         OR (f.date_confirmation IS NULL AND DATE(f.date_modif_time) = ?)
       )
       AND (f.archive = 0 OR f.archive IS NULL)
-      AND (f.ko = 0 OR f.ko IS NULL)
     `, [todayStr, todayStr, todayStr]);
 
     // 2. Nombre de signatures enregistrées aujourd'hui (table signature)
@@ -614,7 +617,6 @@ router.get('/dashboard', authenticate, async (req, res) => {
       WHERE id_etat_final = 7
       AND DATE(date_rdv_time) >= ?
       AND (archive = 0 OR archive IS NULL)
-      AND (ko = 0 OR ko IS NULL)
     `, [todayStr]);
 
     // 4. Liste des confirmateurs actifs avec le nombre de RDV aujourd'hui et à venir
@@ -643,7 +645,6 @@ router.get('/dashboard', authenticate, async (req, res) => {
             OR (f.date_confirmation IS NULL AND DATE(f.date_modif_time) = ?)
           )
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
         ), 0) as rdv_today,
         COALESCE((
           SELECT COUNT(DISTINCT f.id)
@@ -656,7 +657,6 @@ router.get('/dashboard', authenticate, async (req, res) => {
           AND f.id_etat_final = 7
           AND DATE(f.date_rdv_time) >= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
         ), 0) as rdv_upcoming
       FROM utilisateurs u
       LEFT JOIN fonctions f ON u.fonction = f.id
@@ -855,8 +855,7 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
           'f.id_agent = ?',
           'f.date_insert_time >= ?',
           'f.date_insert_time <= ?',
-          '(f.archive = 0 OR f.archive IS NULL)',
-          '(f.ko = 0 OR f.ko IS NULL)'
+          '(f.archive = 0 OR f.archive IS NULL)'
         ];
         const fichesParams = [agent.id, startDate, endDate];
 
@@ -901,7 +900,6 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
         `, [agent.id, startDate, endDate]);
 
         return {
@@ -1054,7 +1052,6 @@ router.get('/production-qualif', authenticate, async (req, res) => {
             `f.date_insert_time <= ?`,
             `f.id_etat_final = ?`,
             `(f.archive = 0 OR f.archive IS NULL)`,
-            `(f.ko = 0 OR f.ko IS NULL)`,
             `f.date_insert_time IS NOT NULL`
           ];
           const params = [...agentIds, startDate, endDate, etat.id];
@@ -1085,7 +1082,6 @@ router.get('/production-qualif', authenticate, async (req, res) => {
             `f.date_insert_time >= ?`,
             `f.date_insert_time <= ?`,
             `(f.archive = 0 OR f.archive IS NULL)`,
-            `(f.ko = 0 OR f.ko IS NULL)`,
             `f.date_insert_time IS NOT NULL`
           ];
           const params = [...agentIds, startDate, endDate];
@@ -1118,7 +1114,6 @@ router.get('/production-qualif', authenticate, async (req, res) => {
            AND f.date_insert_time >= ?
            AND f.date_insert_time <= ?
            AND (f.archive = 0 OR f.archive IS NULL)
-           AND (f.ko = 0 OR f.ko IS NULL)
            AND f.date_insert_time IS NOT NULL`,
           [...agentIds, startDate, endDate]
         );
@@ -1231,7 +1226,6 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
-        AND (f.ko = 0 OR f.ko IS NULL)
         ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
         AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
         GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
@@ -1264,7 +1258,6 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
-        AND (f.ko = 0 OR f.ko IS NULL)
         ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
         AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
         GROUP BY s.id, s.pseudo, s.nom, s.prenom
@@ -2001,7 +1994,6 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
         `;
         const totalResult = await queryOne(totalQuery, [centre.id, startDate, endDate]);
         const totalCount = totalResult?.count || 0;
@@ -2019,7 +2011,6 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
           ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
           AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
         `;
@@ -2039,7 +2030,6 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
           AND f.id_etat_final IN (13, 16, 44, 45)
           AND f.id_etat_final != 38
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
         `;
         const signedResult = await queryOne(signedQuery, [centre.id, startDate, endDate]);
         const signedCount = signedResult?.count || 0;
@@ -2061,7 +2051,6 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
           GROUP BY e.id, e.titre, e.color
           ORDER BY count DESC
         `;
@@ -2092,7 +2081,6 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
           ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
           AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
           GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
@@ -2120,7 +2108,6 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
           ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
           AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
           GROUP BY s.id, s.pseudo, s.nom, s.prenom
@@ -2278,7 +2265,6 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
         `;
         const totalResult = await queryOne(totalQuery, [centre.id, startDate, endDate]);
         const totalCount = totalResult?.count || 0;
@@ -2296,7 +2282,6 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
           ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
           AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
         `;
@@ -2316,7 +2301,6 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
           )
           AND f.id_etat_final = 7
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
         `;
         const confirmedResult = await queryOne(confirmedQuery, [centre.id, startTimestamp, endTimestamp, startDate, endDate]);
         const confirmedCount = confirmedResult?.count || 0;
@@ -2331,7 +2315,6 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
           AND f.id_etat_final IN (13, 16, 44, 45)
           AND f.id_etat_final != 38
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
         `;
         const signedResult = await queryOne(signedQuery, [centre.id, startDate, endDate]);
         const signedCount = signedResult?.count || 0;
@@ -2360,7 +2343,6 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
           ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
           AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
           AND f.id_agent IS NOT NULL
@@ -2546,7 +2528,6 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
       AND f.date_insert_time >= ?
       AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
-      AND (f.ko = 0 OR f.ko IS NULL)
       AND (e.groupe = '0' OR e.groupe = 0)
       GROUP BY f.id_agent, f.id_etat_final, e.titre, e.color, e.abbreviation
       ORDER BY f.id_agent, count DESC
@@ -2734,7 +2715,6 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
           AND m.${modificaDateColumn} >= ?
           AND m.${modificaDateColumn} <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
         `;
         const auditsResult = await queryOne(auditsQuery, [agent.id, startDate, endDate]);
         const totalAudits = auditsResult?.total_audits || 0;
@@ -2763,7 +2743,6 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
             AND m.${modificaDateColumn} <= ?
             AND f.id_etat_final = ?
             AND (f.archive = 0 OR f.archive IS NULL)
-            AND (f.ko = 0 OR f.ko IS NULL)
           `;
           const etatResult = await queryOne(etatQuery, [agent.id, startDate, endDate, etat.id]);
           statsParEtat[etat.id] = {
@@ -2798,7 +2777,6 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
           AND m.${modificaDateColumn} >= ?
           AND m.${modificaDateColumn} <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          AND (f.ko = 0 OR f.ko IS NULL)
           ORDER BY m.${modificaDateColumn} DESC
           LIMIT 100
         `;

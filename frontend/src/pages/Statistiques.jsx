@@ -96,6 +96,7 @@ const Statistiques = () => {
     if (func_id) params.func_id = func_id;
     if (id_filter) params[type_id] = id_filter;
     if (activeTab === 'statko') params.ko = 1;
+    if (activeTab === 'confirmateur' && filters.id_centre) params.id_centre = filters.id_centre;
 
     return params;
   };
@@ -175,19 +176,34 @@ const Statistiques = () => {
           )}
 
           {activeTab === 'confirmateur' && (
-            <div className="filter-group">
-              <label>Confirmateur</label>
-              <select
-                value={filters.id_confirmateur}
-                onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
-                className="form-control"
-              >
-                <option value="">TOUS LES CONFIRMATEURS</option>
-                {confirmateursData?.map(conf => (
-                  <option key={conf.id} value={conf.id}>{conf.pseudo}</option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="filter-group">
+                <label>Centre</label>
+                <select
+                  value={filters.id_centre}
+                  onChange={(e) => handleFilterChange('id_centre', e.target.value)}
+                  className="form-control"
+                >
+                  <option value="">TOUS LES CENTRES</option>
+                  {centresData?.map(centre => (
+                    <option key={centre.id} value={centre.id}>{centre.titre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="filter-group">
+                <label>Confirmateur</label>
+                <select
+                  value={filters.id_confirmateur}
+                  onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
+                  className="form-control"
+                >
+                  <option value="">TOUS LES CONFIRMATEURS</option>
+                  {confirmateursData?.map(conf => (
+                    <option key={conf.id} value={conf.id}>{conf.pseudo}</option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
 
           {activeTab === 'commercial' && (
@@ -280,7 +296,13 @@ const Statistiques = () => {
     const { etats, data, total } = statsData;
 
     if (statType === 'taux') {
-      // Affichage en mode TAUX
+      // Affichage en mode TAUX - Taux = positif / (positif + négatif)
+      const calcTaux = (pos, neg) => {
+        const sum = (pos || 0) + (neg || 0);
+        return sum > 0 ? (((pos || 0) / sum) * 100).toFixed(1) + '%' : '—';
+      };
+      const totalPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
+      const totalNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
       return (
         <table className="stats-table">
           <thead>
@@ -290,6 +312,7 @@ const Statistiques = () => {
               <th>NEUTRE</th>
               <th>POSITIVE</th>
               <th>NEGATIVE</th>
+              <th>TAUX %</th>
             </tr>
           </thead>
           <tbody>
@@ -300,6 +323,7 @@ const Statistiques = () => {
                 <td className="stat-neutre">{item.totals.neutre}</td>
                 <td className="stat-positive">{item.totals.positive}</td>
                 <td className="stat-negative">{item.totals.negative}</td>
+                <td className="stat-taux">{calcTaux(item.totals.positive, item.totals.negative)}</td>
               </tr>
             ))}
             <tr className="total-row">
@@ -309,11 +333,12 @@ const Statistiques = () => {
                 <strong>{data.reduce((sum, item) => sum + item.totals.neutre, 0)}</strong>
               </td>
               <td className="stat-positive">
-                <strong>{data.reduce((sum, item) => sum + item.totals.positive, 0)}</strong>
+                <strong>{totalPos}</strong>
               </td>
               <td className="stat-negative">
-                <strong>{data.reduce((sum, item) => sum + item.totals.negative, 0)}</strong>
+                <strong>{totalNeg}</strong>
               </td>
+              <td className="stat-taux"><strong>{calcTaux(totalPos, totalNeg)}</strong></td>
             </tr>
           </tbody>
         </table>
