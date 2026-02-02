@@ -378,8 +378,16 @@ router.get('/', authenticate, async (req, res) => {
       include_archive === true ||
       include_archive === 'true';
 
+    // Ne pas chercher par id_etat 54 pour les fiches KO : uniquement ko=1
+    let idEtatFinalForWhere = id_etat_final;
+    let koForWhere = ko;
+    if (id_etat_final == 54 || id_etat_final === '54') {
+      idEtatFinalForWhere = undefined;
+      koForWhere = 1;
+    }
+
     // ko : si fourni (ex. ko=1 pour fiches KO), on filtre par ko ; sinon par défaut fiches non-KO (ko=0 ou NULL)
-    const hasKoFilter = ko !== undefined && ko !== null && ko !== '';
+    const hasKoFilter = koForWhere !== undefined && koForWhere !== null && koForWhere !== '';
     let whereConditions = ['fiche.active = 1'];
     if (!hasKoFilter) {
       whereConditions.push('(fiche.ko = 0 OR fiche.ko IS NULL)');
@@ -572,11 +580,11 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
     
-    if (id_etat_final !== undefined && id_etat_final !== null && id_etat_final !== '') {
-      if (id_etat_final === 't_s') {
+    if (idEtatFinalForWhere !== undefined && idEtatFinalForWhere !== null && idEtatFinalForWhere !== '') {
+      if (idEtatFinalForWhere === 't_s') {
         whereConditions.push('(fiche.id_etat_final = 13 OR fiche.id_etat_final = 45 OR fiche.id_etat_final = 44 OR fiche.id_etat_final = 16 OR fiche.id_etat_final = 38)');
       } else {
-        const etatFinal = Array.isArray(id_etat_final) ? id_etat_final : [id_etat_final];
+        const etatFinal = Array.isArray(idEtatFinalForWhere) ? idEtatFinalForWhere : [idEtatFinalForWhere];
         const etatIds = etatFinal.map(e => parseInt(e, 10)).filter(n => !Number.isNaN(n));
         if (etatIds.length === 1) {
           if (qualificationCondition) {
@@ -606,7 +614,7 @@ router.get('/', authenticate, async (req, res) => {
       params.push(id_commercial, id_commercial);
     }
     // RP Confirmation (13) : rappels par RE (id_etat_final=19), filtre par id_re (Tous = tous les RE sous le RP)
-    if (req.user.fonction === 13 && (id_etat_final == 19 || id_etat_final === '19')) {
+    if (req.user.fonction === 13 && (idEtatFinalForWhere == 19 || idEtatFinalForWhere === '19')) {
       const reSousRP = await query(
         'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 14 AND etat > 0',
         [req.user.id]
@@ -655,7 +663,7 @@ router.get('/', authenticate, async (req, res) => {
     }
     if (hasKoFilter) {
       whereConditions.push('fiche.ko = ?');
-      params.push(ko);
+      params.push(koForWhere);
     }
     if (hc !== undefined && hc !== '') {
       whereConditions.push('fiche.hc = ?');
