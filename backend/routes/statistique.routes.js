@@ -1414,7 +1414,7 @@ router.get('/kpis', authenticate, async (req, res) => {
         ? [startDate, endDate, ...idsGroupe0, ...callJwsCentreIds]
         : [startDate, endDate, ...callJwsCentreIds];
 
-      // 1. Top 3 Agents
+      // 1. Top 3 Agents (fiches validées = hors groupe 0, KO=0, HC=0)
       const top3AgentsQuery = `
         SELECT 
           u.id,
@@ -1431,6 +1431,8 @@ router.get('/kpis', authenticate, async (req, res) => {
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
+        AND (f.hc = 0 OR f.hc IS NULL)
         ${centreCondition}
         ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
         AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
@@ -1440,7 +1442,7 @@ router.get('/kpis', authenticate, async (req, res) => {
       `;
       const top3Agents = await query(top3AgentsQuery, baseParams);
 
-      // 2. Top 3 Équipes
+      // 2. Top 3 Équipes (fiches validées = hors groupe 0, KO=0, HC=0)
       const top3TeamsQuery = `
         SELECT 
           s.id as superviseur_id,
@@ -1459,6 +1461,8 @@ router.get('/kpis', authenticate, async (req, res) => {
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
+        AND (f.hc = 0 OR f.hc IS NULL)
         ${centreCondition}
         ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
         AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
@@ -1473,6 +1477,7 @@ router.get('/kpis', authenticate, async (req, res) => {
         ? [startDate, endDate, ...idsGroupe0, ...callJwsCentreIds]
         : [startDate, endDate, ...callJwsCentreIds];
       
+      // Fiches validées = hors groupe 0, KO=0, HC=0 (une fiche HC n'est pas validée)
       const validatedQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
@@ -1480,6 +1485,8 @@ router.get('/kpis', authenticate, async (req, res) => {
         WHERE f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
+        AND (f.hc = 0 OR f.hc IS NULL)
         ${centreCondition}
         ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
         AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)

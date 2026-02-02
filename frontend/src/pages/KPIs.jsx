@@ -240,7 +240,7 @@ const KPIs = () => {
                 <div className="kpi-card-body">
                   <div className="kpi-value-large">
                     <span className="value">{formatPercentage(currentData.conversion_rate)}</span>
-                    <span className="label">Fiches validées / Fiches totales</span>
+                    <span className="label">Fiches validées / Fiches produites</span>
                   </div>
                   {currentData.conversion_rate_change !== undefined && (
                     <div className="evolution-indicator">
@@ -416,7 +416,7 @@ const KPIs = () => {
             </p>
             <p className="info-text">
               {activeTab === 'qualification' 
-                ? 'Les fiches validées correspondent aux fiches qui sont passées en phase 1, 2 ou 3 (hors groupe 0).'
+                ? 'Taux de conversion = Fiches validées / Fiches produites. Validées = fiches hors groupe 0, KO=0, HC=0. Une fiche HC n\'est pas validée.'
                 : 'Les confirmations correspondent aux fiches avec état CONFIRMER (7). Les signatures correspondent aux fiches avec états SIGNER (13, 16, 44, 45).'}
             </p>
           </div>
