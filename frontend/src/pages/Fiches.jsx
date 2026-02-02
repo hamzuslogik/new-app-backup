@@ -170,25 +170,23 @@ const Fiches = () => {
       return searchParams;
     }
     
-    // Par défaut page Fiches : fiches insérées aujourd'hui, état hors groupe 0
+    // Sinon, par défaut : afficher les fiches créées aujourd'hui
     const { dateStr, timeStart, timeEnd } = getTodayDateRange();
     const defaultParams = {
       page: pageParam,
       limit: limitParam,
-      fiche_search: 1,
       date_champ: 'date_insert_time',
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: timeStart,
-      time_fin: timeEnd,
-      hors_groupe_0: 1
+      time_fin: timeEnd
     };
 
     if (filters.include_archive) {
       defaultParams.include_archive = 1;
     }
     
-    // Pour l'agent qualification, filtrer uniquement ses fiches
+    // Pour l'agent qualification, filtrer uniquement ses fiches créées aujourd'hui
     if (isAgentQualif && user?.id) {
       defaultParams.id_agent = user.id;
     }

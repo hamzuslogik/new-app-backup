@@ -369,8 +369,7 @@ router.get('/', authenticate, async (req, res) => {
       sgn_week,
       sgn_month,
       yesterday,
-      tomorrow,
-      hors_groupe_0
+      tomorrow
     } = req.query;
 
     const includeArchive =
@@ -451,9 +450,9 @@ router.get('/', authenticate, async (req, res) => {
     }
 
     // Filtre par groupes d'états autorisés (selon les permissions)
-    // Ne pas appliquer si hors_groupe_0=1 (ex. page Fiches : on filtre uniquement par NOT EXISTS groupe 0)
-    const isHorsGroupe0 = hors_groupe_0 === '1' || hors_groupe_0 === 1;
-    const shouldApplyPermissionFilter = !isHorsGroupe0 && !(req.user.fonction === 3 && !req.query.fiche_search && !req.query.affectation && !req.query.suivi);
+    // Pour les agents qualification (fonction 3), on a déjà filtré par groupe 0 dans le filtre par défaut
+    // Donc on ne doit pas appliquer le filtre de permissions si c'est un agent qualification sans recherche
+    const shouldApplyPermissionFilter = !(req.user.fonction === 3 && !req.query.fiche_search && !req.query.affectation && !req.query.suivi);
     
     if (shouldApplyPermissionFilter) {
       // Utiliser la fonction mise en cache pour récupérer les groupes autorisés
@@ -499,8 +498,9 @@ router.get('/', authenticate, async (req, res) => {
       // Si aucune permission n'existe dans la base, ne pas filtrer (rétrocompatibilité)
     }
 
-    // Exclure les états du groupe 0 pour tous sauf agents qualification (fonction 3), sauf si hors_groupe_0=1 (ex. page Fiches)
-    if (req.user.fonction !== 3 || hors_groupe_0 === '1' || hors_groupe_0 === 1) {
+    // Exclure les états du groupe 0 pour tous les utilisateurs sauf les agents qualification (fonction 3)
+    // Les agents qualification ont besoin du groupe 0 pour leur travail
+    if (req.user.fonction !== 3) {
       whereConditions.push(`NOT EXISTS (
         SELECT 1 FROM etats e 
         WHERE e.id = fiche.id_etat_final 
