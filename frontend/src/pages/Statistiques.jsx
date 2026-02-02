@@ -77,8 +77,9 @@ const Statistiques = () => {
         break;
       case 'statko':
         name_stat = 'STAT_KO';
-        type_id = 'id_centre';
-        id_filter = filters.id_centre;
+        type_id = 'id_agent';
+        func_id = '3';
+        id_filter = filters.id_agent;
         break;
     }
 
@@ -156,7 +157,7 @@ const Statistiques = () => {
             </select>
           </div>
 
-          {(activeTab === 'centre' || activeTab === 'statko') && (
+          {activeTab === 'centre' && (
             <div className="filter-group">
               <label>Centre</label>
               <select
@@ -629,7 +630,7 @@ const Statistiques = () => {
 
       {/* Formulaire de filtres */}
       <div className="stats-filters">
-        <h3>{activeTab === 'statko' ? 'Statistiques fiches KO (ko=1) par Centre' : `Statistiques par ${activeTab.toUpperCase()}`}</h3>
+        <h3>{activeTab === 'statko' ? 'Statistiques fiches KO (ko=1) par Agent' : `Statistiques par ${activeTab.toUpperCase()}`}</h3>
         {renderFilterForm()}
       </div>
 

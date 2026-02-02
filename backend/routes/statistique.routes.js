@@ -6,6 +6,7 @@ const { query, queryOne } = require('../config/database');
 
 // Récupérer les statistiques par type (centre, confirmateur, commercial, agent)
 router.get('/all-stat', authenticate, async (req, res) => {
+  console.log('[STAT] /all-stat - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       name_stat,      // CENTRE, CONFIRMATEUR, COMMERCIAL, AGENT, STAT_KO
@@ -92,8 +93,10 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Valider le champ de groupement
     const allowedGroupFields = ['id_centre', 'id_confirmateur', 'id_commercial', 'id_agent'];
     let groupByField = type_id || 'id_centre';
-    if (name_stat === 'CENTRE' || name_stat === 'STAT_KO') {
+    if (name_stat === 'CENTRE') {
       groupByField = 'id_centre';
+    } else if (name_stat === 'STAT_KO') {
+      groupByField = 'id_agent';
     } else if (name_stat === 'CONFIRMATEUR') {
       groupByField = 'id_confirmateur';
     } else if (name_stat === 'COMMERCIAL') {
@@ -188,7 +191,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
 
     // Construire la réponse selon le type de statistique
     const result = {
-      name_stat: (name_stat === 'STAT_KO') ? 'CENTRE' : name_stat,
+      name_stat: (name_stat === 'STAT_KO') ? 'AGENT' : name_stat,
       stat_type: statType,
       total: total,
       etats: etats.map(e => ({
@@ -236,12 +239,13 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Trier par nom
     result.data.sort((a, b) => a.name.localeCompare(b.name));
 
+    console.log('[STAT] /all-stat - Succès - total:', result.total, 'entités:', result.data.length);
     res.json({
       success: true,
       data: result
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des statistiques:', error);
+    console.error('[STAT] /all-stat - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des statistiques',
@@ -255,6 +259,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
 // - Administrateurs (fonction 1, 2, 7) : voient toutes les fiches
 // - Utilisateurs fonction 9 : voient uniquement les fiches de leurs centres assignés
 router.get('/fiches-par-centre', authenticate, checkPermissionCode('statistiques_fiches_view'), async (req, res) => {
+  console.log('[STAT] /fiches-par-centre - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       date_debut, 
@@ -408,7 +413,7 @@ router.get('/fiches-par-centre', authenticate, checkPermissionCode('statistiques
       }
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des statistiques de fiches par centre:', error);
+    console.error('[STAT] /fiches-par-centre - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des statistiques',
@@ -420,6 +425,7 @@ router.get('/fiches-par-centre', authenticate, checkPermissionCode('statistiques
 // GET /api/statistiques/fiches-detaillees
 // Récupérer les fiches détaillées par centre avec les mêmes filtres
 router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques_fiches_view'), async (req, res) => {
+  console.log('[STAT] /fiches-detaillees - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       date_debut, 
@@ -536,7 +542,7 @@ router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques
       }
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des fiches détaillées:', error);
+    console.error('[STAT] /fiches-detaillees - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des fiches',
@@ -548,6 +554,7 @@ router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques
 // GET /api/statistiques/dashboard
 // Récupérer les statistiques pour le Dashboard
 router.get('/dashboard', authenticate, async (req, res) => {
+  console.log('[STAT] /dashboard - Requête reçue - user:', req.user?.id);
   try {
     const today = new Date();
     const year = today.getFullYear();
@@ -660,7 +667,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des statistiques du Dashboard:', error);
+    console.error('[STAT] /dashboard - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des statistiques',
@@ -671,6 +678,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
 
 // Suivi des agents qualification
 router.get('/agents-qualif', authenticate, async (req, res) => {
+  console.log('[STAT] /agents-qualif - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       date_debut, 
@@ -922,6 +930,7 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
 
 // Récupérer la production par superviseur pour un RP Qualification
 router.get('/production-qualif', authenticate, async (req, res) => {
+  console.log('[STAT] /production-qualif - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       date_debut, 
@@ -1118,7 +1127,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération de la production qualif:', error);
+    console.error('[STAT] /production-qualif - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération de la production',
@@ -1133,6 +1142,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
 
 // Récupérer les KPI qualification (meilleurs agents et équipes)
 router.get('/kpi-qualification', authenticate, async (req, res) => {
+  console.log('[STAT] /kpi-qualification - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
     
@@ -1276,7 +1286,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       data: kpiData
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des KPI qualification:', error);
+    console.error('[STAT] /kpi-qualification - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération des KPI',
@@ -1291,6 +1301,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
 
 // Récupérer les KPIs (Top 3 agents, Top 3 équipes, Taux de conversion, Évolution) - centre CALL_JWS uniquement
 router.get('/kpis', authenticate, async (req, res) => {
+  console.log('[STAT] /kpis - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
     
@@ -1590,7 +1601,7 @@ router.get('/kpis', authenticate, async (req, res) => {
       data: kpiData
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des KPIs:', error);
+    console.error('[STAT] /kpis - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération des KPIs',
@@ -1605,6 +1616,7 @@ router.get('/kpis', authenticate, async (req, res) => {
 
 // Récupérer les KPIs Confirmation (Top 3 confirmateurs confirmations/signatures, Taux, Évolution) - centre CALL_JWS uniquement
 router.get('/kpis-confirmation', authenticate, async (req, res) => {
+  console.log('[STAT] /kpis-confirmation - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
     
@@ -1882,7 +1894,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       data: kpiData
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des KPIs confirmation:', error);
+    console.error('[STAT] /kpis-confirmation - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération des KPIs confirmation',
@@ -1897,6 +1909,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
 
 // Récupérer les KPIs par centre
 router.get('/kpis-centres', authenticate, async (req, res) => {
+  console.log('[STAT] /kpis-centres - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
     
@@ -2140,7 +2153,7 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
       data: kpiData
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des KPIs par centre:', error);
+    console.error('[STAT] /kpis-centres - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération des KPIs par centre',
@@ -2155,6 +2168,7 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
 
 // Récupérer les KPIs pour le centre call_jws
 router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
+  console.log('[STAT] /kpis-confirmation-jws - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
     
@@ -2363,7 +2377,7 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
       data: kpiData
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des KPIs Confirmation JWS:', error);
+    console.error('[STAT] /kpis-confirmation-jws - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération des KPIs Confirmation JWS',
@@ -2374,6 +2388,7 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
 
 // Statistiques des agents pour un superviseur
 router.get('/superviseur/:id', authenticate, async (req, res) => {
+  console.log('[STAT] /superviseur/:id - Requête reçue - user:', req.user?.id, 'superviseur_id:', req.params.id, 'params:', req.query);
   try {
     const { id } = req.params;
     const { 
@@ -2595,7 +2610,7 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des statistiques du superviseur:', error);
+    console.error('[STAT] /superviseur/:id - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération des statistiques',
@@ -2610,6 +2625,7 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
 
 // Récupérer les statistiques par agent qualité (qui ont audité des fiches)
 router.get('/agents-qualite', authenticate, async (req, res) => {
+  console.log('[STAT] /agents-qualite - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       date_debut, 
@@ -2803,7 +2819,7 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des statistiques par agent qualité:', error);
+    console.error('[STAT] /agents-qualite - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération des statistiques',

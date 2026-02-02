@@ -11,6 +11,7 @@ const { query, queryOne } = require('../config/database');
 // GET /api/statistiques-v2/qualification-advanced
 // Métriques avancées pour l'onglet Qualification
 router.get('/qualification-advanced', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  console.log('[STAT-V2] /qualification-advanced - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { date_debut, date_fin, id_agent, id_equipe, id_centre, id_departement } = req.query;
     
@@ -157,7 +158,7 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
       }
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des métriques qualification avancées:', error);
+    console.error('[STAT-V2] /qualification-advanced - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',
@@ -169,6 +170,7 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
 // GET /api/statistiques-v2/confirmation-advanced
 // Métriques avancées pour l'onglet Confirmation
 router.get('/confirmation-advanced', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  console.log('[STAT-V2] /confirmation-advanced - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { date_debut, date_fin, id_confirmateur, id_centre } = req.query;
     
@@ -301,7 +303,7 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
       }
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des métriques confirmation avancées:', error);
+    console.error('[STAT-V2] /confirmation-advanced - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',
@@ -313,6 +315,7 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
 // GET /api/statistiques-v2/centres-advanced
 // Métriques avancées pour l'onglet Centres
 router.get('/centres-advanced', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  console.log('[STAT-V2] /centres-advanced - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { date_debut, date_fin, id_centre } = req.query;
     
@@ -426,6 +429,7 @@ router.get('/centres-advanced', authenticate, checkPermissionCode('statistiques_
 // GET /api/statistiques-v2/temporal-performance
 // Performance temporelle (évolution sur plusieurs mois)
 router.get('/temporal-performance', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  console.log('[STAT-V2] /temporal-performance - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { months = 6, metric_type = 'all' } = req.query; // metric_type: all, qualification, confirmation, signatures
     
@@ -510,7 +514,7 @@ router.get('/temporal-performance', authenticate, checkPermissionCode('statistiq
       data: data
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération de la performance temporelle:', error);
+    console.error('[STAT-V2] /temporal-performance - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',
@@ -522,6 +526,7 @@ router.get('/temporal-performance', authenticate, checkPermissionCode('statistiq
 // GET /api/statistiques-v2/comparison
 // Comparaison multi-périodes : toutes les métriques (fiches générées, qualifiées, confirmées, signatures, rétractées)
 router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  console.log('[STAT-V2] /comparison - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { period1_start, period1_end, period2_start, period2_end } = req.query;
 
@@ -612,7 +617,7 @@ router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_vie
       data: comparison
     });
   } catch (error) {
-    console.error('Erreur lors de la comparaison:', error);
+    console.error('[STAT-V2] /comparison - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',
@@ -624,6 +629,7 @@ router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_vie
 // GET /api/statistiques-v2/heatmap
 // Heatmap par jour de la semaine / heure
 router.get('/heatmap', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  console.log('[STAT-V2] /heatmap - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { date_debut, date_fin, metric_type = 'creation' } = req.query; // creation, confirmation, signature
     
@@ -697,6 +703,7 @@ router.get('/heatmap', authenticate, checkPermissionCode('statistiques_v2_view')
 // GET /api/statistiques-v2/export
 // Export des données en CSV/Excel
 router.get('/export', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  console.log('[STAT-V2] /export - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       type, date_debut, date_fin, 
@@ -767,7 +774,7 @@ router.get('/export', authenticate, checkPermissionCode('statistiques_v2_view'),
       data: exportData
     });
   } catch (error) {
-    console.error('Erreur lors de la préparation de l\'export:', error);
+    console.error('[STAT-V2] /export - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',
@@ -779,6 +786,7 @@ router.get('/export', authenticate, checkPermissionCode('statistiques_v2_view'),
 // GET /api/statistiques-v2/drill-down
 // Drill-down pour voir les détails d'un élément cliqué
 router.get('/drill-down', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  console.log('[STAT-V2] /drill-down - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { drill_type, id_agent, date, id_centre, date_debut, date_fin } = req.query;
     
@@ -853,6 +861,7 @@ router.get('/drill-down', authenticate, checkPermissionCode('statistiques_v2_vie
 // GET /api/statistiques-v2/comparison
 // Comparaison entre deux périodes
 router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  console.log('[STAT-V2] /comparison (v2) - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { period1_start, period1_end, period2_start, period2_end } = req.query;
     
@@ -938,7 +947,7 @@ router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_vie
       }
     });
   } catch (error) {
-    console.error('Erreur lors de la comparaison:', error);
+    console.error('[STAT-V2] /comparison - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',
@@ -950,6 +959,7 @@ router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_vie
 // GET /api/statistiques-v2/alerts
 // Alertes de performance
 router.get('/alerts', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
+  console.log('[STAT-V2] /alerts - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { date_debut, date_fin } = req.query;
     
@@ -1044,7 +1054,7 @@ router.get('/alerts', authenticate, checkPermissionCode('statistiques_v2_view'),
       data: alerts
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des alertes:', error);
+    console.error('[STAT-V2] /alerts - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',
