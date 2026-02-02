@@ -8,7 +8,7 @@ import './Statistiques.css';
 
 const Statistiques = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('centre'); // centre, confirmateur, commercial, agent
+  const [activeTab, setActiveTab] = useState('centre'); // centre, confirmateur, commercial, agent, statko
   const [statType, setStatType] = useState('net'); // net, taux, repartition, part_total, barres, camembert
   
   // États pour les filtres
@@ -74,6 +74,11 @@ const Statistiques = () => {
         type_id = 'id_agent';
         func_id = '3';
         id_filter = filters.id_agent;
+        break;
+      case 'statko':
+        name_stat = 'STAT_KO';
+        type_id = 'id_centre';
+        id_filter = filters.id_centre;
         break;
     }
 
@@ -151,7 +156,7 @@ const Statistiques = () => {
             </select>
           </div>
 
-          {activeTab === 'centre' && (
+          {(activeTab === 'centre' || activeTab === 'statko') && (
             <div className="filter-group">
               <label>Centre</label>
               <select
@@ -614,11 +619,17 @@ const Statistiques = () => {
         >
           COMMERCIAL
         </button>
+        <button
+          className={`menu-btn ${activeTab === 'statko' ? 'active' : ''}`}
+          onClick={() => setActiveTab('statko')}
+        >
+          STAT KO
+        </button>
       </div>
 
       {/* Formulaire de filtres */}
       <div className="stats-filters">
-        <h3>Statistiques par {activeTab.toUpperCase()}</h3>
+        <h3>{activeTab === 'statko' ? 'Statistiques fiches KO (ko=1) par Centre' : `Statistiques par ${activeTab.toUpperCase()}`}</h3>
         {renderFilterForm()}
       </div>
 

@@ -8,7 +8,7 @@ const { query, queryOne } = require('../config/database');
 router.get('/all-stat', authenticate, async (req, res) => {
   try {
     const { 
-      name_stat,      // CENTRE, CONFIRMATEUR, COMMERCIAL, AGENT
+      name_stat,      // CENTRE, CONFIRMATEUR, COMMERCIAL, AGENT, STAT_KO
       type_id,        // id_centre, id_confirmateur, id_commercial, id_agent
       func_id,        // ID de la fonction pour filtrer les utilisateurs
       stat,           // 'net' ou 'taux'
@@ -16,6 +16,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
       date_fin, 
       date,           // date_appel_time, date_insert_time, date_modif_time
       produit,        // 1 (PAC), 2 (PV), ou vide (les deux)
+      ko,             // 1 = fiches KO uniquement (onglet Stat KO)
       id_centre,
       id_confirmateur,
       id_commercial,
@@ -91,7 +92,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Valider le champ de groupement
     const allowedGroupFields = ['id_centre', 'id_confirmateur', 'id_commercial', 'id_agent'];
     let groupByField = type_id || 'id_centre';
-    if (name_stat === 'CENTRE') {
+    if (name_stat === 'CENTRE' || name_stat === 'STAT_KO') {
       groupByField = 'id_centre';
     } else if (name_stat === 'CONFIRMATEUR') {
       groupByField = 'id_confirmateur';
@@ -111,7 +112,6 @@ router.get('/all-stat', authenticate, async (req, res) => {
        FROM fiches
        WHERE (archive = 0 OR archive IS NULL) 
        AND active = 1 
-       AND ko = 0
        AND \`${safeDateField}\` >= ? 
        AND \`${safeDateField}\` <= ?${additionalConditions}`,
       queryParams
@@ -124,7 +124,6 @@ router.get('/all-stat', authenticate, async (req, res) => {
        FROM fiches
        WHERE (archive = 0 OR archive IS NULL) 
        AND active = 1 
-       AND ko = 0
        AND \`${safeDateField}\` >= ? 
        AND \`${safeDateField}\` <= ?${additionalConditions}
        GROUP BY \`${groupByField}\`, id_etat_final
@@ -189,7 +188,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
 
     // Construire la réponse selon le type de statistique
     const result = {
-      name_stat: name_stat,
+      name_stat: (name_stat === 'STAT_KO') ? 'CENTRE' : name_stat,
       stat_type: statType,
       total: total,
       etats: etats.map(e => ({
