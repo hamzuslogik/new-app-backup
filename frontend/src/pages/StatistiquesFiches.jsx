@@ -323,7 +323,6 @@ const StatistiquesFiches = () => {
                   <th>CP</th>
                   <th>Date insertion</th>
                   <th>Date / Heure RDV</th>
-                  <th>Agent qualification</th>
                   <th>Confirmateur</th>
                   <th>Commercial</th>
                   <th>État</th>
@@ -339,7 +338,6 @@ const StatistiquesFiches = () => {
                     <td>{fiche.cp || '-'}</td>
                     <td>{formatDateOnly(fiche.date_insert_time)}</td>
                     <td>{formatDate(fiche.date_rdv_time)}</td>
-                    <td>{fiche.agent_nom || '-'}</td>
                     <td>{fiche.confirmateur_nom || '-'}</td>
                     <td>{fiche.commercial_nom || '-'}</td>
                     <td>

@@ -435,7 +435,6 @@ const Fiches = () => {
           formatDate(fiche.date_rdv_time),
           formatDate(fiche.date_modif_time),
           getEtatName(fiche.id_etat_final),
-          getUserName(fiche.id_agent),
           getConfirmateursFormatted(fiche),
           getUserName(fiche.id_commercial),
           getCentreName(fiche.id_centre),
@@ -857,7 +856,6 @@ const Fiches = () => {
                     <th>Date Insertion</th>
                     <th>Date RDV</th>
                     <th>État Final</th>
-                    <th>Agent qualification</th>
                     <th>Confirmateur</th>
                     <th>Commercial</th>
                     <th>Centre</th>
@@ -896,7 +894,6 @@ const Fiches = () => {
                             )}
                           </span>
                         </td>
-                        <td data-label="Agent qualification:">{getUserName(fiche.id_agent)}</td>
                         <td data-label="Confirmateur:">{getConfirmateursFormatted(fiche)}</td>
                         <td data-label="Commercial:">{getUserName(fiche.id_commercial)}</td>
                         <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>

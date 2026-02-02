@@ -175,6 +175,19 @@ router.get('/all-stat', authenticate, async (req, res) => {
       centres.forEach(centre => {
         entitiesMap[centre.id] = centre.titre;
       });
+    } else if (name_stat === 'STAT_KO') {
+      // Stat KO : récupérer les noms des agents (id_agent) y compris inactifs
+      const agentIds = Object.keys(dataByEntity).map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      if (agentIds.length > 0) {
+        const placeholders = agentIds.map(() => '?').join(',');
+        const agents = await query(
+          `SELECT id, pseudo FROM utilisateurs WHERE id IN (${placeholders})`,
+          agentIds
+        );
+        agents.forEach(agent => {
+          entitiesMap[agent.id] = agent.pseudo || `ID ${agent.id}`;
+        });
+      }
     } else {
       // Pour les utilisateurs (confirmateur, commercial, agent)
       let fonctionFilter = '';
@@ -515,17 +528,14 @@ router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques
         f.cp,
         f.date_insert_time,
         f.date_rdv_time,
-        f.id_agent,
         f.id_confirmateur,
         f.id_commercial,
         f.id_etat_final,
-        agent.pseudo as agent_nom,
         conf.pseudo as confirmateur_nom,
         com.pseudo as commercial_nom,
         e.titre as etat_titre,
         e.color as etat_color
        FROM fiches f
-       LEFT JOIN utilisateurs agent ON f.id_agent = agent.id
        LEFT JOIN utilisateurs conf ON f.id_confirmateur = conf.id
        LEFT JOIN utilisateurs com ON f.id_commercial = com.id
        LEFT JOIN etats e ON f.id_etat_final = e.id
