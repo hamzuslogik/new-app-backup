@@ -663,7 +663,7 @@ router.post('/utilisateurs/generate-token', authenticate, async (req, res) => {
 // Récupérer tous les états (filtrés selon la fonction de l'utilisateur)
 router.get('/etats', authenticate, async (req, res) => {
   try {
-    let querySql = 'SELECT * FROM etats';
+    let querySql = 'SELECT id, titre, color, groupe, ordre, taux, abbreviation FROM etats';
     let params = [];
 
     // Pour les confirmateurs (fonction 6), seuls les états du groupe 2 sont disponibles

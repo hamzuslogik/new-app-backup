@@ -362,13 +362,13 @@ const EtatsTab = () => {
                   </td>
                   <td data-label="Groupe:">{etat.groupe || '-'}</td>
                   <td data-label="Ordre:">{etat.ordre || 0}</td>
-                  <td data-label="Taux:">
+                    <td data-label="Taux:">
                     <span className={`badge ${
-                      etat.taux === 'POSITIVE' ? 'badge-success' :
-                      etat.taux === 'NEGATIVE' ? 'badge-danger' :
+                      (etat.taux || etat.TAUX) === 'POSITIVE' ? 'badge-success' :
+                      (etat.taux || etat.TAUX) === 'NEGATIVE' ? 'badge-danger' :
                       'badge-secondary'
                     }`}>
-                      {etat.taux || 'NEUTRE'}
+                      {etat.taux || etat.TAUX || 'NEUTRE'}
                     </span>
                   </td>
                   <td data-label="Abréviation:">{etat.abbreviation || '-'}</td>
