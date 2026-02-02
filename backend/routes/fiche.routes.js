@@ -378,7 +378,12 @@ router.get('/', authenticate, async (req, res) => {
       include_archive === true ||
       include_archive === 'true';
 
-    let whereConditions = ['fiche.ko = 0', 'fiche.active = 1'];
+    // ko : si fourni (ex. ko=1 pour fiches KO), on filtre par ko ; sinon par défaut fiches non-KO (ko=0 ou NULL)
+    const hasKoFilter = ko !== undefined && ko !== null && ko !== '';
+    let whereConditions = ['fiche.active = 1'];
+    if (!hasKoFilter) {
+      whereConditions.push('(fiche.ko = 0 OR fiche.ko IS NULL)');
+    }
     if (!includeArchive) {
       // Par défaut, on exclut les fiches archivées
       whereConditions.push('(fiche.archive = 0 OR fiche.archive IS NULL)');
@@ -648,7 +653,7 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push('fiche.id_agent = ?');
       params.push(id_agent);
     }
-    if (ko !== undefined && ko !== '') {
+    if (hasKoFilter) {
       whereConditions.push('fiche.ko = ?');
       params.push(ko);
     }

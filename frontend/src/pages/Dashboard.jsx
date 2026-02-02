@@ -96,6 +96,7 @@ const Dashboard = () => {
       time_debut: '00:00:00',
       time_fin: '23:59:59',
       include_archive: false,
+      ko: '', // '' = tous, '0' = fiches OK, '1' = fiches KO
     };
   });
   
@@ -943,6 +944,19 @@ const Dashboard = () => {
                   </label>
                 </div>
 
+                {/* Type de fiches (OK / KO) */}
+                <div className="form-group">
+                  <label>Type de fiches</label>
+                  <select
+                    value={filters.ko ?? ''}
+                    onChange={(e) => handleFilterChange('ko', e.target.value)}
+                  >
+                    <option value="">Tous</option>
+                    <option value="0">Fiches OK</option>
+                    <option value="1">Fiches KO</option>
+                  </select>
+                </div>
+
                 {/* Commercial */}
                 {user?.fonction !== 5 && (
                   <div className="form-group">
@@ -1640,6 +1654,19 @@ const Dashboard = () => {
                       )}
                     </select>
                   )}
+                </div>
+
+                {/* Type de fiches (OK / KO) */}
+                <div className="form-group">
+                  <label>Type de fiches</label>
+                  <select
+                    value={filters.ko ?? ''}
+                    onChange={(e) => handleFilterChange('ko', e.target.value)}
+                  >
+                    <option value="">Tous</option>
+                    <option value="0">Fiches OK</option>
+                    <option value="1">Fiches KO</option>
+                  </select>
                 </div>
 
                 {/* Champ de date */}
