@@ -178,11 +178,11 @@ router.get('/stats', authenticate, async (req, res) => {
       const fcRows = await query(
         `SELECT confirmateur_id, COUNT(DISTINCT id_fiche) as nb_fiches_confirmees
          FROM (
-           SELECT f.id_confirmateur as confirmateur_id, f.id as id_fiche FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND ${dateCond}
+           SELECT f.id_confirmateur as confirmateur_id, f.id as id_fiche FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND (f.ko = 0 OR f.ko IS NULL) AND ${dateCond}
            UNION ALL
-           SELECT f.id_confirmateur_2, f.id FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur_2 IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND ${dateCond}
+           SELECT f.id_confirmateur_2, f.id FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur_2 IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND (f.ko = 0 OR f.ko IS NULL) AND ${dateCond}
            UNION ALL
-           SELECT f.id_confirmateur_3, f.id FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur_3 IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND ${dateCond}
+           SELECT f.id_confirmateur_3, f.id FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur_3 IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND (f.ko = 0 OR f.ko IS NULL) AND ${dateCond}
          ) t
          GROUP BY confirmateur_id`,
         fcParams

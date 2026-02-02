@@ -23,7 +23,8 @@ router.get('/commissions', authenticate, async (req, res) => {
 
     let whereClause = `fiche.id_etat_final = 7 
       AND fiche.date_modif_time >= ? 
-      AND fiche.date_modif_time <= ?`;
+      AND fiche.date_modif_time <= ?
+      AND (fiche.ko = 0 OR fiche.ko IS NULL)`;
     let params = [`${dateDebut} 00:00:00`, `${dateFin} 23:59:59`];
 
     if (id_confirmateur) {
@@ -54,6 +55,7 @@ router.get('/commissions', authenticate, async (req, res) => {
       LEFT JOIN fiches fiche ON histo.id_fiche = fiche.id
       WHERE histo.id_etat = 7 
         AND fiche.id_etat_final = 49
+        AND (fiche.ko = 0 OR fiche.ko IS NULL)
         AND histo.date_creation >= ?
         AND histo.date_creation <= ?
         ${id_confirmateur ? 'AND fiche.id_confirmateur = ?' : ''}
@@ -342,6 +344,7 @@ router.get('/suivi-fiches', authenticate, async (req, res) => {
 
     let whereClause = `histo.id_etat = 9 
       AND fiche.id_etat_final = 13
+      AND (fiche.ko = 0 OR fiche.ko IS NULL)
       AND fiche.date_modif_time >= ?
       AND fiche.date_modif_time <= ?`;
     let params = [`${dateDebut} 00:00:00`, `${dateFin} 23:59:59`];

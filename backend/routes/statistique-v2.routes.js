@@ -58,6 +58,7 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
       FROM fiches f
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
       ${whereClause}
     `, avgProcessingTimeParams);
 
@@ -76,6 +77,7 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
       INNER JOIN etats e ON f.id_etat_final = e.id
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
       AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
       ${whereClause}
       AND f.id_agent IS NOT NULL
@@ -101,6 +103,7 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
       INNER JOIN etats e ON f.id_etat_final = e.id
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
       ${whereClause}
       AND f.id_agent IS NOT NULL
       GROUP BY u.id, u.pseudo
@@ -116,6 +119,7 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
       FROM fiches f
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
       AND f.id_agent IS NOT NULL
       ${whereClause}
     `, avgFichesPerAgentParams);
@@ -136,6 +140,7 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
       LEFT JOIN etats e ON f.id_etat_final = e.id
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
       ${whereClause}
       GROUP BY DATE(f.date_insert_time)
       ORDER BY date ASC
@@ -211,6 +216,7 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
       )
       AND f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
       ${whereClause}
     `, params);
 
@@ -234,6 +240,7 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
       FROM fiches f
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
       ${whereClause}
     `, params);
 
@@ -256,6 +263,7 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
       INNER JOIN utilisateurs u ON f.id_confirmateur = u.id
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
       ${whereClause}
       AND f.id_confirmateur IS NOT NULL
       GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
@@ -272,6 +280,7 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
       FROM fiches f
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
       ${whereClause}
       GROUP BY DATE(COALESCE(FROM_UNIXTIME(f.date_confirmation), f.date_modif_time))
       ORDER BY date ASC
@@ -341,6 +350,7 @@ router.get('/centres-advanced', authenticate, checkPermissionCode('statistiques_
         WHERE f.id_centre = ?
         AND f.date_insert_time >= ? AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
       `, [centre.id, startDate, endDate]);
 
       const signedCount = await queryOne(`
@@ -351,6 +361,7 @@ router.get('/centres-advanced', authenticate, checkPermissionCode('statistiques_
         AND f.id_etat_final IN (13, 16, 44, 45)
         AND f.id_etat_final != 38
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
       `, [centre.id, startDate, endDate]);
 
       // Taux de croissance vs période précédente
@@ -370,6 +381,7 @@ router.get('/centres-advanced', authenticate, checkPermissionCode('statistiques_
         AND f.id_etat_final IN (13, 16, 44, 45)
         AND f.id_etat_final != 38
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
       `, [centre.id, prevStartStr, prevEndStr]);
 
       const growthRate = prevSignedCount?.count > 0
@@ -445,6 +457,7 @@ router.get('/temporal-performance', authenticate, checkPermissionCode('statistiq
           LEFT JOIN etats e ON f.id_etat_final = e.id
           WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
+          AND (f.ko = 0 OR f.ko IS NULL)
         `, [startDate, endDate]);
         
         monthData.qualification = {
@@ -479,6 +492,7 @@ router.get('/temporal-performance', authenticate, checkPermissionCode('statistiq
           FROM fiches f
           WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
+          AND (f.ko = 0 OR f.ko IS NULL)
         `, [startDate, endDate]);
         
         monthData.signatures = {
@@ -535,6 +549,7 @@ router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_vie
       LEFT JOIN etats e ON f.id_etat_final = e.id
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
     `, [period1Start, period1End]);
 
     const p2 = await queryOne(`
@@ -548,6 +563,7 @@ router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_vie
       LEFT JOIN etats e ON f.id_etat_final = e.id
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
     `, [period2Start, period2End]);
 
     const t1 = parseInt(p1?.total || 0);
@@ -718,6 +734,7 @@ router.get('/export', authenticate, checkPermissionCode('statistiques_v2_view'),
         LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
         AND f.id_agent IS NOT NULL
         GROUP BY u.id, u.pseudo
         ORDER BY total_fiches DESC
@@ -736,6 +753,7 @@ router.get('/export', authenticate, checkPermissionCode('statistiques_v2_view'),
         INNER JOIN utilisateurs u ON f.id_confirmateur = u.id
         WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
         AND f.id_confirmateur IS NOT NULL
         GROUP BY u.id, u.pseudo
         ORDER BY confirmations DESC
@@ -797,6 +815,7 @@ router.get('/drill-down', authenticate, checkPermissionCode('statistiques_v2_vie
         LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE DATE(f.date_insert_time) = ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
       `, [date]);
       
       result.summary = summary || {};
@@ -811,6 +830,7 @@ router.get('/drill-down', authenticate, checkPermissionCode('statistiques_v2_vie
         WHERE f.id_centre = ?
         AND f.date_insert_time >= ? AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
       `, [parseInt(id_centre), `${date_debut} 00:00:00`, `${date_fin} 23:59:59`]);
       
       result.metrics = metrics || {};
@@ -862,6 +882,7 @@ router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_vie
       LEFT JOIN etats e ON f.id_etat_final = e.id
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
     `, [start1, end1]);
 
     // Calculer les métriques pour la période 2
@@ -878,6 +899,7 @@ router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_vie
       LEFT JOIN etats e ON f.id_etat_final = e.id
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
     `, [start2, end2]);
 
     // Calculer les différences
@@ -943,6 +965,7 @@ router.get('/alerts', authenticate, checkPermissionCode('statistiques_v2_view'),
       FROM fiches f
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.ko = 0 OR f.ko IS NULL)
     `, [startDate, endDate]);
 
     const rejectionRateValue = parseFloat(rejectionRate?.rejection_rate) || 0;
