@@ -385,6 +385,11 @@
   color: white;
 }
 
+.badge-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
 .action-buttons {
   display: flex;
   gap: 8px;
