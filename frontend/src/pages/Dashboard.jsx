@@ -97,6 +97,7 @@ const Dashboard = () => {
       time_fin: '23:59:59',
       include_archive: false,
       ko: '', // '' = tous, '0' = fiches OK, '1' = fiches KO
+      id_centre: '',
     };
   });
   
@@ -277,7 +278,7 @@ const Dashboard = () => {
     
     // Par défaut : RDV créés dans la journée (fiches CONFIRMER modifiées aujourd'hui = RDV enregistrés aujourd'hui)
     // Pour les confirmateurs : idem, fiches modifiées aujourd'hui (assignation gérée côté backend par user)
-    return {
+    const defaultParams = {
       ...baseParams,
       fiche_search: 1,
       id_etat_final: 7,
@@ -287,6 +288,10 @@ const Dashboard = () => {
       time_debut: timeStart,
       time_fin: timeEnd,
     };
+    if (filters.id_centre) {
+      defaultParams.id_centre = filters.id_centre;
+    }
+    return defaultParams;
   };
 
   // Récupérer les statistiques des RDV
@@ -1063,7 +1068,7 @@ const Dashboard = () => {
                 )}
 
                 {/* Centre */}
-                {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (
+                {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 9) && (
                   <div className="form-group">
                     <label>Centre</label>
                     <select
@@ -1580,7 +1585,7 @@ const Dashboard = () => {
                 )}
 
                 {/* Centre */}
-                {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (
+                {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 9) && (
                   <div className="form-group">
                     <label>Centre</label>
                     <select

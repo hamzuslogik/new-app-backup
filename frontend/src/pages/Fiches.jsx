@@ -27,6 +27,7 @@ const Fiches = () => {
     limit: 500,
     fiche_search: false,
     include_archive: false,
+    id_centre: '',
   });
 
   const normalizeText = (v) => (typeof v === 'string' ? v.trim() : v);
@@ -184,6 +185,9 @@ const Fiches = () => {
 
     if (filters.include_archive) {
       defaultParams.include_archive = 1;
+    }
+    if (filters.id_centre) {
+      defaultParams.id_centre = filters.id_centre;
     }
     
     // Pour l'agent qualification, filtrer uniquement ses fiches créées aujourd'hui
@@ -632,7 +636,7 @@ const Fiches = () => {
               )}
 
               {/* Centre */}
-              {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (
+              {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 9) && (
                 <div className="form-group">
                   <label>Centre</label>
                   <select
