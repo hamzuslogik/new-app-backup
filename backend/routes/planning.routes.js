@@ -423,7 +423,7 @@ router.get('/week', authenticate, async (req, res) => {
         rdv: rdvTime,
         cp: fiche.cp,
         ville: fiche.ville || null,
-        valider: fiche.valider,
+        valider: (fiche.valider === 1 || fiche.valider === true || fiche.valider === '1') ? 1 : 0,
         operation: fiche.produit === 1 ? 'PAC' : fiche.produit === 2 ? 'PV' : '',
         id_commercial: fiche.id_commercial || 0,
         id_etat_final: fiche.id_etat_final || null, // État final de la fiche
