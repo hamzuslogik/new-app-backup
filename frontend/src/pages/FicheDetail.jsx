@@ -1227,11 +1227,24 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         if (parts[1]) rdvTime = parts[1].substring(0, 5);
       }
       
+      // Confirmateurs 1, 2, 3 : reprendre la fiche ou, en session confirmateur (6), s'ajouter au premier créneau libre comme en création rapide (onglet Planning)
+      let idConf1 = ficheData?.id_confirmateur ? String(ficheData.id_confirmateur) : '';
+      let idConf2 = ficheData?.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : '';
+      let idConf3 = ficheData?.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : '';
+      if (Number(user?.fonction) === 6 && user?.id) {
+        const uid = String(user.id);
+        if (![idConf1, idConf2, idConf3].includes(uid)) {
+          if (!idConf1) idConf1 = uid;
+          else if (!idConf2) idConf2 = uid;
+          else if (!idConf3) idConf3 = uid;
+        }
+      }
+      
       setConfFormData({
         produit: ficheData?.produit ? String(ficheData.produit) : '',
-        id_confirmateur: ficheData?.id_confirmateur ? String(ficheData.id_confirmateur) : '',
-        id_confirmateur_2: ficheData?.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : '',
-        id_confirmateur_3: ficheData?.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : '',
+        id_confirmateur: idConf1,
+        id_confirmateur_2: idConf2,
+        id_confirmateur_3: idConf3,
         conf_rdv_date: rdvDate,
         conf_rdv_time: rdvTime,
         conf_rdv_avec: ficheData?.conf_rdv_avec || '',
@@ -5482,6 +5495,14 @@ const PlanningTab = ({
 
   const planningData = planningResponse?.data || {};
   const availabilityData = availabilityResponse?.data || {};
+  
+  // Rafraîchir automatiquement les données à l'ouverture de l'onglet Planning
+  useEffect(() => {
+    if (planningDep && planningWeek && planningYear) {
+      refetchPlanning();
+      refetchAvailability();
+    }
+  }, [planningDep, planningWeek, planningYear]); // au montage / changement dep-semaine-année
   
   // Mutation pour modifier la disponibilité (définie après les queries pour accéder aux refetch)
   const updateAvailabilityMutation = useMutation(

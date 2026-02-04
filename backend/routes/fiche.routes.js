@@ -237,6 +237,10 @@ const getEtatGroupsAndPermissions = async (userFonction) => {
         permissionChecks.push(permissionExists);
       }
     }
+    // Session Confirmateur (6) : inclure Phase 1 (groupe 1) dans les filtres et le changement d'état
+    if (fonction === 6 && !allowedGroups.includes('1')) {
+      allowedGroups.push('1');
+    }
     
     cacheData[fonction] = {
       allowedGroups,
