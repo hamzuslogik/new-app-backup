@@ -6146,15 +6146,20 @@ const PlanningViewForModal = ({
                         onClick={() => !isEditing && isAvailable && onSelectSlot(day.date, slot.hour)}
                         onDoubleClick={(e) => canEditThis && handleCellDoubleClick(day.date, slot.hour, e)}
                         title={
-                          isEditing 
-                            ? 'Modifier la disponibilité' 
-                            : canEditThis && hasData
-                            ? `Double-cliquer pour modifier la disponibilité (${day.dayName} à ${slot.name})`
-                            : isAvailable 
-                            ? `Cliquer pour créer un rendez-vous le ${day.dayName} à ${slot.name}` 
-                            : isBlocked 
-                            ? 'Créneau bloqué' 
-                            : 'Créneau non disponible'
+                          (() => {
+                            const validatedLabel = hasData && rdvs.length > 0
+                              ? `${confirmedCount} validées / ${rdvs.length} total`
+                              : null;
+                            if (isEditing) return 'Modifier la disponibilité';
+                            const actionLabel = canEditThis && hasData
+                              ? `Double-cliquer pour modifier la disponibilité (${day.dayName} à ${slot.name})`
+                              : isAvailable
+                              ? `Cliquer pour créer un rendez-vous le ${day.dayName} à ${slot.name}`
+                              : isBlocked
+                              ? 'Créneau bloqué'
+                              : 'Créneau non disponible';
+                            return validatedLabel ? `${validatedLabel} — ${actionLabel}` : actionLabel;
+                          })()
                         }
                       >
                         {/* Badge de disponibilité avec format "X / Y" - TOUJOURS affiché si on a des données */}
