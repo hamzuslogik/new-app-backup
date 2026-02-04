@@ -35,6 +35,32 @@ function formatDateLocal(date) {
   return `${year}-${month}-${day}`;
 }
 
+// Numéro de semaine ISO (lundi = début de semaine)
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+// Associe une heure "HH:MM" ou "HH:MM:SS" au créneau planning (hour key backend)
+function timeToSlotHour(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return null;
+  const parts = timeStr.trim().split(':');
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) || 0;
+  if (isNaN(h)) return null;
+  const minutes = h * 60 + m;
+  if (minutes >= 540 && minutes <= 659) return '09:00:00';
+  if (minutes >= 660 && minutes <= 779) return '11:00:00';
+  if (minutes >= 780 && minutes <= 959) return '13:00:00';
+  if (minutes >= 960 && minutes <= 1079) return '16:00:00';
+  if (minutes >= 1080 && minutes <= 1169) return '18:00:00';
+  if (minutes >= 1170 && minutes <= 1200) return '19:30:00';
+  return null;
+}
+
 const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // En mode modal, utiliser le contexte personnalisé, sinon utiliser useParams
   const routeParams = useRouteParams();
@@ -1242,6 +1268,30 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       const dateRdvTime = confFormData.conf_rdv_date && confFormData.conf_rdv_time 
         ? `${confFormData.conf_rdv_date} ${confFormData.conf_rdv_time}:00`
         : null;
+
+      // Vérifier si le créneau planning est fermé (même règle que création RDV depuis l'onglet Planning)
+      if (confFormData.conf_rdv_date && confFormData.conf_rdv_time) {
+        let dep = planningDep;
+        if (!dep && ficheData?.cp) {
+          const cpStr = String(ficheData.cp).trim();
+          if (/^\d/.test(cpStr)) dep = cpStr.substring(0, 2);
+          else { const m = cpStr.match(/\d{2}/); if (m) dep = m[0]; }
+        }
+        if (dep && dep.length === 2 && /^\d{2}$/.test(dep)) {
+          const rdvDate = new Date(confFormData.conf_rdv_date + 'T12:00:00');
+          const week = getWeekNumber(rdvDate);
+          const year = rdvDate.getFullYear();
+          const slotHour = timeToSlotHour(confFormData.conf_rdv_time);
+          if (slotHour) {
+            const availRes = await api.get('/planning/availability', { params: { w: week, y: year, dp: dep } });
+            const availData = availRes.data?.data?.[confFormData.conf_rdv_date]?.[slotHour];
+            if (availData?.is_closed === 1) {
+              alert('Impossible de confirmer : le créneau du planning pour cette date et heure est fermé.');
+              return;
+            }
+          }
+        }
+      }
 
       // Préparer les données à envoyer
       const updateData = {
@@ -4088,10 +4138,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             - Superviseur Qualification (2) : peuvent changer les fiches des agents sous leur responsabilité
             - RP Qualification (12) : peuvent changer les fiches des agents sous la responsabilité de leurs superviseurs
             - Agents (3) : peuvent changer les fiches de leur centre
-            - Confirmateurs (6) : peuvent changer toutes les fiches */}
+            - Confirmateurs (6), RE Confirmation (14), RP Confirmation (13) : peuvent changer l'état (y compris si fiche déjà confirmée) */}
         {((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 8 || Number(user?.fonction) === 12) ||
           (Number(user?.fonction) === 3 && user?.centre === ficheData?.id_centre) ||
-          (Number(user?.fonction) === 6)) && (
+          (Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13)) && (
           <div className="fiche-section etat-change-section">
             <h2 className="section-title">Changer l'état de la fiche</h2>
             <div className="etat-change-form">
@@ -4100,7 +4150,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 <select
                   id="id_etat_final"
                   className="form-control"
-                  value={selectedEtat !== null ? selectedEtat : (Number(user?.fonction) === 6 && fiche.id_etat_final ? fiche.id_etat_final : '')}
+                  value={selectedEtat !== null ? selectedEtat : ((Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13) && fiche.id_etat_final ? fiche.id_etat_final : '')}
                   onChange={(e) => handleEtatChange(e.target.value ? parseInt(e.target.value) : null)}
                 >
                   <option value="">{fiche.id_etat_final ? `État actuel: ${etats?.find(e => e.id === fiche.id_etat_final)?.titre || fiche.id_etat_final}` : 'Sélectionner un état'}</option>
