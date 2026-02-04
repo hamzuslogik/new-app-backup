@@ -603,12 +603,11 @@ router.get('/dashboard', authenticate, async (req, res) => {
       AND (f.archive = 0 OR f.archive IS NULL)
     `, [todayStr, todayStr, todayStr]);
 
-    // 2. Nombre de signatures (par date de planning = date du RDV) aujourd'hui
+    // 2. Nombre de signatures enregistrées aujourd'hui (table signature)
     const signaturesToday = await queryOne(`
       SELECT COUNT(*) as count
-      FROM signature s
-      INNER JOIN fiches f ON s.id_fiche = f.id
-      WHERE f.date_rdv_time IS NOT NULL AND DATE(f.date_rdv_time) = ?
+      FROM signature
+      WHERE DATE(date_heure) = ?
     `, [todayStr]);
 
     // 3. Nombre de RDV à venir (état CONFIRMER = 7) avec date_rdv_time >= aujourd'hui
@@ -1768,10 +1767,11 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
           u.photo,
           SUM(s.ajoute) as count_signatures
         FROM signature s
-        INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL) AND f.date_rdv_time IS NOT NULL
+        INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
         INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
         WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-        AND DATE(f.date_rdv_time) >= ? AND DATE(f.date_rdv_time) <= ?
+        AND s.date_heure >= ?
+        AND s.date_heure <= ?
         GROUP BY s.confirmateur, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_signatures DESC
         LIMIT 3
@@ -1786,13 +1786,13 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         count_signatures: parseFloat(conf.count_signatures || 0)
       }));
 
-      // Total signatures (score) période actuelle - par date de planning
+      // Total signatures (score) période actuelle - table signature
       const signaturesTotalResult = await queryOne(
         `SELECT COALESCE(SUM(s.ajoute), 0) as total
          FROM signature s
-         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL) AND f.date_rdv_time IS NOT NULL
+         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
          WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-         AND DATE(f.date_rdv_time) >= ? AND DATE(f.date_rdv_time) <= ?`,
+         AND s.date_heure >= ? AND s.date_heure <= ?`,
         [...callJwsCentreIds, startDate, endDate]
       );
       const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
@@ -1829,13 +1829,13 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       const previousConfirmationsResult = await queryOne(confirmationsQuery, [previousStartTimestamp, previousEndTimestamp, previousStartDate, previousEndDate, ...callJwsCentreIds]);
       const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
 
-      // Signatures période précédente - par date de planning
+      // Signatures période précédente - table signature
       const previousSignaturesTotalResult = await queryOne(
         `SELECT COALESCE(SUM(s.ajoute), 0) as total
          FROM signature s
-         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL) AND f.date_rdv_time IS NOT NULL
+         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
          WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-         AND DATE(f.date_rdv_time) >= ? AND DATE(f.date_rdv_time) <= ?`,
+         AND s.date_heure >= ? AND s.date_heure <= ?`,
         [...callJwsCentreIds, previousStartDate, previousEndDate]
       );
       const previousSignaturesCount = parseFloat(previousSignaturesTotalResult?.total || 0);
