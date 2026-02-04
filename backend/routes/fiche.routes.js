@@ -2907,6 +2907,9 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     } else if (user.fonction === 6) {
       // Confirmateurs : peuvent modifier toutes les fiches (pas de restriction)
       // Pas de vérification d'assignation nécessaire
+    } else if (user.fonction === 14) {
+      // Session RE confirmation (id 14) : peuvent modifier les champs des fiches
+      // Pas de vérification d'assignation nécessaire
     } else if (user.fonction === 2) {
       // Superviseur Qualification : peuvent modifier les fiches des agents sous leur responsabilité
       // Récupérer les agents sous la responsabilité du superviseur
