@@ -6113,6 +6113,8 @@ const PlanningViewForModal = ({
                     // Compter uniquement les fiches confirmées (état final = 7, pas annulées ni reportées)
                     const confirmedRdvs = rdvs.filter(rdv => rdv.etat_check !== 'AN' && rdv.etat_check !== 'RS');
                     const confirmedCount = confirmedRdvs.length;
+                    // Compter les fiches réellement validées par le confirmateur (valider === 1)
+                    const validatedCount = rdvs.filter(rdv => rdv.valider === 1 || rdv.valider === true).length;
                     
                     // Toujours afficher le badge si on a des données (disponibilité ou fiches confirmées)
                     const hasData = hasPlanning || confirmedCount > 0;
@@ -6148,7 +6150,7 @@ const PlanningViewForModal = ({
                         title={
                           (() => {
                             const validatedLabel = hasData && rdvs.length > 0
-                              ? `${confirmedCount} validées / ${rdvs.length} total`
+                              ? `${validatedCount} validées / ${rdvs.length} total`
                               : null;
                             if (isEditing) return 'Modifier la disponibilité';
                             const actionLabel = canEditThis && hasData
