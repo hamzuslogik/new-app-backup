@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { FaCalendarCheck, FaSave, FaTimes, FaSearch } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './AuditRDV.css';
 
 const AuditRDV = () => {
@@ -155,7 +156,7 @@ const AuditRDV = () => {
                     <td>{fiche.agent_pseudo || '-'}</td>
                     <td>{fiche.centre_nom || '-'}</td>
                     <td>{formatDate(fiche.date_creation_rdv)}</td>
-                    <td>{formatDate(fiche.date_rdv_time)}</td>
+                    <td>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                     <td>{fiche.etat_titre || '-'}</td>
                     <td>
                       <div className="comment-quick-edit-container">

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaRobot, FaCalendarAlt, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaChartLine, FaSpinner } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './AssistanceIA.css';
 
 const AssistanceIA = () => {
@@ -244,7 +245,7 @@ const AssistanceIA = () => {
                               {rdv.nom} {rdv.prenom}
                               {rdv.tel && <div className="client-tel">{rdv.tel}</div>}
                             </td>
-                            <td>{formatDate(rdv.date_rdv_time)}</td>
+                            <td>{formatRdvDateTime(rdv.date_rdv_time)}</td>
                             <td>
                               <div className={`score-badge ${getQualificationClass(rdv.score)}`}>
                                 {rdv.score}/100

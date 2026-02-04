@@ -6,6 +6,7 @@ import { useSidebar } from '../contexts/SidebarContext';
 import { FaBars, FaBell, FaUser, FaSignOutAlt, FaTimes, FaCheck, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import api from '../config/api';
 import useLocalStorage from '../hooks/useLocalStorage';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Header.css';
 
 const Header = () => {
@@ -369,10 +370,10 @@ const Header = () => {
                                 color: '#000000'
                               }}>
                                 {decalageInfo.date_rdv_original && (
-                                  <div><strong>RDV original :</strong> {new Date(decalageInfo.date_rdv_original).toLocaleString('fr-FR')}</div>
+                                  <div><strong>RDV original :</strong> {formatRdvDateTime(decalageInfo.date_rdv_original)}</div>
                                 )}
                                 {decalageInfo.date_rdv_nouvelle && (
-                                  <div><strong>Nouveau RDV :</strong> {new Date(decalageInfo.date_rdv_nouvelle).toLocaleString('fr-FR')}</div>
+                                  <div><strong>Nouveau RDV :</strong> {formatRdvDateTime(decalageInfo.date_rdv_nouvelle)}</div>
                                 )}
                               </div>
                             )}

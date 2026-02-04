@@ -5,6 +5,7 @@ import api from '../config/api';
 import { FaCheckCircle, FaTimesCircle, FaCalendarWeek, FaCalendarAlt, FaFileAlt, FaCube } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Phase3.css';
 
 const Phase3 = () => {
@@ -99,7 +100,7 @@ const Phase3 = () => {
             {etatInfo.titre}
           </span>
         </td>
-        <td>{fiche.date_rdv_time ? new Date(fiche.date_rdv_time).toLocaleString('fr-FR') : 'N/A'}</td>
+        <td>{fiche.date_rdv_time ? formatRdvDateTime(fiche.date_rdv_time) : 'N/A'}</td>
         {showCQ && (
           <>
             <td>{fiche.cq_etat || 'N/A'}</td>

@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRouteParams } from '../contexts/RouteParamsContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
+import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
 import './FicheDetail.css';
 
 // Créneaux horaires
@@ -1062,14 +1063,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
       if (needsApproval) {
         // Créer une notification pour les admins
-        const dateFormatted = new Date(updateData.date_rdv_time).toLocaleString('fr-FR', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
+        const dateFormatted = formatRdvDateTime(updateData.date_rdv_time);
         
         try {
           await api.post('/notifications', {
@@ -1862,7 +1856,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     
     estimatedHeight += titleFontSize + sectionSpacing; // Rendez-vous
     if (fiche.date_rdv_time) {
-      const dateRdv = new Date(fiche.date_rdv_time).toLocaleString('fr-FR');
+      const dateRdv = formatRdvDateTime(fiche.date_rdv_time);
       estimatedHeight += estimateTextHeight(`Date RDV: ${dateRdv}`);
     } else {
       estimatedHeight += estimateTextHeight(`Date RDV: -`);
@@ -1989,7 +1983,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       doc.text('RENDEZ-VOUS', margin, yPos);
       yPos += finalLineHeight + 1;
       if (fiche.date_rdv_time) {
-        const dateRdv = new Date(fiche.date_rdv_time).toLocaleString('fr-FR');
+        const dateRdv = formatRdvDateTime(fiche.date_rdv_time);
         yPos += addText(`Date RDV: ${dateRdv}`, margin, yPos);
       } else {
         yPos += addText(`Date RDV: -`, margin, yPos);
@@ -2128,7 +2122,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       doc.text('RENDEZ-VOUS', margin, yPos);
       yPos += finalLineHeight + 1;
       if (fiche.date_rdv_time) {
-        const dateRdv = new Date(fiche.date_rdv_time).toLocaleString('fr-FR');
+        const dateRdv = formatRdvDateTime(fiche.date_rdv_time);
         yPos += addText(`Date RDV: ${dateRdv}`, margin, yPos);
       } else {
         yPos += addText(`Date RDV: -`, margin, yPos);
@@ -2480,7 +2474,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         Créée le: {decalage.date_creation ? new Date(decalage.date_creation).toLocaleString('fr-FR') : 'N/A'}
                       </div>
                       <div style={{ fontSize: '10.2px', marginTop: '5px' }}>
-                        <strong>Nouvelle date:</strong> {decalage.date_nouvelle ? new Date(decalage.date_nouvelle).toLocaleString('fr-FR') : (decalage.date_prevu ? new Date(decalage.date_prevu).toLocaleString('fr-FR') : 'N/A')}
+                        <strong>Nouvelle date:</strong> {decalage.date_nouvelle ? formatRdvDateTime(decalage.date_nouvelle) : (decalage.date_prevu ? formatRdvDateTime(decalage.date_prevu) : 'N/A')}
                       </div>
                       {decalage.message && (
                         <div style={{ fontSize: '10.2px', marginTop: '5px', fontStyle: 'italic', color: '#555' }}>
@@ -2642,7 +2636,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                       color: '#666',
                       fontStyle: 'italic'
                     }}>
-                      Date originale : {new Date(ficheData.date_rdv_time).toLocaleString('fr-FR')}
+                      Date originale : {formatRdvDateTime(ficheData.date_rdv_time)}
                     </div>
                   )}
                 </div>
@@ -2773,7 +2767,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
+                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
                   if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RAPPEL POUR BUREAU (19)
@@ -2785,7 +2779,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
+                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
                   if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // ANNULER ET A REPROGRAMMER (8)
@@ -2797,7 +2791,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
+                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
                   if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // CLIENT HONORE A SUIVRE (9)
@@ -2810,7 +2804,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: new Date(etatData.date_rdv_time).toLocaleDateString('fr-FR') });
+                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
                   if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RDV ANNULER (11)
@@ -2911,7 +2905,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   }
                   if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire confirmateur', value: etatData.conf_commentaire_produit, fullWidth: true });
                   if (etatData.conf_rdv_avec) items.push({ label: 'Entretien avec', value: etatData.conf_rdv_avec });
-                  if (etatData.date_rdv_time) items.push({ label: 'Date RDV', value: new Date(etatData.date_rdv_time).toLocaleString('fr-FR') });
+                  if (etatData.date_rdv_time) items.push({ label: 'Date RDV', value: formatRdvDateTime(etatData.date_rdv_time) });
                   if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                   
                   const professionMr = professions?.find(p => p.id == etatData.profession_mr);
@@ -5798,41 +5792,18 @@ const SMSTab = ({ ficheHash, ficheData }) => {
     
     if (ficheData?.date_rdv_time) {
       try {
-        // date_rdv_time peut être au format datetime MySQL (YYYY-MM-DD HH:MM:SS)
-        // ou au format timestamp
         let dateRdvValue = ficheData.date_rdv_time;
-        
-        // Si c'est une chaîne au format MySQL datetime, la parser directement
+        // Affichage indépendant du fuseau horaire : utiliser les utilitaires qui lisent la chaîne telle quelle
         if (typeof dateRdvValue === 'string') {
-          // Format MySQL: "2026-01-26 14:30:00"
-          dateRdv = new Date(dateRdvValue.replace(' ', 'T')); // Convertir en format ISO
+          dateRdvStr = formatRdvDateOnly(dateRdvValue);
+          heureRdvStr = formatRdvTimeOnly(dateRdvValue);
         } else if (typeof dateRdvValue === 'number') {
-          // Si c'est un nombre (timestamp Unix en secondes)
-          dateRdv = new Date(dateRdvValue * 1000);
-        } else {
-          dateRdv = new Date(dateRdvValue);
-        }
-        
-        // Vérifier que la date est valide
-        if (!isNaN(dateRdv.getTime())) {
-          dateRdvStr = dateRdv.toLocaleDateString('fr-FR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-          });
-          heureRdvStr = dateRdv.toTimeString().slice(0, 5);
-          console.log('[SMS Frontend] Date RDV formatée:', { 
-            original: dateRdvValue,
-            parsed: dateRdv.toISOString(),
-            dateRdvStr, 
-            heureRdvStr 
-          });
-        } else {
-          console.error('[SMS Frontend] Date invalide après parsing:', {
-            original: dateRdvValue,
-            type: typeof dateRdvValue,
-            parsed: dateRdv
-          });
+          // Timestamp : on ne peut pas garantir l'indépendance TZ sans connaître le TZ de stockage
+          const d = new Date(dateRdvValue * 1000);
+          if (!isNaN(d.getTime())) {
+            dateRdvStr = formatRdvDateOnly(d.toISOString().slice(0, 10));
+            heureRdvStr = d.toISOString().slice(11, 16);
+          }
         }
       } catch (error) {
         console.error('[SMS Frontend] Erreur lors du formatage de date_rdv_time:', error, ficheData.date_rdv_time);
@@ -6501,14 +6472,7 @@ const CreateRdvModal = ({
   }, [produits, isLoadingProduits, produitsError]);
 
   const dateFormatted = selectedSlot 
-    ? new Date(`${selectedSlot.date} ${selectedSlot.hour}:00:00`).toLocaleString('fr-FR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+    ? formatRdvDateTime(`${selectedSlot.date} ${String(selectedSlot.hour).substring(0, 5)}`)
     : '';
 
   return (

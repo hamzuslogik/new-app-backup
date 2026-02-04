@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaUserCheck } from 'react-icons/fa';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Affectation.css';
 
 const Affectation = () => {
@@ -406,7 +407,7 @@ const Affectation = () => {
                     </td>
                     <td>
                       {fiche.date_rdv_time ? (
-                        formatDate(fiche.date_rdv_time)
+                        formatRdvDateTime(fiche.date_rdv_time)
                       ) : '-'}
                     </td>
                     <td>

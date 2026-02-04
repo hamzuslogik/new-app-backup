@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaSearch, FaCalendarAlt } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './RappelsBureau.css';
 
 // État 19 = RAPPEL POUR BUREAU (date rappel stockée dans date_rdv_time)
@@ -191,7 +192,7 @@ const RappelsBureau = () => {
                         <td data-label="Nom">{fiche.nom || '–'}</td>
                         <td data-label="Prénom">{fiche.prenom || '–'}</td>
                         <td data-label="Téléphone">{fiche.tel || fiche.gsm1 || '–'}</td>
-                        <td data-label="À rappeler le">{formatDate(fiche.date_rdv_time)}</td>
+                        <td data-label="À rappeler le">{formatRdvDateTime(fiche.date_rdv_time)}</td>
                         <td data-label="Actions">
                           <FicheDetailLink ficheHash={fiche.hash} className="btn-icon" title="Voir la fiche">
                             <FaSearch style={{ color: '#fff', fontSize: '13px' }} />

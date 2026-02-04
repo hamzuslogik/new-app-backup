@@ -6,6 +6,7 @@ import api from '../config/api';
 import { FaChartBar, FaFilter, FaCalendarAlt, FaSearch } from 'react-icons/fa';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './StatistiquesFiches.css';
 
 const StatistiquesFiches = () => {
@@ -337,7 +338,7 @@ const StatistiquesFiches = () => {
                     <td>{fiche.tel || fiche.gsm1 || '-'}</td>
                     <td>{fiche.cp || '-'}</td>
                     <td>{formatDateOnly(fiche.date_insert_time)}</td>
-                    <td>{formatDate(fiche.date_rdv_time)}</td>
+                    <td>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                     <td>{fiche.confirmateur_nom || '-'}</td>
                     <td>{fiche.commercial_nom || '-'}</td>
                     <td>

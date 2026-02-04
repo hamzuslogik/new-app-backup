@@ -9,6 +9,7 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import './Fiches.css';
 
@@ -436,7 +437,7 @@ const Fiches = () => {
           fiche.ville || '',
           fiche.adresse || '',
           formatDate(fiche.date_insert_time),
-          formatDate(fiche.date_rdv_time),
+          formatRdvDateTime(fiche.date_rdv_time),
           formatDate(fiche.date_modif_time),
           getEtatName(fiche.id_etat_final),
           getConfirmateursFormatted(fiche),
@@ -884,7 +885,7 @@ const Fiches = () => {
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
-                        <td data-label="Date RDV:">{formatDate(fiche.date_rdv_time)}</td>
+                        <td data-label="Date RDV:">{formatRdvDateTime(fiche.date_rdv_time)}</td>
                         <td data-label="État:">
                           <span 
                             className="etat-badge"

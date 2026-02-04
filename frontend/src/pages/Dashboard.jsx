@@ -8,6 +8,7 @@ import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChart
 import FicheDetailModal from '../components/FicheDetailModal';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -695,7 +696,7 @@ const Dashboard = () => {
           fiche.ville || '',
           fiche.adresse || '',
           formatDate(fiche.date_insert_time),
-          formatDate(fiche.date_rdv_time),
+          formatRdvDateTime(fiche.date_rdv_time),
           formatDate(fiche.date_modif_time),
           getEtatName(fiche.id_etat_final),
           getConfirmateursFormatted(fiche),
@@ -1241,7 +1242,7 @@ const Dashboard = () => {
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
-                        <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_rdv_time)}</td>
+                        <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                         <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}>
                           <span 
                             className="etat-badge"

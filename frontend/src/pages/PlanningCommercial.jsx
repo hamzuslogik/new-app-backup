@@ -7,6 +7,7 @@ import { FaCalendarAlt, FaUser, FaFileAlt, FaMapMarkerAlt, FaSearch, FaChevronDo
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import './PlanningCommercial.css';
 
@@ -747,7 +748,7 @@ const PlanningCommercial = () => {
                         style={{ backgroundColor: `${etatColor}20` }}
                       >
                         <td data-label="Date RDV:">
-                          <strong>{formatDate(fiche.date_rdv_time)}</strong>
+                          <strong>{formatRdvDateTime(fiche.date_rdv_time)}</strong>
                           {fiche.rdv_urgent === 1 || fiche.qualification_code === 'RDV_URGENT' ? (
                             <span style={{ 
                               marginLeft: '8px', 

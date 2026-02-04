@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaCheck, FaTimes, FaCalendarAlt, FaFilter, FaEye, FaEyeSlash } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Validation.css';
 
 const Validation = () => {
@@ -234,7 +235,7 @@ const Validation = () => {
                           {getProduitName(fiche.produit)}
                         </span>
                       </td>
-                      <td>{formatDate(fiche.date_rdv_time)}</td>
+                      <td>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                       <td className="detail-column">{fiche.commercial_pseudo || '-'}</td>
                       <td className="detail-column">{confirmateurs.join(', ') || '-'}</td>
                       <td>

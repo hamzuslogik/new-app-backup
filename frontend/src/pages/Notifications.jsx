@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Notifications.css';
 
 const Notifications = () => {
@@ -255,13 +256,13 @@ const Notifications = () => {
                       {metadata.date_rdv_original && (
                         <div>
                           <strong>RDV original :</strong>{' '}
-                          {new Date(metadata.date_rdv_original).toLocaleString('fr-FR')}
+                          {formatRdvDateTime(metadata.date_rdv_original)}
                         </div>
                       )}
                       {metadata.date_rdv_nouvelle && (
                         <div>
                           <strong>Nouveau RDV :</strong>{' '}
-                          {new Date(metadata.date_rdv_nouvelle).toLocaleString('fr-FR')}
+                          {formatRdvDateTime(metadata.date_rdv_nouvelle)}
                         </div>
                       )}
                     </div>
