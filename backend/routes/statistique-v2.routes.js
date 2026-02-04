@@ -222,7 +222,6 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
         COUNT(DISTINCT CASE WHEN f.id_etat_final = 38 THEN f.id END) as retracted_count,
         COUNT(DISTINCT f.id) as total_count,
         COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmed_count,
-        COUNT(DISTINCT CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN f.id END) as signatures_count,
         CASE 
           WHEN COUNT(DISTINCT f.id) > 0 
           THEN (COUNT(DISTINCT CASE WHEN f.id_etat_final = 38 THEN f.id END) / COUNT(DISTINCT f.id)) * 100
@@ -239,7 +238,19 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
       ${whereClause}
     `, params);
 
-    // 3. Top 10 Confirmateurs avec détails
+    // 2b. Signatures (par date de planning = date du RDV)
+    const signaturesByPlanningDate = await queryOne(`
+      SELECT COUNT(DISTINCT f.id) as signatures_count
+      FROM fiches f
+      WHERE f.date_rdv_time IS NOT NULL AND DATE(f.date_rdv_time) >= ? AND DATE(f.date_rdv_time) <= ?
+      AND f.id_etat_final IN (13, 16, 44, 45)
+      AND (f.archive = 0 OR f.archive IS NULL)
+      ${whereClause}
+    `, params);
+    const signaturesCount = parseInt(signaturesByPlanningDate?.signatures_count || 0);
+
+    // 3. Top 10 Confirmateurs avec détails (signatures comptées par date de planning)
+    const top10Params = [...params, dateDebut, dateFin];
     const top10Confirmateurs = await query(`
       SELECT 
         u.id,
@@ -248,7 +259,7 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
         u.prenom,
         u.photo,
         COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmations_count,
-        COUNT(DISTINCT CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN f.id END) as signatures_count,
+        COUNT(DISTINCT CASE WHEN f.id_etat_final IN (13, 16, 44, 45) AND f.date_rdv_time IS NOT NULL AND DATE(f.date_rdv_time) >= ? AND DATE(f.date_rdv_time) <= ? THEN f.id END) as signatures_count,
         AVG(CASE 
           WHEN f.date_confirmation IS NOT NULL 
           THEN TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(f.date_confirmation), f.date_modif_time)
@@ -263,14 +274,13 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
       GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
       ORDER BY confirmations_count DESC
       LIMIT 10
-    `, params);
+    `, top10Params);
 
-    // 4. Évolution quotidienne des confirmations et signatures
-    const dailyConfirmationEvolution = await query(`
+    // 4. Évolution quotidienne : confirmations par date de confirmation, signatures par date de planning
+    const dailyConfirmations = await query(`
       SELECT 
         DATE(COALESCE(FROM_UNIXTIME(f.date_confirmation), f.date_modif_time)) as date,
-        COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmations,
-        COUNT(DISTINCT CASE WHEN f.id_etat_final IN (13, 16, 44, 45) AND f.id_etat_final != 38 THEN f.id END) as signatures
+        COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmations
       FROM fiches f
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
@@ -278,6 +288,29 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
       GROUP BY DATE(COALESCE(FROM_UNIXTIME(f.date_confirmation), f.date_modif_time))
       ORDER BY date ASC
     `, params);
+    const dailySignatures = await query(`
+      SELECT 
+        DATE(f.date_rdv_time) as date,
+        COUNT(DISTINCT f.id) as signatures
+      FROM fiches f
+      WHERE f.date_rdv_time IS NOT NULL AND DATE(f.date_rdv_time) >= ? AND DATE(f.date_rdv_time) <= ?
+      AND f.id_etat_final IN (13, 16, 44, 45) AND f.id_etat_final != 38
+      AND (f.archive = 0 OR f.archive IS NULL)
+      ${whereClause}
+      GROUP BY DATE(f.date_rdv_time)
+      ORDER BY date ASC
+    `, params);
+    const toDateStr = (d) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10));
+    const datesSet = new Set([...(dailyConfirmations || []).map(r => toDateStr(r.date)), ...(dailySignatures || []).map(r => toDateStr(r.date))]);
+    const dailyConfirmationEvolution = Array.from(datesSet).sort().map(d => {
+      const confRow = (dailyConfirmations || []).find(r => toDateStr(r.date) === d);
+      const sigRow = (dailySignatures || []).find(r => toDateStr(r.date) === d);
+      return {
+        date: d,
+        confirmations: parseInt(confRow?.confirmations || 0),
+        signatures: parseInt(sigRow?.signatures || 0)
+      };
+    });
 
     res.json({
       success: true,
@@ -287,7 +320,7 @@ router.get('/confirmation-advanced', authenticate, checkPermissionCode('statisti
         retracted_count: parseInt(retractionRate?.retracted_count || 0),
         total_count: parseInt(retractionRate?.total_count || 0),
         confirmed_count: parseInt(retractionRate?.confirmed_count || 0),
-        signatures_count: parseInt(retractionRate?.signatures_count || 0),
+        signatures_count: signaturesCount,
         confirmation_rate: parseFloat(retractionRate?.confirmation_rate || 0),
         top10_confirmateurs: top10Confirmateurs || [],
         daily_evolution: dailyConfirmationEvolution || []
@@ -528,43 +561,57 @@ router.get('/comparison', authenticate, checkPermissionCode('statistiques_v2_vie
     const period2Start = `${period2_start} 00:00:00`;
     const period2End = `${period2_end} 23:59:59`;
 
-    // Période 1 : total, qualifiées (groupe 1,2,3), confirmées (état 7), signatures (13,16,44,45), rétractées (38)
+    // Période 1 : total, qualifiées, confirmées, rétractées par date_insert ; signatures par date de planning
     const p1 = await queryOne(`
       SELECT 
         COUNT(DISTINCT f.id) as total,
         COUNT(DISTINCT CASE WHEN e.groupe IN ('1', '2', '3') THEN f.id END) as validated,
         COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmed,
-        COUNT(DISTINCT CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN f.id END) as signatures_count,
         COUNT(DISTINCT CASE WHEN f.id_etat_final = 38 THEN f.id END) as retracted_count
       FROM fiches f
       LEFT JOIN etats e ON f.id_etat_final = e.id
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
     `, [period1Start, period1End]);
+    const s1Query = await queryOne(`
+      SELECT COUNT(DISTINCT f.id) as signatures_count
+      FROM fiches f
+      WHERE f.date_rdv_time IS NOT NULL AND DATE(f.date_rdv_time) >= ? AND DATE(f.date_rdv_time) <= ?
+      AND f.id_etat_final IN (13, 16, 44, 45)
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [period1_start, period1_end]);
+    const p1WithSig = { ...p1, signatures_count: s1Query?.signatures_count || 0 };
 
     const p2 = await queryOne(`
       SELECT 
         COUNT(DISTINCT f.id) as total,
         COUNT(DISTINCT CASE WHEN e.groupe IN ('1', '2', '3') THEN f.id END) as validated,
         COUNT(DISTINCT CASE WHEN f.id_etat_final = 7 THEN f.id END) as confirmed,
-        COUNT(DISTINCT CASE WHEN f.id_etat_final IN (13, 16, 44, 45) THEN f.id END) as signatures_count,
         COUNT(DISTINCT CASE WHEN f.id_etat_final = 38 THEN f.id END) as retracted_count
       FROM fiches f
       LEFT JOIN etats e ON f.id_etat_final = e.id
       WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
     `, [period2Start, period2End]);
+    const s2Query = await queryOne(`
+      SELECT COUNT(DISTINCT f.id) as signatures_count
+      FROM fiches f
+      WHERE f.date_rdv_time IS NOT NULL AND DATE(f.date_rdv_time) >= ? AND DATE(f.date_rdv_time) <= ?
+      AND f.id_etat_final IN (13, 16, 44, 45)
+      AND (f.archive = 0 OR f.archive IS NULL)
+    `, [period2_start, period2_end]);
+    const p2WithSig = { ...p2, signatures_count: s2Query?.signatures_count || 0 };
 
-    const t1 = parseInt(p1?.total || 0);
-    const t2 = parseInt(p2?.total || 0);
-    const v1 = parseInt(p1?.validated || 0);
-    const v2 = parseInt(p2?.validated || 0);
-    const c1 = parseInt(p1?.confirmed || 0);
-    const c2 = parseInt(p2?.confirmed || 0);
-    const s1 = parseInt(p1?.signatures_count || 0);
-    const s2 = parseInt(p2?.signatures_count || 0);
-    const r1 = parseInt(p1?.retracted_count || 0);
-    const r2 = parseInt(p2?.retracted_count || 0);
+    const t1 = parseInt(p1WithSig?.total || 0);
+    const t2 = parseInt(p2WithSig?.total || 0);
+    const v1 = parseInt(p1WithSig?.validated || 0);
+    const v2 = parseInt(p2WithSig?.validated || 0);
+    const c1 = parseInt(p1WithSig?.confirmed || 0);
+    const c2 = parseInt(p2WithSig?.confirmed || 0);
+    const s1 = parseInt(p1WithSig?.signatures_count || 0);
+    const s2 = parseInt(p2WithSig?.signatures_count || 0);
+    const r1 = parseInt(p1WithSig?.retracted_count || 0);
+    const r2 = parseInt(p2WithSig?.retracted_count || 0);
 
     const comparison = {
       period1: { start: period1_start, end: period1_end },
@@ -627,10 +674,12 @@ router.get('/heatmap', authenticate, checkPermissionCode('statistiques_v2_view')
     const endDate = `${dateFin} 23:59:59`;
 
     let dateField = 'f.date_insert_time';
+    let extraWhere = '';
     if (metric_type === 'confirmation') {
       dateField = 'COALESCE(FROM_UNIXTIME(f.date_confirmation), f.date_modif_time)';
     } else if (metric_type === 'signature') {
-      dateField = 'f.date_modif_time';
+      dateField = 'f.date_rdv_time';
+      extraWhere = ' AND f.id_etat_final IN (13, 16, 44, 45) AND f.date_rdv_time IS NOT NULL';
     }
 
     const heatmapData = await query(`
@@ -640,7 +689,7 @@ router.get('/heatmap', authenticate, checkPermissionCode('statistiques_v2_view')
         COUNT(DISTINCT f.id) as count
       FROM fiches f
       WHERE ${dateField} >= ? AND ${dateField} <= ?
-      AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.archive = 0 OR f.archive IS NULL)${extraWhere}
       GROUP BY DAYOFWEEK(${dateField}), HOUR(${dateField})
       ORDER BY day_of_week, hour
     `, [startDate, endDate]);

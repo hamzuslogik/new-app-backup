@@ -303,7 +303,8 @@ const Signatures = () => {
               <table className="signatures-table">
                 <thead>
                   <tr>
-                    <th>Date/Heure</th>
+                    <th>Date planning (RDV)</th>
+                    <th>Date/Heure signature</th>
                     <th>Confirmateur</th>
                     <th>Fiche</th>
                     <th>Téléphone</th>
@@ -313,6 +314,11 @@ const Signatures = () => {
                 <tbody>
                   {signatures.map(sig => (
                     <tr key={sig.id}>
+                      <td>
+                        {sig.date_planning 
+                          ? new Date(sig.date_planning).toLocaleDateString('fr-FR')
+                          : '-'}
+                      </td>
                       <td>
                         {sig.date_heure 
                           ? new Date(sig.date_heure).toLocaleString('fr-FR')

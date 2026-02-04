@@ -145,18 +145,17 @@ router.get('/signatures', authenticate, async (req, res) => {
     const dateDebut = date_debut || today;
     const dateFin = date_fin || today;
 
-    // Construire les conditions WHERE
+    // Construire les conditions WHERE (par date de planning = date du RDV)
     let whereConditions = [
-      'fiche.id_etat_final = 13', // État SIGNE
+      'fiche.id_etat_final IN (13, 16, 44, 45)', // États signés
       'fiche.archive = 0',
       'fiche.ko = 0',
       'fiche.active = 1',
-      'fiche.date_sign_time IS NOT NULL', // Uniquement les fiches avec date_sign_time
-      'fiche.date_sign_time != ""',
-      'fiche.date_sign_time >= ?', // Filtrer uniquement par date_sign_time
-      'fiche.date_sign_time <= ?'
+      'fiche.date_rdv_time IS NOT NULL',
+      'DATE(fiche.date_rdv_time) >= ?',
+      'DATE(fiche.date_rdv_time) <= ?'
     ];
-    let params = [`${dateDebut} 00:00:00`, `${dateFin} 23:59:59`];
+    let params = [dateDebut, dateFin];
 
     // Filtrer par confirmateur si spécifié
     if (id_confirmateur) {
@@ -166,7 +165,7 @@ router.get('/signatures', authenticate, async (req, res) => {
 
     const whereClause = whereConditions.join(' AND ');
 
-    // Récupérer les fiches signées avec leurs confirmateurs
+    // Récupérer les fiches signées avec leurs confirmateurs (filtrées par date de planning)
     const fiches = await query(
       `SELECT 
         fiche.id,
@@ -177,6 +176,7 @@ router.get('/signatures', authenticate, async (req, res) => {
         fiche.id_confirmateur_2,
         fiche.id_confirmateur_3,
         fiche.date_sign_time,
+        fiche.date_rdv_time,
         fiche.date_modif_time
       FROM fiches fiche
       WHERE ${whereClause}`,
