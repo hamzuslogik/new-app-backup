@@ -743,6 +743,27 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   }, [ficheData?.cp]);
 
+  // Prefetch du planning dès que dep/semaine/année sont connus (affichage instantané au clic onglet Planning)
+  useEffect(() => {
+    if (!planningDep || !planningWeek || !planningYear) return;
+    queryClient.prefetchQuery(
+      ['planning-modal', planningWeek, planningYear, planningDep],
+      async () => {
+        const res = await api.get('/planning/week', { params: { w: planningWeek, y: planningYear, dp: planningDep } });
+        return res.data;
+      },
+      { staleTime: 60000 }
+    );
+    queryClient.prefetchQuery(
+      ['availability-modal', planningWeek, planningYear, planningDep],
+      async () => {
+        const res = await api.get('/planning/availability', { params: { w: planningWeek, y: planningYear, dp: planningDep } });
+        return res.data;
+      },
+      { staleTime: 60000 }
+    );
+  }, [planningDep, planningWeek, planningYear, queryClient]);
+
   // Mettre à jour automatiquement is_urgent si la date du RDV est aujourd'hui ou demain
   useEffect(() => {
     if (rdvFormData.date_rdv_time && showRdvModal) {
@@ -5386,9 +5407,9 @@ const PlanningTab = ({
     },
     { 
       enabled: !!planningDep && !!planningWeek && !!planningYear,
-      // Rafraîchissement automatique toutes les 5 secondes dans le modal
-      refetchInterval: 5000,
-      refetchOnWindowFocus: true,
+      staleTime: 60000,
+      refetchInterval: 60000,
+      refetchOnWindowFocus: false,
       refetchOnReconnect: true
     }
   );
@@ -5402,9 +5423,9 @@ const PlanningTab = ({
     },
     { 
       enabled: !!planningDep && !!planningWeek && !!planningYear,
-      // Rafraîchissement automatique toutes les 5 secondes dans le modal
-      refetchInterval: 5000,
-      refetchOnWindowFocus: true,
+      staleTime: 60000,
+      refetchInterval: 60000,
+      refetchOnWindowFocus: false,
       refetchOnReconnect: true
     }
   );
@@ -5473,18 +5494,6 @@ const PlanningTab = ({
     });
   };
   
-  // Debug logs pour vérifier les données reçues
-  useEffect(() => {
-    if (planningResponse) {
-      console.log('Planning response:', planningResponse);
-      console.log('Planning data:', planningData);
-    }
-    if (availabilityResponse) {
-      console.log('Availability response:', availabilityResponse);
-      console.log('Availability data:', availabilityData);
-    }
-  }, [planningResponse, availabilityResponse, planningData, availabilityData]);
-
   const getMondayOfWeek = (year, week) => {
     const simple = new Date(year, 0, 1 + (week - 1) * 7);
     const dow = simple.getDay();
