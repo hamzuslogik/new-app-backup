@@ -5,7 +5,7 @@ const { query, queryOne } = require('../config/database');
 
 // =====================================================
 // ROUTE: GET /api/signature
-// Récupérer la liste des signatures avec filtres
+// Récupérer la liste des signatures avec filtres (par date de planning = date_rdv_time de la fiche)
 // =====================================================
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -18,16 +18,16 @@ router.get('/', authenticate, async (req, res) => {
       limit = 50
     } = req.query;
 
-    let whereConditions = [];
+    let whereConditions = ['f.id IS NOT NULL'];
     let params = [];
 
-    // Filtrer par date
+    // Filtrer par date de planning (date RDV de la fiche)
     if (date_debut) {
-      whereConditions.push('s.date_heure >= ?');
+      whereConditions.push('f.date_rdv_time >= ?');
       params.push(`${date_debut} 00:00:00`);
     }
     if (date_fin) {
-      whereConditions.push('s.date_heure <= ?');
+      whereConditions.push('f.date_rdv_time <= ?');
       params.push(`${date_fin} 23:59:59`);
     }
 
@@ -43,13 +43,14 @@ router.get('/', authenticate, async (req, res) => {
       params.push(id_fiche);
     }
 
-    const whereClause = whereConditions.length > 0 
-      ? 'WHERE ' + whereConditions.join(' AND ')
-      : '';
+    const whereClause = 'WHERE ' + whereConditions.join(' AND ');
 
-    // Compter le total
+    // Compter le total (JOIN fiches pour filtrer par date_rdv_time)
     const countResult = await queryOne(
-      `SELECT COUNT(*) as total FROM signature s ${whereClause}`,
+      `SELECT COUNT(*) as total 
+       FROM signature s 
+       INNER JOIN fiches f ON s.id_fiche = f.id 
+       ${whereClause}`,
       params
     );
     const total = countResult?.total || 0;
@@ -58,7 +59,7 @@ router.get('/', authenticate, async (req, res) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const limitValue = parseInt(limit);
 
-    // Récupérer les signatures
+    // Récupérer les signatures (date de planning = f.date_rdv_time)
     const signatures = await query(
       `SELECT 
         s.id,
@@ -67,6 +68,7 @@ router.get('/', authenticate, async (req, res) => {
         s.ajoute,
         s.date_heure,
         s.tel,
+        f.date_rdv_time as date_planning,
         f.nom as fiche_nom,
         f.prenom as fiche_prenom,
         f.tel as fiche_tel,
@@ -74,10 +76,10 @@ router.get('/', authenticate, async (req, res) => {
         u.nom as confirmateur_nom,
         u.prenom as confirmateur_prenom
       FROM signature s
-      LEFT JOIN fiches f ON s.id_fiche = f.id
+      INNER JOIN fiches f ON s.id_fiche = f.id
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
       ${whereClause}
-      ORDER BY s.date_heure DESC
+      ORDER BY f.date_rdv_time DESC, s.date_heure DESC
       LIMIT ? OFFSET ?`,
       [...params, limitValue, offset]
     );
@@ -104,28 +106,27 @@ router.get('/', authenticate, async (req, res) => {
 
 // =====================================================
 // ROUTE: GET /api/signature/stats
-// Récupérer les statistiques des signatures
+// Récupérer les statistiques des signatures (par date de planning = date_rdv_time de la fiche)
 // =====================================================
 router.get('/stats', authenticate, async (req, res) => {
   try {
     const { date_debut, date_fin } = req.query;
 
-    let whereConditions = [];
+    let whereConditions = ['f.id IS NOT NULL'];
     let params = [];
 
-    // Filtrer par date
+    // Filtrer par date de planning
     if (date_debut) {
-      whereConditions.push('s.date_heure >= ?');
+      whereConditions.push('f.date_rdv_time >= ?');
       params.push(`${date_debut} 00:00:00`);
     }
     if (date_fin) {
-      whereConditions.push('s.date_heure <= ?');
+      whereConditions.push('f.date_rdv_time <= ?');
       params.push(`${date_fin} 23:59:59`);
     }
 
-    const whereClause = whereConditions.length > 0 
-      ? 'WHERE ' + whereConditions.join(' AND ')
-      : '';
+    const whereClause = 'WHERE ' + whereConditions.join(' AND ');
+    const joinFiches = 'INNER JOIN fiches f ON s.id_fiche = f.id';
 
     // Timestamps et dates pour la période (fiches confirmées = état 7)
     const startDateStr = date_debut ? `${date_debut} 00:00:00` : null;
@@ -133,9 +134,9 @@ router.get('/stats', authenticate, async (req, res) => {
     const startTs = startDateStr ? Math.floor(new Date(startDateStr).getTime() / 1000) : 0;
     const endTs = endDateStr ? Math.floor(new Date(endDateStr).getTime() / 1000) : 0;
 
-    // Total signatures (somme des scores)
+    // Total signatures (somme des scores) - par date de planning
     const totalResult = await queryOne(
-      `SELECT SUM(s.ajoute) as total FROM signature s ${whereClause}`,
+      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFiches} ${whereClause}`,
       params
     );
     const totalSignatures = parseFloat(totalResult?.total || 0);
@@ -143,14 +144,13 @@ router.get('/stats', authenticate, async (req, res) => {
     // Nombre de fiches signées uniques
     const fichesUniquesResult = await queryOne(
       `SELECT COUNT(DISTINCT s.id_fiche) as total 
-       FROM signature s 
-       ${whereClause} 
+       FROM signature s ${joinFiches} ${whereClause} 
        AND s.id_fiche IS NOT NULL`,
       params
     );
     const fichesUniques = fichesUniquesResult?.total || 0;
 
-    // Top 10 confirmateurs par score (nb_signatures = nombre de lignes signature)
+    // Top 10 confirmateurs par score - par date de planning
     const topConfirmateurs = await query(
       `SELECT 
         s.confirmateur,
@@ -161,6 +161,7 @@ router.get('/stats', authenticate, async (req, res) => {
         COUNT(DISTINCT s.id_fiche) as nb_fiches,
         COUNT(*) as nb_signatures
       FROM signature s
+      ${joinFiches}
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
       ${whereClause}
       AND s.confirmateur IS NOT NULL
@@ -192,22 +193,23 @@ router.get('/stats', authenticate, async (req, res) => {
       });
     }
 
-    // Statistiques par jour (derniers 30 jours)
+    // Statistiques par jour (par date de planning, derniers 30 jours)
     const statsParJour = await query(
       `SELECT 
-        DATE(s.date_heure) as date,
+        DATE(f.date_rdv_time) as date,
         SUM(s.ajoute) as total_score,
         COUNT(DISTINCT s.id_fiche) as nb_fiches,
         COUNT(*) as nb_signatures
       FROM signature s
+      ${joinFiches}
       ${whereClause}
-      AND s.date_heure >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-      GROUP BY DATE(s.date_heure)
+      AND f.date_rdv_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+      GROUP BY DATE(f.date_rdv_time)
       ORDER BY date DESC`,
       params
     );
 
-    // Statistiques par confirmateur (tous)
+    // Statistiques par confirmateur (tous) - par date de planning
     const statsConfirmateurs = await query(
       `SELECT 
         s.confirmateur,
@@ -218,6 +220,7 @@ router.get('/stats', authenticate, async (req, res) => {
         COUNT(DISTINCT s.id_fiche) as nb_fiches,
         COUNT(*) as nb_signatures
       FROM signature s
+      ${joinFiches}
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
       ${whereClause}
       AND s.confirmateur IS NOT NULL
@@ -272,7 +275,7 @@ router.get('/stats', authenticate, async (req, res) => {
 
 // =====================================================
 // ROUTE: GET /api/signature/kpi
-// Récupérer les KPI des signatures
+// Récupérer les KPI des signatures (par date de planning = date_rdv_time de la fiche)
 // =====================================================
 router.get('/kpi', authenticate, async (req, res) => {
   try {
@@ -305,16 +308,18 @@ router.get('/kpi', authenticate, async (req, res) => {
     const previousStartStr = previousStart.toISOString().split('T')[0] + ' 00:00:00';
     const previousEndStr = previousEnd.toISOString().split('T')[0] + ' 23:59:59';
 
-    // KPI 1: Total signatures (score - SUM ajoute) - période actuelle
+    const joinFichesKpi = 'INNER JOIN fiches f ON s.id_fiche = f.id';
+
+    // KPI 1: Total signatures (score - SUM ajoute) - période actuelle - par date de planning
     const currentTotalResult = await queryOne(
-      `SELECT SUM(ajoute) as total FROM signature WHERE date_heure >= ? AND date_heure <= ?`,
+      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?`,
       [currentStart, currentEnd]
     );
     const currentTotal = parseFloat(currentTotalResult?.total || 0);
 
-    // KPI 2: Total signatures (score - SUM ajoute) - période précédente
+    // KPI 2: Total signatures - période précédente
     const previousTotalResult = await queryOne(
-      `SELECT SUM(ajoute) as total FROM signature WHERE date_heure >= ? AND date_heure <= ?`,
+      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?`,
       [previousStartStr, previousEndStr]
     );
     const previousTotal = parseFloat(previousTotalResult?.total || 0);
@@ -326,14 +331,14 @@ router.get('/kpi', authenticate, async (req, res) => {
 
     // KPI 4: Nombre de signatures (COUNT) - période actuelle
     const currentNombreResult = await queryOne(
-      `SELECT COUNT(*) as total FROM signature WHERE date_heure >= ? AND date_heure <= ?`,
+      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?`,
       [currentStart, currentEnd]
     );
     const currentNombre = parseInt(currentNombreResult?.total || 0);
 
     // KPI 5: Nombre de signatures (COUNT) - période précédente
     const previousNombreResult = await queryOne(
-      `SELECT COUNT(*) as total FROM signature WHERE date_heure >= ? AND date_heure <= ?`,
+      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?`,
       [previousStartStr, previousEndStr]
     );
     const previousNombre = parseInt(previousNombreResult?.total || 0);
@@ -345,18 +350,18 @@ router.get('/kpi', authenticate, async (req, res) => {
 
     // KPI 7: Nombre de fiches signées uniques (période actuelle)
     const currentFichesResult = await queryOne(
-      `SELECT COUNT(DISTINCT id_fiche) as total 
-       FROM signature 
-       WHERE date_heure >= ? AND date_heure <= ? AND id_fiche IS NOT NULL`,
+      `SELECT COUNT(DISTINCT s.id_fiche) as total 
+       FROM signature s ${joinFichesKpi} 
+       WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? AND s.id_fiche IS NOT NULL`,
       [currentStart, currentEnd]
     );
     const currentFiches = parseInt(currentFichesResult?.total || 0);
 
     // KPI 8: Nombre de fiches signées uniques (période précédente)
     const previousFichesResult = await queryOne(
-      `SELECT COUNT(DISTINCT id_fiche) as total 
-       FROM signature 
-       WHERE date_heure >= ? AND date_heure <= ? AND id_fiche IS NOT NULL`,
+      `SELECT COUNT(DISTINCT s.id_fiche) as total 
+       FROM signature s ${joinFichesKpi} 
+       WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? AND s.id_fiche IS NOT NULL`,
       [previousStartStr, previousEndStr]
     );
     const previousFiches = parseInt(previousFichesResult?.total || 0);
@@ -366,15 +371,16 @@ router.get('/kpi', authenticate, async (req, res) => {
       ? ((currentFiches - previousFiches) / previousFiches) * 100 
       : (currentFiches > 0 ? 100 : 0);
 
-    // KPI 7: Top 3 confirmateurs (période actuelle)
+    // Top 3 confirmateurs (période actuelle) - par date de planning
     const top3Result = await query(
       `SELECT 
         s.confirmateur,
         u.pseudo as confirmateur_pseudo,
         SUM(s.ajoute) as total_score
       FROM signature s
+      ${joinFichesKpi}
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
-      WHERE s.date_heure >= ? AND s.date_heure <= ?
+      WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?
       AND s.confirmateur IS NOT NULL
       GROUP BY s.confirmateur, u.pseudo
       ORDER BY total_score DESC

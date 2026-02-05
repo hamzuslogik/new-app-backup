@@ -1220,35 +1220,21 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
     );
 
     // Enrichir les fiches avec l'information sur les comptes rendu
-    // Récupérer les IDs des fiches qui ont des comptes rendu
+    // "Compte rendu rédigé" uniquement si le commercial actuel de la fiche a un CR (pending ou approved) pour cette fiche.
+    // Après validation d'un CR, l'affectation commerciale est annulée ; si la fiche est réaffectée plus tard, on n'affiche pas "rédigé".
     if (fiches.length > 0) {
       const ficheIds = fiches.map(f => f.id);
       const placeholders = ficheIds.map(() => '?').join(',');
-      
-      let compteRenduQuery;
-      let compteRenduParams;
-      
-      if (req.user.fonction === 5) {
-        // Pour les commerciaux : vérifier seulement leurs propres comptes rendu
-        compteRenduQuery = `SELECT DISTINCT id_fiche 
-                           FROM compte_rendu_pending 
-                           WHERE id_fiche IN (${placeholders})
-                             AND id_commercial = ?
-                             AND statut IN ('pending', 'approved')`;
-        compteRenduParams = [...ficheIds, req.user.id];
-      } else {
-        // Pour les admins : vérifier tous les comptes rendu de la fiche
-        compteRenduQuery = `SELECT DISTINCT id_fiche 
-                           FROM compte_rendu_pending 
-                           WHERE id_fiche IN (${placeholders})
-                             AND statut IN ('pending', 'approved')`;
-        compteRenduParams = ficheIds;
-      }
-      
-      const fichesAvecCompteRendu = await query(compteRenduQuery, compteRenduParams);
+      const compteRenduQuery = `
+        SELECT DISTINCT cr.id_fiche
+        FROM compte_rendu_pending cr
+        INNER JOIN fiches f ON f.id = cr.id_fiche
+        WHERE f.id IN (${placeholders})
+          AND (cr.id_commercial = f.id_commercial OR cr.id_commercial = f.id_commercial_2)
+          AND cr.statut IN ('pending', 'approved')
+      `;
+      const fichesAvecCompteRendu = await query(compteRenduQuery, ficheIds);
       const ficheIdsAvecCompteRendu = new Set(fichesAvecCompteRendu.map(cr => cr.id_fiche));
-      
-      // Ajouter l'information has_compte_rendu à chaque fiche
       fiches.forEach(fiche => {
         fiche.has_compte_rendu = ficheIdsAvecCompteRendu.has(fiche.id);
       });

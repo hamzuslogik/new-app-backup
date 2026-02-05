@@ -3,6 +3,7 @@ import { useQuery } from 'react-query';
 import { FaSignature, FaChartLine, FaUsers, FaFileAlt, FaArrowUp, FaArrowDown, FaMinus, FaSearch } from 'react-icons/fa';
 import api from '../config/api';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Signatures.css';
 
 const Signatures = () => {
@@ -303,7 +304,7 @@ const Signatures = () => {
               <table className="signatures-table">
                 <thead>
                   <tr>
-                    <th>Date/Heure</th>
+                    <th>Date planning (RDV)</th>
                     <th>Confirmateur</th>
                     <th>Fiche</th>
                     <th>Téléphone</th>
@@ -314,9 +315,9 @@ const Signatures = () => {
                   {signatures.map(sig => (
                     <tr key={sig.id}>
                       <td>
-                        {sig.date_heure 
-                          ? new Date(sig.date_heure).toLocaleString('fr-FR')
-                          : '-'}
+                        {sig.date_planning 
+                          ? formatRdvDateTime(sig.date_planning)
+                          : (sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-')}
                       </td>
                       <td>{sig.confirmateur_pseudo || 'Inconnu'}</td>
                       <td>
