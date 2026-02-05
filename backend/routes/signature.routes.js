@@ -18,7 +18,9 @@ router.get('/', authenticate, async (req, res) => {
       limit = 50
     } = req.query;
 
-    let whereConditions = ['f.id IS NOT NULL'];
+    // Limiter aux fiches actuellement signées (même critère que "recherche tout signé par date de planning")
+    const etatsSignes = [13, 16, 44, 45]; // SIGNER, SIGNER RETRACTER, SIGNER PM, SIGNER COMPLET
+    let whereConditions = ['f.id IS NOT NULL', `f.id_etat_final IN (${etatsSignes.join(', ')})`];
     let params = [];
 
     // Filtrer par date de planning (date RDV de la fiche)
@@ -112,7 +114,9 @@ router.get('/stats', authenticate, async (req, res) => {
   try {
     const { date_debut, date_fin } = req.query;
 
-    let whereConditions = ['f.id IS NOT NULL'];
+    // Limiter aux fiches actuellement signées (aligné sur "recherche tout signé par date de planning")
+    const etatsSignes = [13, 16, 44, 45];
+    let whereConditions = ['f.id IS NOT NULL', `f.id_etat_final IN (${etatsSignes.join(', ')})`];
     let params = [];
 
     // Filtrer par date de planning
@@ -309,17 +313,19 @@ router.get('/kpi', authenticate, async (req, res) => {
     const previousEndStr = previousEnd.toISOString().split('T')[0] + ' 23:59:59';
 
     const joinFichesKpi = 'INNER JOIN fiches f ON s.id_fiche = f.id';
+    // Limiter aux fiches actuellement signées (aligné sur "recherche tout signé par date de planning")
+    const whereEtatSigneKpi = 'AND f.id_etat_final IN (13, 16, 44, 45)';
 
     // KPI 1: Total signatures (score - SUM ajoute) - période actuelle - par date de planning
     const currentTotalResult = await queryOne(
-      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?`,
+      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? ${whereEtatSigneKpi}`,
       [currentStart, currentEnd]
     );
     const currentTotal = parseFloat(currentTotalResult?.total || 0);
 
     // KPI 2: Total signatures - période précédente
     const previousTotalResult = await queryOne(
-      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?`,
+      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? ${whereEtatSigneKpi}`,
       [previousStartStr, previousEndStr]
     );
     const previousTotal = parseFloat(previousTotalResult?.total || 0);
@@ -331,14 +337,14 @@ router.get('/kpi', authenticate, async (req, res) => {
 
     // KPI 4: Nombre de signatures (COUNT) - période actuelle
     const currentNombreResult = await queryOne(
-      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?`,
+      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? ${whereEtatSigneKpi}`,
       [currentStart, currentEnd]
     );
     const currentNombre = parseInt(currentNombreResult?.total || 0);
 
     // KPI 5: Nombre de signatures (COUNT) - période précédente
     const previousNombreResult = await queryOne(
-      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?`,
+      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? ${whereEtatSigneKpi}`,
       [previousStartStr, previousEndStr]
     );
     const previousNombre = parseInt(previousNombreResult?.total || 0);
@@ -352,7 +358,7 @@ router.get('/kpi', authenticate, async (req, res) => {
     const currentFichesResult = await queryOne(
       `SELECT COUNT(DISTINCT s.id_fiche) as total 
        FROM signature s ${joinFichesKpi} 
-       WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? AND s.id_fiche IS NOT NULL`,
+       WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? AND s.id_fiche IS NOT NULL ${whereEtatSigneKpi}`,
       [currentStart, currentEnd]
     );
     const currentFiches = parseInt(currentFichesResult?.total || 0);
@@ -361,7 +367,7 @@ router.get('/kpi', authenticate, async (req, res) => {
     const previousFichesResult = await queryOne(
       `SELECT COUNT(DISTINCT s.id_fiche) as total 
        FROM signature s ${joinFichesKpi} 
-       WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? AND s.id_fiche IS NOT NULL`,
+       WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? AND s.id_fiche IS NOT NULL ${whereEtatSigneKpi}`,
       [previousStartStr, previousEndStr]
     );
     const previousFiches = parseInt(previousFichesResult?.total || 0);
@@ -381,7 +387,7 @@ router.get('/kpi', authenticate, async (req, res) => {
       ${joinFichesKpi}
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
       WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?
-      AND s.confirmateur IS NOT NULL
+      AND s.confirmateur IS NOT NULL ${whereEtatSigneKpi}
       GROUP BY s.confirmateur, u.pseudo
       ORDER BY total_score DESC
       LIMIT 3`,
