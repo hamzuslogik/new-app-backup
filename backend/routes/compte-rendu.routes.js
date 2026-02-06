@@ -830,7 +830,8 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     // Récupérer la fiche mise à jour pour vérifier les confirmateurs
     const ficheMiseAJour = await queryOne('SELECT * FROM fiches WHERE id = ?', [compteRendu.id_fiche]);
 
-    // Si le nouvel état est un état signé (13, 16, 44, 45), ajouter dans la table signature
+    // Si le nouvel état est un état signé (13, 16, 44, 45), ajouter dans la table signature.
+    // La page Signatures affiche les données de cette table (mise à jour ici à la validation du compte rendu).
     const etatsSignes = [13, 16, 44, 45];
     if (nouveauEtat && etatsSignes.includes(nouveauEtat) && ficheMiseAJour) {
       const dateSignTime = ficheMiseAJour.date_sign_time || now;
@@ -864,9 +865,9 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
           );
           if (!existing) {
             await query(
-              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-               VALUES (?, ?, 1.0, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel]
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
+               VALUES (?, ?, 1.0, ?, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel, ficheMiseAJour.date_rdv_time || null]
             );
           }
         }
@@ -884,9 +885,9 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
           );
           if (!existing1) {
             await query(
-              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-               VALUES (?, ?, 0.5, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel]
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
+               VALUES (?, ?, 0.5, ?, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel, ficheMiseAJour.date_rdv_time || null]
             );
           }
           // Confirmateur 2
@@ -919,9 +920,9 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
           );
           if (!existing1) {
             await query(
-              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-               VALUES (?, ?, 0.33, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel]
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
+               VALUES (?, ?, 0.33, ?, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur, dateSignTime, tel, ficheMiseAJour.date_rdv_time || null]
             );
           }
           // Confirmateur 2
@@ -934,9 +935,9 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
           );
           if (!existing2) {
             await query(
-              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-               VALUES (?, ?, 0.33, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur2, dateSignTime, tel]
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
+               VALUES (?, ?, 0.33, ?, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur2, dateSignTime, tel, ficheMiseAJour.date_rdv_time || null]
             );
           }
           // Confirmateur 3
@@ -949,9 +950,9 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
           );
           if (!existing3) {
             await query(
-              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-               VALUES (?, ?, 0.33, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur3, dateSignTime, tel]
+              `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
+               VALUES (?, ?, 0.33, ?, ?, ?)`,
+              [compteRendu.id_fiche, idConfirmateur3, dateSignTime, tel, ficheMiseAJour.date_rdv_time || null]
             );
           }
         }
