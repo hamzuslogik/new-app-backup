@@ -1814,7 +1814,10 @@ router.get('/departements', authenticate, async (req, res) => {
 
 // =====================================================
 // GET /planning/rdv-vue
-// Liste des RDV par type : du jour, affiliés du jour, non affiliés du jour
+// Fiches confirmées (état 7) dont la date RDV est le jour choisi.
+// - jour : toutes ces fiches du jour
+// - affilie : celles attribuées à un commercial (id_commercial ou id_commercial_2)
+// - non_affilie : celles non attribuées à un commercial
 // =====================================================
 router.get('/rdv-vue', authenticate, async (req, res) => {
   try {
@@ -1823,6 +1826,7 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
     const d = date || today;
 
     const conditions = [
+      'f.id_etat_final = 7',
       '(f.archive = 0 OR f.archive IS NULL)',
       '(f.ko = 0 OR f.ko IS NULL)',
       'f.date_rdv_time IS NOT NULL',
