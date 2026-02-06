@@ -10,19 +10,13 @@ const RendezVousVue = () => {
   const today = new Date().toISOString().split('T')[0];
   const [activeTab, setActiveTab] = useState('jour');
   const [dateJour, setDateJour] = useState(today);
-  const [dateDebut, setDateDebut] = useState(today);
-  const [dateFin, setDateFin] = useState(today);
 
   const { data: rdvData, isLoading } = useQuery(
-    ['rdv-vue', activeTab, dateJour, dateDebut, dateFin],
+    ['rdv-vue', activeTab, dateJour],
     async () => {
-      const params = { type: activeTab };
-      if (activeTab === 'jour') params.date = dateJour;
-      if (activeTab === 'affilie' || activeTab === 'non_affilie') {
-        params.date_debut = dateDebut;
-        params.date_fin = dateFin;
-      }
-      const res = await api.get('/planning/rdv-vue', { params });
+      const res = await api.get('/planning/rdv-vue', {
+        params: { type: activeTab, date: dateJour }
+      });
       return res.data.data || [];
     },
     { enabled: true }
@@ -61,39 +55,15 @@ const RendezVousVue = () => {
       </div>
 
       <div className="rdv-vue-filters">
-        {activeTab === 'jour' && (
-          <div className="filter-group">
-            <label>Date</label>
-            <input
-              type="date"
-              value={dateJour}
-              onChange={(e) => setDateJour(e.target.value)}
-              className="form-control"
-            />
-          </div>
-        )}
-        {(activeTab === 'affilie' || activeTab === 'non_affilie') && (
-          <>
-            <div className="filter-group">
-              <label>Date début</label>
-              <input
-                type="date"
-                value={dateDebut}
-                onChange={(e) => setDateDebut(e.target.value)}
-                className="form-control"
-              />
-            </div>
-            <div className="filter-group">
-              <label>Date fin</label>
-              <input
-                type="date"
-                value={dateFin}
-                onChange={(e) => setDateFin(e.target.value)}
-                className="form-control"
-              />
-            </div>
-          </>
-        )}
+        <div className="filter-group">
+          <label>Date (journée)</label>
+          <input
+            type="date"
+            value={dateJour}
+            onChange={(e) => setDateJour(e.target.value)}
+            className="form-control"
+          />
+        </div>
       </div>
 
       <div className="rdv-vue-content">

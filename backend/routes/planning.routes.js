@@ -1814,45 +1814,29 @@ router.get('/departements', authenticate, async (req, res) => {
 
 // =====================================================
 // GET /planning/rdv-vue
-// Liste des RDV par type : du jour, affiliés (affectés à un commercial), non affiliés
+// Liste des RDV par type : du jour, affiliés du jour, non affiliés du jour
 // =====================================================
 router.get('/rdv-vue', authenticate, async (req, res) => {
   try {
-    const { type, date, date_debut, date_fin } = req.query;
+    const { type, date } = req.query;
     const today = new Date().toISOString().split('T')[0];
+    const d = date || today;
 
     const conditions = [
       '(f.archive = 0 OR f.archive IS NULL)',
       '(f.ko = 0 OR f.ko IS NULL)',
-      'f.date_rdv_time IS NOT NULL'
+      'f.date_rdv_time IS NOT NULL',
+      'f.date_rdv_time >= ? AND f.date_rdv_time <= ?'
     ];
-    const params = [];
+    const params = [`${d} 00:00:00`, `${d} 23:59:59`];
 
     if (type === 'jour') {
-      const d = date || today;
-      conditions.push('f.date_rdv_time >= ? AND f.date_rdv_time <= ?');
-      params.push(`${d} 00:00:00`, `${d} 23:59:59`);
+      // Tous les RDV du jour
     } else if (type === 'affilie') {
       conditions.push('(f.id_commercial IS NOT NULL AND f.id_commercial > 0) OR (f.id_commercial_2 IS NOT NULL AND f.id_commercial_2 > 0)');
-      if (date_debut) {
-        conditions.push('f.date_rdv_time >= ?');
-        params.push(`${date_debut} 00:00:00`);
-      }
-      if (date_fin) {
-        conditions.push('f.date_rdv_time <= ?');
-        params.push(`${date_fin} 23:59:59`);
-      }
     } else if (type === 'non_affilie') {
       conditions.push('(f.id_commercial IS NULL OR f.id_commercial = 0)');
       conditions.push('(f.id_commercial_2 IS NULL OR f.id_commercial_2 = 0)');
-      if (date_debut) {
-        conditions.push('f.date_rdv_time >= ?');
-        params.push(`${date_debut} 00:00:00`);
-      }
-      if (date_fin) {
-        conditions.push('f.date_rdv_time <= ?');
-        params.push(`${date_fin} 23:59:59`);
-      }
     } else {
       return res.status(400).json({
         success: false,
