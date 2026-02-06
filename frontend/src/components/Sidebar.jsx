@@ -90,6 +90,13 @@ const Sidebar = ({ collapsed }) => {
       visible: true,
     },
     {
+      path: '/rdv-vue',
+      label: 'Vue Rendez-vous',
+      icon: FaCalendarAlt,
+      permission: 'planning_view',
+      visible: true,
+    },
+    {
       path: '/affectation-dep',
       label: 'Affectation par Département',
       icon: FaUserCheck,

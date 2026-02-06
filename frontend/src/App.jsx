@@ -41,6 +41,7 @@ import Validation from './pages/Validation';
 import DemandesInsertion from './pages/DemandesInsertion';
 import Notifications from './pages/Notifications';
 import Signatures from './pages/Signatures';
+import RendezVousVue from './pages/RendezVousVue';
 import AssistanceIA from './pages/AssistanceIA';
 import MesRappels from './pages/MesRappels';
 import RappelsBureau from './pages/RappelsBureau';
@@ -71,6 +72,7 @@ function App() {
           <Route path="planning-dep" element={<ProtectedRoute permission="planning_dep_view"><PlanningDep /></ProtectedRoute>} />
           <Route path="planning-commercial" element={<ProtectedRoute permission="planning_commercial_view"><PlanningCommercial /></ProtectedRoute>} />
           <Route path="planning-hebdomadaire" element={<ProtectedRoute permission="planning_view"><PlanningHebdomadaire /></ProtectedRoute>} />
+          <Route path="rdv-vue" element={<ProtectedRoute permission="planning_view"><RendezVousVue /></ProtectedRoute>} />
           <Route path="affectation-dep" element={<ProtectedRoute permission="affectation_view"><AffectationDep /></ProtectedRoute>} />
           <Route path="statistiques" element={<ProtectedRoute permission="statistiques_view"><Statistiques /></ProtectedRoute>} />
           <Route path="statistiques-rdv" element={<ProtectedRoute permission="statistiques_rdv_view"><StatistiquesRDV /></ProtectedRoute>} />

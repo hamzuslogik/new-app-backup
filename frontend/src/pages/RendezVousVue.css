@@ -1,0 +1,145 @@
+.rdv-vue-page {
+  padding: 16px;
+  background: #f5f5f5;
+  min-height: calc(100vh - 80px);
+}
+
+.rdv-vue-page .page-header {
+  margin-bottom: 16px;
+}
+
+.rdv-vue-page .page-header h1 {
+  color: #333;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.rdv-vue-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.rdv-vue-tabs .tab-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #666;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+}
+
+.rdv-vue-tabs .tab-button:hover {
+  color: #1976d2;
+  background: rgba(25, 118, 210, 0.06);
+}
+
+.rdv-vue-tabs .tab-button.active {
+  color: #1976d2;
+  border-bottom-color: #1976d2;
+}
+
+.rdv-vue-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.rdv-vue-filters .filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.rdv-vue-filters .filter-group label {
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: #555;
+  font-size: 12px;
+}
+
+.rdv-vue-filters .filter-group .form-control {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.rdv-vue-content {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+}
+
+.rdv-vue-content .loading,
+.rdv-vue-content .no-data {
+  padding: 32px;
+  text-align: center;
+  color: #666;
+}
+
+.rdv-vue-content .table-container {
+  overflow-x: auto;
+}
+
+.rdv-vue-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rdv-vue-table th,
+.rdv-vue-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.rdv-vue-table th {
+  background: #fafafa;
+  font-weight: 600;
+  color: #333;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.rdv-vue-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.rdv-vue-table .tel {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.rdv-vue-table .text-muted {
+  color: #999;
+}
+
+.rdv-vue-table .btn-detail {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.rdv-vue-table .btn-detail:hover {
+  background: #1565c0;
+}

@@ -1812,4 +1812,90 @@ router.get('/departements', authenticate, async (req, res) => {
   }
 });
 
+// =====================================================
+// GET /planning/rdv-vue
+// Liste des RDV par type : du jour, affiliés (affectés à un commercial), non affiliés
+// =====================================================
+router.get('/rdv-vue', authenticate, async (req, res) => {
+  try {
+    const { type, date, date_debut, date_fin } = req.query;
+    const today = new Date().toISOString().split('T')[0];
+
+    const conditions = [
+      '(f.archive = 0 OR f.archive IS NULL)',
+      '(f.ko = 0 OR f.ko IS NULL)',
+      'f.date_rdv_time IS NOT NULL'
+    ];
+    const params = [];
+
+    if (type === 'jour') {
+      const d = date || today;
+      conditions.push('f.date_rdv_time >= ? AND f.date_rdv_time <= ?');
+      params.push(`${d} 00:00:00`, `${d} 23:59:59`);
+    } else if (type === 'affilie') {
+      conditions.push('(f.id_commercial IS NOT NULL AND f.id_commercial > 0) OR (f.id_commercial_2 IS NOT NULL AND f.id_commercial_2 > 0)');
+      if (date_debut) {
+        conditions.push('f.date_rdv_time >= ?');
+        params.push(`${date_debut} 00:00:00`);
+      }
+      if (date_fin) {
+        conditions.push('f.date_rdv_time <= ?');
+        params.push(`${date_fin} 23:59:59`);
+      }
+    } else if (type === 'non_affilie') {
+      conditions.push('(f.id_commercial IS NULL OR f.id_commercial = 0)');
+      conditions.push('(f.id_commercial_2 IS NULL OR f.id_commercial_2 = 0)');
+      if (date_debut) {
+        conditions.push('f.date_rdv_time >= ?');
+        params.push(`${date_debut} 00:00:00`);
+      }
+      if (date_fin) {
+        conditions.push('f.date_rdv_time <= ?');
+        params.push(`${date_fin} 23:59:59`);
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Paramètre type requis : jour, affilie ou non_affilie'
+      });
+    }
+
+    const whereClause = 'WHERE ' + conditions.join(' AND ');
+
+    const rows = await query(
+      `SELECT 
+        f.id,
+        f.nom,
+        f.prenom,
+        f.tel,
+        f.date_rdv_time,
+        f.id_commercial,
+        f.id_commercial_2,
+        f.id_etat_final,
+        com.pseudo as commercial_pseudo,
+        com2.pseudo as commercial2_pseudo,
+        e.titre as etat_titre
+      FROM fiches f
+      LEFT JOIN utilisateurs com ON f.id_commercial = com.id
+      LEFT JOIN utilisateurs com2 ON f.id_commercial_2 = com2.id
+      LEFT JOIN etats e ON f.id_etat_final = e.id
+      ${whereClause}
+      ORDER BY f.date_rdv_time ASC`,
+      params
+    );
+
+    res.json({
+      success: true,
+      data: rows || []
+    });
+  } catch (error) {
+    console.error('Erreur GET /planning/rdv-vue:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des rendez-vous',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
