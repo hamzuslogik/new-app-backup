@@ -48,6 +48,16 @@
   border-bottom-color: #1976d2;
 }
 
+.rdv-vue-tabs .tab-button .tab-count {
+  margin-left: 6px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.rdv-vue-tabs .tab-button.active .tab-count {
+  color: inherit;
+}
+
 .rdv-vue-filters {
   display: flex;
   flex-wrap: wrap;

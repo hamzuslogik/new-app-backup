@@ -6,23 +6,48 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './RendezVousVue.css';
 
+const fetchRdvVue = async (type, date) => {
+  const res = await api.get('/planning/rdv-vue', {
+    params: { type, date }
+  });
+  return res.data.data || [];
+};
+
 const RendezVousVue = () => {
   const today = new Date().toISOString().split('T')[0];
   const [activeTab, setActiveTab] = useState('jour');
   const [dateJour, setDateJour] = useState(today);
 
-  const { data: rdvData, isLoading } = useQuery(
-    ['rdv-vue', activeTab, dateJour],
-    async () => {
-      const res = await api.get('/planning/rdv-vue', {
-        params: { type: activeTab, date: dateJour }
-      });
-      return res.data.data || [];
-    },
+  const { data: dataJour, isLoading: loadingJour } = useQuery(
+    ['rdv-vue', 'jour', dateJour],
+    () => fetchRdvVue('jour', dateJour),
+    { enabled: true }
+  );
+  const { data: dataAffilie, isLoading: loadingAffilie } = useQuery(
+    ['rdv-vue', 'affilie', dateJour],
+    () => fetchRdvVue('affilie', dateJour),
+    { enabled: true }
+  );
+  const { data: dataNonAffilie, isLoading: loadingNonAffilie } = useQuery(
+    ['rdv-vue', 'non_affilie', dateJour],
+    () => fetchRdvVue('non_affilie', dateJour),
     { enabled: true }
   );
 
-  const list = rdvData || [];
+  const countJour = (dataJour || []).length;
+  const countAffilie = (dataAffilie || []).length;
+  const countNonAffilie = (dataNonAffilie || []).length;
+
+  const list =
+    activeTab === 'jour'
+      ? dataJour || []
+      : activeTab === 'affilie'
+        ? dataAffilie || []
+        : dataNonAffilie || [];
+  const isLoading =
+    (activeTab === 'jour' && loadingJour) ||
+    (activeTab === 'affilie' && loadingAffilie) ||
+    (activeTab === 'non_affilie' && loadingNonAffilie);
 
   return (
     <div className="rdv-vue-page">
@@ -36,21 +61,21 @@ const RendezVousVue = () => {
           className={`tab-button ${activeTab === 'jour' ? 'active' : ''}`}
           onClick={() => setActiveTab('jour')}
         >
-          <FaCalendarDay /> Rendez-vous du jour
+          <FaCalendarDay /> Rendez-vous du jour <span className="tab-count">({countJour})</span>
         </button>
         <button
           type="button"
           className={`tab-button ${activeTab === 'affilie' ? 'active' : ''}`}
           onClick={() => setActiveTab('affilie')}
         >
-          <FaUserCheck /> Rendez-vous affiliés
+          <FaUserCheck /> Rendez-vous affiliés <span className="tab-count">({countAffilie})</span>
         </button>
         <button
           type="button"
           className={`tab-button ${activeTab === 'non_affilie' ? 'active' : ''}`}
           onClick={() => setActiveTab('non_affilie')}
         >
-          <FaUserSlash /> Rendez-vous non affiliés
+          <FaUserSlash /> Rendez-vous non affiliés <span className="tab-count">({countNonAffilie})</span>
         </button>
       </div>
 
