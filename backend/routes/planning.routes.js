@@ -1814,80 +1814,131 @@ router.get('/departements', authenticate, async (req, res) => {
 
 // =====================================================
 // GET /planning/rdv-vue
-// Fiches confirmées (état 7 = CONFIRMER) dont la date RDV (date_rdv_time) est le jour choisi.
-// - jour : toutes ces fiches du jour
-// - affilie : celles attribuées à un commercial (id_commercial ou id_commercial_2)
-// - non_affilie : celles non attribuées à un commercial
+// Afficher les RDV du jour choisi (confirmés à cette date).
+// - Date >= aujourd'hui : source fiches (id_etat_final=7, date_rdv_time du jour).
+// - Date passée : source fiches_histo (id_etat=7, date_rdv_time du jour), car les fiches
+//   ont changé d'état après validation du compte rendu (signé, etc.).
+// - jour / affilie / non_affilie : même logique sur les trois onglets.
 // =====================================================
 router.get('/rdv-vue', authenticate, async (req, res) => {
   try {
     const { type, date } = req.query;
     const today = new Date().toISOString().split('T')[0];
     const d = date || today;
+    const isPastDate = d < today;
 
-    // Log entrée
-    console.log('[rdv-vue] Requête:', { type, date: d, query: req.query });
+    console.log('[rdv-vue] Requête:', { type, date: d, isPastDate });
 
-    // Fiches confirmées uniquement (état 7) + date planning = date_rdv_time du jour
-    const conditions = [
-      'CAST(f.id_etat_final AS UNSIGNED) = 7',
-      '(f.archive = 0 OR f.archive IS NULL)',
-      '(f.ko = 0 OR f.ko IS NULL)',
-      'f.date_rdv_time IS NOT NULL',
-      'f.date_rdv_time >= ? AND f.date_rdv_time <= ?'
-    ];
-    const params = [`${d} 00:00:00`, `${d} 23:59:59`];
+    let rows = [];
+    const dateStart = `${d} 00:00:00`;
+    const dateEnd = `${d} 23:59:59`;
 
-    if (type === 'jour') {
-      // Tous les RDV du jour (confirmés)
-    } else if (type === 'affilie') {
-      conditions.push('((f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0) OR (f.id_commercial_2 IS NOT NULL AND CAST(f.id_commercial_2 AS UNSIGNED) > 0))');
-    } else if (type === 'non_affilie') {
-      conditions.push('(f.id_commercial IS NULL OR CAST(COALESCE(f.id_commercial, 0) AS UNSIGNED) = 0)');
-      conditions.push('(f.id_commercial_2 IS NULL OR CAST(COALESCE(f.id_commercial_2, 0) AS UNSIGNED) = 0)');
+    if (isPastDate) {
+      // Date passée : RDV via fiches_histo (confirmations à cette date), puis jointure fiches
+      const histoWhereParts = [
+        '(f.archive = 0 OR f.archive IS NULL)',
+        '(f.ko = 0 OR f.ko IS NULL)'
+      ];
+      if (type === 'affilie') {
+        histoWhereParts.push('((f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0) OR (f.id_commercial_2 IS NOT NULL AND CAST(f.id_commercial_2 AS UNSIGNED) > 0))');
+      } else if (type === 'non_affilie') {
+        histoWhereParts.push('(f.id_commercial IS NULL OR CAST(COALESCE(f.id_commercial, 0) AS UNSIGNED) = 0)');
+        histoWhereParts.push('(f.id_commercial_2 IS NULL OR CAST(COALESCE(f.id_commercial_2, 0) AS UNSIGNED) = 0)');
+      }
+      const histoWhere = 'WHERE ' + histoWhereParts.join(' AND ');
+      console.log('[rdv-vue] Source: fiches_histo (date passée).', histoWhere);
+
+      rows = await query(
+        `SELECT 
+          f.id,
+          f.nom,
+          f.prenom,
+          f.tel,
+          f.adresse,
+          f.cp,
+          f.ville,
+          h.date_rdv_time,
+          f.id_commercial,
+          f.id_commercial_2,
+          f.id_etat_final,
+          com.pseudo as commercial_pseudo,
+          com2.pseudo as commercial2_pseudo,
+          e.titre as etat_titre
+        FROM (
+          SELECT id_fiche, MAX(id) as max_id
+          FROM fiches_histo
+          WHERE id_etat = 7 AND date_rdv_time IS NOT NULL
+            AND date_rdv_time >= ? AND date_rdv_time <= ?
+          GROUP BY id_fiche
+        ) last
+        INNER JOIN fiches_histo h ON h.id = last.max_id
+        INNER JOIN fiches f ON f.id = h.id_fiche
+        LEFT JOIN utilisateurs com ON f.id_commercial = com.id
+        LEFT JOIN utilisateurs com2 ON f.id_commercial_2 = com2.id
+        LEFT JOIN etats e ON f.id_etat_final = e.id
+        ${histoWhere}
+        ORDER BY h.date_rdv_time ASC`,
+        [dateStart, dateEnd]
+      );
     } else {
-      console.log('[rdv-vue] Type invalide:', type);
-      return res.status(400).json({
-        success: false,
-        message: 'Paramètre type requis : jour, affilie ou non_affilie'
-      });
+      // Date aujourd'hui ou future : source fiches (état 7, date_rdv_time du jour)
+      const conditions = [
+        'CAST(f.id_etat_final AS UNSIGNED) = 7',
+        '(f.archive = 0 OR f.archive IS NULL)',
+        '(f.ko = 0 OR f.ko IS NULL)',
+        'f.date_rdv_time IS NOT NULL',
+        'f.date_rdv_time >= ? AND f.date_rdv_time <= ?'
+      ];
+      const params = [dateStart, dateEnd];
+
+      if (type === 'affilie') {
+        conditions.push('((f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0) OR (f.id_commercial_2 IS NOT NULL AND CAST(f.id_commercial_2 AS UNSIGNED) > 0))');
+      } else if (type === 'non_affilie') {
+        conditions.push('(f.id_commercial IS NULL OR CAST(COALESCE(f.id_commercial, 0) AS UNSIGNED) = 0)');
+        conditions.push('(f.id_commercial_2 IS NULL OR CAST(COALESCE(f.id_commercial_2, 0) AS UNSIGNED) = 0)');
+      } else if (type !== 'jour') {
+        return res.status(400).json({
+          success: false,
+          message: 'Paramètre type requis : jour, affilie ou non_affilie'
+        });
+      }
+
+      const whereClause = 'WHERE ' + conditions.join(' AND ');
+      console.log('[rdv-vue] Source: fiches.', whereClause);
+
+      rows = await query(
+        `SELECT 
+          f.id,
+          f.nom,
+          f.prenom,
+          f.tel,
+          f.adresse,
+          f.cp,
+          f.ville,
+          f.date_rdv_time,
+          f.id_commercial,
+          f.id_commercial_2,
+          f.id_etat_final,
+          com.pseudo as commercial_pseudo,
+          com2.pseudo as commercial2_pseudo,
+          e.titre as etat_titre
+        FROM fiches f
+        LEFT JOIN utilisateurs com ON f.id_commercial = com.id
+        LEFT JOIN utilisateurs com2 ON f.id_commercial_2 = com2.id
+        LEFT JOIN etats e ON f.id_etat_final = e.id
+        ${whereClause}
+        ORDER BY f.date_rdv_time ASC`,
+        params
+      );
     }
 
-    const whereClause = 'WHERE ' + conditions.join(' AND ');
-    console.log('[rdv-vue] WHERE:', whereClause);
-    console.log('[rdv-vue] Params:', params);
-
-    const rows = await query(
-      `SELECT 
-        f.id,
-        f.nom,
-        f.prenom,
-        f.tel,
-        f.adresse,
-        f.cp,
-        f.ville,
-        f.date_rdv_time,
-        f.id_commercial,
-        f.id_commercial_2,
-        f.id_etat_final,
-        com.pseudo as commercial_pseudo,
-        com2.pseudo as commercial2_pseudo,
-        e.titre as etat_titre
-      FROM fiches f
-      LEFT JOIN utilisateurs com ON f.id_commercial = com.id
-      LEFT JOIN utilisateurs com2 ON f.id_commercial_2 = com2.id
-      LEFT JOIN etats e ON f.id_etat_final = e.id
-      ${whereClause}
-      ORDER BY f.date_rdv_time ASC`,
-      params
-    );
-
     let result = rows || [];
-    // Sécurité : ne garder que les fiches confirmées (état 7) au cas où le SQL aurait retourné autre chose
-    const beforeCount = result.length;
-    result = result.filter(r => Number(r.id_etat_final) === 7);
-    if (beforeCount !== result.length) {
-      console.log('[rdv-vue] ATTENTION: filtrage côté serveur a retiré', beforeCount - result.length, 'lignes (id_etat_final !== 7)');
+    if (!isPastDate) {
+      const beforeCount = result.length;
+      result = result.filter(r => Number(r.id_etat_final) === 7);
+      if (beforeCount !== result.length) {
+        console.log('[rdv-vue] Filtrage état 7:', beforeCount - result.length, 'lignes retirées');
+      }
     }
     console.log('[rdv-vue] Nombre de lignes renvoyées:', result.length);
     if (result.length > 0) {
