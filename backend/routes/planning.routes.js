@@ -1814,7 +1814,7 @@ router.get('/departements', authenticate, async (req, res) => {
 
 // =====================================================
 // GET /planning/rdv-vue
-// Fiches confirmées (état 7) dont la date RDV est le jour choisi.
+// Fiches confirmées (état 7 = CONFIRMER) dont la date RDV (date_rdv_time) est le jour choisi.
 // - jour : toutes ces fiches du jour
 // - affilie : celles attribuées à un commercial (id_commercial ou id_commercial_2)
 // - non_affilie : celles non attribuées à un commercial
@@ -1825,8 +1825,12 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     const d = date || today;
 
+    // Log entrée
+    console.log('[rdv-vue] Requête:', { type, date: d, query: req.query });
+
+    // Fiches confirmées uniquement (état 7) + date planning = date_rdv_time du jour
     const conditions = [
-      'f.id_etat_final = 7',
+      'CAST(f.id_etat_final AS UNSIGNED) = 7',
       '(f.archive = 0 OR f.archive IS NULL)',
       '(f.ko = 0 OR f.ko IS NULL)',
       'f.date_rdv_time IS NOT NULL',
@@ -1835,13 +1839,14 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
     const params = [`${d} 00:00:00`, `${d} 23:59:59`];
 
     if (type === 'jour') {
-      // Tous les RDV du jour
+      // Tous les RDV du jour (confirmés)
     } else if (type === 'affilie') {
-      conditions.push('(f.id_commercial IS NOT NULL AND f.id_commercial > 0) OR (f.id_commercial_2 IS NOT NULL AND f.id_commercial_2 > 0)');
+      conditions.push('((f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0) OR (f.id_commercial_2 IS NOT NULL AND CAST(f.id_commercial_2 AS UNSIGNED) > 0))');
     } else if (type === 'non_affilie') {
-      conditions.push('(f.id_commercial IS NULL OR f.id_commercial = 0)');
-      conditions.push('(f.id_commercial_2 IS NULL OR f.id_commercial_2 = 0)');
+      conditions.push('(f.id_commercial IS NULL OR CAST(COALESCE(f.id_commercial, 0) AS UNSIGNED) = 0)');
+      conditions.push('(f.id_commercial_2 IS NULL OR CAST(COALESCE(f.id_commercial_2, 0) AS UNSIGNED) = 0)');
     } else {
+      console.log('[rdv-vue] Type invalide:', type);
       return res.status(400).json({
         success: false,
         message: 'Paramètre type requis : jour, affilie ou non_affilie'
@@ -1849,6 +1854,8 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
     }
 
     const whereClause = 'WHERE ' + conditions.join(' AND ');
+    console.log('[rdv-vue] WHERE:', whereClause);
+    console.log('[rdv-vue] Params:', params);
 
     const rows = await query(
       `SELECT 
@@ -1872,12 +1879,31 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
       params
     );
 
+    let result = rows || [];
+    // Sécurité : ne garder que les fiches confirmées (état 7) au cas où le SQL aurait retourné autre chose
+    const beforeCount = result.length;
+    result = result.filter(r => Number(r.id_etat_final) === 7);
+    if (beforeCount !== result.length) {
+      console.log('[rdv-vue] ATTENTION: filtrage côté serveur a retiré', beforeCount - result.length, 'lignes (id_etat_final !== 7)');
+    }
+    console.log('[rdv-vue] Nombre de lignes renvoyées:', result.length);
+    if (result.length > 0) {
+      const sample = result.slice(0, 5).map(r => ({
+        id: r.id,
+        id_etat_final: r.id_etat_final,
+        etat_titre: r.etat_titre,
+        id_commercial: r.id_commercial,
+        id_commercial_2: r.id_commercial_2
+      }));
+      console.log('[rdv-vue] Aperçu (max 5):', JSON.stringify(sample, null, 2));
+    }
+
     res.json({
       success: true,
-      data: rows || []
+      data: result
     });
   } catch (error) {
-    console.error('Erreur GET /planning/rdv-vue:', error);
+    console.error('[rdv-vue] Erreur:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des rendez-vous',
