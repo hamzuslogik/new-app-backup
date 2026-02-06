@@ -19,7 +19,7 @@ router.get('/', authenticate, async (req, res) => {
     } = req.query;
 
     // Limiter aux fiches actuellement signées (même critère que "recherche tout signé par date de planning")
-    const etatsSignes = [13, 16, 44, 45]; // SIGNER, SIGNER RETRACTER, SIGNER PM, SIGNER COMPLET
+    const etatsSignes = [13, 16, 38, 44, 45]; // SIGNER, SIGNER RETRACTER, SIGNER RETRACTER 2 FOIS, SIGNER PM, SIGNER COMPLET
     let whereConditions = ['f.id IS NOT NULL', `f.id_etat_final IN (${etatsSignes.join(', ')})`];
     let params = [];
 
@@ -115,7 +115,7 @@ router.get('/stats', authenticate, async (req, res) => {
     const { date_debut, date_fin } = req.query;
 
     // Limiter aux fiches actuellement signées (aligné sur "recherche tout signé par date de planning")
-    const etatsSignes = [13, 16, 44, 45];
+    const etatsSignes = [13, 16, 38, 44, 45]; // SIGNER, SIGNER RETRACTER, SIGNER RETRACTER 2 FOIS, SIGNER PM, SIGNER COMPLET
     let whereConditions = ['f.id IS NOT NULL', `f.id_etat_final IN (${etatsSignes.join(', ')})`];
     let params = [];
 
@@ -314,7 +314,7 @@ router.get('/kpi', authenticate, async (req, res) => {
 
     const joinFichesKpi = 'INNER JOIN fiches f ON s.id_fiche = f.id';
     // Limiter aux fiches actuellement signées (aligné sur "recherche tout signé par date de planning")
-    const whereEtatSigneKpi = 'AND f.id_etat_final IN (13, 16, 44, 45)';
+    const whereEtatSigneKpi = 'AND f.id_etat_final IN (13, 16, 38, 44, 45)';
 
     // KPI 1: Total signatures (score - SUM ajoute) - période actuelle - par date de planning
     const currentTotalResult = await queryOne(
