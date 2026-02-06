@@ -100,6 +100,7 @@ const RendezVousVue = () => {
               <thead>
                 <tr>
                   <th>Fiche</th>
+                  <th>Adresse</th>
                   <th>Date / heure RDV</th>
                   <th>Commercial(s)</th>
                   <th>État</th>
@@ -112,6 +113,15 @@ const RendezVousVue = () => {
                     <td>
                       <strong>{f.nom}</strong> {f.prenom}
                       {f.tel && <div className="tel">{f.tel}</div>}
+                    </td>
+                    <td>
+                      {f.adresse && <div>{f.adresse}</div>}
+                      {(f.cp || f.ville) && (
+                        <div className="cp-ville">
+                          {[f.cp, f.ville].filter(Boolean).join(' ')}
+                        </div>
+                      )}
+                      {!f.adresse && !f.cp && !f.ville && <span className="text-muted">—</span>}
                     </td>
                     <td>{formatRdvDateTime(f.date_rdv_time)}</td>
                     <td>
