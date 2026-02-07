@@ -1832,7 +1832,38 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
     const dateStart = `${d} 00:00:00`;
     const dateEnd = `${d} 23:59:59`;
 
-    if (isPastDate) {
+    // Onglet "Production RDV" : toujours depuis confirmations, filtré par date de confirmation
+    if (type === 'production_rdv') {
+      rows = await query(
+        `SELECT 
+          f.id,
+          f.nom,
+          f.prenom,
+          f.tel,
+          f.adresse,
+          f.cp,
+          f.ville,
+          c.date_rdv_time,
+          COALESCE(c.id_commercial, f.id_commercial) AS id_commercial,
+          f.id_commercial_2,
+          f.id_etat_final,
+          com.pseudo AS commercial_pseudo,
+          com2.pseudo AS commercial2_pseudo,
+          e.titre AS etat_titre
+        FROM confirmations c
+        INNER JOIN fiches f ON f.id = c.id_fiche
+        LEFT JOIN utilisateurs com ON com.id = COALESCE(c.id_commercial, f.id_commercial)
+        LEFT JOIN utilisateurs com2 ON com2.id = f.id_commercial_2
+        LEFT JOIN etats e ON f.id_etat_final = e.id
+        WHERE (f.archive = 0 OR f.archive IS NULL)
+          AND (f.ko = 0 OR f.ko IS NULL)
+          AND c.date_rdv_time IS NOT NULL
+          AND DATE(c.date_creation) = ?
+        ORDER BY c.date_rdv_time ASC`,
+        [d]
+      );
+      console.log('[rdv-vue] Source: confirmations (Production RDV, date_confirmation).', rows?.length ?? 0, 'lignes');
+    } else if (isPastDate) {
       // Date passée : seul l'onglet "jour" affiche des données (source: table confirmations)
       if (type === 'affilie' || type === 'non_affilie') {
         rows = [];
@@ -1885,10 +1916,10 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
       } else if (type === 'non_affilie') {
         conditions.push('(f.id_commercial IS NULL OR CAST(COALESCE(f.id_commercial, 0) AS UNSIGNED) = 0)');
         conditions.push('(f.id_commercial_2 IS NULL OR CAST(COALESCE(f.id_commercial_2, 0) AS UNSIGNED) = 0)');
-      } else if (type !== 'jour') {
+      } else if (type !== 'jour' && type !== 'production_rdv') {
         return res.status(400).json({
           success: false,
-          message: 'Paramètre type requis : jour, affilie ou non_affilie'
+          message: 'Paramètre type requis : jour, affilie, non_affilie ou production_rdv'
         });
       }
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import api from '../config/api';
-import { FaCalendarDay, FaUserCheck, FaUserSlash } from 'react-icons/fa';
+import { FaCalendarDay, FaUserCheck, FaUserSlash, FaChartLine } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './RendezVousVue.css';
@@ -33,21 +33,30 @@ const RendezVousVue = () => {
     () => fetchRdvVue('non_affilie', dateJour),
     { enabled: true }
   );
+  const { data: dataProductionRdv, isLoading: loadingProductionRdv } = useQuery(
+    ['rdv-vue', 'production_rdv', dateJour],
+    () => fetchRdvVue('production_rdv', dateJour),
+    { enabled: true }
+  );
 
   const countJour = (dataJour || []).length;
   const countAffilie = (dataAffilie || []).length;
   const countNonAffilie = (dataNonAffilie || []).length;
+  const countProductionRdv = (dataProductionRdv || []).length;
 
   const list =
     activeTab === 'jour'
       ? dataJour || []
       : activeTab === 'affilie'
         ? dataAffilie || []
-        : dataNonAffilie || [];
+        : activeTab === 'non_affilie'
+          ? dataNonAffilie || []
+          : dataProductionRdv || [];
   const isLoading =
     (activeTab === 'jour' && loadingJour) ||
     (activeTab === 'affilie' && loadingAffilie) ||
-    (activeTab === 'non_affilie' && loadingNonAffilie);
+    (activeTab === 'non_affilie' && loadingNonAffilie) ||
+    (activeTab === 'production_rdv' && loadingProductionRdv);
 
   return (
     <div className="rdv-vue-page">
@@ -76,6 +85,13 @@ const RendezVousVue = () => {
           onClick={() => setActiveTab('non_affilie')}
         >
           <FaUserSlash /> Rendez-vous non affiliés <span className="tab-count">({countNonAffilie})</span>
+        </button>
+        <button
+          type="button"
+          className={`tab-button ${activeTab === 'production_rdv' ? 'active' : ''}`}
+          onClick={() => setActiveTab('production_rdv')}
+        >
+          <FaChartLine /> Production RDV <span className="tab-count">({countProductionRdv})</span>
         </button>
       </div>
 
