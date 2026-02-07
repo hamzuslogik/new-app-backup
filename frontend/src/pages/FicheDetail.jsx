@@ -121,6 +121,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   
   // État pour le formulaire de confirmation
   const [selectedEtat, setSelectedEtat] = useState(null);
+  const [histoConfirmateurId, setHistoConfirmateurId] = useState('');
   const [confFormData, setConfFormData] = useState({
     produit: '',
     id_confirmateur: '',
@@ -223,8 +224,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
   const { data: confirmateurs } = useQuery('confirmateurs', async () => {
     const res = await api.get('/management/utilisateurs');
-    return (res.data.data || []).filter(u => u.fonction === 6);
+    return (res.data.data || []).filter(u => u.fonction === 6 && (u.etat > 0 || u.etat == null));
   });
+
+  const showHistoConfirmateurDropdown = [1, 7, 13, 14].includes(Number(user?.fonction));
 
   const { data: etats } = useQuery('etats', async () => {
     const res = await api.get('/management/etats');
@@ -1459,6 +1462,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       const updateData = {
         id_etat_final: parseInt(selectedEtat)
       };
+      if (showHistoConfirmateurDropdown && histoConfirmateurId !== '' && histoConfirmateurId != null) {
+        updateData.histo_id_confirmateur = parseInt(histoConfirmateurId, 10);
+      }
 
       // Ajouter les champs spécifiques selon l'état sélectionné
       if (selectedEtat === 2) {
@@ -4224,6 +4230,24 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   )}
                 </select>
             </div>
+
+            {showHistoConfirmateurDropdown && (
+              <div className="form-group">
+                <label htmlFor="histo_confirmateur">Confirmateur (historique)</label>
+                <select
+                  id="histo_confirmateur"
+                  className="form-control"
+                  value={histoConfirmateurId}
+                  onChange={(e) => setHistoConfirmateurId(e.target.value)}
+                  title="Confirmateur enregistré dans l'historique lors du changement d'état"
+                >
+                  <option value="">Tout</option>
+                  {(confirmateurs || []).map(c => (
+                    <option key={c.id} value={c.id}>{c.pseudo || `Utilisateur ${c.id}`}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Formulaire de confirmation (état 7) */}
             {selectedEtat === 7 && selectedEtat !== fiche.id_etat_final && (

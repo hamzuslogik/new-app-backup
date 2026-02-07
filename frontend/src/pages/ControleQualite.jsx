@@ -25,6 +25,8 @@ const ControleQualite = () => {
   
   // État pour gérer l'édition du commentaire qualité
   const [editingComment, setEditingComment] = useState({ hash: null, value: '' });
+  // Confirmateur à enregistrer dans l'historique (RE, RP Confirmation, admin, backoffice)
+  const [histoConfirmateurId, setHistoConfirmateurId] = useState('');
 
   // Récupérer les agents qualification
   const { data: agentsData } = useQuery('agents-qualif-list', async () => {
@@ -49,6 +51,14 @@ const ControleQualite = () => {
     const res = await api.get('/management/etats');
     return res.data.data || [];
   });
+
+  // Confirmateurs (pour RE/RP/admin/backoffice : choix du confirmateur à enregistrer dans l'historique)
+  const { data: confirmateursData } = useQuery('confirmateurs-list', async () => {
+    const res = await api.get('/management/utilisateurs');
+    return res.data.data?.filter(u => u.fonction === 6 && (u.etat > 0 || u.etat == null)) || [];
+  });
+  const confirmateurs = confirmateursData || [];
+  const showHistoConfirmateurDropdown = [1, 7, 13, 14].includes(Number(user?.fonction));
 
   // Récupérer les fiches avec rafraîchissement automatique toutes les 3 secondes
   const { data: fichesData, isLoading, error, refetch } = useQuery(
@@ -176,7 +186,11 @@ const ControleQualite = () => {
 
   const handleEtatChange = (hash, newEtatId) => {
     if (!newEtatId) return;
-    updateEtatMutation.mutate({ hash, id_etat_final: parseInt(newEtatId) });
+    updateEtatMutation.mutate({
+      hash,
+      id_etat_final: parseInt(newEtatId),
+      histo_id_confirmateur: showHistoConfirmateurDropdown ? (histoConfirmateurId || undefined) : undefined
+    });
   };
 
   const formatDate = (dateStr) => {
@@ -300,6 +314,22 @@ const ControleQualite = () => {
                 ))}
               </select>
             </div>
+
+            {showHistoConfirmateurDropdown && (
+              <div className="form-group">
+                <label>Confirmateur (historique)</label>
+                <select
+                  value={histoConfirmateurId}
+                  onChange={(e) => setHistoConfirmateurId(e.target.value)}
+                  title="Confirmateur enregistré dans l'historique lors du changement d'état"
+                >
+                  <option value="">Tout</option>
+                  {confirmateurs.map(c => (
+                    <option key={c.id} value={c.id}>{c.pseudo || `Utilisateur ${c.id}`}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="form-group">
               <label>Date début</label>

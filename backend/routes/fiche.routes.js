@@ -9,6 +9,17 @@ const { query, queryOne } = require('../config/database');
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
 
+/** Retourne l'id_confirmateur à enregistrer dans fiches_histo : body.histo_id_confirmateur (RE/RP/admin/backoffice), ou user.id si Confirmateur, sinon null */
+function getHistoConfirmateur(req, fiche = null) {
+  const sent = req.body && req.body.histo_id_confirmateur !== undefined && req.body.histo_id_confirmateur !== null && req.body.histo_id_confirmateur !== '';
+  if (sent) {
+    const v = parseInt(req.body.histo_id_confirmateur, 10);
+    return Number.isFinite(v) ? v : null;
+  }
+  if (req.user && req.user.fonction === 6) return req.user.id;
+  return null;
+}
+
 // Fonction pour encoder un ID en hash (utilise HMAC pour créer un hash unique)
 const encodeFicheId = (id) => {
   if (!id) return null;
@@ -2369,10 +2380,12 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
         }
         
         // Créer l'entrée dans l'historique
+        const histoConf = getHistoConfirmateur(req, null);
+        const histoSousEtat = donneesFiche.id_sous_etat != null ? donneesFiche.id_sous_etat : null;
         await query(
-          `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation)
-           VALUES (?, ?, NOW())`,
-          [insertId, donneesFiche.id_etat_final || 1]
+          `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation)
+           VALUES (?, ?, ?, ?, NOW())`,
+          [insertId, donneesFiche.id_etat_final || 1, histoConf, histoSousEtat]
         );
         
         // Créer des notifications pour l'agent et son superviseur (si existe)
@@ -2985,10 +2998,11 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
         [now, now, id]
       );
       
-      // Note: fiches_histo n'a pas de colonne id_user selon le schéma
+      const histoConf = getHistoConfirmateur(req, fiche);
+      const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
       await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation) VALUES (?, ?, ?)`,
-        [id, value, now]
+        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation) VALUES (?, ?, ?, ?, ?)`,
+        [id, value, histoConf, histoSousEtat, now]
       );
       
       // Si on passe de l'état CONFIRMER (7) à un état du groupe 2, supprimer la date du RDV
@@ -3491,9 +3505,11 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
 
     // Créer l'entrée dans l'historique
     if (ficheData.id_etat_final) {
+      const histoConf = getHistoConfirmateur(req, null);
+      const histoSousEtat = (ficheData.id_sous_etat != null) ? ficheData.id_sous_etat : null;
       await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation) VALUES (?, ?, ?)`,
-        [insertId, ficheData.id_etat_final, now]
+        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation) VALUES (?, ?, ?, ?, ?)`,
+        [insertId, ficheData.id_etat_final, histoConf, histoSousEtat, now]
       );
     }
 
@@ -3526,8 +3542,8 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
       });
     }
 
-    // Vérifier que la fiche existe
-    const fiche = await queryOne('SELECT id_etat_final FROM fiches WHERE id = ?', [id]);
+    // Vérifier que la fiche existe (id_sous_etat pour fiches_histo)
+    const fiche = await queryOne('SELECT id_etat_final, id_sous_etat FROM fiches WHERE id = ?', [id]);
     if (!fiche) {
       return res.status(404).json({
         success: false,
@@ -3575,11 +3591,13 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
       [newEtatId, now, now, id]
     );
 
-    // Enregistrer dans l'historique
+    // Enregistrer dans l'historique (avec id_confirmateur : connecté ou choisi par RE/RP/admin/backoffice)
     if (oldEtatId !== newEtatId) {
+      const histoConf = getHistoConfirmateur(req, fiche);
+      const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
       await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?)`,
-        [id, newEtatId, null, now]
+        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, newEtatId, histoConf, histoSousEtat, null, now]
       );
 
       // Logger la modification
@@ -3643,8 +3661,8 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
       });
     }
 
-    // Vérifier que la fiche existe
-    const fiche = await queryOne('SELECT id_etat_final, id_qualite FROM fiches WHERE id = ?', [id]);
+    // Vérifier que la fiche existe (id_sous_etat pour fiches_histo)
+    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat FROM fiches WHERE id = ?', [id]);
     if (!fiche) {
       return res.status(404).json({
         success: false,
@@ -3687,9 +3705,11 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
 
     // Enregistrer dans l'historique si changement d'état
     if (oldEtatId !== newEtatId) {
+      const histoConf = getHistoConfirmateur(req, fiche);
+      const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
       await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation) VALUES (?, ?, ?)`,
-        [id, newEtatId, now]
+        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation) VALUES (?, ?, ?, ?, ?)`,
+        [id, newEtatId, histoConf, histoSousEtat, now]
       );
 
       // Logger la modification
@@ -3740,7 +3760,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
         message: 'Vous n\'avez pas la permission de valider des fiches qualité'
       });
     }
-    const fiche = await queryOne('SELECT id_etat_final, id_qualite FROM fiches WHERE id = ?', [id]);
+    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat FROM fiches WHERE id = ?', [id]);
     if (!fiche) {
       return res.status(404).json({
         success: false,
@@ -3769,9 +3789,11 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
       [newEtatId, now, now, id]
     );
     if (oldEtatId !== newEtatId) {
+      const histoConf = getHistoConfirmateur(req, fiche);
+      const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
       await query(
-        'INSERT INTO fiches_histo (id_fiche, id_etat, date_creation) VALUES (?, ?, ?)',
-        [id, newEtatId, now]
+        'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation) VALUES (?, ?, ?, ?, ?)',
+        [id, newEtatId, histoConf, histoSousEtat, now]
       );
       await logModification(
         id,
@@ -4113,12 +4135,16 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
     }
     
-    // Créer une entrée dans l'historique
+    // Créer une entrée dans l'historique (id_confirmateur, id_sous_etat)
+    const histoConf = getHistoConfirmateur(req, fiche);
+    const histoSousEtat = (ficheData.id_sous_etat != null) ? ficheData.id_sous_etat : ((fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null);
     await query(
-      `INSERT INTO fiches_histo (id_fiche, id_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
       [
         id,
         ficheData.id_etat_final,
+        histoConf,
+        histoSousEtat,
         ficheData.date_rdv_time || fiche.date_rdv_time || null,
         now
       ]
