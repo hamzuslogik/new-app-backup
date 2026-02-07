@@ -1816,9 +1816,8 @@ router.get('/departements', authenticate, async (req, res) => {
 // GET /planning/rdv-vue
 // Afficher les RDV du jour choisi (confirmés à cette date).
 // - Date >= aujourd'hui : source fiches (id_etat_final=7, date_rdv_time du jour).
-// - Date passée : source fiches_histo (id_etat=7, date_rdv_time du jour), car les fiches
-//   ont changé d'état après validation du compte rendu (signé, etc.).
-// - jour / affilie / non_affilie : même logique sur les trois onglets.
+// - Date passée : uniquement l'onglet "Rendez-vous du jour" utilise la table confirmations ;
+//   les onglets "affiliés" et "non affiliés" renvoient une liste vide.
 // =====================================================
 router.get('/rdv-vue', authenticate, async (req, res) => {
   try {
@@ -1834,52 +1833,43 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
     const dateEnd = `${d} 23:59:59`;
 
     if (isPastDate) {
-      // Date passée : RDV via fiches_histo (confirmations à cette date), puis jointure fiches
-      const histoWhereParts = [
-        '(f.archive = 0 OR f.archive IS NULL)',
-        '(f.ko = 0 OR f.ko IS NULL)'
-      ];
-      if (type === 'affilie') {
-        histoWhereParts.push('((f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0) OR (f.id_commercial_2 IS NOT NULL AND CAST(f.id_commercial_2 AS UNSIGNED) > 0))');
-      } else if (type === 'non_affilie') {
-        histoWhereParts.push('(f.id_commercial IS NULL OR CAST(COALESCE(f.id_commercial, 0) AS UNSIGNED) = 0)');
-        histoWhereParts.push('(f.id_commercial_2 IS NULL OR CAST(COALESCE(f.id_commercial_2, 0) AS UNSIGNED) = 0)');
+      // Date passée : seul l'onglet "jour" affiche des données (source: table confirmations)
+      if (type === 'affilie' || type === 'non_affilie') {
+        rows = [];
+        console.log('[rdv-vue] Date passée, onglet non "jour" : liste vide.');
+      } else {
+        // type === 'jour' : compter et lister depuis confirmations
+        const rdvDateCol = 'COALESCE(c.date_rdv_time, c.date_planning)';
+        rows = await query(
+          `SELECT 
+            f.id,
+            f.nom,
+            f.prenom,
+            f.tel,
+            f.adresse,
+            f.cp,
+            f.ville,
+            ${rdvDateCol} AS date_rdv_time,
+            COALESCE(c.id_commercial, f.id_commercial) AS id_commercial,
+            COALESCE(c.id_commercial_2, f.id_commercial_2) AS id_commercial_2,
+            f.id_etat_final,
+            com.pseudo AS commercial_pseudo,
+            com2.pseudo AS commercial2_pseudo,
+            e.titre AS etat_titre
+          FROM confirmations c
+          INNER JOIN fiches f ON f.id = c.id_fiche
+          LEFT JOIN utilisateurs com ON com.id = COALESCE(c.id_commercial, f.id_commercial)
+          LEFT JOIN utilisateurs com2 ON com2.id = COALESCE(c.id_commercial_2, f.id_commercial_2)
+          LEFT JOIN etats e ON f.id_etat_final = e.id
+          WHERE (f.archive = 0 OR f.archive IS NULL)
+            AND (f.ko = 0 OR f.ko IS NULL)
+            AND ${rdvDateCol} IS NOT NULL
+            AND ${rdvDateCol} >= ? AND ${rdvDateCol} <= ?
+          ORDER BY ${rdvDateCol} ASC`,
+          [dateStart, dateEnd]
+        );
+        console.log('[rdv-vue] Source: confirmations (date passée, onglet jour).', rows?.length ?? 0, 'lignes');
       }
-      const histoWhere = 'WHERE ' + histoWhereParts.join(' AND ');
-      console.log('[rdv-vue] Source: fiches_histo (date passée).', histoWhere);
-
-      rows = await query(
-        `SELECT 
-          f.id,
-          f.nom,
-          f.prenom,
-          f.tel,
-          f.adresse,
-          f.cp,
-          f.ville,
-          h.date_rdv_time,
-          f.id_commercial,
-          f.id_commercial_2,
-          f.id_etat_final,
-          com.pseudo as commercial_pseudo,
-          com2.pseudo as commercial2_pseudo,
-          e.titre as etat_titre
-        FROM (
-          SELECT id_fiche, MAX(id) as max_id
-          FROM fiches_histo
-          WHERE id_etat = 7 AND date_rdv_time IS NOT NULL
-            AND date_rdv_time >= ? AND date_rdv_time <= ?
-          GROUP BY id_fiche
-        ) last
-        INNER JOIN fiches_histo h ON h.id = last.max_id
-        INNER JOIN fiches f ON f.id = h.id_fiche
-        LEFT JOIN utilisateurs com ON f.id_commercial = com.id
-        LEFT JOIN utilisateurs com2 ON f.id_commercial_2 = com2.id
-        LEFT JOIN etats e ON f.id_etat_final = e.id
-        ${histoWhere}
-        ORDER BY h.date_rdv_time ASC`,
-        [dateStart, dateEnd]
-      );
     } else {
       // Date aujourd'hui ou future : source fiches (état 7, date_rdv_time du jour)
       const conditions = [
