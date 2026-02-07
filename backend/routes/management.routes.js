@@ -660,21 +660,12 @@ router.post('/utilisateurs/generate-token', authenticate, async (req, res) => {
 // =====================================================
 
 // Récupérer tous les états (accessible à tous)
-// Récupérer tous les états (filtrés selon la fonction de l'utilisateur)
+// Confirmateurs (6) : accès à toutes les phases (0, 1, 2, 3) pour modification détail fiche et filtres
 router.get('/etats', authenticate, async (req, res) => {
   try {
-    let querySql = 'SELECT id, titre, color, groupe, ordre, taux, abbreviation FROM etats';
-    let params = [];
+    const querySql = 'SELECT id, titre, color, groupe, ordre, taux, abbreviation FROM etats ORDER BY ordre ASC';
 
-    // Pour les confirmateurs (fonction 6), seuls les états du groupe 2 sont disponibles
-    if (req.user.fonction === 6) {
-      querySql += ' WHERE groupe = ?';
-      params.push('2');
-    }
-
-    querySql += ' ORDER BY ordre ASC';
-
-    const etats = await query(querySql, params);
+    const etats = await query(querySql);
     res.json({ success: true, data: etats });
   } catch (error) {
     console.error('Erreur:', error);

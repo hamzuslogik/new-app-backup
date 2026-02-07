@@ -24,7 +24,12 @@ export function getEtatsGroupedByPhase(etats) {
   const byPhase = { 0: [], 1: [], 2: [], 3: [] };
   etats.forEach((e) => {
     const g = normGroupe(e.groupe);
-    if (g >= 0 && g <= 3) byPhase[g].push(e);
+    if (g >= 0 && g <= 3) {
+      byPhase[g].push(e);
+    } else {
+      // États sans groupe 0-3 (ex. NRP, RAPPEL BUREAU) : affichés en Phase 1 pour rester accessibles dans la liste déroulante
+      byPhase[1].push(e);
+    }
   });
   return {
     phase0: [...byPhase[0]].sort(sortByOrdre),
