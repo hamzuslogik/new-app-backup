@@ -29,6 +29,7 @@ const Fiches = () => {
     fiche_search: false,
     include_archive: false,
     id_centre: '',
+    id_sous_etat: '',
   });
 
   const normalizeText = (v) => (typeof v === 'string' ? v.trim() : v);
@@ -55,6 +56,11 @@ const Fiches = () => {
   const { data: etatsData } = useQuery('etats', async () => {
     const res = await api.get('/management/etats');
     return res.data.data;
+  }, referenceDataOptions);
+
+  const { data: sousEtatsData } = useQuery('sous-etat', async () => {
+    const res = await api.get('/management/sous-etat');
+    return res.data.data || [];
   }, referenceDataOptions);
 
   const { data: professionsData } = useQuery('professions', async () => {
@@ -288,6 +294,11 @@ const Fiches = () => {
   const etats = etatsData || [];
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etats);
 
+  const sousEtatsForSelectedEtat = (sousEtatsData || []).filter(
+    s => Number(s.id_etat) === Number(filters.id_etat_final)
+  );
+  const showSousEtatFilter = filters.id_etat_final && sousEtatsForSelectedEtat.length > 0;
+
   const handleFilterChange = (key, value) => {
     const nextValue = key === 'critere' ? normalizeText(value) : value;
     setFilters(prev => ({
@@ -327,6 +338,7 @@ const Fiches = () => {
       page: 1,
       limit: 500,
       fiche_search: false,
+      id_sous_etat: '',
     });
   };
 
@@ -707,6 +719,22 @@ const Fiches = () => {
                   )}
                 </select>
               </div>
+
+              {/* Sous-état (affiché uniquement si l'état sélectionné a des sous-états) */}
+              {showSousEtatFilter && (
+                <div className="form-group">
+                  <label>Sous-état</label>
+                  <select
+                    value={filters.id_sous_etat || ''}
+                    onChange={(e) => handleFilterChange('id_sous_etat', e.target.value)}
+                  >
+                    <option value="">Tout</option>
+                    {sousEtatsForSelectedEtat.map(se => (
+                      <option key={se.id} value={se.id}>{se.titre}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Champ de date */}
               <div className="form-group">

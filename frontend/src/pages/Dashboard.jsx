@@ -99,6 +99,7 @@ const Dashboard = () => {
       include_archive: false,
       ko: '', // '' = tous, '0' = fiches OK, '1' = fiches KO
       id_centre: '',
+      id_sous_etat: '',
     };
   });
   
@@ -158,6 +159,11 @@ const Dashboard = () => {
     const res = await api.get('/management/utilisateurs');
     return res.data.data;
   });
+
+  const { data: sousEtatsData } = useQuery('sous-etat', async () => {
+    const res = await api.get('/management/sous-etat');
+    return res.data.data || [];
+  }, { staleTime: 5 * 60 * 1000 });
 
   const { data: etatsData, isLoading: isLoadingEtats, error: etatsError } = useQuery('etats', async () => {
     const res = await api.get('/management/etats');
@@ -347,6 +353,11 @@ const Dashboard = () => {
   const etatsPhase2 = etats.filter(e => String(e.groupe) === '2' || e.groupe === 2);
   const etatsPhase3 = etats.filter(e => String(e.groupe) === '3' || e.groupe === 3);
 
+  const sousEtatsForSelectedEtat = (sousEtatsData || []).filter(
+    s => Number(s.id_etat) === Number(filters.id_etat_final)
+  );
+  const showSousEtatFilter = filters.id_etat_final && sousEtatsForSelectedEtat.length > 0;
+
   // Debug: afficher les états et leurs groupes
   if (etats.length > 0) {
     console.log('États chargés:', etats.length);
@@ -365,11 +376,12 @@ const Dashboard = () => {
         ? normalizeText(value)
         : value;
     // Activer la recherche (fiche_search) quand un filtre de recherche est modifié pour que les paramètres soient bien envoyés (ex: état NRP)
-    const searchFilterKeys = ['id_etat_final', 'date_debut', 'date_fin', 'date_champ', 'time_debut', 'time_fin', 'id_confirmateur', 'id_commercial', 'id_centre', 'nom', 'prenom', 'critere', 'critere_champ', 'cp', 'produit'];
+    const searchFilterKeys = ['id_etat_final', 'id_sous_etat', 'date_debut', 'date_fin', 'date_champ', 'time_debut', 'time_fin', 'id_confirmateur', 'id_commercial', 'id_centre', 'nom', 'prenom', 'critere', 'critere_champ', 'cp', 'produit'];
     const enableFicheSearch = searchFilterKeys.includes(key);
     setFilters(prev => ({
       ...prev,
       [key]: nextValue,
+      ...(key === 'id_etat_final' ? { id_sous_etat: '' } : {}),
       ...(enableFicheSearch ? { fiche_search: true } : {}),
       page: key === 'page' ? value : 1
     }));
@@ -902,6 +914,22 @@ const Dashboard = () => {
                     </select>
                   )}
                 </div>
+
+                {/* Sous-état (affiché uniquement si l'état sélectionné a des sous-états) */}
+                {showSousEtatFilter && (
+                  <div className="form-group">
+                    <label>Sous-état</label>
+                    <select
+                      value={filters.id_sous_etat || ''}
+                      onChange={(e) => handleFilterChange('id_sous_etat', e.target.value)}
+                    >
+                      <option value="">Tout</option>
+                      {sousEtatsForSelectedEtat.map(se => (
+                        <option key={se.id} value={se.id}>{se.titre}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Date début */}
                 <div className="form-group date-group">
@@ -1661,6 +1689,21 @@ const Dashboard = () => {
                     </select>
                   )}
                 </div>
+
+                {showSousEtatFilter && (
+                  <div className="form-group">
+                    <label>Sous-état</label>
+                    <select
+                      value={filters.id_sous_etat || ''}
+                      onChange={(e) => handleFilterChange('id_sous_etat', e.target.value)}
+                    >
+                      <option value="">Tout</option>
+                      {sousEtatsForSelectedEtat.map(se => (
+                        <option key={se.id} value={se.id}>{se.titre}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Type de fiches (OK / KO) */}
                 <div className="form-group">

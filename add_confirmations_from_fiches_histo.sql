@@ -25,17 +25,18 @@ LIMIT 10;
 
 -- ========== INSERTION ==========
 -- On prend toutes les lignes id_etat = 7 avec id_fiche valide.
--- date_confirmation : date_creation de fiches_histo (date du passage à l'état CONFIRMER).
+-- date_confirmation, date_confirmation_date et date_creation : tous pris depuis date_creation de fiches_histo.
 -- Date RDV : date_rdv_time si renseignée, sinon date_creation. id_confirmateur : fiches_histo ou fiches.
 -- Une ligne par (id_fiche, date) en gardant la dernière entrée du groupe (MAX(id)).
-INSERT INTO `confirmations` (`id_fiche`, `date_rdv_time`, `date_confirmation`, `id_confirmateur`, `id_commercial`, `date_creation`)
+INSERT INTO `confirmations` (`id_fiche`, `date_rdv_time`, `date_confirmation`, `date_confirmation_date`, `id_confirmateur`, `id_commercial`, `date_creation`)
 SELECT
   h.id_fiche,
   COALESCE(h.date_rdv_time, h.date_creation) AS date_rdv_time,
   h.date_creation AS date_confirmation,
+  DATE(h.date_creation) AS date_confirmation_date,
   COALESCE(NULLIF(h.id_confirmateur, 0), (SELECT f.id_confirmateur FROM `fiches` f WHERE f.id = h.id_fiche LIMIT 1)) AS id_confirmateur,
   h.id_commercial,
-  h.date_creation
+  h.date_creation AS date_creation
 FROM `fiches_histo` h
 INNER JOIN (
   SELECT
@@ -53,6 +54,7 @@ WHERE h.id_etat = 7
   AND h.id_fiche > 0
 ON DUPLICATE KEY UPDATE
   date_confirmation = VALUES(date_confirmation),
+  date_confirmation_date = VALUES(date_confirmation_date),
   id_confirmateur = VALUES(id_confirmateur),
   id_commercial = VALUES(id_commercial),
   date_creation = VALUES(date_creation);

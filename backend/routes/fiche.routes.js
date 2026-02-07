@@ -347,6 +347,7 @@ router.get('/', authenticate, async (req, res) => {
       cp,
       produit,
       id_etat_final,
+      id_sous_etat,
       id_commercial,
       id_confirmateur,
       id_re,
@@ -614,6 +615,10 @@ router.get('/', authenticate, async (req, res) => {
       // Si seulement qualification_code est fourni (sans id_etat_final)
       whereConditions.push(qualificationCondition);
       params.push(req.query.qualification_code);
+    }
+    if (id_sous_etat !== undefined && id_sous_etat !== null && id_sous_etat !== '' && id_sous_etat !== 'tout') {
+      whereConditions.push('fiche.id_sous_etat = ?');
+      params.push(id_sous_etat);
     }
     if (id_commercial) {
       whereConditions.push('(fiche.id_commercial = ? OR fiche.id_commercial_2 = ?)');
