@@ -4147,12 +4147,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         )}
 
         {/* Permissions pour changer l'état :
-            - Admins (1, 2, 7) : peuvent changer vers tous les états
+            - Admins (1, 2, 7), Backoffice (11) : peuvent changer vers tous les états (y compris fiche confirmée)
             - Superviseur Qualification (2) : peuvent changer les fiches des agents sous leur responsabilité
             - RP Qualification (12) : peuvent changer les fiches des agents sous la responsabilité de leurs superviseurs
             - Agents (3) : peuvent changer les fiches de leur centre
             - Confirmateurs (6), RE Confirmation (14), RP Confirmation (13) : peuvent changer l'état (y compris si fiche déjà confirmée) */}
-        {((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 8 || Number(user?.fonction) === 12) ||
+        {((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 8 || Number(user?.fonction) === 11 || Number(user?.fonction) === 12) ||
           (Number(user?.fonction) === 3 && user?.centre === ficheData?.id_centre) ||
           (Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13)) && (
           <div className="fiche-section etat-change-section">
@@ -4163,7 +4163,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 <select
                   id="id_etat_final"
                   className="form-control"
-                  value={selectedEtat !== null ? selectedEtat : ((Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13) && fiche.id_etat_final ? fiche.id_etat_final : '')}
+                  value={selectedEtat !== null ? selectedEtat : ((Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13 || Number(user?.fonction) === 11) && fiche.id_etat_final ? fiche.id_etat_final : '')}
                   onChange={(e) => handleEtatChange(e.target.value ? parseInt(e.target.value) : null)}
                 >
                   <option value="">{fiche.id_etat_final ? `État actuel: ${etats?.find(e => e.id === fiche.id_etat_final)?.titre || fiche.id_etat_final}` : 'Sélectionner un état'}</option>

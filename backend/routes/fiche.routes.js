@@ -3977,8 +3977,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           ph3_data: ph3Data
         }
       });
-    } else if (req.user.fonction === 6 || req.user.fonction === 14 || req.user.fonction === 13) {
-      // Confirmateurs (6), RE Confirmation (14), RP Confirmation (13) : peuvent modifier toutes les fiches (y compris changer l'état même si déjà confirmé)
+    } else if (req.user.fonction === 6 || req.user.fonction === 14 || req.user.fonction === 13 || req.user.fonction === 11) {
+      // Confirmateurs (6), RE Confirmation (14), RP Confirmation (13), Backoffice (11) : peuvent modifier toutes les fiches (y compris changer l'état même si déjà confirmé)
       // Pas de vérification d'assignation nécessaire
       //
       // Pour confirmateur (6) uniquement : ne peut pas assigner un autre confirmateur, uniquement s'ajouter lui-même.
