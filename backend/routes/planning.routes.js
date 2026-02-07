@@ -1838,8 +1838,9 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
         rows = [];
         console.log('[rdv-vue] Date passée, onglet non "jour" : liste vide.');
       } else {
-        // type === 'jour' : lister depuis confirmations (colonne date : date_rdv_time ou date_planning)
-        const buildConfirmationsQuery = (dateCol) => `SELECT 
+        // type === 'jour' : lister depuis confirmations (colonne date_rdv_time)
+        rows = await query(
+          `SELECT 
             f.id,
             f.nom,
             f.prenom,
@@ -1847,7 +1848,7 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
             f.adresse,
             f.cp,
             f.ville,
-            c.${dateCol} AS date_rdv_time,
+            c.date_rdv_time,
             COALESCE(c.id_commercial, f.id_commercial) AS id_commercial,
             COALESCE(c.id_commercial_2, f.id_commercial_2) AS id_commercial_2,
             f.id_etat_final,
@@ -1861,20 +1862,11 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
           LEFT JOIN etats e ON f.id_etat_final = e.id
           WHERE (f.archive = 0 OR f.archive IS NULL)
             AND (f.ko = 0 OR f.ko IS NULL)
-            AND c.${dateCol} IS NOT NULL
-            AND DATE(c.${dateCol}) = ?
-          ORDER BY c.${dateCol} ASC`;
-        try {
-          rows = await query(buildConfirmationsQuery('date_rdv_time'), [d]);
-        } catch (err) {
-          const msg = err?.message || String(err);
-          if (msg.includes('date_rdv_time') && (msg.includes('Unknown column') || msg.includes("doesn't exist"))) {
-            console.log('[rdv-vue] Colonne date_rdv_time absente, utilisation de date_planning.');
-            rows = await query(buildConfirmationsQuery('date_planning'), [d]);
-          } else {
-            throw err;
-          }
-        }
+            AND c.date_rdv_time IS NOT NULL
+            AND DATE(c.date_rdv_time) = ?
+          ORDER BY c.date_rdv_time ASC`,
+          [d]
+        );
         console.log('[rdv-vue] Source: confirmations (date passée, onglet jour).', rows?.length ?? 0, 'lignes');
       }
     } else {
