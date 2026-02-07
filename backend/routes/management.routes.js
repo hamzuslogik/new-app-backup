@@ -660,12 +660,15 @@ router.post('/utilisateurs/generate-token', authenticate, async (req, res) => {
 // =====================================================
 
 // Récupérer tous les états (accessible à tous)
-// Confirmateurs (6) : accès à toutes les phases (0, 1, 2, 3) pour modification détail fiche et filtres
+// Groupe 0 (Phase 0) : visible uniquement par RE qualification (2), Agent qualification (3), Qualité qualification (8), RP qualification (12)
 router.get('/etats', authenticate, async (req, res) => {
   try {
     const querySql = 'SELECT id, titre, color, groupe, ordre, taux, abbreviation FROM etats ORDER BY ordre ASC';
-
-    const etats = await query(querySql);
+    let etats = await query(querySql);
+    const canSeeGroupe0 = [2, 3, 8, 12].includes(Number(req.user.fonction));
+    if (!canSeeGroupe0) {
+      etats = etats.filter(e => String(e.groupe) !== '0' && e.groupe !== 0);
+    }
     res.json({ success: true, data: etats });
   } catch (error) {
     console.error('Erreur:', error);

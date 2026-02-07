@@ -344,11 +344,15 @@ const Dashboard = () => {
   const confirmateurs = usersData ? usersData.filter(u => u.fonction === 6 && u.etat > 0) : [];
   const commerciaux = usersData ? usersData.filter(u => u.fonction === 5 && u.etat > 0) : [];
   const centres = centresData ? centresData.filter(c => c.etat > 0) : [];
-  // Exclure les états du groupe 0
-  const etats = (etatsData || []).filter(e => String(e.groupe) !== '0' && e.groupe !== 0);
+  // Groupe 0 visible uniquement par RE qualification (2), Agent qualification (3), Qualité qualification (8), RP qualification (12)
+  const canSeeGroupe0 = [2, 3, 8, 12].includes(Number(user?.fonction));
+  const etats = (etatsData || []).filter(e => {
+    if (String(e.groupe) === '0' || e.groupe === 0) return canSeeGroupe0;
+    return true;
+  });
 
-  // Grouper les états par phase (excluant déjà le groupe 0)
-  // Note: groupe est un VARCHAR dans la base, donc on compare avec des chaînes
+  // Grouper les états par phase
+  const etatsPhase0 = etats.filter(e => String(e.groupe) === '0' || e.groupe === 0);
   const etatsPhase1 = etats.filter(e => String(e.groupe) === '1' || e.groupe === 1);
   const etatsPhase2 = etats.filter(e => String(e.groupe) === '2' || e.groupe === 2);
   const etatsPhase3 = etats.filter(e => String(e.groupe) === '3' || e.groupe === 3);
@@ -873,6 +877,15 @@ const Dashboard = () => {
                       onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
                     >
                       <option value="">Tous</option>
+                      {etatsPhase0.length > 0 && (
+                        <optgroup label="PHASE 0">
+                          {etatsPhase0.map(etat => (
+                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                              {etat.titre}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
                       {etatsPhase1.length > 0 && (
                         <optgroup label="PHASE 1">
                           {etatsPhase1.map(etat => (
@@ -902,7 +915,7 @@ const Dashboard = () => {
                         </optgroup>
                       )}
                       {/* Si aucun état n'est trouvé dans les phases, afficher tous les états */}
-                      {etatsPhase1.length === 0 && etatsPhase2.length === 0 && etatsPhase3.length === 0 && etats.length > 0 && (
+                      {etatsPhase0.length === 0 && etatsPhase1.length === 0 && etatsPhase2.length === 0 && etatsPhase3.length === 0 && etats.length > 0 && (
                         <>
                           {etats.map(etat => (
                             <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
@@ -1649,6 +1662,15 @@ const Dashboard = () => {
                       defaultValue=""
                     >
                       <option value="">Tous</option>
+                      {etatsPhase0.length > 0 && (
+                        <optgroup label="PHASE 0">
+                          {etatsPhase0.map(etat => (
+                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                              {etat.titre}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
                       {etatsPhase1.length > 0 && (
                         <optgroup label="PHASE 1">
                           {etatsPhase1.map(etat => (
@@ -1677,7 +1699,7 @@ const Dashboard = () => {
                           ))}
                         </optgroup>
                       )}
-                      {etatsPhase1.length === 0 && etatsPhase2.length === 0 && etatsPhase3.length === 0 && etats.length > 0 && (
+                      {etatsPhase0.length === 0 && etatsPhase1.length === 0 && etatsPhase2.length === 0 && etatsPhase3.length === 0 && etats.length > 0 && (
                         <>
                           {etats.map(etat => (
                             <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
