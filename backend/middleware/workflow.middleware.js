@@ -93,8 +93,8 @@ const triggerWorkflowOnFicheUpdated = async (req, res, next) => {
             });
           }
           
-          // Vérifier si l'état a changé
-          const oldEtat = req.body.id_etat_final || req.body.old_etat || oldFiche?.id_etat_final;
+          // Vérifier si l'état a changé (ancien état = fiche AVANT mise à jour, pas le body qui contient le nouveau)
+          const oldEtat = oldFiche?.id_etat_final ?? req.body.old_etat;
           const newEtat = fiche.id_etat_final;
           
           // Convertir en nombres pour comparaison cohérente
