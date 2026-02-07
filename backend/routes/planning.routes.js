@@ -1838,7 +1838,7 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
         rows = [];
         console.log('[rdv-vue] Date passée, onglet non "jour" : liste vide.');
       } else {
-        // type === 'jour' : lister depuis confirmations (colonne date_rdv_time)
+        // type === 'jour' : lister depuis confirmations (date_rdv_time, id_commercial ; pas id_commercial_2)
         rows = await query(
           `SELECT 
             f.id,
@@ -1850,7 +1850,7 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
             f.ville,
             c.date_rdv_time,
             COALESCE(c.id_commercial, f.id_commercial) AS id_commercial,
-            COALESCE(c.id_commercial_2, f.id_commercial_2) AS id_commercial_2,
+            f.id_commercial_2,
             f.id_etat_final,
             com.pseudo AS commercial_pseudo,
             com2.pseudo AS commercial2_pseudo,
@@ -1858,7 +1858,7 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
           FROM confirmations c
           INNER JOIN fiches f ON f.id = c.id_fiche
           LEFT JOIN utilisateurs com ON com.id = COALESCE(c.id_commercial, f.id_commercial)
-          LEFT JOIN utilisateurs com2 ON com2.id = COALESCE(c.id_commercial_2, f.id_commercial_2)
+          LEFT JOIN utilisateurs com2 ON com2.id = f.id_commercial_2
           LEFT JOIN etats e ON f.id_etat_final = e.id
           WHERE (f.archive = 0 OR f.archive IS NULL)
             AND (f.ko = 0 OR f.ko IS NULL)
