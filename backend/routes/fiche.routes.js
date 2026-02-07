@@ -4173,7 +4173,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
       'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
       'date_rdv_time', 'date_appel_time', 'date_modif_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
-      'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final',
+      'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final', 'id_sous_etat',
       'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'type_contrat_mr', 'type_contrat_madame',
       // Champs de confirmation
       'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
