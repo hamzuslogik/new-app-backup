@@ -66,9 +66,9 @@ const WorkflowsTab = () => {
     return res.data.data || [];
   });
 
-  // Récupérer les utilisateurs pour les messages système
+  // Récupérer tous les utilisateurs du système (actifs et inactifs) pour notification workflow et message système
   const { data: utilisateursData } = useQuery('utilisateurs-workflows', async () => {
-    const res = await api.get('/management/utilisateurs');
+    const res = await api.get('/management/utilisateurs', { params: { include_inactive: 1 } });
     return res.data.data || [];
   });
 
