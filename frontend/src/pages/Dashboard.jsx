@@ -354,10 +354,13 @@ const Dashboard = () => {
   // Grouper les états par phase
   const normalizeTitre = (t) => (!t ? '' : String(t).toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim());
   const CONFIRMATEUR_ETATS_PHASE2 = ['confirmer', 'annuler a reprogrammer', 'client honore a suivre', 'honore hors cible confirmateurs', 'rdv annuler', 'refuser'];
-  const CONFIRMATEUR_ETATS_PHASE3 = ['signer'];
   const isEtatAllowedForConfirmateur = (e, allowedList) => {
     const n = normalizeTitre(e.titre);
     return allowedList.some(a => n === a || n.includes(a) || a.includes(n));
+  };
+  const isEtatAllowedForConfirmateurPhase3 = (e) => {
+    const n = normalizeTitre(e.titre);
+    return n === 'signer';
   };
 
   let etatsPhase0 = etats.filter(e => String(e.groupe) === '0' || e.groupe === 0);
@@ -365,12 +368,12 @@ const Dashboard = () => {
   let etatsPhase2 = etats.filter(e => String(e.groupe) === '2' || e.groupe === 2);
   let etatsPhase3 = etats.filter(e => String(e.groupe) === '3' || e.groupe === 3);
 
-  // Session confirmateur (fonction 6) : uniquement certains états en phase 2 et phase 3
+  // Session confirmateur (fonction 6) : uniquement certains états en phase 2 et phase 3 (phase 3 = uniquement "Signer")
   if (user?.fonction === 6) {
     etatsPhase0 = [];
     etatsPhase1 = [];
     etatsPhase2 = etatsPhase2.filter(e => isEtatAllowedForConfirmateur(e, CONFIRMATEUR_ETATS_PHASE2));
-    etatsPhase3 = etatsPhase3.filter(e => isEtatAllowedForConfirmateur(e, CONFIRMATEUR_ETATS_PHASE3));
+    etatsPhase3 = etatsPhase3.filter(e => isEtatAllowedForConfirmateurPhase3(e));
   }
 
   const sousEtatsForSelectedEtat = (sousEtatsData || []).filter(
@@ -1383,11 +1386,10 @@ const Dashboard = () => {
                             {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
                           </div>
                           <button
-                            onClick={() => user?.fonction !== 6 && setSelectedFicheHash(fiche.hash)}
+                            onClick={() => setSelectedFicheHash(fiche.hash)}
                             className="btn-detail"
-                            title={user?.fonction === 6 ? 'Non disponible en session confirmateur' : 'Voir les détails'}
-                            disabled={user?.fonction === 6}
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: user?.fonction === 6 ? 'not-allowed' : 'pointer', opacity: user?.fonction === 6 ? 0.6 : 1 }}
+                            title="Voir les détails"
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                           >
                             <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
                           </button>
