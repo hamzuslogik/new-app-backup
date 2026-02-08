@@ -79,34 +79,6 @@ const Dashboard = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [showLongSearchConfirm, setShowLongSearchConfirm] = useState(false);
-  const [pendingLongSearchFilters, setPendingLongSearchFilters] = useState(null);
-  const [longSearchDontShowAgain, setLongSearchDontShowAgain] = useState(false);
-
-  const SESSION_STORAGE_SKIP_LONG_SEARCH_WARN = 'dashboard-skip-long-search-warn';
-
-  /** Alerte recherche longue : pas de dates (ou plage > 1 an) et moins de 2 filtres "forts" */
-  const shouldWarnLongSearch = (f) => {
-    const hasDateDebut = !!f?.date_debut;
-    const hasDateFin = !!f?.date_fin;
-    const hasNarrowDateRange = hasDateDebut && hasDateFin;
-    let rangeOverOneYear = false;
-    if (hasNarrowDateRange && f.date_debut && f.date_fin) {
-      const a = new Date(f.date_debut);
-      const b = new Date(f.date_fin);
-      rangeOverOneYear = (b - a) / (24 * 60 * 60 * 1000) > 365;
-    }
-    const noOrWideDate = !hasNarrowDateRange || rangeOverOneYear;
-    const strongFilters = [
-      f?.id_etat_final != null && f?.id_etat_final !== '',
-      f?.id_commercial != null && f?.id_commercial !== '',
-      f?.id_centre != null && f?.id_centre !== '',
-      f?.id_confirmateur != null && f?.id_confirmateur !== '',
-      f?.critere != null && String(f.critere).trim() !== '',
-    ].filter(Boolean);
-    const strongCount = strongFilters.length;
-    return noOrWideDate && strongCount < 2;
-  };
   // Par défaut : RDV créés dans la journée (fiches CONFIRMER modifiées aujourd'hui)
   const getDefaultDateStr = () => {
     const t = new Date();
@@ -449,27 +421,20 @@ const Dashboard = () => {
     }));
   };
 
-  const runSearchWithFilters = (newFilters, dontShowAgain = false) => {
-    setFilters(newFilters);
-    setShowLongSearchConfirm(false);
-    setPendingLongSearchFilters(null);
-    if (dontShowAgain) {
-      try {
-        sessionStorage.setItem(SESSION_STORAGE_SKIP_LONG_SEARCH_WARN, '1');
-      } catch (_) {}
-    }
-  };
-
   const handleSearch = async (e) => {
     e.preventDefault();
+    setIsSearching(true);
     // Si on cherche uniquement par critère, ne pas appliquer les filtres de date
     const newFilters = { ...filters, fiche_search: true, page: 1 };
-
+    
+    // Si critere est rempli et qu'aucune date n'a été spécifiquement définie, supprimer les dates
     if (newFilters.critere && !newFilters.date_debut && !newFilters.date_fin) {
-      // Les dates ne sont pas dans les filtres
+      // Les dates ne sont pas dans les filtres, donc pas besoin de les supprimer
     } else if (newFilters.critere) {
+      // Si critere est rempli, vérifier si les dates sont les dates d'aujourd'hui
       const today = new Date().toISOString().split('T')[0];
       if (newFilters.date_debut === today && newFilters.date_fin === today) {
+        // Supprimer les dates pour permettre une recherche globale
         delete newFilters.date_debut;
         delete newFilters.date_fin;
         delete newFilters.date_champ;
@@ -477,22 +442,7 @@ const Dashboard = () => {
         delete newFilters.time_fin;
       }
     }
-
-    const skipWarn = (() => {
-      try {
-        return sessionStorage.getItem(SESSION_STORAGE_SKIP_LONG_SEARCH_WARN) === '1';
-      } catch (_) {
-        return false;
-      }
-    })();
-
-    if (shouldWarnLongSearch(newFilters) && !skipWarn) {
-      setPendingLongSearchFilters(newFilters);
-      setShowLongSearchConfirm(true);
-      return;
-    }
-
-    setIsSearching(true);
+    
     setFilters(newFilters);
     try {
       await refetch();
@@ -1540,51 +1490,6 @@ const Dashboard = () => {
           </div>
         )}
       </div>
-
-      {/* Alerte recherche potentiellement longue */}
-      {showLongSearchConfirm && (
-        <div
-          className="long-search-confirm-overlay"
-          onClick={() => {
-            setShowLongSearchConfirm(false);
-            setPendingLongSearchFilters(null);
-          }}
-        >
-          <div className="long-search-confirm-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Recherche potentiellement longue</h3>
-            <p>
-              Cette recherche porte sur une période ou un périmètre très large et peut prendre longtemps (30 secondes à plusieurs minutes). Souhaitez-vous continuer ou ajouter des critères (ex. dates) pour accélérer ?
-            </p>
-            <label className="long-search-confirm-checkbox">
-              <input
-                type="checkbox"
-                checked={longSearchDontShowAgain}
-                onChange={(e) => setLongSearchDontShowAgain(e.target.checked)}
-              />
-              Ne plus afficher pour cette session
-            </label>
-            <div className="long-search-confirm-actions">
-              <button
-                type="button"
-                className="btn-cancel"
-                onClick={() => {
-                  setShowLongSearchConfirm(false);
-                  setPendingLongSearchFilters(null);
-                }}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                className="btn-continue"
-                onClick={() => pendingLongSearchFilters && runSearchWithFilters(pendingLongSearchFilters, longSearchDontShowAgain)}
-              >
-                Continuer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal de détail de fiche */}
       {selectedFicheHash && (
