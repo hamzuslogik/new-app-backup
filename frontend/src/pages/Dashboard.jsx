@@ -362,9 +362,11 @@ const Dashboard = () => {
     const n = normalizeTitre(e.titre);
     return allowedList.some(a => n === a || n.includes(a) || a.includes(n));
   };
+  /** Phase 3 confirmateur : uniquement "Signer" (complet), pas Signer retracter, Retracter 2 fois, Signer PM */
   const isEtatAllowedForConfirmateurPhase3 = (e) => {
     const n = normalizeTitre(e.titre);
-    return n === 'signer';
+    if (n.includes('retracter') || n.includes('pm') || n.includes('2 fois')) return false;
+    return n === 'signer' || n === 'signer complet';
   };
 
   let etatsPhase0 = etats.filter(e => String(e.groupe) === '0' || e.groupe === 0);
