@@ -461,8 +461,9 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_commercial = ?');
         params.push(req.user.id);
       } else if (req.user.fonction === 6) {
-        // Confirmateurs : en recherche par téléphone, autoriser les fiches où le connecté est confirmateur 1, 2 ou 3 (pas seulement dernier)
-        if (req.query.tel) {
+        // Confirmateurs : en recherche par critère (tel, CP, commentaire, etc.), autoriser fiches où le connecté est confirmateur 1, 2 ou 3 (pas seulement dernier)
+        const hasRechercheParCritere = !!(req.query.tel || critere);
+        if (hasRechercheParCritere) {
           whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
           params.push(req.user.id, req.user.id, req.user.id);
         } else {
