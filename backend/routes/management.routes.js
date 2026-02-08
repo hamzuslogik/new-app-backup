@@ -659,15 +659,44 @@ router.post('/utilisateurs/generate-token', authenticate, async (req, res) => {
 // ÉTATS
 // =====================================================
 
+// Liste des titres d'états visibles par les confirmateurs (6) dans le filtre de recherche et le détail fiche
+// Phase 2 : Confirmer, Annuler à reprogrammer, Client honoré à suivre, Honoré hors cible confirmateurs, RDV annulé, Refuser
+// Phase 3 : Signer
+const CONFIRMATEUR_ETAT_TITRES_NORMALISES = [
+  'confirmer',
+  'annuler a reprogrammer',
+  'client honore a suivre',
+  'honore hors cible confirmateurs',
+  'rdv annule',
+  'refuser',
+  'signer'
+].map(t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
+
+function normalizeTitre(s) {
+  if (s == null || typeof s !== 'string') return '';
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
 // Récupérer tous les états (accessible à tous)
 // Groupe 0 (Phase 0) : visible uniquement par RE qualification (2), Agent qualification (3), Qualité qualification (8), RP qualification (12)
+// Confirmateurs (6) : uniquement Phase 2 (Confirmer, Annuler à reprogrammer, Client honoré à suivre, etc.) et Phase 3 (Signer)
 router.get('/etats', authenticate, async (req, res) => {
   try {
     const querySql = 'SELECT id, titre, color, groupe, ordre, taux, abbreviation FROM etats ORDER BY ordre ASC';
     let etats = await query(querySql);
-    const canSeeGroupe0 = [2, 3, 8, 12].includes(Number(req.user.fonction));
+    const fonction = Number(req.user.fonction);
+    const canSeeGroupe0 = [2, 3, 8, 12].includes(fonction);
     if (!canSeeGroupe0) {
       etats = etats.filter(e => String(e.groupe) !== '0' && e.groupe !== 0);
+    }
+    // Session confirmateur (6) : ne garder que les états de la liste (Phase 2 + Signer Phase 3)
+    if (fonction === 6) {
+      etats = etats.filter(e => {
+        const g = String(e.groupe);
+        if (g !== '2' && g !== '3') return false;
+        const titreNorm = normalizeTitre(e.titre);
+        return CONFIRMATEUR_ETAT_TITRES_NORMALISES.some(allowed => titreNorm.includes(allowed) || allowed.includes(titreNorm));
+      });
     }
     res.json({ success: true, data: etats });
   } catch (error) {

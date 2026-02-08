@@ -765,41 +765,78 @@ const Dashboard = () => {
         // URL pour "confirmer de la journée"
         const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_confirmation&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
         
+        const isConfirmateur = user?.fonction === 6;
         return (
           <div className="dashboard-stats-section">
             <div className="stats-cards">
               {/* Confirmer de la journée */}
-              <Link to={confirmesUrl} className="stat-card stat-card-success">
-                <div className="stat-card-icon">
-                  <FaCalendarCheck />
+              {isConfirmateur ? (
+                <div className="stat-card stat-card-success">
+                  <div className="stat-card-icon">
+                    <FaCalendarCheck />
+                  </div>
+                  <div className="stat-card-content">
+                    <div className="stat-card-value">{dashboardStats.rdvTodayConfirmed || 0}</div>
+                    <div className="stat-card-label">Confirmer de la journée</div>
+                  </div>
                 </div>
-                <div className="stat-card-content">
-                  <div className="stat-card-value">{dashboardStats.rdvTodayConfirmed || 0}</div>
-                  <div className="stat-card-label">Confirmer de la journée</div>
-                </div>
-              </Link>
+              ) : (
+                <Link to={confirmesUrl} className="stat-card stat-card-success">
+                  <div className="stat-card-icon">
+                    <FaCalendarCheck />
+                  </div>
+                  <div className="stat-card-content">
+                    <div className="stat-card-value">{dashboardStats.rdvTodayConfirmed || 0}</div>
+                    <div className="stat-card-label">Confirmer de la journée</div>
+                  </div>
+                </Link>
+              )}
 
               {/* Signatures (aujourd'hui) */}
-              <Link to="/signatures" className="stat-card stat-card-warning">
-                <div className="stat-card-icon">
-                  <FaSignature />
+              {isConfirmateur ? (
+                <div className="stat-card stat-card-warning">
+                  <div className="stat-card-icon">
+                    <FaSignature />
+                  </div>
+                  <div className="stat-card-content">
+                    <div className="stat-card-value">{dashboardStats.signaturesToday || 0}</div>
+                    <div className="stat-card-label">Signatures</div>
+                  </div>
                 </div>
-                <div className="stat-card-content">
-                  <div className="stat-card-value">{dashboardStats.signaturesToday || 0}</div>
-                  <div className="stat-card-label">Signatures</div>
-                </div>
-              </Link>
+              ) : (
+                <Link to="/signatures" className="stat-card stat-card-warning">
+                  <div className="stat-card-icon">
+                    <FaSignature />
+                  </div>
+                  <div className="stat-card-content">
+                    <div className="stat-card-value">{dashboardStats.signaturesToday || 0}</div>
+                    <div className="stat-card-label">Signatures</div>
+                  </div>
+                </Link>
+              )}
 
               {/* RDV à venir */}
-              <Link to={`/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_rdv_time&date_debut=${todayStr}&time_debut=00:00:00`} className="stat-card stat-card-info">
-                <div className="stat-card-icon">
-                  <FaCalendarAlt />
+              {isConfirmateur ? (
+                <div className="stat-card stat-card-info">
+                  <div className="stat-card-icon">
+                    <FaCalendarAlt />
+                  </div>
+                  <div className="stat-card-content">
+                    <div className="stat-card-value">{dashboardStats.rdvUpcoming || 0}</div>
+                    <div className="stat-card-label">RDV à venir</div>
+                  </div>
                 </div>
-                <div className="stat-card-content">
-                  <div className="stat-card-value">{dashboardStats.rdvUpcoming || 0}</div>
-                  <div className="stat-card-label">RDV à venir</div>
-                </div>
-              </Link>
+              ) : (
+                <Link to={`/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_rdv_time&date_debut=${todayStr}&time_debut=00:00:00`} className="stat-card stat-card-info">
+                  <div className="stat-card-icon">
+                    <FaCalendarAlt />
+                  </div>
+                  <div className="stat-card-content">
+                    <div className="stat-card-value">{dashboardStats.rdvUpcoming || 0}</div>
+                    <div className="stat-card-label">RDV à venir</div>
+                  </div>
+                </Link>
+              )}
             </div>
           </div>
         );
@@ -1091,8 +1128,8 @@ const Dashboard = () => {
                   </select>
                 </div>
 
-                {/* Confirmateur */}
-                {user?.fonction !== 5 && user?.fonction !== 3 && (
+                {/* Confirmateur (masqué pour confirmateur connecté : toujours lui) */}
+                {user?.fonction !== 5 && user?.fonction !== 3 && user?.fonction !== 6 && (
                   <div className="form-group">
                     <label>Confirmateur</label>
                     <select
@@ -1330,10 +1367,11 @@ const Dashboard = () => {
                             {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
                           </div>
                           <button
-                            onClick={() => setSelectedFicheHash(fiche.hash)}
+                            onClick={() => user?.fonction !== 6 && setSelectedFicheHash(fiche.hash)}
                             className="btn-detail"
-                            title="Voir les détails"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                            title={user?.fonction === 6 ? 'Non disponible en session confirmateur' : 'Voir les détails'}
+                            disabled={user?.fonction === 6}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: user?.fonction === 6 ? 'not-allowed' : 'pointer', opacity: user?.fonction === 6 ? 0.6 : 1 }}
                           >
                             <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
                           </button>
@@ -1590,8 +1628,8 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Confirmateur */}
-                {user?.fonction !== 5 && user?.fonction !== 3 && (
+                {/* Confirmateur (masqué pour confirmateur connecté : toujours lui) */}
+                {user?.fonction !== 5 && user?.fonction !== 3 && user?.fonction !== 6 && (
                   <div className="form-group">
                     <label>Confirmateur</label>
                     <select

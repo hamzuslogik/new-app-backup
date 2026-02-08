@@ -446,10 +446,10 @@ router.get('/', authenticate, async (req, res) => {
         )`);
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id);
       } else if (req.user.fonction === 6) {
-        // Confirmateurs : toujours uniquement les fiches où ils sont assignés (pas de VIEW_ALL_FICHES pour la liste)
+        // Confirmateurs : uniquement les fiches où le connecté est le dernier confirmateur (3, sinon 2, sinon 1)
         whereConditions.push('fiche.date_modif_time >= ? AND fiche.date_modif_time <= ?');
-        whereConditions.push(`(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)`);
-        params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id, req.user.id, req.user.id);
+        whereConditions.push('COALESCE(fiche.id_confirmateur_3, fiche.id_confirmateur_2, fiche.id_confirmateur) = ?');
+        params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id);
       }
     } else {
       // Filtres par fonction quand recherche active
@@ -461,9 +461,9 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_commercial = ?');
         params.push(req.user.id);
       } else if (req.user.fonction === 6) {
-        // Confirmateurs : en recherche, uniquement les fiches où ils sont assignés (confirmateur 1, 2 ou 3)
-        whereConditions.push(`(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)`);
-        params.push(req.user.id, req.user.id, req.user.id);
+        // Confirmateurs : en recherche, uniquement les fiches où le connecté est le dernier confirmateur
+        whereConditions.push('COALESCE(fiche.id_confirmateur_3, fiche.id_confirmateur_2, fiche.id_confirmateur) = ?');
+        params.push(req.user.id);
       }
     }
 
@@ -671,7 +671,8 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('1 = 0');
       }
     // RE Confirmation (14) : en recherche, afficher tous les résultats (y compris hors équipe), quel que soit l'état (rappel bureau, NRP, etc.)
-    } else if (id_confirmateur && id_confirmateur !== 'all') {
+    } else if (id_confirmateur && id_confirmateur !== 'all' && req.user.fonction !== 6) {
+      // Confirmateurs (6) : pas de filtre par id_confirmateur (toujours dernier confirmateur = connecté)
       whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
       params.push(id_confirmateur, id_confirmateur, id_confirmateur);
     }
