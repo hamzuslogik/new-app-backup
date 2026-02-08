@@ -124,16 +124,14 @@ const Dashboard = () => {
     }
   }, [searchParams]);
 
-  // Ref pour le champ nom dans le modal
-  const nomInputRef = useRef(null);
-
-  // Focus automatique sur le champ nom quand le modal s'ouvre
+  // Ref pour le champ critère dans le modal (focus à l'ouverture)
+  const searchModalCritereRef = useRef(null);
   useEffect(() => {
-    if (showSearchModal && nomInputRef.current && user?.fonction !== 5) {
-      // Petit délai pour s'assurer que le modal est rendu
-      setTimeout(() => {
-        nomInputRef.current?.focus();
+    if (showSearchModal && searchModalCritereRef.current && user?.fonction !== 5) {
+      const t = setTimeout(() => {
+        searchModalCritereRef.current?.focus();
       }, 100);
+      return () => clearTimeout(t);
     }
   }, [showSearchModal, user?.fonction]);
 
@@ -221,7 +219,13 @@ const Dashboard = () => {
       if (typeof searchParams.critere === 'string') {
         searchParams.critere = searchParams.critere.trim();
       }
-      
+      // Nom et Prénom sont dans le type de critère : ne pas envoyer nom/prenom en double
+      const champ = searchParams.critere_champ || 'tel';
+      if (champ === 'nom' || champ === 'prenom') {
+        delete searchParams.nom;
+        delete searchParams.prenom;
+      }
+
       // Nettoyer les paramètres vides (mais garder page, limit, fiche_search, critere, critere_champ)
       Object.keys(searchParams).forEach(key => {
         if (key === 'page' || key === 'limit' || key === 'fiche_search') {
@@ -759,13 +763,15 @@ const Dashboard = () => {
       <SystemMessageBanner />
       <div className="dashboard-header">
         <div className="dashboard-header-left">
-          <button 
-            className="btn-search-modal"
-            onClick={() => setShowSearchModal(true)}
-            title="Ouvrir la recherche avancée"
-          >
-            <FaSearch /> Recherche
-          </button>
+          {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 9) && (
+            <button 
+              className="btn-search-modal"
+              onClick={() => setShowSearchModal(true)}
+              title="Ouvrir la recherche avancée"
+            >
+              <FaSearch /> Recherche
+            </button>
+          )}
           <div>
             <h1><FaHome /> Tableau de bord</h1>
             <p>Bienvenue, {user?.pseudo || 'Utilisateur'}</p>
@@ -878,19 +884,6 @@ const Dashboard = () => {
             <div className="search-form-two-columns">
               {/* Colonne de gauche */}
               <div className="search-form-left">
-                {/* Nom */}
-                {user?.fonction !== 5 && (
-                  <div className="form-group">
-                    <label>Nom</label>
-                    <input
-                      type="text"
-                      value={filters.nom || ''}
-                      onChange={(e) => handleFilterChange('nom', e.target.value)}
-                      placeholder="Nom"
-                    />
-                  </div>
-                )}
-
                 {/* Département */}
                 {(user?.fonction !== 5 && user?.fonction !== 6 && user?.fonction !== 3) && (
                   <div className="form-group">
@@ -1047,19 +1040,6 @@ const Dashboard = () => {
                   </label>
                 </div>
 
-                {/* Type de fiches (OK / KO) */}
-                <div className="form-group">
-                  <label>Type de fiches</label>
-                  <select
-                    value={filters.ko ?? ''}
-                    onChange={(e) => handleFilterChange('ko', e.target.value)}
-                  >
-                    <option value="">Tous</option>
-                    <option value="0">Fiches OK</option>
-                    <option value="1">Fiches KO</option>
-                  </select>
-                </div>
-
                 {/* Commercial */}
                 {user?.fonction !== 5 && (
                   <div className="form-group">
@@ -1116,20 +1096,7 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Prénom */}
-                {user?.fonction !== 5 && (
-                  <div className="form-group">
-                    <label>Prénom</label>
-                    <input
-                      type="text"
-                      value={filters.prenom || ''}
-                      onChange={(e) => handleFilterChange('prenom', e.target.value)}
-                      placeholder="Prénom"
-                    />
-                  </div>
-                )}
-
-                {/* Type de critère */}
+                {/* Type de critère (inclut Nom, Prénom, Téléphone, CP, Commentaire) */}
                 <div className="form-group">
                   <label>Type de critère</label>
                   <select
@@ -1140,6 +1107,8 @@ const Dashboard = () => {
                     <option value="tel">Téléphone</option>
                     {user?.fonction !== 5 && (
                       <>
+                        <option value="nom">Nom</option>
+                        <option value="prenom">Prénom</option>
                         <option value="cp">Code Postal</option>
                         <option value="commentaire">Commentaire</option>
                       </>
@@ -1577,36 +1546,11 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Nom et Prénom */}
-                {user?.fonction !== 5 && (
-                  <>
-                    <div className="form-group">
-                      <label>Nom</label>
-                      <input
-                        ref={nomInputRef}
-                        type="text"
-                        value={filters.nom || ''}
-                        onChange={(e) => handleFilterChange('nom', e.target.value)}
-                        placeholder="Nom"
-                        autoFocus
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Prénom</label>
-                      <input
-                        type="text"
-                        value={filters.prenom || ''}
-                        onChange={(e) => handleFilterChange('prenom', e.target.value)}
-                        placeholder="Prénom"
-                      />
-                    </div>
-                  </>
-                )}
-
                 {/* Critère de recherche */}
                 <div className="form-group">
                   <label>Critère</label>
                   <input
+                    ref={searchModalCritereRef}
                     type="text"
                     value={filters.critere || ''}
                     onChange={(e) => handleFilterChange('critere', e.target.value)}
@@ -1615,7 +1559,7 @@ const Dashboard = () => {
                   />
                 </div>
 
-                {/* Type de critère */}
+                {/* Type de critère (inclut Nom, Prénom, Téléphone, CP, Commentaire) */}
                 <div className="form-group">
                   <label>Type de critère</label>
                   <select
@@ -1626,6 +1570,8 @@ const Dashboard = () => {
                     <option value="tel">Téléphone</option>
                     {user?.fonction !== 5 && (
                       <>
+                        <option value="nom">Nom</option>
+                        <option value="prenom">Prénom</option>
                         <option value="cp">Code Postal</option>
                         <option value="commentaire">Commentaire</option>
                       </>
@@ -1782,19 +1728,6 @@ const Dashboard = () => {
                     </select>
                   </div>
                 )}
-
-                {/* Type de fiches (OK / KO) */}
-                <div className="form-group">
-                  <label>Type de fiches</label>
-                  <select
-                    value={filters.ko ?? ''}
-                    onChange={(e) => handleFilterChange('ko', e.target.value)}
-                  >
-                    <option value="">Tous</option>
-                    <option value="0">Fiches OK</option>
-                    <option value="1">Fiches KO</option>
-                  </select>
-                </div>
 
                 {/* Champ de date */}
                 <div className="form-group">
