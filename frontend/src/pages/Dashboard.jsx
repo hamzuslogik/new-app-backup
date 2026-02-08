@@ -1040,24 +1040,6 @@ const Dashboard = () => {
                   </label>
                 </div>
 
-                {/* Commercial */}
-                {user?.fonction !== 5 && (
-                  <div className="form-group">
-                    <label>Commercial</label>
-                    <select
-                      value={filters.id_commercial || ''}
-                      onChange={(e) => handleFilterChange('id_commercial', e.target.value)}
-                    >
-                      <option value="">Tous</option>
-                      {commerciaux.map(com => (
-                        <option key={com.id} value={com.id}>
-                          {com.pseudo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
                 {/* Boutons d'action */}
                 <div className="search-form-actions-left">
                   <button type="submit" className="btn-search">
@@ -1146,6 +1128,24 @@ const Dashboard = () => {
                       {centres.map(centre => (
                         <option key={centre.id} value={centre.id}>
                           {centre.titre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Commercial (aligné avec Date fin) */}
+                {user?.fonction !== 5 && (
+                  <div className="form-group">
+                    <label>Commercial</label>
+                    <select
+                      value={filters.id_commercial || ''}
+                      onChange={(e) => handleFilterChange('id_commercial', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      {commerciaux.map(com => (
+                        <option key={com.id} value={com.id}>
+                          {com.pseudo}
                         </option>
                       ))}
                     </select>
@@ -1610,24 +1610,6 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Commercial */}
-                {user?.fonction !== 5 && (
-                  <div className="form-group">
-                    <label>Commercial</label>
-                    <select
-                      value={filters.id_commercial || ''}
-                      onChange={(e) => handleFilterChange('id_commercial', e.target.value)}
-                    >
-                      <option value="">Tous</option>
-                      {commerciaux.map(com => (
-                        <option key={com.id} value={com.id}>
-                          {com.pseudo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
                 {/* Centre */}
                 {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 9) && (
                   <div className="form-group">
@@ -1762,6 +1744,24 @@ const Dashboard = () => {
                     />
                   </div>
                 </div>
+
+                {/* Commercial (aligné avec Date fin) */}
+                {user?.fonction !== 5 && (
+                  <div className="form-group">
+                    <label>Commercial</label>
+                    <select
+                      value={filters.id_commercial || ''}
+                      onChange={(e) => handleFilterChange('id_commercial', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      {commerciaux.map(com => (
+                        <option key={com.id} value={com.id}>
+                          {com.pseudo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Date fin */}
                 <div className="form-group">
