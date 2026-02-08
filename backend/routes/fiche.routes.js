@@ -461,9 +461,14 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_commercial = ?');
         params.push(req.user.id);
       } else if (req.user.fonction === 6) {
-        // Confirmateurs : en recherche, uniquement les fiches où le connecté est le dernier confirmateur
-        whereConditions.push('COALESCE(fiche.id_confirmateur_3, fiche.id_confirmateur_2, fiche.id_confirmateur) = ?');
-        params.push(req.user.id);
+        // Confirmateurs : en recherche par téléphone, autoriser les fiches où le connecté est confirmateur 1, 2 ou 3 (pas seulement dernier)
+        if (req.query.tel) {
+          whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
+          params.push(req.user.id, req.user.id, req.user.id);
+        } else {
+          whereConditions.push('COALESCE(fiche.id_confirmateur_3, fiche.id_confirmateur_2, fiche.id_confirmateur) = ?');
+          params.push(req.user.id);
+        }
       }
     }
 

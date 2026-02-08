@@ -352,10 +352,26 @@ const Dashboard = () => {
   });
 
   // Grouper les états par phase
-  const etatsPhase0 = etats.filter(e => String(e.groupe) === '0' || e.groupe === 0);
-  const etatsPhase1 = etats.filter(e => String(e.groupe) === '1' || e.groupe === 1);
-  const etatsPhase2 = etats.filter(e => String(e.groupe) === '2' || e.groupe === 2);
-  const etatsPhase3 = etats.filter(e => String(e.groupe) === '3' || e.groupe === 3);
+  const normalizeTitre = (t) => (!t ? '' : String(t).toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim());
+  const CONFIRMATEUR_ETATS_PHASE2 = ['confirmer', 'annuler a reprogrammer', 'client honore a suivre', 'honore hors cible confirmateurs', 'rdv annuler', 'refuser'];
+  const CONFIRMATEUR_ETATS_PHASE3 = ['signer'];
+  const isEtatAllowedForConfirmateur = (e, allowedList) => {
+    const n = normalizeTitre(e.titre);
+    return allowedList.some(a => n === a || n.includes(a) || a.includes(n));
+  };
+
+  let etatsPhase0 = etats.filter(e => String(e.groupe) === '0' || e.groupe === 0);
+  let etatsPhase1 = etats.filter(e => String(e.groupe) === '1' || e.groupe === 1);
+  let etatsPhase2 = etats.filter(e => String(e.groupe) === '2' || e.groupe === 2);
+  let etatsPhase3 = etats.filter(e => String(e.groupe) === '3' || e.groupe === 3);
+
+  // Session confirmateur (fonction 6) : uniquement certains états en phase 2 et phase 3
+  if (user?.fonction === 6) {
+    etatsPhase0 = [];
+    etatsPhase1 = [];
+    etatsPhase2 = etatsPhase2.filter(e => isEtatAllowedForConfirmateur(e, CONFIRMATEUR_ETATS_PHASE2));
+    etatsPhase3 = etatsPhase3.filter(e => isEtatAllowedForConfirmateur(e, CONFIRMATEUR_ETATS_PHASE3));
+  }
 
   const sousEtatsForSelectedEtat = (sousEtatsData || []).filter(
     s => Number(s.id_etat) === Number(filters.id_etat_final)
