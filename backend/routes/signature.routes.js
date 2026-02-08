@@ -14,6 +14,7 @@ router.get('/', authenticate, async (req, res) => {
       date_fin, 
       id_confirmateur, 
       id_fiche,
+      id_etat_final,
       page = 1,
       limit = 50
     } = req.query;
@@ -22,6 +23,12 @@ router.get('/', authenticate, async (req, res) => {
     const etatsSignes = [13, 16, 38, 44, 45]; // SIGNER, SIGNER RETRACTER, SIGNER RETRACTER 2 FOIS, SIGNER PM, SIGNER COMPLET
     let whereConditions = ['f.id IS NOT NULL', `f.id_etat_final IN (${etatsSignes.join(', ')})`];
     let params = [];
+
+    // Filtrer par état final (ex. uniquement Signer / Signer complet = 13 ou 45)
+    if (id_etat_final !== undefined && id_etat_final !== '' && id_etat_final !== null) {
+      whereConditions.push('f.id_etat_final = ?');
+      params.push(id_etat_final);
+    }
 
     // Filtrer par date de planning (date RDV de la fiche)
     if (date_debut) {
@@ -70,10 +77,12 @@ router.get('/', authenticate, async (req, res) => {
         s.ajoute,
         s.date_heure,
         s.tel,
+        f.hash as fiche_hash,
         f.date_rdv_time as date_planning,
         f.nom as fiche_nom,
         f.prenom as fiche_prenom,
         f.tel as fiche_tel,
+        f.id_etat_final as fiche_id_etat_final,
         u.pseudo as confirmateur_pseudo,
         u.nom as confirmateur_nom,
         u.prenom as confirmateur_prenom

@@ -319,29 +319,40 @@ const Dashboard = () => {
     }
   );
 
-  // Récupérer les fiches
+  const isConfirmateurSession = user?.fonction === 6;
+  const todayForSignatures = new Date().toISOString().split('T')[0];
+
+  // Récupérer les signatures (session confirmateur uniquement — données depuis la table signature)
+  const { data: signaturesResponse, isLoading: isLoadingSignatures, isFetching: isFetchingSignatures, error: errorSignatures, refetch: refetchSignatures } = useQuery(
+    ['signatures', user?.id, filters.date_debut, filters.date_fin, filters.id_etat_final, filters.page, filters.limit],
+    async () => {
+      const params = {
+        id_confirmateur: user?.id,
+        date_debut: filters.date_debut || todayForSignatures,
+        date_fin: filters.date_fin || todayForSignatures,
+        page: filters.page || 1,
+        limit: filters.limit === 999999 ? 500 : (filters.limit || 50),
+      };
+      if (filters.id_etat_final != null && filters.id_etat_final !== '') {
+        params.id_etat_final = filters.id_etat_final;
+      }
+      const res = await api.get('/signature', { params });
+      return res.data;
+    },
+    { enabled: !!isConfirmateurSession && !!user?.id, keepPreviousData: true }
+  );
+
+  // Récupérer les fiches (désactivé en session confirmateur, on utilise les signatures)
   const { data, isLoading, isFetching, error, refetch } = useQuery(
     ['fiches', filters, activeTab, debouncedQuickSearch],
     async () => {
       console.time('[PERF] Requête API fiches - Total');
-      console.log('[PERF] Début chargement fiches - Paramètres:', { filters, activeTab, quickSearch });
-      
       const params = getQueryParams();
-      console.log('[PERF] Paramètres de requête générés:', params);
-      
-      const requestStartTime = performance.now();
       const response = await api.get('/fiches', { params });
-      const requestEndTime = performance.now();
-      const requestDuration = requestEndTime - requestStartTime;
-      
-      console.log(`[PERF] Requête API terminée en ${requestDuration.toFixed(2)}ms`);
-      console.log(`[PERF] Nombre de fiches reçues: ${response.data?.data?.length || 0}`);
-      console.log(`[PERF] Pagination:`, response.data?.pagination);
-      
       console.timeEnd('[PERF] Requête API fiches - Total');
       return response.data;
     },
-    { keepPreviousData: true }
+    { keepPreviousData: true, enabled: !isConfirmateurSession }
   );
 
   // Filtrer les utilisateurs par fonction
@@ -362,11 +373,11 @@ const Dashboard = () => {
     const n = normalizeTitre(e.titre);
     return allowedList.some(a => n === a || n.includes(a) || a.includes(n));
   };
-  /** Phase 3 confirmateur : uniquement "Signer" (complet), pas Signer retracter, Retracter 2 fois, Signer PM */
+  /** Phase 3 confirmateur : uniquement l'option "SIGNER" dans le filtre (pas Signer retracter, Signer PM, Signer complet) */
   const isEtatAllowedForConfirmateurPhase3 = (e) => {
     const n = normalizeTitre(e.titre);
-    if (n.includes('retracter') || n.includes('pm') || n.includes('2 fois')) return false;
-    return n === 'signer' || n === 'signer complet';
+    if (n.includes('retracter') || n.includes('pm') || n.includes('2 fois') || n.includes('complet')) return false;
+    return n === 'signer';
   };
 
   let etatsPhase0 = etats.filter(e => String(e.groupe) === '0' || e.groupe === 0);
@@ -447,7 +458,11 @@ const Dashboard = () => {
     
     setFilters(newFilters);
     try {
-      await refetch();
+      if (isConfirmateurSession) {
+        await refetchSignatures();
+      } else {
+        await refetch();
+      }
     } finally {
       setIsSearching(false);
     }
@@ -570,9 +585,32 @@ const Dashboard = () => {
     return '';
   };
 
-  // Déclarer fichesData avant les early returns pour pouvoir l'utiliser dans les hooks
-  const fichesData = data?.data || [];
-  const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
+  // En session confirmateur : afficher les signatures (table signature) ; sinon les fiches
+  const mapSignatureToFiche = (row) => ({
+    hash: row.fiche_hash,
+    nom: row.fiche_nom ?? '',
+    prenom: row.fiche_prenom ?? '',
+    tel: row.fiche_tel || row.tel ?? '',
+    cp: '',
+    date_insert_time: null,
+    date_rdv_time: row.date_planning,
+    id_etat_final: row.fiche_id_etat_final,
+    id_confirmateur: row.confirmateur,
+    id_confirmateur_2: null,
+    id_confirmateur_3: null,
+    id_commercial: null,
+    id_centre: null,
+    produit: null,
+    valider: 1,
+    id_etat_histo: null,
+  });
+
+  const fichesData = isConfirmateurSession && signaturesResponse?.data
+    ? (signaturesResponse.data.map(mapSignatureToFiche))
+    : (data?.data || []);
+  const pagination = isConfirmateurSession && signaturesResponse?.pagination
+    ? signaturesResponse.pagination
+    : (data?.pagination || { total: 0, page: 1, pages: 1 });
   
   // Log performance après chargement des données
   useEffect(() => {
@@ -610,20 +648,25 @@ const Dashboard = () => {
     }
   }, [processedFichesCount, debouncedQuickSearch, sortConfig.key, sortConfig.direction]);
 
-  if (isLoading && !data) {
+  const isLoadingList = isConfirmateurSession ? (isLoadingSignatures && !signaturesResponse) : (isLoading && !data);
+  const errorList = isConfirmateurSession ? errorSignatures : error;
+  const refetchList = isConfirmateurSession ? refetchSignatures : refetch;
+  const isFetchingList = isConfirmateurSession ? (isFetchingSignatures || isSearching) : (isLoading || isFetching || isSearching);
+
+  if (isLoadingList) {
     return (
       <div className="dashboard-loading">
         <div className="spinner"></div>
-        <p>Chargement des fiches...</p>
+        <p>{isConfirmateurSession ? 'Chargement des signatures...' : 'Chargement des fiches...'}</p>
       </div>
     );
   }
 
-  if (error) {
+  if (errorList) {
     return (
       <div className="dashboard-error">
-        <p>Erreur lors du chargement des fiches</p>
-        <button onClick={() => refetch()}>Réessayer</button>
+        <p>{isConfirmateurSession ? 'Erreur lors du chargement des signatures' : 'Erreur lors du chargement des fiches'}</p>
+        <button onClick={() => refetchList()}>Réessayer</button>
       </div>
     );
   }
@@ -1227,7 +1270,7 @@ const Dashboard = () => {
                 ? `Résultats de la recherche ${pagination.total}` 
                 : `${pagination.total}`}
           </h2>
-          {(isLoading || isFetching || isSearching) && (
+          {(isFetchingList) && (
             <div className="search-loading-indicator">
               <div className="spinner-small"></div>
               <span>Recherche en cours...</span>
@@ -1245,13 +1288,13 @@ const Dashboard = () => {
               ))}
             </div>
           </div>
-        ) : !isLoading && !isFetching && !isSearching && fiches.length === 0 ? (
+        ) : !isFetchingList && fiches.length === 0 ? (
           <div className="no-results">
-            <p>Aucune fiche trouvée{debouncedQuickSearch ? ` pour "${debouncedQuickSearch}"` : ''}</p>
+            <p>{isConfirmateurSession ? 'Aucune signature trouvée' : `Aucune fiche trouvée${debouncedQuickSearch ? ` pour "${debouncedQuickSearch}"` : ''}`}</p>
           </div>
         ) : (
           <>
-            <div className={`fiches-table-container ${(isLoading || isFetching || isSearching) ? 'loading' : ''}`}>
+            <div className={`fiches-table-container ${isFetchingList ? 'loading' : ''}`}>
               <table className="fiches-table">
                 <thead>
                   <tr>
