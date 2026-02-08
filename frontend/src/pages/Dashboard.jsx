@@ -273,6 +273,11 @@ const Dashboard = () => {
           delete searchParams[key];
         }
       });
+
+      // Session confirmateur : par défaut ne pas filtrer par état (afficher toutes les fiches modifiées par l'utilisateur)
+      if (user?.fonction === 6 && (searchParams.id_etat_final === 7 || searchParams.id_etat_final === '' || searchParams.id_etat_final == null)) {
+        delete searchParams.id_etat_final;
+      }
       
       return searchParams;
     }
@@ -288,17 +293,19 @@ const Dashboard = () => {
     }
     
     // Par défaut : RDV créés dans la journée (fiches CONFIRMER modifiées aujourd'hui = RDV enregistrés aujourd'hui)
-    // Pour les confirmateurs : idem, fiches modifiées aujourd'hui (assignation gérée côté backend par user)
+    // Pour les confirmateurs : fiches modifiées aujourd'hui par l'utilisateur, tous états (pas de filtre id_etat_final)
     const defaultParams = {
       ...baseParams,
       fiche_search: 1,
-      id_etat_final: 7,
       date_champ: 'date_modif_time',
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: timeStart,
       time_fin: timeEnd,
     };
+    if (user?.fonction !== 6) {
+      defaultParams.id_etat_final = 7;
+    }
     if (filters.id_centre) {
       defaultParams.id_centre = filters.id_centre;
     }
@@ -319,30 +326,7 @@ const Dashboard = () => {
     }
   );
 
-  const isConfirmateurSession = user?.fonction === 6;
-  const todayForSignatures = new Date().toISOString().split('T')[0];
-
-  // Récupérer les signatures (session confirmateur uniquement — données depuis la table signature)
-  const { data: signaturesResponse, isLoading: isLoadingSignatures, isFetching: isFetchingSignatures, error: errorSignatures, refetch: refetchSignatures } = useQuery(
-    ['signatures', user?.id, filters.date_debut, filters.date_fin, filters.id_etat_final, filters.page, filters.limit],
-    async () => {
-      const params = {
-        id_confirmateur: user?.id,
-        date_debut: filters.date_debut || todayForSignatures,
-        date_fin: filters.date_fin || todayForSignatures,
-        page: filters.page || 1,
-        limit: filters.limit === 999999 ? 500 : (filters.limit || 50),
-      };
-      if (filters.id_etat_final != null && filters.id_etat_final !== '') {
-        params.id_etat_final = filters.id_etat_final;
-      }
-      const res = await api.get('/signature', { params });
-      return res.data;
-    },
-    { enabled: !!isConfirmateurSession && !!user?.id, keepPreviousData: true }
-  );
-
-  // Récupérer les fiches (désactivé en session confirmateur, on utilise les signatures)
+  // Récupérer les fiches (tous les rôles, dont confirmateur : par défaut toutes les fiches modifiées par l'utilisateur, tous états)
   const { data, isLoading, isFetching, error, refetch } = useQuery(
     ['fiches', filters, activeTab, debouncedQuickSearch],
     async () => {
@@ -352,7 +336,7 @@ const Dashboard = () => {
       console.timeEnd('[PERF] Requête API fiches - Total');
       return response.data;
     },
-    { keepPreviousData: true, enabled: !isConfirmateurSession }
+    { keepPreviousData: true }
   );
 
   // Filtrer les utilisateurs par fonction
@@ -458,11 +442,7 @@ const Dashboard = () => {
     
     setFilters(newFilters);
     try {
-      if (isConfirmateurSession) {
-        await refetchSignatures();
-      } else {
-        await refetch();
-      }
+      await refetch();
     } finally {
       setIsSearching(false);
     }
@@ -585,32 +565,8 @@ const Dashboard = () => {
     return '';
   };
 
-  // En session confirmateur : afficher les signatures (table signature) ; sinon les fiches
-  const mapSignatureToFiche = (row) => ({
-    hash: row.fiche_hash,
-    nom: row.fiche_nom ?? '',
-    prenom: row.fiche_prenom ?? '',
-    tel: (row.fiche_tel || row.tel) ?? '',
-    cp: '',
-    date_insert_time: null,
-    date_rdv_time: row.date_planning,
-    id_etat_final: row.fiche_id_etat_final,
-    id_confirmateur: row.confirmateur,
-    id_confirmateur_2: null,
-    id_confirmateur_3: null,
-    id_commercial: null,
-    id_centre: null,
-    produit: null,
-    valider: 1,
-    id_etat_histo: null,
-  });
-
-  const fichesData = isConfirmateurSession && signaturesResponse?.data
-    ? (signaturesResponse.data.map(mapSignatureToFiche))
-    : (data?.data || []);
-  const pagination = isConfirmateurSession && signaturesResponse?.pagination
-    ? signaturesResponse.pagination
-    : (data?.pagination || { total: 0, page: 1, pages: 1 });
+  const fichesData = data?.data || [];
+  const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
   
   // Log performance après chargement des données
   useEffect(() => {
@@ -648,16 +604,16 @@ const Dashboard = () => {
     }
   }, [processedFichesCount, debouncedQuickSearch, sortConfig.key, sortConfig.direction]);
 
-  const isLoadingList = isConfirmateurSession ? (isLoadingSignatures && !signaturesResponse) : (isLoading && !data);
-  const errorList = isConfirmateurSession ? errorSignatures : error;
-  const refetchList = isConfirmateurSession ? refetchSignatures : refetch;
-  const isFetchingList = isConfirmateurSession ? (isFetchingSignatures || isSearching) : (isLoading || isFetching || isSearching);
+  const isLoadingList = isLoading && !data;
+  const errorList = error;
+  const refetchList = refetch;
+  const isFetchingList = isLoading || isFetching || isSearching;
 
   if (isLoadingList) {
     return (
       <div className="dashboard-loading">
         <div className="spinner"></div>
-        <p>{isConfirmateurSession ? 'Chargement des signatures...' : 'Chargement des fiches...'}</p>
+        <p>Chargement des fiches...</p>
       </div>
     );
   }
@@ -665,7 +621,7 @@ const Dashboard = () => {
   if (errorList) {
     return (
       <div className="dashboard-error">
-        <p>{isConfirmateurSession ? 'Erreur lors du chargement des signatures' : 'Erreur lors du chargement des fiches'}</p>
+        <p>Erreur lors du chargement des fiches</p>
         <button onClick={() => refetchList()}>Réessayer</button>
       </div>
     );
@@ -1000,7 +956,9 @@ const Dashboard = () => {
                       )}
                       {etatsPhase3.length > 0 && (
                         <optgroup label="PHASE 3">
-                          <option value="t_s" style={{ backgroundColor: '#FF3380' }}>TOUT SIGNER</option>
+                          {user?.fonction !== 6 && (
+                            <option value="t_s" style={{ backgroundColor: '#FF3380' }}>TOUT SIGNER</option>
+                          )}
                           {etatsPhase3.map(etat => (
                             <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
                               {etat.titre}
@@ -1290,7 +1248,7 @@ const Dashboard = () => {
           </div>
         ) : !isFetchingList && fiches.length === 0 ? (
           <div className="no-results">
-            <p>{isConfirmateurSession ? 'Aucune signature trouvée' : `Aucune fiche trouvée${debouncedQuickSearch ? ` pour "${debouncedQuickSearch}"` : ''}`}</p>
+            <p>Aucune fiche trouvée{debouncedQuickSearch ? ` pour "${debouncedQuickSearch}"` : ''}</p>
           </div>
         ) : (
           <>
@@ -1720,7 +1678,9 @@ const Dashboard = () => {
                       )}
                       {etatsPhase3.length > 0 && (
                         <optgroup label="PHASE 3">
-                          <option value="t_s" style={{ backgroundColor: '#FF3380' }}>TOUT SIGNER</option>
+                          {user?.fonction !== 6 && (
+                            <option value="t_s" style={{ backgroundColor: '#FF3380' }}>TOUT SIGNER</option>
+                          )}
                           {etatsPhase3.map(etat => (
                             <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
                               {etat.titre}
