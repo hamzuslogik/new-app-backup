@@ -590,7 +590,7 @@ const Dashboard = () => {
     hash: row.fiche_hash,
     nom: row.fiche_nom ?? '',
     prenom: row.fiche_prenom ?? '',
-    tel: row.fiche_tel || row.tel ?? '',
+    tel: (row.fiche_tel || row.tel) ?? '',
     cp: '',
     date_insert_time: null,
     date_rdv_time: row.date_planning,
