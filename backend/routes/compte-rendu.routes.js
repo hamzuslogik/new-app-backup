@@ -972,6 +972,20 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       [user.id, commentaire_admin || null, now, id]
     );
 
+    // Porte ouverte : si le compte rendu contient l'un des états qualif (HHC TECHNIQUE, REFUSER, HONORE A SUIVRE, SIGNER), enregistrer dans porte_ouverte
+    const etatsPorteOuverte = [9, 12, 13, 16, 35, 38, 44, 45]; // CLIENT HONORE A SUIVRE, REFUSER, SIGNER, SIGNER RETRACTER, HHC TECHNIQUE, SIGNER RETRACTER 2 FOIS, SIGNER PM, SIGNER COMPLET
+    if (nouveauEtat && etatsPorteOuverte.includes(nouveauEtat)) {
+      try {
+        await query(
+          `INSERT INTO porte_ouverte (id_fiche, id_compte_rendu_pending, id_etat_final, id_commercial, id_approbateur, date_approbation, date_creation)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [compteRendu.id_fiche, id, nouveauEtat, compteRendu.id_commercial || null, user.id, now, now]
+        );
+      } catch (errPorteOuverte) {
+        console.error('Insertion porte_ouverte (table peut être absente):', errPorteOuverte.message);
+      }
+    }
+
     res.json({
       success: true,
       message: 'Compte rendu approuvé et modifications appliquées avec succès'
