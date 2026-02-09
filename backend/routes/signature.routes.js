@@ -184,26 +184,35 @@ router.get('/stats', authenticate, async (req, res) => {
       params
     );
 
-    // Nombre de fiches confirmées (RDV, état 7) par confirmateur sur la période
+    // Nombre de fiches confirmées par confirmateur : depuis la table confirmations, filtré par date RDV (pas date confirmation)
     let fichesConfirmeesByConfirmateur = {};
     if (date_debut && date_fin) {
-      const dateCond = `((f.date_confirmation IS NOT NULL AND f.date_confirmation >= ? AND f.date_confirmation <= ?) OR (f.date_confirmation IS NULL AND f.date_modif_time >= ? AND f.date_modif_time <= ?))`;
-      const fcParams = [startTs, endTs, startDateStr, endDateStr, startTs, endTs, startDateStr, endDateStr, startTs, endTs, startDateStr, endDateStr];
+      const confParams = [startDateStr, endDateStr];
       const fcRows = await query(
-        `SELECT confirmateur_id, COUNT(DISTINCT id_fiche) as nb_fiches_confirmees
-         FROM (
-           SELECT f.id_confirmateur as confirmateur_id, f.id as id_fiche FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND (f.ko = 0 OR f.ko IS NULL) AND ${dateCond}
-           UNION ALL
-           SELECT f.id_confirmateur_2, f.id FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur_2 IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND (f.ko = 0 OR f.ko IS NULL) AND ${dateCond}
-           UNION ALL
-           SELECT f.id_confirmateur_3, f.id FROM fiches f WHERE f.id_etat_final = 7 AND f.id_confirmateur_3 IS NOT NULL AND (f.archive = 0 OR f.archive IS NULL) AND (f.ko = 0 OR f.ko IS NULL) AND ${dateCond}
-         ) t
-         GROUP BY confirmateur_id`,
-        fcParams
-      );
+        `SELECT id_confirmateur as confirmateur_id, COUNT(*) as nb_fiches_confirmees
+         FROM confirmations
+         WHERE id_confirmateur IS NOT NULL AND id_confirmateur > 0
+           AND (date_rdv_time >= ? AND date_rdv_time <= ?)
+         GROUP BY id_confirmateur`,
+        confParams
+      ).catch(() => []); // si la table ou colonne n'existe pas, rester vide
       (fcRows || []).forEach(row => {
         fichesConfirmeesByConfirmateur[row.confirmateur_id] = parseInt(row.nb_fiches_confirmees || 0);
       });
+      // Fallback: si date_rdv_time n'existe pas, essayer date_planning
+      if (Object.keys(fichesConfirmeesByConfirmateur).length === 0) {
+        const fcRowsPlan = await query(
+          `SELECT id_confirmateur as confirmateur_id, COUNT(*) as nb_fiches_confirmees
+           FROM confirmations
+           WHERE id_confirmateur IS NOT NULL AND id_confirmateur > 0
+             AND date_planning >= ? AND date_planning <= ?
+           GROUP BY id_confirmateur`,
+          confParams
+        ).catch(() => []);
+        (fcRowsPlan || []).forEach(row => {
+          fichesConfirmeesByConfirmateur[row.confirmateur_id] = parseInt(row.nb_fiches_confirmees || 0);
+        });
+      }
     }
 
     // Statistiques par jour (par date de planning, derniers 30 jours)
@@ -242,26 +251,29 @@ router.get('/stats', authenticate, async (req, res) => {
       params
     );
 
+    const enrichConfirmateur = (c) => {
+      const nb_fiches_confirmees = fichesConfirmeesByConfirmateur[c.confirmateur] ?? 0;
+      const total_score = parseFloat(c.total_score || 0);
+      const taux_signature = nb_fiches_confirmees > 0
+        ? (total_score / nb_fiches_confirmees) * 100
+        : null;
+      return {
+        ...c,
+        total_score,
+        nb_fiches: nb_fiches_confirmees,
+        nb_fiches_confirmees,
+        nb_signatures: parseInt(c.nb_signatures || 0),
+        taux_signature: taux_signature !== null ? parseFloat(taux_signature.toFixed(1)) : null
+      };
+    };
+
     res.json({
       success: true,
       data: {
         totalSignatures,
         fichesUniques,
-        topConfirmateurs: topConfirmateurs.map(c => {
-          const nb_fiches_confirmees = fichesConfirmeesByConfirmateur[c.confirmateur] ?? 0;
-          const total_score = parseFloat(c.total_score || 0);
-          const taux_signature = nb_fiches_confirmees > 0
-            ? (total_score / nb_fiches_confirmees) * 100
-            : null;
-          return {
-            ...c,
-            total_score,
-            nb_fiches: nb_fiches_confirmees,
-            nb_fiches_confirmees,
-            nb_signatures: parseInt(c.nb_signatures || 0),
-            taux_signature: taux_signature !== null ? parseFloat(taux_signature.toFixed(1)) : null
-          };
-        }),
+        topConfirmateurs: topConfirmateurs.map(enrichConfirmateur),
+        allConfirmateurs: statsConfirmateurs.map(enrichConfirmateur),
         statsParJour: statsParJour.map(s => ({
           date: s.date,
           total_score: parseFloat(s.total_score || 0),

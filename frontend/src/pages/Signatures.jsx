@@ -258,10 +258,10 @@ const Signatures = () => {
             </div>
           </div>
 
-          {/* Top 10 Confirmateurs */}
-          {statsData.topConfirmateurs && statsData.topConfirmateurs.length > 0 && (
+          {/* Tous les confirmateurs (confirmés = table confirmations, par date RDV) */}
+          {statsData.allConfirmateurs && statsData.allConfirmateurs.length > 0 && (
             <div className="top-10-section">
-              <h3>Top 10 Confirmateurs</h3>
+              <h3>Tous les confirmateurs</h3>
               <div className="table-container">
                 <table className="stats-table">
                   <thead>
@@ -275,12 +275,12 @@ const Signatures = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {statsData.topConfirmateurs.map((conf, index) => (
+                    {statsData.allConfirmateurs.map((conf, index) => (
                       <tr key={conf.confirmateur}>
                         <td>{index + 1}</td>
                         <td>{conf.confirmateur_pseudo || 'Inconnu'}</td>
                         <td>{formatNumber(conf.total_score)}</td>
-                        <td>{conf.nb_fiches ?? 0}</td>
+                        <td>{conf.nb_fiches_confirmees ?? conf.nb_fiches ?? 0}</td>
                         <td>{conf.nb_signatures || 0}</td>
                         <td>{conf.taux_signature != null ? `${conf.taux_signature.toFixed(1)}%` : '-'}</td>
                       </tr>
