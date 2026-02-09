@@ -4426,12 +4426,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
               );
             }
 
-            // Enregistrer dans modifica
-            await query(
-              `INSERT INTO modifica (id_fiche, id_user, champ, ancien_valeur, nouvelle_valeur, date_modif_time)
-               VALUES (?, ?, ?, ?, ?, ?)`,
-              [id, req.user.id, 'Compte rendu', fiche.id_etat_final || '', etatFiche || '', now]
-            );
+            // Enregistrer dans modifica (structure détectée dynamiquement : type/champ, ancien_valeur/nouvelle_valeur ou last_val/val)
+            await logModification(id, req.user.id, req.user.pseudo || '', 'Compte rendu', fiche.id_etat_final || '', etatFiche || '');
           }
         }
       } catch (error) {
