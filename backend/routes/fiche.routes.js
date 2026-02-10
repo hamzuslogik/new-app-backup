@@ -739,8 +739,8 @@ router.get('/', authenticate, async (req, res) => {
     // Filtres de date avec validation du champ de date
     if (date_champ) {
       // Valider que date_champ est une colonne de date autorisée (sécurité)
-      // fiches_histo_confirmation = filtre par date_creation dans fiches_histo (id_etat=7) pour "confirmations créées dans la journée"
-      const allowedDateColumns = ['date_insert_time', 'date_modif_time', 'date_rdv_time', 'date_appel_time', 'date_confirmation', 'date_qualif', 'date_sign_time', 'fiches_histo_confirmation'];
+      // confirmations = filtre par date_creation dans table confirmations pour "confirmations créées dans la journée"
+      const allowedDateColumns = ['date_insert_time', 'date_modif_time', 'date_rdv_time', 'date_appel_time', 'date_confirmation', 'date_qualif', 'date_sign_time', 'fiches_histo_confirmation', 'confirmations'];
       if (!allowedDateColumns.includes(date_champ)) {
         return res.status(400).json({
           success: false,
@@ -757,15 +757,15 @@ router.get('/', authenticate, async (req, res) => {
         const timeStart = time_debut && String(time_debut).trim() !== '' ? time_debut : '00:00:00';
         const timeEnd = time_fin && String(time_fin).trim() !== '' ? time_fin : '23:59:59';
         
-        // Filtre "confirmations créées dans la journée" : fiches ayant au moins une ligne fiches_histo id_etat=7 avec date_creation dans la plage
-        if (date_champ === 'fiches_histo_confirmation') {
+        // Filtre "confirmations créées dans la journée" : fiches ayant au moins une ligne dans table confirmations avec date_creation dans la plage
+        if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           whereConditions.push(`fiche.id_etat_final = 7`);
           whereConditions.push(`EXISTS (
-            SELECT 1 FROM fiches_histo h
-            WHERE h.id_fiche = fiche.id AND h.id_etat = 7
-            AND h.date_creation >= ? AND h.date_creation <= ?
+            SELECT 1 FROM confirmations c
+            WHERE c.id_fiche = fiche.id
+            AND c.date_creation >= ? AND c.date_creation <= ?
           )`);
           params.push(startDatetime, endDatetime);
         } else if (date_champ === 'date_confirmation') {

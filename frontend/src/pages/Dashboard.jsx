@@ -91,7 +91,7 @@ const Dashboard = () => {
       limit: 999999,
       fiche_search: true,
       id_etat_final: 7,
-      date_champ: 'fiches_histo_confirmation',
+      date_champ: 'confirmations',
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: '00:00:00',
@@ -292,12 +292,12 @@ const Dashboard = () => {
       baseParams.include_archive = 1;
     }
     
-    // Par défaut : fiches confirmées créées dans la journée (qualification CONFIRMER créée aujourd'hui, depuis fiches_histo)
+    // Par défaut : fiches confirmées créées dans la journée (depuis table confirmations)
     // Pour les confirmateurs : fiches modifiées aujourd'hui par l'utilisateur, tous états (pas de filtre id_etat_final)
     const defaultParams = {
       ...baseParams,
       fiche_search: 1,
-      date_champ: 'fiches_histo_confirmation',
+      date_champ: 'confirmations',
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: timeStart,
@@ -794,7 +794,7 @@ const Dashboard = () => {
         const todayStr = `${year}-${month}-${day}`;
         
         // URL pour "confirmer de la journée" (fiches dont la qualification CONFIRMER a été créée aujourd'hui, depuis fiches_histo)
-        const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=fiches_histo_confirmation&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
+        const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=confirmations&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
         
         const isConfirmateur = user?.fonction === 6;
         return (
