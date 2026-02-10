@@ -198,9 +198,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const [compteRenduOption, setCompteRenduOption] = useState('');
   const [editingCompteRendu, setEditingCompteRendu] = useState(null);
 
-  // État pour l'onglet Affectation (commercial principal et commercial 2)
+  // État pour l'onglet Affectation (un seul commercial)
   const [affectationCommercial, setAffectationCommercial] = useState('');
-  const [affectationCommercial2, setAffectationCommercial2] = useState('');
   const [affectationSaving, setAffectationSaving] = useState(false);
   
   // États pour le formulaire de validation
@@ -371,9 +370,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   useEffect(() => {
     if (ficheData) {
       setAffectationCommercial(ficheData.id_commercial != null ? String(ficheData.id_commercial) : '');
-      setAffectationCommercial2(ficheData.id_commercial_2 != null ? String(ficheData.id_commercial_2) : '');
     }
-  }, [ficheData?.id, ficheData?.id_commercial, ficheData?.id_commercial_2]);
+  }, [ficheData?.id, ficheData?.id_commercial]);
 
   // Récupérer les décalages existants pour cette fiche
   const { data: decalagesData } = useQuery(
@@ -5298,30 +5296,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         <div className="fiche-section affectation-tab" style={{ padding: '20px' }}>
           <h2 className="section-title"><FaUserPlus /> Affectation commerciale</h2>
           <p style={{ color: '#666', marginBottom: '20px' }}>
-            Affectez cette fiche à un commercial (principal) et optionnellement à un second commercial.
+            Affectez cette fiche à un commercial.
           </p>
           <div className="form-row" style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '400px' }}>
             <div className="form-group">
-              <label htmlFor="affectation-commercial">Commercial principal</label>
+              <label htmlFor="affectation-commercial">Commercial</label>
               <select
                 id="affectation-commercial"
                 className="form-control"
                 value={affectationCommercial}
                 onChange={(e) => setAffectationCommercial(e.target.value)}
-              >
-                <option value="">— Aucun —</option>
-                {(commerciaux || []).filter(c => c.etat > 0 || c.etat == null).map(c => (
-                  <option key={c.id} value={String(c.id)}>{c.pseudo || `${c.prenom || ''} ${c.nom || ''}`.trim() || c.id}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="affectation-commercial-2">Commercial 2 (optionnel)</label>
-              <select
-                id="affectation-commercial-2"
-                className="form-control"
-                value={affectationCommercial2}
-                onChange={(e) => setAffectationCommercial2(e.target.value)}
               >
                 <option value="">— Aucun —</option>
                 {(commerciaux || []).filter(c => c.etat > 0 || c.etat == null).map(c => (
@@ -5339,7 +5323,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   setAffectationSaving(true);
                   try {
                     await updateFieldMutation.mutateAsync({ field: 'id_commercial', value: affectationCommercial || null });
-                    await updateFieldMutation.mutateAsync({ field: 'id_commercial_2', value: affectationCommercial2 || null });
+                    await updateFieldMutation.mutateAsync({ field: 'id_commercial_2', value: null });
                   } finally {
                     setAffectationSaving(false);
                   }
