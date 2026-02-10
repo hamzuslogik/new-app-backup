@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { FaEdit, FaCheck, FaTimes, FaCalendar, FaUser, FaPhone, FaMapMarkerAlt, FaHome, FaBriefcase, FaFileAlt, FaHistory, FaArrowLeft, FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaSms, FaListAlt, FaInfoCircle, FaFilePdf } from 'react-icons/fa';
+import { FaEdit, FaCheck, FaTimes, FaCalendar, FaUser, FaUserPlus, FaPhone, FaMapMarkerAlt, FaHome, FaBriefcase, FaFileAlt, FaHistory, FaArrowLeft, FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaSms, FaListAlt, FaInfoCircle, FaFilePdf } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -197,6 +197,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // État pour le compte rendu commercial
   const [compteRenduOption, setCompteRenduOption] = useState('');
   const [editingCompteRendu, setEditingCompteRendu] = useState(null);
+
+  // État pour l'onglet Affectation (commercial principal et commercial 2)
+  const [affectationCommercial, setAffectationCommercial] = useState('');
+  const [affectationCommercial2, setAffectationCommercial2] = useState('');
+  const [affectationSaving, setAffectationSaving] = useState(false);
   
   // États pour le formulaire de validation
   const [confRdvAvecValue, setConfRdvAvecValue] = useState('');
@@ -348,6 +353,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   
   // Vérifier si l'utilisateur est un commercial (fonction 5)
   const isCommercial = userFonction === 5;
+
+  // Onglet Affectation : visible par administrateur (1), backoffice (11), RE confirmation (14), RP confirmation (13)
+  const showAffectationTab = [1, 11, 13, 14].includes(Number(user?.fonction));
   
   // Vérifier si c'est un R2 (deuxième commercial assigné)
   const isR2 = isCommercial && ficheData && Number(ficheData.id_commercial_2) === Number(user?.id);
@@ -358,6 +366,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       setActiveTab('fiches');
     }
   }, [isCommercial, activeTab, ficheData]);
+
+  // Synchroniser l'état d'affectation avec la fiche (pour l'onglet Affectation)
+  useEffect(() => {
+    if (ficheData) {
+      setAffectationCommercial(ficheData.id_commercial != null ? String(ficheData.id_commercial) : '');
+      setAffectationCommercial2(ficheData.id_commercial_2 != null ? String(ficheData.id_commercial_2) : '');
+    }
+  }, [ficheData?.id, ficheData?.id_commercial, ficheData?.id_commercial_2]);
 
   // Récupérer les décalages existants pour cette fiche
   const { data: decalagesData } = useQuery(
@@ -2242,6 +2258,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             onClick={() => setActiveTab('modifica')}
           >
             <FaListAlt /> Modifica
+          </button>
+        )}
+        {/* Onglet Affectation : visible par administrateur, backoffice, RE confirmation, RP confirmation */}
+        {showAffectationTab && (
+          <button
+            className={`fiche-tab ${activeTab === 'affectation' ? 'active' : ''}`}
+            onClick={() => setActiveTab('affectation')}
+          >
+            <FaUserPlus /> Affectation
           </button>
         )}
         {/* Masquer les onglets Planning et SMS pour les utilisateurs qualité qualification (fonction 2, 8, 12) et commerciaux */}
@@ -5266,6 +5291,65 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       {/* Onglet Modifica */}
       {activeTab === 'modifica' && (
         <ModificaTab ficheHash={hash} />
+      )}
+
+      {/* Onglet Affectation - Affecter la fiche à un ou deux commerciaux */}
+      {activeTab === 'affectation' && showAffectationTab && (
+        <div className="fiche-section affectation-tab" style={{ padding: '20px' }}>
+          <h2 className="section-title"><FaUserPlus /> Affectation commerciale</h2>
+          <p style={{ color: '#666', marginBottom: '20px' }}>
+            Affectez cette fiche à un commercial (principal) et optionnellement à un second commercial.
+          </p>
+          <div className="form-row" style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '400px' }}>
+            <div className="form-group">
+              <label htmlFor="affectation-commercial">Commercial principal</label>
+              <select
+                id="affectation-commercial"
+                className="form-control"
+                value={affectationCommercial}
+                onChange={(e) => setAffectationCommercial(e.target.value)}
+              >
+                <option value="">— Aucun —</option>
+                {(commerciaux || []).filter(c => c.etat > 0 || c.etat == null).map(c => (
+                  <option key={c.id} value={String(c.id)}>{c.pseudo || `${c.prenom || ''} ${c.nom || ''}`.trim() || c.id}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="affectation-commercial-2">Commercial 2 (optionnel)</label>
+              <select
+                id="affectation-commercial-2"
+                className="form-control"
+                value={affectationCommercial2}
+                onChange={(e) => setAffectationCommercial2(e.target.value)}
+              >
+                <option value="">— Aucun —</option>
+                {(commerciaux || []).filter(c => c.etat > 0 || c.etat == null).map(c => (
+                  <option key={c.id} value={String(c.id)}>{c.pseudo || `${c.prenom || ''} ${c.nom || ''}`.trim() || c.id}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-actions">
+              <button
+                type="button"
+                className="btn-save"
+                disabled={affectationSaving}
+                onClick={async () => {
+                  if (!hash) return;
+                  setAffectationSaving(true);
+                  try {
+                    await updateFieldMutation.mutateAsync({ field: 'id_commercial', value: affectationCommercial || null });
+                    await updateFieldMutation.mutateAsync({ field: 'id_commercial_2', value: affectationCommercial2 || null });
+                  } finally {
+                    setAffectationSaving(false);
+                  }
+                }}
+              >
+                {affectationSaving ? 'Enregistrement...' : 'Enregistrer l\'affectation'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Onglet Planning - Masqué pour qualité qualification */}
