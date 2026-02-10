@@ -586,22 +586,15 @@ router.get('/dashboard', authenticate, async (req, res) => {
     const todayStart = `${todayStr} 00:00:00`;
     const todayEnd = `${todayStr} 23:59:59`;
 
-    // 1. Nombre de RDV aujourd'hui confirmés (état CONFIRMER = 7) 
-    // Uniquement si l'état a changé vers 7 aujourd'hui (vérifier dans fiches_histo)
-    // ET si date_confirmation est aujourd'hui OU date_modif_time est aujourd'hui
+    // 1. Nombre de fiches confirmées créées dans la journée (qualification CONFIRMER créée aujourd'hui)
+    // Comptage depuis fiches_histo : une ligne id_etat=7 avec date_creation = aujourd'hui = une confirmation créée dans la journée
     const rdvTodayConfirmed = await queryOne(`
-      SELECT COUNT(DISTINCT f.id) as count
-      FROM fiches f
-      INNER JOIN fiches_histo h ON f.id = h.id_fiche
-      WHERE f.id_etat_final = 7
-      AND h.id_etat = 7
+      SELECT COUNT(DISTINCT h.id_fiche) as count
+      FROM fiches_histo h
+      INNER JOIN fiches f ON f.id = h.id_fiche AND (f.archive = 0 OR f.archive IS NULL)
+      WHERE h.id_etat = 7
       AND DATE(h.date_creation) = ?
-      AND (
-        (f.date_confirmation IS NOT NULL AND DATE(FROM_UNIXTIME(f.date_confirmation)) = ?)
-        OR (f.date_confirmation IS NULL AND DATE(f.date_modif_time) = ?)
-      )
-      AND (f.archive = 0 OR f.archive IS NULL)
-    `, [todayStr, todayStr, todayStr]);
+    `, [todayStr]);
 
     // 2. Nombre de signatures enregistrées aujourd'hui (table signature)
     const signaturesToday = await queryOne(`
@@ -620,8 +613,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
     `, [todayStr]);
 
     // 4. Liste des confirmateurs actifs avec le nombre de RDV aujourd'hui et à venir
-    // On compte les RDV où le confirmateur est impliqué (id_confirmateur, id_confirmateur_2, ou id_confirmateur_3)
-    // Afficher tous les confirmateurs actifs (utilisateur, fonction et centre actifs), même ceux avec 0 RDV
+    // rdv_today : depuis fiches_histo (qualification confirmer créée aujourd'hui), confirmateur = h.id_confirmateur ou fiche
     const confirmateursWithRdv = await query(`
       SELECT 
         u.id,
@@ -629,22 +621,17 @@ router.get('/dashboard', authenticate, async (req, res) => {
         u.photo,
         u.genre,
         COALESCE((
-          SELECT COUNT(DISTINCT f.id)
-          FROM fiches f
-          INNER JOIN fiches_histo h ON f.id = h.id_fiche
-          WHERE (
-            f.id_confirmateur = u.id 
-            OR f.id_confirmateur_2 = u.id 
-            OR f.id_confirmateur_3 = u.id
-          )
-          AND f.id_etat_final = 7
-          AND h.id_etat = 7
-          AND DATE(h.date_creation) = ?
+          SELECT COUNT(DISTINCT h2.id_fiche)
+          FROM fiches_histo h2
+          INNER JOIN fiches f2 ON f2.id = h2.id_fiche AND (f2.archive = 0 OR f2.archive IS NULL)
+          WHERE h2.id_etat = 7
+          AND DATE(h2.date_creation) = ?
           AND (
-            (f.date_confirmation IS NOT NULL AND DATE(FROM_UNIXTIME(f.date_confirmation)) = ?)
-            OR (f.date_confirmation IS NULL AND DATE(f.date_modif_time) = ?)
+            h2.id_confirmateur = u.id
+            OR f2.id_confirmateur = u.id
+            OR f2.id_confirmateur_2 = u.id
+            OR f2.id_confirmateur_3 = u.id
           )
-          AND (f.archive = 0 OR f.archive IS NULL)
         ), 0) as rdv_today,
         COALESCE((
           SELECT COUNT(DISTINCT f.id)
@@ -666,7 +653,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
       AND (f.etat > 0 OR f.etat IS NULL)
       AND (c.etat > 0 OR c.etat IS NULL)
       ORDER BY rdv_today DESC, rdv_upcoming DESC, u.pseudo ASC
-    `, [todayStr, todayStr, todayStr, todayStr]);
+    `, [todayStr, todayStr]);
 
     res.json({
       success: true,

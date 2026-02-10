@@ -79,7 +79,7 @@ const Dashboard = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  // Par défaut : RDV créés dans la journée (fiches CONFIRMER modifiées aujourd'hui)
+  // Par défaut : fiches confirmées créées dans la journée (qualification CONFIRMER créée aujourd'hui, depuis fiches_histo)
   const getDefaultDateStr = () => {
     const t = new Date();
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
@@ -91,7 +91,7 @@ const Dashboard = () => {
       limit: 999999,
       fiche_search: true,
       id_etat_final: 7,
-      date_champ: 'date_modif_time',
+      date_champ: 'fiches_histo_confirmation',
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: '00:00:00',
@@ -292,12 +292,12 @@ const Dashboard = () => {
       baseParams.include_archive = 1;
     }
     
-    // Par défaut : RDV créés dans la journée (fiches CONFIRMER modifiées aujourd'hui = RDV enregistrés aujourd'hui)
+    // Par défaut : fiches confirmées créées dans la journée (qualification CONFIRMER créée aujourd'hui, depuis fiches_histo)
     // Pour les confirmateurs : fiches modifiées aujourd'hui par l'utilisateur, tous états (pas de filtre id_etat_final)
     const defaultParams = {
       ...baseParams,
       fiche_search: 1,
-      date_champ: 'date_modif_time',
+      date_champ: 'fiches_histo_confirmation',
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: timeStart,
@@ -788,8 +788,8 @@ const Dashboard = () => {
         const day = String(today.getDate()).padStart(2, '0');
         const todayStr = `${year}-${month}-${day}`;
         
-        // URL pour "confirmer de la journée"
-        const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_confirmation&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
+        // URL pour "confirmer de la journée" (fiches dont la qualification CONFIRMER a été créée aujourd'hui, depuis fiches_histo)
+        const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=fiches_histo_confirmation&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
         
         const isConfirmateur = user?.fonction === 6;
         return (
