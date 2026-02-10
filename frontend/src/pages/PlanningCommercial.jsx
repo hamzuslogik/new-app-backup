@@ -11,6 +11,12 @@ import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import './PlanningCommercial.css';
 
+// Date du jour en YYYY-MM-DD (heure locale) pour éviter le décalage UTC sur "RDV aujourd'hui"
+const getLocalDateStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const PlanningCommercial = () => {
   const { user, hasPermission } = useAuth();
   const queryClient = useQueryClient();
@@ -21,14 +27,22 @@ const PlanningCommercial = () => {
     limit: 100,
     fiche_search: false,
     date_champ: 'date_rdv_time',
-    date_debut: new Date().toISOString().split('T')[0], // Aujourd'hui par défaut
-    date_fin: new Date().toISOString().split('T')[0],
+    date_debut: getLocalDateStr(),
+    date_fin: getLocalDateStr(),
     time_debut: '00:00:00',
     time_fin: '23:59:59',
     id_etat_final: user?.fonction === 5 ? '7' : '' // Pour commerciaux : pré-sélectionner CONFIRMER (7)
   });
 
-  // Fonctions pour calculer les dates
+  // Formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC qui fausse "RDV aujourd'hui")
+  const toLocalDateString = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  // Fonctions pour calculer les dates (toujours en date locale pour cohérence avec "RDV aujourd'hui")
   const getDateRange = (period) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -37,7 +51,7 @@ const PlanningCommercial = () => {
       case 'yesterday': {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-        const dateStr = yesterday.toISOString().split('T')[0];
+        const dateStr = toLocalDateString(yesterday);
         return {
           date_debut: dateStr,
           date_fin: dateStr,
@@ -46,7 +60,7 @@ const PlanningCommercial = () => {
         };
       }
       case 'today': {
-        const dateStr = today.toISOString().split('T')[0];
+        const dateStr = toLocalDateString(today);
         return {
           date_debut: dateStr,
           date_fin: dateStr,
@@ -57,7 +71,7 @@ const PlanningCommercial = () => {
       case 'tomorrow': {
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const dateStr = tomorrow.toISOString().split('T')[0];
+        const dateStr = toLocalDateString(tomorrow);
         return {
           date_debut: dateStr,
           date_fin: dateStr,
@@ -75,8 +89,8 @@ const PlanningCommercial = () => {
         sunday.setDate(monday.getDate() + 6);
         
         return {
-          date_debut: monday.toISOString().split('T')[0],
-          date_fin: sunday.toISOString().split('T')[0],
+          date_debut: toLocalDateString(monday),
+          date_fin: toLocalDateString(sunday),
           time_debut: '00:00:00',
           time_fin: '23:59:59'
         };
@@ -97,16 +111,16 @@ const PlanningCommercial = () => {
         nextSunday.setDate(nextMonday.getDate() + 6);
         
         return {
-          date_debut: nextMonday.toISOString().split('T')[0],
-          date_fin: nextSunday.toISOString().split('T')[0],
+          date_debut: toLocalDateString(nextMonday),
+          date_fin: toLocalDateString(nextSunday),
           time_debut: '00:00:00',
           time_fin: '23:59:59'
         };
       }
       default:
         return {
-          date_debut: today.toISOString().split('T')[0],
-          date_fin: today.toISOString().split('T')[0],
+          date_debut: toLocalDateString(today),
+          date_fin: toLocalDateString(today),
           time_debut: '00:00:00',
           time_fin: '23:59:59'
         };
@@ -247,7 +261,7 @@ const PlanningCommercial = () => {
   };
 
   const handleReset = () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateStr();
     setActiveTab('today'); // Réinitialiser à l'onglet "Aujourd'hui"
     setFilters({
       page: 1,
