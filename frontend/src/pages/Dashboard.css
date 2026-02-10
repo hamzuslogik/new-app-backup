@@ -511,6 +511,34 @@ body.dashboard-page {
   font-weight: 500;
 }
 
+.stat-card-skeleton .stat-card-icon {
+  background: #e9ecef;
+}
+
+.stat-card-skeleton-pulse {
+  background: linear-gradient(90deg, #e9ecef 25%, #f8f9fa 50%, #e9ecef 75%);
+  background-size: 200% 100%;
+  animation: stat-card-skeleton-pulse 1.2s ease-in-out infinite;
+  border-radius: 4px;
+  min-height: 1em;
+}
+
+.stat-card-skeleton .stat-card-value.stat-card-skeleton-pulse {
+  width: 48px;
+  height: 28px;
+  margin-bottom: 4px;
+}
+
+.stat-card-skeleton .stat-card-label.stat-card-skeleton-pulse {
+  width: 120px;
+  height: 14px;
+}
+
+@keyframes stat-card-skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Bouton pour afficher/masquer le tableau des confirmateurs */
 .confirmateurs-table-toggle {
   margin-top: 24px;

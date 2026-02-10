@@ -609,15 +609,6 @@ const Dashboard = () => {
   const refetchList = refetch;
   const isFetchingList = isLoading || isFetching || isSearching;
 
-  if (isLoadingList) {
-    return (
-      <div className="dashboard-loading">
-        <div className="spinner"></div>
-        <p>Chargement des fiches...</p>
-      </div>
-    );
-  }
-
   if (errorList) {
     return (
       <div className="dashboard-error">
@@ -780,8 +771,22 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Section des statistiques RDV */}
-      {!isLoadingStats && dashboardStats && (() => {
+      {/* Section des statistiques RDV - visible immédiatement */}
+      {isLoadingStats ? (
+        <div className="dashboard-stats-section">
+          <div className="stats-cards">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="stat-card stat-card-skeleton">
+                <div className="stat-card-icon"></div>
+                <div className="stat-card-content">
+                  <div className="stat-card-value stat-card-skeleton-pulse"></div>
+                  <div className="stat-card-label stat-card-skeleton-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : dashboardStats && (() => {
         const today = new Date();
         const year = today.getFullYear();
         const month = String(today.getMonth() + 1).padStart(2, '0');
