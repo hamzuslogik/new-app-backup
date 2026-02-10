@@ -1398,6 +1398,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         return;
       }
 
+      const isCommercialPorteImprevuNrp =
+        Number(user?.fonction) === 5 && compteRenduOption === 'porte_imprevu_nrp' && Number(selectedEtat) === 8;
+
       // Si on modifie un compte rendu existant
       if (editingCompteRendu) {
         const crToEdit = ficheData?.comptes_rendus?.find(cr => cr.id === editingCompteRendu);
@@ -1410,9 +1413,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         const modifications = {};
         const updateData = {
           id_etat_final: selectedEtat,
-          commentaire: etatFormData.conf_commentaire_produit || '',
-          id_sous_etat: etatFormData.id_sous_etat ? parseInt(etatFormData.id_sous_etat) : null
+          commentaire: etatFormData.conf_commentaire_produit || ''
         };
+        // Pour "Porte / Imprévu / NRP" (état 8), le commercial ne modifie que le commentaire.
+        if (!isCommercialPorteImprevuNrp) {
+          updateData.id_sous_etat = etatFormData.id_sous_etat ? parseInt(etatFormData.id_sous_etat) : null;
+        }
 
         // Pour SIGNER, ajouter les champs Phase 3
         if ([13, 44, 45].includes(selectedEtat)) {
@@ -1454,7 +1460,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           updateData.nbr_annee_finance = etatFormData.nbr_annee_finance || null;
           updateData.credit_immobilier = etatFormData.credit_immobilier || null;
           updateData.credit_autre = etatFormData.credit_autre || null;
-        } else if (selectedEtat === 8) {
+        } else if (selectedEtat === 8 && !isCommercialPorteImprevuNrp) {
           // ANNULER À REPROGRAMMER
           if (etatFormData.conf_rdv_date && etatFormData.conf_rdv_time) {
             modifications.conf_rdv_date = etatFormData.conf_rdv_date;
@@ -1491,15 +1497,18 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         }
       } else if (selectedEtat === 8) {
         // ANNULER À REPROGRAMMER
-        if (etatFormData.conf_rdv_date) {
-          const dateRdvStr = `${etatFormData.conf_rdv_date} ${etatFormData.conf_rdv_time || '00:00'}:00`;
-          updateData.date_rdv_time = dateRdvStr;
-        }
-        if (etatFormData.id_sous_etat) {
-          updateData.id_sous_etat = parseInt(etatFormData.id_sous_etat);
-        }
-        if (etatFormData.conf_rdv_avec) {
-          updateData.conf_rdv_avec = etatFormData.conf_rdv_avec;
+        // Pour "Porte / Imprévu / NRP" côté commercial, on ne saisit que le commentaire.
+        if (!isCommercialPorteImprevuNrp) {
+          if (etatFormData.conf_rdv_date) {
+            const dateRdvStr = `${etatFormData.conf_rdv_date} ${etatFormData.conf_rdv_time || '00:00'}:00`;
+            updateData.date_rdv_time = dateRdvStr;
+          }
+          if (etatFormData.id_sous_etat) {
+            updateData.id_sous_etat = parseInt(etatFormData.id_sous_etat);
+          }
+          if (etatFormData.conf_rdv_avec) {
+            updateData.conf_rdv_avec = etatFormData.conf_rdv_avec;
+          }
         }
         if (etatFormData.conf_commentaire_produit) {
           updateData.conf_commentaire_produit = etatFormData.conf_commentaire_produit;
@@ -2880,7 +2889,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   }
                   if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
-                // HHC TECHNIQUE (35)
+                // HCC TECHNIQUE (35)
                 else if (etatId === 35) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
                   // Afficher le commentaire commercial en priorité s'il existe
@@ -3386,7 +3395,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     if (etatId === 9) return 'Déballé veut réfléchir';
                     if (etatId === 12) return 'Déballé sans suite';
                     if (etatId === 34) return 'Infinançable';
-                    if (etatId === 23) return 'Infaisabilité technique';
+                    if (etatId === 35) return 'Infaisabilité technique';
+                    if (etatId === 23) return 'Hors cible confirmateur';
                     if (etatId === 8) return 'Porte / Imprévu / NRP';
                     return cr.etat_titre || 'N/A';
                   };
@@ -3461,9 +3471,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                 setCompteRenduOption('infinançable');
                                 setSelectedEtat(34);
                                 setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || ''});
-                              } else if (cr.id_etat_final === 23) {
+                              } else if (cr.id_etat_final === 35) {
                                 setCompteRenduOption('infaisabilité_technique');
-                                setSelectedEtat(23);
+                                setSelectedEtat(35);
                                 setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || ''});
                               } else if (cr.id_etat_final === 8) {
                                 setCompteRenduOption('porte_imprevu_nrp');
@@ -3551,7 +3561,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         conf_commentaire_produit: ''
                       });
                     } else if (e.target.value === 'infaisabilité_technique') {
-                      setSelectedEtat(23); // HORS CIBLE CONFIRMATEUR
+                      setSelectedEtat(35); // HCC TECHNIQUE
                       setEtatFormData({
                         ...etatFormData,
                         conf_commentaire_produit: ''
@@ -3635,7 +3645,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               conf_commentaire_produit: ''
                             });
                           } else if (e.target.value === 'infaisabilité_technique') {
-                            setSelectedEtat(23); // HORS CIBLE CONFIRMATEUR
+                            setSelectedEtat(35); // HCC TECHNIQUE
                             setEtatFormData({
                               ...etatFormData,
                               conf_commentaire_produit: ''
@@ -4085,63 +4095,69 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 <div className="etat-form">
                   <h3>Informations Annuler à Reprogrammer</h3>
                   
-                  {sousEtats.length > 0 && (
-                    <div className="form-group">
-                      <label htmlFor="compte_rendu_etat_id_sous_etat_8">Sous État :</label>
-                      <select
-                        id="compte_rendu_etat_id_sous_etat_8"
-                        className="form-control"
-                        value={etatFormData.id_sous_etat}
-                        onChange={(e) => setEtatFormData({...etatFormData, id_sous_etat: e.target.value})}
-                      >
-                        <option value="">Sélectionner</option>
-                        {sousEtats.map(setat => (
-                          <option key={setat.id} value={setat.id}>
-                            {setat.titre}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  {/* Pour l'option "Porte / Imprévu / NRP", le commercial ne remplit que le commentaire.
+                      Les autres champs seront saisis dans la page Compte Rendu. */}
+                  {Number(user?.fonction) === 5 && compteRenduOption === 'porte_imprevu_nrp' ? null : (
+                    <>
+                      {sousEtats.length > 0 && (
+                        <div className="form-group">
+                          <label htmlFor="compte_rendu_etat_id_sous_etat_8">Sous État :</label>
+                          <select
+                            id="compte_rendu_etat_id_sous_etat_8"
+                            className="form-control"
+                            value={etatFormData.id_sous_etat}
+                            onChange={(e) => setEtatFormData({ ...etatFormData, id_sous_etat: e.target.value })}
+                          >
+                            <option value="">Sélectionner</option>
+                            {sousEtats.map((setat) => (
+                              <option key={setat.id} value={setat.id}>
+                                {setat.titre}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="form-group">
+                        <label htmlFor="compte_rendu_etat_conf_rdv_avec_8">Appel Avec :</label>
+                        <select
+                          id="compte_rendu_etat_conf_rdv_avec_8"
+                          className="form-control"
+                          value={etatFormData.conf_rdv_avec}
+                          onChange={(e) => setEtatFormData({ ...etatFormData, conf_rdv_avec: e.target.value })}
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="MR">MR</option>
+                          <option value="MME">MME</option>
+                          <option value="AUTRE">AUTRE</option>
+                        </select>
+                      </div>
+
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label htmlFor="compte_rendu_etat_conf_rdv_date_8">A Rappeler Le :</label>
+                          <input
+                            type="date"
+                            id="compte_rendu_etat_conf_rdv_date_8"
+                            className="form-control"
+                            value={etatFormData.conf_rdv_date}
+                            onChange={(e) => setEtatFormData({ ...etatFormData, conf_rdv_date: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="compte_rendu_etat_conf_rdv_time_8">Heure :</label>
+                          <input
+                            type="time"
+                            id="compte_rendu_etat_conf_rdv_time_8"
+                            className="form-control"
+                            value={etatFormData.conf_rdv_time}
+                            onChange={(e) => setEtatFormData({ ...etatFormData, conf_rdv_time: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </>
                   )}
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_conf_rdv_avec_8">Appel Avec :</label>
-                    <select
-                      id="compte_rendu_etat_conf_rdv_avec_8"
-                      className="form-control"
-                      value={etatFormData.conf_rdv_avec}
-                      onChange={(e) => setEtatFormData({...etatFormData, conf_rdv_avec: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="MR">MR</option>
-                      <option value="MME">MME</option>
-                      <option value="AUTRE">AUTRE</option>
-                    </select>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="compte_rendu_etat_conf_rdv_date_8">A Rappeler Le :</label>
-                      <input
-                        type="date"
-                        id="compte_rendu_etat_conf_rdv_date_8"
-                        className="form-control"
-                        value={etatFormData.conf_rdv_date}
-                        onChange={(e) => setEtatFormData({...etatFormData, conf_rdv_date: e.target.value})}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="compte_rendu_etat_conf_rdv_time_8">Heure :</label>
-                      <input
-                        type="time"
-                        id="compte_rendu_etat_conf_rdv_time_8"
-                        className="form-control"
-                        value={etatFormData.conf_rdv_time}
-                        onChange={(e) => setEtatFormData({...etatFormData, conf_rdv_time: e.target.value})}
-                      />
-                    </div>
-                  </div>
 
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_conf_commentaire_8">Compte rendu :</label>
