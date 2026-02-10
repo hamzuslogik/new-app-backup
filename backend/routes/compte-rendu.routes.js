@@ -7,7 +7,7 @@ const { query, queryOne } = require('../config/database');
 
 // =====================================================
 // ROUTE: POST /api/compte-rendu
-// Créer un compte rendu (pour les commerciaux)
+// Créer un compte rendu (toute fonction ; doit être approuvé par admin/backoffice/RP)
 // =====================================================
 router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, res) => {
   try {
@@ -21,13 +21,7 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
       });
     }
     
-    // Vérifier que l'utilisateur est un commercial (fonction 5)
-    if (user.fonction !== 5) {
-      return res.status(403).json({
-        success: false,
-        message: 'Seuls les commerciaux peuvent créer des comptes rendus'
-      });
-    }
+    // Toute fonction peut créer un compte rendu ; il sera en attente d'approbation
 
     const { 
       id_fiche, 
@@ -69,7 +63,7 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
       });
     }
 
-    // Vérifier que la fiche existe et appartient au commercial
+    // Vérifier que la fiche existe
     const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [id_fiche]);
     if (!fiche) {
       return res.status(404).json({
@@ -78,15 +72,7 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
       });
     }
 
-    // Vérifier que le commercial est assigné à cette fiche
-    if (fiche.id_commercial !== user.id && fiche.id_commercial_2 !== user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Vous n\'êtes pas assigné à cette fiche'
-      });
-    }
-
-    // Vérifier qu'il n'y a pas déjà un compte rendu en attente pour cette fiche
+    // Vérifier qu'il n'y a pas déjà un compte rendu en attente pour cette fiche par le même utilisateur
     const pendingCompteRendu = await queryOne(
       'SELECT id FROM compte_rendu_pending WHERE id_fiche = ? AND id_commercial = ? AND statut = ?',
       [id_fiche, user.id, 'pending']
@@ -396,7 +382,7 @@ router.get('/:id', authenticate, async (req, res) => {
     }
 
     // Vérifier les permissions
-    if (user.fonction === 5 && compteRendu.id_commercial !== user.id) {
+    if (!isAdminOrBackofficeOrRPConfirmation(user.fonction) && compteRendu.id_commercial !== user.id) {
       return res.status(403).json({
         success: false,
         message: 'Vous n\'avez pas accès à ce compte rendu'
@@ -487,8 +473,8 @@ router.put('/:id', authenticate, async (req, res) => {
       });
     }
 
-    // Vérifier les permissions : admin/backoffice/RP confirmation ou commercial propriétaire du compte rendu
-    if (!isAdminOrBackofficeOrRPConfirmation(user.fonction) && (user.fonction !== 5 || compteRendu.id_commercial !== user.id)) {
+    // Vérifier les permissions : admin/backoffice/RP confirmation ou créateur du compte rendu
+    if (!isAdminOrBackofficeOrRPConfirmation(user.fonction) && compteRendu.id_commercial !== user.id) {
       return res.status(403).json({
         success: false,
         message: 'Vous n\'avez pas la permission de modifier ce compte rendu'
