@@ -248,16 +248,20 @@ const EtatsTab = () => {
               <div className="form-group">
                 <label>
                   Groupe
-                  <Tooltip text="Groupe de classification de l'état (ex: Groupe 0, Groupe 1). Utilisé pour organiser les états.">
+                  <Tooltip text="Phase/Groupe de l'état : 0 = Qualification, 1 = Phase 1, 2 = Confirmation, 3 = Signature.">
                     <FaInfoCircle className="info-icon" />
                   </Tooltip>
                 </label>
-                <input
-                  type="text"
+                <select
                   value={formData.groupe}
                   onChange={(e) => setFormData({ ...formData, groupe: e.target.value })}
-                  placeholder="Ex: Groupe 1, Groupe 2"
-                />
+                >
+                  <option value="">-- Sélectionner --</option>
+                  <option value="0">0 - Qualification</option>
+                  <option value="1">1 - Phase 1</option>
+                  <option value="2">2 - Confirmation</option>
+                  <option value="3">3 - Signature</option>
+                </select>
               </div>
               <div className="form-group">
                 <label>
