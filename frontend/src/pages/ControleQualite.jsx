@@ -10,8 +10,9 @@ import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import './ControleQualite.css';
 
-// ID de l'état KO
+// ID de l'état KO et HC
 const ETAT_KO_ID = 54;
+const ETAT_HC_ID = 55;
 
 const ControleQualite = () => {
   const { user } = useAuth();
@@ -33,6 +34,14 @@ const ControleQualite = () => {
   
   // État pour le modal KO
   const [koModal, setKoModal] = useState({
+    isOpen: false,
+    ficheHash: null,
+    sousEtatId: '',
+    commentaire: ''
+  });
+  
+  // État pour le modal HC
+  const [hcModal, setHcModal] = useState({
     isOpen: false,
     ficheHash: null,
     sousEtatId: '',
@@ -74,6 +83,12 @@ const ControleQualite = () => {
   // Récupérer les sous-états pour l'état KO (id 54)
   const { data: sousEtatsKoData } = useQuery('sous-etats-ko', async () => {
     const res = await api.get(`/management/sous-etat/${ETAT_KO_ID}`);
+    return res.data.data || [];
+  });
+
+  // Récupérer les sous-états pour l'état HC (id 55)
+  const { data: sousEtatsHcData } = useQuery('sous-etats-hc', async () => {
+    const res = await api.get(`/management/sous-etat/${ETAT_HC_ID}`);
     return res.data.data || [];
   });
 
@@ -175,6 +190,29 @@ const ControleQualite = () => {
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de la validation KO');
+      }
+    }
+  );
+
+  // Mutation pour valider en HC : En-Attente + hc = 1 (fiche hors cible)
+  const validateQualiteHcMutation = useMutation(
+    async ({ hash, id_sous_etat, commentaire_hc }) => {
+      const res = await api.put(`/fiches/${hash}/valider-qualite-hc`, {
+        id_sous_etat,
+        commentaire_hc
+      });
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['controle-qualite']);
+        refetch();
+        toast.success('Fiche validée (HC) : En-Attente, hors cible');
+        // Fermer le modal
+        setHcModal({ isOpen: false, ficheHash: null, sousEtatId: '', commentaire: '' });
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de la validation HC');
       }
     }
   );
@@ -298,6 +336,7 @@ const ControleQualite = () => {
   const etats = etatsData || [];
   const allEtats = allEtatsData || [];
   const sousEtatsKo = sousEtatsKoData || [];
+  const sousEtatsHc = sousEtatsHcData || [];
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(allEtats);
 
   // Fonctions pour gérer le modal KO
@@ -323,6 +362,32 @@ const ControleQualite = () => {
       hash: koModal.ficheHash,
       id_sous_etat: parseInt(koModal.sousEtatId),
       commentaire_ko: koModal.commentaire
+    });
+  };
+
+  // Fonctions pour gérer le modal HC
+  const openHcModal = (fiche) => {
+    setHcModal({
+      isOpen: true,
+      ficheHash: fiche.hash,
+      sousEtatId: fiche.id_sous_etat ? String(fiche.id_sous_etat) : '',
+      commentaire: fiche.commentaire_qualite || ''
+    });
+  };
+
+  const closeHcModal = () => {
+    setHcModal({ isOpen: false, ficheHash: null, sousEtatId: '', commentaire: '' });
+  };
+
+  const handleHcModalSubmit = () => {
+    if (!hcModal.sousEtatId) {
+      toast.warning('Veuillez sélectionner un sous-état HC');
+      return;
+    }
+    validateQualiteHcMutation.mutate({
+      hash: hcModal.ficheHash,
+      id_sous_etat: parseInt(hcModal.sousEtatId),
+      commentaire_hc: hcModal.commentaire
     });
   };
 
@@ -587,6 +652,14 @@ const ControleQualite = () => {
                         >
                           <FaBan /> KO
                         </button>
+                        <button
+                          className="btn-validate-hc"
+                          onClick={() => openHcModal(fiche)}
+                          disabled={validateQualiteHcMutation.isLoading}
+                          title="Valider (HC) : En-Attente, fiche hors cible"
+                        >
+                          HC
+                        </button>
                         <FicheDetailLink 
                           ficheHash={fiche.hash}
                           className="btn-detail-icon"
@@ -669,6 +742,57 @@ const ControleQualite = () => {
                 disabled={validateQualiteKoMutation.isLoading || !koModal.sousEtatId}
               >
                 {validateQualiteKoMutation.isLoading ? 'Validation...' : 'Valider KO'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal HC */}
+      {hcModal.isOpen && (
+        <div className="modal-overlay" onClick={closeHcModal}>
+          <div className="modal-content hc-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Validation HC (Hors Cible)</h3>
+              <button className="modal-close-btn" onClick={closeHcModal}>
+                <FaTimes />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Sous-état HC <span className="required">*</span></label>
+                <select
+                  value={hcModal.sousEtatId}
+                  onChange={(e) => setHcModal({ ...hcModal, sousEtatId: e.target.value })}
+                  className="hc-sous-etat-select"
+                >
+                  <option value="">-- Sélectionner un sous-état --</option>
+                  {sousEtatsHc.map(se => (
+                    <option key={se.id} value={se.id}>{se.titre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Commentaire</label>
+                <textarea
+                  value={hcModal.commentaire}
+                  onChange={(e) => setHcModal({ ...hcModal, commentaire: e.target.value })}
+                  className="hc-commentaire-textarea"
+                  placeholder="Commentaire sur la raison du HC..."
+                  rows={4}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={closeHcModal}>
+                Annuler
+              </button>
+              <button
+                className="btn-confirm-hc"
+                onClick={handleHcModalSubmit}
+                disabled={validateQualiteHcMutation.isLoading || !hcModal.sousEtatId}
+              >
+                {validateQualiteHcMutation.isLoading ? 'Validation...' : 'Valider HC'}
               </button>
             </div>
           </div>
