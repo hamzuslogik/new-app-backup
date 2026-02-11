@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaSearch, FaChevronDown, FaChevronUp, FaCheckCircle, FaFilter, FaUserCheck, FaCheck, FaComment, FaTimes, FaSave, FaBan } from 'react-icons/fa';
+import { FaSearch, FaChevronDown, FaChevronUp, FaCheckCircle, FaFilter, FaUserCheck, FaCheck, FaComment, FaTimes, FaSave, FaBan, FaBell } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
@@ -46,6 +46,17 @@ const ControleQualite = () => {
     ficheHash: null,
     sousEtatId: '',
     commentaire: ''
+  });
+
+  // État pour le modal Alerte KO (envoyer une alerte à l'agent qui a inséré la fiche)
+  const [alertModal, setAlertModal] = useState({
+    isOpen: false,
+    ficheHash: null,
+    fiche: null,
+    etatId: '',
+    sousEtatId: '',
+    commentaire: '',
+    nbAlertes: null
   });
 
   // Récupérer les agents qualification
@@ -91,6 +102,26 @@ const ControleQualite = () => {
     const res = await api.get(`/management/sous-etat/${ETAT_HC_ID}`);
     return res.data.data || [];
   });
+
+  // Nombre d'alertes KO pour la fiche du modal (quand le modal alerte est ouvert)
+  const { data: alertesKoData } = useQuery(
+    ['alertes-ko-count', alertModal.ficheHash],
+    async () => {
+      const res = await api.get(`/fiches/${alertModal.ficheHash}/alertes-ko`);
+      return res.data;
+    },
+    { enabled: !!alertModal.ficheHash && alertModal.isOpen }
+  );
+
+  // Sous-états pour l'état sélectionné dans le modal alerte (états autres que KO/HC)
+  const { data: sousEtatsAlertData } = useQuery(
+    ['sous-etat-alert', alertModal.etatId],
+    async () => {
+      const res = await api.get(`/management/sous-etat/${alertModal.etatId}`);
+      return res.data.data || [];
+    },
+    { enabled: !!alertModal.etatId && alertModal.isOpen && alertModal.etatId !== String(ETAT_KO_ID) && alertModal.etatId !== String(ETAT_HC_ID) }
+  );
 
   // Récupérer les fiches avec rafraîchissement automatique toutes les 3 secondes
   const { data: fichesData, isLoading, error, refetch } = useQuery(
@@ -213,6 +244,30 @@ const ControleQualite = () => {
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de la validation HC');
+      }
+    }
+  );
+
+  // Mutation pour envoyer une alerte KO à l'agent qui a inséré la fiche
+  const sendAlerteKoMutation = useMutation(
+    async ({ hash, id_etat, id_sous_etat, commentaire }) => {
+      const res = await api.post(`/fiches/${hash}/alerte-ko`, {
+        id_etat: id_etat || null,
+        id_sous_etat: id_sous_etat || null,
+        commentaire: commentaire || null
+      });
+      return res.data;
+    },
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(['controle-qualite']);
+        queryClient.invalidateQueries(['alertes-ko-count']);
+        refetch();
+        toast.success(data?.message || `Alerte ${data?.data?.num_alerte}/3 envoyée à l'agent`);
+        closeAlertModal();
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de l\'envoi de l\'alerte');
       }
     }
   );
@@ -402,6 +457,52 @@ const ControleQualite = () => {
       commentaire_hc: hcModal.commentaire
     });
   };
+
+  // Modal Alerte KO : ouvrir / fermer / envoyer
+  const openAlertModal = (fiche) => {
+    setAlertModal({
+      isOpen: true,
+      ficheHash: fiche.hash,
+      fiche,
+      etatId: fiche.id_etat_final ? String(fiche.id_etat_final) : '',
+      sousEtatId: fiche.id_sous_etat ? String(fiche.id_sous_etat) : '',
+      commentaire: '',
+      nbAlertes: null
+    });
+  };
+
+  const closeAlertModal = () => {
+    setAlertModal({
+      isOpen: false,
+      ficheHash: null,
+      fiche: null,
+      etatId: '',
+      sousEtatId: '',
+      commentaire: '',
+      nbAlertes: null
+    });
+  };
+
+  const handleAlertModalSubmit = () => {
+    const nbAlertes = alertesKoData?.nb_alertes ?? 0;
+    if (nbAlertes >= 3) {
+      toast.warning('3 alertes ont déjà été envoyées pour cette fiche.');
+      return;
+    }
+    sendAlerteKoMutation.mutate({
+      hash: alertModal.ficheHash,
+      id_etat: alertModal.etatId || null,
+      id_sous_etat: alertModal.sousEtatId || null,
+      commentaire: alertModal.commentaire || null
+    });
+  };
+
+  // Sous-états à afficher dans le modal alerte selon l'état sélectionné
+  const sousEtatsAlertModal = alertModal.etatId === String(ETAT_KO_ID)
+    ? sousEtatsKo
+    : alertModal.etatId === String(ETAT_HC_ID)
+      ? sousEtatsHc
+      : (sousEtatsAlertData || []);
 
   return (
     <div className="controle-qualite">
@@ -672,6 +773,15 @@ const ControleQualite = () => {
                         >
                           HC
                         </button>
+                        <button
+                          type="button"
+                          className="btn-alerte-ko"
+                          onClick={() => openAlertModal(fiche)}
+                          disabled={sendAlerteKoMutation.isLoading}
+                          title="Envoyer une alerte à l'agent qui a inséré la fiche (3 alertes avant KO)"
+                        >
+                          <FaBell /> Alerte
+                        </button>
                         <FicheDetailLink 
                           ficheHash={fiche.hash}
                           className="btn-detail-icon"
@@ -805,6 +915,91 @@ const ControleQualite = () => {
                 disabled={validateQualiteHcMutation.isLoading || !hcModal.sousEtatId}
               >
                 {validateQualiteHcMutation.isLoading ? 'Validation...' : 'Valider HC'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Alerte KO */}
+      {alertModal.isOpen && alertModal.fiche && (
+        <div className="modal-overlay" onClick={closeAlertModal}>
+          <div className="modal-content alerte-ko-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3><FaBell /> Envoyer une alerte à l'agent</h3>
+              <button type="button" className="modal-close-btn" onClick={closeAlertModal}>
+                <FaTimes />
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="alerte-ko-info">
+                Alerte envoyée à l'agent qualification qui a inséré la fiche. 3 alertes doivent être envoyées avant de pouvoir passer la fiche en KO.
+              </p>
+              <div className="form-group">
+                <label>Agent destinataire</label>
+                <p className="modal-readonly-value">{alertModal.fiche.agent_pseudo || '-'}</p>
+              </div>
+              <div className="form-group">
+                <label>Client</label>
+                <p className="modal-readonly-value">
+                  {alertModal.fiche.nom || '-'} {alertModal.fiche.prenom || ''} – {alertModal.fiche.tel || '-'}
+                </p>
+              </div>
+              {alertesKoData != null && (
+                <p className="alerte-ko-count">
+                  <strong>{alertesKoData.nb_alertes ?? 0}/3</strong> alertes déjà envoyées pour cette fiche
+                </p>
+              )}
+              <div className="form-group">
+                <label>État</label>
+                <select
+                  value={alertModal.etatId}
+                  onChange={(e) => setAlertModal({ ...alertModal, etatId: e.target.value, sousEtatId: '' })}
+                  className="etat-select"
+                >
+                  <option value="">-- Sélectionner un état --</option>
+                  {etatsPhase0.map(etat => (
+                    <option key={etat.id} value={etat.id}>{etat.titre}</option>
+                  ))}
+                </select>
+              </div>
+              {(alertModal.etatId === String(ETAT_KO_ID) || alertModal.etatId === String(ETAT_HC_ID) || sousEtatsAlertModal.length > 0) && (
+                <div className="form-group">
+                  <label>Sous-état</label>
+                  <select
+                    value={alertModal.sousEtatId}
+                    onChange={(e) => setAlertModal({ ...alertModal, sousEtatId: e.target.value })}
+                    className="sous-etat-select"
+                  >
+                    <option value="">-- Sélectionner un sous-état --</option>
+                    {sousEtatsAlertModal.map(se => (
+                      <option key={se.id} value={se.id}>{se.titre}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="form-group">
+                <label>Commentaire</label>
+                <textarea
+                  value={alertModal.commentaire}
+                  onChange={(e) => setAlertModal({ ...alertModal, commentaire: e.target.value })}
+                  className="commentaire-textarea"
+                  placeholder="Message ou commentaire pour l'agent..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn-cancel" onClick={closeAlertModal}>
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="btn-confirm-alerte"
+                onClick={handleAlertModalSubmit}
+                disabled={sendAlerteKoMutation.isLoading || (alertesKoData?.nb_alertes ?? 0) >= 3}
+              >
+                {sendAlerteKoMutation.isLoading ? 'Envoi...' : 'Envoyer l\'alerte'}
               </button>
             </div>
           </div>

@@ -4149,6 +4149,108 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
   }
 });
 
+// Nombre d'alertes KO envoyées pour une fiche (page Contrôle Qualité)
+router.get('/:hash/alertes-ko', authenticate, hashToIdMiddleware, async (req, res) => {
+  try {
+    const id = req.params.id ? parseInt(req.params.id, 10) : null;
+    if (!id || isNaN(id) || id <= 0) {
+      return res.status(400).json({ success: false, message: 'Identifiant de fiche invalide' });
+    }
+    const hasControleQualitePermission = await hasPermission(req.user.fonction, 'controle_qualite_view');
+    if (!hasControleQualitePermission) {
+      return res.status(403).json({ success: false, message: 'Permission refusée' });
+    }
+    const row = await queryOne('SELECT COUNT(*) AS nb_alertes FROM alert_ko WHERE id_fiche = ?', [id]);
+    const nb_alertes = row?.nb_alertes ?? 0;
+    res.json({ success: true, nb_alertes });
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return res.json({ success: true, nb_alertes: 0 });
+    }
+    console.error('Erreur GET alertes-ko:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Envoyer une alerte KO à l'agent qualification (fonction 3) qui a inséré la fiche
+router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, res) => {
+  try {
+    const id = req.params.id ? parseInt(req.params.id, 10) : null;
+    if (!id || isNaN(id) || id <= 0) {
+      return res.status(400).json({ success: false, message: 'Identifiant de fiche invalide' });
+    }
+    const hasControleQualitePermission = await hasPermission(req.user.fonction, 'controle_qualite_view');
+    if (!hasControleQualitePermission) {
+      return res.status(403).json({ success: false, message: 'Vous n\'avez pas la permission d\'envoyer des alertes' });
+    }
+    const fiche = await queryOne(
+      'SELECT id_agent, nom, prenom, tel FROM fiches WHERE id = ?',
+      [id]
+    );
+    if (!fiche) {
+      return res.status(404).json({ success: false, message: 'Fiche non trouvée' });
+    }
+    if (!fiche.id_agent) {
+      return res.status(400).json({ success: false, message: 'Cette fiche n\'a pas d\'agent assigné' });
+    }
+    const { id_etat, id_sous_etat, commentaire } = req.body;
+    let nb_alertes = 0;
+    try {
+      const countRow = await queryOne('SELECT COUNT(*) AS nb FROM alert_ko WHERE id_fiche = ?', [id]);
+      nb_alertes = countRow?.nb ?? 0;
+    } catch (e) {
+      if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
+    }
+    if (nb_alertes >= 3) {
+      return res.status(400).json({
+        success: false,
+        message: '3 alertes ont déjà été envoyées pour cette fiche. Passage au KO possible.'
+      });
+    }
+    const num_alerte = nb_alertes + 1;
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    try {
+      await query(
+        `INSERT INTO alert_ko (id_fiche, id_agent, id_qualite, id_etat, id_sous_etat, num_alerte, date_alerte, nom, prenom, tel, commentaire)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          fiche.id_agent,
+          req.user.id,
+          id_etat != null && id_etat !== '' ? parseInt(id_etat, 10) : null,
+          id_sous_etat != null && id_sous_etat !== '' ? parseInt(id_sous_etat, 10) : null,
+          num_alerte,
+          now,
+          fiche.nom ?? null,
+          fiche.prenom ?? null,
+          fiche.tel ?? null,
+          commentaire || null
+        ]
+      );
+    } catch (insertErr) {
+      if (insertErr.code === 'ER_NO_SUCH_TABLE') {
+        return res.status(503).json({
+          success: false,
+          message: 'Table alert_ko non créée. Exécutez le script create_table_alert_ko.sql.'
+        });
+      }
+      throw insertErr;
+    }
+    const newTotal = num_alerte;
+    res.json({
+      success: true,
+      message: `Alerte ${num_alerte}/3 envoyée à l'agent`,
+      data: { num_alerte, nb_alertes_total: newTotal }
+    });
+  } catch (error) {
+    console.error('Erreur POST alerte-ko:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Erreur lors de l\'envoi de l\'alerte'
+    });
+  }
+});
+
 // Mettre à jour une fiche
 router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches_edit'), triggerWorkflowOnFicheUpdated, async (req, res) => {
   try {

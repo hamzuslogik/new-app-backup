@@ -955,3 +955,100 @@
   cursor: not-allowed;
 }
 
+/* Bouton Alerte KO */
+.btn-alerte-ko {
+  padding: 6.4px 10px;
+  background: #6f42c1;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+}
+
+.btn-alerte-ko:hover:not(:disabled) {
+  background: #5a32a3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-alerte-ko:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-alerte-ko svg {
+  margin-right: 2px;
+}
+
+/* Modal Alerte KO */
+.modal-content.alerte-ko-modal {
+  border-top: 4px solid #6f42c1;
+}
+
+.alerte-ko-modal .modal-header h3 {
+  color: #6f42c1;
+}
+
+.alerte-ko-info {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.alerte-ko-modal .modal-readonly-value {
+  margin: 0;
+  padding: 6px 0;
+  font-size: 13px;
+  color: #333;
+}
+
+.alerte-ko-count {
+  font-size: 13px;
+  margin-bottom: 12px;
+  color: #6f42c1;
+}
+
+.alerte-ko-modal .sous-etat-select,
+.alerte-ko-modal .commentaire-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.alerte-ko-modal .commentaire-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.btn-confirm-alerte {
+  padding: 10px 20px;
+  background: #6f42c1;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-confirm-alerte:hover:not(:disabled) {
+  background: #5a32a3;
+  transform: translateY(-1px);
+}
+
+.btn-confirm-alerte:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
