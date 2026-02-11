@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import api from '../config/api';
-import { FaBell, FaFilter, FaChevronDown, FaChevronUp, FaSearch } from 'react-icons/fa';
+import { FaBell, FaFilter } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import FicheDetailLink from '../components/FicheDetailLink';
 import './Alertes.css';
 
 const Alertes = () => {
@@ -145,7 +144,6 @@ const Alertes = () => {
                   <th>État / Sous-état</th>
                   <th>N° alerte</th>
                   <th>Commentaire</th>
-                  <th>Fiche</th>
                 </tr>
               </thead>
               <tbody>
@@ -161,15 +159,6 @@ const Alertes = () => {
                     </td>
                     <td><span className="num-alerte">{a.num_alerte}/3</span></td>
                     <td className="comment-cell">{a.commentaire ? String(a.commentaire).slice(0, 80) + (a.commentaire.length > 80 ? '…' : '') : '-'}</td>
-                    <td>
-                      {a.fiche_hash ? (
-                        <FicheDetailLink ficheHash={a.fiche_hash} className="btn-link-fiche" title="Voir la fiche">
-                          <FaSearch />
-                        </FicheDetailLink>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
                   </tr>
                 ))}
               </tbody>
