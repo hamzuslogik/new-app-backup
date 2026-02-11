@@ -1280,9 +1280,23 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       const nbValidees = fichesValidees?.count || 0;
       const nbProduites = fichesProduites?.count || 0;
       const tauxConversion = nbProduites > 0 ? ((nbValidees / nbProduites) * 100).toFixed(1) : 0;
+
+      // Fiches confirmées (table confirmations) - par date de confirmation
+      const fichesConfirmeesQuery = `
+        SELECT COUNT(DISTINCT c.id_fiche) as count
+        FROM confirmations c
+        INNER JOIN fiches f ON c.id_fiche = f.id
+        WHERE c.date_creation >= ?
+        AND c.date_creation <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `;
+      const fichesConfirmees = await queryOne(fichesConfirmeesQuery, [startDate, endDate]);
+      const nbConfirmees = fichesConfirmees?.count || 0;
+      const tauxTransformation = nbValidees > 0 ? ((nbConfirmees / nbValidees) * 100).toFixed(1) : 0;
       
       console.log(`[KPI-QUALIF] Période ${period.key}: startDate=${startDate}, endDate=${endDate}`);
-      console.log(`[KPI-QUALIF] Fiches validées: ${nbValidees}, Fiches produites: ${nbProduites}, Taux: ${tauxConversion}%`);
+      console.log(`[KPI-QUALIF] Fiches validées: ${nbValidees}, Fiches produites: ${nbProduites}, Taux conversion: ${tauxConversion}%`);
+      console.log(`[KPI-QUALIF] Fiches confirmées: ${nbConfirmees}, Taux transformation: ${tauxTransformation}%`);
 
       kpiData[period.key] = {
         period: period.label,
@@ -1310,6 +1324,11 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
           fiches_validees: nbValidees,
           fiches_produites: nbProduites,
           taux: parseFloat(tauxConversion)
+        },
+        taux_transformation: {
+          fiches_confirmees: nbConfirmees,
+          fiches_validees: nbValidees,
+          taux: parseFloat(tauxTransformation)
         }
       };
     }
@@ -1534,21 +1553,18 @@ router.get('/kpis', authenticate, async (req, res) => {
       const totalQualifCount = totalQualifResult?.count || 0;
       console.log('[STAT] /kpis - Fiches produites (qualif) count:', totalQualifCount, 'period:', period.key);
 
-      // 4c. Fiches confirmées (état 7) générées par agents qualification (période actuelle)
-      const confirmedQualifQuery = `
-        SELECT COUNT(DISTINCT f.id) as count
-        FROM fiches f
-        INNER JOIN utilisateurs u ON f.id_agent = u.id
-        WHERE u.fonction = 3
-        AND u.etat > 0
-        AND f.date_insert_time >= ?
-        AND f.date_insert_time <= ?
-        AND f.id_etat_final = 7
+      // 4c. Fiches confirmées (existent dans la table confirmations) - par date de confirmation
+      const confirmedQuery = `
+        SELECT COUNT(DISTINCT c.id_fiche) as count
+        FROM confirmations c
+        INNER JOIN fiches f ON c.id_fiche = f.id
+        WHERE c.date_creation >= ?
+        AND c.date_creation <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
-        ${centreCondition}
       `;
-      const confirmedQualifResult = await queryOne(confirmedQualifQuery, [startDate, endDate, ...centreParams]);
-      const confirmedQualifCount = confirmedQualifResult?.count || 0;
+      const confirmedResult = await queryOne(confirmedQuery, [startDate, endDate]);
+      const confirmedCount = confirmedResult?.count || 0;
+      console.log('[STAT] /kpis - Fiches confirmées count:', confirmedCount, 'period:', period.key);
 
       // 5. Total fiches validées (période précédente) - SANS filtre par centre
       const previousValidatedResult = await queryOne(validatedQuery, [previousStartDate, previousEndDate]);
@@ -1562,9 +1578,9 @@ router.get('/kpis', authenticate, async (req, res) => {
       const previousTotalQualifResult = await queryOne(totalQualifQuery, [previousStartDate, previousEndDate]);
       const previousTotalQualifCount = previousTotalQualifResult?.count || 0;
 
-      // 6c. Fiches confirmées (état 7) générées par agents qualification (période précédente)
-      const previousConfirmedQualifResult = await queryOne(confirmedQualifQuery, [previousStartDate, previousEndDate, ...centreParams]);
-      const previousConfirmedQualifCount = previousConfirmedQualifResult?.count || 0;
+      // 6c. Fiches confirmées (période précédente) - table confirmations
+      const previousConfirmedResult = await queryOne(confirmedQuery, [previousStartDate, previousEndDate]);
+      const previousConfirmedCount = previousConfirmedResult?.count || 0;
 
       // Calculer le taux de conversion (Fiches validées / Fiches produites par agents qualification)
       const conversionRate = totalQualifCount > 0 ? (validatedCount / totalQualifCount) * 100 : 0;
@@ -1572,13 +1588,12 @@ router.get('/kpis', authenticate, async (req, res) => {
       const conversionRateChange = conversionRate - previousConversionRate;
       console.log('[STAT] /kpis - Taux conversion:', { validatedCount, totalQualifCount, conversionRate });
 
-      // Calculer le taux de transformation des agents qualification
-      // Taux de transformation = fiches confirmées (état 7) / fiches générées par agents qualification
-      // Se calcule quand la fiche est passée en confirmer (état 7), peu importe ce qui se passe après.
-      // La période est basée sur la date d'insertion (date_insert_time) de la fiche.
-      const transformationRate = totalQualifCount > 0 ? (confirmedQualifCount / totalQualifCount) * 100 : 0;
-      const previousTransformationRate = previousTotalQualifCount > 0 ? (previousConfirmedQualifCount / previousTotalQualifCount) * 100 : 0;
+      // Calculer le taux de transformation
+      // Taux de transformation = fiches confirmées (table confirmations) / fiches validées
+      const transformationRate = validatedCount > 0 ? (confirmedCount / validatedCount) * 100 : 0;
+      const previousTransformationRate = previousValidatedCount > 0 ? (previousConfirmedCount / previousValidatedCount) * 100 : 0;
       const transformationRateChange = transformationRate - previousTransformationRate;
+      console.log('[STAT] /kpis - Taux transformation:', { confirmedCount, validatedCount, transformationRate });
 
       // Calculer l'évolution
       const evolutionChange = previousValidatedCount > 0 
@@ -1597,8 +1612,8 @@ router.get('/kpis', authenticate, async (req, res) => {
         conversion_produced: totalQualifCount,
         transformation_rate: transformationRate,
         transformation_rate_change: transformationRateChange,
-        transformation_count: confirmedQualifCount,
-        transformation_total: totalQualifCount,
+        transformation_count: confirmedCount,
+        transformation_total: validatedCount,
         top3_agents: top3Agents.map(agent => ({
           id: agent.id,
           pseudo: agent.pseudo,

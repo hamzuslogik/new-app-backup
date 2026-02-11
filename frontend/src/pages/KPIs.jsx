@@ -278,7 +278,7 @@ const KPIs = () => {
                   <div className="kpi-card-body">
                     <div className="kpi-value-large">
                       <span className="value">{formatPercentage(currentData.transformation_rate)}</span>
-                      <span className="label">Fiches confirmées / Fiches générées par agents qualification</span>
+                      <span className="label">Fiches confirmées / Fiches validées</span>
                     </div>
                     {currentData.transformation_rate_change !== undefined && (
                       <div className="evolution-indicator">
@@ -295,7 +295,7 @@ const KPIs = () => {
                     {currentData.transformation_count !== undefined && currentData.transformation_total !== undefined && (
                       <div className="kpi-details">
                         <span className="details-text">
-                          {currentData.transformation_count} confirmées sur {currentData.transformation_total} générées
+                          {currentData.transformation_count} confirmées sur {currentData.transformation_total} validées
                         </span>
                       </div>
                     )}
