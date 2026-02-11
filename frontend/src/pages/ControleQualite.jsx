@@ -291,27 +291,25 @@ const ControleQualite = () => {
   };
 
   // Obtenir le libellé à afficher pour l'état actuel
+  // "Validée" / "Validée (KO)" uniquement si l'état n'est pas dans le groupe 0
   const getEtatActuelLabel = (fiche) => {
-    // Si la fiche est KO, afficher "VALIDÉ (KO)"
-    if (fiche.ko === 1 || fiche.ko === '1') {
-      return 'VALIDÉ (KO)';
-    }
     if (isEtatGroupe0(fiche.id_etat_final)) {
       return fiche.etat_titre || '-';
+    }
+    if (fiche.ko === 1 || fiche.ko === '1') {
+      return 'VALIDÉ (KO)';
     }
     return 'Validé';
   };
 
   // Obtenir la couleur pour l'état actuel
   const getEtatActuelColor = (fiche) => {
-    // Si la fiche est KO, afficher en rouge
-    if (fiche.ko === 1 || fiche.ko === '1') {
-      return '#dc3545';
-    }
     if (isEtatGroupe0(fiche.id_etat_final)) {
       return getEtatColor(fiche);
     }
-    // Couleur par défaut pour "Validé" (vert)
+    if (fiche.ko === 1 || fiche.ko === '1') {
+      return '#dc3545';
+    }
     return '#28a745';
   };
 
