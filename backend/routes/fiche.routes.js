@@ -499,38 +499,34 @@ router.get('/', authenticate, async (req, res) => {
           });
         }
         
-        // Filtrer selon les groupes autorisés
+        // Ajouter le groupe 0 aux groupes autorisés pour voir toutes les fiches (KO, HC, doublon, etc.)
+        const allAllowedGroups = [...new Set([...allowedGroups, '0'])];
+        
+        // Filtrer selon les groupes autorisés (incluant groupe 0)
         // Note: groupe est un VARCHAR, donc on compare avec des chaînes
         // Pour les commerciaux (fonction 5), ajouter aussi l'état CONFIRMER (7) en plus des groupes autorisés
         if (req.user.fonction === 5) {
-          // Commerciaux : Phase 3 (groupe 3) + CONFIRMER (état 7)
+          // Commerciaux : Phase 3 (groupe 3) + CONFIRMER (état 7) + groupe 0
           whereConditions.push(`EXISTS (
             SELECT 1 FROM etats e 
             WHERE e.id = fiche.id_etat_final 
-            AND (CAST(e.groupe AS CHAR) IN (${allowedGroups.map(() => '?').join(',')}) OR fiche.id_etat_final = 7)
+            AND (CAST(e.groupe AS CHAR) IN (${allAllowedGroups.map(() => '?').join(',')}) OR fiche.id_etat_final = 7)
           )`);
-          params.push(...allowedGroups.map(g => String(g)));
+          params.push(...allAllowedGroups.map(g => String(g)));
         } else {
           whereConditions.push(`EXISTS (
             SELECT 1 FROM etats e 
             WHERE e.id = fiche.id_etat_final 
-            AND CAST(e.groupe AS CHAR) IN (${allowedGroups.map(() => '?').join(',')})
+            AND CAST(e.groupe AS CHAR) IN (${allAllowedGroups.map(() => '?').join(',')})
           )`);
-          params.push(...allowedGroups.map(g => String(g)));
+          params.push(...allAllowedGroups.map(g => String(g)));
         }
       }
       // Si aucune permission n'existe dans la base, ne pas filtrer (rétrocompatibilité)
     }
 
-    // Exclure les états du groupe 0 pour tous les utilisateurs sauf les agents qualification (fonction 3)
-    // Les agents qualification ont besoin du groupe 0 pour leur travail
-    if (req.user.fonction !== 3) {
-      whereConditions.push(`NOT EXISTS (
-        SELECT 1 FROM etats e 
-        WHERE e.id = fiche.id_etat_final 
-        AND (e.groupe = '0' OR e.groupe = 0)
-      )`);
-    }
+    // NOTE: On n'exclut plus les états du groupe 0 - toutes les fiches sont visibles
+    // (ko, hc, doublon, etc.)
 
     // Filtres de recherche
     if (nom) {
