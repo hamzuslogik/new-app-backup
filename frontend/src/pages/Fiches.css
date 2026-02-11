@@ -659,7 +659,8 @@ table.fiches-table thead,
 
   .btn-detail,
   .btn-edit,
-  .btn-archive {
+  .btn-archive,
+  .btn-ko {
     width: 36px;
     height: 36px;
     min-width: 36px;
@@ -764,7 +765,8 @@ table.fiches-table thead,
 
 .btn-detail,
 .btn-edit,
-.btn-archive {
+.btn-archive,
+.btn-ko {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -838,6 +840,34 @@ table.fiches-table thead,
 .btn-archive:hover svg {
   color: #ffffff !important;
   fill: #ffffff !important;
+}
+
+.btn-ko {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-ko svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.btn-ko:hover {
+  background: #e63946;
+  transform: translateY(-1px);
+}
+
+.btn-ko:hover svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.btn-ko.active {
+  background: #e63946;
+}
+
+.btn-ko.active:hover {
+  background: #6c757d;
 }
 
 /* Pagination */

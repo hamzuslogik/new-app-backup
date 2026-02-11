@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaPlus, FaEdit, FaArchive, FaTimes, FaSearch, FaChevronDown, FaChevronUp, FaCheck, FaFileAlt } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaArchive, FaTimes, FaSearch, FaChevronDown, FaChevronUp, FaCheck, FaFileAlt, FaBan } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
@@ -282,6 +282,23 @@ const Fiches = () => {
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de l\'archivage de la fiche');
+      }
+    }
+  );
+
+  // Mutation pour mettre une fiche en KO
+  const koMutation = useMutation(
+    async ({ id, ko }) => {
+      const response = await api.patch(`/fiches/${id}/ko`, { ko });
+      return response.data;
+    },
+    {
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries('fiches');
+        toast.success(variables.ko ? 'Fiche mise en KO avec succès' : 'Fiche retirée du KO avec succès');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de la mise en KO de la fiche');
       }
     }
   );
@@ -982,6 +999,21 @@ const Fiches = () => {
                                   title="Modifier"
                                 >
                                   <FaEdit />
+                                </button>
+                              )}
+                              {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 11 || user?.fonction === 12 || user?.fonction === 13) && (
+                                <button
+                                  className={`btn-ko ${fiche.ko ? 'active' : ''}`}
+                                  onClick={() => {
+                                    if (fiche.hash) {
+                                      if (window.confirm(fiche.ko ? 'Retirer le KO de cette fiche ?' : 'Mettre cette fiche en KO ?')) {
+                                        koMutation.mutate({ id: fiche.hash, ko: !fiche.ko });
+                                      }
+                                    }
+                                  }}
+                                  title={fiche.ko ? 'Retirer KO' : 'Mettre en KO'}
+                                >
+                                  <FaBan />
                                 </button>
                               )}
                               {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (

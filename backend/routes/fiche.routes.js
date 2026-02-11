@@ -4543,6 +4543,49 @@ router.patch('/:id/archive', authenticate, hashToIdMiddleware, async (req, res) 
   }
 });
 
+// Mettre une fiche en KO / Retirer le KO
+router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ko } = req.body;
+
+    // Vérifier que la fiche existe
+    const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
+    if (!fiche) {
+      return res.status(404).json({
+        success: false,
+        message: 'Fiche non trouvée'
+      });
+    }
+
+    // Vérifier les permissions (Admin, Backoffice, Superviseurs, RP)
+    const allowedFunctions = [1, 2, 7, 11, 12, 13];
+    if (!allowedFunctions.includes(req.user.fonction)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'avez pas la permission de mettre des fiches en KO'
+      });
+    }
+
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    await query(
+      `UPDATE fiches SET ko = ?, date_modif_time = ? WHERE id = ?`,
+      [ko ? 1 : 0, now, id]
+    );
+
+    res.json({
+      success: true,
+      message: ko ? 'Fiche mise en KO avec succès' : 'Fiche retirée du KO avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise en KO de la fiche:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise en KO de la fiche'
+    });
+  }
+});
+
 // =====================================================
 // SMS
 // =====================================================
