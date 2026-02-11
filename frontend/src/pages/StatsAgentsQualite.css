@@ -448,6 +448,74 @@
   color: #d32f2f;
 }
 
+/* Styles pour les cellules de données */
+.name-cell,
+.location-cell,
+.agent-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name-cell .nom {
+  font-weight: 600;
+  color: #333;
+}
+
+.name-cell .prenom,
+.location-cell .ville,
+.agent-cell .fullname {
+  font-size: 12px;
+  color: #666;
+}
+
+.agent-cell .pseudo {
+  font-weight: 500;
+  color: #2c5e6b;
+}
+
+/* Status badges KO/HC */
+.status-cell {
+  text-align: center;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.ko {
+  background: #e63946;
+  color: white;
+}
+
+.status-badge.hc {
+  background: #f4a261;
+  color: white;
+}
+
+.status-ok {
+  color: #999;
+}
+
+/* Lignes KO/HC */
+.fiches-table tr.row-ko {
+  background-color: rgba(230, 57, 70, 0.08);
+}
+
+.fiches-table tr.row-hc {
+  background-color: rgba(244, 162, 97, 0.08);
+}
+
+.fiches-table tr.row-ko:hover,
+.fiches-table tr.row-hc:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
 @media (max-width: 768px) {
   .agents-stats-grid {
     grid-template-columns: 1fr;

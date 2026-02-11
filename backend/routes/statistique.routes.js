@@ -2792,15 +2792,26 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
             f.nom,
             f.prenom,
             f.tel,
+            f.cp,
+            f.ville,
             f.date_insert_time,
             f.commentaire_qualite,
             f.id_etat_final,
+            f.ko,
+            f.hc,
             e.titre as etat_titre,
             e.color as etat_color,
+            e.abbreviation as etat_abbreviation,
+            agent_createur.pseudo as agent_pseudo,
+            agent_createur.nom as agent_nom,
+            agent_createur.prenom as agent_prenom,
+            centre.titre as centre_titre,
             m.${modificaDateColumn} as date_audit
           FROM fiches f
           INNER JOIN modifica m ON f.id = m.id_fiche
           LEFT JOIN etats e ON f.id_etat_final = e.id
+          LEFT JOIN utilisateurs agent_createur ON f.id_agent = agent_createur.id
+          LEFT JOIN centres centre ON f.id_centre = centre.id
           WHERE m.id_user = ?
           AND f.commentaire_qualite IS NOT NULL
           AND f.commentaire_qualite != ''
@@ -2811,6 +2822,7 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
           LIMIT 100
         `;
         const fichesAuditees = await query(fichesAuditeesQuery, [agent.id, startDate, endDate]);
+        console.log(`[STAT] /agents-qualite - Agent ${agent.pseudo}: ${fichesAuditees?.length || 0} fiches auditées`);
 
         return {
           agent: {

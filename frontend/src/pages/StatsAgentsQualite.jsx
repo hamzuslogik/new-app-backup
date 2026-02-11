@@ -400,47 +400,72 @@ const StatsAgentsQualite = () => {
                     <table className="fiches-table">
                       <thead>
                         <tr>
-                          <th>ID</th>
                           <th>Date Audit</th>
-                          <th>Nom</th>
-                          <th>Prénom</th>
+                          <th>Nom / Prénom</th>
                           <th>Téléphone</th>
+                          <th>CP / Ville</th>
+                          <th>Agent Créateur</th>
+                          <th>Centre</th>
                           <th>État</th>
-                          <th>Commentaire</th>
+                          <th>KO/HC</th>
+                          <th>Commentaire Qualité</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {agentStat.fiches_auditees.map((fiche) => (
-                          <tr key={fiche.id}>
-                            <td>{fiche.id}</td>
+                          <tr key={fiche.id} className={`${fiche.ko ? 'row-ko' : ''} ${fiche.hc ? 'row-hc' : ''}`}>
                             <td>
                               {fiche.date_audit 
                                 ? new Date(fiche.date_audit).toLocaleDateString('fr-FR', {
-                                    year: 'numeric',
-                                    month: '2-digit',
                                     day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
                                     hour: '2-digit',
                                     minute: '2-digit'
                                   })
                                 : '-'}
                             </td>
-                            <td>{fiche.nom || '-'}</td>
-                            <td>{fiche.prenom || '-'}</td>
+                            <td>
+                              <div className="name-cell">
+                                <span className="nom">{fiche.nom || '-'}</span>
+                                <span className="prenom">{fiche.prenom || '-'}</span>
+                              </div>
+                            </td>
                             <td>{fiche.tel || '-'}</td>
+                            <td>
+                              <div className="location-cell">
+                                <span>{fiche.cp || '-'}</span>
+                                <span className="ville">{fiche.ville || '-'}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="agent-cell">
+                                <span className="pseudo">{fiche.agent_pseudo || '-'}</span>
+                                {(fiche.agent_nom || fiche.agent_prenom) && (
+                                  <span className="fullname">{fiche.agent_nom} {fiche.agent_prenom}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td>{fiche.centre_titre || '-'}</td>
                             <td>
                               <span 
                                 className="etat-badge"
                                 style={{ backgroundColor: fiche.etat_color || '#ccc' }}
                               >
-                                {fiche.etat_titre || '-'}
+                                {fiche.etat_abbreviation || fiche.etat_titre || '-'}
                               </span>
+                            </td>
+                            <td className="status-cell">
+                              {fiche.ko ? <span className="status-badge ko">KO</span> : null}
+                              {fiche.hc ? <span className="status-badge hc">HC</span> : null}
+                              {!fiche.ko && !fiche.hc ? <span className="status-ok">-</span> : null}
                             </td>
                             <td className="comment-cell">
                               {fiche.commentaire_qualite ? (
                                 <div className="comment-preview" title={fiche.commentaire_qualite}>
-                                  {fiche.commentaire_qualite.length > 50 
-                                    ? `${fiche.commentaire_qualite.substring(0, 50)}...`
+                                  {fiche.commentaire_qualite.length > 80 
+                                    ? `${fiche.commentaire_qualite.substring(0, 80)}...`
                                     : fiche.commentaire_qualite}
                                 </div>
                               ) : (
