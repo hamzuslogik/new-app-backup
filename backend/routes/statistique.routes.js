@@ -1251,27 +1251,24 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       const bestTeam = await queryOne(bestTeamQuery, bestAgentParams);
 
       // Fiches validées : hors groupe 0 ET KO=0
+      // Utiliser LEFT JOIN et exclure explicitement les états groupe 0
       const fichesValideesQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
-        INNER JOIN utilisateurs u ON f.id_agent = u.id
-        INNER JOIN etats e ON f.id_etat_final = e.id
-        WHERE u.fonction = 3
-        AND f.date_insert_time >= ?
+        LEFT JOIN etats e ON f.id_etat_final = e.id
+        WHERE f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.ko = 0 OR f.ko IS NULL)
-        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
       `;
       const fichesValidees = await queryOne(fichesValideesQuery, [startDate, endDate]);
 
-      // Fiches produites : créées par agents qualification, hors poubelle (archive) et doublon
+      // Fiches produites : hors poubelle (archive) et hors doublon
       const fichesProduiteQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
-        INNER JOIN utilisateurs u ON f.id_agent = u.id
-        WHERE u.fonction = 3
-        AND f.date_insert_time >= ?
+        WHERE f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
       `;
@@ -1280,6 +1277,9 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       const nbValidees = fichesValidees?.count || 0;
       const nbProduites = fichesProduites?.count || 0;
       const tauxConversion = nbProduites > 0 ? ((nbValidees / nbProduites) * 100).toFixed(1) : 0;
+      
+      console.log(`[KPI-QUALIF] Période ${period.key}: startDate=${startDate}, endDate=${endDate}`);
+      console.log(`[KPI-QUALIF] Fiches validées: ${nbValidees}, Fiches produites: ${nbProduites}, Taux: ${tauxConversion}%`);
 
       kpiData[period.key] = {
         period: period.label,
