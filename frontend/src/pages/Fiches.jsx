@@ -937,6 +937,9 @@ const Fiches = () => {
                             style={{ backgroundColor: etatColor }}
                           >
                             {getEtatName(fiche.id_etat_final)}
+                            {(fiche.ko === 1 || fiche.ko === '1') && (
+                              <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>(KO)</span>
+                            )}
                             {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
                               <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
                                 (RDV_URGENT)
