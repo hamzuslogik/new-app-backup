@@ -4172,7 +4172,9 @@ router.get('/:hash/alertes-ko', authenticate, hashToIdMiddleware, async (req, re
   }
 });
 
-// Envoyer une alerte KO à l'agent qualification (fonction 3) qui a inséré la fiche
+// Envoyer une alerte KO à l'agent qualification (fonction 3) qui a inséré la fiche.
+// L'état et le sous-état sélectionnés sont uniquement enregistrés dans alert_ko (contexte de l'alerte).
+// La fiche n'est pas modifiée : pas de changement de id_etat_final ni id_sous_etat sur la table fiches.
 router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, res) => {
   try {
     const id = req.params.id ? parseInt(req.params.id, 10) : null;
@@ -4194,6 +4196,7 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
       return res.status(400).json({ success: false, message: 'Cette fiche n\'a pas d\'agent assigné' });
     }
     const { id_etat, id_sous_etat, commentaire } = req.body;
+    // id_etat / id_sous_etat : enregistrés dans alert_ko uniquement, sans modifier la fiche
     let nb_alertes = 0;
     try {
       const countRow = await queryOne('SELECT COUNT(*) AS nb FROM alert_ko WHERE id_fiche = ?', [id]);

@@ -933,7 +933,7 @@ const ControleQualite = () => {
             </div>
             <div className="modal-body">
               <p className="alerte-ko-info">
-                Alerte envoyée à l'agent qualification qui a inséré la fiche. 3 alertes doivent être envoyées avant de pouvoir passer la fiche en KO.
+                Alerte envoyée à l'agent qualification qui a inséré la fiche. 3 alertes doivent être envoyées avant de pouvoir passer la fiche en KO. L'état et le sous-état choisis ici sont uniquement enregistrés avec l'alerte et ne modifient pas l'état de la fiche.
               </p>
               <div className="form-group">
                 <label>Agent destinataire</label>
