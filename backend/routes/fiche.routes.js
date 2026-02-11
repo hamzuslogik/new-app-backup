@@ -1556,10 +1556,12 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
         fiche.id_agent,
         fiche.id_centre,
         fiche.id_etat_final,
+        fiche.id_sous_etat,
         fiche.date_insert_time,
         fiche.date_modif_time,
         fiche.commentaire_qualite,
         fiche.commentaire_commercial,
+        fiche.ko,
         agent.pseudo as agent_pseudo,
         agent.nom as agent_nom,
         agent.prenom as agent_prenom,
@@ -1567,6 +1569,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
         etat.titre as etat_titre,
         etat.color as etat_color,
         etat.abbreviation as etat_abbreviation,
+        sous_etat.titre as sous_etat_titre,
         qualite_user.pseudo as qualite_user_pseudo,
         qualite_user.nom as qualite_user_nom,
         qualite_user.prenom as qualite_user_prenom,
@@ -1578,6 +1581,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
        LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
        LEFT JOIN centres centre ON fiche.id_centre = centre.id
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
+       LEFT JOIN sous_etat ON fiche.id_sous_etat = sous_etat.id
        LEFT JOIN (
          SELECT 
            m1.id_fiche,

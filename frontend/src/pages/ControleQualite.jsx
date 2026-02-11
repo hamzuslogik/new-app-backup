@@ -293,12 +293,12 @@ const ControleQualite = () => {
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(allEtats);
 
   // Fonctions pour gérer le modal KO
-  const openKoModal = (ficheHash) => {
+  const openKoModal = (fiche) => {
     setKoModal({
       isOpen: true,
-      ficheHash,
-      sousEtatId: '',
-      commentaire: ''
+      ficheHash: fiche.hash,
+      sousEtatId: fiche.id_sous_etat ? String(fiche.id_sous_etat) : '',
+      commentaire: fiche.commentaire_qualite || ''
     });
   };
 
@@ -573,7 +573,7 @@ const ControleQualite = () => {
                         </button>
                         <button
                           className="btn-validate-ko"
-                          onClick={() => openKoModal(fiche.hash)}
+                          onClick={() => openKoModal(fiche)}
                           disabled={validateQualiteKoMutation.isLoading}
                           title="Valider (KO) : En-Attente, fiche non comptabilisée pour l'agent"
                         >
