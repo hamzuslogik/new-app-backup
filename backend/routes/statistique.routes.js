@@ -1335,24 +1335,19 @@ router.get('/kpis', authenticate, async (req, res) => {
   try {
     const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
     
-    // Centre CALL_JWS uniquement
+    // Centre CALL_JWS (optionnel - si pas trouvé, on prend tous les centres)
     const callJwsCentres = await query(`
       SELECT id FROM centres
       WHERE (titre = 'CALL_JWS' OR titre LIKE 'CALL_JWS%' OR titre LIKE 'Call_JWS%')
       AND etat > 0
     `);
     const callJwsCentreIds = (callJwsCentres || []).map(c => c.id);
-    if (callJwsCentreIds.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          jour: { period: 'Aujourd\'hui', date_start: '', date_end: '', top3_agents: [], top3_teams: [], conversion_rate: 0, evolution: {} },
-          semaine: { period: 'Cette semaine', date_start: '', date_end: '', top3_agents: [], top3_teams: [], conversion_rate: 0, evolution: {} },
-          mois: { period: 'Ce mois', date_start: '', date_end: '', top3_agents: [], top3_teams: [], conversion_rate: 0, evolution: {} }
-        }
-      });
-    }
-    const centreCondition = `AND f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})`;
+    // Si pas de centre CALL_JWS, on ne filtre pas par centre (toutes les fiches)
+    const centreCondition = callJwsCentreIds.length > 0 
+      ? `AND f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})` 
+      : '';
+    const useCentreFilter = callJwsCentreIds.length > 0;
+    console.log('[STAT] /kpis - Centre CALL_JWS trouvé:', callJwsCentreIds.length, 'IDs:', callJwsCentreIds);
     
     // Récupérer les IDs des états groupe 0 pour exclure
     const etatsGroupe0 = await query(`
@@ -1429,9 +1424,10 @@ router.get('/kpis', authenticate, async (req, res) => {
       const previousStartDate = `${previousStart} 00:00:00`;
       const previousEndDate = `${previousEnd} 23:59:59`;
 
+      const centreParams = useCentreFilter ? callJwsCentreIds : [];
       const baseParams = idsGroupe0.length > 0 
-        ? [startDate, endDate, ...idsGroupe0, ...callJwsCentreIds]
-        : [startDate, endDate, ...callJwsCentreIds];
+        ? [startDate, endDate, ...idsGroupe0, ...centreParams]
+        : [startDate, endDate, ...centreParams];
 
       // 1. Top 3 Agents (fiches validées = hors groupe 0, KO=0, HC=0)
       const top3AgentsQuery = `
@@ -1493,25 +1489,25 @@ router.get('/kpis', authenticate, async (req, res) => {
 
       // 3. Total fiches validées (période actuelle)
       const validatedParams = idsGroupe0.length > 0 
-        ? [startDate, endDate, ...idsGroupe0, ...callJwsCentreIds]
-        : [startDate, endDate, ...callJwsCentreIds];
+        ? [startDate, endDate, ...idsGroupe0, ...centreParams]
+        : [startDate, endDate, ...centreParams];
       
-      // Fiches validées = hors groupe 0, KO=0, HC=0 (une fiche HC n'est pas validée)
+      // Fiches validées = hors groupe 0 ET KO=0
       const validatedQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
-        INNER JOIN etats e ON f.id_etat_final = e.id
+        LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.ko = 0 OR f.ko IS NULL)
-        AND (f.hc = 0 OR f.hc IS NULL)
         ${centreCondition}
         ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
-        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
       `;
       const validatedResult = await queryOne(validatedQuery, validatedParams);
       const validatedCount = validatedResult?.count || 0;
+      console.log('[STAT] /kpis - Fiches validées count:', validatedCount, 'params:', validatedParams);
 
       // 4. Total fiches créées (période actuelle)
       const totalQuery = `
@@ -1522,10 +1518,11 @@ router.get('/kpis', authenticate, async (req, res) => {
         AND (f.archive = 0 OR f.archive IS NULL)
         ${centreCondition}
       `;
-      const totalResult = await queryOne(totalQuery, [startDate, endDate, ...callJwsCentreIds]);
+      const totalResult = await queryOne(totalQuery, [startDate, endDate, ...centreParams]);
       const totalCount = totalResult?.count || 0;
 
       // 4b. Total fiches générées par agents qualification (période actuelle)
+      // Exclure archive (poubelle) et état 61 (doublon)
       const totalQualifQuery = `
         SELECT COUNT(*) as count
         FROM fiches f
@@ -1535,10 +1532,12 @@ router.get('/kpis', authenticate, async (req, res) => {
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.id_etat_final != 61 OR f.id_etat_final IS NULL)
         ${centreCondition}
       `;
-      const totalQualifResult = await queryOne(totalQualifQuery, [startDate, endDate, ...callJwsCentreIds]);
+      const totalQualifResult = await queryOne(totalQualifQuery, [startDate, endDate, ...centreParams]);
       const totalQualifCount = totalQualifResult?.count || 0;
+      console.log('[STAT] /kpis - Fiches produites (qualif) count:', totalQualifCount, 'period:', period.key);
 
       // 4c. Fiches confirmées (état 7) générées par agents qualification (période actuelle)
       const confirmedQualifQuery = `
@@ -1553,33 +1552,34 @@ router.get('/kpis', authenticate, async (req, res) => {
         AND (f.archive = 0 OR f.archive IS NULL)
         ${centreCondition}
       `;
-      const confirmedQualifResult = await queryOne(confirmedQualifQuery, [startDate, endDate, ...callJwsCentreIds]);
+      const confirmedQualifResult = await queryOne(confirmedQualifQuery, [startDate, endDate, ...centreParams]);
       const confirmedQualifCount = confirmedQualifResult?.count || 0;
 
       // 5. Total fiches validées (période précédente)
       const previousValidatedParams = idsGroupe0.length > 0 
-        ? [previousStartDate, previousEndDate, ...idsGroupe0, ...callJwsCentreIds]
-        : [previousStartDate, previousEndDate, ...callJwsCentreIds];
+        ? [previousStartDate, previousEndDate, ...idsGroupe0, ...centreParams]
+        : [previousStartDate, previousEndDate, ...centreParams];
       
       const previousValidatedResult = await queryOne(validatedQuery, previousValidatedParams);
       const previousValidatedCount = previousValidatedResult?.count || 0;
 
       // 6. Total fiches créées (période précédente)
-      const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...callJwsCentreIds]);
+      const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...centreParams]);
       const previousTotalCount = previousTotalResult?.count || 0;
 
       // 6b. Total fiches générées par agents qualification (période précédente)
-      const previousTotalQualifResult = await queryOne(totalQualifQuery, [previousStartDate, previousEndDate, ...callJwsCentreIds]);
+      const previousTotalQualifResult = await queryOne(totalQualifQuery, [previousStartDate, previousEndDate, ...centreParams]);
       const previousTotalQualifCount = previousTotalQualifResult?.count || 0;
 
       // 6c. Fiches confirmées (état 7) générées par agents qualification (période précédente)
-      const previousConfirmedQualifResult = await queryOne(confirmedQualifQuery, [previousStartDate, previousEndDate, ...callJwsCentreIds]);
+      const previousConfirmedQualifResult = await queryOne(confirmedQualifQuery, [previousStartDate, previousEndDate, ...centreParams]);
       const previousConfirmedQualifCount = previousConfirmedQualifResult?.count || 0;
 
-      // Calculer le taux de conversion
-      const conversionRate = totalCount > 0 ? (validatedCount / totalCount) * 100 : 0;
-      const previousConversionRate = previousTotalCount > 0 ? (previousValidatedCount / previousTotalCount) * 100 : 0;
+      // Calculer le taux de conversion (Fiches validées / Fiches produites par agents qualification)
+      const conversionRate = totalQualifCount > 0 ? (validatedCount / totalQualifCount) * 100 : 0;
+      const previousConversionRate = previousTotalQualifCount > 0 ? (previousValidatedCount / previousTotalQualifCount) * 100 : 0;
       const conversionRateChange = conversionRate - previousConversionRate;
+      console.log('[STAT] /kpis - Taux conversion:', { validatedCount, totalQualifCount, conversionRate });
 
       // Calculer le taux de transformation des agents qualification
       // Taux de transformation = fiches confirmées (état 7) / fiches générées par agents qualification
@@ -1602,6 +1602,8 @@ router.get('/kpis', authenticate, async (req, res) => {
         date_end: period.end,
         conversion_rate: conversionRate,
         conversion_rate_change: conversionRateChange,
+        conversion_validated: validatedCount,
+        conversion_produced: totalQualifCount,
         transformation_rate: transformationRate,
         transformation_rate_change: transformationRateChange,
         transformation_count: confirmedQualifCount,
@@ -1774,7 +1776,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         ORDER BY count_confirmations DESC
         LIMIT 3
       `;
-      const top3Confirmations = await query(top3ConfirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate, ...callJwsCentreIds]);
+      const top3Confirmations = await query(top3ConfirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate, ...centreParams]);
 
       // 2. Top 3 Confirmateurs - Signatures : table signature (rapide, indexée)
       const top3SignaturesQuery = `
@@ -1795,7 +1797,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         ORDER BY count_signatures DESC
         LIMIT 3
       `;
-      const top3SignaturesRows = await query(top3SignaturesQuery, [...callJwsCentreIds, startDate, endDate]);
+      const top3SignaturesRows = await query(top3SignaturesQuery, [...centreParams, startDate, endDate]);
       const top3Signatures = (top3SignaturesRows || []).map(conf => ({
         id: conf.id,
         pseudo: conf.pseudo,
@@ -1812,7 +1814,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
          INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
          WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
          AND s.date_heure >= ? AND s.date_heure <= ?`,
-        [...callJwsCentreIds, startDate, endDate]
+        [...centreParams, startDate, endDate]
       );
       const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
 
@@ -1829,7 +1831,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         AND (f.archive = 0 OR f.archive IS NULL)
         ${centreCondition}
       `;
-      const confirmationsResult = await queryOne(confirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate, ...callJwsCentreIds]);
+      const confirmationsResult = await queryOne(confirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate, ...centreParams]);
       const confirmationsCount = confirmationsResult?.count || 0;
 
       // 5. Total fiches créées (période actuelle) - pour le dénominateur du taux de conversion
@@ -1841,11 +1843,11 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         AND (f.archive = 0 OR f.archive IS NULL)
         ${centreCondition}
       `;
-      const totalResult = await queryOne(totalQuery, [startDate, endDate, ...callJwsCentreIds]);
+      const totalResult = await queryOne(totalQuery, [startDate, endDate, ...centreParams]);
       const totalCount = totalResult?.count || 0;
 
       // 6. Totaux période précédente
-      const previousConfirmationsResult = await queryOne(confirmationsQuery, [previousStartTimestamp, previousEndTimestamp, previousStartDate, previousEndDate, ...callJwsCentreIds]);
+      const previousConfirmationsResult = await queryOne(confirmationsQuery, [previousStartTimestamp, previousEndTimestamp, previousStartDate, previousEndDate, ...centreParams]);
       const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
 
       // Signatures période précédente - table signature
@@ -1855,11 +1857,11 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
          INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
          WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
          AND s.date_heure >= ? AND s.date_heure <= ?`,
-        [...callJwsCentreIds, previousStartDate, previousEndDate]
+        [...centreParams, previousStartDate, previousEndDate]
       );
       const previousSignaturesCount = parseFloat(previousSignaturesTotalResult?.total || 0);
 
-      const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...callJwsCentreIds]);
+      const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...centreParams]);
       const previousTotalCount = previousTotalResult?.count || 0;
 
       // Calculer les taux

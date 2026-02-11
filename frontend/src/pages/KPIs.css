@@ -727,6 +727,43 @@
   margin-top: 5px;
 }
 
+/* Conversion details - fiches validées / produites */
+.conversion-details {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 6px;
+}
+
+.conversion-details .detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.conversion-details .detail-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.conversion-details .detail-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.conversion-details .detail-separator {
+  font-size: 20px;
+  font-weight: 300;
+  color: #ccc;
+  margin: 0 4px;
+}
+
 @media (max-width: 768px) {
   .metric-row {
     grid-template-columns: repeat(2, 1fr);

@@ -242,6 +242,17 @@ const KPIs = () => {
                     <span className="value">{formatPercentage(currentData.conversion_rate)}</span>
                     <span className="label">Fiches validées / Fiches produites</span>
                   </div>
+                  <div className="conversion-details">
+                    <span className="detail-item">
+                      <span className="detail-value">{currentData.conversion_validated || 0}</span>
+                      <span className="detail-label">validées</span>
+                    </span>
+                    <span className="detail-separator">/</span>
+                    <span className="detail-item">
+                      <span className="detail-value">{currentData.conversion_produced || 0}</span>
+                      <span className="detail-label">produites</span>
+                    </span>
+                  </div>
                   {currentData.conversion_rate_change !== undefined && (
                     <div className="evolution-indicator">
                       {getTrendIcon(currentData.conversion_rate_change > 0 ? 'up' : (currentData.conversion_rate_change < 0 ? 'down' : 'stable'))}
@@ -416,7 +427,7 @@ const KPIs = () => {
             </p>
             <p className="info-text">
               {activeTab === 'qualification' 
-                ? 'Taux de conversion = Fiches validées / Fiches produites. Validées = fiches hors groupe 0, KO=0, HC=0. Une fiche HC n\'est pas validée.'
+                ? 'Taux de conversion = Fiches validées / Fiches produites. Validées = fiches hors groupe 0 et KO=0. Produites = fiches créées par agents qualification, hors poubelle et doublon.'
                 : 'Les confirmations correspondent aux fiches avec état CONFIRMER (7). Les signatures correspondent aux fiches avec états SIGNER (13, 16, 44, 45).'}
             </p>
           </div>
