@@ -551,9 +551,7 @@ const ControleQualite = () => {
                         disabled={updateEtatMutation.isLoading}
                       >
                         <option value="">{isEtatGroupe0(fiche.id_etat_final) ? '-- Sélectionner --' : 'Validé'}</option>
-                        {etatsPhase0
-                          .filter(etat => etat.id !== ETAT_KO_ID && etat.id !== ETAT_HC_ID)
-                          .map(etat => (
+                        {etatsPhase0.map(etat => (
                             <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
                               {etat.titre}
                             </option>
