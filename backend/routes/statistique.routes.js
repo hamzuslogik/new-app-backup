@@ -1264,13 +1264,16 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       `;
       const fichesValidees = await queryOne(fichesValideesQuery, [startDate, endDate]);
 
-      // Fiches produites : hors poubelle (archive) et hors doublon
+      // Fiches produites : créées par agents qualification (fonction=3), hors poubelle (archive) et hors doublon (état 61)
       const fichesProduiteQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
-        WHERE f.date_insert_time >= ?
+        INNER JOIN utilisateurs u ON f.id_agent = u.id
+        WHERE u.fonction = 3
+        AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.id_etat_final != 61 OR f.id_etat_final IS NULL)
       `;
       const fichesProduites = await queryOne(fichesProduiteQuery, [startDate, endDate]);
 
@@ -1488,11 +1491,7 @@ router.get('/kpis', authenticate, async (req, res) => {
       const top3Teams = await query(top3TeamsQuery, baseParams);
 
       // 3. Total fiches validées (période actuelle)
-      const validatedParams = idsGroupe0.length > 0 
-        ? [startDate, endDate, ...idsGroupe0, ...centreParams]
-        : [startDate, endDate, ...centreParams];
-      
-      // Fiches validées = hors groupe 0 ET KO=0
+      // Fiches validées = hors groupe 0 ET KO=0 - SANS filtre par centre
       const validatedQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
@@ -1501,13 +1500,11 @@ router.get('/kpis', authenticate, async (req, res) => {
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.ko = 0 OR f.ko IS NULL)
-        ${centreCondition}
-        ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
         AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
       `;
-      const validatedResult = await queryOne(validatedQuery, validatedParams);
+      const validatedResult = await queryOne(validatedQuery, [startDate, endDate]);
       const validatedCount = validatedResult?.count || 0;
-      console.log('[STAT] /kpis - Fiches validées count:', validatedCount, 'params:', validatedParams);
+      console.log('[STAT] /kpis - Fiches validées count:', validatedCount, 'period:', period.key);
 
       // 4. Total fiches créées (période actuelle)
       const totalQuery = `
@@ -1522,20 +1519,18 @@ router.get('/kpis', authenticate, async (req, res) => {
       const totalCount = totalResult?.count || 0;
 
       // 4b. Total fiches générées par agents qualification (période actuelle)
-      // Exclure archive (poubelle) et état 61 (doublon)
+      // Exclure archive (poubelle) et état 61 (doublon) - SANS filtre par centre
       const totalQualifQuery = `
         SELECT COUNT(*) as count
         FROM fiches f
         INNER JOIN utilisateurs u ON f.id_agent = u.id
         WHERE u.fonction = 3
-        AND u.etat > 0
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.id_etat_final != 61 OR f.id_etat_final IS NULL)
-        ${centreCondition}
       `;
-      const totalQualifResult = await queryOne(totalQualifQuery, [startDate, endDate, ...centreParams]);
+      const totalQualifResult = await queryOne(totalQualifQuery, [startDate, endDate]);
       const totalQualifCount = totalQualifResult?.count || 0;
       console.log('[STAT] /kpis - Fiches produites (qualif) count:', totalQualifCount, 'period:', period.key);
 
@@ -1555,20 +1550,16 @@ router.get('/kpis', authenticate, async (req, res) => {
       const confirmedQualifResult = await queryOne(confirmedQualifQuery, [startDate, endDate, ...centreParams]);
       const confirmedQualifCount = confirmedQualifResult?.count || 0;
 
-      // 5. Total fiches validées (période précédente)
-      const previousValidatedParams = idsGroupe0.length > 0 
-        ? [previousStartDate, previousEndDate, ...idsGroupe0, ...centreParams]
-        : [previousStartDate, previousEndDate, ...centreParams];
-      
-      const previousValidatedResult = await queryOne(validatedQuery, previousValidatedParams);
+      // 5. Total fiches validées (période précédente) - SANS filtre par centre
+      const previousValidatedResult = await queryOne(validatedQuery, [previousStartDate, previousEndDate]);
       const previousValidatedCount = previousValidatedResult?.count || 0;
 
       // 6. Total fiches créées (période précédente)
       const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...centreParams]);
       const previousTotalCount = previousTotalResult?.count || 0;
 
-      // 6b. Total fiches générées par agents qualification (période précédente)
-      const previousTotalQualifResult = await queryOne(totalQualifQuery, [previousStartDate, previousEndDate, ...centreParams]);
+      // 6b. Total fiches générées par agents qualification (période précédente) - SANS filtre par centre
+      const previousTotalQualifResult = await queryOne(totalQualifQuery, [previousStartDate, previousEndDate]);
       const previousTotalQualifCount = previousTotalQualifResult?.count || 0;
 
       // 6c. Fiches confirmées (état 7) générées par agents qualification (période précédente)
