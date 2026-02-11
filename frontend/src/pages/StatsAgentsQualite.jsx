@@ -245,9 +245,9 @@ const StatsAgentsQualite = () => {
                 onChange={(e) => handleFilterChange('id_agent_qualite', e.target.value)}
               >
                 <option value="">Tous les agents</option>
-                {agentsQualiteData?.map(agent => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.pseudo} {agent.nom && agent.prenom ? `(${agent.nom} ${agent.prenom})` : ''}
+                {agentsQualiteData?.map(agentStat => (
+                  <option key={agentStat.agent.id} value={agentStat.agent.id}>
+                    {agentStat.agent.pseudo} {agentStat.agent.nom && agentStat.agent.prenom ? `(${agentStat.agent.nom} ${agentStat.agent.prenom})` : ''}
                   </option>
                 ))}
               </select>
