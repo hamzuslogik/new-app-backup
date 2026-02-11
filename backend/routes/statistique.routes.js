@@ -2653,6 +2653,7 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
 // =====================================================
 
 // Récupérer les statistiques par agent qualité (qui ont audité des fiches)
+// Se base sur le champ id_qualite dans la table fiches et date_insert_time pour la date
 router.get('/agents-qualite', authenticate, async (req, res) => {
   console.log('[STAT] /agents-qualite - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
@@ -2670,31 +2671,8 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
     const startDate = `${startDateStr} 00:00:00`;
     const endDate = `${endDateStr} 23:59:59`;
 
-    // Détecter la structure de la table modifica
-    let modificaFieldCondition = '';
-    let modificaDateColumn = 'date_modif_time';
-    try {
-      const modificaColumns = await query('SHOW COLUMNS FROM modifica');
-      const hasTypeColumn = modificaColumns.some(col => col.Field === 'type');
-      const hasChampColumn = modificaColumns.some(col => col.Field === 'champ');
-      
-      if (hasTypeColumn) {
-        modificaFieldCondition = "m.type = 'commentaire_qualite'";
-      } else if (hasChampColumn) {
-        modificaFieldCondition = "m.champ = 'commentaire_qualite'";
-      } else {
-        // Si aucune colonne spécifique, on filtre par les fiches qui ont un commentaire_qualite
-        // et on utilise la table fiches directement
-        modificaFieldCondition = "f.commentaire_qualite IS NOT NULL AND f.commentaire_qualite != ''";
-      }
-    } catch (error) {
-      console.error('Erreur lors de la détection de la structure modifica:', error);
-      // Fallback : utiliser les fiches avec commentaire_qualite
-      modificaFieldCondition = "f.commentaire_qualite IS NOT NULL AND f.commentaire_qualite != ''";
-    }
-
-    // Récupérer tous les agents qualité qui ont ajouté/modifié des commentaires qualité
-    // Un agent qualité est identifié par celui qui a modifié le champ commentaire_qualite
+    // Récupérer tous les agents qualité qui ont audité des fiches
+    // Un agent qualité est identifié par le champ id_qualite dans la table fiches
     let agentsQualiteQuery = `
       SELECT DISTINCT
         u.id,
@@ -2703,19 +2681,16 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
         u.prenom,
         u.photo,
         u.fonction,
-        f.titre as fonction_titre,
+        fn.titre as fonction_titre,
         u.centre,
         c.titre as centre_titre
-      FROM modifica m
-      INNER JOIN fiches fic ON m.id_fiche = fic.id
-      INNER JOIN utilisateurs u ON m.id_user = u.id
-      LEFT JOIN fonctions f ON u.fonction = f.id
+      FROM fiches f
+      INNER JOIN utilisateurs u ON f.id_qualite = u.id
+      LEFT JOIN fonctions fn ON u.fonction = fn.id
       LEFT JOIN centres c ON u.centre = c.id
-      WHERE fic.commentaire_qualite IS NOT NULL
-      AND fic.commentaire_qualite != ''
-      ${modificaFieldCondition && modificaFieldCondition !== '' ? `AND ${modificaFieldCondition}` : ''}
-      AND m.${modificaDateColumn} >= ?
-      AND m.${modificaDateColumn} <= ?
+      WHERE f.id_qualite IS NOT NULL
+      AND f.date_insert_time >= ?
+      AND f.date_insert_time <= ?
       AND u.etat > 0
     `;
 
@@ -2729,64 +2704,73 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
     agentsQualiteQuery += ' ORDER BY u.pseudo ASC';
 
     const agentsQualite = await query(agentsQualiteQuery, agentsParams);
+    console.log('[STAT] /agents-qualite - Agents trouvés:', agentsQualite?.length || 0);
 
     // Pour chaque agent qualité, calculer les statistiques
+    // Récupérer tous les états pour les statistiques
+    const tousEtats = await query(`
+      SELECT id, titre, color, abbreviation, groupe
+      FROM etats
+      ORDER BY groupe ASC, ordre ASC
+    `);
+
     const agentsStats = await Promise.all(
       agentsQualite.map(async (agent) => {
-        // Nombre total de fiches auditées (avec commentaire qualité ajouté/modifié)
-        // On compte les fiches qui ont un commentaire_qualite et qui ont été modifiées par cet agent
+        // Nombre total de fiches auditées par cet agent qualité (basé sur id_qualite)
         const auditsQuery = `
-          SELECT COUNT(DISTINCT f.id) as total_audits
+          SELECT COUNT(*) as total_audits
           FROM fiches f
-          INNER JOIN modifica m ON f.id = m.id_fiche
-          WHERE m.id_user = ?
-          AND f.commentaire_qualite IS NOT NULL
-          AND f.commentaire_qualite != ''
-          AND m.${modificaDateColumn} >= ?
-          AND m.${modificaDateColumn} <= ?
+          WHERE f.id_qualite = ?
+          AND f.date_insert_time >= ?
+          AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
         `;
         const auditsResult = await queryOne(auditsQuery, [agent.id, startDate, endDate]);
         const totalAudits = auditsResult?.total_audits || 0;
 
-        // Nombre de fiches avec commentaire qualité (non vide) - même chose que total_audits
-        const fichesAvecCommentaire = totalAudits;
+        // Nombre de fiches avec commentaire qualité (non vide)
+        const commentQuery = `
+          SELECT COUNT(*) as count
+          FROM fiches f
+          WHERE f.id_qualite = ?
+          AND f.date_insert_time >= ?
+          AND f.date_insert_time <= ?
+          AND f.commentaire_qualite IS NOT NULL
+          AND f.commentaire_qualite != ''
+          AND (f.archive = 0 OR f.archive IS NULL)
+        `;
+        const commentResult = await queryOne(commentQuery, [agent.id, startDate, endDate]);
+        const fichesAvecCommentaire = commentResult?.count || 0;
 
-        // Nombre de fiches par état (états groupe 0)
-        const etatsGroupe0 = await query(`
-          SELECT id, titre, color, abbreviation
-          FROM etats
-          WHERE (groupe = '0' OR groupe = 0)
-          ORDER BY ordre ASC
-        `);
-
+        // Nombre de fiches par état
         const statsParEtat = {};
-        for (const etat of etatsGroupe0) {
+        for (const etat of tousEtats) {
           const etatQuery = `
-            SELECT COUNT(DISTINCT f.id) as count
+            SELECT COUNT(*) as count
             FROM fiches f
-            INNER JOIN modifica m ON f.id = m.id_fiche
-            WHERE m.id_user = ?
-            AND f.commentaire_qualite IS NOT NULL
-            AND f.commentaire_qualite != ''
-            AND m.${modificaDateColumn} >= ?
-            AND m.${modificaDateColumn} <= ?
+            WHERE f.id_qualite = ?
+            AND f.date_insert_time >= ?
+            AND f.date_insert_time <= ?
             AND f.id_etat_final = ?
             AND (f.archive = 0 OR f.archive IS NULL)
           `;
           const etatResult = await queryOne(etatQuery, [agent.id, startDate, endDate, etat.id]);
-          statsParEtat[etat.id] = {
-            id: etat.id,
-            titre: etat.titre,
-            color: etat.color || '#ccc',
-            abbreviation: etat.abbreviation || etat.titre,
-            count: etatResult?.count || 0
-          };
+          const count = etatResult?.count || 0;
+          if (count > 0) {
+            statsParEtat[etat.id] = {
+              id: etat.id,
+              titre: etat.titre,
+              color: etat.color || '#ccc',
+              abbreviation: etat.abbreviation || etat.titre,
+              groupe: etat.groupe,
+              count: count
+            };
+          }
         }
 
         // Détails des fiches auditées (limité à 100 pour les performances)
         const fichesAuditeesQuery = `
-          SELECT DISTINCT
+          SELECT
             f.id,
             f.hash,
             f.nom,
@@ -2806,19 +2790,16 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
             agent_createur.nom as agent_nom,
             agent_createur.prenom as agent_prenom,
             centre.titre as centre_titre,
-            m.${modificaDateColumn} as date_audit
+            f.date_insert_time as date_audit
           FROM fiches f
-          INNER JOIN modifica m ON f.id = m.id_fiche
           LEFT JOIN etats e ON f.id_etat_final = e.id
           LEFT JOIN utilisateurs agent_createur ON f.id_agent = agent_createur.id
           LEFT JOIN centres centre ON f.id_centre = centre.id
-          WHERE m.id_user = ?
-          AND f.commentaire_qualite IS NOT NULL
-          AND f.commentaire_qualite != ''
-          AND m.${modificaDateColumn} >= ?
-          AND m.${modificaDateColumn} <= ?
+          WHERE f.id_qualite = ?
+          AND f.date_insert_time >= ?
+          AND f.date_insert_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
-          ORDER BY m.${modificaDateColumn} DESC
+          ORDER BY f.date_insert_time DESC
           LIMIT 100
         `;
         const fichesAuditees = await query(fichesAuditeesQuery, [agent.id, startDate, endDate]);
