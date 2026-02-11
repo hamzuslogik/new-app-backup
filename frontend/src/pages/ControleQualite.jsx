@@ -253,6 +253,20 @@ const ControleQualite = () => {
     });
   };
 
+  // Quand on choisit KO ou HC dans la liste déroulante : ouvrir le modal au lieu de changer l'état directement
+  const handleNouvelEtatSelect = (fiche, newEtatId) => {
+    const id = newEtatId ? parseInt(newEtatId, 10) : null;
+    if (id === ETAT_KO_ID) {
+      openKoModal(fiche);
+      return;
+    }
+    if (id === ETAT_HC_ID) {
+      openHcModal(fiche);
+      return;
+    }
+    handleEtatChange(fiche.hash, newEtatId);
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
@@ -546,7 +560,7 @@ const ControleQualite = () => {
                     <td>
                       <select
                         value={isEtatGroupe0(fiche.id_etat_final) ? (fiche.id_etat_final || '') : ''}
-                        onChange={(e) => handleEtatChange(fiche.hash, e.target.value)}
+                        onChange={(e) => handleNouvelEtatSelect(fiche, e.target.value)}
                         className="etat-select"
                         disabled={updateEtatMutation.isLoading}
                       >
