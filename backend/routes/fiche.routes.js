@@ -20,6 +20,39 @@ function getHistoConfirmateur(req, fiche = null) {
   return null;
 }
 
+/**
+ * Enregistre un audit dans la table controle_qualite (page Contrôle Qualité).
+ * En cas d'erreur (ex: table absente), log uniquement pour ne pas casser la réponse.
+ * @param {Object} params - id_fiche, id_qualite, id_etat?, id_sous_etat?, commentaire?, ko?, hc?, id_etat_precedent?, id_sous_etat_precedent?, id_agent_fiche?, id_centre?, date_audit?, date_fiche?
+ */
+async function insertControleQualiteAudit(params) {
+  const {
+    id_fiche,
+    id_qualite,
+    id_etat = null,
+    id_sous_etat = null,
+    commentaire = null,
+    ko = 0,
+    hc = 0,
+    id_etat_precedent = null,
+    id_sous_etat_precedent = null,
+    id_agent_fiche = null,
+    id_centre = null,
+    date_audit,
+    date_fiche = null
+  } = params;
+  const now = date_audit || new Date().toISOString().slice(0, 19).replace('T', ' ');
+  try {
+    await query(
+      `INSERT INTO controle_qualite (id_fiche, id_qualite, id_etat, id_sous_etat, commentaire, ko, hc, id_etat_precedent, id_sous_etat_precedent, id_agent_fiche, id_centre, date_audit, date_fiche, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id_fiche, id_qualite, id_etat, id_sous_etat, commentaire, ko, hc, id_etat_precedent, id_sous_etat_precedent, id_agent_fiche, id_centre, now, date_fiche, now]
+    );
+  } catch (err) {
+    console.error('Erreur insertion table controle_qualite (audit non enregistré):', err.message);
+  }
+}
+
 // Fonction pour encoder un ID en hash (utilise HMAC pour créer un hash unique)
 const encodeFicheId = (id) => {
   if (!id) return null;
@@ -3105,6 +3138,28 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       value || null
     );
 
+    // Enregistrer l'audit dans controle_qualite lorsque seul le commentaire qualité est modifié (page Contrôle Qualité)
+    if (field === 'commentaire_qualite') {
+      const hasControleQualitePermission = await hasPermission(req.user.fonction, 'controle_qualite_view');
+      if (hasControleQualitePermission) {
+        await insertControleQualiteAudit({
+          id_fiche: id,
+          id_qualite: req.user.id,
+          id_etat: fiche.id_etat_final ?? null,
+          id_sous_etat: fiche.id_sous_etat ?? null,
+          commentaire: value || null,
+          ko: 0,
+          hc: 0,
+          id_etat_precedent: fiche.id_etat_final ?? null,
+          id_sous_etat_precedent: fiche.id_sous_etat ?? null,
+          id_agent_fiche: fiche.id_agent ?? null,
+          id_centre: fiche.id_centre ?? null,
+          date_audit: now,
+          date_fiche: fiche.date_insert_time ?? null
+        });
+      }
+    }
+
     res.json({
       success: true,
       message: 'Champ mis à jour avec succès'
@@ -3628,6 +3683,28 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
         oldEtatId,
         newEtatId
       );
+
+      // Enregistrer l'audit dans controle_qualite (page Contrôle Qualité)
+      const hasControleQualitePermission = await hasPermission(req.user.fonction, 'controle_qualite_view');
+      if (hasControleQualitePermission) {
+        const ficheInfos = await queryOne('SELECT id_agent, id_centre, date_insert_time FROM fiches WHERE id = ?', [id]);
+        if (ficheInfos) {
+          await insertControleQualiteAudit({
+            id_fiche: id,
+            id_qualite: req.user.id,
+            id_etat: newEtatId,
+            id_sous_etat: null,
+            ko: 0,
+            hc: 0,
+            id_etat_precedent: oldEtatId,
+            id_sous_etat_precedent: fiche.id_sous_etat ?? null,
+            id_agent_fiche: ficheInfos.id_agent ?? null,
+            id_centre: ficheInfos.id_centre ?? null,
+            date_audit: now,
+            date_fiche: ficheInfos.date_insert_time ?? null
+          });
+        }
+      }
     }
 
     res.json({
@@ -3739,6 +3816,25 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
         oldEtatId,
         newEtatId
       );
+
+      // Enregistrer l'audit dans controle_qualite
+      const ficheInfos = await queryOne('SELECT id_agent, id_centre, date_insert_time FROM fiches WHERE id = ?', [id]);
+      if (ficheInfos) {
+        await insertControleQualiteAudit({
+          id_fiche: id,
+          id_qualite: req.user.id,
+          id_etat: newEtatId,
+          id_sous_etat: null,
+          ko: 0,
+          hc: 0,
+          id_etat_precedent: oldEtatId,
+          id_sous_etat_precedent: fiche.id_sous_etat ?? null,
+          id_agent_fiche: ficheInfos.id_agent ?? null,
+          id_centre: ficheInfos.id_centre ?? null,
+          date_audit: now,
+          date_fiche: ficheInfos.date_insert_time ?? null
+        });
+      }
     }
 
     res.json({
@@ -3861,6 +3957,26 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     }
     if (commentaire_ko) {
       await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'commentaire_qualite', null, commentaire_ko);
+    }
+
+    // Enregistrer l'audit dans controle_qualite
+    const ficheInfosKo = await queryOne('SELECT id_agent, id_centre, date_insert_time FROM fiches WHERE id = ?', [id]);
+    if (ficheInfosKo) {
+      await insertControleQualiteAudit({
+        id_fiche: id,
+        id_qualite: req.user.id,
+        id_etat: newEtatId,
+        id_sous_etat: id_sous_etat,
+        commentaire: commentaire_ko || null,
+        ko: 1,
+        hc: 0,
+        id_etat_precedent: oldEtatId,
+        id_sous_etat_precedent: oldSousEtatId ?? null,
+        id_agent_fiche: ficheInfosKo.id_agent ?? null,
+        id_centre: ficheInfosKo.id_centre ?? null,
+        date_audit: now,
+        date_fiche: ficheInfosKo.date_insert_time ?? null
+      });
     }
     
     res.json({
@@ -3987,6 +4103,26 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
     }
     if (commentaire_hc) {
       await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'commentaire_qualite', null, commentaire_hc);
+    }
+
+    // Enregistrer l'audit dans controle_qualite
+    const ficheInfosHc = await queryOne('SELECT id_agent, id_centre, date_insert_time FROM fiches WHERE id = ?', [id]);
+    if (ficheInfosHc) {
+      await insertControleQualiteAudit({
+        id_fiche: id,
+        id_qualite: req.user.id,
+        id_etat: newEtatId,
+        id_sous_etat: id_sous_etat,
+        commentaire: commentaire_hc || null,
+        ko: 0,
+        hc: 1,
+        id_etat_precedent: oldEtatId,
+        id_sous_etat_precedent: oldSousEtatId ?? null,
+        id_agent_fiche: ficheInfosHc.id_agent ?? null,
+        id_centre: ficheInfosHc.id_centre ?? null,
+        date_audit: now,
+        date_fiche: ficheInfosHc.date_insert_time ?? null
+      });
     }
     
     res.json({
