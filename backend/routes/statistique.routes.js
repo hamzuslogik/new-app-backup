@@ -1451,7 +1451,7 @@ router.get('/kpis', authenticate, async (req, res) => {
         ? [startDate, endDate, ...idsGroupe0, ...centreParams]
         : [startDate, endDate, ...centreParams];
 
-      // 1. Top 3 Agents (fiches validées = hors groupe 0, KO=0, HC=0)
+      // 1. Top 3 Agents (fiches validées = hors groupe 0 ET KO=0)
       const top3AgentsQuery = `
         SELECT 
           u.id,
@@ -1462,24 +1462,22 @@ router.get('/kpis', authenticate, async (req, res) => {
           COUNT(DISTINCT f.id) as count_validated
         FROM fiches f
         INNER JOIN utilisateurs u ON f.id_agent = u.id
-        INNER JOIN etats e ON f.id_etat_final = e.id
+        LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE u.fonction = 3
         AND u.etat > 0
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.ko = 0 OR f.ko IS NULL)
-        AND (f.hc = 0 OR f.hc IS NULL)
-        ${centreCondition}
-        ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
-        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
         GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_validated DESC
         LIMIT 3
       `;
-      const top3Agents = await query(top3AgentsQuery, baseParams);
+      const top3Agents = await query(top3AgentsQuery, [startDate, endDate]);
+      console.log('[STAT] /kpis - Top 3 Agents:', top3Agents?.length || 0, 'period:', period.key);
 
-      // 2. Top 3 Équipes (fiches validées = hors groupe 0, KO=0, HC=0)
+      // 2. Top 3 Équipes (fiches validées = hors groupe 0 ET KO=0)
       const top3TeamsQuery = `
         SELECT 
           s.id as superviseur_id,
@@ -1491,7 +1489,7 @@ router.get('/kpis', authenticate, async (req, res) => {
         FROM fiches f
         INNER JOIN utilisateurs a ON f.id_agent = a.id
         INNER JOIN utilisateurs s ON a.chef_equipe = s.id
-        INNER JOIN etats e ON f.id_etat_final = e.id
+        LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE a.fonction = 3
         AND a.etat > 0
         AND s.etat > 0
@@ -1499,15 +1497,13 @@ router.get('/kpis', authenticate, async (req, res) => {
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.ko = 0 OR f.ko IS NULL)
-        AND (f.hc = 0 OR f.hc IS NULL)
-        ${centreCondition}
-        ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
-        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
         GROUP BY s.id, s.pseudo, s.nom, s.prenom
         ORDER BY count_validated DESC
         LIMIT 3
       `;
-      const top3Teams = await query(top3TeamsQuery, baseParams);
+      const top3Teams = await query(top3TeamsQuery, [startDate, endDate]);
+      console.log('[STAT] /kpis - Top 3 Teams:', top3Teams?.length || 0, 'period:', period.key);
 
       // 3. Total fiches validées (période actuelle)
       // Fiches validées = hors groupe 0 ET KO=0 - SANS filtre par centre
