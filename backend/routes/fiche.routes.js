@@ -3767,6 +3767,18 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
         message: 'Identifiant de fiche invalide ou manquant'
       });
     }
+    
+    // Récupérer le sous-état et le commentaire depuis le body
+    const { id_sous_etat, commentaire_ko } = req.body;
+    
+    // Vérifier que le sous-état est fourni
+    if (!id_sous_etat) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le sous-état KO est obligatoire'
+      });
+    }
+    
     const hasControleQualitePermission = await hasPermission(req.user.fonction, 'controle_qualite_view');
     if (!hasControleQualitePermission) {
       return res.status(403).json({
@@ -3781,6 +3793,22 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
         message: 'Fiche non trouvée'
       });
     }
+    
+    // Vérifier que le sous-état existe et appartient à l'état KO (id 54)
+    const sousEtat = await queryOne('SELECT id, titre, id_etat FROM sous_etat WHERE id = ?', [id_sous_etat]);
+    if (!sousEtat) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sous-état non trouvé'
+      });
+    }
+    if (sousEtat.id_etat !== 54) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le sous-état sélectionné n\'appartient pas à l\'état KO'
+      });
+    }
+    
     const etatEnAttente = await queryOne(
       'SELECT id, titre FROM etats WHERE id = 1 OR (titre = ? OR titre = ? OR titre = ?) LIMIT 1',
       ['EN-ATTENTE', 'En-Attente', 'EN ATTENTE']
@@ -3792,22 +3820,25 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
       });
     }
     const oldEtatId = fiche.id_etat_final;
+    const oldSousEtatId = fiche.id_sous_etat;
     const newEtatId = etatEnAttente.id;
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
     if (isQualiteUser && !fiche.id_qualite) {
       await query('UPDATE fiches SET id_qualite = ? WHERE id = ?', [req.user.id, id]);
     }
+    
+    // Mettre à jour la fiche avec l'état, le sous-état KO et le commentaire
     await query(
-      'UPDATE fiches SET id_etat_final = ?, ko = 1, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
-      [newEtatId, now, now, id]
+      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = ?, ko = 1, commentaire_qualite = ?, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
+      [newEtatId, id_sous_etat, commentaire_ko || null, now, now, id]
     );
+    
     if (oldEtatId !== newEtatId) {
       const histoConf = getHistoConfirmateur(req, fiche);
-      const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
       await query(
         'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation) VALUES (?, ?, ?, ?, ?)',
-        [id, newEtatId, histoConf, histoSousEtat, now]
+        [id, newEtatId, histoConf, id_sous_etat, now]
       );
       await logModification(
         id,
@@ -3818,16 +3849,28 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
         newEtatId
       );
     }
+    
+    // Logger les modifications
     await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'ko', null, 1);
+    if (oldSousEtatId !== id_sous_etat) {
+      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'id_sous_etat', oldSousEtatId, id_sous_etat);
+    }
+    if (commentaire_ko) {
+      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'commentaire_qualite', null, commentaire_ko);
+    }
+    
     res.json({
       success: true,
       message: 'Fiche validée (KO) : En-Attente, non comptabilisée pour l\'agent',
       data: {
         id,
         id_etat_final: newEtatId,
+        id_sous_etat: id_sous_etat,
+        sous_etat_titre: sousEtat.titre,
         ko: 1,
         old_etat: oldEtatId,
-        etat_titre: etatEnAttente.titre
+        etat_titre: etatEnAttente.titre,
+        commentaire_ko: commentaire_ko || null
       }
     });
   } catch (error) {
