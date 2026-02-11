@@ -1250,6 +1250,37 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       
       const bestTeam = await queryOne(bestTeamQuery, bestAgentParams);
 
+      // Fiches validées : hors groupe 0 ET KO=0
+      const fichesValideesQuery = `
+        SELECT COUNT(DISTINCT f.id) as count
+        FROM fiches f
+        INNER JOIN utilisateurs u ON f.id_agent = u.id
+        INNER JOIN etats e ON f.id_etat_final = e.id
+        WHERE u.fonction = 3
+        AND f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
+        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+      `;
+      const fichesValidees = await queryOne(fichesValideesQuery, [startDate, endDate]);
+
+      // Fiches produites : créées par agents qualification, hors poubelle (archive) et doublon
+      const fichesProduiteQuery = `
+        SELECT COUNT(DISTINCT f.id) as count
+        FROM fiches f
+        INNER JOIN utilisateurs u ON f.id_agent = u.id
+        WHERE u.fonction = 3
+        AND f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+      `;
+      const fichesProduites = await queryOne(fichesProduiteQuery, [startDate, endDate]);
+
+      const nbValidees = fichesValidees?.count || 0;
+      const nbProduites = fichesProduites?.count || 0;
+      const tauxConversion = nbProduites > 0 ? ((nbValidees / nbProduites) * 100).toFixed(1) : 0;
+
       kpiData[period.key] = {
         period: period.label,
         date_start: period.start,
@@ -1271,7 +1302,12 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
           },
           count: bestTeam.count_validated || 0,
           nb_agents: bestTeam.nb_agents || 0
-        } : null
+        } : null,
+        taux_conversion: {
+          fiches_validees: nbValidees,
+          fiches_produites: nbProduites,
+          taux: parseFloat(tauxConversion)
+        }
       };
     }
 

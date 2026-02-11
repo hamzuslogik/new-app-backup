@@ -206,6 +206,37 @@ const KPIQualification = () => {
                 )}
               </div>
             </div>
+
+            {/* Taux de Conversion */}
+            <div className="kpi-card taux-conversion">
+              <div className="kpi-card-header">
+                <FaChartLine className="kpi-icon" />
+                <h2>Taux de Conversion</h2>
+                <span className="period-label">{currentData.period}</span>
+              </div>
+              <div className="kpi-card-body">
+                {currentData.taux_conversion ? (
+                  <>
+                    <div className="kpi-value taux-value">
+                      <span className="value">{currentData.taux_conversion.taux}%</span>
+                    </div>
+                    <div className="conversion-details">
+                      <div className="detail-item">
+                        <span className="detail-value">{currentData.taux_conversion.fiches_validees}</span>
+                        <span className="detail-label">fiches validées</span>
+                      </div>
+                      <div className="detail-separator">/</div>
+                      <div className="detail-item">
+                        <span className="detail-value">{currentData.taux_conversion.fiches_produites}</span>
+                        <span className="detail-label">fiches produites</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="no-data">Données non disponibles</div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Informations sur la période */}
@@ -214,7 +245,7 @@ const KPIQualification = () => {
               Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
             </p>
             <p className="info-text">
-              Les fiches validées correspondent aux fiches qui sont passées en phase 1, 2 ou 3 (hors groupe 0).
+              Fiches validées = fiches hors groupe 0 avec KO=0. Fiches produites = fiches créées par les agents qualification, hors poubelle et doublon.
             </p>
           </div>
         </div>
