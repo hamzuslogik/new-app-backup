@@ -685,7 +685,8 @@ router.get('/etats', authenticate, async (req, res) => {
     const querySql = 'SELECT id, titre, color, groupe, ordre, taux, abbreviation FROM etats ORDER BY ordre ASC';
     let etats = await query(querySql);
     const fonction = Number(req.user.fonction);
-    const canSeeGroupe0 = [2, 3, 8, 12].includes(fonction);
+    // Groupe 0 visible par : Admin (1), RE qualification (2), Agent qualification (3), Resp ADV (7), Qualité qualification (8), Admin call (11), RP qualification (12)
+    const canSeeGroupe0 = [1, 2, 3, 7, 8, 11, 12].includes(fonction);
     if (!canSeeGroupe0) {
       etats = etats.filter(e => String(e.groupe) !== '0' && e.groupe !== 0);
     }
