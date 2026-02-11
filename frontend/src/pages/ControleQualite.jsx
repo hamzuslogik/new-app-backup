@@ -240,6 +240,10 @@ const ControleQualite = () => {
 
   // Obtenir le libellé à afficher pour l'état actuel
   const getEtatActuelLabel = (fiche) => {
+    // Si la fiche est KO, afficher "VALIDÉ (KO)"
+    if (fiche.ko === 1 || fiche.ko === '1') {
+      return 'VALIDÉ (KO)';
+    }
     if (isEtatGroupe0(fiche.id_etat_final)) {
       return fiche.etat_titre || '-';
     }
@@ -248,6 +252,10 @@ const ControleQualite = () => {
 
   // Obtenir la couleur pour l'état actuel
   const getEtatActuelColor = (fiche) => {
+    // Si la fiche est KO, afficher en rouge
+    if (fiche.ko === 1 || fiche.ko === '1') {
+      return '#dc3545';
+    }
     if (isEtatGroupe0(fiche.id_etat_final)) {
       return getEtatColor(fiche);
     }
