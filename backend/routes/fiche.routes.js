@@ -1576,67 +1576,138 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
 
     const total = totalResult?.total || 0;
 
-    // Récupérer les fiches avec le dernier utilisateur qualité qui a modifié le commentaire
-    const fiches = await query(
-      `SELECT 
-        fiche.id,
-        fiche.nom,
-        fiche.prenom,
-        fiche.tel,
-        fiche.cp,
-        fiche.ville,
-        fiche.produit,
-        fiche.id_agent,
-        fiche.id_centre,
-        fiche.id_etat_final,
-        fiche.id_sous_etat,
-        fiche.date_insert_time,
-        fiche.date_modif_time,
-        fiche.commentaire_qualite,
-        fiche.commentaire_commercial,
-        fiche.ko,
-        agent.pseudo as agent_pseudo,
-        agent.nom as agent_nom,
-        agent.prenom as agent_prenom,
-        centre.titre as centre_nom,
-        etat.titre as etat_titre,
-        etat.color as etat_color,
-        etat.abbreviation as etat_abbreviation,
-        sous_etat.titre as sous_etat_titre,
-        qualite_user.pseudo as qualite_user_pseudo,
-        qualite_user.nom as qualite_user_nom,
-        qualite_user.prenom as qualite_user_prenom,
-        fiche.id_qualite,
-        qualite_assignee.pseudo as qualite_assignee_pseudo,
-        qualite_assignee.nom as qualite_assignee_nom,
-        qualite_assignee.prenom as qualite_assignee_prenom
-       FROM fiches fiche
-       LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
-       LEFT JOIN centres centre ON fiche.id_centre = centre.id
-       LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
-       LEFT JOIN sous_etat ON fiche.id_sous_etat = sous_etat.id
-       LEFT JOIN (
-         SELECT 
-           m1.id_fiche,
-           m1.id_user
-         FROM modifica m1
-         WHERE ${modificaFieldCondition}
-         AND m1.id = (
-           SELECT m2.id
-           FROM modifica m2
-           WHERE ${modificaFieldCondition.replace('m1.', 'm2.')}
-           AND m2.id_fiche = m1.id_fiche
-           ORDER BY m2.\`${modificaDateColumn}\` DESC
-           LIMIT 1
-         )
-       ) last_modif ON fiche.id = last_modif.id_fiche
-       LEFT JOIN utilisateurs qualite_user ON last_modif.id_user = qualite_user.id
-       LEFT JOIN utilisateurs qualite_assignee ON fiche.id_qualite = qualite_assignee.id
-       WHERE ${whereClause}
-       ORDER BY fiche.date_appel_time DESC
-       LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
-    );
+    // Récupérer les fiches avec le dernier utilisateur qualité qui a modifié le commentaire + nb d'alertes KO
+    let fiches;
+    try {
+      fiches = await query(
+        `SELECT 
+          fiche.id,
+          fiche.nom,
+          fiche.prenom,
+          fiche.tel,
+          fiche.cp,
+          fiche.ville,
+          fiche.produit,
+          fiche.id_agent,
+          fiche.id_centre,
+          fiche.id_etat_final,
+          fiche.id_sous_etat,
+          fiche.date_insert_time,
+          fiche.date_modif_time,
+          fiche.commentaire_qualite,
+          fiche.commentaire_commercial,
+          fiche.ko,
+          agent.pseudo as agent_pseudo,
+          agent.nom as agent_nom,
+          agent.prenom as agent_prenom,
+          centre.titre as centre_nom,
+          etat.titre as etat_titre,
+          etat.color as etat_color,
+          etat.abbreviation as etat_abbreviation,
+          sous_etat.titre as sous_etat_titre,
+          qualite_user.pseudo as qualite_user_pseudo,
+          qualite_user.nom as qualite_user_nom,
+          qualite_user.prenom as qualite_user_prenom,
+          fiche.id_qualite,
+          qualite_assignee.pseudo as qualite_assignee_pseudo,
+          qualite_assignee.nom as qualite_assignee_nom,
+          qualite_assignee.prenom as qualite_assignee_prenom,
+          (SELECT COUNT(*) FROM alert_ko ak WHERE ak.id_fiche = fiche.id) AS nb_alertes
+         FROM fiches fiche
+         LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
+         LEFT JOIN centres centre ON fiche.id_centre = centre.id
+         LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
+         LEFT JOIN sous_etat ON fiche.id_sous_etat = sous_etat.id
+         LEFT JOIN (
+           SELECT 
+             m1.id_fiche,
+             m1.id_user
+           FROM modifica m1
+           WHERE ${modificaFieldCondition}
+           AND m1.id = (
+             SELECT m2.id
+             FROM modifica m2
+             WHERE ${modificaFieldCondition.replace('m1.', 'm2.')}
+             AND m2.id_fiche = m1.id_fiche
+             ORDER BY m2.\`${modificaDateColumn}\` DESC
+             LIMIT 1
+           )
+         ) last_modif ON fiche.id = last_modif.id_fiche
+         LEFT JOIN utilisateurs qualite_user ON last_modif.id_user = qualite_user.id
+         LEFT JOIN utilisateurs qualite_assignee ON fiche.id_qualite = qualite_assignee.id
+         WHERE ${whereClause}
+         ORDER BY fiche.date_appel_time DESC
+         LIMIT ? OFFSET ?`,
+        [...params, parseInt(limit), offset]
+      );
+    } catch (err) {
+      if (err.code === 'ER_NO_SUCH_TABLE' && err.message && err.message.includes('alert_ko')) {
+        // Table alert_ko absente : requête sans nb_alertes
+        fiches = await query(
+          `SELECT 
+            fiche.id,
+            fiche.nom,
+            fiche.prenom,
+            fiche.tel,
+            fiche.cp,
+            fiche.ville,
+            fiche.produit,
+            fiche.id_agent,
+            fiche.id_centre,
+            fiche.id_etat_final,
+            fiche.id_sous_etat,
+            fiche.date_insert_time,
+            fiche.date_modif_time,
+            fiche.commentaire_qualite,
+            fiche.commentaire_commercial,
+            fiche.ko,
+            agent.pseudo as agent_pseudo,
+            agent.nom as agent_nom,
+            agent.prenom as agent_prenom,
+            centre.titre as centre_nom,
+            etat.titre as etat_titre,
+            etat.color as etat_color,
+            etat.abbreviation as etat_abbreviation,
+            sous_etat.titre as sous_etat_titre,
+            qualite_user.pseudo as qualite_user_pseudo,
+            qualite_user.nom as qualite_user_nom,
+            qualite_user.prenom as qualite_user_prenom,
+            fiche.id_qualite,
+            qualite_assignee.pseudo as qualite_assignee_pseudo,
+            qualite_assignee.nom as qualite_assignee_nom,
+            qualite_assignee.prenom as qualite_assignee_prenom
+           FROM fiches fiche
+           LEFT JOIN utilisateurs agent ON fiche.id_agent = agent.id
+           LEFT JOIN centres centre ON fiche.id_centre = centre.id
+           LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
+           LEFT JOIN sous_etat ON fiche.id_sous_etat = sous_etat.id
+           LEFT JOIN (
+             SELECT 
+               m1.id_fiche,
+               m1.id_user
+             FROM modifica m1
+             WHERE ${modificaFieldCondition}
+             AND m1.id = (
+               SELECT m2.id
+               FROM modifica m2
+               WHERE ${modificaFieldCondition.replace('m1.', 'm2.')}
+               AND m2.id_fiche = m1.id_fiche
+               ORDER BY m2.\`${modificaDateColumn}\` DESC
+               LIMIT 1
+             )
+           ) last_modif ON fiche.id = last_modif.id_fiche
+           LEFT JOIN utilisateurs qualite_user ON last_modif.id_user = qualite_user.id
+           LEFT JOIN utilisateurs qualite_assignee ON fiche.id_qualite = qualite_assignee.id
+           WHERE ${whereClause}
+           ORDER BY fiche.date_appel_time DESC
+           LIMIT ? OFFSET ?`,
+          [...params, parseInt(limit), offset]
+        );
+        fiches = fiches.map(f => ({ ...f, nb_alertes: 0 }));
+      } else {
+        throw err;
+      }
+    }
 
     // Encoder les IDs
     const fichesWithHash = fiches.map(fiche => ({

@@ -142,7 +142,6 @@ const Alertes = () => {
                   <th>Agent</th>
                   <th>Envoyée par</th>
                   <th>État / Sous-état</th>
-                  <th>N° alerte</th>
                   <th>Commentaire</th>
                 </tr>
               </thead>
@@ -157,7 +156,6 @@ const Alertes = () => {
                     <td>
                       {[a.etat_titre, a.sous_etat_titre].filter(Boolean).join(' / ') || '-'}
                     </td>
-                    <td><span className="num-alerte">{a.num_alerte}/3</span></td>
                     <td className="comment-cell">{a.commentaire ? String(a.commentaire).slice(0, 80) + (a.commentaire.length > 80 ? '…' : '') : '-'}</td>
                   </tr>
                 ))}
