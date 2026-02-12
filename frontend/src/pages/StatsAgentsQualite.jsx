@@ -2,15 +2,18 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaUserCheck, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaChartBar, FaList, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaUserCheck, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaChartBar, FaList, FaChevronDown, FaChevronUp, FaChartPie } from 'react-icons/fa';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import FicheDetailLink from '../components/FicheDetailLink';
 import './StatsAgentsQualite.css';
 
+const CHART_COLORS = ['#9cbfc8', '#4a7a87', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#e83e8c'];
+
 const StatsAgentsQualite = () => {
   const { user } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
-  const [viewMode, setViewMode] = useState('stats'); // 'stats' ou 'fiches'
+  const [viewMode, setViewMode] = useState('stats'); // 'stats', 'fiches' ou 'kpis'
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedAgents, setExpandedAgents] = useState({});
 
@@ -54,8 +57,20 @@ const StatsAgentsQualite = () => {
       return res.data.data;
     },
     {
-      enabled: !!filters.date_debut && !!filters.date_fin
+      enabled: !!filters.date_debut && !!filters.date_fin && viewMode !== 'kpis'
     }
+  );
+
+  // KPIs (alertes KO, remarques)
+  const { data: kpisData, isLoading: kpisLoading } = useQuery(
+    ['stats-agents-qualite-kpis', filters.date_debut, filters.date_fin],
+    async () => {
+      const res = await api.get('/statistiques/agents-qualite-kpis', {
+        params: { date_debut: filters.date_debut, date_fin: filters.date_fin }
+      });
+      return res.data.data;
+    },
+    { enabled: viewMode === 'kpis' && !!filters.date_debut && !!filters.date_fin }
   );
 
   const handleFilterChange = (key, value) => {
@@ -166,7 +181,9 @@ const StatsAgentsQualite = () => {
     exportToPDF(exportData, columns, `stats-agents-qualite-${filters.date_debut}-${filters.date_fin}`, 'Statistiques par Agent Qualité');
   };
 
-  if (isLoading) {
+  const hasError = viewMode !== 'kpis' && error;
+
+  if (viewMode !== 'kpis' && isLoading) {
     return (
       <div className="stats-agents-qualite-page">
         <div className="loading">Chargement des statistiques...</div>
@@ -174,11 +191,11 @@ const StatsAgentsQualite = () => {
     );
   }
 
-  if (error) {
+  if (hasError) {
     return (
       <div className="stats-agents-qualite-page">
         <div className="error">
-          Erreur lors du chargement des statistiques: {error.message || 'Erreur inconnue'}
+          Erreur lors du chargement des statistiques: {error?.message || 'Erreur inconnue'}
         </div>
       </div>
     );
@@ -200,6 +217,12 @@ const StatsAgentsQualite = () => {
             onClick={() => setViewMode('fiches')}
           >
             <FaList /> Fiches Auditées
+          </button>
+          <button
+            className={`mode-btn ${viewMode === 'kpis' ? 'active' : ''}`}
+            onClick={() => setViewMode('kpis')}
+          >
+            <FaChartPie /> KPIs
           </button>
           <div className="export-buttons">
             <button onClick={handleExportCSV} className="btn-export" title="Exporter en CSV">
@@ -494,6 +517,131 @@ const StatsAgentsQualite = () => {
             </div>
           ) : (
             <div className="no-data">Aucun agent qualité trouvé pour cette période</div>
+          )}
+        </div>
+      )}
+
+      {/* Onglet KPIs */}
+      {viewMode === 'kpis' && (
+        <div className="kpis-content">
+          {kpisLoading ? (
+            <div className="loading">Chargement des KPIs...</div>
+          ) : (
+            <>
+              {kpisData?.period && (
+                <div className="period-info">
+                  Période : <strong>{kpisData.period.date_debut}</strong> au <strong>{kpisData.period.date_fin}</strong>
+                </div>
+              )}
+
+              {/* Tableau qualité qualification : alertes et remarques envoyées */}
+              <section className="kpis-section">
+                <h3>Qualité qualification – Alertes et remarques envoyées</h3>
+                <div className="table-responsive">
+                  <table className="stats-table kpis-table">
+                    <thead>
+                      <tr>
+                        <th>Qualité</th>
+                        <th>Alertes envoyées</th>
+                        <th>Remarques envoyées</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(kpisData?.qualite_qualification || []).length === 0 ? (
+                        <tr><td colSpan={3} className="no-data">Aucune donnée</td></tr>
+                      ) : (
+                        (kpisData?.qualite_qualification || []).map((row) => (
+                          <tr key={row.id}>
+                            <td>{row.pseudo || `${row.nom || ''} ${row.prenom || ''}`.trim() || row.id}</td>
+                            <td>{row.nb_alertes_envoyees}</td>
+                            <td>{row.nb_remarques_envoyees}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              {/* Camembert : RE qualification – alertes reçues par leurs agents */}
+              <section className="kpis-section">
+                <h3>Répartition des alertes KO par RE qualification</h3>
+                <div className="kpis-chart-wrap">
+                  {(kpisData?.re_alertes_pie || []).length === 0 ? (
+                    <div className="no-data">Aucune alerte sur la période</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={320}>
+                      <PieChart>
+                        <Pie
+                          data={kpisData.re_alertes_pie}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={120}
+                          label={({ name, value, percent }) => `${name}: ${value} (${((percent || 0) * 100).toFixed(0)}%)`}
+                        >
+                          {(kpisData.re_alertes_pie || []).map((_, i) => (
+                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value, name, props) => [`${value} alertes (${((props?.payload?.percent ?? 0) * 100).toFixed(1)}%)`, name]} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </section>
+
+              {/* Graphique en barres : RE qualification – remarques reçues */}
+              <section className="kpis-section">
+                <h3>Remarques reçues par RE qualification (nombre et %)</h3>
+                <div className="kpis-chart-wrap">
+                  {(kpisData?.re_remarques_bar || []).length === 0 ? (
+                    <div className="no-data">Aucune remarque sur la période</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={kpisData.re_remarques_bar} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                        <XAxis dataKey="name" angle={-25} textAnchor="end" height={60} />
+                        <YAxis />
+                        <Tooltip formatter={(value, name, props) => [`${value} (${props.payload.percent}%)`, name]} />
+                        <Legend />
+                        <Bar dataKey="value" name="Remarques" fill="#4a7a87" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </section>
+
+              {/* Tableau agents qualification : remarques et alertes KO reçues */}
+              <section className="kpis-section">
+                <h3>Agents qualification – Remarques et alertes KO reçues</h3>
+                <div className="table-responsive">
+                  <table className="stats-table kpis-table">
+                    <thead>
+                      <tr>
+                        <th>Agent</th>
+                        <th>Alertes KO reçues</th>
+                        <th>Remarques reçues</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(kpisData?.agents_qualification || []).length === 0 ? (
+                        <tr><td colSpan={3} className="no-data">Aucun agent</td></tr>
+                      ) : (
+                        (kpisData?.agents_qualification || []).map((row) => (
+                          <tr key={row.id}>
+                            <td>{row.pseudo || `${row.nom || ''} ${row.prenom || ''}`.trim() || row.id}</td>
+                            <td>{row.nb_alertes_ko_recues}</td>
+                            <td>{row.nb_remarques_recues}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
           )}
         </div>
       )}

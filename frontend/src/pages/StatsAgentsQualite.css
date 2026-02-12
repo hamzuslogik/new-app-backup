@@ -543,3 +543,51 @@
   }
 }
 
+/* Onglet KPIs */
+.kpis-content {
+  margin-top: 1rem;
+}
+
+.kpis-section {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.kpis-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.kpis-chart-wrap {
+  min-height: 280px;
+  padding: 0.5rem;
+}
+
+.kpis-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.kpis-table th,
+.kpis-table td {
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.kpis-table th {
+  background: #9cbfc8;
+  color: #fff;
+  font-weight: 600;
+}
+
+.kpis-table .no-data {
+  text-align: center;
+  color: #666;
+  padding: 1rem;
+}
+

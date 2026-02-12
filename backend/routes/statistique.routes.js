@@ -2847,4 +2847,194 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
   }
 });
 
+// =====================================================
+// KPIs Stats Agents Qualité (alertes KO, remarques)
+// =====================================================
+router.get('/agents-qualite-kpis', authenticate, async (req, res) => {
+  try {
+    const { date_debut, date_fin } = req.query;
+    const today = new Date();
+    const startDateStr = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const endDateStr = date_fin || today.toISOString().split('T')[0];
+    const startDate = `${startDateStr} 00:00:00`;
+    const endDate = `${endDateStr} 23:59:59`;
+
+    let qualiteTable = [];
+    let reAlertesPie = [];
+    let reRemarquesBar = [];
+    let agentsQualifTable = [];
+
+    try {
+      // 1) Tableau qualité qualification : nb alertes envoyées, nb remarques envoyées (par id_qualite / id_expediteur)
+      let qualiteIdsFromAlertes = [];
+      let qualiteIdsFromRemarques = [];
+      try {
+        qualiteIdsFromAlertes = await query(
+          `SELECT id_qualite AS id FROM alert_ko WHERE date_alerte >= ? AND date_alerte <= ?`,
+          [startDate, endDate]
+        ) || [];
+      } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
+      try {
+        qualiteIdsFromRemarques = await query(
+          `SELECT id_expediteur AS id FROM remarques WHERE date_remarque >= ? AND date_remarque <= ?`,
+          [startDate, endDate]
+        ) || [];
+      } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
+      const allQualiteIds = [...new Set([
+        ...(qualiteIdsFromAlertes || []).map((r) => r.id),
+        ...(qualiteIdsFromRemarques || []).map((r) => r.id)
+      ])].filter(Boolean);
+
+      if (allQualiteIds.length > 0) {
+        const placeholders = allQualiteIds.map(() => '?').join(',');
+        const users = await query(
+          `SELECT id, pseudo, nom, prenom FROM utilisateurs WHERE id IN (${placeholders})`,
+          allQualiteIds
+        );
+        for (const u of users || []) {
+          let alertesSentNb = 0;
+          let remarquesSentNb = 0;
+          try {
+            const alertesSent = await queryOne(
+              `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_qualite = ? AND date_alerte >= ? AND date_alerte <= ?`,
+              [u.id, startDate, endDate]
+            );
+            alertesSentNb = alertesSent?.nb ?? 0;
+          } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
+          try {
+            const remarquesSent = await queryOne(
+              `SELECT COUNT(*) AS nb FROM remarques WHERE id_expediteur = ? AND date_remarque >= ? AND date_remarque <= ?`,
+              [u.id, startDate, endDate]
+            );
+            remarquesSentNb = remarquesSent?.nb ?? 0;
+          } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
+          qualiteTable.push({
+            id: u.id,
+            pseudo: u.pseudo,
+            nom: u.nom,
+            prenom: u.prenom,
+            nb_alertes_envoyees: alertesSentNb,
+            nb_remarques_envoyees: remarquesSentNb
+          });
+        }
+        qualiteTable.sort((a, b) => (b.nb_alertes_envoyees + b.nb_remarques_envoyees) - (a.nb_alertes_envoyees + a.nb_remarques_envoyees));
+      }
+
+      // 2) RE qualification : alertes reçues par leurs agents (camembert : % et nombre)
+      const reList = await query(
+        `SELECT id, pseudo FROM utilisateurs WHERE fonction = 2 AND (etat > 0 OR etat IS NULL) ORDER BY pseudo ASC`
+      ).catch(() => []);
+      let totalAlertes = 0;
+      const reAlertesCounts = [];
+      for (const re of reList || []) {
+        const agents = await query(
+          `SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 3 AND (etat > 0 OR etat IS NULL)`,
+          [re.id]
+        ).catch(() => []);
+        const agentIds = (agents || []).map((a) => a.id);
+        let nb = 0;
+        if (agentIds.length > 0) {
+          try {
+            const ph = agentIds.map(() => '?').join(',');
+            const r = await queryOne(
+              `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_agent IN (${ph}) AND date_alerte >= ? AND date_alerte <= ?`,
+              [...agentIds, startDate, endDate]
+            );
+            nb = r?.nb ?? 0;
+          } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
+        }
+        totalAlertes += nb;
+        reAlertesCounts.push({ re_id: re.id, re_pseudo: re.pseudo, nb });
+      }
+      const totalA = totalAlertes;
+      reAlertesPie = reAlertesCounts.map(({ re_pseudo, nb }) => ({
+        name: re_pseudo,
+        value: nb,
+        percent: totalA > 0 ? Math.round((nb / totalA) * 100) : 0
+      })).filter((d) => d.value > 0);
+
+      // 3) RE qualification : remarques reçues par leurs agents (graphique en barres)
+      let totalRemarques = 0;
+      const reRemarquesCounts = [];
+      for (const re of reList || []) {
+        const agents = await query(
+          `SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 3 AND (etat > 0 OR etat IS NULL)`,
+          [re.id]
+        ).catch(() => []);
+        const agentIds = (agents || []).map((a) => a.id);
+        let nb = 0;
+        if (agentIds.length > 0) {
+          try {
+            const ph = agentIds.map(() => '?').join(',');
+            const r = await queryOne(
+              `SELECT COUNT(*) AS nb FROM remarques WHERE id_destinataire IN (${ph}) AND date_remarque >= ? AND date_remarque <= ?`,
+              [...agentIds, startDate, endDate]
+            );
+            nb = r?.nb ?? 0;
+          } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
+        }
+        totalRemarques += nb;
+        reRemarquesCounts.push({ re_pseudo: re.pseudo, nb });
+      }
+      const totalR = totalRemarques;
+      reRemarquesBar = reRemarquesCounts.map(({ re_pseudo, nb }) => ({
+        name: re_pseudo,
+        value: nb,
+        percent: totalR > 0 ? Math.round((nb / totalR) * 100) : 0
+      }));
+
+      // 4) Tableau agents qualification : nb remarques reçues, nb alertes KO reçues
+      const agentsQualif = await query(
+        `SELECT id, pseudo, nom, prenom, chef_equipe FROM utilisateurs WHERE fonction = 3 AND (etat > 0 OR etat IS NULL) ORDER BY pseudo ASC`
+      ).catch(() => []);
+      for (const ag of agentsQualif || []) {
+        let alertesKoNb = 0;
+        let remarquesNb = 0;
+        try {
+          const alertesKo = await queryOne(
+            `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_agent = ? AND date_alerte >= ? AND date_alerte <= ?`,
+            [ag.id, startDate, endDate]
+          );
+          alertesKoNb = alertesKo?.nb ?? 0;
+        } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
+        try {
+          const remarquesRecu = await queryOne(
+            `SELECT COUNT(*) AS nb FROM remarques WHERE id_destinataire = ? AND date_remarque >= ? AND date_remarque <= ?`,
+            [ag.id, startDate, endDate]
+          );
+          remarquesNb = remarquesRecu?.nb ?? 0;
+        } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
+        agentsQualifTable.push({
+          id: ag.id,
+          pseudo: ag.pseudo,
+          nom: ag.nom,
+          prenom: ag.prenom,
+          nb_alertes_ko_recues: alertesKoNb,
+          nb_remarques_recues: remarquesNb
+        });
+      }
+    } catch (err) {
+      if (err.code !== 'ER_NO_SUCH_TABLE') throw err;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        period: { date_debut: startDateStr, date_fin: endDateStr },
+        qualite_qualification: qualiteTable,
+        re_alertes_pie: reAlertesPie,
+        re_remarques_bar: reRemarquesBar,
+        agents_qualification: agentsQualifTable
+      }
+    });
+  } catch (error) {
+    console.error('[STAT] /agents-qualite-kpis - Erreur:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
