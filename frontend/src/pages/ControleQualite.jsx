@@ -782,8 +782,8 @@ const ControleQualite = () => {
                           type="button"
                           className="btn-alerte-ko"
                           onClick={() => openAlertModal(fiche)}
-                          disabled={sendAlerteKoMutation.isLoading || (fiche.nb_alertes ?? 0) >= 3}
-                          title={(fiche.nb_alertes ?? 0) >= 3 ? '3 alertes déjà envoyées pour cette fiche' : "Envoyer une alerte à l'agent qui a inséré la fiche (3 alertes avant KO)"}
+                          disabled={sendAlerteKoMutation.isLoading || (fiche.nb_alertes ?? 0) >= 1}
+                          title={(fiche.nb_alertes ?? 0) >= 1 ? 'Une alerte a déjà été envoyée pour cette fiche' : "Envoyer une alerte à l'agent qui a inséré la fiche (3 alertes avant KO)"}
                         >
                           <FaBell /> Alerte
                         </button>
