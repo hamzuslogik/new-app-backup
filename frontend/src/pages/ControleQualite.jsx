@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaSearch, FaChevronDown, FaChevronUp, FaCheckCircle, FaFilter, FaUserCheck, FaCheck, FaComment, FaTimes, FaSave, FaBan, FaBell } from 'react-icons/fa';
+import { FaSearch, FaChevronDown, FaChevronUp, FaCheckCircle, FaFilter, FaUserCheck, FaCheck, FaComment, FaTimes, FaSave, FaBan, FaBell, FaCommentDots } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
+import RemarquesContent from '../components/RemarquesContent';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import './ControleQualite.css';
@@ -58,6 +59,9 @@ const ControleQualite = () => {
     commentaire: '',
     nbAlertes: null
   });
+
+  // Modal Remarques (envoyer / consulter les remarques qualité → agents qualification)
+  const [remarquesModalOpen, setRemarquesModalOpen] = useState(false);
 
   // Récupérer les agents qualification
   const { data: agentsData } = useQuery('agents-qualif-list', async () => {
@@ -514,13 +518,32 @@ const ControleQualite = () => {
       <SystemMessageBanner />
       <div className="page-header">
         <h1><FaUserCheck /> Contrôle Qualité</h1>
-        <button 
-          className="filter-toggle-btn" 
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
-        </button>
+        <div className="page-header-actions">
+          <button
+            type="button"
+            className="btn-remarques-header"
+            onClick={() => setRemarquesModalOpen(true)}
+            title="Ouvrir les remarques (qualité → agents qualification)"
+          >
+            <FaCommentDots /> Remarques
+          </button>
+          <button 
+            className="filter-toggle-btn" 
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
+          </button>
+        </div>
       </div>
+
+      {/* Modal Remarques */}
+      {remarquesModalOpen && (
+        <div className="modal-overlay" onClick={() => setRemarquesModalOpen(false)}>
+          <div className="modal-content remarques-modal" onClick={(e) => e.stopPropagation()}>
+            <RemarquesContent inModal onClose={() => setRemarquesModalOpen(false)} />
+          </div>
+        </div>
+      )}
 
       {showFilters && (
         <div className="search-form">

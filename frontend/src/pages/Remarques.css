@@ -1,0 +1,25 @@
+.page-remarques {
+  padding: 16px;
+  max-width: 100%;
+}
+
+.page-remarques .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-remarques .page-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-remarques .page-header h1 svg {
+  color: #f7a219;
+}

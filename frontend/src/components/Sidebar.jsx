@@ -225,6 +225,15 @@ const Sidebar = ({ collapsed }) => {
         [3, 2, 12].includes(Number(user?.fonction)) || (user?.fonction && hasPermission('controle_qualite_view')),
     },
     {
+      path: '/remarques',
+      label: 'Remarques',
+      icon: FaComments,
+      permission: null,
+      visible: true,
+      customCheck: (item, user, hasPermission) =>
+        [3, 2, 12].includes(Number(user?.fonction)) || (user?.fonction && hasPermission('controle_qualite_view')),
+    },
+    {
       path: '/audit-rdv',
       label: 'Audit Rendez-vous',
       icon: FaCalendarAlt,

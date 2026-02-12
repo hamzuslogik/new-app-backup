@@ -30,6 +30,7 @@ const workflowRoutes = require('./routes/workflow.routes');
 const statistiqueV2Routes = require('./routes/statistique-v2.routes');
 const systemMessagesRoutes = require('./routes/systemMessages.routes');
 const alertesRoutes = require('./routes/alertes.routes');
+const remarquesRoutes = require('./routes/remarques.routes');
 
 // Créer l'application Express
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api/workflows', workflowRoutes);
 app.use('/api/statistiques-v2', statistiqueV2Routes);
 app.use('/api/system-messages', systemMessagesRoutes);
 app.use('/api/alertes', alertesRoutes);
+app.use('/api/remarques', remarquesRoutes);
 
 // Route de test (déplacée vers health.routes.js)
 
