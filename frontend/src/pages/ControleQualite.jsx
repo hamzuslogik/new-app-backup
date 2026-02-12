@@ -485,6 +485,11 @@ const ControleQualite = () => {
 
   const handleAlertModalSubmit = () => {
     const nbAlertes = alertesKoData?.nb_alertes ?? 0;
+    const nbAlertesAgentMois = alertesKoData?.nb_alertes_agent_mois ?? 0;
+    if (nbAlertesAgentMois >= 3) {
+      toast.warning('Cet agent a déjà reçu 3 alertes ce mois-ci. Limite mensuelle atteinte.');
+      return;
+    }
     if (nbAlertes >= 3) {
       toast.warning('3 alertes ont déjà été envoyées pour cette fiche.');
       return;
@@ -933,7 +938,7 @@ const ControleQualite = () => {
             </div>
             <div className="modal-body">
               <p className="alerte-ko-info">
-                Alerte envoyée à l'agent qualification qui a inséré la fiche. 3 alertes doivent être envoyées avant de pouvoir passer la fiche en KO. L'état et le sous-état choisis ici sont uniquement enregistrés avec l'alerte et ne modifient pas l'état de la fiche.
+                Alerte envoyée à l'agent qualification qui a inséré la fiche. Un agent ne peut recevoir que 3 alertes par mois maximum. 3 alertes doivent être envoyées sur une fiche avant de pouvoir la passer en KO. L'état et le sous-état choisis ici sont uniquement enregistrés avec l'alerte et ne modifient pas l'état de la fiche.
               </p>
               <div className="form-group">
                 <label>Agent destinataire</label>
@@ -946,9 +951,14 @@ const ControleQualite = () => {
                 </p>
               </div>
               {alertesKoData != null && (
-                <p className="alerte-ko-count">
-                  <strong>{alertesKoData.nb_alertes ?? 0}/3</strong> alertes déjà envoyées pour cette fiche
-                </p>
+                <>
+                  <p className="alerte-ko-count">
+                    <strong>{alertesKoData.nb_alertes ?? 0}/3</strong> alertes pour cette fiche (avant passage KO)
+                  </p>
+                  <p className="alerte-ko-count">
+                    <strong>{alertesKoData.nb_alertes_agent_mois ?? 0}/3</strong> alertes reçues par cet agent ce mois-ci (limite mensuelle)
+                  </p>
+                </>
               )}
               <div className="form-group">
                 <label>État</label>
@@ -997,7 +1007,7 @@ const ControleQualite = () => {
                 type="button"
                 className="btn-confirm-alerte"
                 onClick={handleAlertModalSubmit}
-                disabled={sendAlerteKoMutation.isLoading || (alertesKoData?.nb_alertes ?? 0) >= 3}
+                disabled={sendAlerteKoMutation.isLoading || (alertesKoData?.nb_alertes_agent_mois ?? 0) >= 3 || (alertesKoData?.nb_alertes ?? 0) >= 3}
               >
                 {sendAlerteKoMutation.isLoading ? 'Envoi...' : 'Envoyer l\'alerte'}
               </button>

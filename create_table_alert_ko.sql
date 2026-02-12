@@ -2,8 +2,11 @@
 -- Script de création de la table alert_ko
 -- Date: 2026-02-11
 -- Description: Table des alertes envoyées aux agents qualification (fonction 3)
---              avant passage en KO. 3 alertes doivent être envoyées avant de
---              pouvoir passer une fiche en KO.
+--              avant passage en KO.
+-- Règles :
+--   - Limite par agent : 3 alertes maximum par agent par mois (calcul par id_agent).
+--   - Passage KO : 3 alertes doivent être envoyées sur une fiche avant de pouvoir
+--     passer cette fiche en KO.
 -- =====================================================
 
 -- Supprimer la table si elle existe (décommenter si nécessaire)
@@ -54,7 +57,7 @@ CREATE TABLE IF NOT EXISTS `alert_ko` (
   KEY `idx_id_sous_etat` (`id_sous_etat`),
   KEY `idx_num_alerte` (`num_alerte`),
 
-  -- Index composite : compter les alertes par fiche (doit atteindre 3 avant KO)
+  -- Index composite : compter les alertes par fiche (3 avant KO) et par agent/mois (3 max/mois)
   KEY `idx_fiche_num` (`id_fiche`, `num_alerte`),
   KEY `idx_agent_date` (`id_agent`, `date_alerte`)
 
@@ -78,17 +81,16 @@ SHOW INDEX FROM alert_ko;
 -- Exemples de requêtes utiles
 -- =====================================================
 
--- Nombre d'alertes envoyées par fiche (doit être >= 3 pour autoriser le KO)
--- SELECT id_fiche, COUNT(*) AS nb_alertes
--- FROM alert_ko
--- GROUP BY id_fiche;
+-- Nombre d'alertes par fiche (doit être >= 3 pour autoriser le KO)
+-- SELECT id_fiche, COUNT(*) AS nb_alertes FROM alert_ko GROUP BY id_fiche;
+
+-- Nombre d'alertes par agent sur le mois en cours (limite 3 par agent/mois)
+-- SELECT id_agent, COUNT(*) AS nb FROM alert_ko
+-- WHERE date_alerte >= DATE_FORMAT(NOW(), '%Y-%m-01') GROUP BY id_agent;
 
 -- Vérifier si une fiche a déjà reçu 3 alertes (autorisation passage KO)
--- SELECT id_fiche, COUNT(*) AS nb_alertes
--- FROM alert_ko
--- WHERE id_fiche = ?
--- GROUP BY id_fiche;
--- -- Si nb_alertes >= 3 alors passage KO autorisé
+-- SELECT COUNT(*) AS nb_alertes FROM alert_ko WHERE id_fiche = ?;
+-- Si nb_alertes >= 3 alors passage KO autorisé
 
 -- Historique des alertes pour un agent (fonction 3)
 -- SELECT a.*, f.nom, f.prenom, f.tel

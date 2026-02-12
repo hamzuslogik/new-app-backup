@@ -4149,7 +4149,7 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
   }
 });
 
-// Nombre d'alertes KO envoyées pour une fiche (page Contrôle Qualité)
+// Nombre d'alertes KO envoyées pour une fiche (par fiche) et pour l'agent du mois (par id_agent, limite 3/mois)
 router.get('/:hash/alertes-ko', authenticate, hashToIdMiddleware, async (req, res) => {
   try {
     const id = req.params.id ? parseInt(req.params.id, 10) : null;
@@ -4162,10 +4162,24 @@ router.get('/:hash/alertes-ko', authenticate, hashToIdMiddleware, async (req, re
     }
     const row = await queryOne('SELECT COUNT(*) AS nb_alertes FROM alert_ko WHERE id_fiche = ?', [id]);
     const nb_alertes = row?.nb_alertes ?? 0;
-    res.json({ success: true, nb_alertes });
+    // Nombre d'alertes reçues par l'agent de cette fiche sur le mois en cours (limite 3 par agent/mois)
+    let nb_alertes_agent_mois = 0;
+    try {
+      const fiche = await queryOne('SELECT id_agent FROM fiches WHERE id = ?', [id]);
+      if (fiche?.id_agent) {
+        const rowAgent = await queryOne(
+          `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_agent = ? AND date_alerte >= DATE_FORMAT(NOW(), '%Y-%m-01')`,
+          [fiche.id_agent]
+        );
+        nb_alertes_agent_mois = rowAgent?.nb ?? 0;
+      }
+    } catch (e) {
+      if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
+    }
+    res.json({ success: true, nb_alertes, nb_alertes_agent_mois });
   } catch (err) {
     if (err.code === 'ER_NO_SUCH_TABLE') {
-      return res.json({ success: true, nb_alertes: 0 });
+      return res.json({ success: true, nb_alertes: 0, nb_alertes_agent_mois: 0 });
     }
     console.error('Erreur GET alertes-ko:', err);
     res.status(500).json({ success: false, message: err.message });
@@ -4198,11 +4212,24 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
     const { id_etat, id_sous_etat, commentaire } = req.body;
     // id_etat / id_sous_etat : enregistrés dans alert_ko uniquement, sans modifier la fiche
     let nb_alertes = 0;
+    let nb_alertes_agent_mois = 0;
     try {
       const countRow = await queryOne('SELECT COUNT(*) AS nb FROM alert_ko WHERE id_fiche = ?', [id]);
       nb_alertes = countRow?.nb ?? 0;
+      // Limite : 3 alertes par agent par mois (calcul par id_agent, pas par fiche)
+      const agentRow = await queryOne(
+        `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_agent = ? AND date_alerte >= DATE_FORMAT(NOW(), '%Y-%m-01')`,
+        [fiche.id_agent]
+      );
+      nb_alertes_agent_mois = agentRow?.nb ?? 0;
     } catch (e) {
       if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
+    }
+    if (nb_alertes_agent_mois >= 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cet agent a déjà reçu 3 alertes ce mois-ci. Limite mensuelle atteinte (3 alertes par agent).'
+      });
     }
     if (nb_alertes >= 3) {
       return res.status(400).json({
