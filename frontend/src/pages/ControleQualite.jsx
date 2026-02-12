@@ -526,7 +526,7 @@ const ControleQualite = () => {
             onClick={() => { setRemarquesFicheContext(null); setRemarquesModalOpen(true); }}
             title="Ouvrir les remarques (qualité → agents qualification)"
           >
-            <FaCommentDots /> Remarques
+            <FaCommentDots />
           </button>
           <button 
             className="filter-toggle-btn" 
@@ -821,7 +821,7 @@ const ControleQualite = () => {
                           onClick={() => { setRemarquesFicheContext(fiche); setRemarquesModalOpen(true); }}
                           title="Envoyer une remarque concernant cette fiche à l'agent qualification"
                         >
-                          <FaCommentDots /> Remarques
+                          <FaCommentDots />
                         </button>
                         <FicheDetailLink 
                           ficheHash={fiche.hash}
