@@ -1025,6 +1025,31 @@
   margin-right: 2px;
 }
 
+.btn-remarques-fiche {
+  padding: 6.4px 10px;
+  background: #0d9488;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s;
+}
+
+.btn-remarques-fiche:hover {
+  background: #0f766e;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-remarques-fiche svg {
+  margin-right: 2px;
+}
+
 /* Modal Alerte KO */
 .modal-content.alerte-ko-modal {
   border-top: 4px solid #6f42c1;

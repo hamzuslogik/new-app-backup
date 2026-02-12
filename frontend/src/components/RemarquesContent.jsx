@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -14,12 +14,16 @@ const NATURES_OPTIONS = [
   'Autres'
 ];
 
-const RemarquesContent = ({ inModal = false, onClose }) => {
+const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => {
   const { user, hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const fonction = Number(user?.fonction);
-  const isAdmin = [1, 2, 7].includes(fonction);
+  const isAdmin = [1, 7].includes(fonction);
   const canSend = hasPermission('controle_qualite_view') || isAdmin;
+
+  // Contexte fiche : pré-remplir destinataire (agent de la fiche) et lier la remarque à la fiche
+  const initialDestinataire = ficheContext?.id_agent ? String(ficheContext.id_agent) : '';
+  const initialFicheId = ficheContext?.id ?? null;
 
   const [filters, setFilters] = useState({
     page: 1,
@@ -29,12 +33,23 @@ const RemarquesContent = ({ inModal = false, onClose }) => {
     date_debut: '',
     date_fin: ''
   });
-  const [showFilters, setShowFilters] = useState(!inModal);
+  const [showFilters, setShowFilters] = useState(!inModal && !ficheContext);
   const [form, setForm] = useState({
     nature_remarque: '',
-    id_destinataire: '',
-    commentaire: ''
+    id_destinataire: initialDestinataire,
+    commentaire: '',
+    id_fiche: initialFicheId
   });
+
+  useEffect(() => {
+    if (ficheContext) {
+      setForm((prev) => ({
+        ...prev,
+        id_destinataire: ficheContext.id_agent ? String(ficheContext.id_agent) : prev.id_destinataire,
+        id_fiche: ficheContext.id ?? null
+      }));
+    }
+  }, [ficheContext]);
 
   const { data: agentsData } = useQuery(
     'alertes-agents-list',
@@ -68,7 +83,8 @@ const RemarquesContent = ({ inModal = false, onClose }) => {
       onSuccess: () => {
         queryClient.invalidateQueries(['remarques']);
         toast.success('Remarque envoyée.');
-        setForm({ nature_remarque: '', id_destinataire: '', commentaire: '' });
+        setForm((prev) => ({ ...prev, nature_remarque: '', commentaire: '' }));
+        if (ficheContext && onClose) onClose();
       },
       onError: (err) => toast.error(err.response?.data?.message || err.message)
     }
@@ -84,11 +100,13 @@ const RemarquesContent = ({ inModal = false, onClose }) => {
       toast.warning('Veuillez sélectionner la nature et le destinataire.');
       return;
     }
-    sendMutation.mutate({
+    const body = {
       nature_remarque: form.nature_remarque,
       commentaire: form.commentaire || null,
       id_destinataire: parseInt(form.id_destinataire, 10)
-    });
+    };
+    if (form.id_fiche) body.id_fiche = form.id_fiche;
+    sendMutation.mutate(body);
   };
 
   const formatDate = (dateStr) => {
@@ -112,6 +130,15 @@ const RemarquesContent = ({ inModal = false, onClose }) => {
         <div className="remarques-modal-header">
           <h3><FaCommentDots /> Remarques</h3>
           <button type="button" className="modal-close-btn" onClick={onClose}><FaTimes /></button>
+        </div>
+      )}
+
+      {ficheContext && (
+        <div className="remarques-fiche-context">
+          <strong>Concernant la fiche :</strong> {ficheContext.nom || '-'} {ficheContext.prenom || ''} – {ficheContext.tel || '-'}
+          {ficheContext.agent_pseudo && (
+            <span className="remarques-fiche-agent"> (Agent : {ficheContext.agent_pseudo})</span>
+          )}
         </div>
       )}
 

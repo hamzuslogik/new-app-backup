@@ -62,6 +62,7 @@ const ControleQualite = () => {
 
   // Modal Remarques (envoyer / consulter les remarques qualité → agents qualification)
   const [remarquesModalOpen, setRemarquesModalOpen] = useState(false);
+  const [remarquesFicheContext, setRemarquesFicheContext] = useState(null);
 
   // Récupérer les agents qualification
   const { data: agentsData } = useQuery('agents-qualif-list', async () => {
@@ -522,7 +523,7 @@ const ControleQualite = () => {
           <button
             type="button"
             className="btn-remarques-header"
-            onClick={() => setRemarquesModalOpen(true)}
+            onClick={() => { setRemarquesFicheContext(null); setRemarquesModalOpen(true); }}
             title="Ouvrir les remarques (qualité → agents qualification)"
           >
             <FaCommentDots /> Remarques
@@ -538,9 +539,13 @@ const ControleQualite = () => {
 
       {/* Modal Remarques */}
       {remarquesModalOpen && (
-        <div className="modal-overlay" onClick={() => setRemarquesModalOpen(false)}>
+        <div className="modal-overlay" onClick={() => { setRemarquesModalOpen(false); setRemarquesFicheContext(null); }}>
           <div className="modal-content remarques-modal" onClick={(e) => e.stopPropagation()}>
-            <RemarquesContent inModal onClose={() => setRemarquesModalOpen(false)} />
+            <RemarquesContent
+              inModal
+              onClose={() => { setRemarquesModalOpen(false); setRemarquesFicheContext(null); }}
+              ficheContext={remarquesFicheContext}
+            />
           </div>
         </div>
       )}
@@ -809,6 +814,14 @@ const ControleQualite = () => {
                           title={(fiche.nb_alertes ?? 0) >= 1 ? 'Une alerte a déjà été envoyée pour cette fiche' : "Envoyer une alerte à l'agent qui a inséré la fiche (3 alertes avant KO)"}
                         >
                           <FaBell /> Alerte
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-remarques-fiche"
+                          onClick={() => { setRemarquesFicheContext(fiche); setRemarquesModalOpen(true); }}
+                          title="Envoyer une remarque concernant cette fiche à l'agent qualification"
+                        >
+                          <FaCommentDots /> Remarques
                         </button>
                         <FicheDetailLink 
                           ficheHash={fiche.hash}
