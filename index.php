@@ -982,19 +982,19 @@ if (isset($_SESSION['error_message'])) {
                         <input type="tel" name="gsm" value="<?php echo htmlspecialchars($vicidialData['alt_phone'] ?? ''); ?>">
                     </div>
                     <div class="form-group full-width">
-                        <label>Adresse</label>
+                        <label>Adresse <span class="required">*</span></label>
                         <input type="text" name="adresse" value="<?php 
                             $adresse = trim(($vicidialData['address1'] ?? '') . ' ' . ($vicidialData['address2'] ?? ''));
                             echo htmlspecialchars($adresse);
-                        ?>">
+                        ?>" required>
                     </div>
                     <div class="form-group">
-                        <label>Code Postal</label>
-                        <input type="text" name="code_postal" value="<?php echo htmlspecialchars($vicidialData['postal_code'] ?? ''); ?>">
+                        <label>Code Postal <span class="required">*</span></label>
+                        <input type="text" name="code_postal" value="<?php echo htmlspecialchars($vicidialData['postal_code'] ?? ''); ?>" required>
                     </div>
                     <div class="form-group">
-                        <label>Ville</label>
-                        <input type="text" name="ville" value="<?php echo htmlspecialchars($vicidialData['city'] ?? ''); ?>">
+                        <label>Ville <span class="required">*</span></label>
+                        <input type="text" name="ville" value="<?php echo htmlspecialchars($vicidialData['city'] ?? ''); ?>" required>
                     </div>
                 </div>
             </div>
@@ -1005,7 +1005,14 @@ if (isset($_SESSION['error_message'])) {
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Date et Heure d'Appel</label>
-                        <input type="datetime-local" name="date_appel" value="<?php echo date('Y-m-d\TH:i'); ?>">
+                        <input type="datetime-local" name="date_appel" value="<?php 
+                            $modifyDate = $vicidialData['modify_date'] ?? null;
+                            if (!empty($modifyDate) && ($ts = strtotime($modifyDate)) !== false) {
+                                echo date('Y-m-d\TH:i', $ts);
+                            } else {
+                                echo date('Y-m-d\TH:i');
+                            }
+                        ?>">
                     </div>
                 </div>
             </div>
@@ -1015,8 +1022,8 @@ if (isset($_SESSION['error_message'])) {
                 <div class="section-title">Critères Client</div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Situation Conjugale</label>
-                        <select name="situation_conjugale">
+                        <label>Situation Conjugale <span class="required">*</span></label>
+                        <select name="situation_conjugale" required>
                             <option value="">-- Sélectionner --</option>
                             <option value="Célibataire">Célibataire</option>
                             <option value="Marié(e)">Marié(e)</option>
@@ -1049,8 +1056,8 @@ if (isset($_SESSION['error_message'])) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Profession Mme</label>
-                        <select name="profession_madame">
+                        <label>Profession Mme <span class="required">*</span></label>
+                        <select name="profession_madame" required>
                             <option value="">-- Sélectionner --</option>
                             <?php foreach ($professions as $prof): ?>
                                 <option value="<?php echo htmlspecialchars($prof['id']); ?>">
@@ -1060,8 +1067,8 @@ if (isset($_SESSION['error_message'])) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Type Contrat M.</label>
-                        <select name="type_contrat_mr">
+                        <label>Type Contrat M. <span class="required">*</span></label>
+                        <select name="type_contrat_mr" required>
                             <option value="">-- Sélectionner --</option>
                             <?php foreach ($typeContrats as $contrat): ?>
                                 <option value="<?php echo htmlspecialchars($contrat['id']); ?>">
@@ -1082,8 +1089,8 @@ if (isset($_SESSION['error_message'])) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Entretien avec</label>
-                        <select name="entretien_avec">
+                        <label>Entretien avec <span class="required">*</span></label>
+                        <select name="entretien_avec" required>
                             <option value="">-- Sélectionner --</option>
                             <option value="Monsieur">Monsieur</option>
                             <option value="Madame">Madame</option>
@@ -1100,8 +1107,8 @@ if (isset($_SESSION['error_message'])) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Revenu du Foyer</label>
-                        <input type="text" name="revenu_foyer" placeholder="Ex: 3000-5000€">
+                        <label>Revenu du Foyer <span class="required">*</span></label>
+                        <input type="text" name="revenu_foyer" placeholder="Ex: 3000-5000€" required>
                     </div>
                 </div>
             </div>
@@ -1111,8 +1118,8 @@ if (isset($_SESSION['error_message'])) {
                 <div class="section-title">Critères Techniques</div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Produit</label>
-                        <select name="produit" id="produit" onchange="toggleProductFields()">
+                        <label>Produit <span class="required">*</span></label>
+                        <select name="produit" id="produit" onchange="toggleProductFields()" required>
                             <option value="">-- Sélectionner --</option>
                             <?php foreach ($produits as $produit): ?>
                                 <option value="<?php echo htmlspecialchars($produit['id']); ?>" 
@@ -1133,18 +1140,18 @@ if (isset($_SESSION['error_message'])) {
                     
                     <!-- Champs communs -->
                     <div class="form-group champ-pac" style="display: none;">
-                        <label>Surface Habitable (m²)</label>
-                        <input type="text" name="surface_habitable" placeholder="Ex: 120">
+                        <label>Surface Habitable (m²) <span class="required">*</span></label>
+                        <input type="text" name="surface_habitable" placeholder="Ex: 120" required>
                     </div>
                     <div class="form-group champ-commun champ-pac">
-                        <label>Nombre de Pièces</label>
-                        <input type="number" name="nb_pieces" min="1">
+                        <label>Nombre de Pièces <span class="required">*</span></label>
+                        <input type="number" name="nb_pieces" min="1" required>
                     </div>
                     
                     <!-- Champs spécifiques PAC -->
                     <div class="form-group champ-pac" style="display: none;">
-                        <label>Mode de Chauffage</label>
-                        <select name="mode_chauffage">
+                        <label>Mode de Chauffage <span class="required">*</span></label>
+                        <select name="mode_chauffage" required>
                             <option value="">-- Sélectionner --</option>
                             <?php foreach ($modeChauffages as $mode): ?>
                                 <option value="<?php echo htmlspecialchars($mode['id']); ?>">
@@ -1194,12 +1201,12 @@ if (isset($_SESSION['error_message'])) {
                         </select>
                     </div>
                     <div class="form-group champ-pv" style="display: none;">
-                        <label>Zones d'Ombres</label>
-                        <input type="text" name="zones_ombres" placeholder="Décrire les zones d'ombres">
+                        <label>Zones d'Ombres <span class="required">*</span></label>
+                        <input type="text" name="zones_ombres" placeholder="Décrire les zones d'ombres" required>
                     </div>
                     <div class="form-group champ-pv" style="display: none;">
-                        <label>Site Classé</label>
-                        <select name="site_classe">
+                        <label>Site Classé <span class="required">*</span></label>
+                        <select name="site_classe" required>
                             <option value="">-- Sélectionner --</option>
                             <option value="OUI">OUI</option>
                             <option value="NON">NON</option>
@@ -1220,6 +1227,16 @@ if (isset($_SESSION['error_message'])) {
     </div>
     
     <script>
+        function setRequiredInContainer(container, required) {
+            const inputs = container.querySelectorAll('input, select, textarea');
+            inputs.forEach(function(el) {
+                if (required) {
+                    el.setAttribute('required', 'required');
+                } else {
+                    el.removeAttribute('required');
+                }
+            });
+        }
         function toggleProductFields() {
             const produitSelect = document.getElementById('produit');
             if (!produitSelect) return;
@@ -1227,38 +1244,37 @@ if (isset($_SESSION['error_message'])) {
             const selectedOption = produitSelect.options[produitSelect.selectedIndex];
             const produitNom = selectedOption ? selectedOption.getAttribute('data-nom') : '';
             
-            // Récupérer tous les éléments avec les classes champ-pv et champ-pac
             const champsPV = document.querySelectorAll('.champ-pv');
             const champsPAC = document.querySelectorAll('.champ-pac');
             const champsCommuns = document.querySelectorAll('.champ-commun');
             
-            // Masquer tous les champs spécifiques d'abord
+            // Masquer tous et retirer required des champs masqués
             champsPV.forEach(function(champ) {
                 champ.style.display = 'none';
+                setRequiredInContainer(champ, false);
             });
             champsPAC.forEach(function(champ) {
                 champ.style.display = 'none';
+                setRequiredInContainer(champ, false);
             });
-            
-            // Masquer les champs communs par défaut
             champsCommuns.forEach(function(champ) {
                 champ.style.display = 'none';
+                setRequiredInContainer(champ, false);
             });
             
-            // Afficher les champs selon le produit sélectionné
             if (produitNom === 'PV') {
-                // Afficher les champs PV dans la section Critères Techniques
                 champsPV.forEach(function(champ) {
                     champ.style.display = 'block';
+                    setRequiredInContainer(champ, true);
                 });
             } else if (produitNom === 'PAC') {
-                // Afficher les champs PAC dans la section Critères Techniques
                 champsPAC.forEach(function(champ) {
                     champ.style.display = 'block';
+                    setRequiredInContainer(champ, true);
                 });
-                // Afficher aussi les champs communs pour PAC
                 champsCommuns.forEach(function(champ) {
                     champ.style.display = 'block';
+                    setRequiredInContainer(champ, true);
                 });
             }
         }

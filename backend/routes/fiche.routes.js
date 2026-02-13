@@ -2549,6 +2549,26 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
         });
       }
     } else if (statut === 'REJETEE') {
+      // Passer la fiche existante en état doublon (id_etat_final = 61)
+      const ID_ETAT_DOUBLON = 61;
+      if (demande.id_fiche_existante) {
+        await query(
+          `UPDATE fiches SET id_etat_final = ?, date_modif_time = ? WHERE id = ?`,
+          [ID_ETAT_DOUBLON, now, demande.id_fiche_existante]
+        ).catch(err => {
+          console.error('Erreur lors du passage de la fiche en doublon:', err);
+        });
+        // Historiser le changement d'état
+        const histoConf = getHistoConfirmateur(req, null);
+        await query(
+          `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation)
+           VALUES (?, ?, ?, NULL, NOW())`,
+          [demande.id_fiche_existante, ID_ETAT_DOUBLON, histoConf]
+        ).catch(err => {
+          console.error('Erreur lors de l\'historisation état doublon:', err);
+        });
+      }
+
       // Créer des notifications pour l'agent et son superviseur (si existe) en cas de refus
       const messageRefus = `Votre demande d'insertion de fiche pour ${ficheExistante?.nom || ''} ${ficheExistante?.prenom || ''} a été rejetée par ${traitantPseudo}.${commentaire ? ` Raison : ${commentaire}` : ''}`;
       const metadataRefus = JSON.stringify({
