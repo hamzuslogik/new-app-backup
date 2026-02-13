@@ -49,13 +49,12 @@ const ControleQualite = () => {
     commentaire: ''
   });
 
-  // État pour le modal Alerte KO (envoyer une alerte à l'agent qui a inséré la fiche)
+  // État pour le modal Alerte KO (type PERSO/TECHNIQUE + commentaire)
   const [alertModal, setAlertModal] = useState({
     isOpen: false,
     ficheHash: null,
     fiche: null,
-    etatId: '',
-    sousEtatId: '',
+    typeAlerte: 'PERSO',
     commentaire: '',
     nbAlertes: null
   });
@@ -119,15 +118,6 @@ const ControleQualite = () => {
   );
 
   // Sous-états pour l'état sélectionné dans le modal alerte (états autres que KO/HC)
-  const { data: sousEtatsAlertData } = useQuery(
-    ['sous-etat-alert', alertModal.etatId],
-    async () => {
-      const res = await api.get(`/management/sous-etat/${alertModal.etatId}`);
-      return res.data.data || [];
-    },
-    { enabled: !!alertModal.etatId && alertModal.isOpen && alertModal.etatId !== String(ETAT_KO_ID) && alertModal.etatId !== String(ETAT_HC_ID) }
-  );
-
   // Récupérer les fiches avec rafraîchissement automatique toutes les 3 secondes
   const { data: fichesData, isLoading, error, refetch } = useQuery(
     ['controle-qualite', filters],
@@ -253,12 +243,11 @@ const ControleQualite = () => {
     }
   );
 
-  // Mutation pour envoyer une alerte KO à l'agent qui a inséré la fiche
+  // Mutation pour envoyer une alerte KO (type PERSO/TECHNIQUE + commentaire)
   const sendAlerteKoMutation = useMutation(
-    async ({ hash, id_etat, id_sous_etat, commentaire }) => {
+    async ({ hash, type_alerte, commentaire }) => {
       const res = await api.post(`/fiches/${hash}/alerte-ko`, {
-        id_etat: id_etat || null,
-        id_sous_etat: id_sous_etat || null,
+        type_alerte: type_alerte || 'PERSO',
         commentaire: commentaire || null
       });
       return res.data;
@@ -469,8 +458,7 @@ const ControleQualite = () => {
       isOpen: true,
       ficheHash: fiche.hash,
       fiche,
-      etatId: fiche.id_etat_final ? String(fiche.id_etat_final) : '',
-      sousEtatId: fiche.id_sous_etat ? String(fiche.id_sous_etat) : '',
+      typeAlerte: 'PERSO',
       commentaire: '',
       nbAlertes: null
     });
@@ -481,8 +469,7 @@ const ControleQualite = () => {
       isOpen: false,
       ficheHash: null,
       fiche: null,
-      etatId: '',
-      sousEtatId: '',
+      typeAlerte: 'PERSO',
       commentaire: '',
       nbAlertes: null
     });
@@ -490,9 +477,12 @@ const ControleQualite = () => {
 
   const handleAlertModalSubmit = () => {
     const nbAlertes = alertesKoData?.nb_alertes ?? 0;
-    const nbAlertesAgentMois = alertesKoData?.nb_alertes_agent_mois ?? 0;
-    if (nbAlertesAgentMois >= 3) {
-      toast.warning('Cet agent a déjà reçu 3 alertes ce mois-ci. Limite mensuelle atteinte.');
+    const typeAlerte = alertModal.typeAlerte || 'PERSO';
+    const nbCeType = typeAlerte === 'PERSO'
+      ? (alertesKoData?.nb_alertes_perso_agent_mois ?? 0)
+      : (alertesKoData?.nb_alertes_technique_agent_mois ?? 0);
+    if (nbCeType >= 3) {
+      toast.warning(`Cet agent a déjà reçu 3 alertes ${typeAlerte} ce mois-ci. Limite atteinte (3 par type).`);
       return;
     }
     if (nbAlertes >= 3) {
@@ -501,18 +491,10 @@ const ControleQualite = () => {
     }
     sendAlerteKoMutation.mutate({
       hash: alertModal.ficheHash,
-      id_etat: alertModal.etatId || null,
-      id_sous_etat: alertModal.sousEtatId || null,
+      type_alerte: typeAlerte,
       commentaire: alertModal.commentaire || null
     });
   };
-
-  // Sous-états à afficher dans le modal alerte selon l'état sélectionné
-  const sousEtatsAlertModal = alertModal.etatId === String(ETAT_KO_ID)
-    ? sousEtatsKo
-    : alertModal.etatId === String(ETAT_HC_ID)
-      ? sousEtatsHc
-      : (sousEtatsAlertData || []);
 
   return (
     <div className="controle-qualite">
@@ -974,7 +956,7 @@ const ControleQualite = () => {
             </div>
             <div className="modal-body">
               <p className="alerte-ko-info">
-                Alerte envoyée à l'agent qualification qui a inséré la fiche. Un agent ne peut recevoir que 3 alertes par mois maximum. 3 alertes doivent être envoyées sur une fiche avant de pouvoir la passer en KO. L'état et le sous-état choisis ici sont uniquement enregistrés avec l'alerte et ne modifient pas l'état de la fiche.
+                Alerte envoyée à l'agent qualification qui a inséré la fiche. Choisissez le type (PERSO ou TECHNIQUE) et un commentaire. Un agent peut recevoir jusqu'à 3 alertes PERSO et 3 alertes TECHNIQUE par mois. 3 alertes doivent être envoyées sur une fiche avant de pouvoir la passer en KO.
               </p>
               <div className="form-group">
                 <label>Agent destinataire</label>
@@ -992,38 +974,21 @@ const ControleQualite = () => {
                     <strong>{alertesKoData.nb_alertes ?? 0}/3</strong> alertes pour cette fiche (avant passage KO)
                   </p>
                   <p className="alerte-ko-count">
-                    <strong>{alertesKoData.nb_alertes_agent_mois ?? 0}/3</strong> alertes reçues par cet agent ce mois-ci (limite mensuelle)
+                    <strong>{alertesKoData.nb_alertes_perso_agent_mois ?? 0}/3</strong> PERSO et <strong>{alertesKoData.nb_alertes_technique_agent_mois ?? 0}/3</strong> TECHNIQUE reçues par cet agent ce mois-ci (3 de chaque type autorisées)
                   </p>
                 </>
               )}
               <div className="form-group">
-                <label>État</label>
+                <label>Type d'alerte <span className="required">*</span></label>
                 <select
-                  value={alertModal.etatId}
-                  onChange={(e) => setAlertModal({ ...alertModal, etatId: e.target.value, sousEtatId: '' })}
+                  value={alertModal.typeAlerte}
+                  onChange={(e) => setAlertModal({ ...alertModal, typeAlerte: e.target.value })}
                   className="etat-select"
                 >
-                  <option value="">-- Sélectionner un état --</option>
-                  {etatsPhase0.map(etat => (
-                    <option key={etat.id} value={etat.id}>{etat.titre}</option>
-                  ))}
+                  <option value="PERSO">PERSO</option>
+                  <option value="TECHNIQUE">TECHNIQUE</option>
                 </select>
               </div>
-              {(alertModal.etatId === String(ETAT_KO_ID) || alertModal.etatId === String(ETAT_HC_ID) || sousEtatsAlertModal.length > 0) && (
-                <div className="form-group">
-                  <label>Sous-état</label>
-                  <select
-                    value={alertModal.sousEtatId}
-                    onChange={(e) => setAlertModal({ ...alertModal, sousEtatId: e.target.value })}
-                    className="sous-etat-select"
-                  >
-                    <option value="">-- Sélectionner un sous-état --</option>
-                    {sousEtatsAlertModal.map(se => (
-                      <option key={se.id} value={se.id}>{se.titre}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <div className="form-group">
                 <label>Commentaire</label>
                 <textarea
@@ -1043,7 +1008,7 @@ const ControleQualite = () => {
                 type="button"
                 className="btn-confirm-alerte"
                 onClick={handleAlertModalSubmit}
-                disabled={sendAlerteKoMutation.isLoading || (alertesKoData?.nb_alertes_agent_mois ?? 0) >= 3 || (alertesKoData?.nb_alertes ?? 0) >= 3}
+                disabled={sendAlerteKoMutation.isLoading || (alertModal.typeAlerte === 'PERSO' ? (alertesKoData?.nb_alertes_perso_agent_mois ?? 0) : (alertesKoData?.nb_alertes_technique_agent_mois ?? 0)) >= 3 || (alertesKoData?.nb_alertes ?? 0) >= 3}
               >
                 {sendAlerteKoMutation.isLoading ? 'Envoi...' : 'Envoyer l\'alerte'}
               </button>

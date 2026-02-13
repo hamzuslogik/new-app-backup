@@ -2848,6 +2848,84 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
 });
 
 // =====================================================
+// KPIs Agent Qualification (taux HC, taux KO) – session agent qualification
+// Fiches produites = fiches créées par l'agent, hors poubelle (archive) et doublon (état 61)
+// Taux HC = nombre HC / fiches produites ; Taux KO = nombre KO / fiches produites
+// =====================================================
+router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
+  try {
+    if (Number(req.user?.fonction) !== 3) {
+      return res.status(403).json({
+        success: false,
+        message: 'Réservé aux agents qualification (fonction 3).'
+      });
+    }
+    const agentId = req.user.id;
+    const { date_debut, date_fin } = req.query;
+    const today = new Date();
+    const startDateStr = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const endDateStr = date_fin || today.toISOString().split('T')[0];
+    const startDate = `${startDateStr} 00:00:00`;
+    const endDate = `${endDateStr} 23:59:59`;
+
+    const baseConditions = [
+      'f.id_agent = ?',
+      'f.date_insert_time >= ?',
+      'f.date_insert_time <= ?',
+      '(f.archive = 0 OR f.archive IS NULL)',
+      '(f.id_etat_final != 61 OR f.id_etat_final IS NULL)'
+    ];
+    const baseParams = [agentId, startDate, endDate];
+
+    const fichesProduitesQuery = `
+      SELECT COUNT(DISTINCT f.id) AS count
+      FROM fiches f
+      WHERE ${baseConditions.join(' AND ')}
+    `;
+    const fichesProduitesRow = await queryOne(fichesProduitesQuery, baseParams);
+    const fichesProduites = fichesProduitesRow?.count ?? 0;
+
+    const nbHcQuery = `
+      SELECT COUNT(DISTINCT f.id) AS count
+      FROM fiches f
+      WHERE ${baseConditions.join(' AND ')} AND (f.hc = 1)
+    `;
+    const nbHcRow = await queryOne(nbHcQuery, baseParams);
+    const nbHc = nbHcRow?.count ?? 0;
+
+    const nbKoQuery = `
+      SELECT COUNT(DISTINCT f.id) AS count
+      FROM fiches f
+      WHERE ${baseConditions.join(' AND ')} AND (f.ko = 1)
+    `;
+    const nbKoRow = await queryOne(nbKoQuery, baseParams);
+    const nbKo = nbKoRow?.count ?? 0;
+
+    const tauxHc = fichesProduites > 0 ? Math.round((nbHc / fichesProduites) * 1000) / 10 : 0;
+    const tauxKo = fichesProduites > 0 ? Math.round((nbKo / fichesProduites) * 1000) / 10 : 0;
+
+    res.json({
+      success: true,
+      data: {
+        period: { date_debut: startDateStr, date_fin: endDateStr },
+        fiches_produites: fichesProduites,
+        nb_hc: nbHc,
+        nb_ko: nbKo,
+        taux_hc: tauxHc,
+        taux_ko: tauxKo
+      }
+    });
+  } catch (error) {
+    console.error('[STAT] /agent-qualification-kpis - Erreur:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur',
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
 // KPIs Stats Agents Qualité (alertes KO, remarques)
 // =====================================================
 router.get('/agents-qualite-kpis', authenticate, async (req, res) => {

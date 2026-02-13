@@ -23,6 +23,7 @@ import SuiviAgentsQualif from './pages/SuiviAgentsQualif';
 import SuiviAgents from './pages/SuiviAgents';
 import ProductionQualif from './pages/ProductionQualif';
 import KPIQualification from './pages/KPIQualification';
+import KPIAgentQualification from './pages/KPIAgentQualification';
 import KPIs from './pages/KPIs';
 import StatistiquesV2 from './pages/StatistiquesV2';
 import ControleQualite from './pages/ControleQualite';
@@ -86,11 +87,12 @@ function App() {
           <Route path="suivi-agents" element={<ProtectedRoute permission="suivi_agents_view"><SuiviAgents /></ProtectedRoute>} />
           <Route path="production-qualif" element={<ProtectedRoute permission="production_qualif_view"><ProductionQualif /></ProtectedRoute>} />
           <Route path="kpi-qualification" element={<ProtectedRoute permission="kpi_qualification_view"><KPIQualification /></ProtectedRoute>} />
+          <Route path="mes-indicateurs" element={<ProtectedRoute permission="agent_qualification_kpis" allowFunctions={[3]}><KPIAgentQualification /></ProtectedRoute>} />
           <Route path="kpis" element={<ProtectedRoute permission="kpis_view"><KPIs /></ProtectedRoute>} />
           <Route path="statistiques-v2" element={<ProtectedRoute permission="statistiques_v2_view"><StatistiquesV2 /></ProtectedRoute>} />
           <Route path="controle-qualite" element={<ProtectedRoute permission="controle_qualite_view"><ControleQualite /></ProtectedRoute>} />
           <Route path="alertes" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[3, 2, 12]}><Alertes /></ProtectedRoute>} />
-          <Route path="remarques" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[3, 2, 12]}><Remarques /></ProtectedRoute>} />
+          <Route path="remarques" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[2, 12]}><Remarques /></ProtectedRoute>} />
           <Route path="audit-rdv" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[4, 13]}><AuditRDV /></ProtectedRoute>} />
           <Route path="compte-rendu" element={<ProtectedRoute permission="compte_rendu_view"><CompteRendu /></ProtectedRoute>} />
           <Route path="compte-rendu-pending" element={<ProtectedRoute permission={null} customCheck={(item, user) => [1, 2, 5, 7, 13].includes(Number(user?.fonction))}><CompteRenduPending /></ProtectedRoute>} />

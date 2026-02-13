@@ -1,0 +1,142 @@
+.kpi-agent-qualif-page {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.kpi-agent-qualif-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.kpi-agent-qualif-header h1 {
+  font-size: 24px;
+  color: #333;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kpi-agent-qualif-header h1 svg {
+  color: #f7a219;
+}
+
+.kpi-agent-qualif-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kpi-agent-qualif-filters .filter-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kpi-agent-qualif-filters label {
+  font-weight: 600;
+  color: #555;
+  font-size: 14px;
+}
+
+.kpi-agent-qualif-filters input[type="date"] {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.kpi-agent-qualif-period {
+  margin: 0 0 16px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.kpi-agent-qualif-intro {
+  background: #f0f8f9;
+  border: 1px solid #9cbfc8;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  color: #333;
+}
+
+.kpi-agent-qualif-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.kpi-card {
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #eee;
+}
+
+.kpi-card-base {
+  background: linear-gradient(135deg, #9cbfc8 0%, #7aa8b3 100%);
+  color: #fff;
+  border-color: #7aa8b3;
+}
+
+.kpi-card-hc {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+  color: #333;
+  border-color: #e0a800;
+}
+
+.kpi-card-ko {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: #fff;
+  border-color: #c82333;
+}
+
+.kpi-card-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+
+.kpi-card-label {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  opacity: 0.95;
+}
+
+.kpi-card-value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.kpi-card-detail {
+  font-size: 12px;
+  margin-top: 6px;
+  opacity: 0.9;
+}
+
+.kpi-agent-qualif-page .loading,
+.kpi-agent-qualif-page .error {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 16px;
+}
+
+.kpi-agent-qualif-page .error {
+  color: #c82333;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+}

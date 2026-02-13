@@ -157,37 +157,45 @@ router.get('/', authenticate, async (req, res) => {
 
     const pages = Math.max(1, Math.ceil(total / limit));
 
-    const sql = `
+    let rows;
+    const sqlWithType = `
       SELECT 
-        a.id,
-        a.id_fiche,
-        a.id_agent,
-        a.id_qualite,
-        a.id_etat,
-        a.id_sous_etat,
-        a.num_alerte,
-        a.date_alerte,
-        a.nom,
-        a.prenom,
-        a.tel,
-        a.commentaire,
-        a.created_at,
+        a.id, a.id_fiche, a.id_agent, a.id_qualite, a.type_alerte,
+        a.num_alerte, a.date_alerte, a.nom, a.prenom, a.tel, a.commentaire, a.created_at,
         agent.pseudo AS agent_pseudo,
-        qualite.pseudo AS qualite_pseudo,
-        etat.titre AS etat_titre,
-        sous_etat.titre AS sous_etat_titre
+        qualite.pseudo AS qualite_pseudo
       FROM alert_ko a
       LEFT JOIN utilisateurs agent ON a.id_agent = agent.id
       LEFT JOIN utilisateurs qualite ON a.id_qualite = qualite.id
-      LEFT JOIN etats etat ON a.id_etat = etat.id
-      LEFT JOIN sous_etat ON a.id_sous_etat = sous_etat.id
       WHERE ${whereClause}
       ORDER BY a.date_alerte DESC
       LIMIT ? OFFSET ?
     `;
-    const rows = await query(sql, [...params, limit, offset]);
+    const sqlWithoutType = `
+      SELECT 
+        a.id, a.id_fiche, a.id_agent, a.id_qualite,
+        a.num_alerte, a.date_alerte, a.nom, a.prenom, a.tel, a.commentaire, a.created_at,
+        agent.pseudo AS agent_pseudo,
+        qualite.pseudo AS qualite_pseudo
+      FROM alert_ko a
+      LEFT JOIN utilisateurs agent ON a.id_agent = agent.id
+      LEFT JOIN utilisateurs qualite ON a.id_qualite = qualite.id
+      WHERE ${whereClause}
+      ORDER BY a.date_alerte DESC
+      LIMIT ? OFFSET ?
+    `;
+    try {
+      rows = await query(sqlWithType, [...params, limit, offset]);
+    } catch (err) {
+      if (err.code === 'ER_BAD_FIELD_ERROR' && err.message && err.message.includes('type_alerte')) {
+        rows = await query(sqlWithoutType, [...params, limit, offset]);
+        rows = (rows || []).map((r) => ({ ...r, type_alerte: null }));
+      } else {
+        throw err;
+      }
+    }
 
-    const data = rows.map((r) => ({
+    const data = (rows || []).map((r) => ({
       ...r,
       fiche_hash: encodeFicheId(r.id_fiche) || null
     }));

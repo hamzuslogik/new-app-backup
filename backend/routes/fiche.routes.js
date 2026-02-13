@@ -4220,7 +4220,7 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
   }
 });
 
-// Nombre d'alertes KO envoyées pour une fiche (par fiche) et pour l'agent du mois (par id_agent, limite 3/mois)
+// Nombre d'alertes KO pour une fiche + par type (PERSO/TECHNIQUE) pour l'agent du mois (3 de chaque type autorisés/mois)
 router.get('/:hash/alertes-ko', authenticate, hashToIdMiddleware, async (req, res) => {
   try {
     const id = req.params.id ? parseInt(req.params.id, 10) : null;
@@ -4233,24 +4233,34 @@ router.get('/:hash/alertes-ko', authenticate, hashToIdMiddleware, async (req, re
     }
     const row = await queryOne('SELECT COUNT(*) AS nb_alertes FROM alert_ko WHERE id_fiche = ?', [id]);
     const nb_alertes = row?.nb_alertes ?? 0;
-    // Nombre d'alertes reçues par l'agent de cette fiche sur le mois en cours (limite 3 par agent/mois)
-    let nb_alertes_agent_mois = 0;
+    let nb_alertes_perso_agent_mois = 0;
+    let nb_alertes_technique_agent_mois = 0;
     try {
       const fiche = await queryOne('SELECT id_agent FROM fiches WHERE id = ?', [id]);
       if (fiche?.id_agent) {
-        const rowAgent = await queryOne(
-          `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_agent = ? AND date_alerte >= DATE_FORMAT(NOW(), '%Y-%m-01')`,
-          [fiche.id_agent]
-        );
-        nb_alertes_agent_mois = rowAgent?.nb ?? 0;
+        const base = `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_agent = ? AND date_alerte >= DATE_FORMAT(NOW(), '%Y-%m-01')`;
+        const rowPerso = await queryOne(`${base} AND type_alerte = 'PERSO'`, [fiche.id_agent]);
+        const rowTech = await queryOne(`${base} AND type_alerte = 'TECHNIQUE'`, [fiche.id_agent]);
+        nb_alertes_perso_agent_mois = rowPerso?.nb ?? 0;
+        nb_alertes_technique_agent_mois = rowTech?.nb ?? 0;
       }
     } catch (e) {
       if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
     }
-    res.json({ success: true, nb_alertes, nb_alertes_agent_mois });
+    res.json({
+      success: true,
+      nb_alertes,
+      nb_alertes_perso_agent_mois,
+      nb_alertes_technique_agent_mois
+    });
   } catch (err) {
     if (err.code === 'ER_NO_SUCH_TABLE') {
-      return res.json({ success: true, nb_alertes: 0, nb_alertes_agent_mois: 0 });
+      return res.json({
+        success: true,
+        nb_alertes: 0,
+        nb_alertes_perso_agent_mois: 0,
+        nb_alertes_technique_agent_mois: 0
+      });
     }
     console.error('Erreur GET alertes-ko:', err);
     res.status(500).json({ success: false, message: err.message });
@@ -4258,8 +4268,7 @@ router.get('/:hash/alertes-ko', authenticate, hashToIdMiddleware, async (req, re
 });
 
 // Envoyer une alerte KO à l'agent qualification (fonction 3) qui a inséré la fiche.
-// L'état et le sous-état sélectionnés sont uniquement enregistrés dans alert_ko (contexte de l'alerte).
-// La fiche n'est pas modifiée : pas de changement de id_etat_final ni id_sous_etat sur la table fiches.
+// type_alerte : PERSO ou TECHNIQUE, + commentaire. La fiche n'est pas modifiée.
 router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, res) => {
   try {
     const id = req.params.id ? parseInt(req.params.id, 10) : null;
@@ -4280,26 +4289,35 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
     if (!fiche.id_agent) {
       return res.status(400).json({ success: false, message: 'Cette fiche n\'a pas d\'agent assigné' });
     }
-    const { id_etat, id_sous_etat, commentaire } = req.body;
-    // id_etat / id_sous_etat : enregistrés dans alert_ko uniquement, sans modifier la fiche
+    const { type_alerte, commentaire } = req.body;
+    const typeAlerte = (type_alerte === 'TECHNIQUE' || type_alerte === 'PERSO') ? type_alerte : 'PERSO';
     let nb_alertes = 0;
-    let nb_alertes_agent_mois = 0;
+    let nb_alertes_ce_type_agent_mois = 0;
     try {
       const countRow = await queryOne('SELECT COUNT(*) AS nb FROM alert_ko WHERE id_fiche = ?', [id]);
       nb_alertes = countRow?.nb ?? 0;
-      // Limite : 3 alertes par agent par mois (calcul par id_agent, pas par fiche)
+      // Limite : 3 PERSO et 3 TECHNIQUE par agent par mois
       const agentRow = await queryOne(
-        `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_agent = ? AND date_alerte >= DATE_FORMAT(NOW(), '%Y-%m-01')`,
-        [fiche.id_agent]
+        `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_agent = ? AND date_alerte >= DATE_FORMAT(NOW(), '%Y-%m-01') AND type_alerte = ?`,
+        [fiche.id_agent, typeAlerte]
       );
-      nb_alertes_agent_mois = agentRow?.nb ?? 0;
+      nb_alertes_ce_type_agent_mois = agentRow?.nb ?? 0;
     } catch (e) {
       if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
+      if (e.code === 'ER_BAD_FIELD_ERROR' && e.message && e.message.includes('type_alerte')) {
+        const agentRow = await queryOne(
+          `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_agent = ? AND date_alerte >= DATE_FORMAT(NOW(), '%Y-%m-01')`,
+          [fiche.id_agent]
+        );
+        nb_alertes_ce_type_agent_mois = agentRow?.nb ?? 0;
+      } else {
+        throw e;
+      }
     }
-    if (nb_alertes_agent_mois >= 3) {
+    if (nb_alertes_ce_type_agent_mois >= 3) {
       return res.status(400).json({
         success: false,
-        message: 'Cet agent a déjà reçu 3 alertes ce mois-ci. Limite mensuelle atteinte (3 alertes par agent).'
+        message: `Cet agent a déjà reçu 3 alertes de type ${typeAlerte} ce mois-ci. Limite mensuelle atteinte (3 PERSO et 3 TECHNIQUE par agent).`
       });
     }
     if (nb_alertes >= 3) {
@@ -4312,14 +4330,13 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     try {
       await query(
-        `INSERT INTO alert_ko (id_fiche, id_agent, id_qualite, id_etat, id_sous_etat, num_alerte, date_alerte, nom, prenom, tel, commentaire)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO alert_ko (id_fiche, id_agent, id_qualite, type_alerte, num_alerte, date_alerte, nom, prenom, tel, commentaire)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           fiche.id_agent,
           req.user.id,
-          id_etat != null && id_etat !== '' ? parseInt(id_etat, 10) : null,
-          id_sous_etat != null && id_sous_etat !== '' ? parseInt(id_sous_etat, 10) : null,
+          typeAlerte,
           num_alerte,
           now,
           fiche.nom ?? null,
@@ -4333,6 +4350,12 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
         return res.status(503).json({
           success: false,
           message: 'Table alert_ko non créée. Exécutez le script create_table_alert_ko.sql.'
+        });
+      }
+      if (insertErr.code === 'ER_BAD_FIELD_ERROR' && insertErr.message && insertErr.message.includes('type_alerte')) {
+        return res.status(503).json({
+          success: false,
+          message: 'Colonne type_alerte manquante. Exécutez le script alter_alert_ko_add_type_alerte.sql.'
         });
       }
       throw insertErr;

@@ -4,7 +4,7 @@
 -- Description: Table des alertes envoyées aux agents qualification (fonction 3)
 --              avant passage en KO.
 -- Règles :
---   - Limite par agent : 3 alertes maximum par agent par mois (calcul par id_agent).
+--   - Limite par agent et par type : 3 alertes PERSO et 3 alertes TECHNIQUE par agent par mois.
 --   - Passage KO : 3 alertes doivent être envoyées sur une fiche avant de pouvoir
 --     passer cette fiche en KO.
 -- =====================================================
@@ -25,9 +25,8 @@ CREATE TABLE IF NOT EXISTS `alert_ko` (
   -- Qualité qui envoie l''alerte
   `id_qualite` int(11) NOT NULL COMMENT 'ID de l''utilisateur qualité qui envoie l''alerte',
 
-  -- État et sous-état sélectionnés au moment de l''alerte
-  `id_etat` int(11) DEFAULT NULL COMMENT 'ID de l''état sélectionné',
-  `id_sous_etat` int(11) DEFAULT NULL COMMENT 'ID du sous-état sélectionné',
+  -- Type d''alerte : PERSO ou TECHNIQUE
+  `type_alerte` varchar(20) NOT NULL DEFAULT 'PERSO' COMMENT 'Type d''alerte : PERSO ou TECHNIQUE',
 
   -- Numéro de l''alerte (1, 2 ou 3) : 3 alertes avant passage au KO
   `num_alerte` tinyint(1) NOT NULL COMMENT 'Numéro de l''alerte (1=1ère, 2=2e, 3=3e)',
@@ -53,8 +52,7 @@ CREATE TABLE IF NOT EXISTS `alert_ko` (
   KEY `idx_id_agent` (`id_agent`),
   KEY `idx_id_qualite` (`id_qualite`),
   KEY `idx_date_alerte` (`date_alerte`),
-  KEY `idx_id_etat` (`id_etat`),
-  KEY `idx_id_sous_etat` (`id_sous_etat`),
+  KEY `idx_type_alerte` (`type_alerte`),
   KEY `idx_num_alerte` (`num_alerte`),
 
   -- Index composite : compter les alertes par fiche (3 avant KO) et par agent/mois (3 max/mois)
@@ -65,8 +63,6 @@ CREATE TABLE IF NOT EXISTS `alert_ko` (
   -- ,CONSTRAINT `fk_alert_ko_fiche` FOREIGN KEY (`id_fiche`) REFERENCES `fiches` (`id`) ON DELETE CASCADE
   -- ,CONSTRAINT `fk_alert_ko_agent` FOREIGN KEY (`id_agent`) REFERENCES `utilisateurs` (`id`)
   -- ,CONSTRAINT `fk_alert_ko_qualite` FOREIGN KEY (`id_qualite`) REFERENCES `utilisateurs` (`id`)
-  -- ,CONSTRAINT `fk_alert_ko_etat` FOREIGN KEY (`id_etat`) REFERENCES `etats` (`id`)
-  -- ,CONSTRAINT `fk_alert_ko_sous_etat` FOREIGN KEY (`id_sous_etat`) REFERENCES `sous_etat` (`id`)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Alertes KO envoyées aux agents qualification (3 alertes avant KO)';
 

@@ -231,7 +231,15 @@ const Sidebar = ({ collapsed }) => {
       permission: null,
       visible: true,
       customCheck: (item, user, hasPermission) =>
-        [3, 2, 12].includes(Number(user?.fonction)) || (user?.fonction && hasPermission('controle_qualite_view')),
+        [2, 12].includes(Number(user?.fonction)) || (user?.fonction && hasPermission('controle_qualite_view')),
+    },
+    {
+      path: '/mes-indicateurs',
+      label: 'Mes indicateurs',
+      icon: FaChartLine,
+      permission: null,
+      visible: true,
+      customCheck: (item, user) => Number(user?.fonction) === 3,
     },
     {
       path: '/audit-rdv',
