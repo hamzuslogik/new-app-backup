@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import SystemMessageBanner from '../components/SystemMessageBanner';
+import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './ProductionQualif.css';
 
 const ProductionQualif = () => {
@@ -18,20 +19,9 @@ const ProductionQualif = () => {
   const [isMultiSelectOpen, setIsMultiSelectOpen] = useState(false);
   const multiSelectRef = useRef(null);
 
-  // États pour les filtres
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
-
-  const getFirstOfMonth = () => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  };
-
   const [filters, setFilters] = useState({
-    date_debut: getFirstOfMonth(),
-    date_fin: getTodayDate(),
+    date_debut: getFirstOfMonthLocal(),
+    date_fin: getTodayLocal(),
     id_superviseur: '',
     id_etat_final: [] // Tableau pour multi-select
   });

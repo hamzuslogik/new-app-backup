@@ -7,13 +7,14 @@ import { FaChartBar, FaFilter, FaCalendarAlt, FaSearch } from 'react-icons/fa';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { getFirstOfMonthLocal, getLastDayOfMonthLocal } from '../utils/dateUtils';
 import './StatistiquesFiches.css';
 
 const StatistiquesFiches = () => {
   const { user } = useAuth();
   const [filters, setFilters] = useState({
-    date_debut: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    date_fin: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0],
+    date_debut: getFirstOfMonthLocal(),
+    date_fin: getLastDayOfMonthLocal(),
     date_champ: 'date_modif_time',
     id_centre: ''
   });

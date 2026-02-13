@@ -4,6 +4,29 @@ const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = r
 const { checkPermissionCode } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
 
+// Dates en heure locale : 1er du mois / aujourd'hui (évite UTC qui peut donner le 31 du mois précédent)
+function getFirstOfMonthLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}-01`;
+}
+function getTodayLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function getLastDayOfMonthLocal() {
+  const d = new Date();
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  const y = last.getFullYear();
+  const m = String(last.getMonth() + 1).padStart(2, '0');
+  const day = String(last.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // Récupérer les statistiques par type (centre, confirmateur, commercial, agent)
 router.get('/all-stat', authenticate, async (req, res) => {
   console.log('[STAT] /all-stat - Requête reçue - user:', req.user?.id, 'params:', req.query);
@@ -26,8 +49,8 @@ router.get('/all-stat', authenticate, async (req, res) => {
 
     // Valeurs par défaut
     const champ_date = date || 'date_modif_time';
-    const startDate = date_debut || new Date().toISOString().split('T')[0];
-    const endDate = date_fin || new Date().toISOString().split('T')[0];
+    const startDate = date_debut || getTodayLocal();
+    const endDate = date_fin || getTodayLocal();
     const statType = stat || 'net';
 
     // Construire les conditions avec paramètres préparés
@@ -292,10 +315,9 @@ router.get('/fiches-par-centre', authenticate, checkPermissionCode('statistiques
       id_centre // Filtre optionnel par centre
     } = req.query;
 
-    // Valeurs par défaut pour les dates (mois en cours)
-    const today = new Date();
-    const startDate = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const endDate = date_fin || new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+    // Valeurs par défaut pour les dates (mois en cours : 1er du mois, pas 31 du mois précédent)
+    const startDate = date_debut || getFirstOfMonthLocal();
+    const endDate = date_fin || getLastDayOfMonthLocal();
 
     // Déterminer les centres accessibles selon le rôle
     let allowedCentres = null;
@@ -457,10 +479,9 @@ router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques
       id_centre
     } = req.query;
 
-    // Valeurs par défaut pour les dates (mois en cours)
-    const today = new Date();
-    const startDate = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const endDate = date_fin || new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+    // Valeurs par défaut pour les dates (mois en cours : 1er du mois, pas 31 du mois précédent)
+    const startDate = date_debut || getFirstOfMonthLocal();
+    const endDate = date_fin || getLastDayOfMonthLocal();
 
     // Déterminer les centres accessibles selon le rôle
     let allowedCentres = null;
@@ -691,8 +712,8 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
 
     // Valeurs par défaut : mois en cours
     const today = new Date();
-    const startDateStr = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const endDateStr = date_fin || today.toISOString().split('T')[0];
+    const startDateStr = date_debut || getFirstOfMonthLocal();
+    const endDateStr = date_fin || getTodayLocal();
 
     const startDate = `${startDateStr} 00:00:00`;
     const endDate = `${endDateStr} 23:59:59`;
@@ -940,8 +961,8 @@ router.get('/production-qualif', authenticate, async (req, res) => {
 
     // Valeurs par défaut : mois en cours
     const today = new Date();
-    const startDateStr = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const endDateStr = date_fin || today.toISOString().split('T')[0];
+    const startDateStr = date_debut || getFirstOfMonthLocal();
+    const endDateStr = date_fin || getTodayLocal();
 
     const startDate = `${startDateStr} 00:00:00`;
     const endDate = `${endDateStr} 23:59:59`;
@@ -1151,7 +1172,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
 
     // Dates pour jour, semaine, mois
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getTodayLocal();
     
     // Semaine (lundi à dimanche)
     const dayOfWeek = today.getDay();
@@ -1171,7 +1192,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
     } else {
       // Mois en cours par défaut
-      monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      monthStart = getFirstOfMonthLocal();
       monthEnd = todayStr;
     }
 
@@ -1380,7 +1401,7 @@ router.get('/kpis', authenticate, async (req, res) => {
 
     // Dates pour jour, semaine, mois
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getTodayLocal();
     
     // Semaine (lundi à dimanche)
     const dayOfWeek = today.getDay();
@@ -1397,7 +1418,7 @@ router.get('/kpis', authenticate, async (req, res) => {
       const lastDay = new Date(year, monthNum, 0).getDate();
       monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
     } else {
-      monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      monthStart = getFirstOfMonthLocal();
       monthEnd = todayStr;
     }
 
@@ -1682,7 +1703,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
     
     // Dates pour jour, semaine, mois
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getTodayLocal();
     
     // Semaine (lundi à dimanche)
     const dayOfWeek = today.getDay();
@@ -1699,7 +1720,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       const lastDay = new Date(year, monthNum, 0).getDate();
       monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
     } else {
-      monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      monthStart = getFirstOfMonthLocal();
       monthEnd = todayStr;
     }
 
@@ -1963,7 +1984,7 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
 
     // Dates pour jour, semaine, mois
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getTodayLocal();
     
     // Semaine (lundi à dimanche)
     const dayOfWeek = today.getDay();
@@ -1980,7 +2001,7 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
       const lastDay = new Date(year, monthNum, 0).getDate();
       monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
     } else {
-      monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      monthStart = getFirstOfMonthLocal();
       monthEnd = todayStr;
     }
 
@@ -2238,7 +2259,7 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
 
     // Dates pour jour, semaine, mois
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getTodayLocal();
     
     // Semaine (lundi à dimanche)
     const dayOfWeek = today.getDay();
@@ -2255,7 +2276,7 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
       const lastDay = new Date(year, monthNum, 0).getDate();
       monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
     } else {
-      monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      monthStart = getFirstOfMonthLocal();
       monthEnd = todayStr;
     }
 
@@ -2474,8 +2495,8 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
 
     // Valeurs par défaut : mois en cours
     const today = new Date();
-    const startDateStr = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const endDateStr = date_fin || today.toISOString().split('T')[0];
+    const startDateStr = date_debut || getFirstOfMonthLocal();
+    const endDateStr = date_fin || getTodayLocal();
 
     const startDate = `${startDateStr} 00:00:00`;
     const endDate = `${endDateStr} 23:59:59`;
@@ -2665,8 +2686,8 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
 
     // Valeurs par défaut : mois en cours
     const today = new Date();
-    const startDateStr = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const endDateStr = date_fin || today.toISOString().split('T')[0];
+    const startDateStr = date_debut || getFirstOfMonthLocal();
+    const endDateStr = date_fin || getTodayLocal();
 
     const startDate = `${startDateStr} 00:00:00`;
     const endDate = `${endDateStr} 23:59:59`;
@@ -2863,8 +2884,8 @@ router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
     const agentId = req.user.id;
     const { date_debut, date_fin } = req.query;
     const today = new Date();
-    const startDateStr = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const endDateStr = date_fin || today.toISOString().split('T')[0];
+    const startDateStr = date_debut || getFirstOfMonthLocal();
+    const endDateStr = date_fin || getTodayLocal();
     const startDate = `${startDateStr} 00:00:00`;
     const endDate = `${endDateStr} 23:59:59`;
 
@@ -2908,11 +2929,11 @@ router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
       success: true,
       data: {
         period: { date_debut: startDateStr, date_fin: endDateStr },
-        fiches_produites: fichesProduites,
-        nb_hc: nbHc,
-        nb_ko: nbKo,
-        taux_hc: tauxHc,
-        taux_ko: tauxKo
+        fiches_produites: Number(fichesProduites),
+        nb_hc: Number(nbHc),
+        nb_ko: Number(nbKo),
+        taux_hc: Number(tauxHc),
+        taux_ko: Number(tauxKo)
       }
     });
   } catch (error) {
@@ -2932,8 +2953,8 @@ router.get('/agents-qualite-kpis', authenticate, async (req, res) => {
   try {
     const { date_debut, date_fin } = req.query;
     const today = new Date();
-    const startDateStr = date_debut || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const endDateStr = date_fin || today.toISOString().split('T')[0];
+    const startDateStr = date_debut || getFirstOfMonthLocal();
+    const endDateStr = date_fin || getTodayLocal();
     const startDate = `${startDateStr} 00:00:00`;
     const endDate = `${endDateStr} 23:59:59`;
 

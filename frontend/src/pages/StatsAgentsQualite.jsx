@@ -6,6 +6,7 @@ import { FaUserCheck, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaC
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './StatsAgentsQualite.css';
 
 const CHART_COLORS = ['#9cbfc8', '#4a7a87', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#e83e8c'];
@@ -17,20 +18,9 @@ const StatsAgentsQualite = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedAgents, setExpandedAgents] = useState({});
 
-  // États pour les filtres
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
-
-  const getFirstOfMonth = () => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  };
-
   const [filters, setFilters] = useState({
-    date_debut: getFirstOfMonth(),
-    date_fin: getTodayDate(),
+    date_debut: getFirstOfMonthLocal(),
+    date_fin: getTodayLocal(),
     id_agent_qualite: ''
   });
 

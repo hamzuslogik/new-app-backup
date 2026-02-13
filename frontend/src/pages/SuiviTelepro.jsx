@@ -4,16 +4,16 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaChartLine, FaSignature, FaFileAlt, FaPrint } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './SuiviTelepro.css';
 
 const SuiviTelepro = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('commissions'); // commissions, signatures, new-repro
-  
-  // États pour les filtres
+
   const [filters, setFilters] = useState({
-    date_debut: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0], // 1er du mois
-    date_fin: new Date().toISOString().split('T')[0], // Aujourd'hui
+    date_debut: getFirstOfMonthLocal(),
+    date_fin: getTodayLocal(),
     id_confirmateur: ''
   });
 

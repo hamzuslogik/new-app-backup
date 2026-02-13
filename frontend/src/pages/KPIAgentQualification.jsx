@@ -2,20 +2,16 @@ import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
+import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { FaChartLine, FaExclamationTriangle, FaBan } from 'react-icons/fa';
 import './KPIAgentQualification.css';
 
 const KPIAgentQualification = () => {
   const { user } = useAuth();
-  const getFirstOfMonth = () => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
-  };
-  const getToday = () => new Date().toISOString().split('T')[0];
 
   const [filters, setFilters] = useState({
-    date_debut: getFirstOfMonth(),
-    date_fin: getToday()
+    date_debut: getFirstOfMonthLocal(),
+    date_fin: getTodayLocal()
   });
 
   const { data: kpiData, isLoading, error } = useQuery(
@@ -24,7 +20,8 @@ const KPIAgentQualification = () => {
       const res = await api.get('/statistiques/agent-qualification-kpis', {
         params: { date_debut: filters.date_debut, date_fin: filters.date_fin }
       });
-      return res.data.data;
+      const raw = res.data?.data ?? res.data;
+      return raw && typeof raw === 'object' ? raw : {};
     },
     { enabled: Number(user?.fonction) === 3 && !!filters.date_debut && !!filters.date_fin }
   );
@@ -56,11 +53,11 @@ const KPIAgentQualification = () => {
   }
 
   const period = kpiData?.period;
-  const fichesProduites = kpiData?.fiches_produites ?? 0;
-  const nbHc = kpiData?.nb_hc ?? 0;
-  const nbKo = kpiData?.nb_ko ?? 0;
-  const tauxHc = kpiData?.taux_hc ?? 0;
-  const tauxKo = kpiData?.taux_ko ?? 0;
+  const fichesProduites = Number(kpiData?.fiches_produites) || 0;
+  const nbHc = Number(kpiData?.nb_hc) || 0;
+  const nbKo = Number(kpiData?.nb_ko) || 0;
+  const tauxHc = Number(kpiData?.taux_hc) || 0;
+  const tauxKo = Number(kpiData?.taux_ko) || 0;
 
   return (
     <div className="kpi-agent-qualif-page">
@@ -103,20 +100,20 @@ const KPIAgentQualification = () => {
       <div className="kpi-agent-qualif-cards">
         <div className="kpi-card kpi-card-base">
           <div className="kpi-card-label">Fiches produites</div>
-          <div className="kpi-card-value">{fichesProduites}</div>
+          <div className="kpi-card-value" aria-label="Fiches produites">{fichesProduites}</div>
         </div>
 
         <div className="kpi-card kpi-card-hc">
           <div className="kpi-card-icon"><FaExclamationTriangle /></div>
           <div className="kpi-card-label">Taux HC (hors cible)</div>
-          <div className="kpi-card-value">{tauxHc} %</div>
+          <div className="kpi-card-value" aria-label="Taux HC">{tauxHc} %</div>
           <div className="kpi-card-detail">{nbHc} fiche{nbHc !== 1 ? 's' : ''} HC</div>
         </div>
 
         <div className="kpi-card kpi-card-ko">
           <div className="kpi-card-icon"><FaBan /></div>
           <div className="kpi-card-label">Taux KO (non conformité)</div>
-          <div className="kpi-card-value">{tauxKo} %</div>
+          <div className="kpi-card-value" aria-label="Taux KO">{tauxKo} %</div>
           <div className="kpi-card-detail">{nbKo} fiche{nbKo !== 1 ? 's' : ''} KO</div>
         </div>
       </div>

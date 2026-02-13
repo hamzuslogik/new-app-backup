@@ -4,18 +4,12 @@ import { FaSignature, FaChartLine, FaUsers, FaFileAlt, FaArrowUp, FaArrowDown, F
 import api from '../config/api';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './Signatures.css';
 
 const Signatures = () => {
-  const [dateDebut, setDateDebut] = useState(() => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    return startOfMonth.toISOString().split('T')[0];
-  });
-  const [dateFin, setDateFin] = useState(() => {
-    const now = new Date();
-    return now.toISOString().split('T')[0];
-  });
+  const [dateDebut, setDateDebut] = useState(() => getFirstOfMonthLocal());
+  const [dateFin, setDateFin] = useState(() => getTodayLocal());
   const [selectedConfirmateur, setSelectedConfirmateur] = useState('');
   const [page, setPage] = useState(1);
   const limit = 50;

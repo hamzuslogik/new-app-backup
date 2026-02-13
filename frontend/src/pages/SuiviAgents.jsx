@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
+import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { FaUserTie, FaFileAlt, FaFilter, FaChartBar } from 'react-icons/fa';
 import './SuiviAgents.css';
 
@@ -42,8 +43,8 @@ const SuiviAgents = () => {
   // Pour RE Qualification, masquer les filtres et utiliser automatiquement l'ID de l'utilisateur
   const [showFilters, setShowFilters] = useState(!isREQualif);
   const [filters, setFilters] = useState({
-    date_debut: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    date_fin: new Date().toISOString().split('T')[0],
+    date_debut: getFirstOfMonthLocal(),
+    date_fin: getTodayLocal(),
     id_superviseur: isREQualif ? (user?.id || '') : ''
   });
 

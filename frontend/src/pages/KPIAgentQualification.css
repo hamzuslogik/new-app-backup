@@ -119,6 +119,8 @@
   font-size: 32px;
   font-weight: 700;
   line-height: 1.2;
+  min-height: 1.2em;
+  visibility: visible;
 }
 
 .kpi-card-detail {

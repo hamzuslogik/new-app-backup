@@ -14,6 +14,7 @@ import {
   FaClock, FaExclamationTriangle, FaCheckCircle, FaFileExcel, FaFilePdf,
   FaExpand, FaCompress, FaEye, FaEyeSlash, FaBell, FaInfoCircle, FaWindowClose
 } from 'react-icons/fa';
+import { toLocalDateString, getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './StatistiquesV2.css';
 
 const COLORS = ['#9cbfc8', '#4a7a87', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#e83e8c'];
@@ -59,20 +60,20 @@ const StatistiquesV2 = () => {
       return { start: customDateStart, end: customDateEnd };
     }
 
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getTodayLocal();
 
     switch (selectedPeriod) {
       case 'jour':
         return { start: todayStr, end: todayStr };
-      case 'semaine':
+      case 'semaine': {
+        const today = new Date();
         const dayOfWeek = today.getDay();
         const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
         const monday = new Date(today.getFullYear(), today.getMonth(), diff);
-        return { start: monday.toISOString().split('T')[0], end: todayStr };
+        return { start: toLocalDateString(monday), end: todayStr };
+      }
       case 'mois':
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        return { start: monthStart.toISOString().split('T')[0], end: todayStr };
+        return { start: getFirstOfMonthLocal(), end: todayStr };
       default:
         return { start: todayStr, end: todayStr };
     }

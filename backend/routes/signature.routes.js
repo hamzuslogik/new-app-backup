@@ -3,6 +3,16 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
 
+function getFirstOfMonthLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+function getLastDayOfMonthLocal() {
+  const d = new Date();
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
+}
+
 // =====================================================
 // ROUTE: GET /api/signature
 // Récupérer la liste des signatures avec filtres (par date de planning = date_rdv_time de la fiche)
@@ -306,13 +316,9 @@ router.get('/kpi', authenticate, async (req, res) => {
   try {
     const { date_debut, date_fin } = req.query;
 
-    // Dates par défaut : ce mois
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
-    const dateDebut = date_debut || startOfMonth.toISOString().split('T')[0];
-    const dateFin = date_fin || endOfMonth.toISOString().split('T')[0];
+    // Dates par défaut : 1er du mois -> dernier jour du mois (heure locale)
+    const dateDebut = date_debut || getFirstOfMonthLocal();
+    const dateFin = date_fin || getLastDayOfMonthLocal();
 
     // Période actuelle
     const currentStart = `${dateDebut} 00:00:00`;
