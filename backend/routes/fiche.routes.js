@@ -2391,9 +2391,9 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
       });
     }
     
-    // Récupérer les informations de l'agent et de son superviseur
+    // Récupérer les informations de l'agent, de son RE qualification (chef_equipe) et du RP qualification (id_rp_qualif du RE)
     const agentInfo = await queryOne(
-      `SELECT u.id, u.pseudo, u.chef_equipe, s.pseudo as superviseur_pseudo
+      `SELECT u.id, u.pseudo, u.chef_equipe, s.pseudo as superviseur_pseudo, s.id_rp_qualif
        FROM utilisateurs u
        LEFT JOIN utilisateurs s ON u.chef_equipe = s.id
        WHERE u.id = ?`,
@@ -2549,11 +2549,11 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
         });
       }
     } else if (statut === 'REJETEE') {
-      // Passer la fiche existante en état doublon (id_etat_final = 61)
+      // Passer la fiche existante en état doublon (id_etat_final = 61), sans l'archiver
       const ID_ETAT_DOUBLON = 61;
       if (demande.id_fiche_existante) {
         await query(
-          `UPDATE fiches SET id_etat_final = ?, date_modif_time = ? WHERE id = ?`,
+          `UPDATE fiches SET id_etat_final = ?, date_modif_time = ?, archive = 0 WHERE id = ?`,
           [ID_ETAT_DOUBLON, now, demande.id_fiche_existante]
         ).catch(err => {
           console.error('Erreur lors du passage de la fiche en doublon:', err);
@@ -2569,34 +2569,33 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
         });
       }
 
-      // Créer des notifications pour l'agent et son superviseur (si existe) en cas de refus
-      const messageRefus = `Votre demande d'insertion de fiche pour ${ficheExistante?.nom || ''} ${ficheExistante?.prenom || ''} a été rejetée par ${traitantPseudo}.${commentaire ? ` Raison : ${commentaire}` : ''}`;
+      // Notification de refus : agent, RE qualification et RP qualification, avec le commentaire du refus
+      const messageRefus = `Demande d'insertion de fiche pour ${ficheExistante?.nom || ''} ${ficheExistante?.prenom || ''} rejetée par ${traitantPseudo}.${commentaire ? ` Commentaire : ${commentaire}` : ''}`;
       const metadataRefus = JSON.stringify({
         id_demande: id,
         id_fiche_existante: demande.id_fiche_existante,
         commentaire: commentaire || null
       });
-      
-      // Notification pour l'agent
-      if (demande.id_agent && messageRefus && messageRefus.trim() !== '') {
-        await query(
-          `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-           VALUES (?, ?, ?, ?, ?, 0, ?)`,
-          ['demande_insertion_refusee', demande.id_fiche_existante, messageRefus.trim(), demande.id_agent, now, metadataRefus]
-        ).catch(err => {
-          console.error('Erreur lors de la création de la notification pour l\'agent:', err);
-        });
-      }
-      
-      // Notification pour le superviseur (si existe)
-      if (agentInfo?.chef_equipe && messageRefus && messageRefus.trim() !== '') {
-        await query(
-          `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-           VALUES (?, ?, ?, ?, ?, 0, ?)`,
-          ['demande_insertion_refusee', demande.id_fiche_existante, messageRefus.trim(), agentInfo.chef_equipe, now, metadataRefus]
-        ).catch(err => {
-          console.error('Erreur lors de la création de la notification pour le superviseur:', err);
-        });
+
+      const destinations = [
+        demande.id_agent,
+        agentInfo?.chef_equipe || null,
+        agentInfo?.id_rp_qualif || null
+      ].filter(Boolean);
+
+      const seen = new Set();
+      for (const destId of destinations) {
+        if (seen.has(destId)) continue;
+        seen.add(destId);
+        if (messageRefus && messageRefus.trim() !== '') {
+          await query(
+            `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
+             VALUES (?, ?, ?, ?, ?, 0, ?)`,
+            ['demande_insertion_refusee', demande.id_fiche_existante, messageRefus.trim(), destId, now, metadataRefus]
+          ).catch(err => {
+            console.error('Erreur lors de la création de la notification (destination:', destId, '):', err);
+          });
+        }
       }
     }
     
