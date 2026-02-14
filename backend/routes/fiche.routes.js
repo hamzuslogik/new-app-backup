@@ -3375,48 +3375,9 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       );
     }
     
-    // Si une fiche existante est trouvée, créer une demande d'insertion
+    // Si une fiche existante est trouvée, créer une demande d'insertion (plusieurs demandes possibles pour le même numéro)
     if (existingFiche) {
       const agentId = ficheData.id_agent || req.user.id;
-      
-      // Vérifier si une demande d'insertion existe déjà pour ce numéro, cet agent et aujourd'hui
-      // Utiliser CURDATE() pour comparer uniquement la date (sans l'heure)
-      // Vérifier tous les statuts pour éviter les doublons même si la demande a été traitée
-      const existingDemande = await queryOne(
-        `SELECT id, date_demande, statut 
-         FROM demandes_insertion 
-         WHERE id_agent = ? 
-           AND id_fiche_existante = ?
-           AND date_demande IS NOT NULL
-           AND DATE(date_demande) = CURDATE()
-         ORDER BY id DESC
-         LIMIT 1`,
-        [agentId, existingFiche.id]
-      );
-      
-      console.log('[DEMANDE INSERTION] Vérification doublon:', {
-        agentId,
-        ficheExistanteId: existingFiche.id,
-        existingDemande: existingDemande ? existingDemande.id : null,
-        dateDemande: existingDemande ? existingDemande.date_demande : null,
-        statut: existingDemande ? existingDemande.statut : null,
-        curdate: new Date().toISOString().split('T')[0]
-      });
-      
-      // Si une demande existe déjà pour aujourd'hui, ne pas créer de doublon
-      if (existingDemande) {
-        console.log('[DEMANDE INSERTION] Doublon détecté - demande existante ID:', existingDemande.id);
-        return res.status(200).json({
-          success: true,
-          message: 'Une demande d\'insertion existe déjà pour ce numéro de téléphone, cet agent et aujourd\'hui.',
-          data: {
-            demandeId: existingDemande.id,
-            existingFicheId: existingFiche.id,
-            demandeCreated: false,
-            existingDemande: true
-          }
-        });
-      }
       
       // Récupérer les informations de l'agent pour le message
       const agentInfo = await queryOne(
@@ -3426,31 +3387,6 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       
       // Créer la demande d'insertion
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      
-      // Double vérification avant insertion (sécurité supplémentaire)
-      const doubleCheck = await queryOne(
-        `SELECT id FROM demandes_insertion 
-         WHERE id_agent = ? 
-           AND id_fiche_existante = ?
-           AND date_demande IS NOT NULL
-           AND DATE(date_demande) = CURDATE()
-         LIMIT 1`,
-        [agentId, existingFiche.id]
-      );
-      
-      if (doubleCheck) {
-        console.log('[DEMANDE INSERTION] Double vérification - doublon détecté ID:', doubleCheck.id);
-        return res.status(200).json({
-          success: true,
-          message: 'Une demande d\'insertion existe déjà pour ce numéro de téléphone, cet agent et aujourd\'hui.',
-          data: {
-            demandeId: doubleCheck.id,
-            existingFicheId: existingFiche.id,
-            demandeCreated: false,
-            existingDemande: true
-          }
-        });
-      }
       
       console.log('[DEMANDE INSERTION] Création de la demande - agent:', agentId, 'fiche:', existingFiche.id);
       const demandeResult = await query(
