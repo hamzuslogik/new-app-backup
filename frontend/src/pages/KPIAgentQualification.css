@@ -88,6 +88,14 @@
   border-color: #7aa8b3;
 }
 
+.kpi-card-base .kpi-card-value {
+  color: #fff;
+  min-height: 2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .kpi-card-hc {
   background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
   color: #333;
@@ -120,6 +128,12 @@
   font-weight: 700;
   line-height: 1.2;
   min-height: 1.2em;
+  visibility: visible;
+  content-visibility: visible;
+}
+
+.kpi-agent-qualif-cards .kpi-card-value:empty::after {
+  content: '0';
   visibility: visible;
 }
 

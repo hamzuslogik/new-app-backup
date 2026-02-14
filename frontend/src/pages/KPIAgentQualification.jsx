@@ -21,7 +21,8 @@ const KPIAgentQualification = () => {
         params: { date_debut: filters.date_debut, date_fin: filters.date_fin }
       });
       const raw = res.data?.data ?? res.data;
-      return raw && typeof raw === 'object' ? raw : {};
+      const payload = raw && typeof raw === 'object' ? raw : {};
+      return payload;
     },
     { enabled: Number(user?.fonction) === 3 && !!filters.date_debut && !!filters.date_fin }
   );
@@ -52,12 +53,13 @@ const KPIAgentQualification = () => {
     );
   }
 
-  const period = kpiData?.period;
-  const fichesProduites = Number(kpiData?.fiches_produites) || 0;
-  const nbHc = Number(kpiData?.nb_hc) || 0;
-  const nbKo = Number(kpiData?.nb_ko) || 0;
-  const tauxHc = Number(kpiData?.taux_hc) || 0;
-  const tauxKo = Number(kpiData?.taux_ko) || 0;
+  const data = kpiData || {};
+  const period = data.period;
+  const fichesProduites = Number(data.fiches_produites ?? data.fichesProduites) || 0;
+  const nbHc = Number(data.nb_hc ?? data.nbHc) || 0;
+  const nbKo = Number(data.nb_ko ?? data.nbKo) || 0;
+  const tauxHc = Number(data.taux_hc ?? data.tauxHc) || 0;
+  const tauxKo = Number(data.taux_ko ?? data.tauxKo) || 0;
 
   return (
     <div className="kpi-agent-qualif-page">
@@ -100,7 +102,7 @@ const KPIAgentQualification = () => {
       <div className="kpi-agent-qualif-cards">
         <div className="kpi-card kpi-card-base">
           <div className="kpi-card-label">Fiches produites</div>
-          <div className="kpi-card-value" aria-label="Fiches produites">{fichesProduites}</div>
+          <div className="kpi-card-value" aria-label="Fiches produites">{String(fichesProduites)}</div>
         </div>
 
         <div className="kpi-card kpi-card-hc">
