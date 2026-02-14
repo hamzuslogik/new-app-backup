@@ -2391,7 +2391,7 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
       });
     }
     
-    // Récupérer les informations de l'agent, de son RE qualification (chef_equipe) et du RP qualification (id_rp_qualif du RE)
+    // Récupérer l'agent, son RE qualification (chef_equipe) et le RP qualification (id_rp_qualif du RE)
     const agentInfo = await queryOne(
       `SELECT u.id, u.pseudo, u.chef_equipe, s.pseudo as superviseur_pseudo, s.id_rp_qualif
        FROM utilisateurs u
@@ -2569,8 +2569,8 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
         });
       }
 
-      // Notification de refus : agent, RE qualification et RP qualification, avec le commentaire du refus
-      const messageRefus = `Demande d'insertion de fiche pour ${ficheExistante?.nom || ''} ${ficheExistante?.prenom || ''} rejetée par ${traitantPseudo}.${commentaire ? ` Commentaire : ${commentaire}` : ''}`;
+      // Refus : on n'insère pas la fiche. Notifier l'agent qualification, son RE et son RP de la décision (avec commentaire)
+      const messageRefus = `Demande d'insertion refusée. Fiche concernée : ${ficheExistante?.nom || ''} ${ficheExistante?.prenom || ''}. Rejetée par ${traitantPseudo}.${commentaire ? ` Commentaire : ${commentaire}` : ''}`;
       const metadataRefus = JSON.stringify({
         id_demande: id,
         id_fiche_existante: demande.id_fiche_existante,
@@ -2582,7 +2582,6 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
         agentInfo?.chef_equipe || null,
         agentInfo?.id_rp_qualif || null
       ].filter(Boolean);
-
       const seen = new Set();
       for (const destId of destinations) {
         if (seen.has(destId)) continue;
@@ -2593,7 +2592,7 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
              VALUES (?, ?, ?, ?, ?, 0, ?)`,
             ['demande_insertion_refusee', demande.id_fiche_existante, messageRefus.trim(), destId, now, metadataRefus]
           ).catch(err => {
-            console.error('Erreur lors de la création de la notification (destination:', destId, '):', err);
+            console.error('Erreur notification refus (destination:', destId, '):', err);
           });
         }
       }
