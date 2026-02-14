@@ -2549,27 +2549,8 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
         });
       }
     } else if (statut === 'REJETEE') {
-      // Passer la fiche existante en état doublon (id_etat_final = 61), sans l'archiver
-      const ID_ETAT_DOUBLON = 61;
-      if (demande.id_fiche_existante) {
-        await query(
-          `UPDATE fiches SET id_etat_final = ?, date_modif_time = ?, archive = 0 WHERE id = ?`,
-          [ID_ETAT_DOUBLON, now, demande.id_fiche_existante]
-        ).catch(err => {
-          console.error('Erreur lors du passage de la fiche en doublon:', err);
-        });
-        // Historiser le changement d'état
-        const histoConf = getHistoConfirmateur(req, null);
-        await query(
-          `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation)
-           VALUES (?, ?, ?, NULL, NOW())`,
-          [demande.id_fiche_existante, ID_ETAT_DOUBLON, histoConf]
-        ).catch(err => {
-          console.error('Erreur lors de l\'historisation état doublon:', err);
-        });
-      }
-
-      // Refus : on n'insère pas la fiche. Notifier l'agent qualification, son RE et son RP de la décision (avec commentaire)
+      // Refus : ne pas modifier la fiche existante (garder son état), ne pas insérer la nouvelle fiche.
+      // Notifier l'agent qualification, son RE et son RP de la décision (avec commentaire)
       const messageRefus = `Demande d'insertion refusée. Fiche concernée : ${ficheExistante?.nom || ''} ${ficheExistante?.prenom || ''}. Rejetée par ${traitantPseudo}.${commentaire ? ` Commentaire : ${commentaire}` : ''}`;
       const metadataRefus = JSON.stringify({
         id_demande: id,
