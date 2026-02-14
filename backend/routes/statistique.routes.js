@@ -2876,6 +2876,7 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
 router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
   try {
     if (Number(req.user?.fonction) !== 3) {
+      console.log('[STAT] /agent-qualification-kpis - Refus: utilisateur non agent qualification (fonction=', req.user?.fonction, ')');
       return res.status(403).json({
         success: false,
         message: 'Réservé aux agents qualification (fonction 3).'
@@ -2888,6 +2889,8 @@ router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
     const endDateStr = date_fin || getTodayLocal();
     const startDate = `${startDateStr} 00:00:00`;
     const endDate = `${endDateStr} 23:59:59`;
+
+    console.log('[STAT] /agent-qualification-kpis - Requête:', { agentId, date_debut, date_fin, startDateStr, endDateStr });
 
     const baseConditions = [
       'f.id_agent = ?',
@@ -2905,6 +2908,7 @@ router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
     `;
     const fichesProduitesRow = await queryOne(fichesProduitesQuery, baseParams);
     const fichesProduites = fichesProduitesRow?.count ?? 0;
+    console.log('[STAT] /agent-qualification-kpis - Fiches produites:', { raw: fichesProduitesRow, count: fichesProduites, type: typeof fichesProduites });
 
     const nbHcQuery = `
       SELECT COUNT(DISTINCT f.id) AS count
@@ -2925,16 +2929,19 @@ router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
     const tauxHc = fichesProduites > 0 ? Math.round((nbHc / fichesProduites) * 1000) / 10 : 0;
     const tauxKo = fichesProduites > 0 ? Math.round((nbKo / fichesProduites) * 1000) / 10 : 0;
 
+    const payload = {
+      period: { date_debut: startDateStr, date_fin: endDateStr },
+      fiches_produites: Number(fichesProduites),
+      nb_hc: Number(nbHc),
+      nb_ko: Number(nbKo),
+      taux_hc: Number(tauxHc),
+      taux_ko: Number(tauxKo)
+    };
+    console.log('[STAT] /agent-qualification-kpis - Réponse:', payload);
+
     res.json({
       success: true,
-      data: {
-        period: { date_debut: startDateStr, date_fin: endDateStr },
-        fiches_produites: Number(fichesProduites),
-        nb_hc: Number(nbHc),
-        nb_ko: Number(nbKo),
-        taux_hc: Number(tauxHc),
-        taux_ko: Number(tauxKo)
-      }
+      data: payload
     });
   } catch (error) {
     console.error('[STAT] /agent-qualification-kpis - Erreur:', error.message);
