@@ -323,7 +323,8 @@ const Header = () => {
                 <div className="notifications-list">
                   {notifications.length === 0 ? (
                     <div className="no-notifications">
-                      <p>Aucune notification</p>
+                      <p>Aucune notification non lue</p>
+                      <Link to="/notifications" onClick={() => setShowNotifications(false)} className="view-all-link">Voir la page Notifications</Link>
                     </div>
                   ) : (
                     notifications.map((notification) => {

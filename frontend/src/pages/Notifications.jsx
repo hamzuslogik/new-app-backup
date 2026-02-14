@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import { FaBell, FaCheck, FaTimes, FaEye, FaFilter, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
@@ -13,6 +13,8 @@ const Notifications = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'
+  const notificationsListRef = useRef(null);
+  const markedOnScrollRef = useRef(new Set());
 
   // Récupérer toutes les notifications (lues et non lues)
   const { data: notificationsData, isLoading } = useQuery(
@@ -123,6 +125,34 @@ const Notifications = () => {
     }
   };
 
+  // Marquer comme lu les notifications qui deviennent visibles au scroll dans la page
+  useEffect(() => {
+    const listEl = notificationsListRef.current;
+    if (!listEl || !notifications.length) return;
+    const unreadIds = notifications.filter((n) => n.lu === 0).map((n) => n.id);
+    if (unreadIds.length === 0) return;
+
+    const options = { root: listEl, rootMargin: '0px', threshold: 0.2 };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const id = entry.target.getAttribute('data-notification-id');
+        if (!id || markedOnScrollRef.current.has(id)) return;
+        const numId = parseInt(id, 10);
+        markedOnScrollRef.current.add(id);
+        markAsReadMutation.mutate(numId);
+      });
+    }, options);
+
+    const children = listEl.querySelectorAll('[data-notification-unread="true"]');
+    children.forEach((el) => observer.observe(el));
+
+    return () => {
+      observer.disconnect();
+      unreadIds.forEach((id) => markedOnScrollRef.current.delete(String(id)));
+    };
+  }, [notifications]);
+
   const getNotificationTypeLabel = (type) => {
     switch (type) {
       case 'rdv_approval':
@@ -203,7 +233,7 @@ const Notifications = () => {
           <p>Aucune notification</p>
         </div>
       ) : (
-        <div className="notifications-list">
+        <div className="notifications-list" ref={notificationsListRef}>
           {notifications.map((notification) => {
             const isRdvApproval = notification.type === 'rdv_approval';
             const isDecalageRequest = notification.type === 'decalage_request';
@@ -228,6 +258,8 @@ const Notifications = () => {
                 key={notification.id}
                 role="button"
                 tabIndex={0}
+                data-notification-id={notification.id}
+                data-notification-unread={notification.lu === 0}
                 onClick={(e) => handleCardClick(e, notification)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(e, notification); } }}
                 className={`notification-card ${notification.lu === 0 ? 'unread' : ''} ${getNotificationTypeClass(notification.type)}`}
