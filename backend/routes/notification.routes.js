@@ -57,10 +57,18 @@ const ensureNotificationsTable = async () => {
       }
       console.log('Table notifications créée avec succès');
     }
+    try {
+      await query(`ALTER TABLE notifications ADD COLUMN archive TINYINT(1) NOT NULL DEFAULT 0`);
+    } catch (e) {
+      // Colonne peut déjà exister
+    }
   } catch (error) {
     console.error('Erreur lors de la vérification/création de la table notifications:', error);
   }
 };
+
+const NOTIF_ARCHIVE_CONDITION = 'AND (n.archive = 0 OR n.archive IS NULL)';
+const COUNT_ARCHIVE_CONDITION = 'AND (archive = 0 OR archive IS NULL)';
 
 // Vérifier la table au chargement du module
 ensureNotificationsTable();
@@ -112,12 +120,12 @@ router.get('/', authenticate, async (req, res) => {
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
          ${NOTIF_JOIN_EXP}
-         WHERE n.destination = ? ${luCondition}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-         WHERE n.destination = ? ${luCondition}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     } else if (userFonction === 6) {
@@ -125,13 +133,13 @@ router.get('/', authenticate, async (req, res) => {
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
          ${NOTIF_JOIN_EXP}
-         WHERE n.destination = ? ${luCondition}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
          AND (n.type = 'decalage_request' OR n.type LIKE 'demande_insertion_%')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-         WHERE n.destination = ? ${luCondition}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
          AND (n.type = 'decalage_request' OR n.type LIKE 'demande_insertion_%')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
@@ -147,13 +155,13 @@ router.get('/', authenticate, async (req, res) => {
            FROM notifications n
            LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
            ${NOTIF_JOIN_EXP}
-           WHERE n.destination = ? ${luCondition}
+           WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
            AND n.type = 'decalage_request'
            ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
         const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
            FROM notifications n
            LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-           WHERE n.destination = ? ${luCondition}
+           WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
            AND n.type = 'decalage_request'
            ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
         notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
@@ -164,13 +172,13 @@ router.get('/', authenticate, async (req, res) => {
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
          ${NOTIF_JOIN_EXP}
-         WHERE n.destination = ? ${luCondition}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
          AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
-         WHERE n.destination = ? ${luCondition}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
          AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
@@ -179,13 +187,13 @@ router.get('/', authenticate, async (req, res) => {
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
          ${NOTIF_JOIN_EXP}
-         WHERE n.destination = ? ${luCondition}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
          AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
-         WHERE n.destination = ? ${luCondition}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
          AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
@@ -249,7 +257,7 @@ router.get('/count', authenticate, async (req, res) => {
         `SELECT COUNT(*) as count
          FROM notifications
          WHERE destination = ?
-         AND lu = 0`,
+         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}`,
         [req.user.id]
       );
       count = result?.count || 0;
@@ -259,7 +267,7 @@ router.get('/count', authenticate, async (req, res) => {
         `SELECT COUNT(*) as count
          FROM notifications
          WHERE destination = ?
-         AND lu = 0
+         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}
          AND (type = 'decalage_request' OR type LIKE 'demande_insertion_%')`,
         [req.user.id]
       );
@@ -278,7 +286,7 @@ router.get('/count', authenticate, async (req, res) => {
           `SELECT COUNT(*) as count
            FROM notifications
            WHERE destination = ?
-           AND lu = 0
+           AND lu = 0 ${COUNT_ARCHIVE_CONDITION}
            AND type = 'decalage_request'`,
           [req.user.id]
         );
@@ -290,7 +298,7 @@ router.get('/count', authenticate, async (req, res) => {
         `SELECT COUNT(*) as count
          FROM notifications
          WHERE destination = ?
-         AND lu = 0
+         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}
          AND (type LIKE 'demande_insertion_%' OR type = 'decalage_request' OR type = 'decalage_response')`,
         [req.user.id]
       );
@@ -301,7 +309,7 @@ router.get('/count', authenticate, async (req, res) => {
         `SELECT COUNT(*) as count
          FROM notifications
          WHERE destination = ?
-         AND lu = 0
+         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}
          AND (type LIKE 'demande_insertion_%' OR type = 'decalage_request' OR type = 'decalage_response')`,
         [req.user.id]
       );
@@ -317,6 +325,32 @@ router.get('/count', authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors du comptage des notifications'
+    });
+  }
+});
+
+// Archiver les notifications lues de plus de 3 jours (pour l'utilisateur connecté)
+router.patch('/archive-old', authenticate, async (req, res) => {
+  try {
+    const [result] = await query(
+      `UPDATE notifications
+       SET archive = 1
+       WHERE destination = ?
+       AND (lu = 1 OR lu = true)
+       AND (archive = 0 OR archive IS NULL)
+       AND date_creation < DATE_SUB(NOW(), INTERVAL 3 DAY)`,
+      [req.user.id]
+    );
+    const archived = result?.affectedRows ?? 0;
+    res.json({
+      success: true,
+      archived
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'archivage des notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'archivage des notifications'
     });
   }
 });

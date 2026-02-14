@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useNavigate } from 'react-router-dom';
-import { FaBell, FaCheck, FaTimes, FaEye, FaFilter, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { FaBell, FaCheck, FaTimes, FaEye, FaFilter, FaCheckCircle, FaTimesCircle, FaArchive } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -106,6 +106,22 @@ const Notifications = () => {
         queryClient.invalidateQueries('fiche');
         queryClient.invalidateQueries('planning-week');
         toast.success('Demande de RDV refusée');
+      }
+    }
+  );
+
+  const archiveOldMutation = useMutation(
+    async () => {
+      const res = await api.patch('/notifications/archive-old');
+      return res.data;
+    },
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries('notifications');
+        queryClient.invalidateQueries('notifications-all');
+        queryClient.invalidateQueries('notifications-count');
+        const n = data?.archived ?? 0;
+        if (n > 0) toast.success(`${n} notification(s) archivée(s)`);
       }
     }
   );
@@ -224,6 +240,14 @@ const Notifications = () => {
               <FaCheck /> Tout marquer comme lu
             </button>
           )}
+          <button
+            className="btn-archive-old"
+            onClick={() => archiveOldMutation.mutate()}
+            disabled={archiveOldMutation.isLoading}
+            title="Archiver les notifications lues de plus de 3 jours"
+          >
+            <FaArchive /> Archiver lues &gt; 3 jours
+          </button>
         </div>
       </div>
 
