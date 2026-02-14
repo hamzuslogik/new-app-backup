@@ -28,9 +28,8 @@ const Notifications = () => {
       } else if (filter === 'read') {
         notifications = notifications.filter(n => n.lu === 1);
       }
-      // Si filter === 'all', on garde toutes les notifications
-      
-      return notifications;
+      // Si filter === 'all', on garde toutes les notifications. Les plus récentes en premier.
+      return [...notifications].sort((a, b) => new Date(b.date_creation || 0) - new Date(a.date_creation || 0));
     },
     {
       refetchInterval: 30000, // Rafraîchir toutes les 30 secondes
@@ -56,7 +55,6 @@ const Notifications = () => {
         queryClient.invalidateQueries('notifications');
         queryClient.invalidateQueries('notifications-all');
         queryClient.invalidateQueries('notifications-count');
-        toast.success('Notification marquée comme lue');
       }
     }
   );
@@ -114,10 +112,14 @@ const Notifications = () => {
     if (notification.lu === 0) {
       markAsReadMutation.mutate(notification.id);
     }
-    
-    // Naviguer vers la fiche si disponible
     if (notification.fiche_id && notification.hash) {
       navigate(`/fiches/${notification.hash}`);
+    }
+  };
+
+  const handleCardClick = (e, notification) => {
+    if (notification.lu === 0 && !e.target.closest('button')) {
+      markAsReadMutation.mutate(notification.id);
     }
   };
 
@@ -224,7 +226,12 @@ const Notifications = () => {
             return (
               <div
                 key={notification.id}
+                role="button"
+                tabIndex={0}
+                onClick={(e) => handleCardClick(e, notification)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(e, notification); } }}
                 className={`notification-card ${notification.lu === 0 ? 'unread' : ''} ${getNotificationTypeClass(notification.type)}`}
+                aria-label={notification.lu === 0 ? 'Cliquer pour marquer comme lu' : ''}
               >
                 <div className="notification-header">
                   <div className="notification-type">
@@ -313,16 +320,23 @@ const Notifications = () => {
                     {notification.hash && user?.fonction !== 5 && user?.fonction !== 3 && (
                       <button
                         className="btn-view"
-                        onClick={() => handleNotificationClick(notification)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNotificationClick(notification);
+                        }}
                       >
                         <FaEye /> Voir la fiche
                       </button>
                     )}
-                    {notification.lu === 0 && !canAction && (
+                    {notification.lu === 0 && (
                       <button
                         className="btn-mark-read"
-                        onClick={() => markAsReadMutation.mutate(notification.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAsReadMutation.mutate(notification.id);
+                        }}
                         disabled={markAsReadMutation.isLoading}
+                        title="Marquer cette notification comme lue"
                       >
                         <FaCheck /> Marquer comme lu
                       </button>

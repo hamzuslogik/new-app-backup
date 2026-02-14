@@ -106,6 +106,28 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: calc(100vh - 200px);
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.notifications-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.notifications-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.notifications-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.notifications-list::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
 }
 
 .notification-card {
@@ -273,12 +295,13 @@
 }
 
 .btn-mark-read {
-  background: #6c757d;
+  background: #28a745;
   color: white;
+  font-weight: 600;
 }
 
 .btn-mark-read:hover:not(:disabled) {
-  background: #5a6268;
+  background: #218838;
 }
 
 .btn-accept:disabled,
