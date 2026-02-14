@@ -426,6 +426,18 @@ header.header .user-info span {
   color: var(--text-muted, #999);
 }
 
+.no-notifications .view-all-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--primary-color, #3498db);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.no-notifications .view-all-link:hover {
+  text-decoration: underline;
+}
+
 .notification-item.has-actions {
   cursor: default;
 }

@@ -144,7 +144,8 @@ const Header = () => {
     }
   };
 
-  const notifications = notificationsData || [];
+  const notificationsAll = notificationsData || [];
+  const notifications = notificationsAll.filter((n) => n.lu === 0);
   const unreadCount = notificationsCount || 0;
   const userFonction = user ? Number(user.fonction) : null;
   const isAdmin = user && [1, 2, 7].includes(userFonction);
@@ -152,7 +153,6 @@ const Header = () => {
   const isConfirmateur = user && userFonction === 6;
   const isREConfirmation = user && userFonction === 14;
   const isCommercial = user && userFonction === 5;
-  const canSeeNotifications = isAdmin || isBackoffice || isConfirmateur || isREConfirmation || isCommercial;
   // Afficher le badge pour tous les utilisateurs qui ont des notifications non lues
   const shouldShowBadge = unreadCount > 0;
 
@@ -264,15 +264,8 @@ const Header = () => {
         <div className="notification-container" ref={notificationRef}>
           <button 
             className="notification-btn"
-            onClick={() => {
-              if (canSeeNotifications) {
-                setShowNotifications(!showNotifications);
-              } else {
-                // Rediriger vers la page notifications si l'utilisateur ne peut pas voir le dropdown
-                navigate('/notifications');
-              }
-            }}
-            title={canSeeNotifications ? 'Notifications' : (unreadCount > 0 ? `${unreadCount} notification(s) non lue(s)` : 'Notifications')}
+            onClick={() => setShowNotifications(!showNotifications)}
+            title={unreadCount > 0 ? `${unreadCount} notification(s) non lue(s)` : 'Notifications'}
           >
             <FaBell />
             {shouldShowBadge && (
@@ -281,7 +274,7 @@ const Header = () => {
               </span>
             )}
           </button>
-          {showNotifications && canSeeNotifications && (
+          {showNotifications && (
             <div className="notifications-dropdown">
                 <div className="notifications-header">
                   <h3>Notifications</h3>
@@ -354,9 +347,13 @@ const Header = () => {
                       return (
                         <div
                           key={notification.id}
-                          className={`notification-item ${notification.lu === 0 ? 'unread' : ''} ${canAction ? 'has-actions' : ''} ${!notification.fiche_id || !notification.hash ? 'no-fiche' : ''} ${isCommercial ? 'no-click' : ''}`}
-                          onClick={() => !canAction && notification.fiche_id && notification.hash && !isCommercial && handleNotificationClick(notification)}
-                          style={!notification.fiche_id || !notification.hash || isCommercial ? { cursor: 'default', opacity: 0.7 } : {}}
+                          className={`notification-item unread ${canAction ? 'has-actions' : ''}`}
+                          onClick={(e) => {
+                            if (e.target.closest('button')) return;
+                            if (canAction) return;
+                            handleNotificationClick();
+                          }}
+                          style={{ cursor: 'pointer' }}
                         >
                           <div className="notification-content">
                             <p className="notification-message">{notification.message}</p>
