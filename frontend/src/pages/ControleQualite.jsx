@@ -220,7 +220,7 @@ const ControleQualite = () => {
     }
   );
 
-  // Mutation pour valider en HC : En-Attente + hc = 1 (fiche hors cible)
+  // Mutation pour valider en HC : état HC + sous-état sélectionné (fiche hors cible)
   const validateQualiteHcMutation = useMutation(
     async ({ hash, id_sous_etat, commentaire_hc }) => {
       const res = await api.put(`/fiches/${hash}/valider-qualite-hc`, {
@@ -233,7 +233,7 @@ const ControleQualite = () => {
       onSuccess: () => {
         queryClient.invalidateQueries(['controle-qualite']);
         refetch();
-        toast.success('Fiche validée (HC) : En-Attente, hors cible');
+        toast.success('Fiche validée (HC) : état HC, hors cible');
         // Fermer le modal
         setHcModal({ isOpen: false, ficheHash: null, sousEtatId: '', commentaire: '' });
       },
@@ -784,7 +784,7 @@ const ControleQualite = () => {
                           className="btn-validate-hc"
                           onClick={() => openHcModal(fiche)}
                           disabled={validateQualiteHcMutation.isLoading}
-                          title="Valider (HC) : En-Attente, fiche hors cible"
+                          title="Valider (HC) : état HC, fiche hors cible"
                         >
                           HC
                         </button>

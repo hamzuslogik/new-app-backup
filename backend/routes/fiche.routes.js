@@ -4009,7 +4009,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
   }
 });
 
-// Valider une fiche qualité en HC : état En-Attente + hc = 1 (fiche hors cible)
+// Valider une fiche qualité en HC : état HC (id 55) + sous-état sélectionné (fiche hors cible)
 router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, triggerWorkflowOnEtatChanged, async (req, res) => {
   try {
     const id = req.params.id ? parseInt(req.params.id, 10) : null;
@@ -4061,19 +4061,10 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
       });
     }
     
-    const etatEnAttente = await queryOne(
-      'SELECT id, titre FROM etats WHERE id = 1 OR (titre = ? OR titre = ? OR titre = ?) LIMIT 1',
-      ['EN-ATTENTE', 'En-Attente', 'EN ATTENTE']
-    );
-    if (!etatEnAttente) {
-      return res.status(400).json({
-        success: false,
-        message: 'L\'état "En-Attente" n\'a pas été trouvé dans la base de données'
-      });
-    }
+    const ID_ETAT_HC = 55;
     const oldEtatId = fiche.id_etat_final;
     const oldSousEtatId = fiche.id_sous_etat;
-    const newEtatId = etatEnAttente.id;
+    const newEtatId = ID_ETAT_HC;
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
     if (isQualiteUser && !fiche.id_qualite) {
@@ -4133,7 +4124,7 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
     
     res.json({
       success: true,
-      message: 'Fiche validée (HC) : En-Attente, hors cible',
+      message: 'Fiche validée (HC) : état HC, hors cible',
       data: {
         id,
         id_etat_final: newEtatId,
@@ -4141,7 +4132,7 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
         sous_etat_titre: sousEtat.titre,
         hc: 1,
         old_etat: oldEtatId,
-        etat_titre: etatEnAttente.titre,
+        etat_titre: 'HC',
         commentaire_hc: commentaire_hc || null
       }
     });
