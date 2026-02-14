@@ -115,20 +115,26 @@ const KPIAgentQualification = () => {
       <div className="kpi-agent-qualif-cards">
         <div className="kpi-card kpi-card-base">
           <div className="kpi-card-label">Fiches produites</div>
-          <div className="kpi-card-value" aria-label="Fiches produites">{String(fichesProduites)}</div>
+          <div className="kpi-card-value" aria-label="Fiches produites">
+            <span className="kpi-card-value-inner">{fichesProduites}</span>
+          </div>
         </div>
 
         <div className="kpi-card kpi-card-hc">
           <div className="kpi-card-icon"><FaExclamationTriangle /></div>
           <div className="kpi-card-label">Taux HC (hors cible)</div>
-          <div className="kpi-card-value" aria-label="Taux HC">{tauxHc} %</div>
+          <div className="kpi-card-value" aria-label="Taux HC">
+            <span className="kpi-card-value-inner">{tauxHc} %</span>
+          </div>
           <div className="kpi-card-detail">{nbHc} fiche{nbHc !== 1 ? 's' : ''} HC</div>
         </div>
 
         <div className="kpi-card kpi-card-ko">
           <div className="kpi-card-icon"><FaBan /></div>
           <div className="kpi-card-label">Taux KO (non conformité)</div>
-          <div className="kpi-card-value" aria-label="Taux KO">{tauxKo} %</div>
+          <div className="kpi-card-value" aria-label="Taux KO">
+            <span className="kpi-card-value-inner">{tauxKo} %</span>
+          </div>
           <div className="kpi-card-detail">{nbKo} fiche{nbKo !== 1 ? 's' : ''} KO</div>
         </div>
       </div>
