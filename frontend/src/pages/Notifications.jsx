@@ -126,6 +126,8 @@ const Notifications = () => {
     }
   );
 
+  const notifications = notificationsData || [];
+
   const handleNotificationClick = (notification) => {
     if (notification.lu === 0) {
       markAsReadMutation.mutate(notification.id);
@@ -199,7 +201,6 @@ const Notifications = () => {
     }
   };
 
-  const notifications = notificationsData || [];
   const { user } = useAuth();
   const isAdmin = user && ([1, 2, 7].includes(user.fonction));
 
