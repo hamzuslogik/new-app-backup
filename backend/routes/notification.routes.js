@@ -57,10 +57,12 @@ const ensureNotificationsTable = async () => {
       }
       console.log('Table notifications créée avec succès');
     }
-    try {
+    const hasArchive = await queryOne(
+      `SELECT 1 as ok FROM information_schema.columns
+       WHERE table_schema = SCHEMA() AND table_name = 'notifications' AND column_name = 'archive'`
+    );
+    if (!hasArchive) {
       await query(`ALTER TABLE notifications ADD COLUMN archive TINYINT(1) NOT NULL DEFAULT 0`);
-    } catch (e) {
-      // Colonne peut déjà exister
     }
   } catch (error) {
     console.error('Erreur lors de la vérification/création de la table notifications:', error);
