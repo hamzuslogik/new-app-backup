@@ -131,17 +131,9 @@ const Header = () => {
     navigate('/login');
   };
 
-  const handleNotificationClick = (notification) => {
-    markAsReadMutation.mutate(notification.id);
-    // Vérifier que la fiche existe et a un hash valide avant de naviguer
-    if (notification.fiche_id && notification.hash) {
-      navigate(`/fiches/${notification.hash}`);
-      setShowNotifications(false);
-    } else {
-      console.warn('Impossible de naviguer vers la fiche : fiche_id ou hash manquant', notification);
-      // Afficher un message à l'utilisateur
-      alert('La fiche associée à cette notification n\'est plus disponible.');
-    }
+  const handleNotificationClick = () => {
+    setShowNotifications(false);
+    navigate('/notifications');
   };
 
   const notificationsAll = notificationsData || [];
@@ -352,7 +344,7 @@ const Header = () => {
                           onClick={(e) => {
                             if (e.target.closest('button')) return;
                             if (canAction) return;
-                            handleNotificationClick(notification);
+                            handleNotificationClick();
                           }}
                           style={{ cursor: 'pointer' }}
                         >
