@@ -352,7 +352,7 @@ const Header = () => {
                           onClick={(e) => {
                             if (e.target.closest('button')) return;
                             if (canAction) return;
-                            handleNotificationClick();
+                            handleNotificationClick(notification);
                           }}
                           style={{ cursor: 'pointer' }}
                         >
