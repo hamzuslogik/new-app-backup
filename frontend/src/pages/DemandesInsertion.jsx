@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { useNavigate } from 'react-router-dom';
 import { FaEye, FaCheck, FaTimes, FaClock, FaFilter } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import api from '../config/api';
@@ -9,7 +8,6 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import './DemandesInsertion.css';
 
 const DemandesInsertion = () => {
-  const navigate = useNavigate();
   const { openFicheDetail } = useFicheDetailModal();
   const queryClient = useQueryClient();
   const [statutFilter, setStatutFilter] = useState('');
@@ -79,7 +77,7 @@ const DemandesInsertion = () => {
   const handleVoirFiche = (hash) => {
     if (hash) {
       openFicheDetail(hash);
-      navigate(`/fiches/${hash}?overlay=1`, { replace: false });
+      // Ne pas naviguer : le modal s'ouvre et la page Demandes d'insertion reste en arrière-plan
     } else {
       toast.error('Hash de la fiche non disponible');
     }
