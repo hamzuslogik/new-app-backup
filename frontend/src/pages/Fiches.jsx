@@ -30,6 +30,7 @@ const Fiches = () => {
     include_archive: false,
     id_centre: '',
     id_sous_etat: '',
+    id_agent: '',
   });
 
   const normalizeText = (v) => (typeof v === 'string' ? v.trim() : v);
@@ -196,7 +197,9 @@ const Fiches = () => {
     if (filters.id_centre) {
       defaultParams.id_centre = filters.id_centre;
     }
-    
+    if (filters.id_agent && !isAgentQualif) {
+      defaultParams.id_agent = filters.id_agent;
+    }
     // Pour l'agent qualification, filtrer uniquement ses fiches créées aujourd'hui
     if (isAgentQualif && user?.id) {
       defaultParams.id_agent = user.id;
@@ -355,7 +358,10 @@ const Fiches = () => {
       page: 1,
       limit: 500,
       fiche_search: false,
+      include_archive: false,
+      id_centre: '',
       id_sous_etat: '',
+      id_agent: '',
     });
   };
 
@@ -659,6 +665,24 @@ const Fiches = () => {
                     {commerciaux.map(com => (
                       <option key={com.id} value={com.id}>
                         {com.pseudo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Agent qualification */}
+              {user?.fonction !== 3 && (
+                <div className="form-group">
+                  <label>Agent qualification</label>
+                  <select
+                    value={filters.id_agent || ''}
+                    onChange={(e) => handleFilterChange('id_agent', e.target.value)}
+                  >
+                    <option value="">Tous</option>
+                    {agents.map(agent => (
+                      <option key={agent.id} value={agent.id}>
+                        {agent.pseudo}
                       </option>
                     ))}
                   </select>
