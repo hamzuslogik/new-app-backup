@@ -92,10 +92,12 @@ const PlanningDep = () => {
         }
         const resManagement = await api.get('/management/departements');
         if (resManagement.data && resManagement.data.success && resManagement.data.data) {
-          return resManagement.data.data.map(d => ({
-            code: d.departement_code,
-            nom: d.departement_nom_uppercase || d.departement_nom
-          }));
+          return resManagement.data.data
+            .filter(d => (d.etat == null || d.etat > 0))
+            .map(d => ({
+              code: d.departement_code,
+              nom: d.departement_nom_uppercase || d.departement_nom
+            }));
         }
         return [];
       } catch (error) {
@@ -103,10 +105,12 @@ const PlanningDep = () => {
         try {
           const resManagement = await api.get('/management/departements');
           if (resManagement.data && resManagement.data.success && resManagement.data.data) {
-            return resManagement.data.data.map(d => ({
-              code: d.departement_code,
-              nom: d.departement_nom_uppercase || d.departement_nom
-            }));
+            return resManagement.data.data
+              .filter(d => (d.etat == null || d.etat > 0))
+              .map(d => ({
+                code: d.departement_code,
+                nom: d.departement_nom_uppercase || d.departement_nom
+              }));
           }
         } catch (err) {
           console.error('Erreur route management:', err);

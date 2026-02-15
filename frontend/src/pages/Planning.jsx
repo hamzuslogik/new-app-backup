@@ -106,11 +106,13 @@ const Planning = () => {
         // Fallback : essayer la route management si la route planning ne fonctionne pas
         const resManagement = await api.get('/management/departements');
         if (resManagement.data && resManagement.data.success && resManagement.data.data) {
-          // Transformer les données pour correspondre au format attendu
-          return resManagement.data.data.map(d => ({
-            code: d.departement_code,
-            nom: d.departement_nom_uppercase || d.departement_nom
-          }));
+          // Départements actifs uniquement (etat > 0)
+          return resManagement.data.data
+            .filter(d => (d.etat == null || d.etat > 0))
+            .map(d => ({
+              code: d.departement_code,
+              nom: d.departement_nom_uppercase || d.departement_nom
+            }));
         }
         
         return [];
@@ -120,10 +122,12 @@ const Planning = () => {
         try {
           const resManagement = await api.get('/management/departements');
           if (resManagement.data && resManagement.data.success && resManagement.data.data) {
-            return resManagement.data.data.map(d => ({
-              code: d.departement_code,
-              nom: d.departement_nom_uppercase || d.departement_nom
-            }));
+            return resManagement.data.data
+              .filter(d => (d.etat == null || d.etat > 0))
+              .map(d => ({
+                code: d.departement_code,
+                nom: d.departement_nom_uppercase || d.departement_nom
+              }));
           }
         } catch (err) {
           console.error('Erreur route management:', err);

@@ -1782,13 +1782,11 @@ router.post('/calculate-distance', authenticate, async (req, res) => {
 
 router.get('/departements', authenticate, async (req, res) => {
   try {
-    // Requête identique à celle de l'ancienne application PHP
-    // SELECT dep.departement_nom_uppercase as nom, dep.departement_code as code
-    // FROM departements dep
-    // GROUP BY dep.id order by dep.departement_code ASC
+    // Départements actifs uniquement (etat > 0) pour la liste du planning
     const departements = await query(
       `SELECT dep.departement_nom_uppercase as nom, dep.departement_code as code
        FROM departements dep
+       WHERE dep.etat > 0
        GROUP BY dep.id, dep.departement_nom_uppercase, dep.departement_code
        ORDER BY dep.departement_code ASC`
     );
