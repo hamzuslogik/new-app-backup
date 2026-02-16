@@ -655,7 +655,10 @@ const ControleQualite = () => {
               </thead>
               <tbody>
                 {fiches.map((fiche) => (
-                  <tr key={fiche.hash}>
+                  <tr
+                    key={fiche.hash}
+                    title={fiche.commentaire_qualite ? `Commentaire agent qualification: ${fiche.commentaire_qualite}` : undefined}
+                  >
                     <td>{fiche.nom || '-'}</td>
                     <td>{fiche.prenom || '-'}</td>
                     <td>{fiche.tel || '-'}</td>
