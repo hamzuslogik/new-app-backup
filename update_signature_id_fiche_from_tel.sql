@@ -1,13 +1,12 @@
 -- =====================================================
--- Script pour mettre à jour id_fiche dans la table signature
--- en cherchant dans la table fiches par numéro de téléphone
+-- Script pour mettre à jour id_fiche et date_heure (date planning) dans signature
 -- Base de données: crm
 -- =====================================================
--- 
--- Ce script :
--- 1. Prend les numéros de téléphone (tel) de la table signature
--- 2. Cherche dans la table fiches les lignes correspondantes où archive = 0
--- 3. Met à jour id_fiche dans signature avec l'ID trouvé (la fiche la plus récente si plusieurs)
+--
+-- 1. id_fiche : à partir du tel, cherche dans fiches (archive = 0) et remplit id_fiche
+--    (fiche la plus récente si plusieurs pour le même tel).
+-- 2. date planning : pour les signatures ayant un id_fiche, aligne date_heure sur
+--    la date de RDV de la fiche (fiches.date_rdv_time) pour cohérence avec la page Signatures.
 --
 -- =====================================================
 
@@ -47,6 +46,36 @@ WHERE (s.id_fiche IS NULL OR s.id_fiche = 0)
   AND s.tel = f.tel;
 
 -- =====================================================
+-- DÉTECTION : Signatures dont date_heure != date planning (fiche.date_rdv_time)
+-- =====================================================
+
+SELECT
+    '=== DÉTECTION DATE PLANNING ===' AS info;
+
+SELECT
+    COUNT(*) AS signatures_avec_ecart_date
+FROM signature s
+INNER JOIN fiches f ON s.id_fiche = f.id
+WHERE s.id_fiche IS NOT NULL
+  AND s.id_fiche > 0
+  AND f.date_rdv_time IS NOT NULL
+  AND (s.date_heure IS NULL OR s.date_heure != f.date_rdv_time);
+
+-- =====================================================
+-- MISE À JOUR : Aligner date_heure sur la date planning (fiches.date_rdv_time)
+-- =====================================================
+
+UPDATE signature s
+INNER JOIN fiches f ON s.id_fiche = f.id
+SET s.date_heure = f.date_rdv_time
+WHERE s.id_fiche IS NOT NULL
+  AND s.id_fiche > 0
+  AND f.date_rdv_time IS NOT NULL
+  AND (s.date_heure IS NULL OR s.date_heure != f.date_rdv_time);
+
+SELECT CONCAT('Date planning mise à jour : ', ROW_COUNT(), ' ligne(s)') AS resultat;
+
+-- =====================================================
 -- CORRECTION : Supprimer id_fiche si la fiche est archivée
 -- =====================================================
 
@@ -75,6 +104,14 @@ FROM signature
 WHERE (id_fiche IS NULL OR id_fiche = 0)
   AND tel IS NOT NULL
   AND tel != '';
+
+SELECT 
+    COUNT(*) as signatures_date_planning_alignee
+FROM signature s
+INNER JOIN fiches f ON s.id_fiche = f.id
+WHERE s.id_fiche IS NOT NULL AND s.id_fiche > 0
+  AND f.date_rdv_time IS NOT NULL
+  AND s.date_heure = f.date_rdv_time;
 
 SET SQL_SAFE_UPDATES = 1;
 SET FOREIGN_KEY_CHECKS = 1;
