@@ -1110,6 +1110,7 @@ router.get('/planning-commercial/diagnostic/:tel', authenticate, async (req, res
 // Planning Commercial - Récupérer les RDV affectés aux commerciaux
 // IMPORTANT: Cette route doit être AVANT la route /:id sinon Express va matcher "planning-commercial" comme un ID
 router.get('/planning-commercial', authenticate, async (req, res) => {
+  const logId = `[PLANNING-COMM-${Date.now()}]`;
   try {
     const {
       page = 1,
@@ -1124,6 +1125,9 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
       id_centre,
       cp
     } = req.query;
+
+    console.log(`${logId} User: id=${req.user.id}, fonction=${req.user.fonction}, pseudo=${req.user.pseudo || ''}`);
+    console.log(`${logId} Query: date_debut=${date_debut}, date_fin=${date_fin}, time_debut=${time_debut}, time_fin=${time_fin}, id_commercial=${id_commercial}, page=${page}, limit=${limit}`);
 
     let whereConditions = [
       'fiche.archive = 0',
@@ -1170,20 +1174,23 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
       whereConditions.push('fiche.date_rdv_time != ""');
     }
     
+    let dateStart = null;
+    let dateEnd = null;
     if (date_debut && date_fin) {
-      const dateStart = time_debut ? `${date_debut} ${time_debut}` : `${date_debut} 00:00:00`;
-      const dateEnd = time_fin ? `${date_fin} ${time_fin}` : `${date_fin} 23:59:59`;
+      dateStart = time_debut ? `${date_debut} ${time_debut}` : `${date_debut} 00:00:00`;
+      dateEnd = time_fin ? `${date_fin} ${time_fin}` : `${date_fin} 23:59:59`;
       whereConditions.push('fiche.date_rdv_time >= ? AND fiche.date_rdv_time <= ?');
       params.push(dateStart, dateEnd);
     } else if (date_debut) {
-      const dateStart = time_debut ? `${date_debut} ${time_debut}` : `${date_debut} 00:00:00`;
+      dateStart = time_debut ? `${date_debut} ${time_debut}` : `${date_debut} 00:00:00`;
       whereConditions.push('fiche.date_rdv_time >= ?');
       params.push(dateStart);
     } else if (date_fin) {
-      const dateEnd = time_fin ? `${date_fin} ${time_fin}` : `${date_fin} 23:59:59`;
+      dateEnd = time_fin ? `${date_fin} ${time_fin}` : `${date_fin} 23:59:59`;
       whereConditions.push('fiche.date_rdv_time <= ?');
       params.push(dateEnd);
     }
+    console.log(`${logId} Plage date_rdv_time: ${dateStart || '(non défini)'} -> ${dateEnd || '(non défini)'}`);
 
     // Filtrer par centre
     if (id_centre) {
@@ -1212,6 +1219,8 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
     }
 
     const whereClause = whereConditions.join(' AND ');
+    console.log(`${logId} WHERE: ${whereClause}`);
+    console.log(`${logId} Params: ${JSON.stringify(params)}`);
 
     // Compter le total
     const countResult = await queryOne(
@@ -1221,6 +1230,7 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
       params
     );
     const total = countResult?.total || 0;
+    console.log(`${logId} Total fiches trouvées: ${total}`);
 
     // Calculer la pagination
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -1285,6 +1295,36 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
        LIMIT ? OFFSET ?`,
       [...params, parseInt(limit), offset]
     );
+
+    if (fiches.length > 0) {
+      console.log(`${logId} Fiches retournées (${fiches.length}):`, fiches.slice(0, 5).map(f => ({
+        id: f.id,
+        date_rdv_time: f.date_rdv_time,
+        id_commercial: f.id_commercial,
+        id_commercial_2: f.id_commercial_2,
+        nom: f.nom,
+        prenom: f.prenom
+      })));
+    } else if (total === 0 && (date_debut || date_fin)) {
+      // Diagnostic : existe-t-il des fiches état 7 avec un commercial dans la plage, sans les critères archive/ko/active ?
+      const commercialId = id_commercial || (req.user.fonction === 5 ? req.user.id : null);
+      if (commercialId) {
+        const diagStart = dateStart || (date_debut ? `${date_debut} 00:00:00` : null);
+        const diagEnd = dateEnd || (date_fin ? `${date_fin} 23:59:59` : null);
+        if (diagStart && diagEnd) {
+          const diag = await query(
+            `SELECT id, date_rdv_time, id_etat_final, id_commercial, id_commercial_2, archive, ko, active
+             FROM fiches
+             WHERE id_etat_final = 7
+               AND (id_commercial = ? OR id_commercial_2 = ?)
+               AND date_rdv_time IS NOT NULL AND date_rdv_time != ''
+               AND date_rdv_time >= ? AND date_rdv_time <= ?`,
+            [commercialId, commercialId, diagStart, diagEnd]
+          );
+          console.log(`${logId} DIAG: Fiches état 7 + commercial ${commercialId} dans la plage (sans filtre archive/ko/active): ${diag.length}`, diag.slice(0, 3).map(f => ({ id: f.id, date_rdv_time: f.date_rdv_time, archive: f.archive, ko: f.ko, active: f.active })));
+        }
+      }
+    }
 
     // Enrichir les fiches avec l'information sur les comptes rendu
     // "Compte rendu rédigé" uniquement si le commercial actuel de la fiche a un CR (pending ou approved) pour cette fiche.
