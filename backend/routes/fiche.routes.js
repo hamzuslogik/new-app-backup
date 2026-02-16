@@ -508,7 +508,10 @@ router.get('/', authenticate, async (req, res) => {
     // Filtre par groupes d'états autorisés (selon les permissions)
     // Pour les agents qualification (fonction 3), on a déjà filtré par groupe 0 dans le filtre par défaut
     // Donc on ne doit pas appliquer le filtre de permissions si c'est un agent qualification sans recherche
-    const shouldApplyPermissionFilter = !(req.user.fonction === 3 && !req.query.fiche_search && !req.query.affectation && !req.query.suivi);
+    // Pour les confirmateurs (6) en recherche par critère (tel, CP, etc.), ne pas filtrer par état : afficher l'état de la fiche même s'il est hors droit confirmateur
+    const hasRechercheParCritereConfirmateur = req.user.fonction === 6 && !!(req.query.tel || req.query.critere);
+    const shouldApplyPermissionFilter = !(req.user.fonction === 3 && !req.query.fiche_search && !req.query.affectation && !req.query.suivi)
+      && !hasRechercheParCritereConfirmateur;
     
     if (shouldApplyPermissionFilter) {
       // Utiliser la fonction mise en cache pour récupérer les groupes autorisés
