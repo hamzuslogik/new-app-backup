@@ -1131,7 +1131,7 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
 
     let whereConditions = [
       'fiche.archive = 0',
-      'fiche.ko = 0',
+      // Ne pas exclure les fiches KO : un RDV confirmé (état 7) affecté doit apparaître au planning même si la fiche est KO
       'fiche.active = 1',
       'fiche.date_rdv_time IS NOT NULL',
       'fiche.date_rdv_time != ""',
