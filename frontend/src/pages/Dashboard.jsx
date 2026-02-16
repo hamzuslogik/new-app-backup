@@ -547,6 +547,27 @@ const Dashboard = () => {
   // Libellé d'état à afficher : priorité au etat_titre renvoyé par l'API (affiche tous les états en session confirmateur, ex. en attente)
   const getEtatDisplayName = (fiche) => (fiche?.etat_titre || getEtatName(fiche?.id_etat_final) || '').trim();
 
+  // États pour lesquels le tooltip affiche le commentaire commercial (compte rendu) au lieu du commentaire confirmateur
+  const ETATS_COMMENTAIRE_COMMERCIAL = [
+    'signé',
+    'annuler à reprogrammer',
+    'refuser',
+    'honoré à suivre',
+    'hhc technique',
+    'hhc financement a verifier'
+  ];
+  const getTooltipComment = (fiche) => {
+    const etatTitre = (getEtatDisplayName(fiche) || '').toLowerCase().trim();
+    const useCommentaireCommercial = ETATS_COMMENTAIRE_COMMERCIAL.some(
+      (lib) => etatTitre === lib || etatTitre.includes(lib)
+    );
+    const text = useCommentaireCommercial
+      ? (fiche?.commentaire_commercial ?? '')
+      : (fiche?.conf_commentaire_produit ?? '');
+    const str = (text || '').trim();
+    return str.length > 500 ? str.slice(0, 497) + '...' : str;
+  };
+
   // Obtenir les confirmateurs formatés (afficher uniquement le dernier confirmateur)
   const getConfirmateursFormatted = (fiche) => {
     // Vérifier dans l'ordre inverse (3, 2, 1) pour obtenir le dernier confirmateur
@@ -1313,6 +1334,7 @@ const Dashboard = () => {
                       <tr 
                         key={fiche.hash}
                         style={{ backgroundColor: `${etatColor}20` }}
+                        title={getTooltipComment(fiche) || undefined}
                       >
                         <td data-label="">{fiche.nom || ''}</td>
                         <td data-label="Prénom:">{fiche.prenom || ''}</td>
