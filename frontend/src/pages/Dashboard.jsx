@@ -544,6 +544,9 @@ const Dashboard = () => {
     return etat?.titre || '';
   };
 
+  // Libellé d'état à afficher : priorité au etat_titre renvoyé par l'API (affiche tous les états en session confirmateur, ex. en attente)
+  const getEtatDisplayName = (fiche) => (fiche?.etat_titre || getEtatName(fiche?.id_etat_final) || '').trim();
+
   // Obtenir les confirmateurs formatés (afficher uniquement le dernier confirmateur)
   const getConfirmateursFormatted = (fiche) => {
     // Vérifier dans l'ordre inverse (3, 2, 1) pour obtenir le dernier confirmateur
@@ -670,7 +673,7 @@ const Dashboard = () => {
       return getCentreName(fiche.id_centre).toLowerCase();
     }
     if (key === 'id_etat_final') {
-      return getEtatName(fiche.id_etat_final).toLowerCase();
+      return getEtatDisplayName(fiche).toLowerCase();
     }
     if (key === 'produit') {
       return getProduitName(fiche.produit).toLowerCase();
@@ -1322,7 +1325,7 @@ const Dashboard = () => {
                             className="etat-badge"
                             style={{ backgroundColor: etatColor }}
                           >
-                            {getEtatName(fiche.id_etat_final)}
+                            {getEtatDisplayName(fiche)}
                             {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
                               <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
                                 (RDV_URGENT)

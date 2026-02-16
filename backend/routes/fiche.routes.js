@@ -913,6 +913,7 @@ router.get('/', authenticate, async (req, res) => {
     // Cela évite de créer un produit cartésien qui peut ralentir la requête
     const selectStartTime = Date.now();
     const selectQuery = `SELECT fiche.*,
+       etat.titre as etat_titre,
        cq_e.titre as cqe,
        cq_d.titre as cqd,
        install.nom as installeur,
@@ -928,6 +929,7 @@ router.get('/', authenticate, async (req, res) => {
        u3.pseudo as confirmateur_3_pseudo
        ${qualifSelect}
        FROM fiches fiche
+       LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
        LEFT JOIN cq_etat cq_e ON fiche.cq_etat = cq_e.id
        LEFT JOIN cq_dossier cq_d ON fiche.cq_dossier = cq_d.id
        LEFT JOIN installateurs install ON fiche.ph3_installateur = install.id
