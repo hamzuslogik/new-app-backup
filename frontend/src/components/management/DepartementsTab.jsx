@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-toastify';
 import api from '../../config/api';
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle, FaPowerOff } from 'react-icons/fa';
 import LoadingSpinner from '../common/LoadingSpinner';
 import Tooltip from '../common/Tooltip';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
@@ -157,6 +157,22 @@ const DepartementsTab = () => {
     }
   };
 
+  const handleToggleEtat = (dep) => {
+    const newEtat = dep.etat === 1 ? 0 : 1;
+    const action = newEtat === 1 ? 'activer' : 'désactiver';
+    if (window.confirm(`Voulez-vous ${action} le département "${dep.departement_nom}" ?`)) {
+      updateMutation.mutate({
+        id: dep.id,
+        data: {
+          departement_code: dep.departement_code,
+          departement_nom: dep.departement_nom,
+          departement_nom_uppercase: dep.departement_nom_uppercase || dep.departement_nom?.toUpperCase(),
+          etat: newEtat
+        }
+      });
+    }
+  };
+
   if (isLoading) return <LoadingSpinner text="Chargement des départements..." />;
 
   return (
@@ -300,6 +316,14 @@ const DepartementsTab = () => {
                   </td>
                   <td data-label="">
                     <div className="action-buttons">
+                      <button
+                        className={`btn-icon ${dep.etat === 1 ? 'btn-warning' : 'btn-success'}`}
+                        onClick={() => handleToggleEtat(dep)}
+                        title={dep.etat === 1 ? 'Désactiver le département' : 'Activer le département'}
+                        disabled={updateMutation.isLoading}
+                      >
+                        <FaPowerOff />
+                      </button>
                       <button className="btn-icon" onClick={() => handleEdit(dep)} title="Modifier">
                         <FaEdit />
                       </button>

@@ -136,6 +136,14 @@
   color: #1e7e34;
 }
 
+.btn-icon.btn-warning {
+  color: var(--warning-color, #e0a800);
+}
+
+.btn-icon.btn-warning:hover {
+  color: #c49000;
+}
+
 .form-modal {
   position: fixed;
   top: 0;
