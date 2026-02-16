@@ -4191,7 +4191,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             - RP Qualification (12) : peuvent changer les fiches des agents sous la responsabilité de leurs superviseurs
             - Agents (3) : peuvent changer les fiches de leur centre
             - Confirmateurs (6), RE Confirmation (14), RP Confirmation (13) : peuvent changer l'état (y compris si fiche déjà confirmée) */}
-        {((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 8 || Number(user?.fonction) === 11 || Number(user?.fonction) === 12) ||
+        {!(isModal && isQualiteQualif) && ((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 8 || Number(user?.fonction) === 11 || Number(user?.fonction) === 12) ||
           (Number(user?.fonction) === 3 && user?.centre === ficheData?.id_centre) ||
           (Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13)) && (
           <div className="fiche-section etat-change-section">
