@@ -3755,14 +3755,14 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
     const newEtatId = parseInt(id_etat_final);
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    // Attribuer id_qualite si c'est un utilisateur qualité et que c'est la première modification
+    // Attribuer id_qualite au nouvel agent qualité qui modifie l'état (fiche non verrouillée)
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
-    if (isQualiteUser && !fiche.id_qualite) {
+    if (isQualiteUser) {
       await query(
         `UPDATE fiches SET id_qualite = ? WHERE id = ?`,
         [req.user.id, id]
       );
-      console.log(`id_qualite attribué à l'utilisateur ${req.user.id} (${req.user.pseudo}) pour la fiche ${id}`);
+      console.log(`id_qualite assigné à l'utilisateur ${req.user.id} (${req.user.pseudo}) pour la fiche ${id}`);
     }
 
     // Mettre à jour l'état et date_appel_time automatiquement lors du changement d'état
@@ -3897,14 +3897,14 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
     const newEtatId = etatEnAttente.id;
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    // Attribuer id_qualite si c'est un utilisateur qualité et que c'est la première modification
+    // Attribuer id_qualite au nouvel agent qualité qui modifie l'état (fiche non verrouillée)
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
-    if (isQualiteUser && !fiche.id_qualite) {
+    if (isQualiteUser) {
       await query(
         `UPDATE fiches SET id_qualite = ? WHERE id = ?`,
         [req.user.id, id]
       );
-      console.log(`id_qualite attribué à l'utilisateur ${req.user.id} (${req.user.pseudo}) pour la fiche ${id}`);
+      console.log(`id_qualite assigné à l'utilisateur ${req.user.id} (${req.user.pseudo}) pour la fiche ${id}`);
     }
 
     // Mettre à jour l'état vers "En-Attente" et date_appel_time automatiquement lors du changement d'état
@@ -4047,7 +4047,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     const newEtatId = etatEnAttente.id;
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
-    if (isQualiteUser && !fiche.id_qualite) {
+    if (isQualiteUser) {
       await query('UPDATE fiches SET id_qualite = ? WHERE id = ?', [req.user.id, id]);
     }
     
@@ -4192,7 +4192,7 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
     const newEtatId = ID_ETAT_HC;
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
-    if (isQualiteUser && !fiche.id_qualite) {
+    if (isQualiteUser) {
       await query('UPDATE fiches SET id_qualite = ? WHERE id = ?', [req.user.id, id]);
     }
     
