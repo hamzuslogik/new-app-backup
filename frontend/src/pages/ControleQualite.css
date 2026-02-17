@@ -178,6 +178,26 @@
   background: #f5f5f5;
 }
 
+.fiches-table tbody tr.fiche-row-locked {
+  background: #fff8e6;
+}
+
+.fiches-table tbody tr.fiche-row-locked:hover {
+  background: #fff3d4;
+}
+
+.fiche-locked-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #b8860b;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+}
+
 .fiches-table td {
   padding: 9.6px;
   font-size: 11.9px;

@@ -53,6 +53,43 @@ async function insertControleQualiteAudit(params) {
   }
 }
 
+/**
+ * IDs des états pour lesquels tout agent qualité peut modifier une fiche déjà assignée à un autre
+ * (ex: Debrief, À vérifier). Mis en cache pour éviter des requêtes répétées.
+ */
+let ETATS_QUALITE_OUVERTS_CACHE = null;
+async function getEtatsQualiteOuverts() {
+  if (ETATS_QUALITE_OUVERTS_CACHE) return ETATS_QUALITE_OUVERTS_CACHE;
+  try {
+    const rows = await query(
+      "SELECT id FROM etats WHERE LOWER(titre) LIKE '%debrif%' OR LOWER(titre) LIKE '%verifier%'"
+    );
+    ETATS_QUALITE_OUVERTS_CACHE = (rows || []).map(r => r.id);
+  } catch (err) {
+    console.error('Erreur récupération états qualité ouverts:', err.message);
+    ETATS_QUALITE_OUVERTS_CACHE = [];
+  }
+  return ETATS_QUALITE_OUVERTS_CACHE;
+}
+
+/**
+ * Vérifie si un agent qualité peut modifier une fiche déjà assignée à un autre agent qualité.
+ * Autorisation si : pas d'id_qualite, ou même utilisateur, ou état "Debrief" / "À vérifier".
+ * @param {Object} fiche - { id_qualite, id_etat_final }
+ * @param {number} userId - ID utilisateur connecté
+ * @param {number} userFonction - Fonction de l'utilisateur (2=RE Qualif, 8=Qualité Qualif, 12=RP Qualif)
+ * @returns {Promise<boolean>}
+ */
+async function canQualiteModifierFiche(fiche, userId, userFonction) {
+  const isQualiteUser = userFonction === 2 || userFonction === 8 || userFonction === 12;
+  if (!isQualiteUser) return true;
+  if (!fiche.id_qualite) return true;
+  if (Number(fiche.id_qualite) === Number(userId)) return true;
+  const etatsOuverts = await getEtatsQualiteOuverts();
+  if (etatsOuverts.includes(Number(fiche.id_etat_final))) return true;
+  return false;
+}
+
 // Fonction pour encoder un ID en hash (utilise HMAC pour créer un hash unique)
 const encodeFicheId = (id) => {
   if (!id) return null;
@@ -3142,6 +3179,18 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       // Pas de vérification d'assignation nécessaire
     }
     // Admins (1, 2, 7) : peuvent tout modifier, pas de vérification supplémentaire
+
+    // Contrôle qualité : si un agent qualité modifie le commentaire qualité sur une fiche déjà assignée à un autre, bloquer (sauf états Debrief / À vérifier)
+    const isQualiteUserField = user.fonction === 2 || user.fonction === 8 || user.fonction === 12;
+    if (isQualiteUserField && field === 'commentaire_qualite') {
+      const canModifyField = await canQualiteModifierFiche(fiche, user.id, user.fonction);
+      if (!canModifyField) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".'
+        });
+      }
+    }
     
     // Si modification de l'état final, créer une entrée dans l'historique
     if (field === 'id_etat_final' && value && value !== fiche.id_etat_final) {
@@ -3665,12 +3714,20 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
       });
     }
 
-    // Vérifier que la fiche existe (id_sous_etat pour fiches_histo)
-    const fiche = await queryOne('SELECT id_etat_final, id_sous_etat FROM fiches WHERE id = ?', [id]);
+    // Vérifier que la fiche existe (id_sous_etat, id_qualite pour vérification)
+    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat FROM fiches WHERE id = ?', [id]);
     if (!fiche) {
       return res.status(404).json({
         success: false,
         message: 'Fiche non trouvée'
+      });
+    }
+
+    const canModifyEtat = await canQualiteModifierFiche(fiche, req.user.id, req.user.fonction);
+    if (!canModifyEtat) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".'
       });
     }
 
@@ -3815,6 +3872,14 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
       });
     }
 
+    const canModify = await canQualiteModifierFiche(fiche, req.user.id, req.user.fonction);
+    if (!canModify) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".'
+      });
+    }
+
     // Récupérer l'état "En-Attente" (ID 1)
     const etatEnAttente = await queryOne(
       'SELECT id, titre FROM etats WHERE id = 1 OR (titre = ? OR titre = ? OR titre = ?) LIMIT 1',
@@ -3941,6 +4006,14 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
       return res.status(404).json({
         success: false,
         message: 'Fiche non trouvée'
+      });
+    }
+
+    const canModifyKo = await canQualiteModifierFiche(fiche, req.user.id, req.user.fonction);
+    if (!canModifyKo) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".'
       });
     }
     
@@ -4087,6 +4160,14 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
       return res.status(404).json({
         success: false,
         message: 'Fiche non trouvée'
+      });
+    }
+
+    const canModifyHc = await canQualiteModifierFiche(fiche, req.user.id, req.user.fonction);
+    if (!canModifyHc) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".'
       });
     }
     
@@ -4250,11 +4331,18 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
       return res.status(403).json({ success: false, message: 'Vous n\'avez pas la permission d\'envoyer des alertes' });
     }
     const fiche = await queryOne(
-      'SELECT id_agent, nom, prenom, tel FROM fiches WHERE id = ?',
+      'SELECT id_agent, id_qualite, id_etat_final, nom, prenom, tel FROM fiches WHERE id = ?',
       [id]
     );
     if (!fiche) {
       return res.status(404).json({ success: false, message: 'Fiche non trouvée' });
+    }
+    const canModifyAlerte = await canQualiteModifierFiche(fiche, req.user.id, req.user.fonction);
+    if (!canModifyAlerte) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut envoyer une alerte, sauf si l\'état est "Debrief" ou "À vérifier".'
+      });
     }
     if (!fiche.id_agent) {
       return res.status(400).json({ success: false, message: 'Cette fiche n\'a pas d\'agent assigné' });

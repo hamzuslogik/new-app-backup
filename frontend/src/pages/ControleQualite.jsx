@@ -400,6 +400,27 @@ const ControleQualite = () => {
   const sousEtatsHc = sousEtatsHcData || [];
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(allEtats);
 
+  // IDs des états pour lesquels tout agent qualité peut modifier (Debrief, À vérifier)
+  const etatsQualiteOuverts = React.useMemo(() => {
+    if (!allEtats || !allEtats.length) return [];
+    return allEtats
+      .filter(e => {
+        const t = (e.titre || '').toLowerCase();
+        return t.includes('debrif') || t.includes('verifier');
+      })
+      .map(e => e.id);
+  }, [allEtats]);
+
+  // Fiche verrouillée si assignée à un autre agent qualité et état hors Debrief/À vérifier
+  const isFicheLockedForUser = (fiche) => {
+    if (!user?.id || !fiche?.id_qualite) return false;
+    if (Number(fiche.id_qualite) === Number(user.id)) return false;
+    if (etatsQualiteOuverts.includes(Number(fiche.id_etat_final))) return false;
+    return true;
+  };
+
+  const LOCK_MESSAGE = 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".';
+
   // Fonctions pour gérer le modal KO
   const openKoModal = (fiche) => {
     setKoModal({
@@ -657,7 +678,8 @@ const ControleQualite = () => {
                 {fiches.map((fiche) => (
                   <tr
                     key={fiche.hash}
-                    title={fiche.commentaire_qualite ? `Commentaire agent qualification: ${fiche.commentaire_qualite}` : undefined}
+                    className={isFicheLockedForUser(fiche) ? 'fiche-row-locked' : ''}
+                    title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : (fiche.commentaire_qualite ? `Commentaire agent qualification: ${fiche.commentaire_qualite}` : undefined)}
                   >
                     <td>{fiche.nom || '-'}</td>
                     <td>{fiche.prenom || '-'}</td>
@@ -679,7 +701,8 @@ const ControleQualite = () => {
                         value={isEtatGroupe0(fiche.id_etat_final) ? (fiche.id_etat_final || '') : ''}
                         onChange={(e) => handleNouvelEtatSelect(fiche, e.target.value)}
                         className="etat-select"
-                        disabled={updateEtatMutation.isLoading}
+                        disabled={updateEtatMutation.isLoading || isFicheLockedForUser(fiche)}
+                        title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : undefined}
                       >
                         <option value="">{isEtatGroupe0(fiche.id_etat_final) ? '-- Sélectionner --' : 'Validé'}</option>
                         {etatsPhase0.map(etat => (
@@ -697,7 +720,7 @@ const ControleQualite = () => {
                             const originalValue = fiche.commentaire_qualite || '';
                             const hasChanges = editingComment.hash === fiche.hash && currentValue !== originalValue;
                             
-                            return hasChanges && (
+                            return hasChanges && !isFicheLockedForUser(fiche) && (
                               <>
                                 <button
                                   className="btn-save-comment-quick"
@@ -724,6 +747,7 @@ const ControleQualite = () => {
                         <textarea
                           value={editingComment.hash === fiche.hash ? editingComment.value : (fiche.commentaire_qualite || '')}
                           onChange={(e) => {
+                            if (isFicheLockedForUser(fiche)) return;
                             if (editingComment.hash !== fiche.hash) {
                               setEditingComment({ hash: fiche.hash, value: e.target.value });
                             } else {
@@ -731,6 +755,7 @@ const ControleQualite = () => {
                             }
                           }}
                           onFocus={() => {
+                            if (isFicheLockedForUser(fiche)) return;
                             if (editingComment.hash !== fiche.hash) {
                               setEditingComment({ hash: fiche.hash, value: fiche.commentaire_qualite || '' });
                             }
@@ -739,10 +764,15 @@ const ControleQualite = () => {
                           className="comment-textarea-quick"
                           placeholder="Commentaire qualité... (Ctrl+Enter pour sauvegarder)"
                           rows={2}
+                          readOnly={isFicheLockedForUser(fiche)}
+                          title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : undefined}
                         />
                       </div>
                     </td>
                     <td>
+                      {isFicheLockedForUser(fiche) && (
+                        <span className="fiche-locked-badge" title={LOCK_MESSAGE}>Verrouillée</span>
+                      )}
                       {fiche.qualite_assignee_pseudo ? (
                         <span className="qualite-user-name" title={`Utilisateur qualité assigné: ${fiche.qualite_assignee_pseudo}`}>
                           {fiche.qualite_assignee_pseudo}
@@ -770,24 +800,24 @@ const ControleQualite = () => {
                         <button
                           className="btn-validate-icon"
                           onClick={() => validateQualiteMutation.mutate(fiche.hash)}
-                          disabled={validateQualiteMutation.isLoading}
-                          title="Valider et passer en En-Attente"
+                          disabled={validateQualiteMutation.isLoading || isFicheLockedForUser(fiche)}
+                          title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : "Valider et passer en En-Attente"}
                         >
                           <FaCheckCircle />
                         </button>
                         <button
                           className="btn-validate-ko"
                           onClick={() => openKoModal(fiche)}
-                          disabled={validateQualiteKoMutation.isLoading}
-                          title="Valider (KO) : En-Attente, fiche non comptabilisée pour l'agent"
+                          disabled={validateQualiteKoMutation.isLoading || isFicheLockedForUser(fiche)}
+                          title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : "Valider (KO) : En-Attente, fiche non comptabilisée pour l'agent"}
                         >
                           <FaBan /> KO
                         </button>
                         <button
                           className="btn-validate-hc"
                           onClick={() => openHcModal(fiche)}
-                          disabled={validateQualiteHcMutation.isLoading}
-                          title="Valider (HC) : état HC, fiche hors cible"
+                          disabled={validateQualiteHcMutation.isLoading || isFicheLockedForUser(fiche)}
+                          title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : "Valider (HC) : état HC, fiche hors cible"}
                         >
                           HC
                         </button>
@@ -795,8 +825,8 @@ const ControleQualite = () => {
                           type="button"
                           className="btn-alerte-ko"
                           onClick={() => openAlertModal(fiche)}
-                          disabled={sendAlerteKoMutation.isLoading || (fiche.nb_alertes ?? 0) >= 1}
-                          title={(fiche.nb_alertes ?? 0) >= 1 ? 'Une alerte a déjà été envoyée pour cette fiche' : "Envoyer une alerte à l'agent qui a inséré la fiche (3 alertes avant KO)"}
+                          disabled={sendAlerteKoMutation.isLoading || (fiche.nb_alertes ?? 0) >= 1 || isFicheLockedForUser(fiche)}
+                          title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : ((fiche.nb_alertes ?? 0) >= 1 ? 'Une alerte a déjà été envoyée pour cette fiche' : "Envoyer une alerte à l'agent qui a inséré la fiche (3 alertes avant KO)")}
                         >
                           <FaBell /> Alerte
                         </button>
