@@ -233,11 +233,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
   const showHistoConfirmateurDropdown = [1, 7, 13, 14].includes(Number(user?.fonction));
 
-  const { data: etats } = useQuery('etats', async () => {
-    const res = await api.get('/management/etats');
-    return res.data.data || [];
-  });
-
   const { data: professions } = useQuery('professions', async () => {
     const res = await api.get('/management/professions');
     return res.data.data || [];
@@ -347,6 +342,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       refetchInterval: isModal ? 5000 : false, // Uniquement si c'est un modal
       refetchOnWindowFocus: isModal, // Rafraîchir quand la fenêtre redevient active (modal uniquement)
       refetchOnReconnect: isModal // Rafraîchir quand la connexion est rétablie (modal uniquement)
+    }
+  );
+
+  // États : pour confirmateur (6) quand fiche En-Attente (id 1), uniquement ANNULER, CONFIRMER, HC AGE/DOUBLON/LOCATAIRE, HC AIR AIR, HC FINANCEMENT, NRP, RAPPEL BUREAU
+  const isConfirmateurEnAttente = Number(user?.fonction) === 6 && ficheData?.id_etat_final === 1;
+  const { data: etats } = useQuery(
+    isConfirmateurEnAttente ? ['etats', 'confirmateur-en-attente'] : ['etats'],
+    async () => {
+      const params = isConfirmateurEnAttente ? { id_etat_fiche: 1 } : {};
+      const res = await api.get('/management/etats', { params });
+      return res.data.data || [];
     }
   );
   
