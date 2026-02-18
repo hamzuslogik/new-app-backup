@@ -1293,6 +1293,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // Soumettre la confirmation (état 7)
   const handleConfirmSubmit = async () => {
     try {
+      // Validation : commentaire obligatoire pour la confirmation
+      if (!(confFormData.conf_commentaire_produit || '').trim()) {
+        alert('Veuillez saisir un commentaire.');
+        return;
+      }
+
       // Construire la date/heure du RDV
       const dateRdvTime = confFormData.conf_rdv_date && confFormData.conf_rdv_time 
         ? `${confFormData.conf_rdv_date} ${confFormData.conf_rdv_time}:00`
@@ -1405,6 +1411,29 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
       const isCommercialPorteImprevuNrp =
         Number(user?.fonction) === 5 && compteRenduOption === 'porte_imprevu_nrp' && Number(selectedEtat) === 8;
+
+      // Validation : sous-état obligatoire si la liste des sous-états est présente
+      if (etatsAvecSousEtats.includes(selectedEtat) && sousEtats && sousEtats.length > 0 && !(selectedEtat === 8 && isCommercialPorteImprevuNrp)) {
+        const idSousEtat = selectedEtat === 2 && !editingCompteRendu
+          ? (nrpFormData.id_sous_etat || '').toString().trim()
+          : (etatFormData.id_sous_etat || '').toString().trim();
+        if (!idSousEtat) {
+          alert('Veuillez sélectionner un sous-état.');
+          return;
+        }
+      }
+
+      // Validation : commentaire obligatoire lorsque le formulaire le propose
+      const etatsAvecCommentaire = [2, 8, 9, 12, 19, 23, 34, 13, 44, 45, 16, 38];
+      if (etatsAvecCommentaire.includes(selectedEtat)) {
+        const comment = (selectedEtat === 2 && !editingCompteRendu)
+          ? (nrpFormData.conf_commentaire_produit || '').trim()
+          : (etatFormData.conf_commentaire_produit || '').trim();
+        if (!comment) {
+          alert('Veuillez saisir un commentaire.');
+          return;
+        }
+      }
 
       // Si on modifie un compte rendu existant
       if (editingCompteRendu) {
