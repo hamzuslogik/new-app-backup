@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import api from '../config/api';
+import { useAuth } from '../contexts/AuthContext';
 import { FaBell, FaFilter } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Alertes.css';
 
 const Alertes = () => {
+  const { user } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
+  // Masquer la colonne "Id qualité" (Envoyée par) pour la session Agent qualification (fonction 3)
+  const hideIdQualite = Number(user?.fonction) === 3;
   const [filters, setFilters] = useState({
     page: 1,
     limit: 50,
@@ -140,7 +144,7 @@ const Alertes = () => {
                   <th>Client</th>
                   <th>Téléphone</th>
                   <th>Agent</th>
-                  <th>Envoyée par</th>
+                  {!hideIdQualite && <th>Envoyée par</th>}
                   <th>Type d'alerte</th>
                   <th>Commentaire</th>
                 </tr>
@@ -152,7 +156,7 @@ const Alertes = () => {
                     <td>{(a.nom || '').trim()} {(a.prenom || '').trim() || '-'}</td>
                     <td>{a.tel || '-'}</td>
                     <td>{a.agent_pseudo || '-'}</td>
-                    <td>{a.qualite_pseudo || '-'}</td>
+                    {!hideIdQualite && <td>{a.qualite_pseudo || '-'}</td>}
                     <td>{a.type_alerte || '-'}</td>
                     <td className="comment-cell">{a.commentaire ? String(a.commentaire).slice(0, 80) + (a.commentaire.length > 80 ? '…' : '') : '-'}</td>
                   </tr>
