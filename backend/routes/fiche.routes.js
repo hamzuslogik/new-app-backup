@@ -9,14 +9,15 @@ const { query, queryOne } = require('../config/database');
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
 
-/** Retourne l'id_confirmateur à enregistrer dans fiches_histo : body.histo_id_confirmateur (RE/RP/admin/backoffice), ou user.id si Confirmateur, sinon null */
+/** Retourne l'id_confirmateur à enregistrer dans fiches_histo : body.histo_id_confirmateur (RE/RP/admin/backoffice), sinon id utilisateur connecté (assignation automatique à chaque modification d'état) */
 function getHistoConfirmateur(req, fiche = null) {
   const sent = req.body && req.body.histo_id_confirmateur !== undefined && req.body.histo_id_confirmateur !== null && req.body.histo_id_confirmateur !== '';
   if (sent) {
     const v = parseInt(req.body.histo_id_confirmateur, 10);
     return Number.isFinite(v) ? v : null;
   }
-  if (req.user && req.user.fonction === 6) return req.user.id;
+  // À chaque changement d'état : assigner automatiquement l'id utilisateur connecté
+  if (req.user && req.user.id) return req.user.id;
   return null;
 }
 
