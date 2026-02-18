@@ -233,11 +233,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
   const showHistoConfirmateurDropdown = [1, 7, 13, 14].includes(Number(user?.fonction));
 
-  const { data: etats } = useQuery('etats', async () => {
-    const res = await api.get('/management/etats');
-    return res.data.data || [];
-  });
-
   const { data: professions } = useQuery('professions', async () => {
     const res = await api.get('/management/professions');
     return res.data.data || [];
@@ -294,10 +289,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   });
 
-  // États regroupés par phase (0,1,2,3), ordre BDD, pour les selects
-  const etatsList = etats || [];
-  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etatsList);
-
   // Récupérer les sous-états dynamiquement selon l'état sélectionné
   // États qui ont des sous-états : 2 (NRP), 8 (ANNULER À REPROGRAMMER), 13 (SIGNER), 16 (SIGNER RETRACTER), 19 (RAPPEL POUR BUREAU), 44 (SIGNER PM), 45 (SIGNER COMPLET)
   const etatsAvecSousEtats = [2, 8, 13, 16, 19, 44, 45];
@@ -349,6 +340,20 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       refetchOnReconnect: isModal // Rafraîchir quand la connexion est rétablie (modal uniquement)
     }
   );
+
+  // États : pour confirmateur (6), matrice de transitions selon l'état actuel de la fiche
+  const { data: etats } = useQuery(
+    Number(user?.fonction) === 6 && ficheData?.id_etat_final ? ['etats', 'confirmateur', ficheData.id_etat_final] : ['etats'],
+    async () => {
+      const params = Number(user?.fonction) === 6 && ficheData?.id_etat_final ? { id_etat_fiche: ficheData.id_etat_final } : {};
+      const res = await api.get('/management/etats', { params });
+      return res.data.data || [];
+    }
+  );
+
+  // États regroupés par phase (0,1,2,3), ordre BDD, pour les selects
+  const etatsList = etats || [];
+  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etatsList);
   
   // Vérifier si c'est un commercial (fonction 5)
   const isCommercial = userFonction === 5;

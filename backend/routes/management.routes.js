@@ -659,6 +659,22 @@ router.post('/utilisateurs/generate-token', authenticate, async (req, res) => {
 // ÉTATS
 // =====================================================
 
+// Matrice des états sélectionnables depuis un état actuel pour la session confirmateur (6)
+// id_etat_actuel -> [ids des états autorisés]
+const CONFIRMATEUR_TRANSITIONS = {
+  1: [5, 7, 6, 29, 24, 2, 19],    // EN-ATTENTE
+  2: [5, 7, 6, 29, 24, 2, 19],    // NRP
+  19: [5, 7, 6, 29, 24, 2, 19],   // RAPPEL POUR BUREAU
+  5: [22, 7, 6, 29, 24, 19],      // ANNULER
+  29: [], 6: [], 24: [], 22: [],  // HC et ANNULER 2 FOIS : aucun
+  7: [8, 9, 11, 12],              // CONFIRMER
+  8: [8, 7, 11],                  // ANNULER ET A REPROGRAMMER
+  9: [9, 7, 29, 12],              // CLIENT HONORE A SUIVRE
+  11: [26, 8, 7, 29],             // RDV ANNULER
+  26: [], 12: [25, 8, 7, 2, 19, 6],  // RDV ANN 2 FOIS, REFUSER
+  34: [], 25: [], 35: [], 13: [], 16: []  // HHC FIN A VERIFIER, REF 2 FOIS, HHC TEC, SIGNER, SIGNER RETRACTER
+};
+
 // Liste des titres d'états visibles par les confirmateurs (6) dans le filtre de recherche et le détail fiche
 // Phase 2 : Confirmer, Annuler à reprogrammer, Client honoré à suivre, Honoré hors cible confirmateurs, RDV annulé, Refuser
 // Phase 3 : Signer
@@ -685,19 +701,25 @@ router.get('/etats', authenticate, async (req, res) => {
     const querySql = 'SELECT id, titre, color, groupe, ordre, taux, abbreviation FROM etats ORDER BY ordre ASC';
     let etats = await query(querySql);
     const fonction = Number(req.user.fonction);
+    const idEtatFiche = req.query.id_etat_fiche ? parseInt(req.query.id_etat_fiche, 10) : null;
     // Groupe 0 visible par : Admin (1), RE qualification (2), Agent qualification (3), Resp ADV (7), Qualité qualification (8), Admin call (11), RP qualification (12)
     const canSeeGroupe0 = [1, 2, 3, 7, 8, 11, 12].includes(fonction);
     if (!canSeeGroupe0) {
       etats = etats.filter(e => String(e.groupe) !== '0' && e.groupe !== 0);
     }
-    // Session confirmateur (6) : ne garder que les états de la liste (Phase 2 + Signer Phase 3)
+    // Session confirmateur (6) : selon id_etat_fiche (page détail fiche), appliquer la matrice de transitions
     if (fonction === 6) {
-      etats = etats.filter(e => {
-        const g = String(e.groupe);
-        if (g !== '2' && g !== '3') return false;
-        const titreNorm = normalizeTitre(e.titre);
-        return CONFIRMATEUR_ETAT_TITRES_NORMALISES.some(allowed => titreNorm.includes(allowed) || allowed.includes(titreNorm));
-      });
+      if (idEtatFiche != null && idEtatFiche > 0 && CONFIRMATEUR_TRANSITIONS[idEtatFiche] !== undefined) {
+        const allowedIds = CONFIRMATEUR_TRANSITIONS[idEtatFiche];
+        etats = etats.filter(e => allowedIds.includes(Number(e.id)));
+      } else {
+        etats = etats.filter(e => {
+          const g = String(e.groupe);
+          if (g !== '2' && g !== '3') return false;
+          const titreNorm = normalizeTitre(e.titre);
+          return CONFIRMATEUR_ETAT_TITRES_NORMALISES.some(allowed => titreNorm.includes(allowed) || allowed.includes(titreNorm));
+        });
+      }
     }
     res.json({ success: true, data: etats });
   } catch (error) {
