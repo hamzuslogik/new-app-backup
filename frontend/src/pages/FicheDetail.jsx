@@ -4205,7 +4205,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   value={selectedEtat !== null ? selectedEtat : ((Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13 || Number(user?.fonction) === 11) && fiche.id_etat_final ? fiche.id_etat_final : '')}
                   onChange={(e) => handleEtatChange(e.target.value ? parseInt(e.target.value) : null)}
                 >
-                  <option value="">{fiche.id_etat_final ? `État actuel: ${etats?.find(e => e.id === fiche.id_etat_final)?.titre || fiche.id_etat_final}` : 'Sélectionner un état'}</option>
+                  <option value="">Choisissez un état</option>
                   {/* Afficher l'état actuel comme option visible dans la liste (surtout pour les confirmateurs) */}
                   {fiche.id_etat_final && (() => {
                     const etatActuel = etats?.find(e => e.id === fiche.id_etat_final);
