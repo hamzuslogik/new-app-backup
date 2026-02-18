@@ -1228,6 +1228,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // Gérer le changement d'état
   const handleEtatChange = (newEtatId) => {
     setSelectedEtat(newEtatId);
+    // Si l'état est 19 (Rappel pour Bureau), initialiser la date rappel à J+2 à 09:00
+    if (newEtatId === 19) {
+      const inTwoDays = new Date();
+      inTwoDays.setDate(inTwoDays.getDate() + 2);
+      const dateRappelStr = inTwoDays.toISOString().split('T')[0];
+      setEtatFormData(prev => ({
+        ...prev,
+        date_rappel_date: dateRappelStr,
+        date_rappel_time: '09:00'
+      }));
+    }
     // Si l'état est 7 (confirmer), initialiser les valeurs du formulaire
     if (newEtatId === 7) {
       const currentDate = new Date();
