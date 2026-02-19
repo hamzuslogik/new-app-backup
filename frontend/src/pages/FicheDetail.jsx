@@ -3394,6 +3394,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                       {histo.date_creation ? new Date(histo.date_creation).toLocaleString('fr-FR') : '-'}
                                     </span>
                                   </div>
+                                  {histo.histo_confirmateur_pseudo && (
+                                    <div className="historique-user" style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                                      Changé par : {histo.histo_confirmateur_pseudo}
+                                    </div>
+                                  )}
                                 </div>
                                 
                                 {detailItems.length > 0 && (

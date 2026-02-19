@@ -2912,9 +2912,11 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       historique = await query(
         `SELECT histo.*,
          etat.titre as etat_titre,
-         etat.color as etat_color
+         etat.color as etat_color,
+         u_histo.pseudo as histo_confirmateur_pseudo
          FROM fiches_histo histo
          LEFT JOIN etats etat ON histo.id_etat = etat.id
+         LEFT JOIN utilisateurs u_histo ON histo.id_confirmateur = u_histo.id
          WHERE histo.id_fiche = ? 
          ORDER BY histo.id ASC`,
         [id]
