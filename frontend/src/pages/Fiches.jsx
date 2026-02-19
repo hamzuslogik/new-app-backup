@@ -23,7 +23,7 @@ const Fiches = () => {
   const [editingFiche, setEditingFiche] = useState(null);
   const [quickSearch, setQuickSearch] = useState(''); // Recherche rapide
   const debouncedQuickSearch = useDebouncedValue(quickSearch, 250);
-  const [filters, setFilters] = useState({
+  const getInitialFilters = () => ({
     page: 1,
     limit: 500,
     fiche_search: false,
@@ -32,6 +32,9 @@ const Fiches = () => {
     id_sous_etat: '',
     id_agent: '',
   });
+  const [filters, setFilters] = useState(getInitialFilters);
+  // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
+  const [appliedFilters, setAppliedFilters] = useState(getInitialFilters);
 
   const normalizeText = (v) => (typeof v === 'string' ? v.trim() : v);
 
@@ -107,17 +110,16 @@ const Fiches = () => {
     };
   };
 
-  // Construire les paramètres de requête
-  const getQueryParams = () => {
-    // Si limit est 999999 (Tout) ou si recherche rapide active, utiliser une valeur très élevée pour récupérer toutes les fiches
+  // Construire les paramètres de requête (utilise appliedFilters = filtres envoyés à l'API)
+  const getQueryParams = (sourceFilters) => {
+    const src = sourceFilters || appliedFilters;
     const isQuickSearchActive = debouncedQuickSearch.trim() !== '';
-    const limitParam = isQuickSearchActive ? 999999 : (filters.limit === 999999 ? 999999 : filters.limit);
-    const pageParam = isQuickSearchActive ? 1 : (filters.page || 1);
+    const limitParam = isQuickSearchActive ? 999999 : (src.limit === 999999 ? 999999 : src.limit);
+    const pageParam = isQuickSearchActive ? 1 : (src.page || 1);
     
-    // Si une recherche a été effectuée (fiche_search = true), utiliser les filtres personnalisés
-    if (filters.fiche_search) {
+    if (src.fiche_search) {
       const searchParams = { 
-        ...filters, 
+        ...src, 
         limit: limitParam,
         page: pageParam,
         fiche_search: 1
@@ -191,14 +193,14 @@ const Fiches = () => {
       time_fin: timeEnd
     };
 
-    if (filters.include_archive) {
+    if (src.include_archive) {
       defaultParams.include_archive = 1;
     }
-    if (filters.id_centre) {
-      defaultParams.id_centre = filters.id_centre;
+    if (src.id_centre) {
+      defaultParams.id_centre = src.id_centre;
     }
-    if (filters.id_agent && !isAgentQualif) {
-      defaultParams.id_agent = filters.id_agent;
+    if (src.id_agent && !isAgentQualif) {
+      defaultParams.id_agent = src.id_agent;
     }
     // Pour l'agent qualification, filtrer uniquement ses fiches créées aujourd'hui
     if (isAgentQualif && user?.id) {
@@ -218,9 +220,9 @@ const Fiches = () => {
     { enabled: isAgentQualif }
   );
 
-  // Récupérer les fiches
+  // Récupérer les fiches (requête lancée uniquement au clic Recherche, pagination ou reset)
   const { data, isLoading, error, refetch } = useQuery(
-    ['fiches', filters, debouncedQuickSearch],
+    ['fiches', appliedFilters, debouncedQuickSearch],
     async () => {
       const params = getQueryParams();
       const response = await api.get('/fiches', { params });
@@ -326,21 +328,23 @@ const Fiches = () => {
       [key]: nextValue,
       page: 1
     }));
+    // Pagination et limite : mettre à jour appliedFilters pour lancer la requête
+    if (key === 'page' || key === 'limit') {
+      setAppliedFilters(prev => ({
+        ...prev,
+        [key]: key === 'page' ? value : nextValue,
+        ...(key === 'limit' ? { page: 1 } : {})
+      }));
+    }
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    // Si on cherche uniquement par critère, ne pas appliquer les filtres de date
     const newFilters = { ...filters, fiche_search: true, page: 1 };
     
-    // Si critere est rempli et qu'aucune date n'a été spécifiquement définie, supprimer les dates
-    if (newFilters.critere && !newFilters.date_debut && !newFilters.date_fin) {
-      // Les dates ne sont pas dans les filtres, donc pas besoin de les supprimer
-    } else if (newFilters.critere) {
-      // Si critere est rempli, vérifier si les dates sont les dates d'aujourd'hui
+    if (newFilters.critere) {
       const today = new Date().toISOString().split('T')[0];
       if (newFilters.date_debut === today && newFilters.date_fin === today) {
-        // Supprimer les dates pour permettre une recherche globale
         delete newFilters.date_debut;
         delete newFilters.date_fin;
         delete newFilters.date_champ;
@@ -350,19 +354,13 @@ const Fiches = () => {
     }
     
     setFilters(newFilters);
-    refetch();
+    setAppliedFilters(newFilters);
   };
 
   const handleReset = () => {
-    setFilters({
-      page: 1,
-      limit: 500,
-      fiche_search: false,
-      include_archive: false,
-      id_centre: '',
-      id_sous_etat: '',
-      id_agent: '',
-    });
+    const initial = getInitialFilters();
+    setFilters(initial);
+    setAppliedFilters(initial);
   };
 
   const handleArchive = (fiche, archive) => {

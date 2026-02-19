@@ -84,7 +84,7 @@ const Dashboard = () => {
     const t = new Date();
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
   };
-  const [filters, setFilters] = useState(() => {
+  const getInitialFilters = () => {
     const dateStr = getDefaultDateStr();
     return {
       page: 1,
@@ -101,25 +101,26 @@ const Dashboard = () => {
       id_centre: '',
       id_sous_etat: '',
     };
-  });
+  };
+  const [filters, setFilters] = useState(getInitialFilters);
+  // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
+  const [appliedFilters, setAppliedFilters] = useState(getInitialFilters);
   
-  // Lire les paramètres de l'URL et les appliquer aux filtres
+  // Lire les paramètres de l'URL et les appliquer aux filtres + lancer la recherche
   useEffect(() => {
     const urlParams = Object.fromEntries(searchParams.entries());
     if (Object.keys(urlParams).length > 0 && urlParams.fiche_search === '1') {
-      // Convertir les paramètres de l'URL en filtres
       const newFilters = {
         page: parseInt(urlParams.page) || 1,
         limit: parseInt(urlParams.limit) || 999999,
         fiche_search: true,
         ...urlParams
       };
-      // Convertir id_etat_final en nombre si présent
       if (newFilters.id_etat_final) {
         newFilters.id_etat_final = parseInt(newFilters.id_etat_final);
       }
       setFilters(newFilters);
-      // Ouvrir automatiquement les filtres si des paramètres sont présents
+      setAppliedFilters(newFilters);
       setShowFilters(true);
     }
   }, [searchParams]);
@@ -197,19 +198,17 @@ const Dashboard = () => {
     };
   };
 
-  // Construire les paramètres selon l'onglet actif
-  const getQueryParams = () => {
+  // Construire les paramètres selon l'onglet actif (utilise appliedFilters = filtres envoyés à l'API)
+  const getQueryParams = (sourceFilters) => {
+    const src = sourceFilters || appliedFilters;
     const { dateStr, timeStart, timeEnd } = getTodayDateRange();
-    // Si limit est 999999 (Tout) ou si recherche rapide active, utiliser une valeur très élevée pour récupérer toutes les fiches
     const isQuickSearchActive = debouncedQuickSearch.trim() !== '';
-    const limitParam = isQuickSearchActive ? 999999 : (filters.limit === 999999 ? 999999 : filters.limit);
-    const pageParam = isQuickSearchActive ? 1 : (filters.page || 1);
+    const limitParam = isQuickSearchActive ? 999999 : (src.limit === 999999 ? 999999 : src.limit);
+    const pageParam = isQuickSearchActive ? 1 : (src.page || 1);
     
-    // Si une recherche a été effectuée (fiche_search = true), utiliser les filtres personnalisés
-    if (filters.fiche_search) {
-      // Utiliser les filtres personnalisés de l'utilisateur
+    if (src.fiche_search) {
       const searchParams = { 
-        ...filters, 
+        ...src, 
         limit: limitParam,
         page: pageParam,
         fiche_search: 1
@@ -293,7 +292,7 @@ const Dashboard = () => {
       limit: limitParam
     };
 
-    if (filters.include_archive) {
+    if (src.include_archive) {
       baseParams.include_archive = 1;
     }
     
@@ -311,8 +310,8 @@ const Dashboard = () => {
     if (user?.fonction !== 6) {
       defaultParams.id_etat_final = 7;
     }
-    if (filters.id_centre) {
-      defaultParams.id_centre = filters.id_centre;
+    if (src.id_centre) {
+      defaultParams.id_centre = src.id_centre;
     }
     return defaultParams;
   };
@@ -331,9 +330,9 @@ const Dashboard = () => {
     }
   );
 
-  // Récupérer les fiches (tous les rôles, dont confirmateur : par défaut toutes les fiches modifiées par l'utilisateur, tous états)
+  // Récupérer les fiches (requête lancée uniquement au clic Recherche, pagination ou reset)
   const { data, isLoading, isFetching, error, refetch } = useQuery(
-    ['fiches', filters, activeTab, debouncedQuickSearch],
+    ['fiches', appliedFilters, activeTab, debouncedQuickSearch],
     async () => {
       console.time('[PERF] Requête API fiches - Total');
       const params = getQueryParams();
@@ -404,29 +403,29 @@ const Dashboard = () => {
       key === 'critere' || key === 'nom' || key === 'prenom' || key === 'cp'
         ? normalizeText(value)
         : value;
-    // Activer la recherche (fiche_search) quand un filtre de recherche est modifié pour que les paramètres soient bien envoyés (ex: état NRP)
-    const searchFilterKeys = ['id_etat_final', 'id_sous_etat', 'date_debut', 'date_fin', 'date_champ', 'time_debut', 'time_fin', 'id_confirmateur', 'id_commercial', 'id_centre', 'nom', 'prenom', 'critere', 'critere_champ', 'cp', 'produit'];
-    const enableFicheSearch = searchFilterKeys.includes(key);
     setFilters(prev => ({
       ...prev,
       [key]: nextValue,
       ...(key === 'id_etat_final' ? { id_sous_etat: '' } : {}),
-      ...(enableFicheSearch ? { fiche_search: true } : {}),
       page: key === 'page' ? value : 1
     }));
+    // Pagination et limite : mettre à jour appliedFilters pour lancer la requête
+    if (key === 'page' || key === 'limit') {
+      setAppliedFilters(prev => ({
+        ...prev,
+        [key]: key === 'page' ? value : nextValue,
+        ...(key === 'limit' ? { page: 1 } : {})
+      }));
+    }
   };
 
   const handlePageChange = (newPage) => {
-    setFilters(prev => ({
-      ...prev,
-      page: newPage
-    }));
+    handleFilterChange('page', newPage);
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
     setIsSearching(true);
-    // Si on cherche uniquement par critère, ne pas appliquer les filtres de date
     const newFilters = { ...filters, fiche_search: true, page: 1 };
     
     // Si critere est rempli et qu'aucune date n'a été spécifiquement définie, supprimer les dates
@@ -446,22 +445,22 @@ const Dashboard = () => {
     }
     
     setFilters(newFilters);
-    try {
-      await refetch();
-    } finally {
-      setIsSearching(false);
-    }
+    setAppliedFilters(newFilters);
+    setIsSearching(true);
   };
 
   const handleReset = () => {
-    setFilters({
-      page: 1,
-      limit: 999999,
-      fiche_search: false,
-    });
-    // Réinitialiser aussi les filtres de date pour revenir aux valeurs par défaut
-    queryClient.invalidateQueries(['fiches']);
+    const initial = getInitialFilters();
+    setFilters({ ...initial, fiche_search: false });
+    setAppliedFilters(initial);
   };
+
+  // Réinitialiser isSearching quand la requête est terminée
+  useEffect(() => {
+    if (!isFetching && isSearching) {
+      setIsSearching(false);
+    }
+  }, [isFetching, isSearching]);
 
   // Format date
   const formatDate = (dateString) => {
