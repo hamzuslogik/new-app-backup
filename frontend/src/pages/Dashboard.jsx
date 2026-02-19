@@ -418,7 +418,20 @@ const Dashboard = () => {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!window.confirm('Cette recherche peut prendre plusieurs secondes. Confirmer la recherche ?')) {
+    // Afficher la confirmation uniquement si la recherche n'est pas affinée (risque de recherche lourde)
+    const hasRefinedSearch = !!(
+      (filters.critere || '').trim() ||
+      filters.id_etat_final ||
+      filters.date_champ ||
+      filters.date_debut ||
+      filters.date_fin ||
+      filters.id_confirmateur ||
+      filters.id_commercial ||
+      filters.id_centre ||
+      (filters.cp || '').trim() ||
+      filters.produit
+    );
+    if (!hasRefinedSearch && !window.confirm('Cette recherche peut prendre plusieurs secondes. Confirmer la recherche ?')) {
       return;
     }
     setIsSearching(true);
