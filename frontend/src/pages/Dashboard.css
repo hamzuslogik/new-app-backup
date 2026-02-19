@@ -1390,7 +1390,8 @@ body.dashboard-page {
   }
 }
 
-.fiches-table tbody tr:nth-child(even) {
+/* Alternance grise uniquement pour les lignes non colorées par état */
+.fiches-table tbody tr:nth-child(even):not(.fiche-row-by-etat) {
   background-color: #fafafa;
 }
 

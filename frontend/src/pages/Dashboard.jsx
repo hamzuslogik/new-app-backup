@@ -476,9 +476,9 @@ const Dashboard = () => {
     });
   };
 
-  // Obtenir la couleur de l'état
+  // Obtenir la couleur de l'état (utiliser etatsData pour inclure tous les états, y compris groupe 0 en session confirmateur)
   const getEtatColor = (etatId) => {
-    const etat = etats.find(e => e.id === etatId);
+    const etat = (etatsData || []).find(e => e.id === etatId || e.id === Number(etatId));
     return etat?.color || '#cccccc';
   };
 
@@ -1338,7 +1338,11 @@ const Dashboard = () => {
                     return (
                       <tr 
                         key={fiche.hash}
-                        style={{ backgroundColor: `${etatColor}20` }}
+                        className="fiche-row-by-etat"
+                        style={{ 
+                          backgroundColor: `${etatColor}40`,
+                          borderLeft: `4px solid ${etatColor}`
+                        }}
                         title={getTooltipComment(fiche) || undefined}
                       >
                         <td data-label="">{fiche.nom || ''}</td>
