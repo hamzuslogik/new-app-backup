@@ -31,6 +31,12 @@ const Fiches = () => {
     id_centre: '',
     id_sous_etat: '',
     id_agent: '',
+    id_etat_final: '',
+    date_champ: '',
+    date_debut: '',
+    date_fin: '',
+    time_debut: '',
+    time_fin: '',
   });
   const [filters, setFilters] = useState(getInitialFilters);
   // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
@@ -228,7 +234,7 @@ const Fiches = () => {
       const response = await api.get('/fiches', { params });
       return response.data;
     },
-    { keepPreviousData: true }
+    { keepPreviousData: true, enabled: appliedFilters.fiche_search === true }
   );
 
   // Mutation pour créer une fiche

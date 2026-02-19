@@ -79,29 +79,22 @@ const Dashboard = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  // Par défaut : fiches confirmées créées dans la journée (qualification CONFIRMER créée aujourd'hui, depuis fiches_histo)
-  const getDefaultDateStr = () => {
-    const t = new Date();
-    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-  };
-  const getInitialFilters = () => {
-    const dateStr = getDefaultDateStr();
-    return {
-      page: 1,
-      limit: 999999,
-      fiche_search: true,
-      id_etat_final: 7,
-      date_champ: 'confirmations',
-      date_debut: dateStr,
-      date_fin: dateStr,
-      time_debut: '00:00:00',
-      time_fin: '23:59:59',
-      include_archive: false,
-      ko: '', // '' = tous, '0' = fiches OK, '1' = fiches KO
-      id_centre: '',
-      id_sous_etat: '',
-    };
-  };
+  // Par défaut : filtre vide (état Tous, date non sélectionnée, date début/fin vides)
+  const getInitialFilters = () => ({
+    page: 1,
+    limit: 999999,
+    fiche_search: false,
+    id_etat_final: '',
+    date_champ: '',
+    date_debut: '',
+    date_fin: '',
+    time_debut: '',
+    time_fin: '',
+    include_archive: false,
+    ko: '', // '' = tous, '0' = fiches OK, '1' = fiches KO
+    id_centre: '',
+    id_sous_etat: '',
+  });
   const [filters, setFilters] = useState(getInitialFilters);
   // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
   const [appliedFilters, setAppliedFilters] = useState(getInitialFilters);
@@ -340,7 +333,7 @@ const Dashboard = () => {
       console.timeEnd('[PERF] Requête API fiches - Total');
       return response.data;
     },
-    { keepPreviousData: true }
+    { keepPreviousData: true, enabled: appliedFilters.fiche_search === true }
   );
 
   // Filtrer les utilisateurs par fonction
@@ -451,7 +444,7 @@ const Dashboard = () => {
 
   const handleReset = () => {
     const initial = getInitialFilters();
-    setFilters({ ...initial, fiche_search: false });
+    setFilters(initial);
     setAppliedFilters(initial);
   };
 
