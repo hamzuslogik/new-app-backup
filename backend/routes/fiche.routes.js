@@ -532,11 +532,13 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_commercial = ?');
         params.push(req.user.id);
       } else if (req.user.fonction === 6) {
-        // Confirmateurs : en recherche par critère (tel, CP, etc.) depuis le dashboard, afficher le résultat quel que soit id_confirmateur
+        // Confirmateurs : en recherche par critère (tel, CP, etc.), afficher le résultat quel que soit id_confirmateur
+        // Si date_champ=fiches_histo : fiches_histo filtre déjà par id_confirmateur=connecté, pas besoin de COALESCE
         const hasRechercheParCritere = !!(req.query.tel || critere);
+        const useFichesHisto = req.query.date_champ === 'fiches_histo';
         if (hasRechercheParCritere) {
           // Ne pas filtrer par confirmateur : afficher toute fiche correspondant à la recherche
-        } else {
+        } else if (!useFichesHisto) {
           whereConditions.push('COALESCE(fiche.id_confirmateur_3, fiche.id_confirmateur_2, fiche.id_confirmateur) = ?');
           params.push(req.user.id);
         }
@@ -808,8 +810,9 @@ router.get('/', authenticate, async (req, res) => {
     // Filtres de date avec validation du champ de date
     if (date_champ) {
       // Valider que date_champ est une colonne de date autorisée (sécurité)
-      // confirmations = filtre par date_creation dans table confirmations pour "confirmations créées dans la journée"
-      const allowedDateColumns = ['date_insert_time', 'date_modif_time', 'date_rdv_time', 'date_appel_time', 'date_confirmation', 'date_qualif', 'date_sign_time', 'fiches_histo_confirmation', 'confirmations'];
+      // confirmations = filtre par date_creation dans table confirmations
+      // fiches_histo = fiches statuées aujourd'hui par le confirmateur connecté (table fiches_histo, id_confirmateur)
+      const allowedDateColumns = ['date_insert_time', 'date_modif_time', 'date_rdv_time', 'date_appel_time', 'date_confirmation', 'date_qualif', 'date_sign_time', 'fiches_histo_confirmation', 'fiches_histo', 'confirmations'];
       if (!allowedDateColumns.includes(date_champ)) {
         return res.status(400).json({
           success: false,
@@ -826,8 +829,18 @@ router.get('/', authenticate, async (req, res) => {
         const timeStart = time_debut && String(time_debut).trim() !== '' ? time_debut : '00:00:00';
         const timeEnd = time_fin && String(time_fin).trim() !== '' ? time_fin : '23:59:59';
         
-        // Filtre "confirmations créées dans la journée" : fiches ayant au moins une ligne dans table confirmations avec date_creation dans la plage
-        if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
+        // Filtre "fiches statuées par le confirmateur connecté" : fiches ayant au moins une ligne dans fiches_histo (id_confirmateur = connecté, date_creation dans la plage)
+        if (date_champ === 'fiches_histo') {
+          const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
+          const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
+          whereConditions.push(`EXISTS (
+            SELECT 1 FROM fiches_histo h
+            WHERE h.id_fiche = fiche.id
+            AND h.id_confirmateur = ?
+            AND h.date_creation >= ? AND h.date_creation <= ?
+          )`);
+          params.push(req.user.id, startDatetime, endDatetime);
+        } else if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           whereConditions.push(`fiche.id_etat_final = 7`);

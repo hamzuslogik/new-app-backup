@@ -274,9 +274,14 @@ const Dashboard = () => {
         }
       });
 
-      // Session confirmateur : par défaut ne pas filtrer par état (afficher toutes les fiches modifiées par l'utilisateur)
-      if (user?.fonction === 6 && (searchParams.id_etat_final === 7 || searchParams.id_etat_final === '' || searchParams.id_etat_final == null)) {
-        delete searchParams.id_etat_final;
+      // Session confirmateur : utiliser fiches_histo (fiches statuées par le confirmateur), pas confirmations
+      if (user?.fonction === 6) {
+        if (searchParams.id_etat_final === 7 || searchParams.id_etat_final === '' || searchParams.id_etat_final == null) {
+          delete searchParams.id_etat_final;
+        }
+        if (searchParams.date_champ === 'confirmations') {
+          searchParams.date_champ = 'fiches_histo';
+        }
       }
       
       return searchParams;
@@ -293,11 +298,11 @@ const Dashboard = () => {
     }
     
     // Par défaut : fiches confirmées créées dans la journée (depuis table confirmations)
-    // Pour les confirmateurs : fiches modifiées aujourd'hui par l'utilisateur, tous états (pas de filtre id_etat_final)
+    // Session confirmateur : fiches_histo = fiches statuées aujourd'hui par le confirmateur connecté (tous états, pas de filtre id_etat_final)
     const defaultParams = {
       ...baseParams,
       fiche_search: 1,
-      date_champ: 'confirmations',
+      date_champ: user?.fonction === 6 ? 'fiches_histo' : 'confirmations',
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: timeStart,
