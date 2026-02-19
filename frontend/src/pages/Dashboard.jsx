@@ -418,17 +418,15 @@ const Dashboard = () => {
 
   const handleSearch = async (e) => {
     e.preventDefault();
+    if (!window.confirm('Cette recherche peut prendre plusieurs secondes. Confirmer la recherche ?')) {
+      return;
+    }
     setIsSearching(true);
     const newFilters = { ...filters, fiche_search: true, page: 1 };
     
-    // Si critere est rempli et qu'aucune date n'a été spécifiquement définie, supprimer les dates
-    if (newFilters.critere && !newFilters.date_debut && !newFilters.date_fin) {
-      // Les dates ne sont pas dans les filtres, donc pas besoin de les supprimer
-    } else if (newFilters.critere) {
-      // Si critere est rempli, vérifier si les dates sont les dates d'aujourd'hui
+    if (newFilters.critere) {
       const today = new Date().toISOString().split('T')[0];
       if (newFilters.date_debut === today && newFilters.date_fin === today) {
-        // Supprimer les dates pour permettre une recherche globale
         delete newFilters.date_debut;
         delete newFilters.date_fin;
         delete newFilters.date_champ;
@@ -439,7 +437,6 @@ const Dashboard = () => {
     
     setFilters(newFilters);
     setAppliedFilters(newFilters);
-    setIsSearching(true);
   };
 
   const handleReset = () => {

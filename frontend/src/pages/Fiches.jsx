@@ -346,6 +346,9 @@ const Fiches = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    if (!window.confirm('Cette recherche peut prendre plusieurs secondes. Confirmer la recherche ?')) {
+      return;
+    }
     const newFilters = { ...filters, fiche_search: true, page: 1 };
     
     if (newFilters.critere) {
