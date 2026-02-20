@@ -738,6 +738,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'surface_habitable' => !empty($_POST['surface_habitable']) ? sanitizeInput($_POST['surface_habitable']) : null,
             'surface_chauffee' => !empty($_POST['surface_chauffee']) ? sanitizeInput($_POST['surface_chauffee']) : null,
             'consommation_chauffage' => !empty($_POST['consommation_chauffage']) ? sanitizeInput($_POST['consommation_chauffage']) : null,
+            'consommation_electricite' => !empty($_POST['consommation_electricite']) ? sanitizeInput($_POST['consommation_electricite']) : null,
             'nb_pieces' => !empty($_POST['nb_pieces']) ? intval($_POST['nb_pieces']) : null,
             'commentaire' => !empty($_POST['commentaire_agent']) ? sanitizeInput($_POST['commentaire_agent']) : null,
             // Produit
