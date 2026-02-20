@@ -737,16 +737,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'annee_systeme_chauffage' => !empty($_POST['annee_systeme_chauffage']) ? intval($_POST['annee_systeme_chauffage']) : null,
             'surface_habitable' => !empty($_POST['surface_habitable']) ? sanitizeInput($_POST['surface_habitable']) : null,
             'surface_chauffee' => !empty($_POST['surface_chauffee']) ? sanitizeInput($_POST['surface_chauffee']) : null,
+            'nb_pans' => !empty($_POST['nb_pans']) ? intval($_POST['nb_pans']) : null,
             'consommation_chauffage' => !empty($_POST['consommation_chauffage']) ? sanitizeInput($_POST['consommation_chauffage']) : null,
             'consommation_electricite' => !empty($_POST['consommation_electricite']) ? sanitizeInput($_POST['consommation_electricite']) : null,
             'nb_pieces' => !empty($_POST['nb_pieces']) ? intval($_POST['nb_pieces']) : null,
             'commentaire' => !empty($_POST['commentaire_agent']) ? sanitizeInput($_POST['commentaire_agent']) : null,
             // Produit
             'produit' => !empty($_POST['produit']) ? intval($_POST['produit']) : null,
-            // Champs PV
+            // Champs PV (site_classe et zones_ombres -> conf_site_classe, conf_zones_ombres dans table fiches)
             'orientation_toiture' => !empty($_POST['orientation_toiture']) ? sanitizeInput($_POST['orientation_toiture']) : null,
-            'zones_ombres' => !empty($_POST['zones_ombres']) ? sanitizeInput($_POST['zones_ombres']) : null,
-            'site_classe' => !empty($_POST['site_classe']) ? sanitizeInput($_POST['site_classe']) : null
+            'conf_zones_ombres' => !empty($_POST['zones_ombres']) ? sanitizeInput($_POST['zones_ombres']) : null,
+            'conf_site_classe' => !empty($_POST['site_classe']) ? sanitizeInput($_POST['site_classe']) : null
         ];
         
         // Filtrer les champs nuls

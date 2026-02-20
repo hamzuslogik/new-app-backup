@@ -3639,6 +3639,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       'civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville', 'etude',
       'consommation_chauffage', 'surface_habitable', 'annee_systeme_chauffage', 'surface_chauffee',
       'proprietaire_maison', 'nb_pieces', 'nb_pans', 'age_maison', 'orientation_toiture', 'produit',
+      'site_classe', 'zones_ombres',
       'nb_chemines', 'mode_chauffage', 'consommation_electricite', 'age_mr', 'age_madame',
       'revenu_foyer', 'credit_foyer', 'situation_conjugale', 'nb_enfants', 'profession_mr',
       'profession_madame', 'type_contrat_mr', 'type_contrat_madame', 'commentaire', 'id_agent', 'id_centre', 'id_insert', 'id_confirmateur',
