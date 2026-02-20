@@ -838,15 +838,12 @@ router.get('/', authenticate, async (req, res) => {
           histoJoinForFichesHisto = `INNER JOIN (SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_confirmateur = ? AND date_creation >= ? AND date_creation <= ?) histo_ids ON fiche.id = histo_ids.id_fiche`;
           histoParamsForFichesHisto = [req.user.id, startDatetime, endDatetime];
         } else if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
+          // Fiches confirmées : basé sur fiches + fiches_histo (id_etat=7, date_creation), pas la table confirmations
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           whereConditions.push(`fiche.id_etat_final = 7`);
-          whereConditions.push(`EXISTS (
-            SELECT 1 FROM confirmations c
-            WHERE c.id_fiche = fiche.id
-            AND c.date_creation >= ? AND c.date_creation <= ?
-          )`);
-          params.push(startDatetime, endDatetime);
+          histoJoinForFichesHisto = `INNER JOIN (SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_etat = 7 AND date_creation >= ? AND date_creation <= ?) histo_conf ON fiche.id = histo_conf.id_fiche`;
+          histoParamsForFichesHisto = [startDatetime, endDatetime];
         } else if (date_champ === 'date_confirmation') {
           // Convertir les dates en timestamps Unix
           const startTimestamp = Math.floor(new Date(`${dateDebut || dateFin} ${timeStart}`).getTime() / 1000);

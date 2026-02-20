@@ -266,12 +266,12 @@ const Dashboard = () => {
         }
       });
 
-      // Session confirmateur : utiliser fiches_histo (fiches statuées par le confirmateur), pas confirmations
+      // Session confirmateur : utiliser fiches_histo (fiches statuées par le confirmateur)
       if (user?.fonction === 6) {
         if (searchParams.id_etat_final === 7 || searchParams.id_etat_final === '' || searchParams.id_etat_final == null) {
           delete searchParams.id_etat_final;
         }
-        if (searchParams.date_champ === 'confirmations') {
+        if (searchParams.date_champ === 'fiches_histo_confirmation') {
           searchParams.date_champ = 'fiches_histo';
         }
       }
@@ -289,12 +289,13 @@ const Dashboard = () => {
       baseParams.include_archive = 1;
     }
     
-    // Par défaut : fiches confirmées créées dans la journée (depuis table confirmations)
-    // Session confirmateur : fiches_histo = fiches statuées aujourd'hui par le confirmateur connecté (tous états, pas de filtre id_etat_final)
+    // Par défaut : fiches + fiches_histo (pas confirmations)
+    // Non-confirmateur : fiches confirmées = fiches_histo id_etat=7 dans la plage
+    // Session confirmateur : fiches_histo = fiches statuées par le confirmateur connecté
     const defaultParams = {
       ...baseParams,
       fiche_search: 1,
-      date_champ: user?.fonction === 6 ? 'fiches_histo' : 'confirmations',
+      date_champ: user?.fonction === 6 ? 'fiches_histo' : 'fiches_histo_confirmation',
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: timeStart,
@@ -824,8 +825,8 @@ const Dashboard = () => {
         const day = String(today.getDate()).padStart(2, '0');
         const todayStr = `${year}-${month}-${day}`;
         
-        // URL pour "confirmer de la journée" (fiches dont la qualification CONFIRMER a été créée aujourd'hui, depuis fiches_histo)
-        const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=confirmations&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
+        // URL pour "confirmer de la journée" (fiches + fiches_histo id_etat=7, pas table confirmations)
+        const confirmesUrl = `/dashboard?fiche_search=1&id_etat_final=7&date_champ=fiches_histo_confirmation&date_debut=${todayStr}&date_fin=${todayStr}&time_debut=00:00:00&time_fin=23:59:59`;
         
         const isConfirmateur = user?.fonction === 6;
         return (
@@ -1204,6 +1205,11 @@ const Dashboard = () => {
                     <option value="date_appel_time">Date d'appel</option>
                     {user?.fonction !== 3 && (
                       <option value="date_rdv_time">Date Planning</option>
+                    )}
+                    {user?.fonction === 6 ? (
+                      <option value="fiches_histo">Date statut (fiches_histo)</option>
+                    ) : (
+                      <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                     )}
                   </select>
                 </div>
@@ -1770,6 +1776,11 @@ const Dashboard = () => {
                     <option value="date_appel_time">Date d'appel</option>
                     {user?.fonction !== 3 && (
                       <option value="date_rdv_time">Date Planning</option>
+                    )}
+                    {user?.fonction === 6 ? (
+                      <option value="fiches_histo">Date statut (fiches_histo)</option>
+                    ) : (
+                      <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                     )}
                   </select>
                 </div>

@@ -607,12 +607,12 @@ router.get('/dashboard', authenticate, async (req, res) => {
     const todayStart = `${todayStr} 00:00:00`;
     const todayEnd = `${todayStr} 23:59:59`;
 
-    // 1. Nombre de fiches confirmées créées dans la journée (depuis table confirmations)
+    // 1. Nombre de fiches confirmées créées dans la journée (depuis fiches + fiches_histo, pas confirmations)
     const rdvTodayConfirmed = await queryOne(`
-      SELECT COUNT(DISTINCT c.id_fiche) as count
-      FROM confirmations c
-      INNER JOIN fiches f ON f.id = c.id_fiche AND (f.archive = 0 OR f.archive IS NULL)
-      WHERE c.date_creation >= ? AND c.date_creation <= ?
+      SELECT COUNT(DISTINCT f.id) as count
+      FROM fiches f
+      INNER JOIN fiches_histo h ON h.id_fiche = f.id AND h.id_etat = 7 AND h.date_creation >= ? AND h.date_creation <= ?
+      WHERE f.id_etat_final = 7 AND (f.archive = 0 OR f.archive IS NULL)
     `, [todayStart, todayEnd]);
 
     // 2. Nombre de signatures enregistrées aujourd'hui (table signature)
@@ -631,7 +631,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
       AND (archive = 0 OR archive IS NULL)
     `, [todayStart]);
 
-    // 4. Liste des confirmateurs actifs avec le nombre de RDV aujourd'hui (confirmations) et à venir (fiches)
+    // 4. Liste des confirmateurs actifs avec RDV aujourd'hui (fiches_histo) et à venir (fiches)
     const confirmateursWithRdv = await query(`
       SELECT 
         u.id,
@@ -639,16 +639,11 @@ router.get('/dashboard', authenticate, async (req, res) => {
         u.photo,
         u.genre,
         COALESCE((
-          SELECT COUNT(DISTINCT c2.id_fiche)
-          FROM confirmations c2
-          INNER JOIN fiches f2 ON f2.id = c2.id_fiche AND (f2.archive = 0 OR f2.archive IS NULL)
-          WHERE c2.date_creation >= ? AND c2.date_creation <= ?
-          AND (
-            (c2.id_confirmateur IS NOT NULL AND c2.id_confirmateur = u.id)
-            OR f2.id_confirmateur = u.id
-            OR f2.id_confirmateur_2 = u.id
-            OR f2.id_confirmateur_3 = u.id
-          )
+          SELECT COUNT(DISTINCT h2.id_fiche)
+          FROM fiches_histo h2
+          INNER JOIN fiches f2 ON f2.id = h2.id_fiche AND (f2.archive = 0 OR f2.archive IS NULL)
+          WHERE h2.id_etat = 7 AND h2.date_creation >= ? AND h2.date_creation <= ?
+          AND h2.id_confirmateur = u.id
         ), 0) as rdv_today,
         COALESCE((
           SELECT COUNT(DISTINCT f.id)
