@@ -744,10 +744,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'commentaire' => !empty($_POST['commentaire_agent']) ? sanitizeInput($_POST['commentaire_agent']) : null,
             // Produit
             'produit' => !empty($_POST['produit']) ? intval($_POST['produit']) : null,
-            // Champs PV (site_classe et zones_ombres -> conf_site_classe, conf_zones_ombres dans table fiches)
+            // Champs PV
             'orientation_toiture' => !empty($_POST['orientation_toiture']) ? sanitizeInput($_POST['orientation_toiture']) : null,
-            'conf_zones_ombres' => !empty($_POST['zones_ombres']) ? sanitizeInput($_POST['zones_ombres']) : null,
-            'conf_site_classe' => !empty($_POST['site_classe']) ? sanitizeInput($_POST['site_classe']) : null
+            'zones_ombres' => !empty($_POST['zones_ombres']) ? sanitizeInput($_POST['zones_ombres']) : null,
+            'site_classe' => !empty($_POST['site_classe']) ? sanitizeInput($_POST['site_classe']) : null
         ];
         
         // Filtrer les champs nuls
