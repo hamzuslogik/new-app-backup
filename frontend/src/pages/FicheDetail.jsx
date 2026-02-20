@@ -135,6 +135,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     conf_site_classe: '',
     conf_consommation_electricite: '',
     nb_pans: '',
+    // Champs techniques PAC
+    mode_chauffage: '',
+    annee_systeme_chauffage: '',
+    surface_chauffee: '',
+    consommation_chauffage: '',
     conf_commentaire_produit: ''
   });
 
@@ -1281,6 +1286,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         conf_site_classe: ficheData?.conf_site_classe || ficheData?.site_classe || '',
         conf_consommation_electricite: ficheData?.conf_consommation_electricite || ficheData?.consommation_electricite || '',
         nb_pans: ficheData?.nb_pans ? String(ficheData.nb_pans) : '',
+        mode_chauffage: ficheData?.mode_chauffage ? String(ficheData.mode_chauffage) : '',
+        annee_systeme_chauffage: ficheData?.annee_systeme_chauffage ? String(ficheData.annee_systeme_chauffage) : '',
+        surface_chauffee: ficheData?.surface_chauffee || '',
+        consommation_chauffage: ficheData?.consommation_chauffage || '',
         conf_commentaire_produit: ficheData?.conf_commentaire_produit || ficheData?.commentaire || ''
       });
     } else {
@@ -1297,6 +1306,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         nb_pans: '',
         conf_site_classe: '',
         conf_consommation_electricite: '',
+        mode_chauffage: '',
+        annee_systeme_chauffage: '',
+        surface_chauffee: '',
+        consommation_chauffage: '',
         conf_commentaire_produit: ''
       });
     }
@@ -1354,6 +1367,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         conf_site_classe: confFormData.conf_site_classe || null,
         conf_consommation_electricite: confFormData.conf_consommation_electricite || null,
         nb_pans: confFormData.nb_pans ? parseInt(confFormData.nb_pans) : null,
+        mode_chauffage: confFormData.mode_chauffage ? parseInt(confFormData.mode_chauffage) : null,
+        annee_systeme_chauffage: confFormData.annee_systeme_chauffage ? parseInt(confFormData.annee_systeme_chauffage) : null,
+        surface_chauffee: confFormData.surface_chauffee ? parseFloat(confFormData.surface_chauffee) : null,
+        consommation_chauffage: confFormData.consommation_chauffage || null,
         conf_commentaire_produit: confFormData.conf_commentaire_produit || null
       };
 
@@ -1382,6 +1399,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           conf_site_classe: '',
           conf_consommation_electricite: '',
           nb_pans: '',
+          mode_chauffage: '',
+          annee_systeme_chauffage: '',
+          surface_chauffee: '',
+          consommation_chauffage: '',
           conf_commentaire_produit: ''
         });
         alert('Fiche confirmée avec succès');
@@ -4456,6 +4477,64 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   </div>
                 </div>
 
+                {/* Champs spécifiques PAC */}
+                {confFormData.produit === '1' && (
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="conf_mode_chauffage">Mode de chauffage :</label>
+                      <select
+                        id="conf_mode_chauffage"
+                        className="form-control"
+                        value={confFormData.mode_chauffage}
+                        onChange={(e) => setConfFormData({...confFormData, mode_chauffage: e.target.value})}
+                      >
+                        <option value="">Sélectionner</option>
+                        {modeChauffage?.map(mode => (
+                          <option key={mode.id} value={mode.id}>
+                            {mode.nom || mode.titre || `Mode ${mode.id}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="conf_annee_systeme_chauffage">Année du système de chauffage :</label>
+                      <input
+                        type="number"
+                        id="conf_annee_systeme_chauffage"
+                        className="form-control"
+                        value={confFormData.annee_systeme_chauffage}
+                        onChange={(e) => setConfFormData({...confFormData, annee_systeme_chauffage: e.target.value})}
+                        placeholder="Ex: 2010"
+                        min="1970"
+                        max={new Date().getFullYear()}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="conf_surface_chauffee">Surface chauffée (m²) :</label>
+                      <input
+                        type="number"
+                        id="conf_surface_chauffee"
+                        className="form-control"
+                        value={confFormData.surface_chauffee}
+                        onChange={(e) => setConfFormData({...confFormData, surface_chauffee: e.target.value})}
+                        placeholder="Ex: 100"
+                        min="0"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="conf_consommation_chauffage">Consommation chauffage (€) :</label>
+                      <input
+                        type="text"
+                        id="conf_consommation_chauffage"
+                        className="form-control"
+                        value={confFormData.consommation_chauffage}
+                        onChange={(e) => setConfFormData({...confFormData, consommation_chauffage: e.target.value})}
+                        placeholder="Ex: 1500 €/an"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Champs spécifiques PV */}
                 {confFormData.produit === '2' && (
                   <div className="form-row">
@@ -4567,6 +4646,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         conf_zones_ombres: '',
                         conf_site_classe: '',
                         conf_consommation_electricite: '',
+                        mode_chauffage: '',
+                        annee_systeme_chauffage: '',
+                        surface_chauffee: '',
+                        consommation_chauffage: '',
                         nb_pans: '',
                         conf_commentaire_produit: ''
                       });
