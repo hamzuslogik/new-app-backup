@@ -2433,7 +2433,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               ])}
               {renderField('Détail de l\'étude', 'etude_raison', fiche.etude_raison || '-', 'textarea')}
               {renderField('Mode de chauffage', 'mode_chauffage',
-                modeChauffage?.find(m => m.id == fiche.mode_chauffage)?.titre || fiche.mode_chauffage || '-',
+                (() => { const m = modeChauffage?.find(x => x.id == fiche.mode_chauffage); return m?.nom || m?.titre || '-'; })(),
                 'select', modeChauffage)}
               {renderField('Année de système de chauffage', 'annee_systeme_chauffage', fiche.annee_systeme_chauffage || '-', 'number')}
               {renderField('Surface habitable', 'surface_habitable', fiche.surface_habitable || '-', 'number')}
