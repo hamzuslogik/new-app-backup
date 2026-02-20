@@ -118,9 +118,11 @@ const Dashboard = () => {
     } else if (Object.keys(urlParams).length === 0 && user) {
       // Pas de paramètres : afficher par défaut les fiches confirmées du jour (fiches_histo id_etat=7, date_creation)
       // Confirmateur : fiches statuées par lui aujourd'hui (fiches_histo id_confirmateur)
+      // On modifie uniquement appliedFilters pour la requête API, sans toucher aux champs du filtre (filters)
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      const defaultFilters = {
+      const defaultApplied = {
+        ...getInitialFilters(),
         page: 1,
         limit: 999999,
         fiche_search: true,
@@ -130,13 +132,8 @@ const Dashboard = () => {
         date_fin: todayStr,
         time_debut: '00:00:00',
         time_fin: '23:59:59',
-        include_archive: false,
-        ko: '',
-        id_centre: '',
-        id_sous_etat: '',
       };
-      setFilters(defaultFilters);
-      setAppliedFilters(defaultFilters);
+      setAppliedFilters(defaultApplied);
       setShowFilters(true);
     }
   }, [searchParams, user]);
