@@ -84,6 +84,11 @@ async function getEtatsQualiteOuverts() {
 async function canQualiteModifierFiche(fiche, userId, userFonction) {
   const isQualiteUser = userFonction === 2 || userFonction === 8 || userFonction === 12;
   if (!isQualiteUser) return true;
+  // Fiche validée (état hors groupe 0) : verrouillée pour tout le monde
+  const etatRow = await queryOne('SELECT groupe FROM etats WHERE id = ?', [fiche.id_etat_final]);
+  if (etatRow && etatRow.groupe !== '0' && etatRow.groupe !== 0) {
+    return false;
+  }
   if (!fiche.id_qualite) return true;
   if (Number(fiche.id_qualite) === Number(userId)) return true;
   const etatsOuverts = await getEtatsQualiteOuverts();
@@ -3202,7 +3207,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       if (!canModifyField) {
         return res.status(403).json({
           success: false,
-          message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".'
+          message: 'Cette fiche est verrouillée et ne peut pas être modifiée.'
         });
       }
     }
@@ -3742,7 +3747,7 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
     if (!canModifyEtat) {
       return res.status(403).json({
         success: false,
-        message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".'
+        message: 'Cette fiche est verrouillée et ne peut pas être modifiée.'
       });
     }
 
@@ -3891,7 +3896,7 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
     if (!canModify) {
       return res.status(403).json({
         success: false,
-        message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".'
+        message: 'Cette fiche est verrouillée et ne peut pas être modifiée.'
       });
     }
 
@@ -4028,7 +4033,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     if (!canModifyKo) {
       return res.status(403).json({
         success: false,
-        message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".'
+        message: 'Cette fiche est verrouillée et ne peut pas être modifiée.'
       });
     }
     
@@ -4182,7 +4187,7 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
     if (!canModifyHc) {
       return res.status(403).json({
         success: false,
-        message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".'
+        message: 'Cette fiche est verrouillée et ne peut pas être modifiée.'
       });
     }
     
@@ -4356,7 +4361,7 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
     if (!canModifyAlerte) {
       return res.status(403).json({
         success: false,
-        message: 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut envoyer une alerte, sauf si l\'état est "Debrief" ou "À vérifier".'
+        message: 'Cette fiche est verrouillée et ne peut pas être modifiée.'
       });
     }
     if (!fiche.id_agent) {

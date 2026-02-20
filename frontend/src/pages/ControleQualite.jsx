@@ -411,15 +411,21 @@ const ControleQualite = () => {
       .map(e => e.id);
   }, [allEtats]);
 
-  // Fiche verrouillée si assignée à un autre agent qualité et état hors Debrief/À vérifier
+  // Fiche verrouillée si validée (état hors groupe 0) pour tout le monde, ou si assignée à un autre agent qualité et état hors Debrief/À vérifier
   const isFicheLockedForUser = (fiche) => {
+    // Fiche validée (Validé, En-Attente, KO, HC, etc.) : verrouillée pour tout le monde
+    if (!isEtatGroupe0(fiche.id_etat_final)) return true;
+    // Sinon : verrouillée si assignée à un autre agent qualité et état hors Debrief/À vérifier
     if (!user?.id || !fiche?.id_qualite) return false;
     if (Number(fiche.id_qualite) === Number(user.id)) return false;
     if (etatsQualiteOuverts.includes(Number(fiche.id_etat_final))) return false;
     return true;
   };
 
-  const LOCK_MESSAGE = 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".';
+  const getLockMessage = (fiche) =>
+    !isEtatGroupe0(fiche?.id_etat_final)
+      ? 'Cette fiche est validée et verrouillée pour tout le monde.'
+      : 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".';
 
   // Fonctions pour gérer le modal KO
   const openKoModal = (fiche) => {
@@ -702,7 +708,7 @@ const ControleQualite = () => {
                         onChange={(e) => handleNouvelEtatSelect(fiche, e.target.value)}
                         className="etat-select"
                         disabled={updateEtatMutation.isLoading || isFicheLockedForUser(fiche)}
-                        title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : undefined}
+                        title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : undefined}
                       >
                         <option value="">{isEtatGroupe0(fiche.id_etat_final) ? '-- Sélectionner --' : 'Validé'}</option>
                         {etatsPhase0.map(etat => (
@@ -768,13 +774,13 @@ const ControleQualite = () => {
                           placeholder="Commentaire qualité... (Ctrl+Enter pour sauvegarder)"
                           rows={2}
                           readOnly={isFicheLockedForUser(fiche)}
-                          title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : undefined}
+                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : undefined}
                         />
                       </div>
                     </td>
                     <td>
                       {isFicheLockedForUser(fiche) && (
-                        <span className="fiche-locked-badge" title={LOCK_MESSAGE}>Verrouillée</span>
+                        <span className="fiche-locked-badge" title={getLockMessage(fiche)}>Verrouillée</span>
                       )}
                       {fiche.qualite_assignee_pseudo ? (
                         <span className="qualite-user-name" title={`Utilisateur qualité assigné: ${fiche.qualite_assignee_pseudo}`}>
@@ -804,7 +810,7 @@ const ControleQualite = () => {
                           className="btn-validate-icon"
                           onClick={() => validateQualiteMutation.mutate(fiche.hash)}
                           disabled={validateQualiteMutation.isLoading || isFicheLockedForUser(fiche)}
-                          title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : "Valider et passer en En-Attente"}
+                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : "Valider et passer en En-Attente"}
                         >
                           <FaCheckCircle />
                         </button>
@@ -812,7 +818,7 @@ const ControleQualite = () => {
                           className="btn-validate-ko"
                           onClick={() => openKoModal(fiche)}
                           disabled={validateQualiteKoMutation.isLoading || isFicheLockedForUser(fiche)}
-                          title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : "Valider (KO) : En-Attente, fiche non comptabilisée pour l'agent"}
+                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : "Valider (KO) : En-Attente, fiche non comptabilisée pour l'agent"}
                         >
                           <FaBan /> KO
                         </button>
@@ -820,7 +826,7 @@ const ControleQualite = () => {
                           className="btn-validate-hc"
                           onClick={() => openHcModal(fiche)}
                           disabled={validateQualiteHcMutation.isLoading || isFicheLockedForUser(fiche)}
-                          title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : "Valider (HC) : état HC, fiche hors cible"}
+                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : "Valider (HC) : état HC, fiche hors cible"}
                         >
                           HC
                         </button>
@@ -829,7 +835,7 @@ const ControleQualite = () => {
                           className="btn-alerte-ko"
                           onClick={() => openAlertModal(fiche)}
                           disabled={sendAlerteKoMutation.isLoading || (fiche.nb_alertes ?? 0) >= 1 || isFicheLockedForUser(fiche)}
-                          title={isFicheLockedForUser(fiche) ? LOCK_MESSAGE : ((fiche.nb_alertes ?? 0) >= 1 ? 'Une alerte a déjà été envoyée pour cette fiche' : "Envoyer une alerte à l'agent qui a inséré la fiche (3 alertes avant KO)")}
+                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : ((fiche.nb_alertes ?? 0) >= 1 ? 'Une alerte a déjà été envoyée pour cette fiche' : "Envoyer une alerte à l'agent qui a inséré la fiche (3 alertes avant KO)")}
                         >
                           <FaBell /> Alerte
                         </button>
