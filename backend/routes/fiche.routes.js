@@ -965,6 +965,7 @@ router.get('/', authenticate, async (req, res) => {
     const selectStartTime = Date.now();
     const selectQuery = `SELECT fiche.*,
        etat.titre as etat_titre,
+       etat.color as etat_color,
        cq_e.titre as cqe,
        cq_d.titre as cqd,
        install.nom as installeur,

@@ -499,8 +499,9 @@ const Dashboard = () => {
     });
   };
 
-  // Obtenir la couleur de l'état (utiliser etatsData pour inclure tous les états, y compris groupe 0 en session confirmateur)
-  const getEtatColor = (etatId) => {
+  // Obtenir la couleur de l'état : priorité à etat_color renvoyé par l'API (couvre tous les états dont ceux hors filtre confirmateur), sinon etatsData
+  const getEtatColor = (etatId, fiche) => {
+    if (fiche?.etat_color) return fiche.etat_color;
     const etat = (etatsData || []).find(e => e.id === etatId || e.id === Number(etatId));
     return etat?.color || '#cccccc';
   };
@@ -1360,7 +1361,7 @@ const Dashboard = () => {
                 <tbody>
                   {fiches.map((fiche) => {
                     const indicators = checkIndicators(fiche.id_etat_histo);
-                    const etatColor = getEtatColor(fiche.id_etat_final);
+                    const etatColor = getEtatColor(fiche.id_etat_final, fiche);
                     const produitColor = getProduitColor(fiche.produit);
                     
                     return (
