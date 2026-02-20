@@ -334,7 +334,7 @@ const Dashboard = () => {
       console.timeEnd('[PERF] Requête API fiches - Total');
       return response.data;
     },
-    { keepPreviousData: true, enabled: appliedFilters.fiche_search === true }
+    { keepPreviousData: true, enabled: !!appliedFilters.fiche_search }
   );
 
   // Filtrer les utilisateurs par fonction
