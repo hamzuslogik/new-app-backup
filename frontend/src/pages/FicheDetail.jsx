@@ -2430,6 +2430,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 { value: 'LES DEUX', label: 'LES DEUX' }
               ])}
               {renderField('Nombre de pièces', 'nb_pieces', fiche.nb_pieces || '-', 'number')}
+              {renderField('Nombre de pans', 'nb_pans', fiche.nb_pans || '-', 'number')}
               {renderField('Orientation de la toiture', 'orientation_toiture', fiche.orientation_toiture || fiche.conf_orientation_toiture || '-', 'select', [
                 { value: 'NORD', label: 'NORD' },
                 { value: 'SUD', label: 'SUD' },
@@ -2440,6 +2441,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 { value: 'SUD-EST', label: 'SUD-EST' },
                 { value: 'SUD-OUEST', label: 'SUD-OUEST' }
               ])}
+              {renderField('Zones d\'ombres', 'zones_ombres', fiche.zones_ombres || fiche.conf_zones_ombres || '-')}
               {renderField('Proche d\'un site classé', 'site_classe', fiche.site_classe || fiche.conf_site_classe || '-', 'select', [
                 { value: 'OUI', label: 'Oui' },
                 { value: 'NON', label: 'Non' }
