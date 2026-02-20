@@ -1748,8 +1748,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     const isCommercial = userFonction == 5 && hasPermission('fiches_edit') && ficheData.id_commercial === user.id;
     const isConfirmateur = userFonction == 6;
     const isREConfirmation = userFonction == 14; // Session RE confirmation : modification rapide des champs
+    const isBackoffice = userFonction == 11; // Backoffice : modification rapide des champs
     
-    const canEdit = !readOnly && userFonction != null && (isAdmin || isQualiteQualif || isAgent || isCommercial || isConfirmateur || isREConfirmation);
+    const canEdit = !readOnly && userFonction != null && (isAdmin || isQualiteQualif || isAgent || isCommercial || isConfirmateur || isREConfirmation || isBackoffice);
     
 
     return (

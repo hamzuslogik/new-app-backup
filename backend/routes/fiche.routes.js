@@ -3138,8 +3138,8 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     } else if (user.fonction === 6) {
       // Confirmateurs : peuvent modifier toutes les fiches (pas de restriction)
       // Pas de vérification d'assignation nécessaire
-    } else if (user.fonction === 14 || user.fonction === 13) {
-      // RE Confirmation (14), RP Confirmation (13) : peuvent modifier les champs des fiches
+    } else if (user.fonction === 14 || user.fonction === 13 || user.fonction === 11) {
+      // RE Confirmation (14), RP Confirmation (13), Backoffice (11) : peuvent modifier les champs des fiches (modification rapide)
       // Pas de vérification d'assignation nécessaire
     } else if (user.fonction === 2) {
       // Superviseur Qualification : peuvent modifier les fiches des agents sous leur responsabilité
