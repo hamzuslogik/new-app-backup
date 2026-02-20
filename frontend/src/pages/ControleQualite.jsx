@@ -679,10 +679,6 @@ const ControleQualite = () => {
                   <tr
                     key={fiche.hash}
                     className={isFicheLockedForUser(fiche) ? 'fiche-row-locked' : ''}
-                    title={[
-                      isFicheLockedForUser(fiche) ? LOCK_MESSAGE : null,
-                      fiche.commentaire_qualite ? `Commentaire agent qualification: ${fiche.commentaire_qualite}` : null
-                    ].filter(Boolean).join('\n\n') || undefined}
                   >
                     <td>{fiche.nom || '-'}</td>
                     <td>{fiche.prenom || '-'}</td>
