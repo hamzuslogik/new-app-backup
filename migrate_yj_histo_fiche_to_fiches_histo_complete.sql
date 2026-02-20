@@ -268,6 +268,7 @@ SET @has_id_confirmateur_2_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOW
 SET @has_id_confirmateur_3_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) = 'id_confirmateur_3');
 SET @has_nom_confirmateur_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) = 'nom_confirmateur');
 SET @has_conf_commentaire_produit_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) = 'conf_commentaire_produit');
+SET @has_commentaire_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) = 'commentaire');
 SET @has_conf_rdv_avec_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) = 'conf_rdv_avec');
 
 -- Dates
@@ -356,6 +357,8 @@ SELECT
     @has_date_planning_col as has_date_planning,
     COALESCE(@date_planning_col_name, '-') as colonne_date_planning,
     @has_id_confirmateur_col as has_id_confirmateur,
+    @has_conf_commentaire_produit_col as has_conf_commentaire_produit,
+    @has_commentaire_col as has_commentaire,
     @has_date_appel_time_col as has_date_appel_time,
     @has_ph3_pac_col as has_ph3_pac;
 
@@ -501,7 +504,9 @@ SET @id_confirmateur_3_select = CASE
     ELSE ''
 END;
 
+-- conf_commentaire_produit (fiches_histo) <- commentaire (yj_histo_fiche) ; fallback conf_commentaire_produit si commentaire absent
 SET @conf_commentaire_produit_select = CASE
+    WHEN @fh_has_conf_commentaire_produit > 0 AND @has_commentaire_col > 0 THEN 'hf.`commentaire`'
     WHEN @fh_has_conf_commentaire_produit > 0 AND @has_conf_commentaire_produit_col > 0 THEN 'hf.`conf_commentaire_produit`'
     ELSE ''
 END;
