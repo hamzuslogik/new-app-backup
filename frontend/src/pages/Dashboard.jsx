@@ -99,7 +99,7 @@ const Dashboard = () => {
   // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
   const [appliedFilters, setAppliedFilters] = useState(getInitialFilters);
   
-  // Lire les paramètres de l'URL et les appliquer aux filtres + lancer la recherche
+  // Lire les paramètres de l'URL ou afficher par défaut les fiches confirmées du jour (basé fiches_histo)
   useEffect(() => {
     const urlParams = Object.fromEntries(searchParams.entries());
     if (Object.keys(urlParams).length > 0 && urlParams.fiche_search === '1') {
@@ -115,8 +115,31 @@ const Dashboard = () => {
       setFilters(newFilters);
       setAppliedFilters(newFilters);
       setShowFilters(true);
+    } else if (Object.keys(urlParams).length === 0 && user) {
+      // Pas de paramètres : afficher par défaut les fiches confirmées du jour (fiches_histo id_etat=7, date_creation)
+      // Confirmateur : fiches statuées par lui aujourd'hui (fiches_histo id_confirmateur)
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const defaultFilters = {
+        page: 1,
+        limit: 999999,
+        fiche_search: true,
+        id_etat_final: user.fonction === 6 ? '' : 7,
+        date_champ: user.fonction === 6 ? 'fiches_histo' : 'fiches_histo_confirmation',
+        date_debut: todayStr,
+        date_fin: todayStr,
+        time_debut: '00:00:00',
+        time_fin: '23:59:59',
+        include_archive: false,
+        ko: '',
+        id_centre: '',
+        id_sous_etat: '',
+      };
+      setFilters(defaultFilters);
+      setAppliedFilters(defaultFilters);
+      setShowFilters(true);
     }
-  }, [searchParams]);
+  }, [searchParams, user]);
 
   // Ref pour le champ critère dans le modal (focus à l'ouverture)
   const searchModalCritereRef = useRef(null);
