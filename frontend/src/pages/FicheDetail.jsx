@@ -1005,6 +1005,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           : `${rdvFormData.date_rdv_time}:00`,
         id_etat_final: 7, // Toujours CONFIRMER (7) - RDV_URGENT est géré via id_qualif
         produit: rdvFormData.produit ? parseInt(rdvFormData.produit) : null,
+        conf_produit: rdvFormData.produit ? parseInt(rdvFormData.produit) : null,
         id_confirmateur: rdvFormData.id_confirmateur ? parseInt(rdvFormData.id_confirmateur) : null,
         id_confirmateur_2: rdvFormData.id_confirmateur_2 ? parseInt(rdvFormData.id_confirmateur_2) : null,
         id_confirmateur_3: rdvFormData.id_confirmateur_3 ? parseInt(rdvFormData.id_confirmateur_3) : null,
