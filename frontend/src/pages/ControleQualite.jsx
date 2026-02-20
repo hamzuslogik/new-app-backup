@@ -669,6 +669,7 @@ const ControleQualite = () => {
                   <th>Date Insertion</th>
                   <th>État Actuel</th>
                   <th>Nouvel État</th>
+                  <th>Commentaire agent</th>
                   <th>Commentaire Qualité</th>
                   <th>Utilisateur Qualité</th>
                   <th>Actions</th>
@@ -710,6 +711,9 @@ const ControleQualite = () => {
                             </option>
                           ))}
                       </select>
+                    </td>
+                    <td className="comment-agent-cell">
+                      <span className="comment-agent-text">{fiche.commentaire || '-'}</span>
                     </td>
                     <td>
                       <div className="comment-quick-edit-container">
