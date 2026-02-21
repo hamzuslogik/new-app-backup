@@ -1830,7 +1830,7 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
     const dateStart = `${d} 00:00:00`;
     const dateEnd = `${d} 23:59:59`;
 
-    // Onglet "Production RDV" : toujours depuis confirmations, filtré par date de confirmation
+    // Onglet "Production RDV" : depuis fiches_histo, filtré par date_creation (date de confirmation)
     if (type === 'production_rdv') {
       rows = await query(
         `SELECT 
@@ -1841,26 +1841,27 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
           f.adresse,
           f.cp,
           f.ville,
-          c.date_rdv_time,
-          COALESCE(c.id_commercial, f.id_commercial) AS id_commercial,
+          COALESCE(h.date_rdv_time, f.date_rdv_time) AS date_rdv_time,
+          f.id_commercial,
           f.id_commercial_2,
           f.id_etat_final,
           com.pseudo AS commercial_pseudo,
           com2.pseudo AS commercial2_pseudo,
           e.titre AS etat_titre
-        FROM confirmations c
-        INNER JOIN fiches f ON f.id = c.id_fiche
-        LEFT JOIN utilisateurs com ON com.id = COALESCE(c.id_commercial, f.id_commercial)
-        LEFT JOIN utilisateurs com2 ON com2.id = f.id_commercial_2
+        FROM fiches_histo h
+        INNER JOIN fiches f ON f.id = h.id_fiche
+        LEFT JOIN utilisateurs com ON f.id_commercial = com.id
+        LEFT JOIN utilisateurs com2 ON f.id_commercial_2 = com2.id
         LEFT JOIN etats e ON f.id_etat_final = e.id
-        WHERE (f.archive = 0 OR f.archive IS NULL)
+        WHERE h.id_etat = 7
+          AND (f.archive = 0 OR f.archive IS NULL)
           AND (f.ko = 0 OR f.ko IS NULL)
-          AND c.date_rdv_time IS NOT NULL
-          AND DATE(c.date_creation) = ?
-        ORDER BY c.date_rdv_time ASC`,
-        [d]
+          AND (COALESCE(h.date_rdv_time, f.date_rdv_time) IS NOT NULL)
+          AND h.date_creation >= ? AND h.date_creation <= ?
+        ORDER BY COALESCE(h.date_rdv_time, f.date_rdv_time) ASC`,
+        [dateStart, dateEnd]
       );
-      console.log('[rdv-vue] Source: confirmations (Production RDV, date_confirmation).', rows?.length ?? 0, 'lignes');
+      console.log('[rdv-vue] Source: fiches_histo (Production RDV, date_creation).', rows?.length ?? 0, 'lignes');
     } else if (isPastDate) {
       // Date passée : seul l'onglet "jour" affiche des données (source: table confirmations)
       if (type === 'affilie' || type === 'non_affilie') {
