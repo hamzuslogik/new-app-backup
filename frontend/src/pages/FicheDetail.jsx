@@ -6732,7 +6732,7 @@ const CreateRdvModal = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content rdv-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Créer un rendez-vous</h2>
+          <h2 style={{ color: '#000' }}>Créer un rendez-vous</h2>
           <button className="modal-close" onClick={onClose}>
             <FaTimes />
           </button>
