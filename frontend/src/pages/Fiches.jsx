@@ -11,6 +11,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
+import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import './Fiches.css';
 
 const Fiches = () => {
@@ -1151,6 +1152,7 @@ const Fiches = () => {
           isLoading={updateMutation.isLoading}
         />
       )}
+      <ScrollToTopButton />
     </div>
   );
 };
