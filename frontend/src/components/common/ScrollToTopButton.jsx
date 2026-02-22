@@ -1,44 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { FaArrowUp } from 'react-icons/fa';
 import './ScrollToTopButton.css';
 
 const ScrollToTopButton = () => {
   const [visible, setVisible] = useState(false);
-  const [scrollContainer, setScrollContainer] = useState(null);
+  const scrollContainerRef = useRef(null);
 
   useEffect(() => {
-    // Le scroll se fait sur .content-wrapper (Layout)
-    const container = document.querySelector('.content-wrapper') || window;
-    setScrollContainer(container);
+    scrollContainerRef.current = document.querySelector('.content-wrapper');
   }, []);
 
   useEffect(() => {
-    if (!scrollContainer) return;
+    const container = scrollContainerRef.current;
+    const win = window;
 
-    const getScrollTop = () => scrollContainer === window
-      ? window.scrollY || document.documentElement.scrollTop
-      : scrollContainer.scrollTop;
+    const getScrollTop = () => {
+      const elScroll = container?.scrollTop ?? 0;
+      const winScroll = win.scrollY ?? document.documentElement.scrollTop ?? 0;
+      return Math.max(elScroll, winScroll);
+    };
 
-    const handleScroll = () => setVisible(getScrollTop() > 300);
+    const handleScroll = () => setVisible(getScrollTop() > 150);
 
-    handleScroll(); // Vérifier l'état initial (ex: retour navigateur)
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [scrollContainer]);
+    handleScroll();
+    if (container) container.addEventListener('scroll', handleScroll, { passive: true });
+    win.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      if (container) container.removeEventListener('scroll', handleScroll);
+      win.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   const scrollToTop = () => {
-    if (scrollContainer) {
-      if (scrollContainer === window) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
+    const container = scrollContainerRef.current;
+    if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (!visible) return null;
-
-  return (
+  const buttonEl = (
     <button
       type="button"
       className="scroll-to-top-btn"
@@ -49,6 +49,9 @@ const ScrollToTopButton = () => {
       <FaArrowUp />
     </button>
   );
+
+  if (!visible) return null;
+  return createPortal(buttonEl, document.body);
 };
 
 export default ScrollToTopButton;
