@@ -6335,9 +6335,6 @@ const PlanningViewForModal = ({
   
   const handleSave = (date, hour) => {
     if (editValue === '' || editValue === null || editValue === undefined) {
-      if (onUpdateAvailability) {
-        onUpdateAvailability(date, hour, 0, 'hour');
-      }
       setEditingCell(null);
       setEditValue('');
       return;
@@ -6362,12 +6359,7 @@ const PlanningViewForModal = ({
   const handleCellAvailabilityChange = (date, hour, value) => {
     const key = `${date}-${hour}`;
     if (value === '' || value === null || value === undefined) {
-      const newValues = { ...cellAvailabilityValues };
-      delete newValues[key];
-      setCellAvailabilityValues(newValues);
-      if (onUpdateAvailability) {
-        onUpdateAvailability(date, hour, 0, 'hour');
-      }
+      setCellAvailabilityValues({ ...cellAvailabilityValues, [key]: '' });
       return;
     }
     const numValue = parseInt(value);
@@ -6490,9 +6482,6 @@ const PlanningViewForModal = ({
                                   handleSave(day.date, slot.hour);
                                 } else if (e.key === 'Escape') {
                                   handleCancel();
-                                } else if (e.key === 'Backspace' && editValue === '') {
-                                  e.preventDefault();
-                                  handleSave(day.date, slot.hour);
                                 }
                               }}
                               style={{
@@ -6559,15 +6548,6 @@ const PlanningViewForModal = ({
                                   ? cellAvailabilityValues[`${day.date}-${slot.hour}`] 
                                   : (availabilityCount !== null ? availabilityCount : '')}
                                 onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Backspace') {
-                                    const val = cellAvailabilityValues[`${day.date}-${slot.hour}`] ?? availabilityCount ?? '';
-                                    if (val === '' || val === 0 || String(val).length <= 1) {
-                                      e.preventDefault();
-                                      handleCellAvailabilityChange(day.date, slot.hour, '');
-                                    }
-                                  }
-                                }}
                                 onClick={(e) => e.stopPropagation()}
                                 onFocus={(e) => e.stopPropagation()}
                                 style={{
@@ -6579,7 +6559,7 @@ const PlanningViewForModal = ({
                                 }}
                                 min="0"
                                 placeholder="-"
-                                title="Modifier la disponibilité (Backspace pour supprimer)"
+                                title="Modifier la disponibilité (Backspace pour effacer puis saisir la nouvelle valeur)"
                               />
                             )}
                           </>
@@ -6600,15 +6580,6 @@ const PlanningViewForModal = ({
                                   ? cellAvailabilityValues[`${day.date}-${slot.hour}`] 
                                   : ''}
                                 onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Backspace') {
-                                    const val = cellAvailabilityValues[`${day.date}-${slot.hour}`] ?? '';
-                                    if (val === '' || String(val).length <= 1) {
-                                      e.preventDefault();
-                                      handleCellAvailabilityChange(day.date, slot.hour, '');
-                                    }
-                                  }
-                                }}
                                 onClick={(e) => e.stopPropagation()}
                                 onFocus={(e) => e.stopPropagation()}
                                 style={{
@@ -6620,7 +6591,7 @@ const PlanningViewForModal = ({
                                 }}
                                 min="0"
                                 placeholder="-"
-                                title="Modifier la disponibilité (Backspace pour supprimer)"
+                                title="Modifier la disponibilité (Backspace pour effacer puis saisir la nouvelle valeur)"
                               />
                             )}
                           </>
