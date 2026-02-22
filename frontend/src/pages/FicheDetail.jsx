@@ -1785,6 +1785,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 <select
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveField(field); } }}
                   className="form-control"
                   autoFocus
                 >
@@ -1799,15 +1800,18 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 <textarea
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); handleSaveField(field); } }}
                   className="form-control"
                   autoFocus
                   rows={4}
+                  title="Ctrl+Entrée pour enregistrer"
                 />
               ) : (
                 <input
                   type={type}
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveField(field); } }}
                   className="form-control"
                   autoFocus
                 />
