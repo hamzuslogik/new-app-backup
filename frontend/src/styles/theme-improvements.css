@@ -416,11 +416,19 @@ table.availability-table td.time-slot-header span {
 .week-navigation .week-info *,
 .week-navigation .week-info span,
 .planning-week-navigation,
-.planning-week-navigation *,
 .planning-week-navigation .week-info,
 .planning-week-navigation .week-info *,
 .planning-week-navigation .week-info span {
   color: #ffffff !important;
+}
+
+/* Exception : boutons nav semaine (FicheDetail planning) - noir */
+.planning-week-navigation .nav-btn,
+.planning-week-navigation .nav-btn *,
+.planning-week-navigation .nav-btn svg,
+.planning-week-navigation .nav-btn path {
+  color: #000000 !important;
+  fill: #000000 !important;
 }
 
 /* Header du planning hebdomadaire - texte blanc sur fond sombre */

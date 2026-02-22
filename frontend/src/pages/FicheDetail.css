@@ -1436,8 +1436,12 @@
 
 .modal-header h2 {
   margin: 0;
-  color: #9cbfc8;
+  color: #000 !important;
   font-weight: bold;
+}
+
+.rdv-modal .modal-header h2 {
+  color: #000 !important;
 }
 
 .modal-close {
