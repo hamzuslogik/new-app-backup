@@ -247,7 +247,7 @@
 .planning-week-navigation .nav-btn {
   background: transparent;
   border: none;
-  color: var(--label-color, #065F46) !important;
+  color: #000 !important;
   font-size: 15.3px;
   cursor: pointer;
   padding: 4px 8px;
