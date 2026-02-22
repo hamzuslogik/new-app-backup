@@ -351,6 +351,11 @@ const WorkflowsTab = () => {
       if (config.type) {
         parts.push(`type: ${config.type}`);
       }
+    } else if (action.type === 'execute_sql') {
+      if (config.sql) {
+        const preview = config.sql.substring(0, 50);
+        parts.push(`"${preview}${config.sql.length > 50 ? '...' : ''}"`);
+      }
     }
     
     if (action.delay_seconds > 0) {
@@ -726,6 +731,7 @@ const WorkflowsTab = () => {
                           <option value="change_etat">Changer l'état</option>
                           <option value="webhook">Webhook HTTP</option>
                           <option value="system_message">Message système</option>
+                          <option value="execute_sql">Exécuter requête SQL</option>
                         </select>
                       </div>
                       <div className="form-group">
@@ -1098,6 +1104,41 @@ const WorkflowsTab = () => {
                         )}
                       </>
                     )}
+
+                    {action.type === 'execute_sql' && (
+                      <>
+                        <div className="form-group">
+                          <label>Requête SQL *</label>
+                          <textarea
+                            value={action.config?.sql || ''}
+                            onChange={(e) => updateAction(index, 'config', { ...action.config, sql: e.target.value })}
+                            rows="6"
+                            placeholder="Ex: UPDATE fiches SET id_confirmateur = {fiche.id_confirmateur} WHERE id = {fiche.id}"
+                            required
+                            style={{ fontFamily: 'monospace', fontSize: '12px' }}
+                          />
+                        </div>
+                        <div style={{ padding: '10px', background: '#e3f2fd', borderRadius: '6px', fontSize: '12px', marginBottom: '12px' }}>
+                          <strong>Variables disponibles (utiliser entre accolades) :</strong>
+                          <ul style={{ margin: '8px 0 0 16px', padding: 0 }}>
+                            <li><code>{'{fiche.id}'}</code> — ID de la fiche</li>
+                            <li><code>{'{fiche.id_confirmateur}'}</code> — Confirmateur principal</li>
+                            <li><code>{'{fiche.id_confirmateur_2}'}</code> — Confirmateur 2</li>
+                            <li><code>{'{fiche.id_confirmateur_3}'}</code> — Confirmateur 3</li>
+                            <li><code>{'{fiche.id_agent}'}</code> — Agent assigné</li>
+                            <li><code>{'{fiche.id_qualite}'}</code> — Agent qualité</li>
+                            <li><code>{'{fiche.id_commercial}'}</code> — Commercial principal</li>
+                            <li><code>{'{fiche.id_commercial_2}'}</code> — Commercial 2</li>
+                            <li><code>{'{fiche.id_insert}'}</code> — Agent créateur</li>
+                            <li><code>{'{fiche.id_etat_final}'}</code> — État actuel</li>
+                            <li><code>{'{user.id}'}</code> — ID de l&apos;utilisateur qui a déclenché</li>
+                          </ul>
+                          <p style={{ margin: '8px 0 0 0', color: '#666' }}>
+                            Les variables sont remplacées de façon sécurisée (paramètres préparés). Requêtes SELECT, INSERT, UPDATE, DELETE supportées.
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
                 <button type="button" className="btn-secondary" onClick={addAction}>
@@ -1189,6 +1230,11 @@ const WorkflowsTab = () => {
                               {a.config?.cibles_utilisateurs && Array.isArray(a.config.cibles_utilisateurs) && (
                                 <>Utilisateurs: {a.config.cibles_utilisateurs.length}</>
                               )}
+                            </div>
+                          )}
+                          {a.type === 'execute_sql' && a.config?.sql && (
+                            <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                              {a.config.sql.substring(0, 40)}{a.config.sql.length > 40 ? '...' : ''}
                             </div>
                           )}
                           {a.delay_seconds > 0 && (

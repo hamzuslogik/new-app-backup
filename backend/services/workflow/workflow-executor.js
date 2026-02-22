@@ -363,6 +363,9 @@ async function executeAction(actionType, config, eventData) {
     case 'system_message':
       return await executeSystemMessageAction(config, eventData);
     
+    case 'execute_sql':
+      return await executeSQLAction(config, eventData);
+    
     default:
       throw new Error(`Type d'action non supporté: ${actionType}`);
   }
@@ -899,6 +902,56 @@ async function executeSystemMessageAction(config, eventData) {
   console.log(`[WORKFLOW] ========== executeSystemMessageAction FIN ==========`);
   
   return { success: true, message: 'Message système créé', system_message_id: result.insertId };
+}
+
+/**
+ * Action : Exécuter une requête SQL
+ * Les variables {fiche.id}, {fiche.id_confirmateur}, etc. sont remplacées par des paramètres pour éviter l'injection SQL.
+ */
+async function executeSQLAction(config, eventData) {
+  const { query: dbQuery, queryOne } = require('../../config/database');
+  const { sql: sqlTemplate } = config;
+
+  if (!sqlTemplate || typeof sqlTemplate !== 'string' || sqlTemplate.trim() === '') {
+    throw new Error('La requête SQL est requise pour l\'action execute_sql');
+  }
+
+  if (!eventData.fiche && eventData.fiche_id) {
+    eventData.fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [eventData.fiche_id]);
+  }
+
+  const sqlTrimmed = sqlTemplate.trim();
+  const regex = /\{([^}]+)\}/g;
+  const parts = [];
+  const params = [];
+  let lastIndex = 0;
+  let m;
+
+  while ((m = regex.exec(sqlTrimmed)) !== null) {
+    parts.push(sqlTrimmed.slice(lastIndex, m.index));
+    const value = getFieldValue(m[1].trim(), eventData);
+    params.push(value !== null && value !== undefined ? value : null);
+    lastIndex = regex.lastIndex;
+  }
+  parts.push(sqlTrimmed.slice(lastIndex));
+
+  const sql = parts.join('?');
+
+  if (!sql || sql.trim() === '') {
+    throw new Error('Requête SQL vide après remplacement des variables');
+  }
+
+  const result = await dbQuery(sql, params);
+  const isArray = Array.isArray(result);
+  const affectedRows = isArray ? result.length : (result?.affectedRows ?? 0);
+  const insertId = isArray ? null : (result?.insertId ?? null);
+
+  return {
+    success: true,
+    message: 'Requête exécutée',
+    affectedRows: typeof affectedRows === 'number' ? affectedRows : 0,
+    insertId: insertId || undefined
+  };
 }
 
 /**
