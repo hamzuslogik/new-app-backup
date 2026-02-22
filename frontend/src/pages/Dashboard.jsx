@@ -597,24 +597,25 @@ const Dashboard = () => {
     return str.length > 500 ? str.slice(0, 497) + '...' : str;
   };
 
-  // Obtenir les confirmateurs formatés (afficher uniquement le dernier confirmateur)
+  // États SIGNER (TOUT SIGNER) : 13, 16, 44, 45
+  const ETATS_SIGNER = [13, 16, 44, 45];
+  const isFicheSigner = (fiche) => fiche?.id_etat_final && ETATS_SIGNER.includes(Number(fiche.id_etat_final));
+
+  // Obtenir les confirmateurs formatés : pour SIGNER avec 2-3 confirmateurs → afficher tous ; sinon → dernier uniquement
   const getConfirmateursFormatted = (fiche) => {
-    // Vérifier dans l'ordre inverse (3, 2, 1) pour obtenir le dernier confirmateur
-    if (fiche.id_confirmateur_3) {
-      const conf3 = getUserName(fiche.id_confirmateur_3);
-      if (conf3) return conf3;
+    const conf1 = fiche.id_confirmateur ? getUserName(fiche.id_confirmateur) : '';
+    const conf2 = fiche.id_confirmateur_2 ? getUserName(fiche.id_confirmateur_2) : '';
+    const conf3 = fiche.id_confirmateur_3 ? getUserName(fiche.id_confirmateur_3) : '';
+    const nbConfirmateurs = [conf1, conf2, conf3].filter(Boolean).length;
+
+    // Tout signer + 2 ou 3 confirmateurs : afficher tous
+    if (isFicheSigner(fiche) && nbConfirmateurs >= 2) {
+      return [conf1, conf2, conf3].filter(Boolean).join(' | ');
     }
-    
-    if (fiche.id_confirmateur_2) {
-      const conf2 = getUserName(fiche.id_confirmateur_2);
-      if (conf2) return conf2;
-    }
-    
-    if (fiche.id_confirmateur) {
-      const conf1 = getUserName(fiche.id_confirmateur);
-      if (conf1) return conf1;
-    }
-    
+    // Sinon : afficher uniquement le dernier (ordre 3, 2, 1)
+    if (conf3) return conf3;
+    if (conf2) return conf2;
+    if (conf1) return conf1;
     return '';
   };
 
