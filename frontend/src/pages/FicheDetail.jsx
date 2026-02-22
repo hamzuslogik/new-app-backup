@@ -106,6 +106,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     produit: '',
     conf_rdv_avec: '',
     // Champs spécifiques PV
+    surface_habitable: '',
     conf_orientation_toiture: '',
     conf_zones_ombres: '',
     conf_site_classe: '',
@@ -906,6 +907,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       produit: ficheData?.produit ? String(ficheData.produit) : '',
       conf_rdv_avec: ficheData?.conf_rdv_avec || '',
       // Champs spécifiques PV
+      surface_habitable: ficheData?.surface_habitable || '',
       conf_orientation_toiture: (ficheData?.conf_orientation_toiture || ficheData?.orientation_toiture || '').toString(),
       conf_zones_ombres: (ficheData?.conf_zones_ombres || ficheData?.zones_ombres || '').toString(),
       conf_site_classe: (ficheData?.conf_site_classe || ficheData?.site_classe || '').toString(),
@@ -1016,6 +1018,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         id_confirmateur_3: rdvFormData.id_confirmateur_3 ? parseInt(rdvFormData.id_confirmateur_3) : null,
         conf_rdv_avec: rdvFormData.conf_rdv_avec || null,
         // Champs spécifiques PV
+        surface_habitable: rdvFormData.surface_habitable ? parseFloat(rdvFormData.surface_habitable) : null,
         conf_orientation_toiture: rdvFormData.conf_orientation_toiture || null,
         conf_zones_ombres: rdvFormData.conf_zones_ombres || null,
         conf_site_classe: rdvFormData.conf_site_classe || null,
@@ -1075,6 +1078,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           id_confirmateur_3: '',
           produit: '',
           conf_rdv_avec: '',
+          surface_habitable: '',
           conf_orientation_toiture: '',
           conf_zones_ombres: '',
           conf_site_classe: '',
@@ -6768,18 +6772,12 @@ const CreateRdvModal = ({
                         style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                       />
                       <span style={{ fontWeight: 'bold' }}>RDV URGENT</span>
-                      {isAutoUrgent && !rdvFormData.is_urgent && (
+                      {isAutoUrgent && (
                         <span style={{ fontSize: '0.72em', color: '#f44336', fontStyle: 'italic', marginLeft: '8px' }}>
                           (Automatique : RDV aujourd'hui ou demain)
                         </span>
                       )}
                     </label>
-                    <p style={{ marginTop: '4px', fontSize: '0.77em', color: '#666', fontStyle: 'italic' }}>
-                      Par défaut, le rendez-vous est en état CONFIRMER. Cochez cette case pour le marquer comme urgent.
-                      {isAutoUrgent && (
-                        <span style={{ color: '#f44336', fontWeight: 'bold' }}> Les RDV d'aujourd'hui ou de demain sont automatiquement marqués comme urgents.</span>
-                      )}
-                    </p>
                   </>
                 );
               })()}
@@ -7022,6 +7020,18 @@ const CreateRdvModal = ({
                   {isPV && (
                     <>
                       <div className="form-row">
+                        <div className="form-group">
+                          <label htmlFor="rdv_surface_habitable">Surface habitable (m²)</label>
+                          <input
+                            type="number"
+                            id="rdv_surface_habitable"
+                            className="form-control"
+                            value={rdvFormData.surface_habitable || ''}
+                            onChange={(e) => setRdvFormData({...rdvFormData, surface_habitable: e.target.value})}
+                            placeholder="Ex: 120"
+                            min="0"
+                          />
+                        </div>
                         <div className="form-group">
                           <label htmlFor="rdv_orientation">Orientation toiture</label>
                           <select
