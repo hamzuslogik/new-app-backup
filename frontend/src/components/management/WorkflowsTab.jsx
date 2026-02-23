@@ -1132,6 +1132,12 @@ const WorkflowsTab = () => {
                             <li><code>{'{fiche.id_insert}'}</code> — Agent créateur</li>
                             <li><code>{'{fiche.id_etat_final}'}</code> — État actuel</li>
                             <li><code>{'{user.id}'}</code> — ID de l&apos;utilisateur qui a déclenché</li>
+                            <li style={{ listStyle: 'none', marginTop: '6px' }}><strong>Date / DateTime :</strong></li>
+                            <li><code>{'{NOW}'}</code> ou <code>{'{CURRENT_DATE}'}</code> — Date du jour (YYYY-MM-DD)</li>
+                            <li><code>{'{NOW_DATETIME}'}</code> ou <code>{'{CURRENT_DATETIME}'}</code> — Date et heure actuelles (YYYY-MM-DD HH:MM:SS)</li>
+                            <li><code>{'{fiche.date_rdv_time}'}</code> — Date/heure RDV</li>
+                            <li><code>{'{fiche.date_insert_time}'}</code> — Date/heure création</li>
+                            <li><code>{'{fiche.date_modif_time}'}</code> — Date/heure dernière modification</li>
                           </ul>
                           <p style={{ margin: '8px 0 0 0', color: '#666' }}>
                             Les variables sont remplacées de façon sécurisée (paramètres préparés). Requêtes SELECT, INSERT, UPDATE, DELETE supportées.

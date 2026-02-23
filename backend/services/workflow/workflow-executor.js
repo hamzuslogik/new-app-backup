@@ -905,8 +905,23 @@ async function executeSystemMessageAction(config, eventData) {
 }
 
 /**
+ * Résout une variable pour l'action SQL (date/datetime spéciaux + champs eventData)
+ */
+function getSQLVariableValue(key, eventData) {
+  const k = key.toUpperCase().replace(/\s+/g, '_');
+  const now = new Date();
+  if (k === 'NOW' || k === 'CURRENT_DATE' || k === 'DATE_NOW') {
+    return now.toISOString().slice(0, 10);
+  }
+  if (k === 'NOW_DATETIME' || k === 'CURRENT_DATETIME' || k === 'DATETIME_NOW') {
+    return now.toISOString().slice(0, 19).replace('T', ' ');
+  }
+  return getFieldValue(key, eventData);
+}
+
+/**
  * Action : Exécuter une requête SQL
- * Les variables {fiche.id}, {fiche.id_confirmateur}, etc. sont remplacées par des paramètres pour éviter l'injection SQL.
+ * Les variables {fiche.id}, {fiche.id_confirmateur}, {NOW}, {NOW_DATETIME}, etc. sont remplacées par des paramètres pour éviter l'injection SQL.
  */
 async function executeSQLAction(config, eventData) {
   const { query: dbQuery, queryOne } = require('../../config/database');
@@ -929,7 +944,7 @@ async function executeSQLAction(config, eventData) {
 
   while ((m = regex.exec(sqlTrimmed)) !== null) {
     parts.push(sqlTrimmed.slice(lastIndex, m.index));
-    const value = getFieldValue(m[1].trim(), eventData);
+    const value = getSQLVariableValue(m[1].trim(), eventData);
     params.push(value !== null && value !== undefined ? value : null);
     lastIndex = regex.lastIndex;
   }
