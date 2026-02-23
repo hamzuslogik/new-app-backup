@@ -438,6 +438,11 @@ const Fiches = () => {
     return etat?.titre || '';
   };
 
+  // Agent qualification : si état dans groupe 0, afficher l'état, sinon "Validé"
+  const isEtatGroupe0 = (etatId) => etatsPhase0.some(e => Number(e.id) === Number(etatId));
+  const getEtatDisplayForAgentQualif = (etatId) =>
+    isEtatGroupe0(etatId) ? getEtatName(etatId) : 'Validé';
+
   // Obtenir les confirmateurs formatés (avec confirmateur 2 et 3 si existent)
   // Priorité aux pseudos renvoyés par l'API (pour RE Confirmation : afficher le nom même si hors équipe)
   const getConfirmateursFormatted = (fiche) => {
@@ -498,7 +503,7 @@ const Fiches = () => {
           formatDate(fiche.date_insert_time),
           formatRdvDateTime(fiche.date_rdv_time),
           formatDate(fiche.date_modif_time),
-          getEtatName(fiche.id_etat_final),
+          isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getEtatName(fiche.id_etat_final),
           getConfirmateursFormatted(fiche),
           getUserName(fiche.id_commercial),
           getCentreName(fiche.id_centre),
@@ -984,7 +989,7 @@ const Fiches = () => {
                             className="etat-badge"
                             style={{ backgroundColor: etatColor }}
                           >
-                            {getEtatName(fiche.id_etat_final)}
+                            {isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getEtatName(fiche.id_etat_final)}
                             {(fiche.ko === 1 || fiche.ko === '1') && (
                               <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>(KO)</span>
                             )}

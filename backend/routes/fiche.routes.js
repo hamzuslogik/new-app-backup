@@ -513,16 +513,11 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_commercial = ?');
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, 7, req.user.id);
       } else if (req.user.fonction === 3) {
-        // Agents Qualification : Fiches créées aujourd'hui par l'agent avec états du groupe 0
+        // Agents Qualification : Fiches créées aujourd'hui par l'agent (id_agent ou id_insert)
+        // On affiche toutes les fiches (groupe 0 ou validées) ; l'affichage État se fait côté front (groupe 0 = libellé, sinon "Validé")
         whereConditions.push('fiche.date_insert_time >= ? AND fiche.date_insert_time <= ?');
-        whereConditions.push('fiche.id_agent = ?');
-        // Filtrer uniquement les états du groupe 0
-        whereConditions.push(`EXISTS (
-          SELECT 1 FROM etats e 
-          WHERE e.id = fiche.id_etat_final 
-          AND (e.groupe = '0' OR e.groupe = 0)
-        )`);
-        params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id);
+        whereConditions.push('(fiche.id_agent = ? OR fiche.id_insert = ?)');
+        params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id, req.user.id);
       } else if (req.user.fonction === 6) {
         // Confirmateurs : uniquement les fiches où le connecté est le dernier confirmateur (3, sinon 2, sinon 1)
         whereConditions.push('fiche.date_modif_time >= ? AND fiche.date_modif_time <= ?');
