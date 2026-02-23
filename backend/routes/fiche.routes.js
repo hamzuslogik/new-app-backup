@@ -419,7 +419,9 @@ const logModification = async (idFiche, userId, userPseudo, field, oldValue, new
 router.get('/', authenticate, async (req, res) => {
   const requestStartTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
-  console.log(`[PERF-${requestId}] Début requête GET /fiches - Query params:`, req.query);
+  console.log(`[FICHES-${requestId}] === Début GET /fiches ===`);
+  console.log(`[FICHES-${requestId}] User: id=${req.user?.id}, fonction=${req.user?.fonction}, pseudo=${req.user?.pseudo || req.user?.login || 'N/A'}`);
+  console.log(`[FICHES-${requestId}] Query params:`, JSON.stringify(req.query));
   
   try {
     const {
@@ -504,7 +506,8 @@ router.get('/', authenticate, async (req, res) => {
                           req.query.tel || req.query.cp || req.query.produit || 
                           req.query.id_etat_final || req.query.id_commercial || 
                           req.query.id_confirmateur || req.query.id_re || req.query.id_centre;
-    
+    console.log(`[FICHES-${requestId}] isActiveSearch=${!!isActiveSearch} (fiche_search=${!!req.query.fiche_search}, affectation=${!!req.query.affectation}, suivi=${!!req.query.suivi}, critere=${!!req.query.critere})`);
+
     if (!isActiveSearch) {
       if (req.user.fonction === 5) {
         // Commerciaux : RDV du jour avec état final 7
@@ -515,6 +518,7 @@ router.get('/', authenticate, async (req, res) => {
       } else if (req.user.fonction === 3) {
         // Agents Qualification : Fiches créées aujourd'hui par l'agent (id_agent ou id_insert)
         // On affiche toutes les fiches (groupe 0 ou validées) ; l'affichage État se fait côté front (groupe 0 = libellé, sinon "Validé")
+        console.log(`[FICHES-${requestId}] Filtre Agent Qualif: date_insert_time ${y_m_d} 00:00:00 -> 23:59:59, id_agent/id_insert=${req.user.id}`);
         whereConditions.push('fiche.date_insert_time >= ? AND fiche.date_insert_time <= ?');
         whereConditions.push('(fiche.id_agent = ? OR fiche.id_insert = ?)');
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id, req.user.id);
@@ -528,6 +532,7 @@ router.get('/', authenticate, async (req, res) => {
       // Filtres par fonction quand recherche active
       if (req.user.fonction === 3) {
         // Agents Qualification : Filtrer par id_agent pour limiter aux fiches de l'agent
+        console.log(`[FICHES-${requestId}] Filtre Agent Qualif (recherche active): id_agent=${req.user.id}`);
         whereConditions.push('fiche.id_agent = ?');
         params.push(req.user.id);
       } else if (req.user.fonction === 5 && !affectation) {
@@ -554,7 +559,8 @@ router.get('/', authenticate, async (req, res) => {
     const hasRechercheParCritereConfirmateur = req.user.fonction === 6 && !!(req.query.tel || req.query.critere);
     const shouldApplyPermissionFilter = !(req.user.fonction === 3 && !req.query.fiche_search && !req.query.affectation && !req.query.suivi)
       && !hasRechercheParCritereConfirmateur;
-    
+    console.log(`[FICHES-${requestId}] shouldApplyPermissionFilter=${shouldApplyPermissionFilter}`);
+
     if (shouldApplyPermissionFilter) {
       // Utiliser la fonction mise en cache pour récupérer les groupes autorisés
       const { allowedGroups, anyPermissionExists } = await getEtatGroupsAndPermissions(req.user.fonction);
@@ -916,15 +922,15 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.date_insert_time != ""');
         whereConditions.push('fiche.date_insert_time >= ? AND fiche.date_insert_time <= ?');
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`);
-        console.log(`[PERF-${requestId}] Filtre par défaut ajouté: fiches créées aujourd'hui (date_insert_time)`);
+        console.log(`[FICHES-${requestId}] Filtre par défaut: fiches créées aujourd'hui (date_insert_time)`);
       }
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
     // Log de la clause WHERE et des paramètres pour debugging
-    console.log(`[PERF-${requestId}] WHERE clause: ${whereClause}`);
-    console.log(`[PERF-${requestId}] WHERE params:`, JSON.stringify(params));
+    console.log(`[FICHES-${requestId}] WHERE clause: ${whereClause}`);
+    console.log(`[FICHES-${requestId}] WHERE params (${params.length}):`, JSON.stringify(params));
 
     // Configurer GROUP_CONCAT pour éviter les troncatures
     await query('SET SESSION group_concat_max_len = 1000000');
@@ -943,7 +949,7 @@ router.get('/', authenticate, async (req, res) => {
     );
     const total = countResult.total;
     const countDuration = Date.now() - countStartTime;
-    console.log(`[PERF-${requestId}] COUNT query terminé en ${countDuration}ms - Total: ${total}`);
+    console.log(`[FICHES-${requestId}] COUNT query: ${countDuration}ms → total=${total} fiches`);
 
     // Calculer la pagination
     const offset = (page - 1) * limit;
@@ -992,10 +998,10 @@ router.get('/', authenticate, async (req, res) => {
        ORDER BY fiche.date_rdv_time ASC
        LIMIT ? OFFSET ?`;
     const selectParams = histoJoinForFichesHisto ? [...histoParamsForFichesHisto, ...params, parseInt(limit), offset] : [...params, parseInt(limit), offset];
-    console.log(`[PERF-${requestId}] Début SELECT query - Limit: ${limit}, Offset: ${offset}`);
+    console.log(`[FICHES-${requestId}] SELECT query - limit=${limit}, offset=${offset}, page=${page}`);
     const fiches = await query(selectQuery, selectParams);
     const selectDuration = Date.now() - selectStartTime;
-    console.log(`[PERF-${requestId}] SELECT query terminé en ${selectDuration}ms - ${fiches.length} fiches récupérées`);
+    console.log(`[FICHES-${requestId}] SELECT query: ${selectDuration}ms → ${fiches.length} fiches`);
 
     // Ajouter le hash pour chaque fiche (masquer l'ID)
     const hashStartTime = Date.now();
@@ -1006,15 +1012,11 @@ router.get('/', authenticate, async (req, res) => {
       id: undefined
     }));
     const hashDuration = Date.now() - hashStartTime;
-    console.log(`[PERF-${requestId}] Hash encoding terminé en ${hashDuration}ms`);
+    console.log(`[FICHES-${requestId}] Hash encoding: ${hashDuration}ms`);
 
     const totalDuration = Date.now() - requestStartTime;
-    console.log(`[PERF-${requestId}] === RÉSUMÉ PERFORMANCE ===`);
-    console.log(`[PERF-${requestId}] COUNT: ${countDuration}ms (${((countDuration/totalDuration)*100).toFixed(1)}%)`);
-    console.log(`[PERF-${requestId}] SELECT: ${selectDuration}ms (${((selectDuration/totalDuration)*100).toFixed(1)}%)`);
-    console.log(`[PERF-${requestId}] HASH: ${hashDuration}ms`);
-    console.log(`[PERF-${requestId}] TOTAL: ${totalDuration}ms`);
-    console.log(`[PERF-${requestId}] =========================`);
+    console.log(`[FICHES-${requestId}] === FIN GET /fiches: ${total} total, ${fiches.length} retournées, ${totalDuration}ms ===`);
+    console.log(`[FICHES-${requestId}] Perf: COUNT ${countDuration}ms | SELECT ${selectDuration}ms | HASH ${hashDuration}ms | TOTAL ${totalDuration}ms`);
 
     res.json({
       success: true,
@@ -1028,7 +1030,7 @@ router.get('/', authenticate, async (req, res) => {
     });
   } catch (error) {
     const totalDuration = Date.now() - requestStartTime;
-    console.error(`[PERF-${requestId}] Erreur après ${totalDuration}ms:`, error);
+    console.error(`[FICHES-${requestId}] Erreur après ${totalDuration}ms:`, error);
     console.error('Erreur lors de la récupération des fiches:', error);
     res.status(500).json({
       success: false,
