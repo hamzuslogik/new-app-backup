@@ -516,12 +516,11 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_commercial = ?');
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, 7, req.user.id);
       } else if (req.user.fonction === 3) {
-        // Agents Qualification : Fiches créées aujourd'hui par l'agent (id_agent ou id_insert)
-        // On affiche toutes les fiches (groupe 0 ou validées) ; l'affichage État se fait côté front (groupe 0 = libellé, sinon "Validé")
-        console.log(`[FICHES-${requestId}] Filtre Agent Qualif: date_insert_time ${y_m_d} 00:00:00 -> 23:59:59, id_agent/id_insert=${req.user.id}`);
+        // Agents Qualification : Fiches créées aujourd'hui, assignées à l'agent (id_agent uniquement)
+        console.log(`[FICHES-${requestId}] Filtre Agent Qualif: date_insert_time ${y_m_d} 00:00:00 -> 23:59:59, id_agent=${req.user.id}`);
         whereConditions.push('fiche.date_insert_time >= ? AND fiche.date_insert_time <= ?');
-        whereConditions.push('(fiche.id_agent = ? OR fiche.id_insert = ?)');
-        params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id, req.user.id);
+        whereConditions.push('fiche.id_agent = ?');
+        params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id);
       } else if (req.user.fonction === 6) {
         // Confirmateurs : uniquement les fiches où le connecté est le dernier confirmateur (3, sinon 2, sinon 1)
         whereConditions.push('fiche.date_modif_time >= ? AND fiche.date_modif_time <= ?');
@@ -1063,17 +1062,17 @@ router.get('/stats/mois', authenticate, async (req, res) => {
     const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
     const endDate = `${y}-${m}-${String(lastDay).padStart(2, '0')} 23:59:59`;
 
-    // États groupe 0 : stats par état
+    // États groupe 0 : stats par état (id_agent uniquement)
     const statsGroupe0 = await query(
       `SELECT e.id as etat_id, e.titre as etat_nom, e.color as etat_color, COUNT(f.id) as count
        FROM fiches f
        INNER JOIN etats e ON f.id_etat_final = e.id AND (e.groupe = '0' OR e.groupe = 0)
        WHERE f.active = 1 AND (f.archive = 0 OR f.archive IS NULL)
          AND f.date_insert_time >= ? AND f.date_insert_time <= ?
-         AND (f.id_agent = ? OR f.id_insert = ?)
+         AND f.id_agent = ?
        GROUP BY e.id, e.titre, e.color
        ORDER BY e.ordre ASC`,
-      [startDate, endDate, req.user.id, req.user.id]
+      [startDate, endDate, req.user.id]
     );
 
     // Comptage "Validé" : états hors groupe 0
@@ -1083,8 +1082,8 @@ router.get('/stats/mois', authenticate, async (req, res) => {
        INNER JOIN etats e ON f.id_etat_final = e.id AND (e.groupe != '0' AND e.groupe != 0)
        WHERE f.active = 1 AND (f.archive = 0 OR f.archive IS NULL)
          AND f.date_insert_time >= ? AND f.date_insert_time <= ?
-         AND (f.id_agent = ? OR f.id_insert = ?)`,
-      [startDate, endDate, req.user.id, req.user.id]
+         AND f.id_agent = ?`,
+      [startDate, endDate, req.user.id]
     );
 
     const data = statsGroupe0.map((r) => ({
