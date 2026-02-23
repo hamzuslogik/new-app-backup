@@ -227,7 +227,7 @@ const Fiches = () => {
     { enabled: isAgentQualif }
   );
 
-  // Récupérer les fiches (requête lancée uniquement au clic Recherche, pagination ou reset)
+  // Récupérer les fiches (pour agent qualif: chargement auto des fiches créées aujourd'hui; sinon: au clic Recherche)
   const { data, isLoading, error, refetch } = useQuery(
     ['fiches', appliedFilters, debouncedQuickSearch],
     async () => {
@@ -235,7 +235,7 @@ const Fiches = () => {
       const response = await api.get('/fiches', { params });
       return response.data;
     },
-    { keepPreviousData: true, enabled: appliedFilters.fiche_search === true }
+    { keepPreviousData: true, enabled: appliedFilters.fiche_search === true || isAgentQualif }
   );
 
   // Mutation pour créer une fiche
