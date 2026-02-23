@@ -956,6 +956,9 @@ async function executeSQLAction(config, eventData) {
     throw new Error('Requête SQL vide après remplacement des variables');
   }
 
+  console.log('[WORKFLOW] execute_sql - Requête exécutée:', sql);
+  console.log('[WORKFLOW] execute_sql - Paramètres:', JSON.stringify(params));
+
   const result = await dbQuery(sql, params);
   const isArray = Array.isArray(result);
   const affectedRows = isArray ? result.length : (result?.affectedRows ?? 0);
