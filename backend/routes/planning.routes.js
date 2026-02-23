@@ -1830,7 +1830,7 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
     const dateStart = `${d} 00:00:00`;
     const dateEnd = `${d} 23:59:59`;
 
-    // Onglet "Production RDV" : fiches avec date_rdv_time du jour (date/heure depuis fiches)
+    // Onglet "Production RDV" : compter par date confirmation (confirmations), afficher date_rdv_time depuis fiches
     if (type === 'production_rdv') {
       rows = await query(
         `SELECT 
@@ -1848,25 +1848,26 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
           com.pseudo AS commercial_pseudo,
           com2.pseudo AS commercial2_pseudo,
           e.titre AS etat_titre
-        FROM fiches f
+        FROM confirmations c
+        INNER JOIN fiches f ON f.id = c.id_fiche
         LEFT JOIN utilisateurs com ON com.id = f.id_commercial
         LEFT JOIN utilisateurs com2 ON com2.id = f.id_commercial_2
         LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE (f.archive = 0 OR f.archive IS NULL)
           AND (f.ko = 0 OR f.ko IS NULL)
           AND f.date_rdv_time IS NOT NULL
-          AND DATE(f.date_rdv_time) = ?
+          AND DATE(COALESCE(c.date_confirmation, c.date_creation)) = ?
         ORDER BY f.date_rdv_time ASC`,
         [d]
       );
-      console.log('[rdv-vue] Source: fiches (Production RDV, date_rdv_time).', rows?.length ?? 0, 'lignes');
+      console.log('[rdv-vue] Source: confirmations (filtre date_confirmation) + fiches (affichage date_rdv_time).', rows?.length ?? 0, 'lignes');
     } else if (isPastDate) {
       // Date passée : seul l'onglet "jour" affiche des données (source: table confirmations)
       if (type === 'affilie' || type === 'non_affilie') {
         rows = [];
         console.log('[rdv-vue] Date passée, onglet non "jour" : liste vide.');
       } else {
-        // type === 'jour' : lister depuis fiches (date_rdv_time)
+        // type === 'jour' : compter par date confirmation (confirmations), afficher date_rdv_time depuis fiches
         rows = await query(
           `SELECT 
             f.id,
@@ -1883,18 +1884,19 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
             com.pseudo AS commercial_pseudo,
             com2.pseudo AS commercial2_pseudo,
             e.titre AS etat_titre
-          FROM fiches f
+          FROM confirmations c
+          INNER JOIN fiches f ON f.id = c.id_fiche
           LEFT JOIN utilisateurs com ON com.id = f.id_commercial
           LEFT JOIN utilisateurs com2 ON com2.id = f.id_commercial_2
           LEFT JOIN etats e ON f.id_etat_final = e.id
           WHERE (f.archive = 0 OR f.archive IS NULL)
             AND (f.ko = 0 OR f.ko IS NULL)
             AND f.date_rdv_time IS NOT NULL
-            AND DATE(f.date_rdv_time) = ?
+            AND DATE(COALESCE(c.date_confirmation, c.date_creation)) = ?
           ORDER BY f.date_rdv_time ASC`,
           [d]
         );
-        console.log('[rdv-vue] Source: fiches (date passée, onglet jour).', rows?.length ?? 0, 'lignes');
+        console.log('[rdv-vue] Source: confirmations (date passée, filtre date_confirmation) + fiches (affichage date_rdv_time).', rows?.length ?? 0, 'lignes');
       }
     } else {
       // Date aujourd'hui ou future : source fiches (état 7, date_rdv_time du jour)
