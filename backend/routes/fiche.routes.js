@@ -1039,6 +1039,68 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// Stats du mois pour agent qualification (Production du mois)
+router.get('/stats/mois', authenticate, async (req, res) => {
+  try {
+    if (req.user.fonction !== 3) {
+      return res.status(403).json({ success: false, message: 'Réservé aux agents qualification' });
+    }
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const startDate = `${y}-${m}-01 00:00:00`;
+    const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+    const endDate = `${y}-${m}-${String(lastDay).padStart(2, '0')} 23:59:59`;
+
+    // États groupe 0 : stats par état
+    const statsGroupe0 = await query(
+      `SELECT e.id as etat_id, e.titre as etat_nom, e.color as etat_color, COUNT(f.id) as count
+       FROM fiches f
+       INNER JOIN etats e ON f.id_etat_final = e.id AND (e.groupe = '0' OR e.groupe = 0)
+       WHERE f.active = 1 AND (f.archive = 0 OR f.archive IS NULL)
+         AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+         AND (f.id_agent = ? OR f.id_insert = ?)
+       GROUP BY e.id, e.titre, e.color
+       ORDER BY e.ordre ASC`,
+      [startDate, endDate, req.user.id, req.user.id]
+    );
+
+    // Comptage "Validé" : états hors groupe 0
+    const validatedResult = await queryOne(
+      `SELECT COUNT(f.id) as count
+       FROM fiches f
+       INNER JOIN etats e ON f.id_etat_final = e.id AND (e.groupe != '0' AND e.groupe != 0)
+       WHERE f.active = 1 AND (f.archive = 0 OR f.archive IS NULL)
+         AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+         AND (f.id_agent = ? OR f.id_insert = ?)`,
+      [startDate, endDate, req.user.id, req.user.id]
+    );
+
+    const data = statsGroupe0.map((r) => ({
+      etat_id: r.etat_id,
+      etat_nom: r.etat_nom,
+      etat_color: r.etat_color || '#cccccc',
+      count: r.count
+    }));
+
+    // Ajouter la carte Validé si > 0
+    const validatedCount = validatedResult?.count || 0;
+    if (validatedCount > 0) {
+      data.push({
+        etat_id: 'validated',
+        etat_nom: 'Validé',
+        etat_color: '#28a745',
+        count: validatedCount
+      });
+    }
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erreur GET /fiches/stats/mois:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors du chargement des stats du mois' });
+  }
+});
+
 // Diagnostic - Vérifier pourquoi une fiche n'apparaît pas dans le planning commercial
 router.get('/planning-commercial/diagnostic/:tel', authenticate, async (req, res) => {
   try {
