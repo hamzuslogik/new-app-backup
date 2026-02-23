@@ -941,6 +941,13 @@ router.get('/', authenticate, async (req, res) => {
       : '';
     const countParams = histoJoinForFichesHisto ? [...histoParamsForFichesHisto, ...params] : params;
 
+    // Log des requêtes SQL exécutées pour agent qualification (fonction 3)
+    if (req.user.fonction === 3) {
+      const countSql = `SELECT COUNT(DISTINCT fiche.id) as total FROM fiches fiche ${histoJoinForFichesHisto} ${qualifJoinForCount} ${whereClause}`;
+      console.log(`[FICHES-${requestId}] [AGENT_QUALIF] COUNT SQL:`, countSql);
+      console.log(`[FICHES-${requestId}] [AGENT_QUALIF] COUNT params:`, JSON.stringify(countParams));
+    }
+
     // Compter le total
     const countStartTime = Date.now();
     const countResult = await queryOne(
@@ -998,6 +1005,10 @@ router.get('/', authenticate, async (req, res) => {
        ORDER BY fiche.date_rdv_time ASC
        LIMIT ? OFFSET ?`;
     const selectParams = histoJoinForFichesHisto ? [...histoParamsForFichesHisto, ...params, parseInt(limit), offset] : [...params, parseInt(limit), offset];
+    if (req.user.fonction === 3) {
+      console.log(`[FICHES-${requestId}] [AGENT_QUALIF] SELECT SQL:`, selectQuery);
+      console.log(`[FICHES-${requestId}] [AGENT_QUALIF] SELECT params:`, JSON.stringify(selectParams));
+    }
     console.log(`[FICHES-${requestId}] SELECT query - limit=${limit}, offset=${offset}, page=${page}`);
     const fiches = await query(selectQuery, selectParams);
     const selectDuration = Date.now() - selectStartTime;
