@@ -722,8 +722,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $optionalFields = [
             'date_appel' => !empty($_POST['date_appel']) ? date('c', strtotime($_POST['date_appel'])) : null,
             'situation_conjugale' => !empty($_POST['situation_conjugale']) ? sanitizeInput($_POST['situation_conjugale']) : null,
-            'age_mr' => !empty($_POST['age_mr']) ? intval($_POST['age_mr']) : null,
-            'age_madame' => !empty($_POST['age_madame']) ? intval($_POST['age_madame']) : null,
+            'age_mr' => !empty($_POST['age_mr']) ? sanitizeInput($_POST['age_mr']) : null,
+            'age_madame' => !empty($_POST['age_madame']) ? sanitizeInput($_POST['age_madame']) : null,
             'nb_enfants' => !empty($_POST['nb_enfants']) ? intval($_POST['nb_enfants']) : null,
             'profession_mr' => !empty($_POST['profession_mr']) ? intval($_POST['profession_mr']) : null,
             'profession_madame' => !empty($_POST['profession_madame']) ? intval($_POST['profession_madame']) : null,
@@ -734,7 +734,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'revenu_foyer' => !empty($_POST['revenu_foyer']) ? sanitizeInput($_POST['revenu_foyer']) : null,
             'etude' => !empty($_POST['etude']) ? sanitizeInput($_POST['etude']) : null,
             'mode_chauffage' => !empty($_POST['mode_chauffage']) ? intval($_POST['mode_chauffage']) : null,
-            'annee_systeme_chauffage' => !empty($_POST['annee_systeme_chauffage']) ? intval($_POST['annee_systeme_chauffage']) : null,
+            'annee_systeme_chauffage' => !empty($_POST['annee_systeme_chauffage']) ? sanitizeInput($_POST['annee_systeme_chauffage']) : null,
             'surface_habitable' => !empty($_POST['surface_habitable']) ? sanitizeInput($_POST['surface_habitable']) : null,
             'surface_chauffee' => !empty($_POST['surface_chauffee']) ? sanitizeInput($_POST['surface_chauffee']) : null,
             'nb_pans' => !empty($_POST['nb_pans']) ? intval($_POST['nb_pans']) : null,
@@ -916,7 +916,12 @@ if (isset($_SESSION['error_message'])) {
         <div class="header-actions">
             <div>
                 <h1 style="margin: 0; border: none; padding: 0;">Création de Fiche CRM</h1>
-                <p style="margin: 5px 0 0 0;">Agent: <strong><?php echo htmlspecialchars($agent); ?></strong></p>
+                <p style="margin: 5px 0 0 0;">
+                    Agent: <strong><?php echo htmlspecialchars($agent); ?></strong>
+                    <?php if ($agentUser && isset($agentUser['id'])): ?>
+                        <span style="color: #7f8c8d; font-size: 0.95em;">(ID CRM: <?php echo (int) $agentUser['id']; ?>)</span>
+                    <?php endif; ?>
+                </p>
             </div>
             <div style="display: flex; gap: 10px;">
                 <a href="?load_last=1" class="btn btn-secondary" style="background: #27ae60;">Charger la dernière fiche OK</a>
@@ -1040,7 +1045,7 @@ if (isset($_SESSION['error_message'])) {
                     </div>
                     <div class="form-group">
                         <label>Âge Mme</label>
-                        <input type="number" name="age_madame" min="18" max="120">
+                        <input type="text" name="age_madame" placeholder="Ex: 42">
                     </div>
                     <div class="form-group">
                         <label>Nombre d'Enfants</label>
@@ -1164,7 +1169,7 @@ if (isset($_SESSION['error_message'])) {
                     </div>
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Année Système Chauffage</label>
-                        <input type="number" name="annee_systeme_chauffage" min="1900" max="<?php echo date('Y'); ?>">
+                        <input type="text" name="annee_systeme_chauffage" placeholder="Ex: 2015, récent, avant 2010, ne sait pas">
                     </div>
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Surface Chauffée (m²)</label>
