@@ -1356,6 +1356,7 @@ const Dashboard = () => {
                     const etatColor = getEtatColor(fiche.id_etat_final, fiche);
                     const produitColor = getProduitColor(fiche.produit);
                     
+                    const tooltipComment = getTooltipComment(fiche);
                     return (
                       <tr 
                         key={fiche.hash}
@@ -1364,7 +1365,13 @@ const Dashboard = () => {
                           backgroundColor: `${etatColor}40`,
                           borderLeft: `4px solid ${etatColor}`
                         }}
-                        title={getTooltipComment(fiche) || undefined}
+                        {...(tooltipComment ? {
+                          'data-toggle': 'tooltip',
+                          'data-trigger': 'hover',
+                          'data-placement': 'top',
+                          'data-content': tooltipComment,
+                          title: tooltipComment
+                        } : {})}
                       >
                         <td data-label="">{fiche.nom || ''}</td>
                         <td data-label="Prénom:">{fiche.prenom || ''}</td>
