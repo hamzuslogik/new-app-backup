@@ -577,10 +577,19 @@ const Dashboard = () => {
   // Libellé d'état à afficher : priorité au etat_titre renvoyé par l'API (affiche tous les états en session confirmateur, ex. en attente)
   const getEtatDisplayName = (fiche) => (fiche?.etat_titre || getEtatName(fiche?.id_etat_final) || '').trim();
 
-  // Bulle au survol : afficher le commentaire confirmateur (conf_commentaire_produit).
+  // Bulle au survol : nom prénom client, téléphone, puis commentaire confirmateur en dessous.
   const getTooltipComment = (fiche) => {
-    const str = (fiche?.conf_commentaire_produit ?? '').trim();
-    return str.length > 500 ? str.slice(0, 497) + '...' : str;
+    const nom = (fiche?.nom ?? '').trim();
+    const prenom = (fiche?.prenom ?? '').trim();
+    const tel = (fiche?.tel ?? '').trim();
+    const commentaire = (fiche?.conf_commentaire_produit ?? '').trim();
+    const commentaireStr = commentaire.length > 500 ? commentaire.slice(0, 497) + '...' : commentaire;
+    const lignes = [
+      [nom, prenom].filter(Boolean).join(' '),
+      tel,
+      commentaireStr
+    ].filter(Boolean);
+    return lignes.join('\n');
   };
 
   // États SIGNER (TOUT SIGNER) : 13, 16, 44, 45
