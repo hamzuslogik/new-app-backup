@@ -577,14 +577,9 @@ const Dashboard = () => {
   // Libellé d'état à afficher : priorité au etat_titre renvoyé par l'API (affiche tous les états en session confirmateur, ex. en attente)
   const getEtatDisplayName = (fiche) => (fiche?.etat_titre || getEtatName(fiche?.id_etat_final) || '').trim();
 
-  // Bulle au survol : par défaut afficher le commentaire confirmateur (conf_commentaire_produit).
-  // Sauf si la fiche a été mise à jour suite à l'acceptation d'un compte rendu → afficher le commentaire commercial.
+  // Bulle au survol : afficher le commentaire confirmateur (conf_commentaire_produit).
   const getTooltipComment = (fiche) => {
-    const useCommentaireCommercial = fiche?.has_etat_changed_by_compte_rendu === true;
-    const text = useCommentaireCommercial
-      ? (fiche?.commentaire_commercial ?? '')
-      : (fiche?.conf_commentaire_produit ?? '');
-    const str = (text || '').trim();
+    const str = (fiche?.conf_commentaire_produit ?? '').trim();
     return str.length > 500 ? str.slice(0, 497) + '...' : str;
   };
 
@@ -1356,7 +1351,6 @@ const Dashboard = () => {
                     const etatColor = getEtatColor(fiche.id_etat_final, fiche);
                     const produitColor = getProduitColor(fiche.produit);
                     
-                    const tooltipComment = getTooltipComment(fiche);
                     return (
                       <tr 
                         key={fiche.hash}
@@ -1365,13 +1359,7 @@ const Dashboard = () => {
                           backgroundColor: `${etatColor}40`,
                           borderLeft: `4px solid ${etatColor}`
                         }}
-                        {...(tooltipComment ? {
-                          'data-toggle': 'tooltip',
-                          'data-trigger': 'hover',
-                          'data-placement': 'top',
-                          'data-content': tooltipComment,
-                          title: tooltipComment
-                        } : {})}
+                        title={getTooltipComment(fiche) || undefined}
                       >
                         <td data-label="">{fiche.nom || ''}</td>
                         <td data-label="Prénom:">{fiche.prenom || ''}</td>
