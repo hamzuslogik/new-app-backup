@@ -1013,6 +1013,23 @@ router.get('/', authenticate, async (req, res) => {
     const selectDuration = Date.now() - selectStartTime;
     console.log(`[FICHES-${requestId}] SELECT query: ${selectDuration}ms → ${fiches.length} fiches`);
 
+    // Enrichir les fiches : has_etat_changed_by_compte_rendu = fiche mise à jour suite à l'acceptation d'un compte rendu
+    if (fiches.length > 0) {
+      const ficheIds = fiches.map((f) => f.id);
+      const placeholders = ficheIds.map(() => '?').join(',');
+      const crQuery = `
+        SELECT DISTINCT cr.id_fiche
+        FROM compte_rendu_pending cr
+        WHERE cr.id_fiche IN (${placeholders})
+          AND cr.statut = 'approved'
+      `;
+      const fichesAvecCRAccepted = await query(crQuery, ficheIds);
+      const ficheIdsAvecCRAccepted = new Set(fichesAvecCRAccepted.map((cr) => cr.id_fiche));
+      fiches.forEach((fiche) => {
+        fiche.has_etat_changed_by_compte_rendu = ficheIdsAvecCRAccepted.has(fiche.id);
+      });
+    }
+
     // Ajouter le hash pour chaque fiche (masquer l'ID)
     const hashStartTime = Date.now();
     const fichesWithHash = fiches.map(fiche => ({

@@ -577,20 +577,10 @@ const Dashboard = () => {
   // Libellé d'état à afficher : priorité au etat_titre renvoyé par l'API (affiche tous les états en session confirmateur, ex. en attente)
   const getEtatDisplayName = (fiche) => (fiche?.etat_titre || getEtatName(fiche?.id_etat_final) || '').trim();
 
-  // États pour lesquels le tooltip affiche le commentaire commercial (compte rendu) au lieu du commentaire confirmateur
-  const ETATS_COMMENTAIRE_COMMERCIAL = [
-    'signé',
-    'annuler à reprogrammer',
-    'refuser',
-    'honoré à suivre',
-    'hhc technique',
-    'hhc financement a verifier'
-  ];
+  // Bulle au survol : par défaut afficher le commentaire confirmateur (conf_commentaire_produit).
+  // Sauf si la fiche a été mise à jour suite à l'acceptation d'un compte rendu → afficher le commentaire commercial.
   const getTooltipComment = (fiche) => {
-    const etatTitre = (getEtatDisplayName(fiche) || '').toLowerCase().trim();
-    const useCommentaireCommercial = ETATS_COMMENTAIRE_COMMERCIAL.some(
-      (lib) => etatTitre === lib || etatTitre.includes(lib)
-    );
+    const useCommentaireCommercial = fiche?.has_etat_changed_by_compte_rendu === true;
     const text = useCommentaireCommercial
       ? (fiche?.commentaire_commercial ?? '')
       : (fiche?.conf_commentaire_produit ?? '');

@@ -361,6 +361,79 @@ function getUserByPseudo($pseudo) {
     return null;
 }
 
+// Trouver une profession par nom ou la créer si elle n'existe pas
+function findOrCreateProfession($nom) {
+    global $CRM_CONFIG;
+    
+    $nom = trim($nom);
+    if (empty($nom)) {
+        writeLog("ERREUR: Nom profession vide");
+        return null;
+    }
+    
+    writeLog("findOrCreateProfession: " . $nom);
+    
+    $token = $CRM_CONFIG['api_token'] ?? '';
+    if (empty($token) || !function_exists('curl_init')) {
+        writeLog("ERREUR: Token ou CURL manquant pour findOrCreateProfession");
+        return null;
+    }
+    
+    $baseUrl = rtrim($CRM_CONFIG['api_url'], '/') . '/management';
+    $nomLower = mb_strtolower($nom);
+    
+    // 1. Récupérer la liste des professions
+    $ch = curl_init($baseUrl . '/professions');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPGET => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Accept: application/json'
+        ],
+        CURLOPT_TIMEOUT => 10
+    ]);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $data = @json_decode($response, true);
+    if (isset($data['data']) && is_array($data['data'])) {
+        foreach ($data['data'] as $p) {
+            if (isset($p['nom']) && mb_strtolower(trim($p['nom'])) === $nomLower && isset($p['id'])) {
+                writeLog("Profession existante trouvee: ID " . $p['id']);
+                return (int) $p['id'];
+            }
+        }
+    }
+    
+    // 2. Créer la profession
+    writeLog("Creation nouvelle profession: " . $nom);
+    $ch = curl_init($baseUrl . '/professions');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode(['nom' => $nom], JSON_UNESCAPED_UNICODE),
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+            'Accept: application/json'
+        ],
+        CURLOPT_TIMEOUT => 10
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    $data = @json_decode($response, true);
+    if ($httpCode === 201 && isset($data['data']['id'])) {
+        writeLog("Profession creee: ID " . $data['data']['id']);
+        return (int) $data['data']['id'];
+    }
+    
+    writeLog("ERREUR findOrCreateProfession: HTTP " . $httpCode . " - " . ($data['message'] ?? $response));
+    return null;
+}
+
 // Fonction de validation et nettoyage des données
 function sanitizeInput($data) {
     if (is_array($data)) {
@@ -719,14 +792,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Ajouter les données optionnelles avec validation
+        $professionMr = null;
+        if (!empty($_POST['profession_mr']) && is_numeric($_POST['profession_mr'])) {
+            $professionMr = intval($_POST['profession_mr']);
+        } elseif (!empty(trim($_POST['profession_mr_text'] ?? ''))) {
+            $professionMr = findOrCreateProfession(trim($_POST['profession_mr_text']));
+        }
+        $professionMadame = null;
+        if (!empty($_POST['profession_madame']) && is_numeric($_POST['profession_madame'])) {
+            $professionMadame = intval($_POST['profession_madame']);
+        } elseif (!empty(trim($_POST['profession_madame_text'] ?? ''))) {
+            $professionMadame = findOrCreateProfession(trim($_POST['profession_madame_text']));
+            if ($professionMadame === null) {
+                throw new Exception("Impossible de créer ou trouver la profession pour Mme. Vérifiez les permissions API.");
+            }
+        }
+        
         $optionalFields = [
             'date_appel' => !empty($_POST['date_appel']) ? date('c', strtotime($_POST['date_appel'])) : null,
             'situation_conjugale' => !empty($_POST['situation_conjugale']) ? sanitizeInput($_POST['situation_conjugale']) : null,
             'age_mr' => !empty($_POST['age_mr']) ? sanitizeInput($_POST['age_mr']) : null,
             'age_madame' => !empty($_POST['age_madame']) ? sanitizeInput($_POST['age_madame']) : null,
             'nb_enfants' => !empty($_POST['nb_enfants']) ? intval($_POST['nb_enfants']) : null,
-            'profession_mr' => !empty($_POST['profession_mr']) ? intval($_POST['profession_mr']) : null,
-            'profession_madame' => !empty($_POST['profession_madame']) ? intval($_POST['profession_madame']) : null,
+            'profession_mr' => $professionMr,
+            'profession_madame' => $professionMadame,
             'type_contrat_mr' => !empty($_POST['type_contrat_mr']) ? intval($_POST['type_contrat_mr']) : null,
             'type_contrat_madame' => !empty($_POST['type_contrat_madame']) ? intval($_POST['type_contrat_madame']) : null,
             'entretien_avec' => !empty($_POST['entretien_avec']) ? sanitizeInput($_POST['entretien_avec']) : null,
@@ -909,6 +998,12 @@ if (isset($_SESSION['error_message'])) {
         .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .btn-secondary { background: #95a5a6; color: white; padding: 8px 16px; text-decoration: none; display: inline-block; }
         .btn-secondary:hover { background: #7f8c8d; }
+        .autocomplete-wrap { position: relative; }
+        .autocomplete-wrap input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .autocomplete-suggestions { position: absolute; left: 0; right: 0; top: 100%; z-index: 100; background: #fff; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; max-height: 220px; overflow-y: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: none; }
+        .autocomplete-suggestions.active { display: block; }
+        .autocomplete-suggestions div { padding: 8px 12px; cursor: pointer; }
+        .autocomplete-suggestions div:hover { background: #e8f4f8; }
     </style>
 </head>
 <body>
@@ -1030,7 +1125,7 @@ if (isset($_SESSION['error_message'])) {
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Situation Conjugale <span class="required">*</span></label>
-                        <select name="situation_conjugale" required>
+                        <select name="situation_conjugale" id="situation_conjugale" required>
                             <option value="">-- Sélectionner --</option>
                             <option value="Célibataire">Célibataire</option>
                             <option value="Marié(e)">Marié(e)</option>
@@ -1039,11 +1134,11 @@ if (isset($_SESSION['error_message'])) {
                             <option value="Veuf(ve)">Veuf(ve)</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group cond-required-if-couple">
                         <label>Âge M.</label>
-                        <input type="number" name="age_mr" min="18" max="120">
+                        <input type="text" name="age_mr" placeholder="Ex: 45">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group cond-required-if-couple">
                         <label>Âge Mme</label>
                         <input type="text" name="age_madame" placeholder="Ex: 42">
                     </div>
@@ -1051,30 +1146,24 @@ if (isset($_SESSION['error_message'])) {
                         <label>Nombre d'Enfants</label>
                         <input type="number" name="nb_enfants" min="0" value="0">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group cond-required-if-couple">
                         <label>Profession M.</label>
-                        <select name="profession_mr">
-                            <option value="">-- Sélectionner --</option>
-                            <?php foreach ($professions as $prof): ?>
-                                <option value="<?php echo htmlspecialchars($prof['id']); ?>">
-                                    <?php echo htmlspecialchars($prof['nom']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <div class="autocomplete-wrap" data-name="profession_mr" data-required="0">
+                            <input type="text" class="autocomplete-input" name="profession_mr_text" placeholder="Rechercher ou saisir une profession..." autocomplete="off" value="">
+                            <input type="hidden" name="profession_mr" value="">
+                            <div class="autocomplete-suggestions"></div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Profession Mme <span class="required">*</span></label>
-                        <select name="profession_madame" required>
-                            <option value="">-- Sélectionner --</option>
-                            <?php foreach ($professions as $prof): ?>
-                                <option value="<?php echo htmlspecialchars($prof['id']); ?>">
-                                    <?php echo htmlspecialchars($prof['nom']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="form-group cond-required-if-couple">
+                        <label>Profession Mme <span class="required" id="label-required-profession_madame">*</span></label>
+                        <div class="autocomplete-wrap" data-name="profession_madame" data-required="1">
+                            <input type="text" class="autocomplete-input" name="profession_madame_text" placeholder="Rechercher ou saisir une profession..." autocomplete="off" value="" required>
+                            <input type="hidden" name="profession_madame" value="">
+                            <div class="autocomplete-suggestions"></div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Type Contrat M. <span class="required">*</span></label>
+                    <div class="form-group cond-required-if-couple">
+                        <label>Type Contrat M. <span class="required" id="label-required-type_contrat_mr">*</span></label>
                         <select name="type_contrat_mr" required>
                             <option value="">-- Sélectionner --</option>
                             <?php foreach ($typeContrats as $contrat): ?>
@@ -1084,7 +1173,7 @@ if (isset($_SESSION['error_message'])) {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group cond-required-if-couple">
                         <label>Type Contrat Mme</label>
                         <select name="type_contrat_madame">
                             <option value="">-- Sélectionner --</option>
@@ -1233,6 +1322,7 @@ if (isset($_SESSION['error_message'])) {
         </form>
     </div>
     
+    <script type="application/json" id="professions-data"><?php echo json_encode(array_values(array_map(function($p) { return ['id' => (int)$p['id'], 'nom' => $p['nom']]; }, $professions))); ?></script>
     <script>
         function setRequiredInContainer(container, required) {
             const inputs = container.querySelectorAll('input, select, textarea');
@@ -1286,9 +1376,77 @@ if (isset($_SESSION['error_message'])) {
             }
         }
         
+        function updateRequiredCoupleFields() {
+            var sit = document.getElementById('situation_conjugale');
+            if (!sit) return;
+            var val = (sit.value || '').trim();
+            var optionalWhenSingle = ['Célibataire', 'Veuf(ve)', 'Divorcé(e)'];
+            var notRequired = optionalWhenSingle.indexOf(val) !== -1;
+            var professionMadameInput = document.querySelector('input[name="profession_madame_text"]');
+            var typeContratMrSelect = document.querySelector('select[name="type_contrat_mr"]');
+            var labelProf = document.getElementById('label-required-profession_madame');
+            var labelType = document.getElementById('label-required-type_contrat_mr');
+            if (professionMadameInput) {
+                if (notRequired) professionMadameInput.removeAttribute('required');
+                else professionMadameInput.setAttribute('required', 'required');
+            }
+            if (typeContratMrSelect) {
+                if (notRequired) typeContratMrSelect.removeAttribute('required');
+                else typeContratMrSelect.setAttribute('required', 'required');
+            }
+            if (labelProf) labelProf.style.display = notRequired ? 'none' : '';
+            if (labelType) labelType.style.display = notRequired ? 'none' : '';
+        }
+        
         // Appeler la fonction au chargement de la page si un produit est déjà sélectionné
         document.addEventListener('DOMContentLoaded', function() {
             toggleProductFields();
+            updateRequiredCoupleFields();
+            var sitSelect = document.getElementById('situation_conjugale');
+            if (sitSelect) sitSelect.addEventListener('change', updateRequiredCoupleFields);
+            var professions = [];
+            try {
+                var el = document.getElementById('professions-data');
+                if (el) professions = JSON.parse(el.textContent || '[]');
+            } catch (e) {}
+            document.querySelectorAll('.autocomplete-wrap').forEach(function(wrap) {
+                var input = wrap.querySelector('.autocomplete-input');
+                var hidden = wrap.querySelector('input[type="hidden"]');
+                var listEl = wrap.querySelector('.autocomplete-suggestions');
+                function showSuggestions(q) {
+                    q = (q || '').trim().toLowerCase();
+                    listEl.innerHTML = '';
+                    var shown = 0;
+                    professions.forEach(function(p) {
+                        if (q && p.nom.toLowerCase().indexOf(q) === -1) return;
+                        shown++;
+                        if (shown > 50) return;
+                        var d = document.createElement('div');
+                        d.textContent = p.nom;
+                        d.dataset.id = p.id;
+                        d.dataset.nom = p.nom;
+                        d.addEventListener('click', function() {
+                            hidden.value = this.dataset.id;
+                            input.value = this.dataset.nom;
+                            listEl.classList.remove('active');
+                            listEl.innerHTML = '';
+                        });
+                        listEl.appendChild(d);
+                    });
+                    listEl.classList.toggle('active', listEl.children.length > 0);
+                }
+                input.addEventListener('focus', function() { showSuggestions(this.value); });
+                input.addEventListener('input', function() {
+                    if (!this.value.trim()) hidden.value = '';
+                    showSuggestions(this.value);
+                });
+                input.addEventListener('blur', function() {
+                    setTimeout(function() { listEl.classList.remove('active'); }, 200);
+                });
+                document.addEventListener('click', function(e) {
+                    if (!wrap.contains(e.target)) listEl.classList.remove('active');
+                });
+            });
         });
     </script>
 </body>
