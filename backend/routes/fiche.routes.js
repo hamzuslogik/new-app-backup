@@ -2969,6 +2969,11 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       }
     } catch (e) { console.log('Erreur produit:', e.message); }
 
+    const hasEtatChangedByCompteRendu = !!(await queryOne(
+      'SELECT 1 FROM compte_rendu_pending WHERE id_fiche = ? AND statut = ? LIMIT 1',
+      [id, 'approved']
+    ));
+
     // Construire l'objet fiche enrichi
     const ficheEnrichie = {
       ...fiche,
