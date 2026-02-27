@@ -3473,11 +3473,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         {/* Section Compte rendu : commerciaux propriétaires, Admin (1,2,7) et RP Confirmation (13) peuvent voir et modifier */}
         {((user?.fonction === 5 && (Number(ficheData?.id_commercial) === Number(user?.id) || Number(ficheData?.id_commercial_2) === Number(user?.id))) || [1, 2, 7].includes(Number(user?.fonction)) || Number(user?.fonction) === 13) && (
           <>
-            {/* Afficher les comptes rendu existants */}
-            {ficheData?.comptes_rendus && ficheData.comptes_rendus.length > 0 && (
+            {/* Afficher les comptes rendu en attente uniquement (masquer après approbation/rejet) */}
+            {ficheData?.comptes_rendus && ficheData.comptes_rendus.some((cr) => cr.statut === 'pending') && (
               <div className="fiche-section compte-rendu-section">
                 <h2 className="section-title">Comptes rendu en attente</h2>
-                {ficheData.comptes_rendus.map((cr) => {
+                {ficheData.comptes_rendus.filter((cr) => cr.statut === 'pending').map((cr) => {
                   // Mapper l'état de la base de données vers le libellé commercial
                   const getEtatCommercialLabel = (etatId) => {
                     if ([13, 44, 45].includes(etatId)) return 'Signer';
@@ -4182,8 +4182,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             {selectedEtat === 8 && selectedEtat !== ficheData?.id_etat_final && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
                 <div className="etat-form">
-                  <h3>Informations Annuler à Reprogrammer</h3>
-                  
                   {/* Pour l'option "Porte / Imprévu / NRP", le commercial ne remplit que le commentaire.
                       Les autres champs seront saisis dans la page Compte Rendu. */}
                   {Number(user?.fonction) === 5 && compteRenduOption === 'porte_imprevu_nrp' ? null : (
