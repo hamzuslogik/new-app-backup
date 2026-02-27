@@ -711,6 +711,19 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push(qualificationCondition);
       params.push(req.query.qualification_code);
     }
+    // Annuler à reprogrammer (id 8) : affiner par COMPTE RENDU ou REPRO CONFIRMATEURS
+    const annulerReproType = req.query.annuler_repro_type;
+    if (annulerReproType && (idEtatFinalForWhere === 8 || idEtatFinalForWhere === '8')) {
+      if (annulerReproType === 'compte_rendu') {
+        whereConditions.push(
+          `EXISTS (SELECT 1 FROM compte_rendu_pending cr WHERE cr.id_fiche = fiche.id AND cr.statut = 'approved')`
+        );
+      } else if (annulerReproType === 'repro_confirmateurs') {
+        whereConditions.push(
+          `NOT EXISTS (SELECT 1 FROM compte_rendu_pending cr WHERE cr.id_fiche = fiche.id AND cr.statut = 'approved')`
+        );
+      }
+    }
     if (id_sous_etat !== undefined && id_sous_etat !== null && id_sous_etat !== '' && id_sous_etat !== 'tout') {
       whereConditions.push('fiche.id_sous_etat = ?');
       params.push(id_sous_etat);

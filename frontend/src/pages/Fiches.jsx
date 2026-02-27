@@ -33,6 +33,7 @@ const Fiches = () => {
     id_sous_etat: '',
     id_agent: '',
     id_etat_final: '',
+    annuler_repro_type: '', // '' = tous, 'compte_rendu' ou 'repro_confirmateurs' (visible si état = Annuler à reprogrammer)
     date_champ: '',
     date_debut: '',
     date_fin: '',
@@ -333,7 +334,8 @@ const Fiches = () => {
     setFilters(prev => ({
       ...prev,
       [key]: nextValue,
-      page: 1
+      page: 1,
+      ...(key === 'id_etat_final' ? { id_sous_etat: '', annuler_repro_type: '' } : {})
     }));
     // Pagination et limite : mettre à jour appliedFilters pour lancer la requête
     if (key === 'page' || key === 'limit') {
@@ -808,6 +810,21 @@ const Fiches = () => {
                     {sousEtatsForSelectedEtat.map(se => (
                       <option key={se.id} value={se.id}>{se.titre}</option>
                     ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Affiner Annuler à reprogrammer : COMPTE RENDU ou REPRO CONFIRMATEURS */}
+              {Number(filters.id_etat_final) === 8 && (
+                <div className="form-group">
+                  <label>Source</label>
+                  <select
+                    value={filters.annuler_repro_type || ''}
+                    onChange={(e) => handleFilterChange('annuler_repro_type', e.target.value)}
+                  >
+                    <option value="">Tous</option>
+                    <option value="compte_rendu">COMPTE RENDU</option>
+                    <option value="repro_confirmateurs">REPRO CONFIRMATEURS</option>
                   </select>
                 </div>
               )}
