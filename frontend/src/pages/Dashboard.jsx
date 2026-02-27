@@ -1381,6 +1381,7 @@ const Dashboard = () => {
                             className="etat-badge"
                             style={{ backgroundColor: etatColor }}
                           >
+                            {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
                             {getEtatDisplayName(fiche)}
                             {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
                               <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>

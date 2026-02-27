@@ -2991,6 +2991,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       etat_final_groupe: etat?.groupe || null,
       // Ajouter id_etat_final pour vérification côté frontend
       id_etat_final_verified: fiche.id_etat_final,
+      has_etat_changed_by_compte_rendu: hasEtatChangedByCompteRendu,
       produit_nom: produit?.nom || null,
       produit_color: produit?.color || null,
       qualification_code: qualification_code || null
@@ -3029,6 +3030,8 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         
         historique = historique.map(histo => ({
           ...histo,
+          histo_id_confirmateur: histo.id_confirmateur,
+          from_compte_rendu: histo.id_etat === 8 && !histo.id_confirmateur,
           id_confirmateur: fiche.id_confirmateur,
           id_confirmateur_2: fiche.id_confirmateur_2,
           id_confirmateur_3: fiche.id_confirmateur_3,

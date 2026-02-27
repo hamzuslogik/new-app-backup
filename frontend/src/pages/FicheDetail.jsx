@@ -3198,6 +3198,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
                             }}
                           >
+                            {fiche.id_etat_final === 8 && fiche.has_etat_changed_by_compte_rendu && (
+                              <span style={{ marginRight: '6px' }}>&lt;CR&gt;</span>
+                            )}
                             {etatActuel.etat_titre}
                           </span>
                         </div>
@@ -3421,6 +3424,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                         fontSize: '14px'
                                       }}
                                     >
+                                      {histo.from_compte_rendu && (
+                                        <span style={{ marginRight: '6px' }}>&lt;CR&gt;</span>
+                                      )}
                                       {histo.etat_titre || 'État inconnu'}
                                     </span>
                                     <span className="historique-date" style={{ color: '#666', fontSize: '13px', marginLeft: 'auto' }}>
