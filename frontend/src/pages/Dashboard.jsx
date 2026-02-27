@@ -592,6 +592,12 @@ const Dashboard = () => {
     return lignes.join('\n');
   };
 
+  // id_etat 8 = Annuler à reprogrammer : afficher <CR> devant si l'état provient de l'acceptation d'un compte rendu
+  const ID_ETAT_ANNULER_A_REPROGRAMMER = 8;
+  const showCRPrefix = (fiche) =>
+    fiche?.id_etat_final === ID_ETAT_ANNULER_A_REPROGRAMMER &&
+    fiche?.has_etat_changed_by_compte_rendu === true;
+
   // États SIGNER (TOUT SIGNER) : 13, 16, 44, 45
   const ETATS_SIGNER = [13, 16, 44, 45];
   const isFicheSigner = (fiche) => fiche?.id_etat_final && ETATS_SIGNER.includes(Number(fiche.id_etat_final));
