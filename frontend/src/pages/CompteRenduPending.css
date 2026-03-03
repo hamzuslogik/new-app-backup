@@ -170,10 +170,18 @@
   background: #28a745;
   color: white;
 }
+.compte-rendu-card .cr-actions .btn-icon.btn-success,
+.compte-rendu-card .cr-actions .btn-icon.btn-success svg {
+  color: white !important;
+}
 
 .btn-icon.btn-danger {
   background: #dc3545;
   color: white;
+}
+.compte-rendu-card .cr-actions .btn-icon.btn-danger,
+.compte-rendu-card .cr-actions .btn-icon.btn-danger svg {
+  color: white !important;
 }
 
 .cr-content {
@@ -318,6 +326,15 @@
 .btn-danger {
   background: #dc3545;
   color: white;
+}
+
+.action-buttons .btn-success,
+.action-buttons .btn-success svg {
+  color: white !important;
+}
+.action-buttons .btn-danger,
+.action-buttons .btn-danger svg {
+  color: white !important;
 }
 
 .commentaire-section {

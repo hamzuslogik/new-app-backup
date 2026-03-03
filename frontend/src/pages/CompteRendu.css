@@ -266,8 +266,47 @@
 }
 
 .btn-edit {
-  background: #17a2b8;
+  background: #6c757d;
   color: white;
+}
+
+/* Boutons icône dans les cartes */
+.compte-rendu-card .cr-actions .btn-icon {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.compte-rendu-card .cr-actions .btn-icon.btn-success {
+  background: #28a745;
+}
+.compte-rendu-card .cr-actions .btn-icon.btn-edit {
+  background: #6c757d;
+  color: white;
+}
+.compte-rendu-card .cr-actions .btn-icon.btn-danger {
+  background: #dc3545;
+}
+
+/* Icônes blanches dans boutons Approuver et Rejeter */
+.compte-rendu-card .cr-actions .btn-icon.btn-success,
+.compte-rendu-card .cr-actions .btn-icon.btn-success svg {
+  color: white !important;
+}
+.compte-rendu-card .cr-actions .btn-icon.btn-danger,
+.compte-rendu-card .cr-actions .btn-icon.btn-danger svg {
+  color: white !important;
+}
+.action-buttons .btn-success,
+.action-buttons .btn-success svg {
+  color: white !important;
+}
+.action-buttons .btn-danger,
+.action-buttons .btn-danger svg {
+  color: white !important;
 }
 
 /* Bouton Modifier compte rendu toujours visible (pas seulement au survol) */
