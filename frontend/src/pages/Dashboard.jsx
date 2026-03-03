@@ -578,12 +578,16 @@ const Dashboard = () => {
   // Libellé d'état à afficher : priorité au etat_titre renvoyé par l'API (affiche tous les états en session confirmateur, ex. en attente)
   const getEtatDisplayName = (fiche) => (fiche?.etat_titre || getEtatName(fiche?.id_etat_final) || '').trim();
 
-  // Bulle au survol : nom prénom client, téléphone, puis commentaire confirmateur en dessous.
+  // Bulle au survol : nom prénom client, téléphone, puis commentaire. Si état changé par compte rendu → commentaire commercial, sinon commentaire confirmateur.
   const getTooltipComment = (fiche) => {
     const nom = (fiche?.nom ?? '').trim();
     const prenom = (fiche?.prenom ?? '').trim();
     const tel = (fiche?.tel ?? '').trim();
-    const commentaire = (fiche?.conf_commentaire_produit ?? '').trim();
+    const useCommentaireCommercial = fiche?.has_etat_changed_by_compte_rendu === true;
+    const commentaire = (useCommentaireCommercial
+      ? (fiche?.commentaire_commercial ?? '')
+      : (fiche?.conf_commentaire_produit ?? '')
+    ).trim();
     const commentaireStr = commentaire.length > 500 ? commentaire.slice(0, 497) + '...' : commentaire;
     const lignes = [
       [nom, prenom].filter(Boolean).join(' '),
