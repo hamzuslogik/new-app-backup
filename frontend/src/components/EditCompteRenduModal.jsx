@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from 'react-query';
 import api from '../config/api';
 import { FaTimes } from 'react-icons/fa';
@@ -102,8 +103,8 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
     setModifications(newModifications);
   };
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
+  const modalContent = (
+    <div className="edit-compte-rendu-modal-overlay modal-overlay" onClick={onClose}>
       <div className="modal-content large edit-compte-rendu-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{readOnly ? 'Voir le compte rendu' : 'Modifier le compte rendu'}</h2>
@@ -335,6 +336,8 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default EditCompteRenduModal;
