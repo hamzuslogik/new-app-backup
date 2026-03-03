@@ -104,7 +104,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content large edit-compte-rendu-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{readOnly ? 'Voir le compte rendu' : 'Modifier le compte rendu'}</h2>
           <button className="btn-close" onClick={onClose}>
