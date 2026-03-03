@@ -481,7 +481,7 @@ router.put('/:id', authenticate, async (req, res) => {
       });
     }
 
-    // Liste des champs autorisés
+    // Liste des champs autorisés (modifications)
     const allowedFields = [
       'nom', 'prenom', 'civ', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville',
       'situation_conjugale', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
@@ -489,8 +489,9 @@ router.put('/:id', authenticate, async (req, res) => {
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
       'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
-      'date_rdv_time', 'date_appel_time', 'id_centre', 'id_commercial',
-      'id_commercial_2', 'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'type_contrat_mr', 'type_contrat_madame',
+      'date_rdv_time', 'date_appel_time', 'date_sign_time', 'conf_rdv_date', 'conf_rdv_time',
+      'id_centre', 'id_commercial', 'id_commercial_2', 'id_qualif', 'rdv_urgent',
+      'commentaire', 'commentaire_qualite', 'type_contrat_mr', 'type_contrat_madame',
       'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
       'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
       'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
