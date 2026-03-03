@@ -12,31 +12,18 @@ export const useModalScrollLock = (isOpen) => {
       const originalBodyOverflow = document.body.style.overflow;
       const originalHtmlOverflow = document.documentElement.style.overflow;
       const originalBodyPaddingRight = document.body.style.paddingRight;
-      const originalBodyPosition = document.body.style.position;
-      const originalBodyTop = document.body.style.top;
-      const originalBodyWidth = document.body.style.width;
-      
-      // Calculer la position de scroll actuelle
-      const scrollY = window.scrollY;
       
       // Calculer la largeur de la scrollbar pour éviter le décalage du contenu
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       
-      // Bloquer le scroll du body et html sans modifier la taille
+      // Bloquer le scroll sans position:fixed pour éviter que la page rétrécisse (affichage moitié largeur)
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      // Ne pas forcer width: 100% pour éviter de réduire la page
-      // document.body.style.width = '100%';
       
       // Ajouter un padding-right pour compenser la disparition de la scrollbar
       if (scrollbarWidth > 0) {
         document.body.style.paddingRight = `${scrollbarWidth}px`;
       }
-      
-      // Sauvegarder la position de scroll pour la restaurer plus tard
-      window.scrollYPosition = scrollY;
 
       // Gérer les événements wheel pour permettre le scroll uniquement sur les modals
       const handleWheel = (e) => {
@@ -201,21 +188,7 @@ export const useModalScrollLock = (isOpen) => {
         // Restaurer les valeurs originales quand le modal se ferme
         document.body.style.overflow = originalBodyOverflow;
         document.documentElement.style.overflow = originalHtmlOverflow;
-        document.body.style.position = originalBodyPosition;
-        document.body.style.top = originalBodyTop;
-        // Restaurer la largeur seulement si elle était définie
-        if (originalBodyWidth) {
-          document.body.style.width = originalBodyWidth;
-        } else {
-          document.body.style.width = '';
-        }
         document.body.style.paddingRight = originalBodyPaddingRight;
-        
-        // Restaurer la position de scroll
-        if (window.scrollYPosition !== undefined) {
-          window.scrollTo(0, window.scrollYPosition);
-          delete window.scrollYPosition;
-        }
       };
     }
   }, [isOpen]);
