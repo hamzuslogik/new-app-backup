@@ -274,6 +274,13 @@
   margin: 0;
 }
 
+/* Modal Approuver compte rendu - titre en noir */
+.approve-compte-rendu-modal .modal-header,
+.approve-compte-rendu-modal .modal-header h2 {
+  color: #000 !important;
+  font-weight: 600;
+}
+
 .btn-close {
   background: none;
   border: none;

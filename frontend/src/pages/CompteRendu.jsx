@@ -109,9 +109,7 @@ const CompteRendu = () => {
   );
 
   const handleApprove = (cr) => {
-    if (window.confirm('Êtes-vous sûr de vouloir approuver ce compte rendu ? Les modifications seront appliquées à la fiche.')) {
-      approveMutation.mutate({ id: cr.id, commentaire: commentaireAdmin });
-    }
+    approveMutation.mutate({ id: cr.id, commentaire: commentaireAdmin });
   };
 
   const handleReject = (cr) => {
@@ -327,7 +325,7 @@ const CompteRendu = () => {
       {/* Modal d'approbation/rejet */}
       {selectedCompteRendu && canApprove && selectedCompteRendu.statut === 'pending' && (
         <div className="modal-overlay" onClick={() => setSelectedCompteRendu(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content approve-compte-rendu-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>
                 {selectedCompteRendu.fiche_nom} {selectedCompteRendu.fiche_prenom}
