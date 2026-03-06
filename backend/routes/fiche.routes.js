@@ -1479,9 +1479,10 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
       }
     }
 
-    // Enrichir les fiches avec l'information sur les comptes rendu
-    // "Compte rendu rédigé" uniquement si le commercial actuel de la fiche a un CR (pending ou approved) pour cette fiche.
-    // Après validation d'un CR, l'affectation commerciale est annulée ; si la fiche est réaffectée plus tard, on n'affiche pas "rédigé".
+    // Enrichir les fiches avec l'information sur les comptes rendu (uniquement depuis compte_rendu_pending)
+    // "Compte rendu rédigé" uniquement si le commercial actuel a un CR en attente (pending) pour cette fiche.
+    // On ne compte pas les CR approuvés : à l'approbation la fiche est désaffectée (id_commercial = null),
+    // donc si la fiche réapparaît au planning c'est qu'elle a été réaffectée → afficher "non rédigé".
     if (fiches.length > 0) {
       const ficheIds = fiches.map(f => f.id);
       const placeholders = ficheIds.map(() => '?').join(',');
@@ -1491,7 +1492,7 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
         INNER JOIN fiches f ON f.id = cr.id_fiche
         WHERE f.id IN (${placeholders})
           AND (cr.id_commercial = f.id_commercial OR cr.id_commercial = f.id_commercial_2)
-          AND cr.statut IN ('pending', 'approved')
+          AND cr.statut = 'pending'
       `;
       const fichesAvecCompteRendu = await query(compteRenduQuery, ficheIds);
       const ficheIdsAvecCompteRendu = new Set(fichesAvecCompteRendu.map(cr => cr.id_fiche));
