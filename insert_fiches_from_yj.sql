@@ -145,6 +145,7 @@ DELIMITER ;
 --   yj_fiche.nom_confirmateur (varchar) -> fiches.id_confirmateur (int) - conversion via table utilisateurs
 --   yj_fiche.nom_confirmateur_2 (varchar) -> fiches.id_confirmateur_2 (int) - conversion via table utilisateurs
 --   yj_fiche.nom_confirmateur_3 (varchar) -> fiches.id_confirmateur_3 (int) - conversion via table utilisateurs
+--   yj_fiche.commentaire -> fiches.conf_commentaire_produit (commentaire confirmateur / compte rendu)
 
 INSERT INTO `fiches` (
   `id`, `civ`, `nom`, `prenom`, `tel`, `gsm1`, `gsm2`, `adresse`, `cp`, `ville`,
@@ -401,7 +402,8 @@ SELECT
   0 as `hc`, -- Pas de champ direct dans yj_fiche
   1 as `active`, -- Par défaut actif
   CAST(`valider` AS UNSIGNED) as `valider`,
-  NULLIF(`conf_commentaire_produit`, '') as `conf_commentaire_produit`,
+  -- conf_commentaire_produit: rempli par le champ commentaire de yj_fiche
+  NULLIF(TRIM(`commentaire`), '') as `conf_commentaire_produit`,
   -- Conf consommations: convertir de decimal vers int (si c'est un decimal dans yj_fiche)
   CASE 
     WHEN `conf_consommations` IS NOT NULL AND `conf_consommations` > 0 
@@ -498,7 +500,8 @@ ON DUPLICATE KEY UPDATE
   `id_commercial` = VALUES(`id_commercial`),
   `id_confirmateur` = VALUES(`id_confirmateur`),
   `date_rdv_time` = VALUES(`date_rdv_time`),
-  `date_modif_time` = VALUES(`date_modif_time`);
+  `date_modif_time` = VALUES(`date_modif_time`),
+  `conf_commentaire_produit` = VALUES(`conf_commentaire_produit`);
 
 -- =====================================================
 -- FIN DU SCRIPT
