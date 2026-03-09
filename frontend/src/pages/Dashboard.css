@@ -1293,6 +1293,11 @@ body.dashboard-page {
   background-color: #f5f5f5;
 }
 
+/* Confirmateur sélectionné dans la colonne (quand "Inclure 2ème confirmateur" est coché) */
+.fiches-table .confirmateur-selected {
+  font-weight: 700;
+}
+
 /* Garder le format tableau même sur mobile - scroll horizontal */
 @media (max-width: 768px) {
   .fiches-table-container {

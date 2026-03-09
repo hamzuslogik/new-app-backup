@@ -635,6 +635,35 @@ const Dashboard = () => {
     return '';
   };
 
+  // Quand "Inclure 2ème confirmateur" est coché et un confirmateur est sélectionné : afficher Confirmateur 1 | Confirmateur 2 | Confirmateur 3, avec le sélectionné mis en avant
+  const renderConfirmateurCell = (fiche) => {
+    const selectedId = appliedFilters.id_confirmateur ? String(appliedFilters.id_confirmateur) : null;
+    const includeSecond = appliedFilters.include_confirmateur_2;
+
+    if (includeSecond && selectedId) {
+      const c1 = fiche.id_confirmateur ? getUserName(fiche.id_confirmateur) : null;
+      const c2 = fiche.id_confirmateur_2 ? getUserName(fiche.id_confirmateur_2) : null;
+      const c3 = fiche.id_confirmateur_3 ? getUserName(fiche.id_confirmateur_3) : null;
+      const isSelected = (id) => id && String(id) === selectedId;
+      const parts = [];
+      if (c1) parts.push({ key: '1', id: fiche.id_confirmateur, name: c1 });
+      if (c2) parts.push({ key: '2', id: fiche.id_confirmateur_2, name: c2 });
+      if (c3) parts.push({ key: '3', id: fiche.id_confirmateur_3, name: c3 });
+      if (parts.length === 0) return '-';
+      return (
+        <>
+          {parts.map((p, i) => (
+            <span key={p.key}>
+              {i > 0 && ' | '}
+              <span className={isSelected(p.id) ? 'confirmateur-selected' : ''}>{p.name}</span>
+            </span>
+          ))}
+        </>
+      );
+    }
+    return getConfirmateursFormatted(fiche);
+  };
+
   const fichesData = data?.data || [];
   const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
   
@@ -1439,7 +1468,7 @@ const Dashboard = () => {
                             )}
                           </span>
                         </td>
-                        <td data-label="Confirmateur:">{getConfirmateursFormatted(fiche)}</td>
+                        <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
                         <td data-label="Commercial:">{getUserName(fiche.id_commercial)}</td>
                         <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
                         <td data-label="Produit:">
