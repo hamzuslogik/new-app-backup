@@ -138,11 +138,13 @@ DELIMITER ;
 --   yj_fiche.cq_dossier (varchar) -> fiches.cq_dossier (int)
 --   yj_fiche.archive (tinyint) -> fiches.archive (int)
 --   yj_fiche.valider (tinyint) -> fiches.valider (int)
+--   yj_fiche.nom_centre (varchar) -> fiches.id_centre (int) - conversion via table centres (titre = nom_centre)
 --   yj_fiche.nom_agent (varchar) -> fiches.id_agent (int) - conversion via table utilisateurs
 --     (nom_agent correspond à l'agent qui a créé/assigne la fiche)
 --   yj_fiche.nom_commercial (varchar) -> fiches.id_commercial (int) - conversion via table utilisateurs (si id_commercial vide)
 --   yj_fiche.nom_commercial_2 (varchar) -> fiches.id_commercial_2 (int) - conversion via table utilisateurs
 --   yj_fiche.nom_confirmateur (varchar) -> fiches.id_confirmateur (int) - conversion via table utilisateurs
+--     (id_confirmateur rempli uniquement si nom_confirmateur = nom_confirmateur_2 = nom_confirmateur_3)
 --   yj_fiche.nom_confirmateur_2 (varchar) -> fiches.id_confirmateur_2 (int) - conversion via table utilisateurs
 --   yj_fiche.nom_confirmateur_3 (varchar) -> fiches.id_confirmateur_3 (int) - conversion via table utilisateurs
 --   yj_fiche.commentaire -> fiches.conf_commentaire_produit (commentaire confirmateur / compte rendu)
@@ -251,24 +253,37 @@ SELECT
     )
     ELSE NULL
   END as `id_agent`,
-  `id_centre`,
-  NULL as `id_insert`, -- Pas de champ direct dans yj_fiche (id_agent représente l'agent créateur)
-  -- id_confirmateur: retrouver l'ID via le nom dans la table utilisateurs (avec fallback sur id_confirmateur si le nom n'existe pas)
+  -- id_centre: retrouver l'ID via nom_centre dans la table centres (non pas id_centre de yj_fiche)
   COALESCE(
     CASE 
-      WHEN `nom_confirmateur` != '' AND `nom_confirmateur` IS NOT NULL
-      THEN (
-        SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = TRIM(UPPER(`yj_fiche`.`nom_confirmateur`)) LIMIT 1
-      )
+      WHEN NULLIF(TRIM(`nom_centre`), '') IS NOT NULL
+      THEN (SELECT `id` FROM `centres` WHERE TRIM(UPPER(`titre`)) = TRIM(UPPER(`yj_fiche`.`nom_centre`)) LIMIT 1)
       ELSE NULL
     END,
-    CASE 
-      WHEN `id_confirmateur` > 0 THEN `id_confirmateur`
-      ELSE NULL
-    END
-  ) as `id_confirmateur`,
-  -- id_confirmateur_2: retrouver l'ID via le nom dans la table utilisateurs
+    CASE WHEN `id_centre` > 0 THEN `id_centre` ELSE NULL END
+  ) as `id_centre`,
+  NULL as `id_insert`, -- Pas de champ direct dans yj_fiche (id_agent représente l'agent créateur)
+  -- id_confirmateur: uniquement si nom_confirmateur = nom_confirmateur_2 = nom_confirmateur_3 (même valeur)
   CASE 
+    WHEN NULLIF(TRIM(`nom_confirmateur`), '') IS NOT NULL
+     AND NULLIF(TRIM(`nom_confirmateur_2`), '') IS NOT NULL
+     AND NULLIF(TRIM(`nom_confirmateur_3`), '') IS NOT NULL
+     AND UPPER(TRIM(`nom_confirmateur`)) = UPPER(TRIM(`nom_confirmateur_2`))
+     AND UPPER(TRIM(`nom_confirmateur_2`)) = UPPER(TRIM(`nom_confirmateur_3`))
+    THEN COALESCE(
+      (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = UPPER(TRIM(`yj_fiche`.`nom_confirmateur`)) LIMIT 1),
+      CASE WHEN `id_confirmateur` > 0 THEN `id_confirmateur` ELSE NULL END
+    )
+    ELSE NULL
+  END as `id_confirmateur`,
+  -- id_confirmateur_2: rempli seulement si les 3 confirmateurs ne sont pas tous identiques
+  CASE 
+    WHEN NULLIF(TRIM(`nom_confirmateur`), '') IS NOT NULL
+     AND NULLIF(TRIM(`nom_confirmateur_2`), '') IS NOT NULL
+     AND NULLIF(TRIM(`nom_confirmateur_3`), '') IS NOT NULL
+     AND UPPER(TRIM(`nom_confirmateur`)) = UPPER(TRIM(`nom_confirmateur_2`))
+     AND UPPER(TRIM(`nom_confirmateur_2`)) = UPPER(TRIM(`nom_confirmateur_3`))
+    THEN NULL
     WHEN `nom_confirmateur_2` != '' AND `nom_confirmateur_2` IS NOT NULL
     THEN COALESCE(
       (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = TRIM(UPPER(`yj_fiche`.`nom_confirmateur_2`)) LIMIT 1),
@@ -276,8 +291,14 @@ SELECT
     )
     ELSE NULL
   END as `id_confirmateur_2`,
-  -- id_confirmateur_3: retrouver l'ID via le nom dans la table utilisateurs
+  -- id_confirmateur_3: rempli seulement si les 3 confirmateurs ne sont pas tous identiques
   CASE 
+    WHEN NULLIF(TRIM(`nom_confirmateur`), '') IS NOT NULL
+     AND NULLIF(TRIM(`nom_confirmateur_2`), '') IS NOT NULL
+     AND NULLIF(TRIM(`nom_confirmateur_3`), '') IS NOT NULL
+     AND UPPER(TRIM(`nom_confirmateur`)) = UPPER(TRIM(`nom_confirmateur_2`))
+     AND UPPER(TRIM(`nom_confirmateur_2`)) = UPPER(TRIM(`nom_confirmateur_3`))
+    THEN NULL
     WHEN `nom_confirmateur_3` != '' AND `nom_confirmateur_3` IS NOT NULL
     THEN COALESCE(
       (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = TRIM(UPPER(`yj_fiche`.`nom_confirmateur_3`)) LIMIT 1),
@@ -497,8 +518,11 @@ ON DUPLICATE KEY UPDATE
   `etude` = VALUES(`etude`),
   `id_etat_final` = VALUES(`id_etat_final`),
   `id_agent` = VALUES(`id_agent`),
+  `id_centre` = VALUES(`id_centre`),
   `id_commercial` = VALUES(`id_commercial`),
   `id_confirmateur` = VALUES(`id_confirmateur`),
+  `id_confirmateur_2` = VALUES(`id_confirmateur_2`),
+  `id_confirmateur_3` = VALUES(`id_confirmateur_3`),
   `date_rdv_time` = VALUES(`date_rdv_time`),
   `date_modif_time` = VALUES(`date_modif_time`),
   `conf_commentaire_produit` = VALUES(`conf_commentaire_produit`);

@@ -439,6 +439,7 @@ router.get('/', authenticate, async (req, res) => {
       id_sous_etat,
       id_commercial,
       id_confirmateur,
+      include_confirmateur_2,
       id_re,
       id_centre,
       id_agent,
@@ -767,11 +768,17 @@ router.get('/', authenticate, async (req, res) => {
       } else if (!(id_re && id_re !== 'all' && !reIds.includes(parseInt(id_re, 10)))) {
         whereConditions.push('1 = 0');
       }
-    // RE Confirmation (14) : en recherche, afficher tous les résultats (y compris hors équipe), quel que soit l'état (rappel bureau, NRP, etc.)
+    // Filtre par confirmateur : pour toutes les sessions Dashboard sauf confirmateur (fonction 6).
+    // include_confirmateur_2=0 : uniquement 1er confirmateur ; sinon (défaut) inclure aussi 2ème et 3ème.
     } else if (id_confirmateur && id_confirmateur !== 'all' && req.user.fonction !== 6) {
-      // Confirmateurs (6) : pas de filtre par id_confirmateur (toujours dernier confirmateur = connecté)
-      whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
-      params.push(id_confirmateur, id_confirmateur, id_confirmateur);
+      const excludeConfirmateur2 = include_confirmateur_2 === '0' || include_confirmateur_2 === 0 || include_confirmateur_2 === false || include_confirmateur_2 === 'false';
+      if (excludeConfirmateur2) {
+        whereConditions.push('fiche.id_confirmateur = ?');
+        params.push(id_confirmateur);
+      } else {
+        whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
+        params.push(id_confirmateur, id_confirmateur, id_confirmateur);
+      }
     }
     if (id_centre) {
       whereConditions.push('fiche.id_centre = ?');

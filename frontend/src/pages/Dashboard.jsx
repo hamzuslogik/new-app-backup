@@ -96,6 +96,7 @@ const Dashboard = () => {
     id_centre: '',
     id_sous_etat: '',
     annuler_repro_type: '', // '' = tous, 'compte_rendu' ou 'repro_confirmateurs' (visible si état = Annuler à reprogrammer)
+    include_confirmateur_2: true,
   });
   const [filters, setFilters] = useState(getInitialFilters);
   // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
@@ -251,6 +252,15 @@ const Dashboard = () => {
             searchParams.include_archive = 1;
           } else {
             delete searchParams.include_archive;
+          }
+          return;
+        }
+        // include_confirmateur_2 : n'envoyer que si un confirmateur est sélectionné (1 = inclure 2ème/3ème, 0 = 1er uniquement)
+        if (key === 'include_confirmateur_2') {
+          if (searchParams.id_confirmateur) {
+            searchParams.include_confirmateur_2 = searchParams.include_confirmateur_2 ? 1 : 0;
+          } else {
+            delete searchParams.include_confirmateur_2;
           }
           return;
         }
@@ -1183,20 +1193,33 @@ const Dashboard = () => {
 
                 {/* Confirmateur (masqué pour confirmateur connecté : toujours lui) */}
                 {user?.fonction !== 5 && user?.fonction !== 3 && user?.fonction !== 6 && (
-                  <div className="form-group">
-                    <label>Confirmateur</label>
-                    <select
-                      value={filters.id_confirmateur || ''}
-                      onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
-                    >
-                      <option value="">Tous</option>
-                      {confirmateurs.map(conf => (
-                        <option key={conf.id} value={conf.id}>
-                          {conf.pseudo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <>
+                    <div className="form-group">
+                      <label>Confirmateur</label>
+                      <select
+                        value={filters.id_confirmateur || ''}
+                        onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
+                      >
+                        <option value="">Tous</option>
+                        {confirmateurs.map(conf => (
+                          <option key={conf.id} value={conf.id}>
+                            {conf.pseudo}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {filters.id_confirmateur && (
+                      <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          id="include_confirmateur_2"
+                          checked={!!filters.include_confirmateur_2}
+                          onChange={(e) => handleFilterChange('include_confirmateur_2', e.target.checked)}
+                        />
+                        <label htmlFor="include_confirmateur_2" style={{ marginBottom: 0 }}>Inclure 2ème confirmateur</label>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Centre */}
@@ -1688,20 +1711,33 @@ const Dashboard = () => {
 
                 {/* Confirmateur (masqué pour confirmateur connecté : toujours lui) */}
                 {user?.fonction !== 5 && user?.fonction !== 3 && user?.fonction !== 6 && (
-                  <div className="form-group">
-                    <label>Confirmateur</label>
-                    <select
-                      value={filters.id_confirmateur || ''}
-                      onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
-                    >
-                      <option value="">Tous</option>
-                      {confirmateurs.map(conf => (
-                        <option key={conf.id} value={conf.id}>
-                          {conf.pseudo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <>
+                    <div className="form-group">
+                      <label>Confirmateur</label>
+                      <select
+                        value={filters.id_confirmateur || ''}
+                        onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
+                      >
+                        <option value="">Tous</option>
+                        {confirmateurs.map(conf => (
+                          <option key={conf.id} value={conf.id}>
+                            {conf.pseudo}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {filters.id_confirmateur && (
+                      <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          id="include_confirmateur_2_mobile"
+                          checked={!!filters.include_confirmateur_2}
+                          onChange={(e) => handleFilterChange('include_confirmateur_2', e.target.checked)}
+                        />
+                        <label htmlFor="include_confirmateur_2_mobile" style={{ marginBottom: 0 }}>Inclure 2ème confirmateur</label>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Centre */}
