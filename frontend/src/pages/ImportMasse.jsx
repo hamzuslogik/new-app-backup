@@ -430,8 +430,8 @@ const ImportMasse = () => {
                   ?.filter(c => {
                     // Filtrer par état actif
                     if (c.etat <= 0) return false;
-                    // Les admins (fonction 1, 7) peuvent voir tous les centres
-                    if (user?.fonction === 1 || user?.fonction === 7) return true;
+                    // Admin (1, 2, 7), backoffice (11), RP confirmation (13) : voir tous les centres
+                    if ([1, 2, 7, 11, 13].includes(Number(user?.fonction))) return true;
                     // Les autres utilisateurs ne peuvent voir que leur propre centre
                     return c.id === user?.centre;
                   })
