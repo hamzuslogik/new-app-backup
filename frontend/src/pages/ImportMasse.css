@@ -199,7 +199,8 @@
 }
 
 .centre-selection,
-.produit-selection {
+.produit-selection,
+.agent-selection {
   padding: 16px;
   background: #f9f9f9;
   border-radius: 8px;
@@ -207,7 +208,8 @@
 }
 
 .centre-selection label,
-.produit-selection label {
+.produit-selection label,
+.agent-selection label {
   display: block;
   margin-bottom: 8px;
   font-size: 13.6px;
@@ -215,7 +217,8 @@
 }
 
 .centre-select,
-.produit-select {
+.produit-select,
+.agent-select {
   width: 100%;
   max-width: 400px;
   padding: 8px 12px;

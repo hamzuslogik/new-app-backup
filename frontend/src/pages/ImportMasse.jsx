@@ -46,6 +46,7 @@ const ImportMasse = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedCentre, setSelectedCentre] = useState(user?.centre || '');
   const [selectedProduit, setSelectedProduit] = useState('');
+  const [selectedAgent, setSelectedAgent] = useState('');
   const [activeJobId, setActiveJobId] = useState(() => sessionStorage.getItem(SESSION_STORAGE_JOB_KEY) || null);
   const abortControllerRef = useRef(null);
 
@@ -60,6 +61,13 @@ const ImportMasse = () => {
     const res = await api.get('/management/produits');
     return res.data.data || [];
   });
+
+  // Récupérer la liste des utilisateurs (pour le choix de l'agent assigné aux fiches importées)
+  const { data: usersData } = useQuery('users', async () => {
+    const res = await api.get('/management/utilisateurs');
+    return res.data.data || [];
+  });
+  const agentsList = (usersData || []).filter(u => u.etat > 0);
 
   // Polling de la progression d'un import en cours (persisté via sessionStorage)
   const { data: progressResponse, isError: progressError, error: progressErr } = useQuery(
@@ -238,6 +246,12 @@ const ImportMasse = () => {
       return;
     }
 
+    // Vérifier qu'un agent est sélectionné
+    if (!selectedAgent) {
+      toast.error('Veuillez sélectionner un agent');
+      return;
+    }
+
     setIsProcessing(true);
     setImportResult(null);
     importMutation.mutate({
@@ -245,7 +259,8 @@ const ImportMasse = () => {
       tempFile,
       skipDuplicates: false,
       id_centre: selectedCentre,
-      produit: selectedProduit
+      produit: selectedProduit,
+      id_agent: selectedAgent
     });
   };
 
@@ -279,6 +294,7 @@ const ImportMasse = () => {
     sessionStorage.removeItem(SESSION_STORAGE_RESULT_KEY);
     setSelectedCentre(user?.centre || '');
     setSelectedProduit('');
+    setSelectedAgent('');
   };
 
   if (!hasPermission('fiches_create')) {
@@ -447,6 +463,27 @@ const ImportMasse = () => {
               </select>
               <p className="selection-help">Toutes les fiches importées seront associées à ce produit</p>
             </div>
+
+            <div className="agent-selection">
+              <label htmlFor="agent-select">
+                <strong>Agent *</strong>
+              </label>
+              <select
+                id="agent-select"
+                value={selectedAgent}
+                onChange={(e) => setSelectedAgent(e.target.value)}
+                className="agent-select"
+                required
+              >
+                <option value="">-- Sélectionner un agent --</option>
+                {agentsList.map(agent => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.pseudo || agent.nom || agent.login || `ID ${agent.id}`}
+                  </option>
+                ))}
+              </select>
+              <p className="selection-help">Toutes les fiches importées seront assignées à cet agent</p>
+            </div>
           </div>
 
           <div className="mapping-table-container">
@@ -521,7 +558,7 @@ const ImportMasse = () => {
             <button
               className="btn-import"
               onClick={handleImport}
-              disabled={isProcessing || !!activeJobId || !(mapping.tel || mapping.gsm1 || mapping.gsm2) || !selectedCentre || !selectedProduit}
+              disabled={isProcessing || !!activeJobId || !(mapping.tel || mapping.gsm1 || mapping.gsm2) || !selectedCentre || !selectedProduit || !selectedAgent}
             >
               {isProcessing ? (
                 <>

@@ -144,7 +144,9 @@ DELIMITER ;
 --   yj_fiche.nom_commercial (varchar) -> fiches.id_commercial (int) - conversion via table utilisateurs (si id_commercial vide)
 --   yj_fiche.nom_commercial_2 (varchar) -> fiches.id_commercial_2 (int) - conversion via table utilisateurs
 --   yj_fiche.nom_confirmateur (varchar) -> fiches.id_confirmateur (int) - conversion via table utilisateurs
---     (id_confirmateur rempli uniquement si nom_confirmateur = nom_confirmateur_2 = nom_confirmateur_3)
+--     Si nom_confirmateur = nom_confirmateur_2 = nom_confirmateur_3 → uniquement id_confirmateur
+--     Si 2 valeurs distinctes → id_confirmateur + id_confirmateur_2
+--     Si 3 valeurs distinctes → id_confirmateur + id_confirmateur_2 + id_confirmateur_3
 --   yj_fiche.nom_confirmateur_2 (varchar) -> fiches.id_confirmateur_2 (int) - conversion via table utilisateurs
 --   yj_fiche.nom_confirmateur_3 (varchar) -> fiches.id_confirmateur_3 (int) - conversion via table utilisateurs
 --   yj_fiche.commentaire -> fiches.conf_commentaire_produit (commentaire confirmateur / compte rendu)
@@ -263,47 +265,40 @@ SELECT
     CASE WHEN `id_centre` > 0 THEN `id_centre` ELSE NULL END
   ) as `id_centre`,
   NULL as `id_insert`, -- Pas de champ direct dans yj_fiche (id_agent représente l'agent créateur)
-  -- id_confirmateur: uniquement si nom_confirmateur = nom_confirmateur_2 = nom_confirmateur_3 (même valeur)
-  CASE 
-    WHEN NULLIF(TRIM(`nom_confirmateur`), '') IS NOT NULL
-     AND NULLIF(TRIM(`nom_confirmateur_2`), '') IS NOT NULL
-     AND NULLIF(TRIM(`nom_confirmateur_3`), '') IS NOT NULL
-     AND UPPER(TRIM(`nom_confirmateur`)) = UPPER(TRIM(`nom_confirmateur_2`))
-     AND UPPER(TRIM(`nom_confirmateur_2`)) = UPPER(TRIM(`nom_confirmateur_3`))
-    THEN COALESCE(
-      (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = UPPER(TRIM(`yj_fiche`.`nom_confirmateur`)) LIMIT 1),
-      CASE WHEN `id_confirmateur` > 0 THEN `id_confirmateur` ELSE NULL END
-    )
-    ELSE NULL
-  END as `id_confirmateur`,
-  -- id_confirmateur_2: rempli seulement si les 3 confirmateurs ne sont pas tous identiques
-  CASE 
-    WHEN NULLIF(TRIM(`nom_confirmateur`), '') IS NOT NULL
-     AND NULLIF(TRIM(`nom_confirmateur_2`), '') IS NOT NULL
-     AND NULLIF(TRIM(`nom_confirmateur_3`), '') IS NOT NULL
+  -- Confirmateurs : 1 même valeur sur les 3 noms → uniquement id_confirmateur ; 2 valeurs distinctes → id_confirmateur + id_confirmateur_2 ; 3 distinctes → id_confirmateur + id_confirmateur_2 + id_confirmateur_3
+  COALESCE(
+    CASE WHEN NULLIF(TRIM(`nom_confirmateur`), '') IS NOT NULL
+    THEN (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = UPPER(TRIM(`yj_fiche`.`nom_confirmateur`)) LIMIT 1)
+    ELSE NULL END,
+    CASE WHEN `id_confirmateur` > 0 THEN `id_confirmateur` ELSE NULL END
+  ) as `id_confirmateur`,
+  CASE
+    -- Tous les 3 noms identiques → pas de 2ème
+    WHEN NULLIF(TRIM(`nom_confirmateur`), '') IS NOT NULL AND NULLIF(TRIM(`nom_confirmateur_2`), '') IS NOT NULL AND NULLIF(TRIM(`nom_confirmateur_3`), '') IS NOT NULL
      AND UPPER(TRIM(`nom_confirmateur`)) = UPPER(TRIM(`nom_confirmateur_2`))
      AND UPPER(TRIM(`nom_confirmateur_2`)) = UPPER(TRIM(`nom_confirmateur_3`))
     THEN NULL
-    WHEN `nom_confirmateur_2` != '' AND `nom_confirmateur_2` IS NOT NULL
-    THEN COALESCE(
-      (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = TRIM(UPPER(`yj_fiche`.`nom_confirmateur_2`)) LIMIT 1),
-      NULL
-    )
+    -- 2ème position différente du 1er → id_confirmateur_2 depuis nom_confirmateur_2
+    WHEN NULLIF(TRIM(`nom_confirmateur_2`), '') IS NOT NULL AND UPPER(TRIM(`nom_confirmateur_2`)) != UPPER(TRIM(IFNULL(`nom_confirmateur`, '')))
+    THEN (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = UPPER(TRIM(`yj_fiche`.`nom_confirmateur_2`)) LIMIT 1)
+    -- 3ème position différente du 1er (et 2ème vide ou égal au 1er) → id_confirmateur_2 depuis nom_confirmateur_3
+    WHEN NULLIF(TRIM(`nom_confirmateur_3`), '') IS NOT NULL AND UPPER(TRIM(`nom_confirmateur_3`)) != UPPER(TRIM(IFNULL(`nom_confirmateur`, '')))
+     AND (NULLIF(TRIM(`nom_confirmateur_2`), '') IS NULL OR UPPER(TRIM(`nom_confirmateur_2`)) = UPPER(TRIM(IFNULL(`nom_confirmateur`, ''))))
+    THEN (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = UPPER(TRIM(`yj_fiche`.`nom_confirmateur_3`)) LIMIT 1)
     ELSE NULL
   END as `id_confirmateur_2`,
-  -- id_confirmateur_3: rempli seulement si les 3 confirmateurs ne sont pas tous identiques
-  CASE 
-    WHEN NULLIF(TRIM(`nom_confirmateur`), '') IS NOT NULL
-     AND NULLIF(TRIM(`nom_confirmateur_2`), '') IS NOT NULL
-     AND NULLIF(TRIM(`nom_confirmateur_3`), '') IS NOT NULL
+  CASE
+    -- Tous les 3 noms identiques → pas de 3ème
+    WHEN NULLIF(TRIM(`nom_confirmateur`), '') IS NOT NULL AND NULLIF(TRIM(`nom_confirmateur_2`), '') IS NOT NULL AND NULLIF(TRIM(`nom_confirmateur_3`), '') IS NOT NULL
      AND UPPER(TRIM(`nom_confirmateur`)) = UPPER(TRIM(`nom_confirmateur_2`))
      AND UPPER(TRIM(`nom_confirmateur_2`)) = UPPER(TRIM(`nom_confirmateur_3`))
     THEN NULL
-    WHEN `nom_confirmateur_3` != '' AND `nom_confirmateur_3` IS NOT NULL
-    THEN COALESCE(
-      (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = TRIM(UPPER(`yj_fiche`.`nom_confirmateur_3`)) LIMIT 1),
-      NULL
-    )
+    -- 3 valeurs distinctes : 1er != 2ème et 2ème != 3ème et 1er != 3ème → id_confirmateur_3 depuis nom_confirmateur_3
+    WHEN NULLIF(TRIM(`nom_confirmateur`), '') IS NOT NULL AND NULLIF(TRIM(`nom_confirmateur_2`), '') IS NOT NULL AND NULLIF(TRIM(`nom_confirmateur_3`), '') IS NOT NULL
+     AND UPPER(TRIM(`nom_confirmateur`)) != UPPER(TRIM(`nom_confirmateur_2`))
+     AND UPPER(TRIM(`nom_confirmateur_2`)) != UPPER(TRIM(`nom_confirmateur_3`))
+     AND UPPER(TRIM(`nom_confirmateur`)) != UPPER(TRIM(`nom_confirmateur_3`))
+    THEN (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = UPPER(TRIM(`yj_fiche`.`nom_confirmateur_3`)) LIMIT 1)
     ELSE NULL
   END as `id_confirmateur_3`,
   `id_qualite`,

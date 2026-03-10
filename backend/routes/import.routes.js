@@ -945,7 +945,7 @@ const findKeyInObject = (obj, targetKey) => {
 };
 
 // Fonction pour insérer une fiche
-const insertFiche = async (contact, mapping, userId, idCentre, produitId = null) => {
+const insertFiche = async (contact, mapping, userId, idCentre, produitId = null, idAgent = null) => {
   // Variable statique pour logger seulement le premier contact
   const isFirstContact = !insertFiche.firstContactLogged;
   if (isFirstContact) {
@@ -1160,8 +1160,8 @@ const insertFiche = async (contact, mapping, userId, idCentre, produitId = null)
   }
 
   // Valeurs par défaut obligatoires
-  // Toujours utiliser l'ID de l'utilisateur connecté comme id_agent
-  ficheData.id_agent = userId;
+  // Utiliser l'agent sélectionné (id_agent) si fourni, sinon l'utilisateur connecté
+  ficheData.id_agent = idAgent != null && idAgent > 0 ? parseInt(idAgent, 10) : userId;
   // Toujours utiliser le centre sélectionné
   ficheData.id_centre = idCentre;
   // Utiliser le produit sélectionné si fourni et si le mapping ne contient pas déjà un produit
@@ -1470,7 +1470,7 @@ router.post('/preview', authenticate, checkPermissionCode('fiches_create'), uplo
 
 // Exécuter l'import en arrière-plan (mise à jour de la progression dans importJobs)
 async function runImportJob(jobId, params) {
-  const { validContacts, mapping, userId, centreId, produit, tempFilePath, tempFile, data, duplicates, fileColumns } = params;
+  const { validContacts, mapping, userId, centreId, produit, id_agent, tempFilePath, tempFile, data, duplicates, fileColumns } = params;
   const job = importJobs.get(jobId);
   if (!job || job.status !== 'running') return;
 
@@ -1486,7 +1486,7 @@ async function runImportJob(jobId, params) {
     }
     const contact = validContacts[i];
     try {
-      await insertFiche(contact, mapping, userId, centreId, produit);
+      await insertFiche(contact, mapping, userId, centreId, produit, id_agent);
       job.inserted++;
       job.processed = i + 1;
       const progressInterval = validContacts.length > 100 ? 100 : 10;
@@ -1539,7 +1539,7 @@ async function runImportJob(jobId, params) {
 // POST /api/import/process — Démarre l'import et retourne immédiatement un jobId (l'import continue en arrière-plan)
 router.post('/process', authenticate, checkPermissionCode('fiches_create'), async (req, res) => {
   try {
-    const { mapping, tempFile, skipDuplicates, id_centre, produit } = req.body;
+    const { mapping, tempFile, skipDuplicates, id_centre, produit, id_agent } = req.body;
 
     if (!mapping || !tempFile) {
       return res.status(400).json({ success: false, message: 'Mapping et fichier temporaire requis' });
@@ -1547,11 +1547,14 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
     const centreId = id_centre || req.user.centre;
     if (!centreId) return res.status(400).json({ success: false, message: 'Centre requis' });
     if (!produit) return res.status(400).json({ success: false, message: 'Produit requis' });
+    if (!id_agent) return res.status(400).json({ success: false, message: 'Agent requis' });
 
     const centre = await queryOne('SELECT id, etat FROM centres WHERE id = ?', [centreId]);
     if (!centre || centre.etat === 0) return res.status(400).json({ success: false, message: 'Centre invalide ou désactivé' });
     const produitData = await queryOne('SELECT id FROM produits WHERE id = ?', [parseInt(produit)]);
     if (!produitData) return res.status(400).json({ success: false, message: 'Produit invalide' });
+    const agentData = await queryOne('SELECT id, etat FROM utilisateurs WHERE id = ?', [parseInt(id_agent)]);
+    if (!agentData || agentData.etat === 0) return res.status(400).json({ success: false, message: 'Agent invalide ou désactivé' });
 
     const tempFilePath = path.join(__dirname, '../../uploads', tempFile);
     if (!fs.existsSync(tempFilePath)) return res.status(404).json({ success: false, message: 'Fichier temporaire non trouvé' });
@@ -1618,6 +1621,7 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
         userId: req.user.id,
         centreId,
         produit,
+        id_agent: parseInt(id_agent, 10),
         tempFilePath,
         tempFile,
         data,
@@ -1931,7 +1935,7 @@ if (typeof cleanPhoneNumber !== 'undefined') module.exports.cleanPhoneNumber = c
 // Traiter l'import avec le mapping fourni
 router.post('/process', authenticate, checkPermissionCode('fiches_create'), async (req, res) => {
   try {
-    const { mapping, tempFile, skipDuplicates, id_centre, produit } = req.body;
+    const { mapping, tempFile, skipDuplicates, id_centre, produit, id_agent } = req.body;
     
     if (!mapping || !tempFile) {
       return res.status(400).json({
@@ -1957,6 +1961,14 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
       });
     }
 
+    // Vérifier que l'agent est fourni
+    if (!id_agent) {
+      return res.status(400).json({
+        success: false,
+        message: 'Agent requis'
+      });
+    }
+
     // Vérifier que le centre existe et est actif
     const centre = await queryOne('SELECT id, etat FROM centres WHERE id = ?', [centreId]);
     if (!centre || centre.etat === 0) {
@@ -1972,6 +1984,15 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
       return res.status(400).json({
         success: false,
         message: 'Produit invalide'
+      });
+    }
+
+    // Vérifier que l'agent existe et est actif
+    const agentData = await queryOne('SELECT id, etat FROM utilisateurs WHERE id = ?', [parseInt(id_agent)]);
+    if (!agentData || agentData.etat === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Agent invalide ou désactivé'
       });
     }
 
@@ -2321,7 +2342,7 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
     for (let i = 0; i < validContacts.length; i++) {
       const contact = validContacts[i];
       try {
-        await insertFiche(contact, mapping, req.user.id, centreId, produit);
+        await insertFiche(contact, mapping, req.user.id, centreId, produit, parseInt(id_agent, 10));
         inserted++;
         
         // Afficher la progression tous les 100 contacts
