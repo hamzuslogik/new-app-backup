@@ -67,7 +67,8 @@ const ImportMasse = () => {
     const res = await api.get('/management/utilisateurs');
     return res.data.data || [];
   });
-  const agentsList = (usersData || []).filter(u => u.etat > 0);
+  // Afficher uniquement les utilisateurs de fonction backoffice (fonction 11)
+  const agentsList = (usersData || []).filter(u => u.etat > 0 && Number(u.fonction) === 11);
 
   // Polling de la progression d'un import en cours (persisté via sessionStorage)
   const { data: progressResponse, isError: progressError, error: progressErr } = useQuery(
@@ -482,7 +483,7 @@ const ImportMasse = () => {
                   </option>
                 ))}
               </select>
-              <p className="selection-help">Toutes les fiches importées seront assignées à cet agent</p>
+              <p className="selection-help">Toutes les fiches importées seront assignées à cet agent (liste des utilisateurs backoffice)</p>
             </div>
           </div>
 
