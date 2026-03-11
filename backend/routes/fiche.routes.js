@@ -1033,20 +1033,27 @@ router.get('/', authenticate, async (req, res) => {
     const selectDuration = Date.now() - selectStartTime;
     console.log(`[FICHES-${requestId}] SELECT query: ${selectDuration}ms → ${fiches.length} fiches`);
 
-    // Enrichir les fiches : has_etat_changed_by_compte_rendu = fiche mise à jour suite à l'acceptation d'un compte rendu
+    // Enrichir les fiches : has_etat_changed_by_compte_rendu + compte_rendu_commercial_pseudo (dernier CR approuvé)
     if (fiches.length > 0) {
       const ficheIds = fiches.map((f) => f.id);
       const placeholders = ficheIds.map(() => '?').join(',');
       const crQuery = `
-        SELECT DISTINCT cr.id_fiche
+        SELECT cr.id_fiche, u.pseudo as compte_rendu_commercial_pseudo
         FROM compte_rendu_pending cr
-        WHERE cr.id_fiche IN (${placeholders})
-          AND cr.statut = 'approved'
+        LEFT JOIN utilisateurs u ON cr.id_commercial = u.id
+        INNER JOIN (
+          SELECT id_fiche, MAX(id) as max_id
+          FROM compte_rendu_pending
+          WHERE statut = 'approved' AND id_fiche IN (${placeholders})
+          GROUP BY id_fiche
+        ) last_cr ON cr.id_fiche = last_cr.id_fiche AND cr.id = last_cr.max_id
+        WHERE cr.statut = 'approved'
       `;
-      const fichesAvecCRAccepted = await query(crQuery, ficheIds);
-      const ficheIdsAvecCRAccepted = new Set(fichesAvecCRAccepted.map((cr) => cr.id_fiche));
+      const crWithCommercial = await query(crQuery, ficheIds);
+      const crByFiche = new Map(crWithCommercial.map((r) => [r.id_fiche, r.compte_rendu_commercial_pseudo || null]));
       fiches.forEach((fiche) => {
-        fiche.has_etat_changed_by_compte_rendu = ficheIdsAvecCRAccepted.has(fiche.id);
+        fiche.has_etat_changed_by_compte_rendu = crByFiche.has(fiche.id);
+        fiche.compte_rendu_commercial_pseudo = crByFiche.get(fiche.id) || null;
       });
     }
 
@@ -2995,6 +3002,20 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       [id, 'approved']
     ));
 
+    // Pseudo du commercial auteur du dernier compte rendu approuvé (pour affichage <CR> + nom)
+    let compte_rendu_commercial_pseudo = null;
+    if (hasEtatChangedByCompteRendu) {
+      const lastCr = await queryOne(
+        `SELECT u.pseudo
+         FROM compte_rendu_pending cr
+         LEFT JOIN utilisateurs u ON cr.id_commercial = u.id
+         WHERE cr.id_fiche = ? AND cr.statut = 'approved'
+         ORDER BY cr.date_approbation DESC, cr.id DESC LIMIT 1`,
+        [id]
+      );
+      if (lastCr && lastCr.pseudo) compte_rendu_commercial_pseudo = lastCr.pseudo;
+    }
+
     // Récupérer "Validé par qui" pour fiches confirmées et validées (dernière validation avec valider=1)
     let validateur_pseudo = null;
     if (fiche.id_etat_final === 7 && fiche.valider > 0) {
@@ -3039,6 +3060,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       // Ajouter id_etat_final pour vérification côté frontend
       id_etat_final_verified: fiche.id_etat_final,
       has_etat_changed_by_compte_rendu: hasEtatChangedByCompteRendu,
+      compte_rendu_commercial_pseudo,
       produit_nom: produit?.nom || null,
       produit_color: produit?.color || null,
       qualification_code: qualification_code || null,
@@ -3054,10 +3076,12 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         `SELECT histo.*,
          etat.titre as etat_titre,
          etat.color as etat_color,
-         u_histo.pseudo as histo_confirmateur_pseudo
+         u_histo.pseudo as histo_confirmateur_pseudo,
+         u_cr.pseudo as cr_commercial_pseudo
          FROM fiches_histo histo
          LEFT JOIN etats etat ON histo.id_etat = etat.id
          LEFT JOIN utilisateurs u_histo ON histo.id_confirmateur = u_histo.id
+         LEFT JOIN utilisateurs u_cr ON histo.id_commercial_cr = u_cr.id
          WHERE histo.id_fiche = ? 
          ORDER BY histo.id ASC`,
         [id]
@@ -3079,7 +3103,8 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         historique = historique.map(histo => ({
           ...histo,
           histo_id_confirmateur: histo.id_confirmateur,
-          from_compte_rendu: histo.id_etat === 8 && !histo.id_confirmateur,
+          from_compte_rendu: histo.from_compte_rendu === 1 || (histo.id_etat === 8 && !histo.id_confirmateur),
+          cr_commercial_pseudo: histo.cr_commercial_pseudo || null,
           id_confirmateur: fiche.id_confirmateur,
           id_confirmateur_2: fiche.id_confirmateur_2,
           id_confirmateur_3: fiche.id_confirmateur_3,

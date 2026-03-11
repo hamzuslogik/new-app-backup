@@ -839,11 +839,11 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       [now, compteRendu.id_fiche]
     );
 
-    // Enregistrer l'historique si l'état a changé
+    // Enregistrer l'historique si l'état a changé (avec from_compte_rendu et id_commercial_cr pour affichage <CR> + commercial)
     if (nouveauEtat && nouveauEtat !== ancienEtat) {
       await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation) VALUES (?, ?, ?)`,
-        [compteRendu.id_fiche, nouveauEtat, now]
+        `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr) VALUES (?, ?, ?, 1, ?)`,
+        [compteRendu.id_fiche, nouveauEtat, now, compteRendu.id_commercial || null]
       );
     }
 

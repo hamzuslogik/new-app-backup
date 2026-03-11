@@ -3234,8 +3234,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
                             }}
                           >
-                            {fiche.id_etat_final === 8 && fiche.has_etat_changed_by_compte_rendu && (
-                              <span style={{ marginRight: '6px' }}>&lt;CR&gt;</span>
+                            {fiche.has_etat_changed_by_compte_rendu && (
+                              <span style={{ marginRight: '6px' }}>&lt;CR&gt;{fiche.compte_rendu_commercial_pseudo ? ` ${fiche.compte_rendu_commercial_pseudo}` : ''}</span>
                             )}
                             {etatActuel.etat_titre}
                           </span>
@@ -3461,7 +3461,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                       }}
                                     >
                                       {histo.from_compte_rendu && (
-                                        <span style={{ marginRight: '6px' }}>&lt;CR&gt;</span>
+                                        <span style={{ marginRight: '6px' }}>&lt;CR&gt;{histo.cr_commercial_pseudo ? ` ${histo.cr_commercial_pseudo}` : ''}</span>
                                       )}
                                       {histo.etat_titre || 'État inconnu'}
                                     </span>
