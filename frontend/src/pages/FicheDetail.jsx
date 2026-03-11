@@ -95,6 +95,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   
   // État pour le modal de création de RDV
   const [showRdvModal, setShowRdvModal] = useState(false);
+  const [rdvSubmitting, setRdvSubmitting] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null); // { date, hour }
   const [rdvFormData, setRdvFormData] = useState({
     date_rdv_time: '',
@@ -978,6 +979,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       return;
     }
 
+    setRdvSubmitting(true);
     try {
       // Vérifier la disponibilité du créneau
       let needsApproval = false;
@@ -1165,6 +1167,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     } catch (error) {
       console.error('Erreur lors de la création du RDV:', error);
       alert('Erreur lors de la création du rendez-vous: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setRdvSubmitting(false);
     }
   };
 
@@ -5703,6 +5707,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             setSelectedSlot(null);
           }}
           onSubmit={handleCreateRdvFromForm}
+          rdvSubmitting={rdvSubmitting}
         />
       )}
     </div>
@@ -6729,7 +6734,8 @@ const CreateRdvModal = ({
   setRdvFormData, 
   confirmateurs,
   onClose, 
-  onSubmit 
+  onSubmit,
+  rdvSubmitting = false
 }) => {
   const isConfirmateurSession = Number(user?.fonction) === 6;
 
@@ -6852,7 +6858,7 @@ const CreateRdvModal = ({
             <p><strong>Fiche :</strong> {ficheData?.nom || ''} {ficheData?.prenom || ''} ({ficheData?.tel || ''})</p>
           </div>
 
-          <form className="rdv-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+          <form className="rdv-form" onSubmit={(e) => { e.preventDefault(); if (!rdvSubmitting) onSubmit(); }}>
             {/* Case à cocher pour RDV urgent - Par défaut CONFIRMER */}
             <div className="form-group">
               {(() => {
@@ -7236,8 +7242,8 @@ const CreateRdvModal = ({
               <button type="button" className="btn-cancel" onClick={onClose}>
                 Annuler
               </button>
-              <button type="submit" className="btn-save">
-                Créer le RDV
+              <button type="submit" className="btn-save" disabled={rdvSubmitting}>
+                {rdvSubmitting ? 'Création…' : 'Créer le RDV'}
               </button>
             </div>
           </form>
