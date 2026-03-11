@@ -825,14 +825,17 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     }
 
     // Annuler l'affectation de la fiche au commercial après validation du compte rendu
-    // (la fiche pourra être réaffectée plus tard ; le "compte rendu rédigé" ne s'affichera plus pour ce cycle)
-    const ficheAvantDesaffectation = await queryOne('SELECT id_commercial, id_commercial_2 FROM fiches WHERE id = ?', [compteRendu.id_fiche]);
+    // et annuler la validation RDV (valider = 0) pour que, si un nouveau RDV est pris depuis la fiche, il faille revalider
+    const ficheAvantDesaffectation = await queryOne('SELECT id_commercial, id_commercial_2, valider FROM fiches WHERE id = ?', [compteRendu.id_fiche]);
     if (ficheAvantDesaffectation && (ficheAvantDesaffectation.id_commercial != null || ficheAvantDesaffectation.id_commercial_2 != null)) {
       await logModification(compteRendu.id_fiche, user.id, 'id_commercial', ficheAvantDesaffectation.id_commercial, null, now);
       await logModification(compteRendu.id_fiche, user.id, 'id_commercial_2', ficheAvantDesaffectation.id_commercial_2, null, now);
     }
+    if (ficheAvantDesaffectation && ficheAvantDesaffectation.valider > 0) {
+      await logModification(compteRendu.id_fiche, user.id, 'valider', ficheAvantDesaffectation.valider, 0, now);
+    }
     await query(
-      `UPDATE fiches SET id_commercial = NULL, id_commercial_2 = NULL, date_modif_time = ? WHERE id = ?`,
+      `UPDATE fiches SET id_commercial = NULL, id_commercial_2 = NULL, valider = 0, conf_rdv_avec = NULL, conf_presence_couple = NULL, date_modif_time = ? WHERE id = ?`,
       [now, compteRendu.id_fiche]
     );
 
