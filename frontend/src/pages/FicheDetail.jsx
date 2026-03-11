@@ -96,6 +96,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // État pour le modal de création de RDV
   const [showRdvModal, setShowRdvModal] = useState(false);
   const [rdvSubmitting, setRdvSubmitting] = useState(false);
+  const [etatSubmitting, setEtatSubmitting] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null); // { date, hour }
   const [rdvFormData, setRdvFormData] = useState({
     date_rdv_time: '',
@@ -1576,10 +1577,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           updateData.modifications = modifications;
         }
 
-        updateCompteRenduMutation.mutate({ crId: editingCompteRendu, data: updateData });
+        setEtatSubmitting(true);
+        updateCompteRenduMutation.mutate({ crId: editingCompteRendu, data: updateData }, { onSettled: () => setEtatSubmitting(false) });
         return;
       }
 
+      setEtatSubmitting(true);
       const updateData = {
         id_etat_final: parseInt(selectedEtat)
       };
@@ -1765,9 +1768,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           alert('État de la fiche mis à jour avec succès');
         }
       }
+      setEtatSubmitting(false);
     } catch (error) {
       console.error('Erreur lors du changement d\'état:', error);
       alert('Erreur lors du changement d\'état: ' + (error.response?.data?.message || error.message));
+      setEtatSubmitting(false);
     }
   };
 
@@ -4171,7 +4176,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   </div>
 
                   <div className="form-actions">
-                    <button className="btn-confirm" onClick={handleEtatSubmit}>Enregistrer</button>
+                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
@@ -4207,7 +4212,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     />
                   </div>
                   <div className="form-actions">
-                    <button className="btn-confirm" onClick={handleEtatSubmit}>Enregistrer</button>
+                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
@@ -4299,7 +4304,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   </div>
 
                   <div className="form-actions">
-                    <button className="btn-confirm" onClick={handleEtatSubmit}>Enregistrer</button>
+                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
@@ -4750,8 +4755,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   <button
                     className="btn-confirm"
                     onClick={handleEtatSubmit}
+                    disabled={etatSubmitting}
                   >
-                    Enregistrer
+                    {etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}
                   </button>
                   <button
                     className="btn-cancel"
@@ -4846,7 +4852,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 </div>
 
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit}>Enregistrer</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setEtatFormData({...etatFormData, conf_rdv_date: '', conf_rdv_time: '', id_sous_etat: '', conf_rdv_avec: '', conf_commentaire_produit: ''});
@@ -4915,7 +4921,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 </div>
 
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit}>Enregistrer</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setEtatFormData({...etatFormData, date_rappel_date: '', date_rappel_time: '', id_sous_etat: '', conf_commentaire_produit: ''});
@@ -5273,7 +5279,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 </div>
 
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit}>Enregistrer</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     if (user?.fonction === 5) {
@@ -5344,7 +5350,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 </div>
 
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit}>Enregistrer</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setEtatFormData({...etatFormData, id_commercial: '', id_commercial_2: '', conf_commentaire_produit: ''});
@@ -5411,7 +5417,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   />
                 </div>
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit}>Enregistrer</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setCompteRenduOption('');
@@ -5436,7 +5442,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   />
                 </div>
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit}>Enregistrer</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setCompteRenduOption('');
@@ -5458,8 +5464,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 <button
                   className="btn-confirm"
                   onClick={handleEtatSubmit}
+                  disabled={etatSubmitting}
                 >
-                  Enregistrer
+                  {etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
                 <button
                   className="btn-cancel"
