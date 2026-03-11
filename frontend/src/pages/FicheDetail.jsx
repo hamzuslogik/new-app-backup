@@ -312,6 +312,32 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     { enabled: selectedEtat !== null && etatsAvecSousEtats.includes(selectedEtat) }
   );
 
+  // Admin session (1 admin, 11 backoffice, 13 RP confirmation, 14 RE confirmation) : formulaire honoré à suivre étendu
+  const isAdminSessionHonoreSuivre = [1, 11, 13, 14].includes(Number(user?.fonction));
+
+  // Pré-remplir A Rappeler le (J+2 jours ouvrés) quand admin session sélectionne état 9 (Honoré à suivre)
+  useEffect(() => {
+    const addWorkingDays = (date, days) => {
+      const result = new Date(date);
+      let added = 0;
+      while (added < days) {
+        result.setDate(result.getDate() + 1);
+        const dow = result.getDay();
+        if (dow !== 0 && dow !== 6) added++;
+      }
+      return result;
+    };
+    if (selectedEtat === 9 && isAdminSessionHonoreSuivre) {
+      const dateRappel = addWorkingDays(new Date(), 2);
+      const dateRappelStr = dateRappel.toISOString().split('T')[0];
+      setEtatFormData(prev => ({
+        ...prev,
+        date_rappel_date: prev.date_rappel_date || dateRappelStr,
+        date_rappel_time: prev.date_rappel_time || '09:00'
+      }));
+    }
+  }, [selectedEtat, isAdminSessionHonoreSuivre]);
+
   // Pré-remplir les sous-états selon l'option de compte rendu sélectionnée
   useEffect(() => {
     if (compteRenduOption && sousEtats.length > 0 && selectedEtat) {
@@ -1600,6 +1626,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         // CLIENT HONORE A SUIVRE (9), REFUSER (12), HORS CIBLE CONFIRMATEUR (23), HHC FINANCEMENT A VERIFIER (34)
         if (etatFormData.conf_commentaire_produit) {
           updateData.conf_commentaire_produit = etatFormData.conf_commentaire_produit;
+        }
+        // Admin session (1, 11, 13, 14) : pour Honoré à suivre (9), ajouter A Rappeler le, Commercial
+        if (selectedEtat === 9 && isAdminSessionHonoreSuivre) {
+          if (etatFormData.date_rappel_date) {
+            const dateRappelStr = `${etatFormData.date_rappel_date} ${etatFormData.date_rappel_time || '09:00'}:00`;
+            updateData.date_rdv_time = dateRappelStr;
+          }
+          if (etatFormData.id_commercial) {
+            updateData.id_commercial = parseInt(etatFormData.id_commercial);
+          }
         }
       } else if ([13, 44, 45].includes(selectedEtat)) {
         // SIGNER, SIGNER PM, SIGNER COMPLET
@@ -5313,8 +5349,76 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               </div>
             )}
 
-            {/* Formulaire pour états 9 (CLIENT HONORE A SUIVRE), 12 (REFUSER), 23 (HORS CIBLE CONFIRMATEUR), 34 (HHC FINANCEMENT A VERIFIER) */}
-            {[9, 12, 23, 34].includes(selectedEtat) && selectedEtat !== fiche.id_etat_final && (
+            {/* Formulaire Honoré à suivre (état 9) - version étendue pour Admin, Backoffice, RP Confirmation, RE Confirmation */}
+            {selectedEtat === 9 && selectedEtat !== fiche.id_etat_final && isAdminSessionHonoreSuivre && (
+              <div className="etat-form" style={{ marginTop: '20px' }}>
+                <h3>Honoré à suivre</h3>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="etat_date_rappel_9">A Rappeler le :</label>
+                    <input
+                      type="date"
+                      id="etat_date_rappel_9"
+                      className="form-control"
+                      value={etatFormData.date_rappel_date}
+                      onChange={(e) => setEtatFormData({...etatFormData, date_rappel_date: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="etat_date_rappel_time_9">Heure :</label>
+                    <input
+                      type="time"
+                      id="etat_date_rappel_time_9"
+                      className="form-control"
+                      value={etatFormData.date_rappel_time}
+                      onChange={(e) => setEtatFormData({...etatFormData, date_rappel_time: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Date d&apos;appel :</label>
+                  <div className="form-control" style={{ backgroundColor: '#f8f9fa' }}>
+                    {new Date().toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
+                  </div>
+                  <small style={{ color: '#6c757d' }}>Remplie automatiquement à l&apos;enregistrement</small>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="etat_commercial_9">Commercial :</label>
+                  <select
+                    id="etat_commercial_9"
+                    className="form-control"
+                    value={etatFormData.id_commercial}
+                    onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
+                  >
+                    <option value="">Sélectionner</option>
+                    {(commerciaux || []).filter(c => c.etat > 0 || c.etat == null).map(c => (
+                      <option key={c.id} value={c.id}>{c.pseudo || `${c.prenom || ''} ${c.nom || ''}`.trim() || c.id}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="etat_conf_commentaire_9">Commentaire :</label>
+                  <textarea
+                    id="etat_conf_commentaire_9"
+                    className="form-control"
+                    rows="4"
+                    value={etatFormData.conf_commentaire_produit}
+                    onChange={(e) => setEtatFormData({...etatFormData, conf_commentaire_produit: e.target.value})}
+                  />
+                </div>
+                <div className="form-actions">
+                  <button className="btn-confirm" onClick={handleEtatSubmit}>Enregistrer</button>
+                  <button className="btn-cancel" onClick={() => {
+                    setSelectedEtat(null);
+                    setCompteRenduOption('');
+                    setEtatFormData({...etatFormData, date_rappel_date: '', date_rappel_time: '', id_commercial: '', conf_commentaire_produit: ''});
+                  }}>Annuler</button>
+                </div>
+              </div>
+            )}
+
+            {/* Formulaire pour états 9 (si non admin session), 12 (REFUSER), 23 (HORS CIBLE CONFIRMATEUR), 34 (HHC FINANCEMENT A VERIFIER) */}
+            {[9, 12, 23, 34].includes(selectedEtat) && selectedEtat !== fiche.id_etat_final && !(selectedEtat === 9 && isAdminSessionHonoreSuivre) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Commentaire</h3>
                 <div className="form-group">
