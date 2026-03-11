@@ -5480,11 +5480,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               <div className="validation-info">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
                   <span className="validation-badge validated">✓ Validée</span>
+                  {fiche.validateur_pseudo && (
+                    <span className="validation-with">Validé par : {fiche.validateur_pseudo}</span>
+                  )}
                   {fiche.conf_rdv_avec && (
-                    <span className="validation-with">Avec: {fiche.conf_rdv_avec}</span>
+                    <span className="validation-with">Avec qui : {fiche.conf_rdv_avec}</span>
                   )}
                   {fiche.conf_presence_couple && (
-                    <span className="validation-with">Présence du couple: {fiche.conf_presence_couple}</span>
+                    <span className="validation-with">Présence couple : {fiche.conf_presence_couple}</span>
                   )}
                 </div>
                 <button

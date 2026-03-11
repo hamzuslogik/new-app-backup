@@ -2995,6 +2995,27 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       [id, 'approved']
     ));
 
+    // Récupérer "Validé par qui" pour fiches confirmées et validées (dernière validation avec valider=1)
+    let validateur_pseudo = null;
+    if (fiche.id_etat_final === 7 && fiche.valider > 0) {
+      try {
+        const tableExists = await queryOne(
+          `SELECT COUNT(*) as c FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'validations'`
+        );
+        if (tableExists && tableExists.c > 0) {
+          const lastValid = await queryOne(
+            `SELECT u.pseudo 
+             FROM validations v
+             LEFT JOIN utilisateurs u ON v.id_user = u.id
+             WHERE v.id_fiche = ? AND v.valider = 1
+             ORDER BY v.date_valider_time DESC, v.id DESC LIMIT 1`,
+            [id]
+          );
+          if (lastValid && lastValid.pseudo) validateur_pseudo = lastValid.pseudo;
+        }
+      } catch (e) { console.log('Erreur validateur:', e.message); }
+    }
+
     // Construire l'objet fiche enrichi
     const ficheEnrichie = {
       ...fiche,
@@ -3020,7 +3041,8 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       has_etat_changed_by_compte_rendu: hasEtatChangedByCompteRendu,
       produit_nom: produit?.nom || null,
       produit_color: produit?.color || null,
-      qualification_code: qualification_code || null
+      qualification_code: qualification_code || null,
+      validateur_pseudo: validateur_pseudo
     };
 
     // Récupérer l'historique complet avec détails
