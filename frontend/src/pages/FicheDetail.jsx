@@ -1566,13 +1566,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           if (etatFormData.conf_rdv_avec) {
             modifications.conf_rdv_avec = etatFormData.conf_rdv_avec;
           }
-        } else if (selectedEtat === 9) {
-          // HONORÉ À SUIVRE : date rappel (modifiable)
-          if (etatFormData.date_rappel_date) {
-            const dateRappelStr = `${etatFormData.date_rappel_date} ${etatFormData.date_rappel_time || '09:00'}:00`;
-            modifications.date_rdv_time = dateRappelStr;
-          }
-        }
 
         if (Object.keys(modifications).length > 0) {
           updateData.modifications = modifications;
@@ -1632,11 +1625,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         // CLIENT HONORE A SUIVRE (9), REFUSER (12), HORS CIBLE CONFIRMATEUR (23), HHC FINANCEMENT A VERIFIER (34)
         if (etatFormData.conf_commentaire_produit) {
           updateData.conf_commentaire_produit = etatFormData.conf_commentaire_produit;
-        }
-        // Pour Honoré à suivre (9) : date rappel (création compte rendu)
-        if (selectedEtat === 9 && etatFormData.date_rappel_date) {
-          const dateRappelStr = `${etatFormData.date_rappel_date} ${etatFormData.date_rappel_time || '09:00'}:00`;
-          updateData.date_rdv_time = dateRappelStr;
         }
         // Admin session (1, 11, 13, 14) : pour Honoré à suivre (9), ajouter A Rappeler le, Commercial
         if (selectedEtat === 9 && isAdminSessionHonoreSuivre) {
@@ -3598,19 +3586,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               } else if (cr.id_etat_final === 9) {
                                 setCompteRenduOption('deballé_réfléchir');
                                 setSelectedEtat(9);
-                                let dateRappelDate = '';
-                                let dateRappelTime = '09:00';
-                                if (cr.modifications?.date_rdv_time) {
-                                  const dr = new Date(cr.modifications.date_rdv_time);
-                                  dateRappelDate = dr.toISOString().split('T')[0];
-                                  dateRappelTime = dr.toTimeString().split(' ')[0].substring(0, 5);
-                                }
-                                setEtatFormData({
-                                  ...etatFormData,
-                                  conf_commentaire_produit: cr.commentaire || '',
-                                  date_rappel_date: dateRappelDate,
-                                  date_rappel_time: dateRappelTime
-                                });
+                                setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || ''});
                               } else if (cr.id_etat_final === 12) {
                                 setCompteRenduOption('deballé_sans_suite');
                                 setSelectedEtat(12);
@@ -3692,23 +3668,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                       });
                     } else if (e.target.value === 'deballé_réfléchir') {
                       setSelectedEtat(9); // CLIENT HONORE A SUIVRE
-                      const addWorkingDays = (date, days) => {
-                        const result = new Date(date);
-                        let added = 0;
-                        while (added < days) {
-                          result.setDate(result.getDate() + 1);
-                          const dow = result.getDay();
-                          if (dow !== 0 && dow !== 6) added++;
-                        }
-                        return result;
-                      };
-                      const dateRappel = addWorkingDays(new Date(), 2);
-                      const dateRappelStr = dateRappel.toISOString().split('T')[0];
                       setEtatFormData({
                         ...etatFormData,
-                        conf_commentaire_produit: '',
-                        date_rappel_date: dateRappelStr,
-                        date_rappel_time: '09:00'
+                        conf_commentaire_produit: ''
                       });
                     } else if (e.target.value === 'deballé_sans_suite') {
                       setSelectedEtat(12); // REFUSER
@@ -3790,23 +3752,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                             });
                           } else if (e.target.value === 'deballé_réfléchir') {
                             setSelectedEtat(9); // CLIENT HONORE A SUIVRE
-                            const addWorkingDays = (date, days) => {
-                              const result = new Date(date);
-                              let added = 0;
-                              while (added < days) {
-                                result.setDate(result.getDate() + 1);
-                                const dow = result.getDay();
-                                if (dow !== 0 && dow !== 6) added++;
-                              }
-                              return result;
-                            };
-                            const dateRappel = addWorkingDays(new Date(), 2);
-                            const dateRappelStr = dateRappel.toISOString().split('T')[0];
                             setEtatFormData({
                               ...etatFormData,
-                              conf_commentaire_produit: '',
-                              date_rappel_date: dateRappelStr,
-                              date_rappel_time: '09:00'
+                              conf_commentaire_produit: ''
                             });
                           } else if (e.target.value === 'deballé_sans_suite') {
                             setSelectedEtat(12); // REFUSER
@@ -3864,7 +3812,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                             ph3_installateur: '', conf_consommations: '', ph3_bonus_30: '', valeur_mensualite: '', 
                             ph3_mensualite: '', ph3_attente: '', nbr_annee_finance: '', credit_immobilier: '', 
                             credit_autre: '', conf_commentaire_produit: '', conf_rdv_date: '', conf_rdv_time: '', conf_rdv_avec: '',
-                            date_rappel_date: '', date_rappel_time: ''
                           });
                         }}
                       >
@@ -4238,35 +4185,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               </div>
             )}
 
-            {/* Formulaire pour états 9 (Honoré à suivre), 12, 23, 34 pour commerciaux - état 9 avec Date rappel */}
+            {/* Formulaire pour états 9, 12, 23, 34 pour commerciaux */}
             {[9, 12, 23, 34].includes(selectedEtat) && selectedEtat !== ficheData?.id_etat_final && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
                 <div className="etat-form">
-                  <h3>{selectedEtat === 9 ? 'Honoré à suivre' : 'Commentaire'}</h3>
-                  {selectedEtat === 9 && (
-                    <div className="form-row" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                      <div className="form-group">
-                        <label htmlFor="compte_rendu_date_rappel_9">Date rappel (modifiable) :</label>
-                        <input
-                          type="date"
-                          id="compte_rendu_date_rappel_9"
-                          className="form-control"
-                          value={etatFormData.date_rappel_date}
-                          onChange={(e) => setEtatFormData({...etatFormData, date_rappel_date: e.target.value})}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="compte_rendu_date_rappel_time_9">Heure :</label>
-                        <input
-                          type="time"
-                          id="compte_rendu_date_rappel_time_9"
-                          className="form-control"
-                          value={etatFormData.date_rappel_time}
-                          onChange={(e) => setEtatFormData({...etatFormData, date_rappel_time: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <h3>Commentaire</h3>
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_conf_commentaire_simple">Compte rendu :</label>
                     <textarea
@@ -4283,7 +4206,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
-                      setEtatFormData({...etatFormData, conf_commentaire_produit: '', date_rappel_date: '', date_rappel_time: ''});
+                      setEtatFormData({...etatFormData, conf_commentaire_produit: ''});
                     }}>Annuler</button>
                   </div>
                 </div>

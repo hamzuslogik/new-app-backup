@@ -26,6 +26,26 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
   })();
   const confRdvTime = initialMods.conf_rdv_time || '';
   const confRdvTimeShort = confRdvTime && /^\d{2}:\d{2}/.test(confRdvTime) ? confRdvTime.substring(0, 5) : confRdvTime;
+  const dateRdvTimeStr = initialMods.date_rdv_time || '';
+  const [dateRappelDate, dateRappelTime] = (() => {
+    if (!dateRdvTimeStr) return ['', '09:00'];
+    const m = String(dateRdvTimeStr).match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::\d{2})?/);
+    return m ? [m[1], m[2].substring(0, 5)] : ['', '09:00'];
+  })();
+  const addWorkingDays = (date, days) => {
+    const result = new Date(date);
+    let added = 0;
+    while (added < days) {
+      result.setDate(result.getDate() + 1);
+      const dow = result.getDay();
+      if (dow !== 0 && dow !== 6) added++;
+    }
+    return result;
+  };
+  const defaultDateRappel = (() => {
+    const d = addWorkingDays(new Date(), 2);
+    return [d.toISOString().split('T')[0], '09:00'];
+  })();
 
   const [formData, setFormData] = useState({
     id_etat_final: compteRendu.id_etat_final || '',
@@ -57,12 +77,14 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
     ph3_attente: compteRendu.ph3_attente || '',
     nbr_annee_finance: compteRendu.nbr_annee_finance || '',
     credit_immobilier: compteRendu.credit_immobilier || '',
-    credit_autre: compteRendu.credit_autre || ''
+    credit_autre: compteRendu.credit_autre || '',
+    date_rappel_date: compteRendu.id_etat_final === 9 ? (dateRappelDate || defaultDateRappel[0]) : '',
+    date_rappel_time: compteRendu.id_etat_final === 9 ? (dateRappelTime || defaultDateRappel[1]) : '09:00'
   });
 
   const [otherModifications, setOtherModifications] = useState(() => {
     const mods = parseModifications(compteRendu.modifications);
-    const structuredKeys = ['conf_rdv_date', 'conf_rdv_time', 'conf_rdv_avec', 'produit', 'date_sign_time', 'id_commercial', 'id_commercial_2'];
+    const structuredKeys = ['conf_rdv_date', 'conf_rdv_time', 'conf_rdv_avec', 'produit', 'date_sign_time', 'id_commercial', 'id_commercial_2', 'date_rdv_time'];
     const other = {};
     Object.entries(mods).forEach(([k, v]) => {
       if (!structuredKeys.includes(k) && v != null) other[k] = v;
@@ -119,6 +141,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
   const idEtat = parseInt(formData.id_etat_final, 10);
   const isEtatSigner = [13, 44, 45].includes(idEtat);
   const isEtatAnnulerRepro = idEtat === 8;
+  const isEtatHonoreSuivre = idEtat === 9;
   const isEtatCommentaireSeul = [9, 12, 23, 34, 35].includes(idEtat);
 
   const handleSubmit = (e) => {
@@ -128,6 +151,10 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
       if (formData.conf_rdv_date) mods.conf_rdv_date = formData.conf_rdv_date;
       if (formData.conf_rdv_time) mods.conf_rdv_time = formData.conf_rdv_time;
       if (formData.conf_rdv_avec) mods.conf_rdv_avec = formData.conf_rdv_avec;
+    } else if (isEtatHonoreSuivre) {
+      if (formData.date_rappel_date) {
+        mods.date_rdv_time = `${formData.date_rappel_date} ${formData.date_rappel_time || '09:00'}:00`;
+      }
     } else if (isEtatSigner) {
       if (formData.produit) mods.produit = parseInt(formData.produit, 10);
       if (formData.id_commercial) mods.id_commercial = parseInt(formData.id_commercial, 10);
@@ -188,7 +215,16 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
             <select
               value={formData.id_etat_final}
               onChange={(e) => {
-                setFormData({ ...formData, id_etat_final: e.target.value, id_sous_etat: '' });
+                const val = e.target.value;
+                const updates = { ...formData, id_etat_final: val, id_sous_etat: '' };
+                if (val === '9') {
+                  updates.date_rappel_date = formData.date_rappel_date || defaultDateRappel[0];
+                  updates.date_rappel_time = formData.date_rappel_time || '09:00';
+                } else {
+                  updates.date_rappel_date = '';
+                  updates.date_rappel_time = '09:00';
+                }
+                setFormData(updates);
               }}
               disabled={readOnly}
             >
@@ -249,6 +285,33 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
               disabled={readOnly}
             />
           </div>
+
+          {/* État 9 - Honoré à suivre : Date rappel (J+2 par défaut, modifiable) */}
+          {isEtatHonoreSuivre && (
+            <div className="form-section">
+              <h3>Honoré à suivre</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Date rappel (modifiable) :</label>
+                  <input
+                    type="date"
+                    value={formData.date_rappel_date}
+                    onChange={(e) => setFormData({ ...formData, date_rappel_date: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Heure :</label>
+                  <input
+                    type="time"
+                    value={formData.date_rappel_time}
+                    onChange={(e) => setFormData({ ...formData, date_rappel_time: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* État 8 - Annuler à reprogrammer : sous-état, appel avec, date/heure rappel */}
           {isEtatAnnulerRepro && (
