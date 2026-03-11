@@ -1566,6 +1566,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           if (etatFormData.conf_rdv_avec) {
             modifications.conf_rdv_avec = etatFormData.conf_rdv_avec;
           }
+        }
 
         if (Object.keys(modifications).length > 0) {
           updateData.modifications = modifications;
