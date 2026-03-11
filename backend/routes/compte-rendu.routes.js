@@ -5,6 +5,23 @@ const { checkPermissionCode, hasPermission } = require('../middleware/permission
 const { triggerWorkflowOnCompteRenduCreated, triggerWorkflowOnCompteRenduApproved } = require('../middleware/workflow.middleware');
 const { query, queryOne } = require('../config/database');
 
+/**
+ * Ajoute N jours ouvrés (lundi-vendredi) à une date
+ * @param {Date} date - date de départ
+ * @param {number} days - nombre de jours ouvrés à ajouter
+ * @returns {Date} date + N jours ouvrés
+ */
+function addWorkingDays(date, days) {
+  const result = new Date(date);
+  let added = 0;
+  while (added < days) {
+    result.setDate(result.getDate() + 1);
+    const dow = result.getDay(); // 0 = dimanche, 6 = samedi
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return result;
+}
+
 // =====================================================
 // ROUTE: POST /api/compte-rendu
 // Créer un compte rendu (toute fonction ; doit être approuvé par admin/backoffice/RP)
@@ -738,6 +755,19 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
         
         fields.push('`id_etat_final` = ?');
         values.push(compteRendu.id_etat_final);
+      }
+    }
+
+    // Déballé veut réfléchir (honoré à suivre) : définir automatiquement date_rdv_time = date rappel à J+2 jours ouvrés (lundi-vendredi)
+    const idEtatFinal = compteRendu.id_etat_final || modifications.id_etat_final || ancienEtat;
+    if (idEtatFinal === 9 && !modifications.date_rdv_time) {
+      const dateRappel = addWorkingDays(new Date(), 2);
+      const dateRappelStr = dateRappel.toISOString().slice(0, 10) + ' 09:00:00';
+      const oldDateRdv = ancienneFiche.date_rdv_time;
+      await logModification(compteRendu.id_fiche, user.id, 'date_rdv_time', oldDateRdv, dateRappelStr, now);
+      if (!fields.includes('`date_rdv_time` = ?')) {
+        fields.push('`date_rdv_time` = ?');
+        values.push(dateRappelStr);
       }
     }
 
