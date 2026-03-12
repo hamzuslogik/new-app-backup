@@ -2988,6 +2988,25 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       if (lastCr && lastCr.pseudo) compte_rendu_commercial_pseudo = lastCr.pseudo;
     }
 
+    // Confirmateurs issus de fiches_histo (id_etat=7) : source de vérité pour ne pas écraser l'ancien confirmateur
+    let confirmateurs_from_histo = [];
+    try {
+      const histoConfRows = await query(
+        `SELECT id_confirmateur FROM fiches_histo WHERE id_fiche = ? AND id_etat = 7 ORDER BY id ASC`,
+        [id]
+      );
+      const seen = new Set();
+      for (const row of histoConfRows || []) {
+        const cid = row.id_confirmateur ? Number(row.id_confirmateur) : null;
+        if (cid && cid > 0 && !seen.has(cid) && confirmateurs_from_histo.length < 3) {
+          seen.add(cid);
+          confirmateurs_from_histo.push(cid);
+        }
+      }
+    } catch (e) {
+      console.log('confirmateurs_from_histo:', e.message);
+    }
+
     // Récupérer "Validé par qui" pour fiches confirmées et validées (dernière validation avec valider=1)
     let validateur_pseudo = null;
     if (fiche.id_etat_final === 7 && fiche.valider > 0) {
@@ -3036,7 +3055,8 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       produit_nom: produit?.nom || null,
       produit_color: produit?.color || null,
       qualification_code: qualification_code || null,
-      validateur_pseudo: validateur_pseudo
+      validateur_pseudo: validateur_pseudo,
+      confirmateurs_from_histo
     };
 
     // Récupérer l'historique complet avec détails
@@ -4746,13 +4766,34 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       // Pas de vérification d'assignation nécessaire
       //
       // Pour confirmateur (6) uniquement : ne peut pas assigner un autre confirmateur, uniquement s'ajouter lui-même.
+      // Source de vérité = fiches_histo (id_etat=7) pour ne pas écraser l'ancien confirmateur.
       if (req.user.fonction === 6 && ficheData && (ficheData.id_confirmateur !== undefined || ficheData.id_confirmateur_2 !== undefined || ficheData.id_confirmateur_3 !== undefined)) {
         const uid = Number(req.user.id);
-        const current = [
+        let current = [
           fiche.id_confirmateur ? Number(fiche.id_confirmateur) : null,
           fiche.id_confirmateur_2 ? Number(fiche.id_confirmateur_2) : null,
           fiche.id_confirmateur_3 ? Number(fiche.id_confirmateur_3) : null
         ];
+        try {
+          const histoConfRows = await query(
+            `SELECT id_confirmateur FROM fiches_histo WHERE id_fiche = ? AND id_etat = 7 ORDER BY id ASC`,
+            [id]
+          );
+          const seen = new Set();
+          const fromHisto = [];
+          for (const row of histoConfRows || []) {
+            const cid = row.id_confirmateur ? Number(row.id_confirmateur) : null;
+            if (cid && cid > 0 && !seen.has(cid) && fromHisto.length < 3) {
+              seen.add(cid);
+              fromHisto.push(cid);
+            }
+          }
+          if (fromHisto.length > 0) {
+            current = [fromHisto[0] || null, fromHisto[1] || null, fromHisto[2] || null];
+          }
+        } catch (e) {
+          console.log('confirmateurs_from_histo (PUT):', e.message);
+        }
 
         const already = current.includes(uid);
         if (!already) {
@@ -4765,24 +4806,30 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           if (wantsSelf) {
             if (!current[0]) {
               ficheData.id_confirmateur = uid;
+              ficheData.id_confirmateur_2 = current[1] || null;
+              ficheData.id_confirmateur_3 = current[2] || null;
             } else if (!current[1]) {
+              ficheData.id_confirmateur = current[0];
               ficheData.id_confirmateur_2 = uid;
+              ficheData.id_confirmateur_3 = current[2] || null;
             } else if (!current[2]) {
+              ficheData.id_confirmateur = current[0];
+              ficheData.id_confirmateur_2 = current[1];
               ficheData.id_confirmateur_3 = uid;
             } else {
-              ficheData.id_confirmateur = fiche.id_confirmateur;
-              ficheData.id_confirmateur_2 = fiche.id_confirmateur_2;
-              ficheData.id_confirmateur_3 = fiche.id_confirmateur_3;
+              ficheData.id_confirmateur = current[0];
+              ficheData.id_confirmateur_2 = current[1];
+              ficheData.id_confirmateur_3 = current[2];
             }
           } else {
-            ficheData.id_confirmateur = fiche.id_confirmateur;
-            ficheData.id_confirmateur_2 = fiche.id_confirmateur_2;
-            ficheData.id_confirmateur_3 = fiche.id_confirmateur_3;
+            ficheData.id_confirmateur = current[0] ?? fiche.id_confirmateur;
+            ficheData.id_confirmateur_2 = current[1] ?? fiche.id_confirmateur_2;
+            ficheData.id_confirmateur_3 = current[2] ?? fiche.id_confirmateur_3;
           }
         } else {
-          ficheData.id_confirmateur = fiche.id_confirmateur;
-          ficheData.id_confirmateur_2 = fiche.id_confirmateur_2;
-          ficheData.id_confirmateur_3 = fiche.id_confirmateur_3;
+          ficheData.id_confirmateur = current[0] ?? fiche.id_confirmateur;
+          ficheData.id_confirmateur_2 = current[1] ?? fiche.id_confirmateur_2;
+          ficheData.id_confirmateur_3 = current[2] ?? fiche.id_confirmateur_3;
         }
       }
     }
