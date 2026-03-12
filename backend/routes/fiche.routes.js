@@ -3435,10 +3435,11 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
-      'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
-      'date_rdv_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
+      'produit', 'etude', 'etude_raison', 'orientation_toiture', 'site_classe', 'zones_ombres',
+      'isolation', 'conf_commentaire_produit', 'conf_rdv_avec',
+      'date_rdv_time', 'date_appel_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final',
-      'rdv_urgent', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'type_contrat_mr', 'type_contrat_madame',
+      'rdv_urgent', 'rdv_seul', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'type_contrat_mr', 'type_contrat_madame',
       'cq_etat', 'cq_dossier', 'observations_cq'
     ];
 
@@ -3449,8 +3450,10 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       });
     }
 
-    // Ne pas permettre la modification de date_appel_time (rempli automatiquement lors du changement d'état)
-    if (field === 'date_appel_time') {
+    // date_appel_time : modifiable uniquement par les sessions "modification rapide" (RE 14, RP 13, Backoffice 11 ou permission fiche_quick_edit)
+    const isModificationRapide = user.fonction === 14 || user.fonction === 13 || user.fonction === 11 ||
+      (await hasPermission(user.fonction, 'fiche_quick_edit'));
+    if (field === 'date_appel_time' && !isModificationRapide) {
       return res.status(400).json({
         success: false,
         message: 'date_appel_time ne peut pas être modifiée manuellement. Elle est remplie automatiquement lors du changement d\'état.'

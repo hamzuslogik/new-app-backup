@@ -1833,10 +1833,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     const isAgent = userFonction == 3 && user.centre === ficheData.id_centre;
     const isCommercial = userFonction == 5 && hasPermission('fiches_edit') && ficheData.id_commercial === user.id;
     const isConfirmateur = userFonction == 6;
-    const isREConfirmation = userFonction == 14; // Session RE confirmation : modification rapide des champs
-    const isBackoffice = userFonction == 11; // Backoffice : modification rapide des champs
-    
-    const canEdit = !readOnly && userFonction != null && (isAdmin || isQualiteQualif || isAgent || isCommercial || isConfirmateur || isREConfirmation || isBackoffice);
+    const isREConfirmation = userFonction == 14; // RE confirmation : modification rapide
+    const isRPConfirmation = userFonction == 13; // RP confirmation : modification rapide
+    const isBackoffice = userFonction == 11; // Backoffice : modification rapide
+    const canEditModificationRapide = isREConfirmation || isRPConfirmation || isBackoffice || (typeof hasPermission === 'function' && hasPermission('fiche_quick_edit'));
+
+    // Pour les sessions "modification rapide", tous les champs sont modifiables (sauf date_appel_time si backend le refuse)
+    const effectiveReadOnly = readOnly && !canEditModificationRapide;
+    const canEditField = !effectiveReadOnly && userFonction != null && (isAdmin || isQualiteQualif || isAgent || isCommercial || isConfirmateur || canEditModificationRapide);
     
 
     return (
@@ -1901,7 +1905,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           )}
         </td>
         <td className="field-actions">
-          {canEdit && !isEditing && (
+          {canEditField && !isEditing && (
             <button
               className="btn-edit"
               onClick={() => handleEditField(field, value)}
@@ -1924,8 +1928,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   }
 
   const fiche = ficheData;
-  
-  // Obtenir la couleur de l'état
+
+  const userFonctionTop = user ? Number(user.fonction) : null;
+  const canEditModificationRapideTop = userFonctionTop === 14 || userFonctionTop === 13 || userFonctionTop === 11 || (typeof hasPermission === 'function' && hasPermission('fiche_quick_edit'));
   const getEtatColor = () => {
     if (fiche.etat_final_color) {
       return fiche.etat_final_color;
@@ -2483,8 +2488,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   { id: 1, nom: 'PAC' },
                   { id: 2, nom: 'PV' }
                 ])}
-              {/* Commentaire agent qualification : visible uniquement pour les agents qualité qualification (fonction 2, 8, 12) */}
-              {((Number(user?.fonction) === 2 || Number(user?.fonction) === 8 || Number(user?.fonction) === 12)) && 
+              {/* Commentaire agent qualification : visible pour qualite qualification (2, 8, 12) et modification rapide (RE/RP/Backoffice ou fiche_quick_edit) */}
+              {((Number(user?.fonction) === 2 || Number(user?.fonction) === 8 || Number(user?.fonction) === 12) || canEditModificationRapideTop) &&
                 renderField('Commentaire (Agent Qualification)', 'commentaire', fiche.commentaire || '-', 'textarea')}
               
               {/* Logique d'affichage selon l'état de la fiche :
