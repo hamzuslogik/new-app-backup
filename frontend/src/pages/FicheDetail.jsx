@@ -2573,11 +2573,18 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               {renderField('Centre', 'id_centre',
                 centres?.find(c => c.id === fiche.id_centre)?.titre || fiche.centre_titre || '-',
                 'select', centres)}
-              {renderField('RDV SEUL', 'rdv_seul', 
-                (fiche.conf_rdv_avec || fiche.rdv_avec) ? (fiche.conf_rdv_avec === 'SEUL' || fiche.rdv_avec === 'SEUL' ? 'OUI' : 'NON') : '-',
+              {renderField('Présence du couple', 'rdv_seul',
+                (() => {
+                  const raw = (fiche.conf_presence_couple !== undefined && fiche.conf_presence_couple !== null && String(fiche.conf_presence_couple).trim() !== '')
+                    ? String(fiche.conf_presence_couple).toUpperCase()
+                    : (fiche.conf_rdv_avec || fiche.rdv_avec)
+                      ? (fiche.conf_rdv_avec === 'SEUL' || fiche.rdv_avec === 'SEUL' ? 'NON' : 'OUI')
+                      : null;
+                  return raw || '-';
+                })(),
                 'select', [
-                  { value: 'OUI', label: 'Oui (RDV seul)' },
-                  { value: 'NON', label: 'Non (Couple présent)' }
+                  { value: 'OUI', label: 'Oui (couple présent)' },
+                  { value: 'NON', label: 'Non (RDV seul)' }
                 ])}
             </tbody>
           </table>
