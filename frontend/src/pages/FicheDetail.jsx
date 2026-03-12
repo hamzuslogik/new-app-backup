@@ -6756,7 +6756,7 @@ const CreateRdvModal = ({
     return found?.pseudo || `ID: ${id}`;
   };
 
-  // En session confirmateur : première confirmation => conf1 = connecté ; déjà confirmée => garder conf1 et ajouter connecté en conf2 si vide sinon conf3
+  // En session confirmateur : première confirmation => conf1 = connecté ; déjà confirmée => garder tous les confirmateurs existants et ajouter connecté en conf2 si vide sinon conf3
   useEffect(() => {
     if (!isConfirmateurSession || !user?.id) return;
     const uid = String(user.id);
@@ -6767,7 +6767,8 @@ const CreateRdvModal = ({
       const c = prev?.id_confirmateur_3 || '';
 
       if ([a, b, c].includes(uid)) return prev;
-      const alreadyConfirmed = a && a !== uid;
+      // Déjà confirmée = au moins un confirmateur existant (on les garde tous, on n'écrase jamais)
+      const alreadyConfirmed = !!(a || b || c);
       if (!alreadyConfirmed) {
         return { ...prev, id_confirmateur: uid, id_confirmateur_2: '', id_confirmateur_3: '' };
       }
