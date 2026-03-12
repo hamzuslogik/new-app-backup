@@ -3440,6 +3440,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'date_rdv_time', 'date_appel_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final',
       'rdv_urgent', 'rdv_seul', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'type_contrat_mr', 'type_contrat_madame',
+      'conf_type_contrat_mr', 'conf_type_contrat_madame',
       'cq_etat', 'cq_dossier', 'observations_cq'
     ];
 
@@ -3464,7 +3465,14 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     const oldValue = fiche[field];
 
     // Champs logiques -> colonne en base (colonnes différentes ou absentes)
-    const fieldToDb = { rdv_seul: 'conf_presence_couple', etude_raison: 'conf_details_etude' };
+    const fieldToDb = {
+      rdv_seul: 'conf_presence_couple',
+      etude_raison: 'conf_details_etude',
+      profession_mr: 'conf_profession_monsieur',
+      profession_madame: 'conf_profession_madame',
+      type_contrat_mr: 'conf_type_contrat_mr',
+      type_contrat_madame: 'conf_type_contrat_madame'
+    };
     const dbField = fieldToDb[field] || field;
     const dbOldValue = fieldToDb[field] ? (fiche[dbField] ?? oldValue) : oldValue;
 

@@ -2543,7 +2543,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 { value: 'SUD-OUEST', label: 'SUD-OUEST' }
               ])}
               {renderField('Zones d\'ombres', 'zones_ombres',
-                (fiche.conf_zones_ombres != null && String(fiche.conf_zones_ombres).trim() !== '') ? fiche.conf_zones_ombres : (fiche.zones_ombres || '-')}
+                (fiche.conf_zones_ombres != null && String(fiche.conf_zones_ombres).trim() !== '') ? fiche.conf_zones_ombres : (fiche.zones_ombres || '-')
+              )}
               {renderField('Proche d\'un site classé', 'site_classe', fiche.site_classe || fiche.conf_site_classe || '-', 'select', [
                 { value: 'OUI', label: 'Oui' },
                 { value: 'NON', label: 'Non' }
@@ -2551,7 +2552,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               {renderField('Âge du MR', 'age_mr', fiche.age_mr || '-', 'number')}
               {renderField('Âge du Madame', 'age_madame', fiche.age_madame || '-', 'number')}
               {renderField('Consommation électricité', 'consommation_electricite',
-                (fiche.conf_consommation_electricite != null && String(fiche.conf_consommation_electricite).trim() !== '') ? fiche.conf_consommation_electricite : (fiche.consommation_electricite || '-')}
+                (fiche.conf_consommation_electricite != null && String(fiche.conf_consommation_electricite).trim() !== '') ? fiche.conf_consommation_electricite : (fiche.consommation_electricite || '-')
+              )}
               {renderField('Revenu du foyer', 'revenu_foyer', fiche.revenu_foyer || '-', 'number')}
               {renderField('Crédit du foyer', 'credit_foyer', fiche.credit_foyer || '-', 'number')}
               {renderField('Situation Conjugale', 'situation_conjugale', fiche.situation_conjugale || '-', 'select', [
@@ -2601,11 +2603,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           <h2 className="section-title">Informations professionnelles</h2>
           <table className="fiche-details-table">
             <tbody>
-              {renderField('Profession Du MR', 'profession_mr', 
-                professions?.find(p => p.id == fiche.profession_mr)?.nom || fiche.profession_mr || '-',
+              {renderField('Profession Du MR', 'profession_mr',
+                (fiche.conf_profession_monsieur != null && String(fiche.conf_profession_monsieur).trim() !== '')
+                  ? (professions?.find(p => p.id == fiche.conf_profession_monsieur || (p.nom && String(p.nom).toLowerCase() === String(fiche.conf_profession_monsieur).toLowerCase()))?.nom || fiche.conf_profession_monsieur)
+                  : (professions?.find(p => p.id == fiche.profession_mr)?.nom || fiche.profession_mr || '-'),
                 'select', professions)}
               {renderField('Type de Contrat MR', 'type_contrat_mr',
-                typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_mr))?.nom || fiche.type_contrat_mr || '-',
+                (fiche.conf_type_contrat_mr != null && fiche.conf_type_contrat_mr !== '')
+                  ? (typeContrat?.find(t => String(t.id) === String(fiche.conf_type_contrat_mr))?.nom || fiche.conf_type_contrat_mr || '-')
+                  : (typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_mr))?.nom || fiche.type_contrat_mr || '-'),
                 'select', typeContrat)}
               {renderField('Profession Du Madame', 'profession_madame',
                 (fiche.conf_profession_madame != null && String(fiche.conf_profession_madame).trim() !== '')
@@ -2613,7 +2619,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   : (professions?.find(p => p.id == fiche.profession_madame)?.nom || fiche.profession_madame || '-'),
                 'select', professions)}
               {renderField('Type de Contrat MME', 'type_contrat_madame',
-                typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_madame))?.nom || fiche.type_contrat_madame || '-',
+                (fiche.conf_type_contrat_madame != null && fiche.conf_type_contrat_madame !== '')
+                  ? (typeContrat?.find(t => String(t.id) === String(fiche.conf_type_contrat_madame))?.nom || fiche.conf_type_contrat_madame || '-')
+                  : (typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_madame))?.nom || fiche.type_contrat_madame || '-'),
                 'select', typeContrat)}
             </tbody>
           </table>
