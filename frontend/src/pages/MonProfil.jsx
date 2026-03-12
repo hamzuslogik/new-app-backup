@@ -3,7 +3,6 @@ import api from '../config/api';
 import './MonProfil.css';
 
 const MonProfil = () => {
-  const { user: authUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
