@@ -2482,8 +2482,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           <h2 className="section-title">Détails de l'étude</h2>
           <table className="fiche-details-table">
             <tbody>
-              {renderField('Étude à faire pour', 'produit', 
-                fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : fiche.produit === 2 ? 'PV' : '-'),
+              {renderField('Étude à faire pour', 'produit',
+                (fiche.conf_produit != null && fiche.conf_produit !== '')
+                  ? (fiche.conf_produit === 1 || fiche.conf_produit === '1' ? 'PAC' : fiche.conf_produit === 2 || fiche.conf_produit === '2' ? 'PV' : String(fiche.conf_produit))
+                  : (fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : fiche.produit === 2 ? 'PV' : '-')),
                 'select', [
                   { id: 1, nom: 'PAC' },
                   { id: 2, nom: 'PV' }
@@ -2510,11 +2512,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 'select', modeChauffage)}
               {renderField('Année de système de chauffage', 'annee_systeme_chauffage', fiche.annee_systeme_chauffage || '-', 'number')}
               {renderField('Surface habitable', 'surface_habitable', fiche.surface_habitable || '-', 'number')}
-              {renderField('Consommation chauffage', 'consommation_chauffage', fiche.consommation_chauffage || '-')}
+              {renderField('Consommation chauffage', 'consommation_chauffage',
+                (fiche.conf_consommations != null && fiche.conf_consommations !== '') ? String(fiche.conf_consommations) : (fiche.consommation_chauffage || '-'))}
               {renderField('Surface chauffée en M²', 'surface_chauffee', fiche.surface_chauffee || '-', 'number')}
-              {fiche.surface_chauffee && fiche.consommation_chauffage && parseFloat(fiche.surface_chauffee) > 0 && parseFloat(fiche.consommation_chauffage.replace(/[^\d.,]/g, '').replace(',', '.')) > 0 ? (
-                renderField('Consommation en M²', 'conso', 
-                  (parseFloat(fiche.consommation_chauffage.replace(/[^\d.,]/g, '').replace(',', '.')) / parseFloat(fiche.surface_chauffee)).toFixed(2) + ' €/m²',
+              {fiche.surface_chauffee && (fiche.conf_consommations != null && fiche.conf_consommations !== '' ? fiche.conf_consommations : fiche.consommation_chauffage) && parseFloat(fiche.surface_chauffee) > 0 && parseFloat(String(fiche.conf_consommations != null && fiche.conf_consommations !== '' ? fiche.conf_consommations : fiche.consommation_chauffage).replace(/[^\d.,]/g, '').replace(',', '.')) > 0 ? (
+                renderField('Consommation en M²', 'conso',
+                  (parseFloat(String(fiche.conf_consommations != null && fiche.conf_consommations !== '' ? fiche.conf_consommations : fiche.consommation_chauffage).replace(/[^\d.,]/g, '').replace(',', '.')) / parseFloat(fiche.surface_chauffee)).toFixed(2) + ' €/m²',
                   'text')
               ) : (
                 renderField('Consommation en M²', 'conso', '-', 'text')
@@ -2527,7 +2530,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               ])}
               {renderField('Nombre de pièces', 'nb_pieces', fiche.nb_pieces || '-', 'number')}
               {renderField('Nombre de pans', 'nb_pans', fiche.nb_pans || '-', 'number')}
-              {renderField('Orientation de la toiture', 'orientation_toiture', fiche.orientation_toiture || fiche.conf_orientation_toiture || '-', 'select', [
+              {renderField('Orientation de la toiture', 'orientation_toiture',
+                (fiche.conf_orientation_toiture != null && String(fiche.conf_orientation_toiture).trim() !== '') ? fiche.conf_orientation_toiture : (fiche.orientation_toiture || '-'), 'select', [
                 { value: 'NORD', label: 'NORD' },
                 { value: 'SUD', label: 'SUD' },
                 { value: 'EST', label: 'EST' },
@@ -2538,14 +2542,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 { value: 'SUD-EST', label: 'SUD-EST' },
                 { value: 'SUD-OUEST', label: 'SUD-OUEST' }
               ])}
-              {renderField('Zones d\'ombres', 'zones_ombres', fiche.zones_ombres || fiche.conf_zones_ombres || '-')}
+              {renderField('Zones d\'ombres', 'zones_ombres',
+                (fiche.conf_zones_ombres != null && String(fiche.conf_zones_ombres).trim() !== '') ? fiche.conf_zones_ombres : (fiche.zones_ombres || '-')}
               {renderField('Proche d\'un site classé', 'site_classe', fiche.site_classe || fiche.conf_site_classe || '-', 'select', [
                 { value: 'OUI', label: 'Oui' },
                 { value: 'NON', label: 'Non' }
               ])}
               {renderField('Âge du MR', 'age_mr', fiche.age_mr || '-', 'number')}
               {renderField('Âge du Madame', 'age_madame', fiche.age_madame || '-', 'number')}
-              {renderField('Consommation électricité', 'consommation_electricite', fiche.consommation_electricite || '-')}
+              {renderField('Consommation électricité', 'consommation_electricite',
+                (fiche.conf_consommation_electricite != null && String(fiche.conf_consommation_electricite).trim() !== '') ? fiche.conf_consommation_electricite : (fiche.consommation_electricite || '-')}
               {renderField('Revenu du foyer', 'revenu_foyer', fiche.revenu_foyer || '-', 'number')}
               {renderField('Crédit du foyer', 'credit_foyer', fiche.credit_foyer || '-', 'number')}
               {renderField('Situation Conjugale', 'situation_conjugale', fiche.situation_conjugale || '-', 'select', [
@@ -2602,7 +2608,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_mr))?.nom || fiche.type_contrat_mr || '-',
                 'select', typeContrat)}
               {renderField('Profession Du Madame', 'profession_madame',
-                professions?.find(p => p.id == fiche.profession_madame)?.nom || fiche.profession_madame || '-',
+                (fiche.conf_profession_madame != null && String(fiche.conf_profession_madame).trim() !== '')
+                  ? (professions?.find(p => p.id == fiche.conf_profession_madame || (p.nom && String(p.nom).toLowerCase() === String(fiche.conf_profession_madame).toLowerCase()))?.nom || fiche.conf_profession_madame)
+                  : (professions?.find(p => p.id == fiche.profession_madame)?.nom || fiche.profession_madame || '-'),
                 'select', professions)}
               {renderField('Type de Contrat MME', 'type_contrat_madame',
                 typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_madame))?.nom || fiche.type_contrat_madame || '-',
