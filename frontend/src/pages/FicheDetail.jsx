@@ -960,7 +960,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     // Session confirmateur (fonction 6) : première confirmation => conf1 = connecté ; déjà confirmée (histo ou fiche) => garder confirmateurs (priorité histo) et ajouter connecté en conf2/conf3
     if (Number(user?.fonction) === 6 && user?.id) {
       const uid = String(user.id);
-      const alreadyConfirmed = !!(confFromHisto && confFromHisto.length > 0) || !!(baseConf1 || baseConf2 || baseConf3);
+      // Déjà confirmée = présence d'au moins une entrée confirmation dans l'historique (id_etat=7). Sinon => confirmateur connecté en conf1.
+      const alreadyConfirmed = !!(confFromHisto && confFromHisto.length > 0);
       if (!alreadyConfirmed) {
         nextRdvFormData.id_confirmateur = uid;
         nextRdvFormData.id_confirmateur_2 = '';
@@ -1314,7 +1315,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       let idConf3 = histoConf ? (histoConf[2] || '') : (ficheData?.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : '');
       if (Number(user?.fonction) === 6 && user?.id) {
         const uid = String(user.id);
-        const alreadyConfirmed = !!(histoConf && histoConf.length > 0) || !!(idConf1 || idConf2 || idConf3);
+        // Déjà confirmée = présence d'historique confirmation (id_etat=7). Sinon => confirmateur connecté en conf1.
+        const alreadyConfirmed = !!(histoConf && histoConf.length > 0);
         if (!alreadyConfirmed) {
           idConf1 = uid;
           idConf2 = '';
@@ -6785,14 +6787,15 @@ const CreateRdvModal = ({
       let b = prev?.id_confirmateur_2 || '';
       let c = prev?.id_confirmateur_3 || '';
       // Si le formulaire n'a pas de confirmateurs mais qu'on a l'historique, initialiser depuis l'histo
-      if (histoConf && !a && !b && !c) {
+      if (histoConf && histoConf.length > 0 && !a && !b && !c) {
         a = histoConf[0] || '';
         b = histoConf[1] || '';
         c = histoConf[2] || '';
       }
+      // Déjà confirmée = présence d'historique confirmation. Pas d'histo => confirmateur connecté en conf1.
+      const alreadyConfirmed = !!(histoConf && histoConf.length > 0);
 
-      if ([a, b, c].includes(uid)) return histoConf && !prev?.id_confirmateur ? { ...prev, id_confirmateur: a, id_confirmateur_2: b, id_confirmateur_3: c } : prev;
-      const alreadyConfirmed = !!(a || b || c);
+      if ([a, b, c].includes(uid)) return histoConf && histoConf.length > 0 && !prev?.id_confirmateur ? { ...prev, id_confirmateur: a, id_confirmateur_2: b, id_confirmateur_3: c } : prev;
       if (!alreadyConfirmed) {
         return { ...prev, id_confirmateur: uid, id_confirmateur_2: '', id_confirmateur_3: '' };
       }

@@ -4790,6 +4790,9 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           }
           if (fromHisto.length > 0) {
             current = [fromHisto[0] || null, fromHisto[1] || null, fromHisto[2] || null];
+          } else {
+            // Pas d'historique confirmation pour cette fiche => première confirmation, confirmateur connecté = confirmateur 1
+            current = [null, null, null];
           }
         } catch (e) {
           console.log('confirmateurs_from_histo (PUT):', e.message);
