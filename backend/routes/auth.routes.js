@@ -102,6 +102,86 @@ router.get('/verify', authenticate, async (req, res) => {
   });
 });
 
+// Profil de l'utilisateur connecté (infos complètes sans mot de passe)
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const user = await queryOne(
+      `SELECT u.id, u.login, u.pseudo, u.nom, u.prenom, u.mail, u.tel, u.fonction, u.centre, u.genre, u.photo, u.color,
+       f.titre as fonction_titre, f.etat as fonction_etat,
+       c.titre as centre_titre, c.etat as centre_etat
+       FROM utilisateurs u
+       LEFT JOIN fonctions f ON u.fonction = f.id
+       LEFT JOIN centres c ON u.centre = c.id
+       WHERE u.id = ? AND u.etat > 0`,
+      [req.user.id]
+    );
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+    if (user.fonction_etat === 0 || user.centre_etat === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Votre fonction ou centre est désactivé'
+      });
+    }
+    res.json({
+      success: true,
+      data: {
+        id: user.id,
+        login: user.login,
+        pseudo: user.pseudo,
+        nom: user.nom,
+        prenom: user.prenom,
+        mail: user.mail,
+        tel: user.tel,
+        fonction: user.fonction,
+        fonction_titre: user.fonction_titre,
+        centre: user.centre,
+        centre_titre: user.centre_titre,
+        genre: user.genre,
+        photo: user.photo,
+        color: user.color
+      }
+    });
+  } catch (error) {
+    console.error('Erreur GET /auth/me:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la récupération du profil' });
+  }
+});
+
+// Changer le mot de passe (utilisateur connecté)
+router.post('/change-password', authenticate, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Mot de passe actuel et nouveau mot de passe requis'
+      });
+    }
+    const user = await queryOne('SELECT id, mdp FROM utilisateurs WHERE id = ?', [req.user.id]);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+    const currentHashed = hashPassword(currentPassword);
+    if (user.mdp !== currentHashed) {
+      return res.status(400).json({
+        success: false,
+        message: 'Mot de passe actuel incorrect'
+      });
+    }
+    const newHashed = hashPassword(newPassword);
+    await query('UPDATE utilisateurs SET mdp = ? WHERE id = ?', [newHashed, req.user.id]);
+    res.json({
+      success: true,
+      message: 'Mot de passe modifié avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur POST /auth/change-password:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors du changement de mot de passe' });
+  }
+});
+
 // Déconnexion (côté client, mais on peut logger ici)
 router.post('/logout', authenticate, (req, res) => {
   res.json({

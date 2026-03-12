@@ -2297,36 +2297,8 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
     ];
     const params = [];
 
-    // Pour les confirmateurs (fonction 6), ils voient tous les RDV confirmés dans la plage de dates
-    // Le filtrage par confirmateur assigné n'est pas nécessaire ici car ils doivent valider tous les RDV
-    
-    // Pour RE Confirmation (fonction 14), filtrer par confirmateurs sous responsabilité
-    if (req.user.fonction === 14) {
-      // Récupérer les IDs des confirmateurs sous responsabilité (chef_equipe = RE Confirmation)
-      const confirmateursIds = await query(
-        'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
-        [req.user.id]
-      );
-      
-      if (confirmateursIds.length === 0) {
-        // Aucun confirmateur sous responsabilité, retourner vide
-        return res.json({
-          success: true,
-          data: {
-            fiches: [],
-            stats: { valides: 0, nonValides: 0, total: 0 },
-            statsByDepartement: [],
-            totals: { valides: 0, nonValides: 0, total: 0 }
-          }
-        });
-      }
-      
-      const ids = confirmateursIds.map(c => c.id);
-      whereConditions.push(`(f.id_confirmateur IN (${ids.map(() => '?').join(',')}) OR f.id_confirmateur_2 IN (${ids.map(() => '?').join(',')}) OR f.id_confirmateur_3 IN (${ids.map(() => '?').join(',')}))`);
-      params.push(...ids, ...ids, ...ids);
-      console.log(`[Validation RDV] RE Confirmation - Confirmateurs sous responsabilité:`, ids);
-    }
-    
+    // Pour les confirmateurs (fonction 6) et RE Confirmation (fonction 14) : voir toutes les fiches à valider (pas de filtre par confirmateur)
+    // Les admins (1, 2, 7) voient également tout.
     console.log(`[Validation RDV] User fonction: ${req.user.fonction}, User ID: ${req.user.id}`);
 
     // Filtrer par validation

@@ -26,6 +26,7 @@ import {
   FaSignature,
   FaRobot,
   FaBullhorn,
+  FaUser,
 } from 'react-icons/fa';
 import './Sidebar.css';
 
@@ -379,6 +380,15 @@ const Sidebar = ({ collapsed }) => {
       customCheck: (item, user) => {
         return true; // Tous les utilisateurs peuvent voir leurs notifications
       },
+    },
+    {
+      path: '/mon-profil',
+      label: 'Mon profil',
+      icon: FaUser,
+      permission: null,
+      visible: true,
+      // RE qualification, RP qualification, qualité qualification, qualité confirmation, confirmateur, RE confirmation, RP confirmation, backoffice, ADMINISTRATEUR, partenaire
+      customCheck: (item, user) => [1, 2, 6, 7, 8, 9, 11, 12, 13, 14].includes(Number(user?.fonction)),
     },
   ];
 

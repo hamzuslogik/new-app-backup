@@ -46,6 +46,24 @@ const ProtectedRoute = ({ children, permission, excludeFunctions = [], allowFunc
   // allowFunctions : accès direct pour certains rôles (ex. Mes rappels pour Confirmateur 6, RE Confirmation 14, RP Confirmation 13)
   const isAllowedByFunction = allowFunctions.length > 0 && user?.fonction != null && allowFunctions.includes(Number(user.fonction));
 
+  // Page réservée à certaines fonctions uniquement (sans permission) : ex. Mon profil
+  if (!permission && allowFunctions.length > 0 && !isAllowedByFunction) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        flexDirection: 'column',
+        gap: '20px'
+      }}>
+        <h2>Accès refusé</h2>
+        <p>Cette page n'est pas accessible pour votre rôle.</p>
+        <button onClick={() => window.history.back()}>Retour</button>
+      </div>
+    );
+  }
+
   if (permission && !hasPermission(permission) && !isAllowedByFunction) {
     // Autoriser Admin et Backoffice pour les pages Permissions et Management
     if (isAdminOrBackoffice && isPermissionsOrManagementPage) {
