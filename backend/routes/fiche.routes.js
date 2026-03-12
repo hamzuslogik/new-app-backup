@@ -3467,7 +3467,6 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     // Champs logiques -> colonne en base (colonnes différentes ou absentes)
     const fieldToDb = {
       rdv_seul: 'conf_presence_couple',
-      etude_raison: 'conf_details_etude',
       profession_mr: 'conf_profession_monsieur',
       profession_madame: 'conf_profession_madame',
       type_contrat_mr: 'conf_type_contrat_mr',

@@ -2506,7 +2506,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 { value: 'OUI', label: 'Oui' },
                 { value: 'NON', label: 'Non' }
               ])}
-              {renderField('Détail de l\'étude', 'etude_raison', (fiche.conf_details_etude || fiche.etude_raison) || '-', 'textarea')}
+              {renderField('Détail de l\'étude', 'etude_raison', fiche.etude_raison || '-', 'textarea')}
               {renderField('Mode de chauffage', 'mode_chauffage',
                 (() => { const m = modeChauffage?.find(x => x.id == fiche.mode_chauffage); return m?.nom || m?.titre || '-'; })(),
                 'select', modeChauffage)}
