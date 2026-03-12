@@ -957,24 +957,19 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       conf_commentaire_produit: '' // Vide par défaut pour le modal de création RDV
     };
 
-    // Session confirmateur (fonction 6) : première confirmation => conf1 = connecté ; déjà confirmée (histo ou fiche) => garder confirmateurs (priorité histo) et ajouter connecté en conf2/conf3
+    // Session confirmateur (fonction 6) : confirmateur connecté = toujours conf1 ; si conf1 existait → décaler en conf2 ; si conf1 et conf2 existaient → décaler (conf1→conf2, conf2→conf3).
     if (Number(user?.fonction) === 6 && user?.id) {
       const uid = String(user.id);
-      // Déjà confirmée = présence d'au moins une entrée confirmation dans l'historique (id_etat=7). Sinon => confirmateur connecté en conf1.
       const alreadyConfirmed = !!(confFromHisto && confFromHisto.length > 0);
       if (!alreadyConfirmed) {
         nextRdvFormData.id_confirmateur = uid;
         nextRdvFormData.id_confirmateur_2 = '';
         nextRdvFormData.id_confirmateur_3 = '';
       } else {
-        if (![nextRdvFormData.id_confirmateur, nextRdvFormData.id_confirmateur_2, nextRdvFormData.id_confirmateur_3].includes(uid)) {
-          const c1 = nextRdvFormData.id_confirmateur;
-          const c2 = nextRdvFormData.id_confirmateur_2;
-          const c3 = nextRdvFormData.id_confirmateur_3;
-          if (c1 && c2 && !c3) nextRdvFormData.id_confirmateur_3 = uid;
-          else if (c1 && !c2) nextRdvFormData.id_confirmateur_2 = uid;
-          else if (!c1) nextRdvFormData.id_confirmateur = uid;
-        }
+        // Connecté = conf1 ; ancien conf1 → conf2 ; ancien conf2 → conf3
+        nextRdvFormData.id_confirmateur = uid;
+        nextRdvFormData.id_confirmateur_2 = baseConf1 || '';
+        nextRdvFormData.id_confirmateur_3 = baseConf2 || '';
       }
     }
 
@@ -1313,20 +1308,18 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       let idConf1 = histoConf ? (histoConf[0] || '') : (ficheData?.id_confirmateur ? String(ficheData.id_confirmateur) : '');
       let idConf2 = histoConf ? (histoConf[1] || '') : (ficheData?.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : '');
       let idConf3 = histoConf ? (histoConf[2] || '') : (ficheData?.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : '');
+      // Confirmateurs : connecté = toujours conf1 ; si histo existe, décaler ancien conf1→conf2, ancien conf2→conf3
       if (Number(user?.fonction) === 6 && user?.id) {
         const uid = String(user.id);
-        // Déjà confirmée = présence d'historique confirmation (id_etat=7). Sinon => confirmateur connecté en conf1.
         const alreadyConfirmed = !!(histoConf && histoConf.length > 0);
         if (!alreadyConfirmed) {
           idConf1 = uid;
           idConf2 = '';
           idConf3 = '';
         } else {
-          if (![idConf1, idConf2, idConf3].includes(uid)) {
-            if (idConf1 && idConf2 && !idConf3) idConf3 = uid;
-            else if (idConf1 && !idConf2) idConf2 = uid;
-            else if (!idConf1) idConf1 = uid;
-          }
+          idConf1 = uid;
+          idConf2 = histoConf[0] || '';
+          idConf3 = histoConf[1] || '';
         }
       }
       
@@ -6786,23 +6779,19 @@ const CreateRdvModal = ({
       let a = prev?.id_confirmateur || '';
       let b = prev?.id_confirmateur_2 || '';
       let c = prev?.id_confirmateur_3 || '';
-      // Si le formulaire n'a pas de confirmateurs mais qu'on a l'historique, initialiser depuis l'histo
       if (histoConf && histoConf.length > 0 && !a && !b && !c) {
         a = histoConf[0] || '';
         b = histoConf[1] || '';
         c = histoConf[2] || '';
       }
-      // Déjà confirmée = présence d'historique confirmation. Pas d'histo => confirmateur connecté en conf1.
       const alreadyConfirmed = !!(histoConf && histoConf.length > 0);
 
-      if ([a, b, c].includes(uid)) return histoConf && histoConf.length > 0 && !prev?.id_confirmateur ? { ...prev, id_confirmateur: a, id_confirmateur_2: b, id_confirmateur_3: c } : prev;
+      if ([a, b, c].includes(uid)) return histoConf && histoConf.length > 0 && !prev?.id_confirmateur ? { ...prev, id_confirmateur: uid, id_confirmateur_2: a, id_confirmateur_3: b } : prev;
       if (!alreadyConfirmed) {
         return { ...prev, id_confirmateur: uid, id_confirmateur_2: '', id_confirmateur_3: '' };
       }
-      if (a && b && !c) return { ...prev, id_confirmateur: a, id_confirmateur_2: b, id_confirmateur_3: uid };
-      if (a && !b) return { ...prev, id_confirmateur: a, id_confirmateur_2: uid, id_confirmateur_3: c };
-      if (!a) return { ...prev, id_confirmateur: uid, id_confirmateur_2: b, id_confirmateur_3: c };
-      return prev;
+      // Connecté = conf1 ; ancien conf1 → conf2 ; ancien conf2 → conf3
+      return { ...prev, id_confirmateur: uid, id_confirmateur_2: a, id_confirmateur_3: b };
     });
   }, [isConfirmateurSession, user?.id, setRdvFormData, ficheData?.confirmateurs_from_histo]);
 

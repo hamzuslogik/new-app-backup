@@ -4807,23 +4807,10 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           ];
           const wantsSelf = requested.includes(uid);
           if (wantsSelf) {
-            if (!current[0]) {
-              ficheData.id_confirmateur = uid;
-              ficheData.id_confirmateur_2 = current[1] || null;
-              ficheData.id_confirmateur_3 = current[2] || null;
-            } else if (!current[1]) {
-              ficheData.id_confirmateur = current[0];
-              ficheData.id_confirmateur_2 = uid;
-              ficheData.id_confirmateur_3 = current[2] || null;
-            } else if (!current[2]) {
-              ficheData.id_confirmateur = current[0];
-              ficheData.id_confirmateur_2 = current[1];
-              ficheData.id_confirmateur_3 = uid;
-            } else {
-              ficheData.id_confirmateur = current[0];
-              ficheData.id_confirmateur_2 = current[1];
-              ficheData.id_confirmateur_3 = current[2];
-            }
+            // Confirmateur connecté = toujours confirmateur 1 ; anciens décalés : ancien conf1 → conf2, ancien conf2 → conf3
+            ficheData.id_confirmateur = uid;
+            ficheData.id_confirmateur_2 = current[0] || null;
+            ficheData.id_confirmateur_3 = current[1] || null;
           } else {
             ficheData.id_confirmateur = current[0] ?? fiche.id_confirmateur;
             ficheData.id_confirmateur_2 = current[1] ?? fiche.id_confirmateur_2;
