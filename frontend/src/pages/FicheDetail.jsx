@@ -2490,8 +2490,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   { id: 1, nom: 'PAC' },
                   { id: 2, nom: 'PV' }
                 ])}
-              {/* Commentaire agent qualification : visible pour qualite qualification (2, 8, 12) et modification rapide (RE/RP/Backoffice ou fiche_quick_edit) */}
-              {((Number(user?.fonction) === 2 || Number(user?.fonction) === 8 || Number(user?.fonction) === 12) || canEditModificationRapideTop) &&
+              {/* Commentaire agent qualification : visible uniquement pour Backoffice (fonction 11) */}
+              {Number(user?.fonction) === 11 &&
                 renderField('Commentaire (Agent Qualification)', 'commentaire', fiche.commentaire || '-', 'textarea')}
               
               {/* Logique d'affichage selon l'état de la fiche :
