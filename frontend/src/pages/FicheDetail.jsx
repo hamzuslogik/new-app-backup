@@ -949,21 +949,19 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       conf_commentaire_produit: '' // Vide par défaut pour le modal de création RDV
     };
 
-    // Session confirmateur (fonction 6) :
-    // - forcer le confirmateur connecté
-    // - interdire d'assigner un autre confirmateur
+    // Session confirmateur (fonction 6) : première confirmation => confirmateur1 = connecté, conf2/3 vides ; déjà confirmée => garder confirmateurs existants et ajouter connecté en conf2 si vide sinon conf3
     if (Number(user?.fonction) === 6 && user?.id) {
       const uid = String(user.id);
-      const a = nextRdvFormData.id_confirmateur;
-      const b = nextRdvFormData.id_confirmateur_2;
-      const c = nextRdvFormData.id_confirmateur_3;
-
-      // Si déjà présent en 1/2/3 -> ne rien changer
-      if (![a, b, c].includes(uid)) {
-        // Sinon, s'ajouter automatiquement en 1, sinon 2, sinon 3
-        if (!a) nextRdvFormData.id_confirmateur = uid;
-        else if (!b) nextRdvFormData.id_confirmateur_2 = uid;
-        else if (!c) nextRdvFormData.id_confirmateur_3 = uid;
+      const alreadyConfirmed = Number(ficheData?.id_etat_final) === 7 && (ficheData?.id_confirmateur || ficheData?.id_confirmateur_2 || ficheData?.id_confirmateur_3);
+      if (!alreadyConfirmed) {
+        nextRdvFormData.id_confirmateur = uid;
+        nextRdvFormData.id_confirmateur_2 = '';
+        nextRdvFormData.id_confirmateur_3 = '';
+      } else {
+        if (![nextRdvFormData.id_confirmateur, nextRdvFormData.id_confirmateur_2, nextRdvFormData.id_confirmateur_3].includes(uid)) {
+          if (!nextRdvFormData.id_confirmateur_2) nextRdvFormData.id_confirmateur_2 = uid;
+          else if (!nextRdvFormData.id_confirmateur_3) nextRdvFormData.id_confirmateur_3 = uid;
+        }
       }
     }
 
@@ -1295,16 +1293,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         if (parts[1]) rdvTime = parts[1].substring(0, 5);
       }
       
-      // Confirmateurs 1, 2, 3 : reprendre la fiche ou, en session confirmateur (6), s'ajouter au premier créneau libre comme en création rapide (onglet Planning)
+      // Confirmateurs : première confirmation => confirmateur1 = connecté, conf2/3 vides ; déjà confirmée => garder existants et ajouter connecté en conf2 si vide sinon conf3
       let idConf1 = ficheData?.id_confirmateur ? String(ficheData.id_confirmateur) : '';
       let idConf2 = ficheData?.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : '';
       let idConf3 = ficheData?.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : '';
       if (Number(user?.fonction) === 6 && user?.id) {
         const uid = String(user.id);
-        if (![idConf1, idConf2, idConf3].includes(uid)) {
-          if (!idConf1) idConf1 = uid;
-          else if (!idConf2) idConf2 = uid;
-          else if (!idConf3) idConf3 = uid;
+        const alreadyConfirmed = Number(ficheData?.id_etat_final) === 7 && (ficheData?.id_confirmateur || ficheData?.id_confirmateur_2 || ficheData?.id_confirmateur_3);
+        if (!alreadyConfirmed) {
+          idConf1 = uid;
+          idConf2 = '';
+          idConf3 = '';
+        } else {
+          if (![idConf1, idConf2, idConf3].includes(uid)) {
+            if (!idConf2) idConf2 = uid;
+            else if (!idConf3) idConf3 = uid;
+          }
         }
       }
       
@@ -6752,7 +6756,7 @@ const CreateRdvModal = ({
     return found?.pseudo || `ID: ${id}`;
   };
 
-  // En session confirmateur : s'ajouter automatiquement en 1/2/3 si nécessaire
+  // En session confirmateur : première confirmation => conf1 = connecté ; déjà confirmée => garder conf1 et ajouter connecté en conf2 si vide sinon conf3
   useEffect(() => {
     if (!isConfirmateurSession || !user?.id) return;
     const uid = String(user.id);
@@ -6763,7 +6767,10 @@ const CreateRdvModal = ({
       const c = prev?.id_confirmateur_3 || '';
 
       if ([a, b, c].includes(uid)) return prev;
-      if (!a) return { ...prev, id_confirmateur: uid };
+      const alreadyConfirmed = a && a !== uid;
+      if (!alreadyConfirmed) {
+        return { ...prev, id_confirmateur: uid, id_confirmateur_2: '', id_confirmateur_3: '' };
+      }
       if (!b) return { ...prev, id_confirmateur_2: uid };
       if (!c) return { ...prev, id_confirmateur_3: uid };
       return prev;
