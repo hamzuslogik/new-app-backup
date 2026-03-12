@@ -3463,20 +3463,25 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     // Récupérer l'ancienne valeur avant la mise à jour
     const oldValue = fiche[field];
 
+    // Champs logiques -> colonne en base (colonnes différentes ou absentes)
+    const fieldToDb = { rdv_seul: 'conf_presence_couple', etude_raison: 'conf_details_etude' };
+    const dbField = fieldToDb[field] || field;
+    const dbOldValue = fieldToDb[field] ? (fiche[dbField] ?? oldValue) : oldValue;
+
     // Mettre à jour le champ
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     await query(
-      `UPDATE fiches SET \`${field}\` = ?, date_modif_time = ? WHERE id = ?`,
+      `UPDATE fiches SET \`${dbField}\` = ?, date_modif_time = ? WHERE id = ?`,
       [value || null, now, id]
     );
 
-    // Enregistrer la modification dans modifica
+    // Enregistrer la modification dans modifica (nom logique du champ pour l'audit)
     await logModification(
       id,
       req.user.id,
       req.user.pseudo || 'Utilisateur',
       field,
-      oldValue,
+      dbOldValue,
       value || null
     );
 

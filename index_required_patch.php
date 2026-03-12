@@ -227,6 +227,7 @@
                             <option value="Sud">Sud</option>
                             <option value="Sud-Ouest">Sud-Ouest</option>
                             <option value="Ouest">Ouest</option>
+                            <option value="Est Ouest">Est Ouest</option>
                             <option value="Nord-Ouest">Nord-Ouest</option>
                         </select>
                     </div>

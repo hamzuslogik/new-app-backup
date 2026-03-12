@@ -1522,6 +1522,7 @@ const FicheFormModal = ({
                         <option value="SUD">SUD</option>
                         <option value="EST">EST</option>
                         <option value="OUEST">OUEST</option>
+                        <option value="EST OUEST">EST OUEST</option>
                         <option value="NORD-EST">NORD-EST</option>
                         <option value="NORD-OUEST">NORD-OUEST</option>
                         <option value="SUD-EST">SUD-EST</option>

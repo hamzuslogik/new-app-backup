@@ -2504,7 +2504,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 { value: 'OUI', label: 'Oui' },
                 { value: 'NON', label: 'Non' }
               ])}
-              {renderField('Détail de l\'étude', 'etude_raison', fiche.etude_raison || '-', 'textarea')}
+              {renderField('Détail de l\'étude', 'etude_raison', (fiche.conf_details_etude || fiche.etude_raison) || '-', 'textarea')}
               {renderField('Mode de chauffage', 'mode_chauffage',
                 (() => { const m = modeChauffage?.find(x => x.id == fiche.mode_chauffage); return m?.nom || m?.titre || '-'; })(),
                 'select', modeChauffage)}
@@ -2532,6 +2532,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 { value: 'SUD', label: 'SUD' },
                 { value: 'EST', label: 'EST' },
                 { value: 'OUEST', label: 'OUEST' },
+                { value: 'EST OUEST', label: 'EST OUEST' },
                 { value: 'NORD-EST', label: 'NORD-EST' },
                 { value: 'NORD-OUEST', label: 'NORD-OUEST' },
                 { value: 'SUD-EST', label: 'SUD-EST' },
@@ -4628,6 +4629,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         <option value="SUD">SUD</option>
                         <option value="EST">EST</option>
                         <option value="OUEST">OUEST</option>
+                        <option value="EST OUEST">EST OUEST</option>
                         <option value="NORD-EST">NORD-EST</option>
                         <option value="NORD-OUEST">NORD-OUEST</option>
                         <option value="SUD-EST">SUD-EST</option>
@@ -7197,6 +7199,7 @@ const CreateRdvModal = ({
                             <option value="SUD">SUD</option>
                             <option value="EST">EST</option>
                             <option value="OUEST">OUEST</option>
+                            <option value="EST OUEST">EST OUEST</option>
                             <option value="NORD-EST">NORD-EST</option>
                             <option value="NORD-OUEST">NORD-OUEST</option>
                             <option value="SUD-EST">SUD-EST</option>
