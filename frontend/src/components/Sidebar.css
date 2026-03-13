@@ -137,6 +137,17 @@
   color: #ffffff !important;
 }
 
+/* Cercle plein rouge devant le lien Messages (messages non lus) */
+.sidebar-link-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  margin-right: 8px;
+}
+
 .sidebar-link.active .sidebar-icon {
   color: #ffffff !important;
 }

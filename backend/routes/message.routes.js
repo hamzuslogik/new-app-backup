@@ -3,6 +3,27 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
 
+// Nombre de messages non lus pour l'utilisateur connecté (sidebar)
+router.get('/unread-count', authenticate, async (req, res) => {
+  try {
+    const row = await queryOne(
+      `SELECT COUNT(*) as count FROM chats WHERE destination = ? AND lu = 0`,
+      [req.user.id]
+    );
+    res.json({
+      success: true,
+      count: row?.count ?? 0
+    });
+  } catch (error) {
+    console.error('Erreur comptage messages non lus:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors du comptage des messages',
+      count: 0
+    });
+  }
+});
+
 // Récupérer la liste des conversations (utilisateurs avec qui on a discuté)
 router.get('/conversations', authenticate, async (req, res) => {
   try {

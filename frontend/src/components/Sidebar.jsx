@@ -47,6 +47,17 @@ const Sidebar = ({ collapsed }) => {
 
   const isREQualif = agentsSousResponsabilite && agentsSousResponsabilite.length > 0;
 
+  // Nombre de messages non lus (pour le cercle rouge sur le lien Messages)
+  const { data: messagesUnread } = useQuery(
+    'messages-unread-count',
+    async () => {
+      const res = await api.get('/messages/unread-count');
+      return res.data?.count ?? 0;
+    },
+    { enabled: !!user && hasPermission('messages_view'), refetchInterval: 30000 }
+  );
+  const messagesUnreadCount = messagesUnread ?? 0;
+
   const menuItems = [
     {
       path: '/dashboard',
@@ -423,6 +434,7 @@ const Sidebar = ({ collapsed }) => {
             })
             .map((item) => {
               const Icon = item.icon;
+              const showMessagesDot = item.path === '/messages' && messagesUnreadCount > 0;
               return (
                 <li key={item.path}>
                   <NavLink
@@ -431,6 +443,7 @@ const Sidebar = ({ collapsed }) => {
                       `sidebar-link ${isActive ? 'active' : ''}`
                     }
                   >
+                    {showMessagesDot && <span className="sidebar-link-dot" aria-hidden />}
                     <Icon className="sidebar-icon" />
                     {!collapsed && <span>{item.label}</span>}
                   </NavLink>
