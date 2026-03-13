@@ -54,7 +54,7 @@ const Sidebar = ({ collapsed }) => {
       const res = await api.get('/messages/unread-count');
       return res.data?.count ?? 0;
     },
-    { enabled: !!user && hasPermission('messages_view'), refetchInterval: 30000 }
+    { enabled: !!user && hasPermission('messages_view'), refetchInterval: 5000 }
   );
   const messagesUnreadCount = messagesUnread ?? 0;
 

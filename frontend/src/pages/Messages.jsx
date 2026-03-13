@@ -69,6 +69,10 @@ const Messages = () => {
     {
       enabled: !!selectedUser,
       refetchInterval: 3000, // Rafraîchir toutes les 3 secondes
+      onSuccess: () => {
+        // Mettre à jour le compteur sidebar (cercle rouge) dès qu'on ouvre une conversation
+        queryClient.invalidateQueries('messages-unread-count');
+      },
     }
   );
 
@@ -83,6 +87,7 @@ const Messages = () => {
         setMessageText('');
         queryClient.invalidateQueries(['messages', selectedUser]);
         queryClient.invalidateQueries('conversations');
+        queryClient.invalidateQueries('messages-unread-count');
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de l\'envoi du message');
