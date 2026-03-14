@@ -210,9 +210,9 @@ router.get('/', authenticate, async (req, res) => {
       });
     }
 
-    const { statut, id_fiche } = req.query;
+    const { statut, id_fiche, date, id_commercial } = req.query;
 
-    console.log('[COMPTE-RENDU] GET /compte-rendu - User:', user.id, 'Fonction:', user.fonction, 'Query:', { statut, id_fiche });
+    console.log('[COMPTE-RENDU] GET /compte-rendu - User:', user.id, 'Fonction:', user.fonction, 'Query:', { statut, id_fiche, date, id_commercial });
 
     let whereConditions = [];
     let params = [];
@@ -221,8 +221,11 @@ router.get('/', authenticate, async (req, res) => {
     if (user.fonction === 5) {
       whereConditions.push('cr.id_commercial = ?');
       params.push(user.id);
+    } else if (id_commercial) {
+      // Admin/RP : filtre par commercial si spécifié
+      whereConditions.push('cr.id_commercial = ?');
+      params.push(id_commercial);
     }
-    // Si admin, voir tous les comptes rendus
 
     // Filtrer par statut si spécifié
     if (statut) {
@@ -234,6 +237,12 @@ router.get('/', authenticate, async (req, res) => {
     if (id_fiche) {
       whereConditions.push('cr.id_fiche = ?');
       params.push(id_fiche);
+    }
+
+    // Filtrer par date (compte rendus du jour donné, basé sur date_creation)
+    if (date) {
+      whereConditions.push('DATE(cr.date_creation) = ?');
+      params.push(date);
     }
 
     const whereClause = whereConditions.length > 0 

@@ -9,10 +9,14 @@ import EditCompteRenduModal from '../components/EditCompteRenduModal';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './CompteRendu.css';
 
+const getTodayISO = () => new Date().toISOString().split('T')[0];
+
 const CompteRendu = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedStatutPending, setSelectedStatutPending] = useState(user.fonction === 5 ? 'pending' : 'all');
+  const [filterDate, setFilterDate] = useState(getTodayISO);
+  const [filterCommercial, setFilterCommercial] = useState('');
   const [commentaireAdmin, setCommentaireAdmin] = useState('');
   const [selectedCompteRendu, setSelectedCompteRendu] = useState(null);
   const [editingCompteRendu, setEditingCompteRendu] = useState(null);
@@ -43,9 +47,11 @@ const CompteRendu = () => {
 
   // Récupérer les comptes rendus en attente
   const { data: comptesRendusPendingData, isLoading: isLoadingPending } = useQuery(
-    ['compte-rendu-pending', selectedStatutPending],
+    ['compte-rendu-pending', selectedStatutPending, filterDate, filterCommercial],
     async () => {
-      const params = selectedStatutPending !== 'all' ? { statut: selectedStatutPending } : {};
+      const params = { date: filterDate };
+      if (selectedStatutPending !== 'all') params.statut = selectedStatutPending;
+      if (filterCommercial) params.id_commercial = filterCommercial;
       const res = await api.get('/compte-rendu', { params });
       return res.data.data || [];
     }
@@ -163,6 +169,34 @@ const CompteRendu = () => {
       {/* Section Comptes Rendus Pending */}
       <div className="results-section">
           <div className="pending-header">
+            <div className="compte-rendu-filters">
+              <div className="filter-group">
+                <label htmlFor="filter-date">Date :</label>
+                <input
+                  id="filter-date"
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                  className="filter-input"
+                />
+              </div>
+              {canApprove && (
+                <div className="filter-group">
+                  <label htmlFor="filter-commercial">Commercial :</label>
+                  <select
+                    id="filter-commercial"
+                    value={filterCommercial}
+                    onChange={(e) => setFilterCommercial(e.target.value)}
+                    className="filter-select"
+                  >
+                    <option value="">Tous</option>
+                    {commerciaux.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nom} {c.prenom}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
             {canApprove && (
               <div className="statut-filters">
                 <button
@@ -318,7 +352,7 @@ const CompteRendu = () => {
               ))}
             </div>
           ) : (
-            <div className="no-data">Aucun compte rendu en attente trouvé</div>
+            <div className="no-data">Aucun compte rendu trouvé</div>
           )}
       </div>
 

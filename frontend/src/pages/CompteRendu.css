@@ -61,7 +61,37 @@
 .pending-header {
   margin-bottom: 20px;
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.compte-rendu-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.compte-rendu-filters .filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compte-rendu-filters .filter-group label {
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+.compte-rendu-filters .filter-input,
+.compte-rendu-filters .filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .compte-rendu-card.statut-pending {
