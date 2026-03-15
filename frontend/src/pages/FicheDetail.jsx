@@ -3214,6 +3214,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 observations_cq: fiche.observations_cq || null,
                 date_creation: fiche.date_modif_time || fiche.date_insert_time || new Date().toISOString()
               };
+
+              // Afficher <CR> dans l'état actuel uniquement si cet état vient d'un compte rendu (dernière entrée historio = état actuel et from_compte_rendu)
+              const lastHisto = fiche.historique && fiche.historique.length > 0 ? fiche.historique[fiche.historique.length - 1] : null;
+              const isCurrentStateFromCR = lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.from_compte_rendu;
+              const crPseudoEtatActuel = isCurrentStateFromCR ? (lastHisto.cr_commercial_pseudo || '') : '';
               
               const detailItemsActuel = renderEtatDetails(etatActuel);
               
@@ -3287,8 +3292,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
                             }}
                           >
-                            {fiche.has_etat_changed_by_compte_rendu && (
-                              <span style={{ marginRight: '6px' }}>&lt;CR&gt;{fiche.compte_rendu_commercial_pseudo ? ` ${fiche.compte_rendu_commercial_pseudo}` : ''}</span>
+                            {isCurrentStateFromCR && (
+                              <span style={{ marginRight: '6px' }}>&lt;CR&gt;{crPseudoEtatActuel ? ` ${crPseudoEtatActuel}` : ''}</span>
                             )}
                             {etatActuel.etat_titre}
                           </span>
