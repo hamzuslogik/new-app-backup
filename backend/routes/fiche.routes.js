@@ -712,16 +712,16 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push(qualificationCondition);
       params.push(req.query.qualification_code);
     }
-    // Annuler à reprogrammer (id 8) : affiner par COMPTE RENDU ou REPRO CONFIRMATEURS
+    // Annuler à reprogrammer (id 8) : affiner par COMPTE RENDU ou REPRO CONFIRMATEURS (basé sur fiches_histo.from_compte_rendu)
     const annulerReproType = req.query.annuler_repro_type;
     if (annulerReproType && (idEtatFinalForWhere === 8 || idEtatFinalForWhere === '8')) {
       if (annulerReproType === 'compte_rendu') {
         whereConditions.push(
-          `EXISTS (SELECT 1 FROM compte_rendu_pending cr WHERE cr.id_fiche = fiche.id AND cr.statut = 'approved')`
+          `EXISTS (SELECT 1 FROM fiches_histo fh WHERE fh.id_fiche = fiche.id AND fh.id_etat = 8 AND fh.from_compte_rendu = 1)`
         );
       } else if (annulerReproType === 'repro_confirmateurs') {
         whereConditions.push(
-          `NOT EXISTS (SELECT 1 FROM compte_rendu_pending cr WHERE cr.id_fiche = fiche.id AND cr.statut = 'approved')`
+          `NOT EXISTS (SELECT 1 FROM fiches_histo fh WHERE fh.id_fiche = fiche.id AND fh.id_etat = 8 AND fh.from_compte_rendu = 1)`
         );
       }
     }
