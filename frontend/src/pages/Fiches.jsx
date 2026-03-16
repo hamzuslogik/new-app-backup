@@ -440,11 +440,8 @@ const Fiches = () => {
     return etat?.titre || '';
   };
 
-  // id_etat 8 = Annuler à reprogrammer : afficher <CR> devant si l'état provient de l'acceptation d'un compte rendu
-  const ID_ETAT_ANNULER_A_REPROGRAMMER = 8;
-  const showCRPrefix = (fiche) =>
-    fiche?.id_etat_final === ID_ETAT_ANNULER_A_REPROGRAMMER &&
-    fiche?.has_etat_changed_by_compte_rendu === true;
+  // Afficher <CR> dans la colonne état final uniquement si l'état actuel provient d'un compte rendu (dernière entrée historio with from_compte_rendu)
+  const showCRPrefix = (fiche) => fiche?.current_state_from_compte_rendu === true;
 
   // Agent qualification : si état dans groupe 0, afficher l'état, sinon "Validé"
   const isEtatGroupe0 = (etatId) => etatsPhase0.some(e => Number(e.id) === Number(etatId));

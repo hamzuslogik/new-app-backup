@@ -1059,6 +1059,28 @@ router.get('/', authenticate, async (req, res) => {
       });
     }
 
+    // État actuel = compte rendu : vrai ssi la dernière entrée fiches_histo a from_compte_rendu = 1 (pour affichage <CR> colonne état final)
+    if (fiches.length > 0) {
+      const ficheIds = fiches.map((f) => f.id);
+      const placeholders = ficheIds.map(() => '?').join(',');
+      const currentStateFromCrQuery = `
+        SELECT fh.id_fiche
+        FROM fiches_histo fh
+        INNER JOIN (
+          SELECT id_fiche, MAX(id) as max_id
+          FROM fiches_histo
+          WHERE id_fiche IN (${placeholders})
+          GROUP BY id_fiche
+        ) last ON fh.id_fiche = last.id_fiche AND fh.id = last.max_id
+        WHERE fh.from_compte_rendu = 1
+      `;
+      const currentStateFromCrRows = await query(currentStateFromCrQuery, ficheIds);
+      const currentStateFromCrSet = new Set(currentStateFromCrRows.map((r) => r.id_fiche));
+      fiches.forEach((fiche) => {
+        fiche.current_state_from_compte_rendu = currentStateFromCrSet.has(fiche.id);
+      });
+    }
+
     // Ajouter le hash pour chaque fiche (masquer l'ID)
     const hashStartTime = Date.now();
     const fichesWithHash = fiches.map(fiche => ({
