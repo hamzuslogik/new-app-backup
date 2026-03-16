@@ -16,6 +16,10 @@
 --   yj.date_visite -> date_creation
 --   yj.date_modif -> date_modif
 --   statut = 'approved' (CR historiques considérés validés)
+--
+-- POURQUOI compte_rendu_pending peut avoir moins de lignes que yj_compte_rendu (sans étape créations) :
+--   1. Fiche inexistante : yj.fiche_id pas dans fiches ou fiche_id <= 0 (exclus par INNER JOIN + WHERE)
+--   2. Commercial introuvable : résolu en créant les commerciaux manquants en état inactif (etat=0, fonction=5)
 -- =====================================================
 
 USE `crm`;
@@ -25,7 +29,37 @@ SET SQL_SAFE_UPDATES = 0;
 -- Désactiver temporairement les FK pour éviter les erreurs sur lignes orphelines
 SET FOREIGN_KEY_CHECKS = 0;
 
--- Insérer uniquement les lignes dont la fiche existe et le commercial est trouvé
+-- =====================================================
+-- ÉTAPE 1 : Créer les commerciaux manquants (état inactif)
+-- =====================================================
+-- Pour chaque nom distinct dans yj_compte_rendu.commercial qui n'existe pas dans utilisateurs
+-- (aucune ligne avec pseudo ou login égal à ce nom), on crée un utilisateur avec etat=0, fonction=5.
+INSERT INTO `utilisateurs` (`nom`, `prenom`, `pseudo`, `login`, `etat`, `fonction`)
+SELECT
+  base.display_name,
+  '' AS prenom,
+  base.display_name,
+  base.display_name,
+  0 AS etat,
+  5 AS fonction
+FROM (
+  SELECT MIN(TRIM(yj.`commercial`)) AS display_name
+  FROM `yj_compte_rendu` yj
+  WHERE TRIM(IFNULL(yj.`commercial`, '')) != ''
+  GROUP BY UPPER(TRIM(yj.`commercial`))
+) base
+WHERE NOT EXISTS (
+  SELECT 1 FROM `utilisateurs` u
+  WHERE TRIM(UPPER(u.`pseudo`)) = TRIM(UPPER(base.display_name))
+     OR TRIM(UPPER(u.`login`)) = TRIM(UPPER(base.display_name))
+);
+
+SELECT CONCAT('Commerciaux créés (état inactif) : ', ROW_COUNT(), ' ligne(s)') AS etape1;
+
+-- =====================================================
+-- ÉTAPE 2 : Migration compte_rendu_pending (fiche existe + commercial trouvé ou créé)
+-- =====================================================
+-- On cherche id_commercial par pseudo/login sans filtrer sur etat, pour inclure les commerciaux inactifs créés ci-dessus.
 INSERT INTO `compte_rendu_pending` (
   `id_fiche`,
   `id_commercial`,
@@ -72,11 +106,10 @@ FROM (
     yj.`fiche_id` AS id_fiche,
     IFNULL(
       (SELECT MIN(u.`id`) FROM `utilisateurs` u
-       WHERE (TRIM(UPPER(u.`pseudo`)) = TRIM(UPPER(yj.`commercial`)) OR TRIM(UPPER(u.`login`)) = TRIM(UPPER(yj.`commercial`)))
-       AND u.`etat` > 0),
+       WHERE (TRIM(UPPER(u.`pseudo`)) = TRIM(UPPER(yj.`commercial`)) OR TRIM(UPPER(u.`login`)) = TRIM(UPPER(yj.`commercial`)))),
       (SELECT MIN(u.`id`) FROM `utilisateurs` u
        WHERE TRIM(UPPER(u.`pseudo`)) LIKE CONCAT('%', TRIM(UPPER(yj.`commercial`)), '%')
-       AND u.`fonction` = 5 AND u.`etat` > 0)
+       AND u.`fonction` = 5)
     ) AS id_commercial,
     (SELECT MIN(e.`id`) FROM `etats` e
      WHERE TRIM(UPPER(e.`titre`)) = TRIM(UPPER(yj.`etat_fiche`))) AS id_etat_final,
@@ -107,27 +140,68 @@ WHERE base.id_commercial IS NOT NULL;
 SET FOREIGN_KEY_CHECKS = 1;
 SET SQL_SAFE_UPDATES = 1;
 
--- Statistiques
-SELECT COUNT(*) AS total_inseres FROM `compte_rendu_pending`;
-SELECT
-  (SELECT COUNT(*) FROM yj_compte_rendu) AS total_yj,
-  (SELECT COUNT(*) FROM yj_compte_rendu yj
-   INNER JOIN fiches f ON f.id = yj.fiche_id
-   WHERE EXISTS (
-     SELECT 1 FROM utilisateurs u
-     WHERE (TRIM(UPPER(u.pseudo)) = TRIM(UPPER(yj.commercial))
-        OR TRIM(UPPER(u.login)) = TRIM(UPPER(yj.commercial)))
-     AND u.etat > 0
-   )) AS lignes_migrees,
-  (SELECT COUNT(*) FROM yj_compte_rendu yj
-   LEFT JOIN fiches f ON f.id = yj.fiche_id
-   WHERE f.id IS NULL AND yj.fiche_id > 0) AS fiches_inexistantes,
-  (SELECT COUNT(*) FROM yj_compte_rendu yj
-   WHERE NOT EXISTS (
-     SELECT 1 FROM utilisateurs u
-     WHERE (TRIM(UPPER(u.pseudo)) = TRIM(UPPER(yj.commercial))
-        OR TRIM(UPPER(u.login)) = TRIM(UPPER(yj.commercial)))
-     AND u.etat > 0
-   ) AND yj.fiche_id IN (SELECT id FROM fiches)) AS commerciaux_introuvables;
+-- =====================================================
+-- DIAGNOSTIC : pourquoi total compte_rendu_pending ≠ total yj_compte_rendu
+-- =====================================================
 
-SELECT 'Migration yj_compte_rendu -> compte_rendu_pending terminée.' AS message;
+SELECT '--- Effectifs ---' AS info;
+SELECT
+  (SELECT COUNT(*) FROM yj_compte_rendu) AS total_yj_compte_rendu,
+  (SELECT COUNT(*) FROM compte_rendu_pending) AS total_compte_rendu_pending_apres_insert,
+  (SELECT COUNT(*) FROM yj_compte_rendu) - (SELECT COUNT(*) FROM compte_rendu_pending) AS ecart_lignes_non_migrees;
+
+SELECT '--- Cause 1 : fiches inexistantes (yj.fiche_id pas dans fiches ou <= 0) ---' AS info;
+SELECT COUNT(*) AS nb_exclus_fiche_inexistante
+FROM yj_compte_rendu yj
+LEFT JOIN fiches f ON f.id = yj.fiche_id
+WHERE f.id IS NULL OR yj.fiche_id <= 0;
+
+SELECT '--- Échantillon fiches inexistantes (fiche_id, commercial, etat_fiche) ---' AS info;
+SELECT yj.fiche_id, yj.commercial, yj.etat_fiche
+FROM yj_compte_rendu yj
+LEFT JOIN fiches f ON f.id = yj.fiche_id
+WHERE (f.id IS NULL OR yj.fiche_id <= 0)
+LIMIT 20;
+
+SELECT '--- Cause 2 : commercial introuvable (après création des manquants, devrait être 0) ---' AS info;
+SELECT COUNT(*) AS nb_exclus_commercial_introuvable
+FROM yj_compte_rendu yj
+INNER JOIN fiches f ON f.id = yj.fiche_id
+WHERE yj.fiche_id > 0
+  AND NOT EXISTS (
+    SELECT 1 FROM utilisateurs u
+    WHERE (TRIM(UPPER(u.pseudo)) = TRIM(UPPER(yj.commercial))
+       OR TRIM(UPPER(u.login)) = TRIM(UPPER(yj.commercial)))
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM utilisateurs u
+    WHERE TRIM(UPPER(u.pseudo)) LIKE CONCAT('%', TRIM(UPPER(yj.commercial)), '%')
+    AND u.fonction = 5
+  );
+
+SELECT '--- Échantillon commerciaux introuvables (fiche_id, commercial, etat_fiche) ---' AS info;
+SELECT yj.fiche_id, yj.commercial, yj.etat_fiche
+FROM yj_compte_rendu yj
+INNER JOIN fiches f ON f.id = yj.fiche_id
+WHERE yj.fiche_id > 0
+  AND NOT EXISTS (
+    SELECT 1 FROM utilisateurs u
+    WHERE (TRIM(UPPER(u.pseudo)) = TRIM(UPPER(yj.commercial))
+       OR TRIM(UPPER(u.login)) = TRIM(UPPER(yj.commercial)))
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM utilisateurs u
+    WHERE TRIM(UPPER(u.pseudo)) LIKE CONCAT('%', TRIM(UPPER(yj.commercial)), '%')
+    AND u.fonction = 5
+  )
+LIMIT 20;
+
+SELECT '--- Résumé : total exclu = fiches inexistantes (+ commerciaux introuvables si aucun créé) ---' AS info;
+SELECT
+  (SELECT COUNT(*) FROM yj_compte_rendu yj LEFT JOIN fiches f ON f.id = yj.fiche_id WHERE f.id IS NULL OR yj.fiche_id <= 0)
+  + (SELECT COUNT(*) FROM yj_compte_rendu yj INNER JOIN fiches f ON f.id = yj.fiche_id WHERE yj.fiche_id > 0
+     AND NOT EXISTS (SELECT 1 FROM utilisateurs u WHERE (TRIM(UPPER(u.pseudo)) = TRIM(UPPER(yj.commercial)) OR TRIM(UPPER(u.login)) = TRIM(UPPER(yj.commercial))))
+     AND NOT EXISTS (SELECT 1 FROM utilisateurs u WHERE TRIM(UPPER(u.pseudo)) LIKE CONCAT('%', TRIM(UPPER(yj.commercial)), '%') AND u.fonction = 5)
+  ) AS total_exclu_attendu;
+
+SELECT 'Migration terminée : commerciaux manquants créés (état inactif), tous les CR migrés sauf fiches inexistantes.' AS message;

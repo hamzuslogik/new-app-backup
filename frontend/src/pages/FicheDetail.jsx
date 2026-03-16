@@ -3292,9 +3292,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
                             }}
                           >
-                            {isCurrentStateFromCR && (
-                              <span style={{ marginRight: '6px' }}>&lt;CR&gt;{crPseudoEtatActuel ? ` ${crPseudoEtatActuel}` : ''}</span>
-                            )}
+                            {isCurrentStateFromCR ? (
+                              <>
+                                <span style={{ marginRight: '6px' }}>&lt;CR&gt;</span>
+                                {crPseudoEtatActuel && <span style={{ marginRight: '6px' }}>{crPseudoEtatActuel} – </span>}
+                              </>
+                            ) : null}
                             {etatActuel.etat_titre}
                           </span>
                         </div>
