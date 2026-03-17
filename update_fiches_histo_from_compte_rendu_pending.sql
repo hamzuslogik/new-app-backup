@@ -3,30 +3,27 @@
 -- =====================================================
 -- Prerequisite: add_fiches_histo_from_compte_rendu.sql exécuté (colonnes from_compte_rendu, id_commercial_cr)
 --
--- Met à jour:
---   fiches_histo.from_compte_rendu = 1
---   fiches_histo.id_commercial_cr = compte_rendu_pending.id_commercial
+-- Met à jour UNE SEULE ligne fiches_histo par compte rendu :
+--   celle dont date_creation est la plus proche de la date du CR (date_modif/date_creation).
+--   Les autres lignes (même fiche, même état, même jour) viennent des confirmateurs et ne sont pas modifiées.
 --
 -- Correspondance:
 --   fiches_histo.id_fiche = compte_rendu_pending.id_fiche
 --   fiches_histo.id_etat = compte_rendu_pending.id_etat_final
---   Même jour: DATE(fiches_histo.date_creation) = DATE(compte_rendu_pending.date_modif)
---              ou DATE(compte_rendu_pending.date_creation)
+--   Même jour, puis choix de la ligne dont date_creation est la plus proche de date_ref du CR
 --
--- Statuts couverts: approved, rejected, pending (tous les CR, pas seulement approuvés)
+-- Statuts couverts: approved, rejected, pending (tous les CR)
 -- =====================================================
 
 USE `crm`;
 
 SET SQL_SAFE_UPDATES = 0;
 
--- Sous-requête : un CR par (id_fiche, id_etat_final, date_jour, statut) pour éviter les doublons
--- On prend le CR avec l'id minimal quand plusieurs correspondent au même jour
--- Tous les statuts sont pris en compte (approved, rejected, pending)
+-- Une ligne CR par (id_fiche, id_etat_final, date_jour)
+-- Puis pour chaque CR, la SEULE ligne fiches_histo dont date_creation est la plus proche de date_ref
 UPDATE `fiches_histo` fh
 INNER JOIN (
-  SELECT cr.id_fiche, cr.id_etat_final, cr.id_commercial,
-         COALESCE(cr.date_modif, cr.date_creation) AS date_ref
+  SELECT fh_in.id AS fh_id, cr.id_commercial
   FROM `compte_rendu_pending` cr
   INNER JOIN (
     SELECT id_fiche, id_etat_final, DATE(COALESCE(date_modif, date_creation)) AS date_jour,
@@ -39,13 +36,23 @@ INNER JOIN (
         AND cr.id_etat_final = uniq.id_etat_final
         AND DATE(COALESCE(cr.date_modif, cr.date_creation)) = uniq.date_jour
         AND cr.id = uniq.min_id
-) cr
-  ON fh.id_fiche = cr.id_fiche
-  AND fh.id_etat = cr.id_etat_final
-  AND DATE(fh.date_creation) = DATE(cr.date_ref)
+  INNER JOIN `fiches_histo` fh_in
+    ON fh_in.id_fiche = cr.id_fiche
+    AND fh_in.id_etat = cr.id_etat_final
+    AND DATE(fh_in.date_creation) = DATE(COALESCE(cr.date_modif, cr.date_creation))
+  WHERE fh_in.id = (
+    SELECT fh2.id
+    FROM `fiches_histo` fh2
+    WHERE fh2.id_fiche = cr.id_fiche
+      AND fh2.id_etat = cr.id_etat_final
+      AND DATE(fh2.date_creation) = DATE(COALESCE(cr.date_modif, cr.date_creation))
+    ORDER BY ABS(TIMESTAMPDIFF(SECOND, fh2.date_creation, COALESCE(cr.date_modif, cr.date_creation)))
+    LIMIT 1
+  )
+) sel ON fh.id = sel.fh_id
 SET
   fh.from_compte_rendu = 1,
-  fh.id_commercial_cr = cr.id_commercial;
+  fh.id_commercial_cr = sel.id_commercial;
 
 SET SQL_SAFE_UPDATES = 1;
 
