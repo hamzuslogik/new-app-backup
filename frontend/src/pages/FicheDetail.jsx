@@ -107,12 +107,24 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     id_confirmateur_3: '',
     produit: '',
     conf_rdv_avec: '',
+    conf_appel_tunisie_avec: '',
+    conf_deja_etude: '',
+    conf_profession_monsieur: '',
+    conf_type_contrat_mr: '',
+    conf_profession_madame: '',
+    conf_type_contrat_madame: '',
+    conf_revenu: '',
+    conf_credit: '',
+    conf_mode_chauffage: '',
+    conf_consommation_electricite: '',
+    conf_consommation_chauffage: '',
+    conf_rdv_annule_precedent: '',
+    conf_presence_couple: '',
     // Champs spécifiques PV
     surface_habitable: '',
     conf_orientation_toiture: '',
     conf_zones_ombres: '',
     conf_site_classe: '',
-    conf_consommation_electricite: '',
     nb_pans: '',
     // Champs spécifiques PAC
     surface_chauffee: '',
@@ -133,10 +145,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     conf_rdv_date: '',
     conf_rdv_time: '',
     conf_rdv_avec: '',
+    conf_appel_tunisie_avec: '',
+    conf_deja_etude: '',
+    conf_profession_monsieur: '',
+    conf_type_contrat_mr: '',
+    conf_profession_madame: '',
+    conf_type_contrat_madame: '',
+    conf_revenu: '',
+    conf_credit: '',
+    conf_mode_chauffage: '',
+    conf_consommation_electricite: '',
+    conf_consommation_chauffage: '',
+    conf_rdv_annule_precedent: '',
+    conf_presence_couple: '',
     conf_orientation_toiture: '',
     conf_zones_ombres: '',
     conf_site_classe: '',
-    conf_consommation_electricite: '',
     nb_pans: '',
     // Champs techniques PAC
     mode_chauffage: '',
@@ -145,6 +169,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     consommation_chauffage: '',
     conf_commentaire_produit: ''
   });
+  const [confFilterProfMr, setConfFilterProfMr] = useState('');
+  const [confFilterProfMme, setConfFilterProfMme] = useState('');
 
   // État pour le formulaire NRP
   const [nrpFormData, setNrpFormData] = useState({
@@ -1052,12 +1078,24 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         id_confirmateur_2: rdvFormData.id_confirmateur_2 ? parseInt(rdvFormData.id_confirmateur_2) : null,
         id_confirmateur_3: rdvFormData.id_confirmateur_3 ? parseInt(rdvFormData.id_confirmateur_3) : null,
         conf_rdv_avec: rdvFormData.conf_rdv_avec || null,
+        conf_appel_tunisie_avec: rdvFormData.conf_appel_tunisie_avec || null,
+        conf_deja_etude: rdvFormData.conf_deja_etude || null,
+        conf_profession_monsieur: rdvFormData.conf_profession_monsieur ? parseInt(rdvFormData.conf_profession_monsieur) : null,
+        conf_type_contrat_mr: rdvFormData.conf_type_contrat_mr ? parseInt(rdvFormData.conf_type_contrat_mr) : null,
+        conf_profession_madame: rdvFormData.conf_profession_madame ? parseInt(rdvFormData.conf_profession_madame) : null,
+        conf_type_contrat_madame: rdvFormData.conf_type_contrat_madame ? parseInt(rdvFormData.conf_type_contrat_madame) : null,
+        conf_revenu: rdvFormData.conf_revenu || null,
+        conf_credit: rdvFormData.conf_credit || null,
+        conf_mode_chauffage: rdvFormData.conf_mode_chauffage ? parseInt(rdvFormData.conf_mode_chauffage) : null,
+        conf_consommation_electricite: rdvFormData.conf_consommation_electricite || null,
+        conf_consommation_chauffage: rdvFormData.conf_consommation_chauffage || null,
+        conf_rdv_annule_precedent: rdvFormData.conf_rdv_annule_precedent || null,
+        conf_presence_couple: rdvFormData.conf_presence_couple || null,
         // Champs spécifiques PV
         surface_habitable: rdvFormData.surface_habitable ? parseFloat(rdvFormData.surface_habitable) : null,
         conf_orientation_toiture: rdvFormData.conf_orientation_toiture || null,
         conf_zones_ombres: rdvFormData.conf_zones_ombres || null,
         conf_site_classe: rdvFormData.conf_site_classe || null,
-        conf_consommation_electricite: rdvFormData.conf_consommation_electricite || null,
         nb_pans: rdvFormData.nb_pans ? parseInt(rdvFormData.nb_pans) : null,
         // Champs spécifiques PAC
         surface_chauffee: rdvFormData.surface_chauffee || null,
@@ -1113,11 +1151,23 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           id_confirmateur_3: '',
           produit: '',
           conf_rdv_avec: '',
+          conf_appel_tunisie_avec: '',
+          conf_deja_etude: '',
+          conf_profession_monsieur: '',
+          conf_type_contrat_mr: '',
+          conf_profession_madame: '',
+          conf_type_contrat_madame: '',
+          conf_revenu: '',
+          conf_credit: '',
+          conf_mode_chauffage: '',
+          conf_consommation_electricite: '',
+          conf_consommation_chauffage: '',
+          conf_rdv_annule_precedent: '',
+          conf_presence_couple: '',
           surface_habitable: '',
           conf_orientation_toiture: '',
           conf_zones_ombres: '',
           conf_site_classe: '',
-          conf_consommation_electricite: '',
           nb_pans: '',
           surface_chauffee: '',
           consommation_chauffage: '',
@@ -1331,10 +1381,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         conf_rdv_date: rdvDate,
         conf_rdv_time: rdvTime,
         conf_rdv_avec: ficheData?.conf_rdv_avec || '',
+        conf_appel_tunisie_avec: ficheData?.conf_appel_tunisie_avec || '',
+        conf_deja_etude: ficheData?.conf_deja_etude || '',
+        conf_profession_monsieur: ficheData?.conf_profession_monsieur != null ? String(ficheData.conf_profession_monsieur) : '',
+        conf_type_contrat_mr: ficheData?.conf_type_contrat_mr != null ? String(ficheData.conf_type_contrat_mr) : '',
+        conf_profession_madame: ficheData?.conf_profession_madame != null ? String(ficheData.conf_profession_madame) : '',
+        conf_type_contrat_madame: ficheData?.conf_type_contrat_madame != null ? String(ficheData.conf_type_contrat_madame) : '',
+        conf_revenu: ficheData?.conf_revenu || '',
+        conf_credit: ficheData?.conf_credit || '',
+        conf_mode_chauffage: ficheData?.conf_mode_chauffage != null ? String(ficheData.conf_mode_chauffage) : '',
+        conf_consommation_electricite: ficheData?.conf_consommation_electricite || ficheData?.consommation_electricite || '',
+        conf_consommation_chauffage: ficheData?.conf_consommation_chauffage || ficheData?.consommation_chauffage || '',
+        conf_rdv_annule_precedent: ficheData?.conf_rdv_annule_precedent || '',
+        conf_presence_couple: ficheData?.conf_presence_couple || '',
         conf_orientation_toiture: ficheData?.conf_orientation_toiture || ficheData?.orientation_toiture || '',
         conf_zones_ombres: ficheData?.conf_zones_ombres || ficheData?.zones_ombres || '',
         conf_site_classe: ficheData?.conf_site_classe || ficheData?.site_classe || '',
-        conf_consommation_electricite: ficheData?.conf_consommation_electricite || ficheData?.consommation_electricite || '',
         nb_pans: ficheData?.nb_pans ? String(ficheData.nb_pans) : '',
         mode_chauffage: ficheData?.mode_chauffage ? String(ficheData.mode_chauffage) : '',
         annee_systeme_chauffage: ficheData?.annee_systeme_chauffage ? String(ficheData.annee_systeme_chauffage) : '',
@@ -1351,17 +1413,31 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         conf_rdv_date: '',
         conf_rdv_time: '',
         conf_rdv_avec: '',
+        conf_appel_tunisie_avec: '',
+        conf_deja_etude: '',
+        conf_profession_monsieur: '',
+        conf_type_contrat_mr: '',
+        conf_profession_madame: '',
+        conf_type_contrat_madame: '',
+        conf_revenu: '',
+        conf_credit: '',
+        conf_mode_chauffage: '',
+        conf_consommation_electricite: '',
+        conf_consommation_chauffage: '',
+        conf_rdv_annule_precedent: '',
+        conf_presence_couple: '',
         conf_orientation_toiture: '',
         conf_zones_ombres: '',
         nb_pans: '',
         conf_site_classe: '',
-        conf_consommation_electricite: '',
         mode_chauffage: '',
         annee_systeme_chauffage: '',
         surface_chauffee: '',
         consommation_chauffage: '',
         conf_commentaire_produit: ''
       });
+      setConfFilterProfMr('');
+      setConfFilterProfMme('');
     }
   };
 
@@ -1412,10 +1488,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         id_confirmateur_3: confFormData.id_confirmateur_3 ? parseInt(confFormData.id_confirmateur_3) : null,
         date_rdv_time: dateRdvTime,
         conf_rdv_avec: confFormData.conf_rdv_avec || null,
+        conf_appel_tunisie_avec: confFormData.conf_appel_tunisie_avec || null,
+        conf_deja_etude: confFormData.conf_deja_etude || null,
+        conf_profession_monsieur: confFormData.conf_profession_monsieur ? parseInt(confFormData.conf_profession_monsieur) : null,
+        conf_type_contrat_mr: confFormData.conf_type_contrat_mr ? parseInt(confFormData.conf_type_contrat_mr) : null,
+        conf_profession_madame: confFormData.conf_profession_madame ? parseInt(confFormData.conf_profession_madame) : null,
+        conf_type_contrat_madame: confFormData.conf_type_contrat_madame ? parseInt(confFormData.conf_type_contrat_madame) : null,
+        conf_revenu: confFormData.conf_revenu || null,
+        conf_credit: confFormData.conf_credit || null,
+        conf_mode_chauffage: confFormData.conf_mode_chauffage ? parseInt(confFormData.conf_mode_chauffage) : null,
+        conf_consommation_electricite: confFormData.conf_consommation_electricite || null,
+        conf_consommation_chauffage: confFormData.conf_consommation_chauffage || null,
+        conf_rdv_annule_precedent: confFormData.conf_rdv_annule_precedent || null,
+        conf_presence_couple: confFormData.conf_presence_couple || null,
         conf_orientation_toiture: confFormData.conf_orientation_toiture || null,
         conf_zones_ombres: confFormData.conf_zones_ombres || null,
         conf_site_classe: confFormData.conf_site_classe || null,
-        conf_consommation_electricite: confFormData.conf_consommation_electricite || null,
         nb_pans: confFormData.nb_pans ? parseInt(confFormData.nb_pans) : null,
         mode_chauffage: confFormData.mode_chauffage ? parseInt(confFormData.mode_chauffage) : null,
         annee_systeme_chauffage: confFormData.annee_systeme_chauffage ? parseInt(confFormData.annee_systeme_chauffage) : null,
@@ -1444,10 +1532,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           conf_rdv_date: '',
           conf_rdv_time: '',
           conf_rdv_avec: '',
+          conf_appel_tunisie_avec: '',
+          conf_deja_etude: '',
+          conf_profession_monsieur: '',
+          conf_type_contrat_mr: '',
+          conf_profession_madame: '',
+          conf_type_contrat_madame: '',
+          conf_revenu: '',
+          conf_credit: '',
+          conf_mode_chauffage: '',
+          conf_consommation_electricite: '',
+          conf_consommation_chauffage: '',
+          conf_rdv_annule_precedent: '',
+          conf_presence_couple: '',
           conf_orientation_toiture: '',
           conf_zones_ombres: '',
           conf_site_classe: '',
-          conf_consommation_electricite: '',
           nb_pans: '',
           mode_chauffage: '',
           annee_systeme_chauffage: '',
@@ -1455,6 +1555,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           consommation_chauffage: '',
           conf_commentaire_produit: ''
         });
+        setConfFilterProfMr('');
+        setConfFilterProfMme('');
         alert('Fiche confirmée avec succès');
       }
     } catch (error) {
@@ -4586,6 +4688,204 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   </div>
                 </div>
 
+                {/* Champs confirmation communs */}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="conf_appel_tunisie_avec">Appel en Tunisie avec :</label>
+                    <select
+                      id="conf_appel_tunisie_avec"
+                      className="form-control"
+                      value={confFormData.conf_appel_tunisie_avec}
+                      onChange={(e) => setConfFormData({...confFormData, conf_appel_tunisie_avec: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="MR">Mr</option>
+                      <option value="MME">Mme</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="conf_deja_etude">A déjà fait une étude :</label>
+                    <select
+                      id="conf_deja_etude"
+                      className="form-control"
+                      value={confFormData.conf_deja_etude}
+                      onChange={(e) => setConfFormData({...confFormData, conf_deja_etude: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="OUI">OUI</option>
+                      <option value="NON">NON</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="conf_rdv_annule_precedent">RDV déjà annulé précédemment :</label>
+                    <select
+                      id="conf_rdv_annule_precedent"
+                      className="form-control"
+                      value={confFormData.conf_rdv_annule_precedent}
+                      onChange={(e) => setConfFormData({...confFormData, conf_rdv_annule_precedent: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="OUI">OUI</option>
+                      <option value="NON">NON</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="conf_presence_couple">Présence du couple ou célibataire :</label>
+                    <select
+                      id="conf_presence_couple"
+                      className="form-control"
+                      value={confFormData.conf_presence_couple}
+                      onChange={(e) => setConfFormData({...confFormData, conf_presence_couple: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="OUI">OUI</option>
+                      <option value="NON">NON</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Profession MR :</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Filtrer..."
+                      value={confFilterProfMr}
+                      onChange={(e) => setConfFilterProfMr(e.target.value)}
+                      style={{ marginBottom: '4px' }}
+                    />
+                    <select
+                      id="conf_profession_mr"
+                      className="form-control"
+                      value={confFormData.conf_profession_monsieur}
+                      onChange={(e) => setConfFormData({...confFormData, conf_profession_monsieur: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {(professions || [])
+                        .filter(p => !confFilterProfMr || (p.nom || '').toLowerCase().includes(confFilterProfMr.toLowerCase()))
+                        .slice(0, 200)
+                        .map(prof => (
+                          <option key={prof.id} value={prof.id}>{prof.nom}</option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="conf_type_contrat_mr">Type de Contrat MR :</label>
+                    <select
+                      id="conf_type_contrat_mr"
+                      className="form-control"
+                      value={confFormData.conf_type_contrat_mr}
+                      onChange={(e) => setConfFormData({...confFormData, conf_type_contrat_mr: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {(typeContrat || []).map(t => (
+                        <option key={t.id} value={t.id}>{t.nom}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Profession MME :</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Filtrer..."
+                      value={confFilterProfMme}
+                      onChange={(e) => setConfFilterProfMme(e.target.value)}
+                      style={{ marginBottom: '4px' }}
+                    />
+                    <select
+                      id="conf_profession_mme"
+                      className="form-control"
+                      value={confFormData.conf_profession_madame}
+                      onChange={(e) => setConfFormData({...confFormData, conf_profession_madame: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {(professions || [])
+                        .filter(p => !confFilterProfMme || (p.nom || '').toLowerCase().includes(confFilterProfMme.toLowerCase()))
+                        .slice(0, 200)
+                        .map(prof => (
+                          <option key={prof.id} value={prof.id}>{prof.nom}</option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="conf_type_contrat_madame">Type de Contrat MME :</label>
+                    <select
+                      id="conf_type_contrat_madame"
+                      className="form-control"
+                      value={confFormData.conf_type_contrat_madame}
+                      onChange={(e) => setConfFormData({...confFormData, conf_type_contrat_madame: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {(typeContrat || []).map(t => (
+                        <option key={t.id} value={t.id}>{t.nom}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="conf_revenu">Revenu :</label>
+                    <input
+                      type="text"
+                      id="conf_revenu"
+                      className="form-control"
+                      value={confFormData.conf_revenu}
+                      onChange={(e) => setConfFormData({...confFormData, conf_revenu: e.target.value})}
+                      placeholder="Revenu"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="conf_credit">Crédit :</label>
+                    <input
+                      type="text"
+                      id="conf_credit"
+                      className="form-control"
+                      value={confFormData.conf_credit}
+                      onChange={(e) => setConfFormData({...confFormData, conf_credit: e.target.value})}
+                      placeholder="Crédit"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="conf_consommation_electricite_gen">Consommations électrique :</label>
+                    <input
+                      type="text"
+                      id="conf_consommation_electricite_gen"
+                      className="form-control"
+                      value={confFormData.conf_consommation_electricite}
+                      onChange={(e) => setConfFormData({...confFormData, conf_consommation_electricite: e.target.value})}
+                      placeholder="Ex: 800 €/an"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="conf_consommation_chauffage_gen">Consommations chauffage :</label>
+                    <input
+                      type="text"
+                      id="conf_consommation_chauffage_gen"
+                      className="form-control"
+                      value={confFormData.conf_consommation_chauffage}
+                      onChange={(e) => setConfFormData({...confFormData, conf_consommation_chauffage: e.target.value})}
+                      placeholder="Ex: 1500 €/an"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="conf_mode_chauffage_gen">Mode de chauffage :</label>
+                    <select
+                      id="conf_mode_chauffage_gen"
+                      className="form-control"
+                      value={confFormData.conf_mode_chauffage}
+                      onChange={(e) => setConfFormData({...confFormData, conf_mode_chauffage: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {(modeChauffage || []).map(mode => (
+                        <option key={mode.id} value={mode.id}>{mode.nom || mode.titre || `Mode ${mode.id}`}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 {/* Champs spécifiques PAC */}
                 {confFormData.produit === '1' && (
                   <div className="form-row">
@@ -6881,6 +7181,17 @@ const CreateRdvModal = ({
     return res.data.data || [];
   });
 
+  const { data: professionsRdv } = useQuery('professions', async () => {
+    const res = await api.get('/management/professions');
+    return res.data?.data || res.data || [];
+  });
+  const { data: typeContratRdv } = useQuery('type-contrat', async () => {
+    const res = await api.get('/management/type-contrat');
+    return res.data?.data || res.data || [];
+  });
+  const [rdvFilterProfMr, setRdvFilterProfMr] = useState('');
+  const [rdvFilterProfMme, setRdvFilterProfMme] = useState('');
+
   const { data: produits, isLoading: isLoadingProduits, error: produitsError } = useQuery(
     'produits-modal', 
     async () => {
@@ -7131,6 +7442,183 @@ const CreateRdvModal = ({
                 <option value="MME">MME</option>
                 <option value="AUTRE">AUTRE</option>
               </select>
+            </div>
+
+            {/* Champs confirmation (création rapide RDV) */}
+            <div className="form-row">
+              <div className="form-group">
+                <label>Appel en Tunisie avec</label>
+                <select
+                  className="form-control"
+                  value={rdvFormData.conf_appel_tunisie_avec || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_appel_tunisie_avec: e.target.value})}
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="MR">Mr</option>
+                  <option value="MME">Mme</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>A déjà fait une étude</label>
+                <select
+                  className="form-control"
+                  value={rdvFormData.conf_deja_etude || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_deja_etude: e.target.value})}
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="OUI">OUI</option>
+                  <option value="NON">NON</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>RDV déjà annulé précédemment</label>
+                <select
+                  className="form-control"
+                  value={rdvFormData.conf_rdv_annule_precedent || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_rdv_annule_precedent: e.target.value})}
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="OUI">OUI</option>
+                  <option value="NON">NON</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Présence du couple ou célibataire</label>
+                <select
+                  className="form-control"
+                  value={rdvFormData.conf_presence_couple || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_presence_couple: e.target.value})}
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="OUI">OUI</option>
+                  <option value="NON">NON</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Profession MR</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Filtrer..."
+                  value={rdvFilterProfMr}
+                  onChange={(e) => setRdvFilterProfMr(e.target.value)}
+                  style={{ marginBottom: '4px' }}
+                />
+                <select
+                  className="form-control"
+                  value={rdvFormData.conf_profession_monsieur || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_profession_monsieur: e.target.value})}
+                >
+                  <option value="">Sélectionner</option>
+                  {(professionsRdv || []).filter(p => !rdvFilterProfMr || (p.nom || '').toLowerCase().includes(rdvFilterProfMr.toLowerCase())).slice(0, 200).map(prof => (
+                    <option key={prof.id} value={prof.id}>{prof.nom}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Type de Contrat MR</label>
+                <select
+                  className="form-control"
+                  value={rdvFormData.conf_type_contrat_mr || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_type_contrat_mr: e.target.value})}
+                >
+                  <option value="">Sélectionner</option>
+                  {(typeContratRdv || []).map(t => (
+                    <option key={t.id} value={t.id}>{t.nom}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Profession MME</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Filtrer..."
+                  value={rdvFilterProfMme}
+                  onChange={(e) => setRdvFilterProfMme(e.target.value)}
+                  style={{ marginBottom: '4px' }}
+                />
+                <select
+                  className="form-control"
+                  value={rdvFormData.conf_profession_madame || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_profession_madame: e.target.value})}
+                >
+                  <option value="">Sélectionner</option>
+                  {(professionsRdv || []).filter(p => !rdvFilterProfMme || (p.nom || '').toLowerCase().includes(rdvFilterProfMme.toLowerCase())).slice(0, 200).map(prof => (
+                    <option key={prof.id} value={prof.id}>{prof.nom}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Type de Contrat MME</label>
+                <select
+                  className="form-control"
+                  value={rdvFormData.conf_type_contrat_madame || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_type_contrat_madame: e.target.value})}
+                >
+                  <option value="">Sélectionner</option>
+                  {(typeContratRdv || []).map(t => (
+                    <option key={t.id} value={t.id}>{t.nom}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Revenu</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={rdvFormData.conf_revenu || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_revenu: e.target.value})}
+                  placeholder="Revenu"
+                />
+              </div>
+              <div className="form-group">
+                <label>Crédit</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={rdvFormData.conf_credit || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_credit: e.target.value})}
+                  placeholder="Crédit"
+                />
+              </div>
+              <div className="form-group">
+                <label>Mode de chauffage</label>
+                <select
+                  className="form-control"
+                  value={rdvFormData.conf_mode_chauffage || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_mode_chauffage: e.target.value})}
+                >
+                  <option value="">Sélectionner</option>
+                  {(modeChauffage || []).map(mode => (
+                    <option key={mode.id} value={mode.id}>{mode.nom || mode.titre || `Mode ${mode.id}`}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Consommations électrique</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={rdvFormData.conf_consommation_electricite || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_electricite: e.target.value})}
+                  placeholder="Ex: 800 €/an"
+                />
+              </div>
+              <div className="form-group">
+                <label>Consommations chauffage</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={rdvFormData.conf_consommation_chauffage || ''}
+                  onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_chauffage: e.target.value})}
+                  placeholder="Ex: 1500 €/an"
+                />
+              </div>
             </div>
 
             {/* Champs spécifiques selon le produit */}

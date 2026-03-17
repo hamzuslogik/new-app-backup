@@ -2677,8 +2677,11 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
           'active', 'valider', 'conf_commentaire_produit', 'conf_consommations',
           'conf_profession_monsieur', 'conf_profession_madame', 'conf_presence_couple',
           'conf_produit', 'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
-          'conf_consommation_electricite', 'conf_rdv_avec', 'cq_etat', 'cq_dossier',
-          'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
+'conf_consommation_electricite', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
+      'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
+      'conf_type_contrat_mr', 'conf_type_contrat_madame',
+      'cq_etat', 'cq_dossier',
+      'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
           'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
           'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
           'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'pseudo'
@@ -3460,7 +3463,9 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
       'produit', 'etude', 'etude_raison', 'orientation_toiture', 'site_classe', 'zones_ombres',
-      'isolation', 'conf_commentaire_produit', 'conf_rdv_avec',
+      'isolation', 'conf_commentaire_produit', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
+      'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
+      'conf_presence_couple', 'conf_profession_monsieur', 'conf_profession_madame',
       'date_rdv_time', 'date_appel_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final',
       'rdv_urgent', 'rdv_seul', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'type_contrat_mr', 'type_contrat_madame',
@@ -3845,7 +3850,10 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       'active', 'valider', 'conf_commentaire_produit', 'conf_consommations',
       'conf_profession_monsieur', 'conf_profession_madame', 'conf_presence_couple',
       'conf_produit', 'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
-      'conf_consommation_electricite', 'conf_rdv_avec', 'cq_etat', 'cq_dossier',
+      'conf_consommation_electricite', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
+      'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
+      'conf_type_contrat_mr', 'conf_type_contrat_madame',
+      'cq_etat', 'cq_dossier',
       'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
       'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
       'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
@@ -4710,7 +4718,10 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
         'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
         'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
-        'conf_consommation_electricite', 'conf_rdv_avec'
+        'conf_consommation_electricite', 'conf_rdv_avec',
+        'conf_appel_tunisie_avec', 'conf_deja_etude', 'conf_revenu', 'conf_credit',
+        'conf_mode_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
+        'conf_type_contrat_mr', 'conf_type_contrat_madame'
       ];
 
       // Extraire id_etat_final et id_sous_etat séparément car ils ne vont pas dans modifications
@@ -5020,6 +5031,9 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
       'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
       'conf_consommation_electricite', 'conf_rdv_avec',
+      'conf_appel_tunisie_avec', 'conf_deja_etude', 'conf_revenu', 'conf_credit',
+      'conf_mode_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
+      'conf_type_contrat_mr', 'conf_type_contrat_madame',
       'surface_chauffee', 'consommation_chauffage', 'mode_chauffage', 'annee_systeme_chauffage'
     ];
 
@@ -5764,7 +5778,23 @@ router.get('/:id/modifica', authenticate, hashToIdMiddleware, async (req, res) =
 router.post('/:id/valider', authenticate, hashToIdMiddleware, checkPermissionCode('fiche_validate'), triggerWorkflowOnRdvValidated, async (req, res) => {
   try {
     const { id } = req.params;
-    const { type_valid, conf_rdv_avec, conf_presence_couple } = req.body; // type_valid: "0" pour annuler, "1-Y" pour valider avec Y = conf_rdv_avec
+    const {
+      type_valid,
+      conf_rdv_avec,
+      conf_presence_couple,
+      conf_appel_tunisie_avec,
+      conf_deja_etude,
+      conf_profession_monsieur,
+      conf_type_contrat_mr,
+      conf_profession_madame,
+      conf_type_contrat_madame,
+      conf_revenu,
+      conf_credit,
+      conf_mode_chauffage,
+      conf_consommation_electricite,
+      conf_consommation_chauffage,
+      conf_rdv_annule_precedent
+    } = req.body; // type_valid: "0" pour annuler, "1-Y" pour valider avec Y = conf_rdv_avec
     const userId = req.user.id;
     const dateValider = Math.floor(Date.now() / 1000);
     const dateValiderTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -5799,7 +5829,11 @@ router.post('/:id/valider', authenticate, hashToIdMiddleware, checkPermissionCod
     const lastVal = fiche.valider > 0 ? 'Valider' : 'Non Valider';
     const newVal = valider > 0 ? 'Valider' : 'Non Valider';
 
-    // Mettre à jour la fiche
+    // Mettre à jour la fiche (tous les champs conf_ pour la validation)
+    const confAppelTunisie = conf_appel_tunisie_avec ? String(conf_appel_tunisie_avec).trim().toUpperCase().slice(0, 10) : null;
+    const confDejaEtude = conf_deja_etude ? String(conf_deja_etude).toUpperCase() : null;
+    const confRdvAnnule = conf_rdv_annule_precedent ? String(conf_rdv_annule_precedent).toUpperCase() : null;
+
     if (valider === 0) {
       // Annuler la validation
       await query(
@@ -5807,10 +5841,20 @@ router.post('/:id/valider', authenticate, hashToIdMiddleware, checkPermissionCod
         [parseInt(id)]
       );
     } else {
-      // Valider
+      // Valider : mettre à jour tous les champs conf_ envoyés
       await query(
-        'UPDATE fiches SET valider = ?, conf_rdv_avec = ?, conf_presence_couple = ? WHERE id = ?',
-        [valider, confRdvAvec, confPresenceCouple, parseInt(id)]
+        `UPDATE fiches SET valider = ?, conf_rdv_avec = ?, conf_presence_couple = ?,
+         conf_appel_tunisie_avec = ?, conf_deja_etude = ?, conf_profession_monsieur = ?, conf_type_contrat_mr = ?,
+         conf_profession_madame = ?, conf_type_contrat_madame = ?, conf_revenu = ?, conf_credit = ?,
+         conf_mode_chauffage = ?, conf_consommation_electricite = ?, conf_consommation_chauffage = ?, conf_rdv_annule_precedent = ?
+         WHERE id = ?`,
+        [
+          valider, confRdvAvec, confPresenceCouple,
+          confAppelTunisie, confDejaEtude, conf_profession_monsieur || null, conf_type_contrat_mr || null,
+          conf_profession_madame || null, conf_type_contrat_madame || null, conf_revenu || null, conf_credit || null,
+          conf_mode_chauffage || null, conf_consommation_electricite || null, conf_consommation_chauffage || null, confRdvAnnule,
+          parseInt(id)
+        ]
       );
     }
 

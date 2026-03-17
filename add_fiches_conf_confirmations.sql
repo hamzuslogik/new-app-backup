@@ -3,6 +3,8 @@
 
 USE `crm`;
 
+-- Appel en Tunisie avec : Mr ou Mme
+ALTER TABLE `fiches` ADD COLUMN `conf_appel_tunisie_avec` VARCHAR(10) DEFAULT NULL COMMENT 'MR/MME';
 -- A déjà fait une étude : OUI/NON
 ALTER TABLE `fiches` ADD COLUMN `conf_deja_etude` VARCHAR(10) DEFAULT NULL COMMENT 'OUI/NON';
 -- Revenu, Crédit
