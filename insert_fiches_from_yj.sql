@@ -165,7 +165,10 @@ INSERT INTO `fiches` (
   `archive`, `ko`, `hc`, `active`, `valider`, `conf_commentaire_produit`, `conf_consommations`,
   `conf_profession_monsieur`, `conf_profession_madame`, `conf_presence_couple`, `conf_produit`,
   `conf_orientation_toiture`, `conf_zones_ombres`, `conf_site_classe`, `conf_consommation_electricite`,
-  `conf_rdv_avec`, `cq_etat`, `cq_dossier`, `ph3_installateur`, `ph3_pac`, `ph3_puissance`,
+  `conf_rdv_avec`,
+  `conf_appel_tunisie_avec`, `conf_deja_etude`, `conf_revenu`, `conf_credit`, `conf_mode_chauffage`,
+  `conf_consommation_chauffage`, `conf_rdv_annule_precedent`, `conf_type_contrat_mr`, `conf_type_contrat_madame`,
+  `cq_etat`, `cq_dossier`, `ph3_installateur`, `ph3_pac`, `ph3_puissance`,
   `ph3_puissance_pv`, `ph3_rr_model`, `ph3_ballon`, `ph3_marque_ballon`, `ph3_alimentation`,
   `ph3_type`, `ph3_prix`, `ph3_bonus_30`, `ph3_mensualite`, `ph3_attente`, `nbr_annee_finance`,
   `credit_immobilier`, `credit_autre`, `hash`
@@ -440,6 +443,16 @@ SELECT
   NULLIF(`site_classe`, '') as `conf_site_classe`, -- site_classe -> conf_site_classe
   NULL as `conf_consommation_electricite`, -- Pas de champ direct dans yj_fiche
   NULLIF(`conf_rdv_avec`, '') as `conf_rdv_avec`,
+  -- Nouveaux champs conf_ (yj_fiche a conf_deja_fait_etude, conf_revenu, conf_credit, conf_annulee_precedemment, conf_consommation_chauffage)
+  NULL as `conf_appel_tunisie_avec`, -- Pas dans yj_fiche
+  COALESCE(NULLIF(TRIM(`conf_deja_fait_etude`), ''), NULLIF(TRIM(`etude`), '')) as `conf_deja_etude`,
+  COALESCE(NULLIF(TRIM(`conf_revenu`), ''), NULLIF(TRIM(`revenu`), '')) as `conf_revenu`,
+  COALESCE(NULLIF(TRIM(`conf_credit`), ''), NULLIF(TRIM(`credit`), '')) as `conf_credit`,
+  NULL as `conf_mode_chauffage`, -- conf_energie dans yj_fiche est varchar (libellé), pas id
+  NULLIF(TRIM(`conf_consommation_chauffage`), '') as `conf_consommation_chauffage`,
+  NULLIF(TRIM(`conf_annulee_precedemment`), '') as `conf_rdv_annule_precedent`,
+  NULL as `conf_type_contrat_mr`, -- Pas dans yj_fiche
+  NULL as `conf_type_contrat_madame`, -- Pas dans yj_fiche
   -- CQ état: convertir cq_etat de varchar vers int (si c'est un nombre)
   CASE 
     WHEN `cq_etat` != '' AND `cq_etat` REGEXP '^[0-9]+$'
@@ -520,7 +533,26 @@ ON DUPLICATE KEY UPDATE
   `id_confirmateur_3` = VALUES(`id_confirmateur_3`),
   `date_rdv_time` = VALUES(`date_rdv_time`),
   `date_modif_time` = VALUES(`date_modif_time`),
-  `conf_commentaire_produit` = VALUES(`conf_commentaire_produit`);
+  `conf_commentaire_produit` = VALUES(`conf_commentaire_produit`),
+  `conf_consommations` = VALUES(`conf_consommations`),
+  `conf_profession_monsieur` = VALUES(`conf_profession_monsieur`),
+  `conf_profession_madame` = VALUES(`conf_profession_madame`),
+  `conf_presence_couple` = VALUES(`conf_presence_couple`),
+  `conf_produit` = VALUES(`conf_produit`),
+  `conf_orientation_toiture` = VALUES(`conf_orientation_toiture`),
+  `conf_zones_ombres` = VALUES(`conf_zones_ombres`),
+  `conf_site_classe` = VALUES(`conf_site_classe`),
+  `conf_consommation_electricite` = VALUES(`conf_consommation_electricite`),
+  `conf_rdv_avec` = VALUES(`conf_rdv_avec`),
+  `conf_appel_tunisie_avec` = VALUES(`conf_appel_tunisie_avec`),
+  `conf_deja_etude` = VALUES(`conf_deja_etude`),
+  `conf_revenu` = VALUES(`conf_revenu`),
+  `conf_credit` = VALUES(`conf_credit`),
+  `conf_mode_chauffage` = VALUES(`conf_mode_chauffage`),
+  `conf_consommation_chauffage` = VALUES(`conf_consommation_chauffage`),
+  `conf_rdv_annule_precedent` = VALUES(`conf_rdv_annule_precedent`),
+  `conf_type_contrat_mr` = VALUES(`conf_type_contrat_mr`),
+  `conf_type_contrat_madame` = VALUES(`conf_type_contrat_madame`);
 
 -- =====================================================
 -- FIN DU SCRIPT

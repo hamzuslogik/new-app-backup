@@ -3222,42 +3222,53 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   if (etatData.ph3_alimentation) items.push({ label: 'Alimentation', value: etatData.ph3_alimentation });
                   if (etatData.date_sign_time) items.push({ label: 'DATE SIGNATURE', value: new Date(etatData.date_sign_time).toLocaleString('fr-FR') });
                 }
-                // CONFIRMER (7)
+                // CONFIRMER (7) — afficher tous les champs conf_ remplis (non null)
                 else if (etatId === 7) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  // Afficher le commentaire commercial s'il existe (après création d'un compte rendu approuvé)
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
                   }
                   if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire confirmateur', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  if (etatData.conf_rdv_avec) items.push({ label: 'Entretien avec', value: etatData.conf_rdv_avec });
                   if (etatData.date_rdv_time) items.push({ label: 'Date RDV', value: formatRdvDateTime(etatData.date_rdv_time) });
                   if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
-                  
-                  const professionMr = professions?.find(p => p.id == etatData.profession_mr);
-                  const typeContratMr = typeContrat?.find(t => String(t.id) === String(etatData.type_contrat_mr));
-                  if (etatData.profession_mr || etatData.type_contrat_mr) {
-                    const profMrText = professionMr ? professionMr.nom : (etatData.profession_mr || '-');
-                    const contratMrText = typeContratMr ? typeContratMr.nom : (etatData.type_contrat_mr || '-');
-                    items.push({ label: 'Profession MR et type de contrat', value: `${profMrText}${etatData.profession_mr && etatData.type_contrat_mr ? ' - ' : ''}${contratMrText}` });
+                  // Champs conf_ (affichés uniquement si non vides)
+                  if (etatData.conf_rdv_avec) items.push({ label: 'RDV pris avec', value: etatData.conf_rdv_avec });
+                  if (etatData.conf_appel_tunisie_avec) items.push({ label: 'Appel en Tunisie avec', value: etatData.conf_appel_tunisie_avec });
+                  if (etatData.conf_deja_etude) items.push({ label: 'A déjà fait une étude', value: etatData.conf_deja_etude });
+                  if (etatData.conf_rdv_annule_precedent) items.push({ label: 'RDV déjà annulé précédemment', value: etatData.conf_rdv_annule_precedent });
+                  if (etatData.conf_presence_couple) items.push({ label: 'Présence du couple ou célibataire', value: etatData.conf_presence_couple });
+                  const profMrId = etatData.conf_profession_monsieur ?? etatData.profession_mr;
+                  if (profMrId != null && profMrId !== '') {
+                    const professionMr = professions?.find(p => p.id == profMrId);
+                    items.push({ label: 'Profession MR', value: professionMr ? professionMr.nom : String(profMrId) });
                   }
-                  
-                  const professionMme = professions?.find(p => p.id == etatData.profession_madame);
-                  const typeContratMme = typeContrat?.find(t => String(t.id) === String(etatData.type_contrat_madame));
-                  if (etatData.profession_madame || etatData.type_contrat_madame) {
-                    const profMmeText = professionMme ? professionMme.nom : (etatData.profession_madame || '-');
-                    const contratMmeText = typeContratMme ? typeContratMme.nom : (etatData.type_contrat_madame || '-');
-                    items.push({ label: 'Profession MME et type de contrat', value: `${profMmeText}${etatData.profession_madame && etatData.type_contrat_madame ? ' - ' : ''}${contratMmeText}` });
+                  const typeContratMrId = etatData.conf_type_contrat_mr ?? etatData.type_contrat_mr;
+                  if (typeContratMrId != null && typeContratMrId !== '') {
+                    const typeContratMr = typeContrat?.find(t => String(t.id) === String(typeContratMrId));
+                    items.push({ label: 'Type de contrat MR', value: typeContratMr ? typeContratMr.nom : String(typeContratMrId) });
                   }
-                  
-                  if (etatData.revenu_foyer) items.push({ label: 'Revenu', value: etatData.revenu_foyer });
-                  if (etatData.credit_foyer) items.push({ label: 'Crédit', value: etatData.credit_foyer });
-                  
-                  if (etatData.mode_chauffage) {
-                    const modeChauffageText = modeChauffage?.find(m => m.id == etatData.mode_chauffage)?.nom || etatData.mode_chauffage;
+                  const profMmeId = etatData.conf_profession_madame ?? etatData.profession_madame;
+                  if (profMmeId != null && profMmeId !== '') {
+                    const professionMme = professions?.find(p => p.id == profMmeId);
+                    items.push({ label: 'Profession MME', value: professionMme ? professionMme.nom : String(profMmeId) });
+                  }
+                  const typeContratMmeId = etatData.conf_type_contrat_madame ?? etatData.type_contrat_madame;
+                  if (typeContratMmeId != null && typeContratMmeId !== '') {
+                    const typeContratMme = typeContrat?.find(t => String(t.id) === String(typeContratMmeId));
+                    items.push({ label: 'Type de contrat MME', value: typeContratMme ? typeContratMme.nom : String(typeContratMmeId) });
+                  }
+                  if (etatData.conf_revenu || etatData.revenu_foyer) items.push({ label: 'Revenu', value: etatData.conf_revenu || etatData.revenu_foyer || '-' });
+                  if (etatData.conf_credit || etatData.credit_foyer) items.push({ label: 'Crédit', value: etatData.conf_credit || etatData.credit_foyer || '-' });
+                  const modeChauffageId = etatData.conf_mode_chauffage ?? etatData.mode_chauffage;
+                  if (modeChauffageId != null && modeChauffageId !== '') {
+                    const modeChauffageText = modeChauffage?.find(m => m.id == modeChauffageId)?.nom || modeChauffage?.find(m => m.id == modeChauffageId)?.titre || String(modeChauffageId);
                     items.push({ label: 'Mode de chauffage', value: modeChauffageText });
                   }
-                  
+                  if (etatData.conf_consommation_electricite) items.push({ label: 'Consommations électrique', value: etatData.conf_consommation_electricite });
+                  if (etatData.conf_consommation_chauffage) items.push({ label: 'Consommations chauffage', value: etatData.conf_consommation_chauffage });
+                  if (etatData.conf_orientation_toiture != null && etatData.conf_orientation_toiture !== '') items.push({ label: 'Orientation toiture', value: String(etatData.conf_orientation_toiture) });
+                  if (etatData.conf_zones_ombres != null && etatData.conf_zones_ombres !== '') items.push({ label: 'Zones d\'ombres', value: String(etatData.conf_zones_ombres) });
+                  if (etatData.conf_site_classe != null && etatData.conf_site_classe !== '') items.push({ label: 'Proche d\'un site classé', value: String(etatData.conf_site_classe) });
                   if (etatData.produit) {
                     const produitText = produits?.find(p => p.id == etatData.produit)?.nom || (etatData.produit === 1 ? 'PAC' : etatData.produit === 2 ? 'PV' : etatData.produit);
                     items.push({ label: 'Produit', value: produitText });
@@ -3302,6 +3313,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 commentaire_qualite: fiche.commentaire_qualite || null,
                 commentaire_commercial: fiche.commentaire_commercial || null,
                 conf_rdv_avec: fiche.conf_rdv_avec || null,
+                conf_appel_tunisie_avec: fiche.conf_appel_tunisie_avec || null,
+                conf_deja_etude: fiche.conf_deja_etude || null,
+                conf_profession_monsieur: fiche.conf_profession_monsieur ?? fiche.profession_mr ?? null,
+                conf_type_contrat_mr: fiche.conf_type_contrat_mr ?? fiche.type_contrat_mr ?? null,
+                conf_profession_madame: fiche.conf_profession_madame ?? fiche.profession_madame ?? null,
+                conf_type_contrat_madame: fiche.conf_type_contrat_madame ?? fiche.type_contrat_madame ?? null,
+                conf_revenu: fiche.conf_revenu || null,
+                conf_credit: fiche.conf_credit || null,
+                conf_mode_chauffage: fiche.conf_mode_chauffage ?? fiche.mode_chauffage ?? null,
+                conf_consommation_electricite: fiche.conf_consommation_electricite || null,
+                conf_consommation_chauffage: fiche.conf_consommation_chauffage || null,
+                conf_rdv_annule_precedent: fiche.conf_rdv_annule_precedent || null,
+                conf_presence_couple: fiche.conf_presence_couple || null,
+                conf_orientation_toiture: fiche.conf_orientation_toiture ?? fiche.orientation_toiture ?? null,
+                conf_zones_ombres: fiche.conf_zones_ombres ?? fiche.zones_ombres ?? null,
+                conf_site_classe: fiche.conf_site_classe ?? fiche.site_classe ?? null,
                 date_rdv_time: fiche.date_rdv_time || null,
                 date_appel_time: fiche.date_appel_time || null,
                 date_sign_time: fiche.date_sign_time || null,
