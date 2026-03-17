@@ -4,7 +4,8 @@
 -- Remplit la table confirmations uniquement depuis fiches_histo :
 --   lignes avec id_etat = 7 (CONFIRMER) et date_rdv_time renseignée,
 --   une ligne par (id_fiche, date_rdv_time).
--- date_creation = date_confirmation (même valeur).
+-- date_creation = date de la confirmation (même valeur que date_confirmation).
+--   Source : fiches_histo.date_creation = moment de création de la ligne histo = passage à l'état CONFIRMER (7).
 -- id_etat_avant = NULL.
 -- commentaire = champ conf_commentaire_produit de fiches_histo.
 --
@@ -25,7 +26,7 @@ SET SQL_SAFE_UPDATES = 0;
 -- TRUNCATE TABLE `confirmations`;
 
 -- Insérer les confirmations depuis fiches_histo (une ligne par id_fiche + date_rdv_time)
--- date_creation = date_confirmation ; id_etat_avant = NULL ; commentaire depuis conf_commentaire_produit
+-- date_creation et date_confirmation = date de la confirmation (fiches_histo.date_creation = passage à l'état 7)
 INSERT INTO `confirmations` (`id_fiche`, `date_rdv_time`, `date_confirmation`, `id_confirmateur`, `id_commercial`, `date_creation`, `id_etat_avant`, `commentaire`)
 SELECT
   h.id_fiche,
