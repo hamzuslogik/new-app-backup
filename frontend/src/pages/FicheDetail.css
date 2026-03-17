@@ -1654,3 +1654,52 @@
   }
 }
 
+/* Autocomplete-wrap (un seul champ avec suggestions, comme index.php) */
+.autocomplete-wrap {
+  position: relative;
+  width: 100%;
+}
+.autocomplete-wrap .autocomplete-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: #fff;
+  box-sizing: border-box;
+}
+.autocomplete-wrap .autocomplete-input:focus {
+  outline: none;
+  border-color: #9cbfc8;
+}
+.autocomplete-wrap .autocomplete-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 100;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  display: none;
+}
+.autocomplete-wrap .autocomplete-suggestions.active {
+  display: block;
+}
+.autocomplete-wrap .autocomplete-suggestions > div {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.autocomplete-wrap .autocomplete-suggestions > div:last-child {
+  border-bottom: none;
+}
+.autocomplete-wrap .autocomplete-suggestions > div:hover {
+  background: #e8f4f8;
+}
+

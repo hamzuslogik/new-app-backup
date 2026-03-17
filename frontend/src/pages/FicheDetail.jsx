@@ -169,8 +169,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     consommation_chauffage: '',
     conf_commentaire_produit: ''
   });
-  const [confFilterProfMr, setConfFilterProfMr] = useState('');
-  const [confFilterProfMme, setConfFilterProfMme] = useState('');
+  const [confProfMrDisplay, setConfProfMrDisplay] = useState('');
+  const [confProfMmeDisplay, setConfProfMmeDisplay] = useState('');
+  const [showSuggestionsMr, setShowSuggestionsMr] = useState(false);
+  const [showSuggestionsMme, setShowSuggestionsMme] = useState(false);
 
   // État pour le formulaire NRP
   const [nrpFormData, setNrpFormData] = useState({
@@ -281,6 +283,19 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     const res = await api.get('/management/type-contrat');
     return res.data.data || [];
   });
+
+  // Synchroniser l'affichage autocomplete profession avec l'id sélectionné (préremplissage, sans écraser la saisie)
+  useEffect(() => {
+    if (!professions || selectedEtat !== 7) return;
+    if (confFormData.conf_profession_monsieur) {
+      const p = professions.find(pr => String(pr.id) === String(confFormData.conf_profession_monsieur));
+      if (p?.nom && (confProfMrDisplay === '' || confProfMrDisplay === p.nom)) setConfProfMrDisplay(p.nom);
+    }
+    if (confFormData.conf_profession_madame) {
+      const p = professions.find(pr => String(pr.id) === String(confFormData.conf_profession_madame));
+      if (p?.nom && (confProfMmeDisplay === '' || confProfMmeDisplay === p.nom)) setConfProfMmeDisplay(p.nom);
+    }
+  }, [selectedEtat, confFormData.conf_profession_monsieur, confFormData.conf_profession_madame, professions]);
 
   const { data: produits } = useQuery('produits', async () => {
     try {
@@ -1436,8 +1451,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         consommation_chauffage: '',
         conf_commentaire_produit: ''
       });
-      setConfFilterProfMr('');
-      setConfFilterProfMme('');
+      setConfProfMrDisplay('');
+      setConfProfMmeDisplay('');
+      setShowSuggestionsMr(false);
+      setShowSuggestionsMme(false);
     }
   };
 
@@ -1555,8 +1572,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           consommation_chauffage: '',
           conf_commentaire_produit: ''
         });
-        setConfFilterProfMr('');
-        setConfFilterProfMme('');
+        setConfProfMrDisplay('');
+        setConfProfMmeDisplay('');
+        setShowSuggestionsMr(false);
+        setShowSuggestionsMme(false);
         alert('Fiche confirmée avec succès');
       }
     } catch (error) {
@@ -4747,28 +4766,38 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Profession MR :</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Filtrer..."
-                      value={confFilterProfMr}
-                      onChange={(e) => setConfFilterProfMr(e.target.value)}
-                      style={{ marginBottom: '4px' }}
-                    />
-                    <select
-                      id="conf_profession_mr"
-                      className="form-control"
-                      value={confFormData.conf_profession_monsieur}
-                      onChange={(e) => setConfFormData({...confFormData, conf_profession_monsieur: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {(professions || [])
-                        .filter(p => !confFilterProfMr || (p.nom || '').toLowerCase().includes(confFilterProfMr.toLowerCase()))
-                        .slice(0, 200)
-                        .map(prof => (
-                          <option key={prof.id} value={prof.id}>{prof.nom}</option>
-                        ))}
-                    </select>
+                    <div className="autocomplete-wrap">
+                      <input
+                        type="text"
+                        className="autocomplete-input"
+                        placeholder="Rechercher ou saisir une profession..."
+                        autoComplete="off"
+                        value={confProfMrDisplay}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setConfProfMrDisplay(v);
+                          const match = professions?.find(p => (p.nom || '') === v);
+                          if (!match && confFormData.conf_profession_monsieur) {
+                            setConfFormData(prev => ({ ...prev, conf_profession_monsieur: '' }));
+                          }
+                        }}
+                        onFocus={() => setShowSuggestionsMr(true)}
+                        onBlur={() => setTimeout(() => setShowSuggestionsMr(false), 200)}
+                      />
+                      <div className={`autocomplete-suggestions ${showSuggestionsMr ? 'active' : ''}`}>
+                        {(professions || [])
+                          .filter(p => !confProfMrDisplay || (p.nom || '').toLowerCase().includes(confProfMrDisplay.toLowerCase()))
+                          .slice(0, 50)
+                          .map(prof => (
+                            <div
+                              key={prof.id}
+                              onMouseDown={(e) => { e.preventDefault(); setConfFormData(prev => ({ ...prev, conf_profession_monsieur: String(prof.id) })); setConfProfMrDisplay(prof.nom || ''); setShowSuggestionsMr(false); }}
+                            >
+                              {prof.nom}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
                   </div>
                   <div className="form-group">
                     <label htmlFor="conf_type_contrat_mr">Type de Contrat MR :</label>
@@ -4786,28 +4815,38 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   </div>
                   <div className="form-group">
                     <label>Profession MME :</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Filtrer..."
-                      value={confFilterProfMme}
-                      onChange={(e) => setConfFilterProfMme(e.target.value)}
-                      style={{ marginBottom: '4px' }}
-                    />
-                    <select
-                      id="conf_profession_mme"
-                      className="form-control"
-                      value={confFormData.conf_profession_madame}
-                      onChange={(e) => setConfFormData({...confFormData, conf_profession_madame: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {(professions || [])
-                        .filter(p => !confFilterProfMme || (p.nom || '').toLowerCase().includes(confFilterProfMme.toLowerCase()))
-                        .slice(0, 200)
-                        .map(prof => (
-                          <option key={prof.id} value={prof.id}>{prof.nom}</option>
-                        ))}
-                    </select>
+                    <div className="autocomplete-wrap">
+                      <input
+                        type="text"
+                        className="autocomplete-input"
+                        placeholder="Rechercher ou saisir une profession..."
+                        autoComplete="off"
+                        value={confProfMmeDisplay}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setConfProfMmeDisplay(v);
+                          const match = professions?.find(p => (p.nom || '') === v);
+                          if (!match && confFormData.conf_profession_madame) {
+                            setConfFormData(prev => ({ ...prev, conf_profession_madame: '' }));
+                          }
+                        }}
+                        onFocus={() => setShowSuggestionsMme(true)}
+                        onBlur={() => setTimeout(() => setShowSuggestionsMme(false), 200)}
+                      />
+                      <div className={`autocomplete-suggestions ${showSuggestionsMme ? 'active' : ''}`}>
+                        {(professions || [])
+                          .filter(p => !confProfMmeDisplay || (p.nom || '').toLowerCase().includes(confProfMmeDisplay.toLowerCase()))
+                          .slice(0, 50)
+                          .map(prof => (
+                            <div
+                              key={prof.id}
+                              onMouseDown={(e) => { e.preventDefault(); setConfFormData(prev => ({ ...prev, conf_profession_madame: String(prof.id) })); setConfProfMmeDisplay(prof.nom || ''); setShowSuggestionsMme(false); }}
+                            >
+                              {prof.nom}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
                   </div>
                   <div className="form-group">
                     <label htmlFor="conf_type_contrat_madame">Type de Contrat MME :</label>
@@ -7175,6 +7214,19 @@ const CreateRdvModal = ({
     });
   }, [ficheData, setRdvFormData]);
 
+  // Afficher le nom de la profession dans l'autocomplete quand ficheData ou rdvFormData a un id
+  useEffect(() => {
+    if (!professionsRdv?.length) return;
+    if (rdvFormData.conf_profession_monsieur) {
+      const p = professionsRdv.find(pr => String(pr.id) === String(rdvFormData.conf_profession_monsieur));
+      if (p?.nom && (rdvProfMrDisplay === '' || rdvProfMrDisplay === p.nom)) setRdvProfMrDisplay(p.nom);
+    }
+    if (rdvFormData.conf_profession_madame) {
+      const p = professionsRdv.find(pr => String(pr.id) === String(rdvFormData.conf_profession_madame));
+      if (p?.nom && (rdvProfMmeDisplay === '' || rdvProfMmeDisplay === p.nom)) setRdvProfMmeDisplay(p.nom);
+    }
+  }, [professionsRdv, rdvFormData.conf_profession_monsieur, rdvFormData.conf_profession_madame]);
+
   // Récupérer les modes de chauffage pour les champs PAC
   const { data: modeChauffage } = useQuery('mode-chauffage', async () => {
     const res = await api.get('/management/mode-chauffage');
@@ -7189,8 +7241,10 @@ const CreateRdvModal = ({
     const res = await api.get('/management/type-contrat');
     return res.data?.data || res.data || [];
   });
-  const [rdvFilterProfMr, setRdvFilterProfMr] = useState('');
-  const [rdvFilterProfMme, setRdvFilterProfMme] = useState('');
+  const [rdvProfMrDisplay, setRdvProfMrDisplay] = useState('');
+  const [rdvProfMmeDisplay, setRdvProfMmeDisplay] = useState('');
+  const [showRdvSuggestionsMr, setShowRdvSuggestionsMr] = useState(false);
+  const [showRdvSuggestionsMme, setShowRdvSuggestionsMme] = useState(false);
 
   const { data: produits, isLoading: isLoadingProduits, error: produitsError } = useQuery(
     'produits-modal', 
@@ -7498,24 +7552,37 @@ const CreateRdvModal = ({
             <div className="form-row">
               <div className="form-group">
                 <label>Profession MR</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Filtrer..."
-                  value={rdvFilterProfMr}
-                  onChange={(e) => setRdvFilterProfMr(e.target.value)}
-                  style={{ marginBottom: '4px' }}
-                />
-                <select
-                  className="form-control"
-                  value={rdvFormData.conf_profession_monsieur || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_profession_monsieur: e.target.value})}
-                >
-                  <option value="">Sélectionner</option>
-                  {(professionsRdv || []).filter(p => !rdvFilterProfMr || (p.nom || '').toLowerCase().includes(rdvFilterProfMr.toLowerCase())).slice(0, 200).map(prof => (
-                    <option key={prof.id} value={prof.id}>{prof.nom}</option>
-                  ))}
-                </select>
+                <div className="autocomplete-wrap">
+                  <input
+                    type="text"
+                    className="autocomplete-input"
+                    placeholder="Rechercher ou saisir une profession..."
+                    autoComplete="off"
+                    value={rdvProfMrDisplay}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setRdvProfMrDisplay(v);
+                      if (!(professionsRdv || []).find(p => (p.nom || '') === v) && rdvFormData.conf_profession_monsieur) {
+                        setRdvFormData(prev => ({ ...prev, conf_profession_monsieur: '' }));
+                      }
+                    }}
+                    onFocus={() => setShowRdvSuggestionsMr(true)}
+                    onBlur={() => setTimeout(() => setShowRdvSuggestionsMr(false), 200)}
+                  />
+                  <div className={`autocomplete-suggestions ${showRdvSuggestionsMr ? 'active' : ''}`}>
+                    {(professionsRdv || [])
+                      .filter(p => !rdvProfMrDisplay || (p.nom || '').toLowerCase().includes(rdvProfMrDisplay.toLowerCase()))
+                      .slice(0, 50)
+                      .map(prof => (
+                        <div
+                          key={prof.id}
+                          onMouseDown={(e) => { e.preventDefault(); setRdvFormData(prev => ({ ...prev, conf_profession_monsieur: String(prof.id) })); setRdvProfMrDisplay(prof.nom || ''); setShowRdvSuggestionsMr(false); }}
+                        >
+                          {prof.nom}
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
               <div className="form-group">
                 <label>Type de Contrat MR</label>
@@ -7532,24 +7599,37 @@ const CreateRdvModal = ({
               </div>
               <div className="form-group">
                 <label>Profession MME</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Filtrer..."
-                  value={rdvFilterProfMme}
-                  onChange={(e) => setRdvFilterProfMme(e.target.value)}
-                  style={{ marginBottom: '4px' }}
-                />
-                <select
-                  className="form-control"
-                  value={rdvFormData.conf_profession_madame || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_profession_madame: e.target.value})}
-                >
-                  <option value="">Sélectionner</option>
-                  {(professionsRdv || []).filter(p => !rdvFilterProfMme || (p.nom || '').toLowerCase().includes(rdvFilterProfMme.toLowerCase())).slice(0, 200).map(prof => (
-                    <option key={prof.id} value={prof.id}>{prof.nom}</option>
-                  ))}
-                </select>
+                <div className="autocomplete-wrap">
+                  <input
+                    type="text"
+                    className="autocomplete-input"
+                    placeholder="Rechercher ou saisir une profession..."
+                    autoComplete="off"
+                    value={rdvProfMmeDisplay}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setRdvProfMmeDisplay(v);
+                      if (!(professionsRdv || []).find(p => (p.nom || '') === v) && rdvFormData.conf_profession_madame) {
+                        setRdvFormData(prev => ({ ...prev, conf_profession_madame: '' }));
+                      }
+                    }}
+                    onFocus={() => setShowRdvSuggestionsMme(true)}
+                    onBlur={() => setTimeout(() => setShowRdvSuggestionsMme(false), 200)}
+                  />
+                  <div className={`autocomplete-suggestions ${showRdvSuggestionsMme ? 'active' : ''}`}>
+                    {(professionsRdv || [])
+                      .filter(p => !rdvProfMmeDisplay || (p.nom || '').toLowerCase().includes(rdvProfMmeDisplay.toLowerCase()))
+                      .slice(0, 50)
+                      .map(prof => (
+                        <div
+                          key={prof.id}
+                          onMouseDown={(e) => { e.preventDefault(); setRdvFormData(prev => ({ ...prev, conf_profession_madame: String(prof.id) })); setRdvProfMmeDisplay(prof.nom || ''); setShowRdvSuggestionsMme(false); }}
+                        >
+                          {prof.nom}
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
               <div className="form-group">
                 <label>Type de Contrat MME</label>
