@@ -3094,7 +3094,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
-                  if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RAPPEL POUR BUREAU (19)
                 else if (etatId === 19) {
@@ -3106,7 +3106,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
-                  if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // ANNULER ET A REPROGRAMMER (8)
                 else if (etatId === 8) {
@@ -3118,7 +3118,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
-                  if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // CLIENT HONORE A SUIVRE (9)
                 else if (etatId === 9) {
@@ -3131,7 +3131,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
-                  if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RDV ANNULER (11)
                 else if (etatId === 11) {
@@ -3164,7 +3164,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // HHC FINANCEMENT A VERIFIER (34)
                 else if (etatId === 34) {
@@ -3175,7 +3175,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // HCC TECHNIQUE (35)
                 else if (etatId === 35) {
@@ -3187,7 +3187,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.commercial_pseudo) items.push({ label: 'Commercial', value: etatData.commercial_pseudo });
-                  if (etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // SIGNER, SIGNER RETRACTER, SIGNER COMPLET, SIGNER PM (13, 16, 45, 44) - Phase 3
                 else if ([13, 16, 45, 44].includes(etatId)) {
@@ -3222,15 +3222,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   if (etatData.ph3_alimentation) items.push({ label: 'Alimentation', value: etatData.ph3_alimentation });
                   if (etatData.date_sign_time) items.push({ label: 'DATE SIGNATURE', value: new Date(etatData.date_sign_time).toLocaleString('fr-FR') });
                 }
-                // CONFIRMER (7) — afficher tous les champs conf_ remplis (non null)
+                // CONFIRMER (7) — afficher tous les champs conf_ remplis (non null) ; si entrée CR : commentaire commercial uniquement
                 else if (etatId === 7) {
                   if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                  if (etatData.from_compte_rendu && etatData.commentaire_commercial) {
+                    items.push({ label: 'Commentaire commercial (compte rendu)', value: etatData.commentaire_commercial, fullWidth: true });
+                  } else if (!etatData.from_compte_rendu && etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire confirmateur', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.conf_commentaire_produit) items.push({ label: 'Commentaire confirmateur', value: etatData.conf_commentaire_produit, fullWidth: true });
                   if (etatData.date_rdv_time) items.push({ label: 'Date RDV', value: formatRdvDateTime(etatData.date_rdv_time) });
-                  if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                   // Champs conf_ (affichés uniquement si non vides)
                   if (etatData.conf_rdv_avec) items.push({ label: 'RDV pris avec', value: etatData.conf_rdv_avec });
                   if (etatData.conf_appel_tunisie_avec) items.push({ label: 'Appel en Tunisie avec', value: etatData.conf_appel_tunisie_avec });
@@ -3293,11 +3294,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit && !etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_appel_time) items.push({ label: 'Date appel', value: new Date(etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 
                 return items;
               };
+              
+              // Dernière entrée historique = passage à l'état actuel (pour date_creation et from_compte_rendu)
+              const lastHisto = fiche.historique && fiche.historique.length > 0 ? fiche.historique[fiche.historique.length - 1] : null;
+              const dateCreationEtatActuel = (lastHisto && lastHisto.id_etat === fiche.id_etat_final) ? lastHisto.date_creation : (fiche.date_modif_time || fiche.date_insert_time || null);
               
               // Construire l'objet état actuel à partir des données de la fiche
               const etatActuel = {
@@ -3360,11 +3365,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 cq_etat: fiche.cq_etat || null,
                 cq_dossier: fiche.cq_dossier || null,
                 observations_cq: fiche.observations_cq || null,
-                date_creation: fiche.date_modif_time || fiche.date_insert_time || new Date().toISOString()
+                date_creation: dateCreationEtatActuel,
+                from_compte_rendu: !!(lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.from_compte_rendu)
               };
 
               // Afficher <CR> dans l'état actuel uniquement si cet état vient d'un compte rendu (dernière entrée historio = état actuel et from_compte_rendu)
-              const lastHisto = fiche.historique && fiche.historique.length > 0 ? fiche.historique[fiche.historique.length - 1] : null;
               const isCurrentStateFromCR = lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.from_compte_rendu;
               const crPseudoEtatActuel = isCurrentStateFromCR ? (lastHisto.cr_commercial_pseudo || '') : '';
               
