@@ -21,6 +21,31 @@ function getHistoConfirmateur(req, fiche = null) {
   return null;
 }
 
+/** Colonnes conf_* de fiches_histo (alignées sur add_fiches_histo_conf_columns.sql) pour enregistrer la confirmation (état 7) */
+const FICHES_HISTO_CONF_COLUMNS = [
+  'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur', 'conf_profession_madame',
+  'conf_presence_couple', 'conf_produit', 'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
+  'conf_consommation_electricite', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
+  'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
+  'conf_type_contrat_mr', 'conf_type_contrat_madame'
+];
+
+/**
+ * Construit les colonnes et valeurs conf_* pour un INSERT fiches_histo lorsque id_etat = 7.
+ * Toutes les colonnes conf_* sont incluses (valeur null si absente).
+ * @param {Object} source - Objet principal (ex: ficheData, body)
+ * @param {Object} fallback - Objet de repli si source n'a pas la clé (ex: fiche)
+ * @returns {{ cols: string[], vals: any[] }}
+ */
+function getConfFieldsForHisto(source = {}, fallback = {}) {
+  const cols = [...FICHES_HISTO_CONF_COLUMNS];
+  const vals = cols.map(key => {
+    const v = source[key] !== undefined && source[key] !== '' ? source[key] : (fallback[key] !== undefined && fallback[key] !== '' ? fallback[key] : null);
+    return v === '' ? null : v;
+  });
+  return { cols, vals };
+}
+
 /**
  * Enregistre un audit dans la table controle_qualite (page Contrôle Qualité).
  * En cas d'erreur (ex: table absente), log uniquement pour ne pas casser la réponse.
@@ -865,13 +890,12 @@ router.get('/', authenticate, async (req, res) => {
           histoJoinForFichesHisto = `INNER JOIN (SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_confirmateur = ? AND date_creation >= ? AND date_creation <= ?) histo_ids ON fiche.id = histo_ids.id_fiche`;
           histoParamsForFichesHisto = [req.user.id, startDatetime, endDatetime];
         } else if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
-          // Fiches confirmées : basé sur fiches_histo (id_etat=7, date_creation dans la plage jour)
-          // DATE(date_creation) pour éviter les soucis de fuseau (date_creation en UTC vs local)
-          const startDate = dateDebut || dateFin;
-          const endDate = dateFin || dateDebut;
+          // Fiches confirmées : basé sur fiches_histo (id_etat=7, date_creation dans la plage)
+          const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
+          const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           whereConditions.push(`fiche.id_etat_final = 7`);
-          histoJoinForFichesHisto = `INNER JOIN (SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_etat = 7 AND DATE(date_creation) >= ? AND DATE(date_creation) <= ?) histo_conf ON fiche.id = histo_conf.id_fiche`;
-          histoParamsForFichesHisto = [startDate, endDate];
+          histoJoinForFichesHisto = `INNER JOIN (SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_etat = 7 AND date_creation >= ? AND date_creation <= ?) histo_conf ON fiche.id = histo_conf.id_fiche`;
+          histoParamsForFichesHisto = [startDatetime, endDatetime];
         } else if (date_champ === 'date_confirmation') {
           // Convertir les dates en timestamps Unix
           const startTimestamp = Math.floor(new Date(`${dateDebut || dateFin} ${timeStart}`).getTime() / 1000);
@@ -2716,13 +2740,19 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
           await query('UPDATE fiches SET hash = ? WHERE id = ?', [nouvelleFicheHash, insertId]);
         }
         
-        // Créer l'entrée dans l'historique
+        // Créer l'entrée dans l'historique + champs conf_* si état 7
         const histoConf = getHistoConfirmateur(req, null);
         const histoSousEtat = donneesFiche.id_sous_etat != null ? donneesFiche.id_sous_etat : null;
+        const histoEtatId = donneesFiche.id_etat_final || 1;
+        const isEtat7 = parseInt(histoEtatId) === 7;
+        const { cols: confCols, vals: confVals } = isEtat7 ? getConfFieldsForHisto(donneesFiche, {}) : { cols: [], vals: [] };
+        const histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
+        const histoPlaceholders = histoCols.map(() => '?').join(', ');
+        const dateRdvHisto = donneesFiche.date_rdv_time || null;
+        const histoValues = [insertId, histoEtatId, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
         await query(
-          `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation)
-           VALUES (?, ?, ?, ?, NOW())`,
-          [insertId, donneesFiche.id_etat_final || 1, histoConf, histoSousEtat]
+          `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
+          histoValues
         );
         
         // Créer des notifications pour l'agent et son superviseur (si existe)
@@ -3913,13 +3943,19 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       throw new Error('Impossible de récupérer l\'ID de la fiche insérée');
     }
 
-    // Créer l'entrée dans l'historique
+    // Créer l'entrée dans l'historique + champs conf_* si état 7
     if (ficheData.id_etat_final) {
       const histoConf = getHistoConfirmateur(req, null);
       const histoSousEtat = (ficheData.id_sous_etat != null) ? ficheData.id_sous_etat : null;
+      const isEtat7 = parseInt(ficheData.id_etat_final) === 7;
+      const { cols: confCols, vals: confVals } = isEtat7 ? getConfFieldsForHisto(ficheData, {}) : { cols: [], vals: [] };
+      const histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
+      const histoPlaceholders = histoCols.map(() => '?').join(', ');
+      const dateRdvHisto = ficheData.date_rdv_time || null;
+      const histoValues = [insertId, ficheData.id_etat_final, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
       await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation) VALUES (?, ?, ?, ?, ?)`,
-        [insertId, ficheData.id_etat_final, histoConf, histoSousEtat, now]
+        `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
+        histoValues
       );
     }
 
@@ -4009,13 +4045,31 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
       [newEtatId, now, now, id]
     );
 
-    // Enregistrer dans l'historique (avec id_confirmateur : connecté ou choisi par RE/RP/admin/backoffice)
+    // Enregistrer dans l'historique (avec id_confirmateur : connecté ou choisi par RE/RP/admin/backoffice) + conf_* si état 7
     if (oldEtatId !== newEtatId) {
       const histoConf = getHistoConfirmateur(req, fiche);
       const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
+      let dateRdvHisto = null;
+      let confCols = [];
+      let confVals = [];
+      if (newEtatId === 7) {
+        const ficheForConf = await queryOne(
+          `SELECT date_rdv_time, ${FICHES_HISTO_CONF_COLUMNS.join(', ')} FROM fiches WHERE id = ?`,
+          [id]
+        );
+        if (ficheForConf) {
+          dateRdvHisto = ficheForConf.date_rdv_time || null;
+          const out = getConfFieldsForHisto(ficheForConf, {});
+          confCols = out.cols;
+          confVals = out.vals;
+        }
+      }
+      const histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
+      const histoPlaceholders = histoCols.map(() => '?').join(', ');
+      const histoValues = [id, newEtatId, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
       await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, newEtatId, histoConf, histoSousEtat, null, now]
+        `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
+        histoValues
       );
 
       // Logger la modification
@@ -5000,19 +5054,18 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
     }
     
-    // Créer une entrée dans l'historique (id_confirmateur, id_sous_etat)
+    // Créer une entrée dans l'historique (id_confirmateur, id_sous_etat) + champs conf_* si état 7
     const histoConf = getHistoConfirmateur(req, fiche);
     const histoSousEtat = (ficheData.id_sous_etat != null) ? ficheData.id_sous_etat : ((fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null);
+    const dateRdvHisto = ficheData.date_rdv_time || fiche.date_rdv_time || null;
+    const isEtat7 = parseInt(ficheData.id_etat_final) === 7;
+    const { cols: confCols, vals: confVals } = isEtat7 ? getConfFieldsForHisto(ficheData, fiche) : { cols: [], vals: [] };
+    const histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
+    const histoPlaceholders = histoCols.map(() => '?').join(', ');
+    const histoValues = [id, ficheData.id_etat_final, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
     await query(
-      `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        ficheData.id_etat_final,
-        histoConf,
-        histoSousEtat,
-        ficheData.date_rdv_time || fiche.date_rdv_time || null,
-        now
-      ]
+      `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
+      histoValues
     );
     }
 
