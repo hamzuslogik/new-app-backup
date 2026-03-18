@@ -1469,11 +1469,11 @@
   padding: 16px;
 }
 
-.rdv-form-info {
+.rdv-modal .rdv-form-info {
   background: #f9f9f9;
-  padding: 12px;
+  padding: 8px 10px;
   border-radius: 5px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .rdv-form-info p {
@@ -1483,6 +1483,70 @@
 
 .rdv-form {
   padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 14px;
+  align-content: start;
+}
+
+.rdv-modal .rdv-form > .form-group {
+  margin-bottom: 0;
+}
+
+.rdv-modal .rdv-form > .form-group:has(input[type="checkbox"]) {
+  grid-column: 1 / -1;
+}
+
+.rdv-modal .rdv-form > .form-group:has(select#rdv_produit) {
+  grid-column: 1 / -1;
+}
+
+.rdv-modal .rdv-form > .form-group label,
+.rdv-modal .rdv-form .form-row label {
+  font-weight: bold;
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.rdv-modal .rdv-form > .form-row {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 14px;
+}
+
+.rdv-modal .rdv-form > .form-row .form-group {
+  margin-bottom: 0;
+}
+
+.rdv-modal .rdv-form .form-control,
+.rdv-modal .rdv-form .autocomplete-input {
+  padding: 5px 8px;
+  font-size: 13px;
+  min-height: 32px;
+}
+
+.rdv-modal .rdv-form select.form-control {
+  padding: 5px 8px;
+  font-size: 13px;
+  min-height: 32px;
+}
+
+.rdv-modal .rdv-form textarea.form-control {
+  padding: 6px 8px;
+  font-size: 13px;
+  min-height: 56px;
+}
+
+.rdv-modal .rdv-form > .form-group:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+.rdv-modal .rdv-form .modal-actions {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  padding-top: 10px;
 }
 
 /* Styles pour les selects dans le modal RDV */
@@ -1594,6 +1658,14 @@
 
 @media (max-width: 768px) {
   .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .rdv-modal .rdv-form {
+    grid-template-columns: 1fr;
+  }
+
+  .rdv-modal .rdv-form > .form-row {
     grid-template-columns: 1fr;
   }
   
