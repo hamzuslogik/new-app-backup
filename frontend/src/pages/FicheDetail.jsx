@@ -11,6 +11,21 @@ import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
 import './FicheDetail.css';
 
+// Résout l'id d'une profession : si le libellé existe en base on le renvoie, sinon on crée la profession et on renvoie le nouvel id
+async function resolveProfessionId(apiClient, displayName, currentId, professionsList) {
+  const trimmed = displayName != null ? String(displayName).trim() : '';
+  if (!trimmed) return currentId || '';
+  const found = (professionsList || []).find(p => (p.nom || '').trim() === trimmed);
+  if (found) return String(found.id);
+  try {
+    const res = await apiClient.post('/management/professions/find-or-create', { nom: trimmed });
+    if (res.data?.success && res.data?.data?.id) return String(res.data.data.id);
+  } catch (err) {
+    console.error('Erreur find-or-create profession:', err);
+  }
+  return currentId || '';
+}
+
 // Créneaux horaires
 const TIME_SLOTS = [
   { hour: '09:00:00', name: '9H ( 9h uniquement )' },
@@ -1020,9 +1035,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     setShowRdvModal(true);
   };
 
-  // Fonction pour créer le RDV depuis le formulaire
-  const handleCreateRdvFromForm = async () => {
-    if (!rdvFormData.date_rdv_time) {
+  // Fonction pour créer le RDV depuis le formulaire (formData optionnel = données avec professions résolues)
+  const handleCreateRdvFromForm = async (formData) => {
+    const data = formData || rdvFormData;
+    if (!data.date_rdv_time) {
       alert('Veuillez remplir la date et l\'heure du RDV');
       return;
     }
@@ -1083,41 +1099,41 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       // Préparer les données de mise à jour
       // RDV_URGENT doit être en état CONFIRMER (7) avec la qualification RDV_URGENT
       const updateData = {
-        date_rdv_time: rdvFormData.date_rdv_time.includes(':') 
-          ? rdvFormData.date_rdv_time 
-          : `${rdvFormData.date_rdv_time}:00`,
+        date_rdv_time: data.date_rdv_time.includes(':') 
+          ? data.date_rdv_time 
+          : `${data.date_rdv_time}:00`,
         id_etat_final: 7, // Toujours CONFIRMER (7) - RDV_URGENT est géré via id_qualif
-        produit: rdvFormData.produit ? parseInt(rdvFormData.produit) : null,
-        conf_produit: rdvFormData.produit ? parseInt(rdvFormData.produit) : null,
-        id_confirmateur: rdvFormData.id_confirmateur ? parseInt(rdvFormData.id_confirmateur) : null,
-        id_confirmateur_2: rdvFormData.id_confirmateur_2 ? parseInt(rdvFormData.id_confirmateur_2) : null,
-        id_confirmateur_3: rdvFormData.id_confirmateur_3 ? parseInt(rdvFormData.id_confirmateur_3) : null,
-        conf_rdv_avec: rdvFormData.conf_rdv_avec || null,
-        conf_appel_tunisie_avec: rdvFormData.conf_appel_tunisie_avec || null,
-        conf_deja_etude: rdvFormData.conf_deja_etude || null,
-        conf_profession_monsieur: rdvFormData.conf_profession_monsieur ? parseInt(rdvFormData.conf_profession_monsieur) : null,
-        conf_type_contrat_mr: rdvFormData.conf_type_contrat_mr ? parseInt(rdvFormData.conf_type_contrat_mr) : null,
-        conf_profession_madame: rdvFormData.conf_profession_madame ? parseInt(rdvFormData.conf_profession_madame) : null,
-        conf_type_contrat_madame: rdvFormData.conf_type_contrat_madame ? parseInt(rdvFormData.conf_type_contrat_madame) : null,
-        conf_revenu: rdvFormData.conf_revenu || null,
-        conf_credit: rdvFormData.conf_credit || null,
-        conf_mode_chauffage: rdvFormData.conf_mode_chauffage ? parseInt(rdvFormData.conf_mode_chauffage) : null,
-        conf_consommation_electricite: rdvFormData.conf_consommation_electricite || null,
-        conf_consommation_chauffage: rdvFormData.conf_consommation_chauffage || null,
-        conf_rdv_annule_precedent: rdvFormData.conf_rdv_annule_precedent || null,
-        conf_presence_couple: rdvFormData.conf_presence_couple || null,
+        produit: data.produit ? parseInt(data.produit) : null,
+        conf_produit: data.produit ? parseInt(data.produit) : null,
+        id_confirmateur: data.id_confirmateur ? parseInt(data.id_confirmateur) : null,
+        id_confirmateur_2: data.id_confirmateur_2 ? parseInt(data.id_confirmateur_2) : null,
+        id_confirmateur_3: data.id_confirmateur_3 ? parseInt(data.id_confirmateur_3) : null,
+        conf_rdv_avec: data.conf_rdv_avec || null,
+        conf_appel_tunisie_avec: data.conf_appel_tunisie_avec || null,
+        conf_deja_etude: data.conf_deja_etude || null,
+        conf_profession_monsieur: data.conf_profession_monsieur ? parseInt(data.conf_profession_monsieur) : null,
+        conf_type_contrat_mr: data.conf_type_contrat_mr ? parseInt(data.conf_type_contrat_mr) : null,
+        conf_profession_madame: data.conf_profession_madame ? parseInt(data.conf_profession_madame) : null,
+        conf_type_contrat_madame: data.conf_type_contrat_madame ? parseInt(data.conf_type_contrat_madame) : null,
+        conf_revenu: data.conf_revenu || null,
+        conf_credit: data.conf_credit || null,
+        conf_mode_chauffage: data.conf_mode_chauffage ? parseInt(data.conf_mode_chauffage) : null,
+        conf_consommation_electricite: data.conf_consommation_electricite || null,
+        conf_consommation_chauffage: data.conf_consommation_chauffage || null,
+        conf_rdv_annule_precedent: data.conf_rdv_annule_precedent || null,
+        conf_presence_couple: data.conf_presence_couple || null,
         // Champs spécifiques PV
-        surface_habitable: rdvFormData.surface_habitable ? parseFloat(rdvFormData.surface_habitable) : null,
-        conf_orientation_toiture: rdvFormData.conf_orientation_toiture || null,
-        conf_zones_ombres: rdvFormData.conf_zones_ombres || null,
-        conf_site_classe: rdvFormData.conf_site_classe || null,
-        nb_pans: rdvFormData.nb_pans ? parseInt(rdvFormData.nb_pans) : null,
+        surface_habitable: data.surface_habitable ? parseFloat(data.surface_habitable) : null,
+        conf_orientation_toiture: data.conf_orientation_toiture || null,
+        conf_zones_ombres: data.conf_zones_ombres || null,
+        conf_site_classe: data.conf_site_classe || null,
+        nb_pans: data.nb_pans ? parseInt(data.nb_pans) : null,
         // Champs spécifiques PAC
-        surface_chauffee: rdvFormData.surface_chauffee || null,
-        consommation_chauffage: rdvFormData.consommation_chauffage || null,
-        mode_chauffage: rdvFormData.mode_chauffage ? parseInt(rdvFormData.mode_chauffage) : null,
-        annee_systeme_chauffage: rdvFormData.annee_systeme_chauffage ? parseInt(rdvFormData.annee_systeme_chauffage) : null,
-        conf_commentaire_produit: rdvFormData.conf_commentaire_produit || null
+        surface_chauffee: data.surface_chauffee || null,
+        consommation_chauffage: data.consommation_chauffage || null,
+        mode_chauffage: data.mode_chauffage ? parseInt(data.mode_chauffage) : null,
+        annee_systeme_chauffage: data.annee_systeme_chauffage ? parseInt(data.annee_systeme_chauffage) : null,
+        conf_commentaire_produit: data.conf_commentaire_produit || null
       };
 
       // Vérifier si le RDV est pour aujourd'hui ou demain
@@ -1134,7 +1150,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       
       // Gérer rdv_urgent (nouveau champ booléen)
       // Si c'est pour aujourd'hui ou demain, ou si l'utilisateur a coché la case, mettre à 1
-      updateData.rdv_urgent = (rdvFormData.is_urgent || isTodayOrTomorrow) ? 1 : 0;
+      updateData.rdv_urgent = (data.is_urgent || isTodayOrTomorrow) ? 1 : 0;
       
       // Pour rétrocompatibilité, mettre à jour aussi id_qualif si nécessaire
       if (updateData.rdv_urgent === 1) {
@@ -1216,7 +1232,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
         alert(`RDV créé en PRE-CONFIRMER. Une demande d'approbation a été envoyée aux administrateurs.`);
       } else {
-        alert(`Rendez-vous créé avec succès${rdvFormData.is_urgent ? ' (RDV URGENT)' : ' (CONFIRMER)'}`);
+        alert(`Rendez-vous créé avec succès${data.is_urgent ? ' (RDV URGENT)' : ' (CONFIRMER)'}`);
       }
 
       // Fermer le modal
@@ -1227,6 +1243,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       queryClient.invalidateQueries(['fiche', hash]);
       queryClient.invalidateQueries(['planning-week']);
       queryClient.invalidateQueries(['planning-availability']);
+      queryClient.invalidateQueries('professions'); // Rafraîchir la liste (nouvelle profession éventuelle)
       queryClient.invalidateQueries(['planning-modal']);
       queryClient.invalidateQueries(['availability-modal']);
       
@@ -1496,6 +1513,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         }
       }
 
+      // Résoudre les professions (créer en base si libellé saisi n'existe pas)
+      const idProfMr = await resolveProfessionId(api, confProfMrDisplay, confFormData.conf_profession_monsieur, professions);
+      const idProfMme = await resolveProfessionId(api, confProfMmeDisplay, confFormData.conf_profession_madame, professions);
+
       // Préparer les données à envoyer
       const updateData = {
         id_etat_final: 7,
@@ -1507,9 +1528,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         conf_rdv_avec: confFormData.conf_rdv_avec || null,
         conf_appel_tunisie_avec: confFormData.conf_appel_tunisie_avec || null,
         conf_deja_etude: confFormData.conf_deja_etude || null,
-        conf_profession_monsieur: confFormData.conf_profession_monsieur ? parseInt(confFormData.conf_profession_monsieur) : null,
+        conf_profession_monsieur: idProfMr ? parseInt(idProfMr) : null,
         conf_type_contrat_mr: confFormData.conf_type_contrat_mr ? parseInt(confFormData.conf_type_contrat_mr) : null,
-        conf_profession_madame: confFormData.conf_profession_madame ? parseInt(confFormData.conf_profession_madame) : null,
+        conf_profession_madame: idProfMme ? parseInt(idProfMme) : null,
         conf_type_contrat_madame: confFormData.conf_type_contrat_madame ? parseInt(confFormData.conf_type_contrat_madame) : null,
         conf_revenu: confFormData.conf_revenu || null,
         conf_credit: confFormData.conf_credit || null,
@@ -1538,6 +1559,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         queryClient.invalidateQueries(['fiches']);
         queryClient.invalidateQueries(['modifica', hash]); // Invalider les modifications
         queryClient.invalidateQueries(['planning-commercial']); // Mettre à jour le planning commercial
+        queryClient.invalidateQueries('professions'); // Rafraîchir la liste (nouvelle profession éventuelle)
         setSelectedEtat(null);
         setCompteRenduOption('');
         setEditingCompteRendu(null);
@@ -7362,7 +7384,13 @@ const CreateRdvModal = ({
             <p><strong>Fiche :</strong> {ficheData?.nom || ''} {ficheData?.prenom || ''} ({ficheData?.tel || ''})</p>
           </div>
 
-          <form className="rdv-form" onSubmit={(e) => { e.preventDefault(); if (!rdvSubmitting) onSubmit(); }}>
+          <form className="rdv-form" onSubmit={async (e) => {
+            e.preventDefault();
+            if (rdvSubmitting) return;
+            const idMr = await resolveProfessionId(api, rdvProfMrDisplay, rdvFormData.conf_profession_monsieur, professionsRdv);
+            const idMme = await resolveProfessionId(api, rdvProfMmeDisplay, rdvFormData.conf_profession_madame, professionsRdv);
+            onSubmit({ ...rdvFormData, conf_profession_monsieur: idMr, conf_profession_madame: idMme });
+          }}>
             <table className="rdv-form-table">
               <tbody>
                 {/* RDV urgent */}

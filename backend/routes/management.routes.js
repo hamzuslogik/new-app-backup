@@ -869,6 +869,35 @@ router.post('/professions', authenticate, checkPermission(1, 2, 7, 11), async (r
   }
 });
 
+// Trouver une profession par nom ou la créer si elle n'existe pas (pour formulaires RDV / confirmation)
+router.post('/professions/find-or-create', authenticate, async (req, res) => {
+  try {
+    let { nom } = req.body;
+    if (nom == null) nom = '';
+    const trimmed = String(nom).trim();
+    if (!trimmed) {
+      return res.status(400).json({ success: false, message: 'Le nom est requis' });
+    }
+
+    const existing = await queryOne(
+      'SELECT id, nom FROM professions WHERE LOWER(TRIM(nom)) = LOWER(?)',
+      [trimmed]
+    );
+    if (existing) {
+      return res.json({ success: true, data: { id: existing.id, nom: existing.nom } });
+    }
+
+    const result = await query('INSERT INTO professions (nom) VALUES (?)', [trimmed]);
+    res.status(201).json({
+      success: true,
+      data: { id: result.insertId, nom: trimmed }
+    });
+  } catch (error) {
+    console.error('Erreur find-or-create profession:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la création de la profession' });
+  }
+});
+
 // Mettre à jour une profession
 router.put('/professions/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
