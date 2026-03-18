@@ -120,7 +120,7 @@ const Dashboard = () => {
       setShowFilters(true);
     } else if (Object.keys(urlParams).length === 0 && user) {
       // Pas de paramètres : afficher par défaut les RDV créés aujourd'hui (confirmations du jour = fiches_histo id_etat=7, date_creation)
-      // Confirmateur : fiches statuées par lui aujourd'hui (fiches_histo id_confirmateur)
+      // Session confirmateur : fiches modifiées dans la journée par le confirmateur (fiches_histo id_confirmateur = connecté, date_creation = aujourd'hui)
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const defaultApplied = {
@@ -135,6 +135,7 @@ const Dashboard = () => {
         time_debut: '00:00:00',
         time_fin: '23:59:59',
       };
+      setFilters(defaultApplied);
       setAppliedFilters(defaultApplied);
       setShowFilters(true);
     }
@@ -1357,13 +1358,22 @@ const Dashboard = () => {
         </div>
 
         <div className="results-header">
-          <h2>
-            {debouncedQuickSearch.trim() !== '' 
-              ? `Résultats de la recherche rapide: ${fiches.length} fiche${fiches.length > 1 ? 's' : ''}`
-              : filters.fiche_search 
-                ? `Résultats de la recherche ${pagination.total}` 
-                : `${pagination.total}`}
-          </h2>
+          <div className="results-header-title-block">
+            <h2>
+              {debouncedQuickSearch.trim() !== '' 
+                ? `Résultats de la recherche rapide: ${fiches.length} fiche${fiches.length > 1 ? 's' : ''}`
+                : filters.fiche_search 
+                  ? `Résultats de la recherche ${pagination.total}` 
+                  : `${pagination.total}`}
+            </h2>
+            {user?.fonction === 6 && appliedFilters.date_champ === 'fiches_histo' && appliedFilters.date_debut === appliedFilters.date_fin && (() => {
+              const today = new Date();
+              const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+              return appliedFilters.date_debut === todayStr ? (
+                <p className="dashboard-confirmateur-subtitle">Fiches modifiées par moi dans la journée</p>
+              ) : null;
+            })()}
+          </div>
           {(isFetchingList) && (
             <div className="search-loading-indicator">
               <div className="spinner-small"></div>

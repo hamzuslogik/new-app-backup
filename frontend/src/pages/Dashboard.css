@@ -1148,11 +1148,24 @@ body.dashboard-page {
   gap: 12px;
 }
 
+.results-header-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .results-header h2 {
   font-size: 17px;
   color: #9cbfc8;
   margin: 0;
   font-weight: bold;
+}
+
+.dashboard-confirmateur-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: #6b8a92;
+  font-weight: normal;
 }
 
 .results-header-right {
