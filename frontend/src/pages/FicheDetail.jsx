@@ -2674,17 +2674,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               {renderField('Nombre de pièces', 'nb_pieces', fiche.nb_pieces || '-', 'number')}
               {renderField('Nombre de pans', 'nb_pans', fiche.nb_pans || '-', 'number')}
               {renderField('Orientation de la toiture', 'orientation_toiture',
-                (fiche.conf_orientation_toiture != null && String(fiche.conf_orientation_toiture).trim() !== '') ? fiche.conf_orientation_toiture : (fiche.orientation_toiture || '-'), 'select', [
-                { value: 'NORD', label: 'NORD' },
-                { value: 'SUD', label: 'SUD' },
-                { value: 'EST', label: 'EST' },
-                { value: 'OUEST', label: 'OUEST' },
-                { value: 'EST OUEST', label: 'EST OUEST' },
-                { value: 'NORD-EST', label: 'NORD-EST' },
-                { value: 'NORD-OUEST', label: 'NORD-OUEST' },
-                { value: 'SUD-EST', label: 'SUD-EST' },
-                { value: 'SUD-OUEST', label: 'SUD-OUEST' }
-              ])}
+                (fiche.conf_orientation_toiture != null && String(fiche.conf_orientation_toiture).trim() !== '') ? fiche.conf_orientation_toiture : (fiche.orientation_toiture || '-'), 'text')}
               {renderField('Zones d\'ombres', 'zones_ombres',
                 (fiche.conf_zones_ombres != null && String(fiche.conf_zones_ombres).trim() !== '') ? fiche.conf_zones_ombres : (fiche.zones_ombres || '-')
               )}
@@ -5070,23 +5060,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         <tr>
                           <td><label htmlFor="conf_orientation_toiture">Orientation toiture :</label></td>
                           <td>
-                            <select
+                            <input
+                              type="text"
                               id="conf_orientation_toiture"
                               className="form-control"
-                              value={confFormData.conf_orientation_toiture}
+                              value={confFormData.conf_orientation_toiture || ''}
                               onChange={(e) => setConfFormData({...confFormData, conf_orientation_toiture: e.target.value})}
-                            >
-                              <option value="">Sélectionner</option>
-                              <option value="NORD">NORD</option>
-                              <option value="SUD">SUD</option>
-                              <option value="EST">EST</option>
-                              <option value="OUEST">OUEST</option>
-                              <option value="EST OUEST">EST OUEST</option>
-                              <option value="NORD-EST">NORD-EST</option>
-                              <option value="NORD-OUEST">NORD-OUEST</option>
-                              <option value="SUD-EST">SUD-EST</option>
-                              <option value="SUD-OUEST">SUD-OUEST</option>
-                            </select>
+                              placeholder="Ex: Sud, Nord-Est..."
+                            />
                           </td>
                         </tr>
                         <tr>
@@ -7926,23 +7907,14 @@ const CreateRdvModal = ({
                       <tr>
                         <td><label htmlFor="rdv_orientation">Orientation toiture</label></td>
                         <td>
-                          <select
+                          <input
+                            type="text"
                             id="rdv_orientation"
                             className="form-control"
-                            value={rdvFormData.conf_orientation_toiture}
+                            value={rdvFormData.conf_orientation_toiture || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_orientation_toiture: e.target.value})}
-                          >
-                            <option value="">Sélectionner</option>
-                            <option value="NORD">NORD</option>
-                            <option value="SUD">SUD</option>
-                            <option value="EST">EST</option>
-                            <option value="OUEST">OUEST</option>
-                            <option value="EST OUEST">EST OUEST</option>
-                            <option value="NORD-EST">NORD-EST</option>
-                            <option value="NORD-OUEST">NORD-OUEST</option>
-                            <option value="SUD-EST">SUD-EST</option>
-                            <option value="SUD-OUEST">SUD-OUEST</option>
-                          </select>
+                            placeholder="Ex: Sud, Nord-Est..."
+                          />
                         </td>
                       </tr>
                       <tr>

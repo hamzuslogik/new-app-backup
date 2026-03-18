@@ -1513,18 +1513,7 @@ const FicheFormModal = ({
                   <>
                     <div className="form-group">
                       <label>Orientation toiture</label>
-                      <select name="orientation_toiture" value={formData.orientation_toiture || ''} onChange={handleChange}>
-                        <option value="">Sélectionner</option>
-                        <option value="NORD">NORD</option>
-                        <option value="SUD">SUD</option>
-                        <option value="EST">EST</option>
-                        <option value="OUEST">OUEST</option>
-                        <option value="EST OUEST">EST OUEST</option>
-                        <option value="NORD-EST">NORD-EST</option>
-                        <option value="NORD-OUEST">NORD-OUEST</option>
-                        <option value="SUD-EST">SUD-EST</option>
-                        <option value="SUD-OUEST">SUD-OUEST</option>
-                      </select>
+                      <input type="text" name="orientation_toiture" value={formData.orientation_toiture || ''} onChange={handleChange} placeholder="Ex: Sud, Nord-Est..." />
                     </div>
                     <div className="form-group">
                       <label>Site classé</label>

@@ -1174,17 +1174,7 @@ if (isset($_SESSION['error_message'])) {
                     </div>
                     <div class="form-group champ-pv" style="display: none;">
                         <label>Orientation Toiture</label>
-                        <select name="orientation_toiture">
-                            <option value="">-- Sélectionner --</option>
-                            <option value="Nord">Nord</option>
-                            <option value="Nord-Est">Nord-Est</option>
-                            <option value="Est">Est</option>
-                            <option value="Sud-Est">Sud-Est</option>
-                            <option value="Sud">Sud</option>
-                            <option value="Sud-Ouest">Sud-Ouest</option>
-                            <option value="Ouest">Ouest</option>
-                            <option value="Nord-Ouest">Nord-Ouest</option>
-                        </select>
+                        <input type="text" name="orientation_toiture" placeholder="Ex: Sud, Nord-Est...">
                     </div>
                     <div class="form-group champ-pv" style="display: none;">
                         <label>Zones d'Ombres</label>

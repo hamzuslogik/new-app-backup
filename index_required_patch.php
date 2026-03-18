@@ -218,18 +218,7 @@
                     </div>
                     <div class="form-group champ-pv" style="display: none;">
                         <label>Orientation Toiture <span class="required">*</span></label>
-                        <select name="orientation_toiture" required>
-                            <option value="">-- Sélectionner --</option>
-                            <option value="Nord">Nord</option>
-                            <option value="Nord-Est">Nord-Est</option>
-                            <option value="Est">Est</option>
-                            <option value="Sud-Est">Sud-Est</option>
-                            <option value="Sud">Sud</option>
-                            <option value="Sud-Ouest">Sud-Ouest</option>
-                            <option value="Ouest">Ouest</option>
-                            <option value="Est Ouest">Est Ouest</option>
-                            <option value="Nord-Ouest">Nord-Ouest</option>
-                        </select>
+                        <input type="text" name="orientation_toiture" placeholder="Ex: Sud, Nord-Est..." required>
                     </div>
                     <div class="form-group champ-pv" style="display: none;">
                         <label>Zones d'Ombres <span class="required">*</span></label>
