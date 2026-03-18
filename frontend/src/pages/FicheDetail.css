@@ -1473,7 +1473,8 @@
   background: #f9f9f9;
   padding: 8px 10px;
   border-radius: 5px;
-  margin-bottom: 10px;
+  max-width: 420px;
+  margin: 0 auto 10px;
 }
 
 .rdv-form-info p {
@@ -1483,41 +1484,70 @@
 
 .rdv-form {
   padding: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 14px;
-  align-content: start;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .rdv-modal .rdv-form > .form-group {
   margin-bottom: 0;
-}
-
-.rdv-modal .rdv-form > .form-group:has(input[type="checkbox"]) {
-  grid-column: 1 / -1;
-}
-
-.rdv-modal .rdv-form > .form-group:has(select#rdv_produit) {
-  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
 .rdv-modal .rdv-form > .form-group label,
-.rdv-modal .rdv-form .form-row label {
+.rdv-modal .rdv-form .form-row .form-group label {
   font-weight: bold;
   font-size: 12px;
-  margin-bottom: 3px;
+  margin-bottom: 0;
+  flex-shrink: 0;
+  min-width: 140px;
+  text-align: right;
+}
+
+.rdv-modal .rdv-form > .form-group .form-control,
+.rdv-modal .rdv-form > .form-group .autocomplete-wrap,
+.rdv-modal .rdv-form > .form-group .checkbox-label {
+  flex: 1;
+  max-width: 220px;
+}
+
+.rdv-modal .rdv-form > .form-group:has(input[type="checkbox"]) .checkbox-label {
+  max-width: none;
+  justify-content: center;
 }
 
 .rdv-modal .rdv-form > .form-row {
-  grid-column: 1 / -1;
   margin-bottom: 0;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
 }
 
 .rdv-modal .rdv-form > .form-row .form-group {
   margin-bottom: 0;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.rdv-modal .rdv-form > .form-row .form-group label {
+  min-width: 140px;
+  text-align: right;
+}
+
+.rdv-modal .rdv-form > .form-row .form-group .form-control,
+.rdv-modal .rdv-form > .form-row .form-group .autocomplete-wrap {
+  flex: 1;
+  max-width: 220px;
 }
 
 .rdv-modal .rdv-form .form-control,
@@ -1539,14 +1569,14 @@
   min-height: 56px;
 }
 
-.rdv-modal .rdv-form > .form-group:has(textarea) {
-  grid-column: 1 / -1;
+.rdv-modal .rdv-form > .form-group:has(textarea) .form-control {
+  max-width: 280px;
 }
 
 .rdv-modal .rdv-form .modal-actions {
-  grid-column: 1 / -1;
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  justify-content: center;
 }
 
 /* Styles pour les selects dans le modal RDV */
@@ -1661,14 +1691,13 @@
     grid-template-columns: 1fr;
   }
 
-  .rdv-modal .rdv-form {
-    grid-template-columns: 1fr;
+  .rdv-modal .rdv-form > .form-group .form-control,
+  .rdv-modal .rdv-form > .form-group .autocomplete-wrap,
+  .rdv-modal .rdv-form > .form-row .form-group .form-control,
+  .rdv-modal .rdv-form > .form-row .form-group .autocomplete-wrap {
+    max-width: 100%;
   }
 
-  .rdv-modal .rdv-form > .form-row {
-    grid-template-columns: 1fr;
-  }
-  
   .rdv-etat-radio {
     flex-direction: column;
     gap: 8px;
