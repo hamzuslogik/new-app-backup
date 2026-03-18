@@ -3219,6 +3219,39 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           date_sign_time: fiche.date_sign_time || null,
           valeur_mensualite: fiche.valeur_mensualite || null
         }));
+
+        // Pour les entrées issues d'un compte rendu (from_compte_rendu), remplacer commentaire_commercial par le commentaire du CR (compte_rendu_pending)
+        try {
+          const crs = await query(
+            `SELECT id, id_etat_final, id_commercial, commentaire,
+                    COALESCE(date_approbation, date_modif, date_creation) AS date_ref
+             FROM compte_rendu_pending
+             WHERE id_fiche = ? AND statut = 'approved'`,
+            [id]
+          );
+          if (crs && crs.length > 0) {
+            historique = historique.map(histo => {
+              if (!(histo.from_compte_rendu === true || (histo.id_etat === 8 && !histo.id_confirmateur))) return histo;
+              const histoDate = histo.date_creation ? new Date(histo.date_creation).getTime() : 0;
+              const matching = crs.filter(cr =>
+                Number(cr.id_etat_final) === Number(histo.id_etat) &&
+                ((cr.id_commercial == null && histo.id_commercial_cr == null) || Number(cr.id_commercial) === Number(histo.id_commercial_cr))
+              );
+              if (matching.length === 0) return histo;
+              const best = matching.reduce((acc, cr) => {
+                const crDate = cr.date_ref ? new Date(cr.date_ref).getTime() : 0;
+                const diff = Math.abs(histoDate - crDate);
+                return !acc || diff < acc.diff ? { cr, diff } : acc;
+              }, null);
+              if (best && best.cr.commentaire != null && best.cr.commentaire !== '') {
+                return { ...histo, commentaire_commercial: best.cr.commentaire };
+              }
+              return histo;
+            });
+          }
+        } catch (e) {
+          console.log('Enrichissement commentaire CR (compte_rendu_pending) ignoré:', e.message);
+        }
       }
     } catch (error) {
       console.error('Erreur lors de la récupération de l\'historique:', error.message);
