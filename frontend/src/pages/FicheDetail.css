@@ -947,6 +947,45 @@
   padding-bottom: 8px;
 }
 
+/* Tableau sans bordure (même rendu que modal création RDV) */
+.confirmation-form .rdv-form-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: none;
+}
+
+.confirmation-form .rdv-form-table td {
+  border: none;
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+.confirmation-form .rdv-form-table td:first-child {
+  font-weight: bold;
+  font-size: 12px;
+  white-space: nowrap;
+  width: 1%;
+  padding-right: 12px;
+}
+
+.confirmation-form .rdv-form-table td:last-child {
+  width: 99%;
+}
+
+.confirmation-form .rdv-form-table .form-control,
+.confirmation-form .rdv-form-table .autocomplete-input {
+  max-width: 280px;
+  box-sizing: border-box;
+}
+
+.confirmation-form .rdv-form-table textarea.form-control {
+  max-width: 320px;
+}
+
+.confirmation-form .rdv-form-table .autocomplete-wrap {
+  max-width: 280px;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

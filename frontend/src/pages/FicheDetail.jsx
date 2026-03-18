@@ -4629,480 +4629,517 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             {selectedEtat === 7 && selectedEtat !== fiche.id_etat_final && (
               <div className="confirmation-form">
                 <h3>Informations de confirmation</h3>
-                
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="conf_produit">Étude à faire pour :</label>
-                    <select
-                      id="conf_produit"
-                      className="form-control"
-                      value={confFormData.produit}
-                      onChange={(e) => setConfFormData({...confFormData, produit: e.target.value})}
-                      required
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="1">PAC</option>
-                      <option value="2">PV</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="conf_id_confirmateur">Confirmateur :</label>
-                    <select
-                      id="conf_id_confirmateur"
-                      className="form-control"
-                      value={confFormData.id_confirmateur}
-                      onChange={(e) => setConfFormData({...confFormData, id_confirmateur: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {confirmateurs?.map(conf => (
-                        <option key={conf.id} value={conf.id}>
-                          {conf.pseudo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="conf_id_confirmateur_2">Confirmateur 2 (optionnel) :</label>
-                    <select
-                      id="conf_id_confirmateur_2"
-                      className="form-control"
-                      value={confFormData.id_confirmateur_2}
-                      onChange={(e) => setConfFormData({...confFormData, id_confirmateur_2: e.target.value})}
-                    >
-                      <option value="">Aucun</option>
-                      {confirmateurs?.map(conf => (
-                        <option key={conf.id} value={conf.id}>
-                          {conf.pseudo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="conf_id_confirmateur_3">Confirmateur 3 (optionnel) :</label>
-                    <select
-                      id="conf_id_confirmateur_3"
-                      className="form-control"
-                      value={confFormData.id_confirmateur_3}
-                      onChange={(e) => setConfFormData({...confFormData, id_confirmateur_3: e.target.value})}
-                    >
-                      <option value="">Aucun</option>
-                      {confirmateurs?.map(conf => (
-                        <option key={conf.id} value={conf.id}>
-                          {conf.pseudo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="conf_rdv_date">Date RDV :</label>
-                    <input
-                      type="date"
-                      id="conf_rdv_date"
-                      className="form-control"
-                      value={confFormData.conf_rdv_date}
-                      onChange={(e) => setConfFormData({...confFormData, conf_rdv_date: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="conf_rdv_time">Heure RDV :</label>
-                    <input
-                      type="time"
-                      id="conf_rdv_time"
-                      className="form-control"
-                      value={confFormData.conf_rdv_time}
-                      onChange={(e) => setConfFormData({...confFormData, conf_rdv_time: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="conf_rdv_avec">RDV pris avec :</label>
-                    <select
-                      id="conf_rdv_avec"
-                      className="form-control"
-                      value={confFormData.conf_rdv_avec}
-                      onChange={(e) => setConfFormData({...confFormData, conf_rdv_avec: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="MR">MR</option>
-                      <option value="MME">MME</option>
-                      <option value="AUTRE">AUTRE</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Champs confirmation communs */}
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="conf_appel_tunisie_avec">Appel en Tunisie avec :</label>
-                    <select
-                      id="conf_appel_tunisie_avec"
-                      className="form-control"
-                      value={confFormData.conf_appel_tunisie_avec}
-                      onChange={(e) => setConfFormData({...confFormData, conf_appel_tunisie_avec: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="MR">Mr</option>
-                      <option value="MME">Mme</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="conf_deja_etude">A déjà fait une étude :</label>
-                    <select
-                      id="conf_deja_etude"
-                      className="form-control"
-                      value={confFormData.conf_deja_etude}
-                      onChange={(e) => setConfFormData({...confFormData, conf_deja_etude: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="OUI">OUI</option>
-                      <option value="NON">NON</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="conf_rdv_annule_precedent">RDV déjà annulé précédemment :</label>
-                    <select
-                      id="conf_rdv_annule_precedent"
-                      className="form-control"
-                      value={confFormData.conf_rdv_annule_precedent}
-                      onChange={(e) => setConfFormData({...confFormData, conf_rdv_annule_precedent: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="OUI">OUI</option>
-                      <option value="NON">NON</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="conf_presence_couple">Présence du couple ou célibataire :</label>
-                    <select
-                      id="conf_presence_couple"
-                      className="form-control"
-                      value={confFormData.conf_presence_couple}
-                      onChange={(e) => setConfFormData({...confFormData, conf_presence_couple: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="OUI">OUI</option>
-                      <option value="NON">NON</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Profession MR :</label>
-                    <div className="autocomplete-wrap">
-                      <input
-                        type="text"
-                        className="autocomplete-input"
-                        placeholder="Rechercher ou saisir une profession..."
-                        autoComplete="off"
-                        value={confProfMrDisplay}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setConfProfMrDisplay(v);
-                          const match = professions?.find(p => (p.nom || '') === v);
-                          if (!match && confFormData.conf_profession_monsieur) {
-                            setConfFormData(prev => ({ ...prev, conf_profession_monsieur: '' }));
-                          }
-                        }}
-                        onFocus={() => setShowSuggestionsMr(true)}
-                        onBlur={() => setTimeout(() => setShowSuggestionsMr(false), 200)}
-                      />
-                      <div className={`autocomplete-suggestions ${showSuggestionsMr ? 'active' : ''}`}>
-                        {(professions || [])
-                          .filter(p => !confProfMrDisplay || (p.nom || '').toLowerCase().includes(confProfMrDisplay.toLowerCase()))
-                          .slice(0, 50)
-                          .map(prof => (
-                            <div
-                              key={prof.id}
-                              onMouseDown={(e) => { e.preventDefault(); setConfFormData(prev => ({ ...prev, conf_profession_monsieur: String(prof.id) })); setConfProfMrDisplay(prof.nom || ''); setShowSuggestionsMr(false); }}
-                            >
-                              {prof.nom}
-                            </div>
+                <table className="rdv-form-table">
+                  <tbody>
+                    <tr>
+                      <td><label htmlFor="conf_produit">Étude à faire pour :</label></td>
+                      <td>
+                        <select
+                          id="conf_produit"
+                          className="form-control"
+                          value={confFormData.produit}
+                          onChange={(e) => setConfFormData({...confFormData, produit: e.target.value})}
+                          required
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="1">PAC</option>
+                          <option value="2">PV</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_id_confirmateur">Confirmateur :</label></td>
+                      <td>
+                        <select
+                          id="conf_id_confirmateur"
+                          className="form-control"
+                          value={confFormData.id_confirmateur}
+                          onChange={(e) => setConfFormData({...confFormData, id_confirmateur: e.target.value})}
+                        >
+                          <option value="">Sélectionner</option>
+                          {confirmateurs?.map(conf => (
+                            <option key={conf.id} value={conf.id}>
+                              {conf.pseudo}
+                            </option>
                           ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="conf_type_contrat_mr">Type de Contrat MR :</label>
-                    <select
-                      id="conf_type_contrat_mr"
-                      className="form-control"
-                      value={confFormData.conf_type_contrat_mr}
-                      onChange={(e) => setConfFormData({...confFormData, conf_type_contrat_mr: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {(typeContrat || []).map(t => (
-                        <option key={t.id} value={t.id}>{t.nom}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Profession MME :</label>
-                    <div className="autocomplete-wrap">
-                      <input
-                        type="text"
-                        className="autocomplete-input"
-                        placeholder="Rechercher ou saisir une profession..."
-                        autoComplete="off"
-                        value={confProfMmeDisplay}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setConfProfMmeDisplay(v);
-                          const match = professions?.find(p => (p.nom || '') === v);
-                          if (!match && confFormData.conf_profession_madame) {
-                            setConfFormData(prev => ({ ...prev, conf_profession_madame: '' }));
-                          }
-                        }}
-                        onFocus={() => setShowSuggestionsMme(true)}
-                        onBlur={() => setTimeout(() => setShowSuggestionsMme(false), 200)}
-                      />
-                      <div className={`autocomplete-suggestions ${showSuggestionsMme ? 'active' : ''}`}>
-                        {(professions || [])
-                          .filter(p => !confProfMmeDisplay || (p.nom || '').toLowerCase().includes(confProfMmeDisplay.toLowerCase()))
-                          .slice(0, 50)
-                          .map(prof => (
-                            <div
-                              key={prof.id}
-                              onMouseDown={(e) => { e.preventDefault(); setConfFormData(prev => ({ ...prev, conf_profession_madame: String(prof.id) })); setConfProfMmeDisplay(prof.nom || ''); setShowSuggestionsMme(false); }}
-                            >
-                              {prof.nom}
-                            </div>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_id_confirmateur_2">Confirmateur 2 (optionnel) :</label></td>
+                      <td>
+                        <select
+                          id="conf_id_confirmateur_2"
+                          className="form-control"
+                          value={confFormData.id_confirmateur_2}
+                          onChange={(e) => setConfFormData({...confFormData, id_confirmateur_2: e.target.value})}
+                        >
+                          <option value="">Aucun</option>
+                          {confirmateurs?.map(conf => (
+                            <option key={conf.id} value={conf.id}>
+                              {conf.pseudo}
+                            </option>
                           ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="conf_type_contrat_madame">Type de Contrat MME :</label>
-                    <select
-                      id="conf_type_contrat_madame"
-                      className="form-control"
-                      value={confFormData.conf_type_contrat_madame}
-                      onChange={(e) => setConfFormData({...confFormData, conf_type_contrat_madame: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {(typeContrat || []).map(t => (
-                        <option key={t.id} value={t.id}>{t.nom}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_id_confirmateur_3">Confirmateur 3 (optionnel) :</label></td>
+                      <td>
+                        <select
+                          id="conf_id_confirmateur_3"
+                          className="form-control"
+                          value={confFormData.id_confirmateur_3}
+                          onChange={(e) => setConfFormData({...confFormData, id_confirmateur_3: e.target.value})}
+                        >
+                          <option value="">Aucun</option>
+                          {confirmateurs?.map(conf => (
+                            <option key={conf.id} value={conf.id}>
+                              {conf.pseudo}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_rdv_date">Date RDV :</label></td>
+                      <td>
+                        <input
+                          type="date"
+                          id="conf_rdv_date"
+                          className="form-control"
+                          value={confFormData.conf_rdv_date}
+                          onChange={(e) => setConfFormData({...confFormData, conf_rdv_date: e.target.value})}
+                        />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_rdv_time">Heure RDV :</label></td>
+                      <td>
+                        <input
+                          type="time"
+                          id="conf_rdv_time"
+                          className="form-control"
+                          value={confFormData.conf_rdv_time}
+                          onChange={(e) => setConfFormData({...confFormData, conf_rdv_time: e.target.value})}
+                        />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_rdv_avec">RDV pris avec :</label></td>
+                      <td>
+                        <select
+                          id="conf_rdv_avec"
+                          className="form-control"
+                          value={confFormData.conf_rdv_avec}
+                          onChange={(e) => setConfFormData({...confFormData, conf_rdv_avec: e.target.value})}
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="MR">MR</option>
+                          <option value="MME">MME</option>
+                          <option value="AUTRE">AUTRE</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_appel_tunisie_avec">Appel en Tunisie avec :</label></td>
+                      <td>
+                        <select
+                          id="conf_appel_tunisie_avec"
+                          className="form-control"
+                          value={confFormData.conf_appel_tunisie_avec}
+                          onChange={(e) => setConfFormData({...confFormData, conf_appel_tunisie_avec: e.target.value})}
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="MR">Mr</option>
+                          <option value="MME">Mme</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_deja_etude">A déjà fait une étude :</label></td>
+                      <td>
+                        <select
+                          id="conf_deja_etude"
+                          className="form-control"
+                          value={confFormData.conf_deja_etude}
+                          onChange={(e) => setConfFormData({...confFormData, conf_deja_etude: e.target.value})}
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="OUI">OUI</option>
+                          <option value="NON">NON</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_rdv_annule_precedent">RDV déjà annulé précédemment :</label></td>
+                      <td>
+                        <select
+                          id="conf_rdv_annule_precedent"
+                          className="form-control"
+                          value={confFormData.conf_rdv_annule_precedent}
+                          onChange={(e) => setConfFormData({...confFormData, conf_rdv_annule_precedent: e.target.value})}
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="OUI">OUI</option>
+                          <option value="NON">NON</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_presence_couple">Présence du couple ou célibataire :</label></td>
+                      <td>
+                        <select
+                          id="conf_presence_couple"
+                          className="form-control"
+                          value={confFormData.conf_presence_couple}
+                          onChange={(e) => setConfFormData({...confFormData, conf_presence_couple: e.target.value})}
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="OUI">OUI</option>
+                          <option value="NON">NON</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label>Profession MR :</label></td>
+                      <td>
+                        <div className="autocomplete-wrap">
+                          <input
+                            type="text"
+                            className="autocomplete-input"
+                            placeholder="Rechercher ou saisir une profession..."
+                            autoComplete="off"
+                            value={confProfMrDisplay}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setConfProfMrDisplay(v);
+                              const match = professions?.find(p => (p.nom || '') === v);
+                              if (!match && confFormData.conf_profession_monsieur) {
+                                setConfFormData(prev => ({ ...prev, conf_profession_monsieur: '' }));
+                              }
+                            }}
+                            onFocus={() => setShowSuggestionsMr(true)}
+                            onBlur={() => setTimeout(() => setShowSuggestionsMr(false), 200)}
+                          />
+                          <div className={`autocomplete-suggestions ${showSuggestionsMr ? 'active' : ''}`}>
+                            {(professions || [])
+                              .filter(p => !confProfMrDisplay || (p.nom || '').toLowerCase().includes(confProfMrDisplay.toLowerCase()))
+                              .slice(0, 50)
+                              .map(prof => (
+                                <div
+                                  key={prof.id}
+                                  onMouseDown={(e) => { e.preventDefault(); setConfFormData(prev => ({ ...prev, conf_profession_monsieur: String(prof.id) })); setConfProfMrDisplay(prof.nom || ''); setShowSuggestionsMr(false); }}
+                                >
+                                  {prof.nom}
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_type_contrat_mr">Type de Contrat MR :</label></td>
+                      <td>
+                        <select
+                          id="conf_type_contrat_mr"
+                          className="form-control"
+                          value={confFormData.conf_type_contrat_mr}
+                          onChange={(e) => setConfFormData({...confFormData, conf_type_contrat_mr: e.target.value})}
+                        >
+                          <option value="">Sélectionner</option>
+                          {(typeContrat || []).map(t => (
+                            <option key={t.id} value={t.id}>{t.nom}</option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label>Profession MME :</label></td>
+                      <td>
+                        <div className="autocomplete-wrap">
+                          <input
+                            type="text"
+                            className="autocomplete-input"
+                            placeholder="Rechercher ou saisir une profession..."
+                            autoComplete="off"
+                            value={confProfMmeDisplay}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setConfProfMmeDisplay(v);
+                              const match = professions?.find(p => (p.nom || '') === v);
+                              if (!match && confFormData.conf_profession_madame) {
+                                setConfFormData(prev => ({ ...prev, conf_profession_madame: '' }));
+                              }
+                            }}
+                            onFocus={() => setShowSuggestionsMme(true)}
+                            onBlur={() => setTimeout(() => setShowSuggestionsMme(false), 200)}
+                          />
+                          <div className={`autocomplete-suggestions ${showSuggestionsMme ? 'active' : ''}`}>
+                            {(professions || [])
+                              .filter(p => !confProfMmeDisplay || (p.nom || '').toLowerCase().includes(confProfMmeDisplay.toLowerCase()))
+                              .slice(0, 50)
+                              .map(prof => (
+                                <div
+                                  key={prof.id}
+                                  onMouseDown={(e) => { e.preventDefault(); setConfFormData(prev => ({ ...prev, conf_profession_madame: String(prof.id) })); setConfProfMmeDisplay(prof.nom || ''); setShowSuggestionsMme(false); }}
+                                >
+                                  {prof.nom}
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_type_contrat_madame">Type de Contrat MME :</label></td>
+                      <td>
+                        <select
+                          id="conf_type_contrat_madame"
+                          className="form-control"
+                          value={confFormData.conf_type_contrat_madame}
+                          onChange={(e) => setConfFormData({...confFormData, conf_type_contrat_madame: e.target.value})}
+                        >
+                          <option value="">Sélectionner</option>
+                          {(typeContrat || []).map(t => (
+                            <option key={t.id} value={t.id}>{t.nom}</option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_revenu">Revenu :</label></td>
+                      <td>
+                        <input
+                          type="text"
+                          id="conf_revenu"
+                          className="form-control"
+                          value={confFormData.conf_revenu}
+                          onChange={(e) => setConfFormData({...confFormData, conf_revenu: e.target.value})}
+                          placeholder="Revenu"
+                        />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_credit">Crédit :</label></td>
+                      <td>
+                        <input
+                          type="text"
+                          id="conf_credit"
+                          className="form-control"
+                          value={confFormData.conf_credit}
+                          onChange={(e) => setConfFormData({...confFormData, conf_credit: e.target.value})}
+                          placeholder="Crédit"
+                        />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_consommation_electricite_gen">Consommations électrique :</label></td>
+                      <td>
+                        <input
+                          type="text"
+                          id="conf_consommation_electricite_gen"
+                          className="form-control"
+                          value={confFormData.conf_consommation_electricite}
+                          onChange={(e) => setConfFormData({...confFormData, conf_consommation_electricite: e.target.value})}
+                          placeholder="Ex: 800 €/an"
+                        />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_consommation_chauffage_gen">Consommations chauffage :</label></td>
+                      <td>
+                        <input
+                          type="text"
+                          id="conf_consommation_chauffage_gen"
+                          className="form-control"
+                          value={confFormData.conf_consommation_chauffage}
+                          onChange={(e) => setConfFormData({...confFormData, conf_consommation_chauffage: e.target.value})}
+                          placeholder="Ex: 1500 €/an"
+                        />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_mode_chauffage_gen">Mode de chauffage :</label></td>
+                      <td>
+                        <select
+                          id="conf_mode_chauffage_gen"
+                          className="form-control"
+                          value={confFormData.conf_mode_chauffage}
+                          onChange={(e) => setConfFormData({...confFormData, conf_mode_chauffage: e.target.value})}
+                        >
+                          <option value="">Sélectionner</option>
+                          {(modeChauffage || []).map(mode => (
+                            <option key={mode.id} value={mode.id}>{mode.nom || mode.titre || `Mode ${mode.id}`}</option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="conf_revenu">Revenu :</label>
-                    <input
-                      type="text"
-                      id="conf_revenu"
-                      className="form-control"
-                      value={confFormData.conf_revenu}
-                      onChange={(e) => setConfFormData({...confFormData, conf_revenu: e.target.value})}
-                      placeholder="Revenu"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="conf_credit">Crédit :</label>
-                    <input
-                      type="text"
-                      id="conf_credit"
-                      className="form-control"
-                      value={confFormData.conf_credit}
-                      onChange={(e) => setConfFormData({...confFormData, conf_credit: e.target.value})}
-                      placeholder="Crédit"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="conf_consommation_electricite_gen">Consommations électrique :</label>
-                    <input
-                      type="text"
-                      id="conf_consommation_electricite_gen"
-                      className="form-control"
-                      value={confFormData.conf_consommation_electricite}
-                      onChange={(e) => setConfFormData({...confFormData, conf_consommation_electricite: e.target.value})}
-                      placeholder="Ex: 800 €/an"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="conf_consommation_chauffage_gen">Consommations chauffage :</label>
-                    <input
-                      type="text"
-                      id="conf_consommation_chauffage_gen"
-                      className="form-control"
-                      value={confFormData.conf_consommation_chauffage}
-                      onChange={(e) => setConfFormData({...confFormData, conf_consommation_chauffage: e.target.value})}
-                      placeholder="Ex: 1500 €/an"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="conf_mode_chauffage_gen">Mode de chauffage :</label>
-                    <select
-                      id="conf_mode_chauffage_gen"
-                      className="form-control"
-                      value={confFormData.conf_mode_chauffage}
-                      onChange={(e) => setConfFormData({...confFormData, conf_mode_chauffage: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {(modeChauffage || []).map(mode => (
-                        <option key={mode.id} value={mode.id}>{mode.nom || mode.titre || `Mode ${mode.id}`}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                    {/* Champs spécifiques PAC */}
+                    {confFormData.produit === '1' && (
+                      <>
+                        <tr>
+                          <td><label htmlFor="conf_mode_chauffage">Mode de chauffage :</label></td>
+                          <td>
+                            <select
+                              id="conf_mode_chauffage"
+                              className="form-control"
+                              value={confFormData.mode_chauffage}
+                              onChange={(e) => setConfFormData({...confFormData, mode_chauffage: e.target.value})}
+                            >
+                              <option value="">Sélectionner</option>
+                              {modeChauffage?.map(mode => (
+                                <option key={mode.id} value={mode.id}>
+                                  {mode.nom || mode.titre || `Mode ${mode.id}`}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><label htmlFor="conf_annee_systeme_chauffage">Année du système de chauffage :</label></td>
+                          <td>
+                            <input
+                              type="number"
+                              id="conf_annee_systeme_chauffage"
+                              className="form-control"
+                              value={confFormData.annee_systeme_chauffage}
+                              onChange={(e) => setConfFormData({...confFormData, annee_systeme_chauffage: e.target.value})}
+                              placeholder="Ex: 2010"
+                              min="1970"
+                              max={new Date().getFullYear()}
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><label htmlFor="conf_surface_chauffee">Surface chauffée (m²) :</label></td>
+                          <td>
+                            <input
+                              type="number"
+                              id="conf_surface_chauffee"
+                              className="form-control"
+                              value={confFormData.surface_chauffee}
+                              onChange={(e) => setConfFormData({...confFormData, surface_chauffee: e.target.value})}
+                              placeholder="Ex: 100"
+                              min="0"
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><label htmlFor="conf_consommation_chauffage">Consommation chauffage (€) :</label></td>
+                          <td>
+                            <input
+                              type="text"
+                              id="conf_consommation_chauffage"
+                              className="form-control"
+                              value={confFormData.consommation_chauffage}
+                              onChange={(e) => setConfFormData({...confFormData, consommation_chauffage: e.target.value})}
+                              placeholder="Ex: 1500 €/an"
+                            />
+                          </td>
+                        </tr>
+                      </>
+                    )}
 
-                {/* Champs spécifiques PAC */}
-                {confFormData.produit === '1' && (
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="conf_mode_chauffage">Mode de chauffage :</label>
-                      <select
-                        id="conf_mode_chauffage"
-                        className="form-control"
-                        value={confFormData.mode_chauffage}
-                        onChange={(e) => setConfFormData({...confFormData, mode_chauffage: e.target.value})}
-                      >
-                        <option value="">Sélectionner</option>
-                        {modeChauffage?.map(mode => (
-                          <option key={mode.id} value={mode.id}>
-                            {mode.nom || mode.titre || `Mode ${mode.id}`}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="conf_annee_systeme_chauffage">Année du système de chauffage :</label>
-                      <input
-                        type="number"
-                        id="conf_annee_systeme_chauffage"
-                        className="form-control"
-                        value={confFormData.annee_systeme_chauffage}
-                        onChange={(e) => setConfFormData({...confFormData, annee_systeme_chauffage: e.target.value})}
-                        placeholder="Ex: 2010"
-                        min="1970"
-                        max={new Date().getFullYear()}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="conf_surface_chauffee">Surface chauffée (m²) :</label>
-                      <input
-                        type="number"
-                        id="conf_surface_chauffee"
-                        className="form-control"
-                        value={confFormData.surface_chauffee}
-                        onChange={(e) => setConfFormData({...confFormData, surface_chauffee: e.target.value})}
-                        placeholder="Ex: 100"
-                        min="0"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="conf_consommation_chauffage">Consommation chauffage (€) :</label>
-                      <input
-                        type="text"
-                        id="conf_consommation_chauffage"
-                        className="form-control"
-                        value={confFormData.consommation_chauffage}
-                        onChange={(e) => setConfFormData({...confFormData, consommation_chauffage: e.target.value})}
-                        placeholder="Ex: 1500 €/an"
-                      />
-                    </div>
-                  </div>
-                )}
+                    {/* Champs spécifiques PV */}
+                    {confFormData.produit === '2' && (
+                      <>
+                        <tr>
+                          <td><label htmlFor="conf_orientation_toiture">Orientation toiture :</label></td>
+                          <td>
+                            <select
+                              id="conf_orientation_toiture"
+                              className="form-control"
+                              value={confFormData.conf_orientation_toiture}
+                              onChange={(e) => setConfFormData({...confFormData, conf_orientation_toiture: e.target.value})}
+                            >
+                              <option value="">Sélectionner</option>
+                              <option value="NORD">NORD</option>
+                              <option value="SUD">SUD</option>
+                              <option value="EST">EST</option>
+                              <option value="OUEST">OUEST</option>
+                              <option value="EST OUEST">EST OUEST</option>
+                              <option value="NORD-EST">NORD-EST</option>
+                              <option value="NORD-OUEST">NORD-OUEST</option>
+                              <option value="SUD-EST">SUD-EST</option>
+                              <option value="SUD-OUEST">SUD-OUEST</option>
+                            </select>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><label htmlFor="conf_zones_ombres">Zones ombres :</label></td>
+                          <td>
+                            <select
+                              id="conf_zones_ombres"
+                              className="form-control"
+                              value={confFormData.conf_zones_ombres}
+                              onChange={(e) => setConfFormData({...confFormData, conf_zones_ombres: e.target.value})}
+                            >
+                              <option value="">Sélectionner</option>
+                              <option value="OUI">OUI</option>
+                              <option value="NON">NON</option>
+                            </select>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><label htmlFor="conf_site_classe">Proche d'un site classé :</label></td>
+                          <td>
+                            <select
+                              id="conf_site_classe"
+                              className="form-control"
+                              value={confFormData.conf_site_classe}
+                              onChange={(e) => setConfFormData({...confFormData, conf_site_classe: e.target.value})}
+                            >
+                              <option value="">Sélectionner</option>
+                              <option value="OUI">OUI</option>
+                              <option value="NON">NON</option>
+                            </select>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><label htmlFor="conf_consommation_electricite">Consommation électricité (€) :</label></td>
+                          <td>
+                            <input
+                              type="text"
+                              id="conf_consommation_electricite"
+                              className="form-control"
+                              value={confFormData.conf_consommation_electricite}
+                              onChange={(e) => setConfFormData({...confFormData, conf_consommation_electricite: e.target.value})}
+                              placeholder="Ex: 800 €/an"
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><label htmlFor="conf_nb_pans">Nombre de pans :</label></td>
+                          <td>
+                            <input
+                              type="number"
+                              id="conf_nb_pans"
+                              className="form-control"
+                              min="1"
+                              value={confFormData.nb_pans}
+                              onChange={(e) => setConfFormData({...confFormData, nb_pans: e.target.value})}
+                            />
+                          </td>
+                        </tr>
+                      </>
+                    )}
 
-                {/* Champs spécifiques PV */}
-                {confFormData.produit === '2' && (
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="conf_orientation_toiture">Orientation toiture :</label>
-                      <select
-                        id="conf_orientation_toiture"
-                        className="form-control"
-                        value={confFormData.conf_orientation_toiture}
-                        onChange={(e) => setConfFormData({...confFormData, conf_orientation_toiture: e.target.value})}
-                      >
-                        <option value="">Sélectionner</option>
-                        <option value="NORD">NORD</option>
-                        <option value="SUD">SUD</option>
-                        <option value="EST">EST</option>
-                        <option value="OUEST">OUEST</option>
-                        <option value="EST OUEST">EST OUEST</option>
-                        <option value="NORD-EST">NORD-EST</option>
-                        <option value="NORD-OUEST">NORD-OUEST</option>
-                        <option value="SUD-EST">SUD-EST</option>
-                        <option value="SUD-OUEST">SUD-OUEST</option>
-                      </select>
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="conf_zones_ombres">Zones ombres :</label>
-                      <select
-                        id="conf_zones_ombres"
-                        className="form-control"
-                        value={confFormData.conf_zones_ombres}
-                        onChange={(e) => setConfFormData({...confFormData, conf_zones_ombres: e.target.value})}
-                      >
-                        <option value="">Sélectionner</option>
-                        <option value="OUI">OUI</option>
-                        <option value="NON">NON</option>
-                      </select>
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="conf_site_classe">Proche d'un site classé :</label>
-                      <select
-                        id="conf_site_classe"
-                        className="form-control"
-                        value={confFormData.conf_site_classe}
-                        onChange={(e) => setConfFormData({...confFormData, conf_site_classe: e.target.value})}
-                      >
-                        <option value="">Sélectionner</option>
-                        <option value="OUI">OUI</option>
-                        <option value="NON">NON</option>
-                      </select>
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="conf_consommation_electricite">Consommation électricité (€) :</label>
-                      <input
-                        type="text"
-                        id="conf_consommation_electricite"
-                        className="form-control"
-                        value={confFormData.conf_consommation_electricite}
-                        onChange={(e) => setConfFormData({...confFormData, conf_consommation_electricite: e.target.value})}
-                        placeholder="Ex: 800 €/an"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="conf_nb_pans">Nombre de pans :</label>
-                      <input
-                        type="number"
-                        id="conf_nb_pans"
-                        className="form-control"
-                        min="1"
-                        value={confFormData.nb_pans}
-                        onChange={(e) => setConfFormData({...confFormData, nb_pans: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="form-group">
-                  <label htmlFor="conf_commentaire_produit">Commentaire :</label>
-                  <textarea
-                    id="conf_commentaire_produit"
-                    className="form-control"
-                    rows="4"
-                    value={confFormData.conf_commentaire_produit}
-                    onChange={(e) => setConfFormData({...confFormData, conf_commentaire_produit: e.target.value})}
-                  />
-                </div>
+                    <tr>
+                      <td><label htmlFor="conf_commentaire_produit">Commentaire :</label></td>
+                      <td>
+                        <textarea
+                          id="conf_commentaire_produit"
+                          className="form-control"
+                          rows="4"
+                          value={confFormData.conf_commentaire_produit}
+                          onChange={(e) => setConfFormData({...confFormData, conf_commentaire_produit: e.target.value})}
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
 
                 <div className="form-actions">
                   <button
