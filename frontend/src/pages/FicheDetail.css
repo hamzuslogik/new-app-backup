@@ -1484,70 +1484,31 @@
 
 .rdv-form {
   padding: 0;
-  max-width: 420px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
-.rdv-modal .rdv-form > .form-group {
-  margin-bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
+/* Tableau sans bordure : 1ère colonne = label, 2ème = champ */
+.rdv-form-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: none;
 }
 
-.rdv-modal .rdv-form > .form-group label,
-.rdv-modal .rdv-form .form-row .form-group label {
+.rdv-form-table td {
+  border: none;
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+.rdv-form-table td:first-child {
   font-weight: bold;
   font-size: 12px;
-  margin-bottom: 0;
-  flex-shrink: 0;
-  min-width: 140px;
-  text-align: left;
+  white-space: nowrap;
+  width: 1%;
+  padding-right: 12px;
 }
 
-.rdv-modal .rdv-form > .form-group .form-control,
-.rdv-modal .rdv-form > .form-group .autocomplete-wrap,
-.rdv-modal .rdv-form > .form-group .checkbox-label {
-  flex: 1;
-  max-width: 220px;
-}
-
-.rdv-modal .rdv-form > .form-group:has(input[type="checkbox"]) .checkbox-label {
-  max-width: none;
-  justify-content: flex-start;
-}
-
-.rdv-modal .rdv-form > .form-row {
-  margin-bottom: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: stretch;
-}
-
-.rdv-modal .rdv-form > .form-row .form-group {
-  margin-bottom: 0;
-  width: 100%;
-  max-width: 420px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-}
-
-.rdv-modal .rdv-form > .form-row .form-group label {
-  min-width: 140px;
-  text-align: left;
-}
-
-.rdv-modal .rdv-form > .form-row .form-group .form-control,
-.rdv-modal .rdv-form > .form-row .form-group .autocomplete-wrap {
-  flex: 1;
-  max-width: 220px;
+.rdv-form-table td:last-child {
+  width: 99%;
 }
 
 .rdv-modal .rdv-form .form-control,
@@ -1555,6 +1516,13 @@
   padding: 5px 8px;
   font-size: 13px;
   min-height: 32px;
+  width: 100%;
+  max-width: 280px;
+  box-sizing: border-box;
+}
+
+.rdv-modal .rdv-form .autocomplete-wrap {
+  max-width: 280px;
 }
 
 .rdv-modal .rdv-form select.form-control {
@@ -1567,10 +1535,9 @@
   padding: 6px 8px;
   font-size: 13px;
   min-height: 56px;
-}
-
-.rdv-modal .rdv-form > .form-group:has(textarea) .form-control {
-  max-width: 280px;
+  width: 100%;
+  max-width: 320px;
+  box-sizing: border-box;
 }
 
 .rdv-modal .rdv-form .modal-actions {
@@ -1691,10 +1658,9 @@
     grid-template-columns: 1fr;
   }
 
-  .rdv-modal .rdv-form > .form-group .form-control,
-  .rdv-modal .rdv-form > .form-group .autocomplete-wrap,
-  .rdv-modal .rdv-form > .form-row .form-group .form-control,
-  .rdv-modal .rdv-form > .form-row .form-group .autocomplete-wrap {
+  .rdv-modal .rdv-form .form-control,
+  .rdv-modal .rdv-form .autocomplete-input,
+  .rdv-modal .rdv-form textarea.form-control {
     max-width: 100%;
   }
 

@@ -7326,428 +7326,460 @@ const CreateRdvModal = ({
           </div>
 
           <form className="rdv-form" onSubmit={(e) => { e.preventDefault(); if (!rdvSubmitting) onSubmit(); }}>
-            {/* Case à cocher pour RDV urgent - Par défaut CONFIRMER */}
-            <div className="form-group">
-              {(() => {
-                // Vérifier si la date du RDV est aujourd'hui ou demain
-                const rdvDateStr = rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[0] : '';
-                let isAutoUrgent = false;
-                if (rdvDateStr) {
-                  const rdvDate = new Date(rdvDateStr);
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const tomorrow = new Date(today);
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  const rdvDateOnly = new Date(rdvDate);
-                  rdvDateOnly.setHours(0, 0, 0, 0);
-                  isAutoUrgent = rdvDateOnly.getTime() === today.getTime() || rdvDateOnly.getTime() === tomorrow.getTime();
-                }
-                const isUrgent = rdvFormData.is_urgent || isAutoUrgent;
-                
-                return (
-                  <>
-                    <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={isUrgent}
-                        onChange={(e) => setRdvFormData({...rdvFormData, is_urgent: e.target.checked, id_etat_final: 7})}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <span style={{ fontWeight: 'bold' }}>RDV URGENT</span>
-                      {isAutoUrgent && (
-                        <span style={{ fontSize: '0.72em', color: '#f44336', fontStyle: 'italic', marginLeft: '8px' }}>
-                          (Automatique : RDV aujourd'hui ou demain)
-                        </span>
+            <table className="rdv-form-table">
+              <tbody>
+                {/* RDV urgent */}
+                <tr>
+                  <td>
+                    {(() => {
+                      const rdvDateStr = rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[0] : '';
+                      let isAutoUrgent = false;
+                      if (rdvDateStr) {
+                        const rdvDate = new Date(rdvDateStr);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const tomorrow = new Date(today);
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        const rdvDateOnly = new Date(rdvDate);
+                        rdvDateOnly.setHours(0, 0, 0, 0);
+                        isAutoUrgent = rdvDateOnly.getTime() === today.getTime() || rdvDateOnly.getTime() === tomorrow.getTime();
+                      }
+                      const isUrgent = rdvFormData.is_urgent || isAutoUrgent;
+                      return <strong>RDV URGENT</strong>;
+                    })()}
+                  </td>
+                  <td>
+                    {(() => {
+                      const rdvDateStr = rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[0] : '';
+                      let isAutoUrgent = false;
+                      if (rdvDateStr) {
+                        const rdvDate = new Date(rdvDateStr);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const tomorrow = new Date(today);
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        const rdvDateOnly = new Date(rdvDate);
+                        rdvDateOnly.setHours(0, 0, 0, 0);
+                        isAutoUrgent = rdvDateOnly.getTime() === today.getTime() || rdvDateOnly.getTime() === tomorrow.getTime();
+                      }
+                      const isUrgent = rdvFormData.is_urgent || isAutoUrgent;
+                      return (
+                        <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={isUrgent}
+                            onChange={(e) => setRdvFormData({...rdvFormData, is_urgent: e.target.checked, id_etat_final: 7})}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontWeight: 'bold' }}>RDV URGENT</span>
+                          {isAutoUrgent && (
+                            <span style={{ fontSize: '0.72em', color: '#f44336', fontStyle: 'italic', marginLeft: '8px' }}>
+                              (Automatique : RDV aujourd'hui ou demain)
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })()}
+                  </td>
+                </tr>
+                <tr>
+                  <td><label htmlFor="rdv_date">Date RDV *</label></td>
+                  <td>
+                    <input
+                      type="date"
+                      id="rdv_date"
+                      className="form-control"
+                      value={rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[0] : ''}
+                      onChange={(e) => {
+                        const time = rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[1] : '00:00';
+                        setRdvFormData({...rdvFormData, date_rdv_time: `${e.target.value} ${time}`});
+                      }}
+                      required
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td><label htmlFor="rdv_time">Heure RDV *</label></td>
+                  <td>
+                    <input
+                      type="time"
+                      id="rdv_time"
+                      className="form-control"
+                      value={rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[1]?.substring(0, 5) : ''}
+                      onChange={(e) => {
+                        const date = rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[0] : selectedSlot?.date || '';
+                        setRdvFormData({...rdvFormData, date_rdv_time: `${date} ${e.target.value}`});
+                      }}
+                      required
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td><label htmlFor="rdv_produit">Produit *</label></td>
+                  <td>
+                    {isLoadingProduits ? (
+                      <div>Chargement des produits...</div>
+                    ) : produitsError ? (
+                      <div style={{ color: 'red' }}>Erreur lors du chargement des produits</div>
+                    ) : (
+                      <select
+                        id="rdv_produit"
+                        className="form-control"
+                        value={rdvFormData.produit}
+                        onChange={(e) => setRdvFormData({...rdvFormData, produit: e.target.value})}
+                        required
+                      >
+                        <option value="">Sélectionner un produit</option>
+                        {produits && Array.isArray(produits) && produits.length > 0 ? (
+                          produits
+                            .filter(p => p && (p.etat > 0 || p.etat === undefined))
+                            .map(prod => (
+                              <option key={prod.id} value={prod.id}>
+                                {prod.nom || `Produit ${prod.id}`}
+                              </option>
+                            ))
+                        ) : (
+                          <option value="" disabled>Aucun produit disponible</option>
+                        )}
+                      </select>
+                    )}
+                    {produits && Array.isArray(produits) && (
+                      <small style={{ color: '#666', fontSize: '10.2px' }}>
+                        {produits.length} produit(s) disponible(s)
+                      </small>
+                    )}
+                  </td>
+                </tr>
+                <tr>
+                  <td><label htmlFor="rdv_confirmateur">Confirmateur *</label></td>
+                  <td>
+                    <select
+                      id="rdv_confirmateur"
+                      className="form-control"
+                      value={rdvFormData.id_confirmateur}
+                      onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur: e.target.value})}
+                      disabled={isConfirmateurSession}
+                      required
+                    >
+                      <option value="">{isConfirmateurSession ? '—' : 'Sélectionner'}</option>
+                      {isConfirmateurSession ? (
+                        rdvFormData.id_confirmateur ? (
+                          <option value={rdvFormData.id_confirmateur}>
+                            {getConfirmateurLabel(rdvFormData.id_confirmateur)}
+                          </option>
+                        ) : null
+                      ) : (
+                        confirmateurs?.map(conf => (
+                          <option key={conf.id} value={conf.id}>
+                            {conf.pseudo}
+                          </option>
+                        ))
                       )}
-                    </label>
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* Date et heure du RDV */}
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="rdv_date">Date RDV *</label>
-                <input
-                  type="date"
-                  id="rdv_date"
-                  className="form-control"
-                  value={rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[0] : ''}
-                  onChange={(e) => {
-                    const time = rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[1] : '00:00';
-                    setRdvFormData({...rdvFormData, date_rdv_time: `${e.target.value} ${time}`});
-                  }}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="rdv_time">Heure RDV *</label>
-                <input
-                  type="time"
-                  id="rdv_time"
-                  className="form-control"
-                  value={rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[1]?.substring(0, 5) : ''}
-                  onChange={(e) => {
-                    const date = rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[0] : selectedSlot?.date || '';
-                    setRdvFormData({...rdvFormData, date_rdv_time: `${date} ${e.target.value}`});
-                  }}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Produit */}
-            <div className="form-group">
-              <label htmlFor="rdv_produit">Produit *</label>
-              {isLoadingProduits ? (
-                <div>Chargement des produits...</div>
-              ) : produitsError ? (
-                <div style={{ color: 'red' }}>Erreur lors du chargement des produits</div>
-              ) : (
-                <select
-                  id="rdv_produit"
-                  className="form-control"
-                  value={rdvFormData.produit}
-                  onChange={(e) => setRdvFormData({...rdvFormData, produit: e.target.value})}
-                  required
-                >
-                  <option value="">Sélectionner un produit</option>
-                  {produits && Array.isArray(produits) && produits.length > 0 ? (
-                    produits
-                      .filter(p => p && (p.etat > 0 || p.etat === undefined))
-                      .map(prod => (
-                        <option key={prod.id} value={prod.id}>
-                          {prod.nom || `Produit ${prod.id}`}
-                        </option>
-                      ))
-                  ) : (
-                    <option value="" disabled>Aucun produit disponible</option>
-                  )}
-                </select>
-              )}
-              {produits && Array.isArray(produits) && (
-                <small style={{ color: '#666', fontSize: '10.2px' }}>
-                  {produits.length} produit(s) disponible(s)
-                </small>
-              )}
-            </div>
-
-            {/* Confirmateurs */}
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="rdv_confirmateur">Confirmateur *</label>
-                <select
-                  id="rdv_confirmateur"
-                  className="form-control"
-                  value={rdvFormData.id_confirmateur}
-                  onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur: e.target.value})}
-                  disabled={isConfirmateurSession}
-                  required
-                >
-                  <option value="">{isConfirmateurSession ? '—' : 'Sélectionner'}</option>
-                  {isConfirmateurSession ? (
-                    rdvFormData.id_confirmateur ? (
-                      <option value={rdvFormData.id_confirmateur}>
-                        {getConfirmateurLabel(rdvFormData.id_confirmateur)}
-                      </option>
-                    ) : null
-                  ) : (
-                    confirmateurs?.map(conf => (
-                      <option key={conf.id} value={conf.id}>
-                        {conf.pseudo}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="rdv_confirmateur_2">Confirmateur 2 (optionnel)</label>
-                <select
-                  id="rdv_confirmateur_2"
-                  className="form-control"
-                  value={rdvFormData.id_confirmateur_2}
-                  onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur_2: e.target.value})}
-                  disabled={isConfirmateurSession}
-                >
-                  <option value="">Aucun</option>
-                  {isConfirmateurSession ? (
-                    rdvFormData.id_confirmateur_2 ? (
-                      <option value={rdvFormData.id_confirmateur_2}>
-                        {getConfirmateurLabel(rdvFormData.id_confirmateur_2)}
-                      </option>
-                    ) : null
-                  ) : (
-                    confirmateurs?.map(conf => (
-                      <option key={conf.id} value={conf.id}>
-                        {conf.pseudo}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="rdv_confirmateur_3">Confirmateur 3 (optionnel)</label>
-              <select
-                id="rdv_confirmateur_3"
-                className="form-control"
-                value={rdvFormData.id_confirmateur_3}
-                onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur_3: e.target.value})}
-                disabled={isConfirmateurSession}
-              >
-                <option value="">Aucun</option>
-                {isConfirmateurSession ? (
-                  rdvFormData.id_confirmateur_3 ? (
-                    <option value={rdvFormData.id_confirmateur_3}>
-                      {getConfirmateurLabel(rdvFormData.id_confirmateur_3)}
-                    </option>
-                  ) : null
-                ) : (
-                  confirmateurs?.map(conf => (
-                    <option key={conf.id} value={conf.id}>
-                      {conf.pseudo}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
-
-            {/* RDV avec */}
-            <div className="form-group">
-              <label htmlFor="rdv_avec">RDV pris avec</label>
-              <select
-                id="rdv_avec"
-                className="form-control"
-                value={rdvFormData.conf_rdv_avec}
-                onChange={(e) => setRdvFormData({...rdvFormData, conf_rdv_avec: e.target.value})}
-              >
-                <option value="">Sélectionner</option>
-                <option value="MR">MR</option>
-                <option value="MME">MME</option>
-                <option value="AUTRE">AUTRE</option>
-              </select>
-            </div>
-
-            {/* Champs confirmation (création rapide RDV) */}
-            <div className="form-row">
-              <div className="form-group">
-                <label>Appel en Tunisie avec</label>
-                <select
-                  className="form-control"
-                  value={rdvFormData.conf_appel_tunisie_avec || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_appel_tunisie_avec: e.target.value})}
-                >
-                  <option value="">Sélectionner</option>
-                  <option value="MR">Mr</option>
-                  <option value="MME">Mme</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>A déjà fait une étude</label>
-                <select
-                  className="form-control"
-                  value={rdvFormData.conf_deja_etude || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_deja_etude: e.target.value})}
-                >
-                  <option value="">Sélectionner</option>
-                  <option value="OUI">OUI</option>
-                  <option value="NON">NON</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>RDV déjà annulé précédemment</label>
-                <select
-                  className="form-control"
-                  value={rdvFormData.conf_rdv_annule_precedent || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_rdv_annule_precedent: e.target.value})}
-                >
-                  <option value="">Sélectionner</option>
-                  <option value="OUI">OUI</option>
-                  <option value="NON">NON</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Présence du couple ou célibataire</label>
-                <select
-                  className="form-control"
-                  value={rdvFormData.conf_presence_couple || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_presence_couple: e.target.value})}
-                >
-                  <option value="">Sélectionner</option>
-                  <option value="OUI">OUI</option>
-                  <option value="NON">NON</option>
-                </select>
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Profession MR</label>
-                <div className="autocomplete-wrap">
-                  <input
-                    type="text"
-                    className="autocomplete-input"
-                    placeholder="Rechercher ou saisir une profession..."
-                    autoComplete="off"
-                    value={rdvProfMrDisplay}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setRdvProfMrDisplay(v);
-                      if (!(professionsRdv || []).find(p => (p.nom || '') === v) && rdvFormData.conf_profession_monsieur) {
-                        setRdvFormData(prev => ({ ...prev, conf_profession_monsieur: '' }));
-                      }
-                    }}
-                    onFocus={() => setShowRdvSuggestionsMr(true)}
-                    onBlur={() => setTimeout(() => setShowRdvSuggestionsMr(false), 200)}
-                  />
-                  <div className={`autocomplete-suggestions ${showRdvSuggestionsMr ? 'active' : ''}`}>
-                    {(professionsRdv || [])
-                      .filter(p => !rdvProfMrDisplay || (p.nom || '').toLowerCase().includes(rdvProfMrDisplay.toLowerCase()))
-                      .slice(0, 50)
-                      .map(prof => (
-                        <div
-                          key={prof.id}
-                          onMouseDown={(e) => { e.preventDefault(); setRdvFormData(prev => ({ ...prev, conf_profession_monsieur: String(prof.id) })); setRdvProfMrDisplay(prof.nom || ''); setShowRdvSuggestionsMr(false); }}
-                        >
-                          {prof.nom}
-                        </div>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label htmlFor="rdv_confirmateur_2">Confirmateur 2 (optionnel)</label></td>
+                  <td>
+                    <select
+                      id="rdv_confirmateur_2"
+                      className="form-control"
+                      value={rdvFormData.id_confirmateur_2}
+                      onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur_2: e.target.value})}
+                      disabled={isConfirmateurSession}
+                    >
+                      <option value="">Aucun</option>
+                      {isConfirmateurSession ? (
+                        rdvFormData.id_confirmateur_2 ? (
+                          <option value={rdvFormData.id_confirmateur_2}>
+                            {getConfirmateurLabel(rdvFormData.id_confirmateur_2)}
+                          </option>
+                        ) : null
+                      ) : (
+                        confirmateurs?.map(conf => (
+                          <option key={conf.id} value={conf.id}>
+                            {conf.pseudo}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label htmlFor="rdv_confirmateur_3">Confirmateur 3 (optionnel)</label></td>
+                  <td>
+                    <select
+                      id="rdv_confirmateur_3"
+                      className="form-control"
+                      value={rdvFormData.id_confirmateur_3}
+                      onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur_3: e.target.value})}
+                      disabled={isConfirmateurSession}
+                    >
+                      <option value="">Aucun</option>
+                      {isConfirmateurSession ? (
+                        rdvFormData.id_confirmateur_3 ? (
+                          <option value={rdvFormData.id_confirmateur_3}>
+                            {getConfirmateurLabel(rdvFormData.id_confirmateur_3)}
+                          </option>
+                        ) : null
+                      ) : (
+                        confirmateurs?.map(conf => (
+                          <option key={conf.id} value={conf.id}>
+                            {conf.pseudo}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label htmlFor="rdv_avec">RDV pris avec</label></td>
+                  <td>
+                    <select
+                      id="rdv_avec"
+                      className="form-control"
+                      value={rdvFormData.conf_rdv_avec}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_rdv_avec: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="MR">MR</option>
+                      <option value="MME">MME</option>
+                      <option value="AUTRE">AUTRE</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Appel en Tunisie avec</label></td>
+                  <td>
+                    <select
+                      className="form-control"
+                      value={rdvFormData.conf_appel_tunisie_avec || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_appel_tunisie_avec: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="MR">Mr</option>
+                      <option value="MME">Mme</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>A déjà fait une étude</label></td>
+                  <td>
+                    <select
+                      className="form-control"
+                      value={rdvFormData.conf_deja_etude || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_deja_etude: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="OUI">OUI</option>
+                      <option value="NON">NON</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>RDV déjà annulé précédemment</label></td>
+                  <td>
+                    <select
+                      className="form-control"
+                      value={rdvFormData.conf_rdv_annule_precedent || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_rdv_annule_precedent: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="OUI">OUI</option>
+                      <option value="NON">NON</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Présence du couple ou célibataire</label></td>
+                  <td>
+                    <select
+                      className="form-control"
+                      value={rdvFormData.conf_presence_couple || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_presence_couple: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="OUI">OUI</option>
+                      <option value="NON">NON</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Profession MR</label></td>
+                  <td>
+                    <div className="autocomplete-wrap">
+                      <input
+                        type="text"
+                        className="autocomplete-input"
+                        placeholder="Rechercher ou saisir une profession..."
+                        autoComplete="off"
+                        value={rdvProfMrDisplay}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setRdvProfMrDisplay(v);
+                          if (!(professionsRdv || []).find(p => (p.nom || '') === v) && rdvFormData.conf_profession_monsieur) {
+                            setRdvFormData(prev => ({ ...prev, conf_profession_monsieur: '' }));
+                          }
+                        }}
+                        onFocus={() => setShowRdvSuggestionsMr(true)}
+                        onBlur={() => setTimeout(() => setShowRdvSuggestionsMr(false), 200)}
+                      />
+                      <div className={`autocomplete-suggestions ${showRdvSuggestionsMr ? 'active' : ''}`}>
+                        {(professionsRdv || [])
+                          .filter(p => !rdvProfMrDisplay || (p.nom || '').toLowerCase().includes(rdvProfMrDisplay.toLowerCase()))
+                          .slice(0, 50)
+                          .map(prof => (
+                            <div
+                              key={prof.id}
+                              onMouseDown={(e) => { e.preventDefault(); setRdvFormData(prev => ({ ...prev, conf_profession_monsieur: String(prof.id) })); setRdvProfMrDisplay(prof.nom || ''); setShowRdvSuggestionsMr(false); }}
+                            >
+                              {prof.nom}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Type de Contrat MR</label></td>
+                  <td>
+                    <select
+                      className="form-control"
+                      value={rdvFormData.conf_type_contrat_mr || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_type_contrat_mr: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {(typeContratRdv || []).map(t => (
+                        <option key={t.id} value={t.id}>{t.nom}</option>
                       ))}
-                  </div>
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Type de Contrat MR</label>
-                <select
-                  className="form-control"
-                  value={rdvFormData.conf_type_contrat_mr || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_type_contrat_mr: e.target.value})}
-                >
-                  <option value="">Sélectionner</option>
-                  {(typeContratRdv || []).map(t => (
-                    <option key={t.id} value={t.id}>{t.nom}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Profession MME</label>
-                <div className="autocomplete-wrap">
-                  <input
-                    type="text"
-                    className="autocomplete-input"
-                    placeholder="Rechercher ou saisir une profession..."
-                    autoComplete="off"
-                    value={rdvProfMmeDisplay}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setRdvProfMmeDisplay(v);
-                      if (!(professionsRdv || []).find(p => (p.nom || '') === v) && rdvFormData.conf_profession_madame) {
-                        setRdvFormData(prev => ({ ...prev, conf_profession_madame: '' }));
-                      }
-                    }}
-                    onFocus={() => setShowRdvSuggestionsMme(true)}
-                    onBlur={() => setTimeout(() => setShowRdvSuggestionsMme(false), 200)}
-                  />
-                  <div className={`autocomplete-suggestions ${showRdvSuggestionsMme ? 'active' : ''}`}>
-                    {(professionsRdv || [])
-                      .filter(p => !rdvProfMmeDisplay || (p.nom || '').toLowerCase().includes(rdvProfMmeDisplay.toLowerCase()))
-                      .slice(0, 50)
-                      .map(prof => (
-                        <div
-                          key={prof.id}
-                          onMouseDown={(e) => { e.preventDefault(); setRdvFormData(prev => ({ ...prev, conf_profession_madame: String(prof.id) })); setRdvProfMmeDisplay(prof.nom || ''); setShowRdvSuggestionsMme(false); }}
-                        >
-                          {prof.nom}
-                        </div>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Profession MME</label></td>
+                  <td>
+                    <div className="autocomplete-wrap">
+                      <input
+                        type="text"
+                        className="autocomplete-input"
+                        placeholder="Rechercher ou saisir une profession..."
+                        autoComplete="off"
+                        value={rdvProfMmeDisplay}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setRdvProfMmeDisplay(v);
+                          if (!(professionsRdv || []).find(p => (p.nom || '') === v) && rdvFormData.conf_profession_madame) {
+                            setRdvFormData(prev => ({ ...prev, conf_profession_madame: '' }));
+                          }
+                        }}
+                        onFocus={() => setShowRdvSuggestionsMme(true)}
+                        onBlur={() => setTimeout(() => setShowRdvSuggestionsMme(false), 200)}
+                      />
+                      <div className={`autocomplete-suggestions ${showRdvSuggestionsMme ? 'active' : ''}`}>
+                        {(professionsRdv || [])
+                          .filter(p => !rdvProfMmeDisplay || (p.nom || '').toLowerCase().includes(rdvProfMmeDisplay.toLowerCase()))
+                          .slice(0, 50)
+                          .map(prof => (
+                            <div
+                              key={prof.id}
+                              onMouseDown={(e) => { e.preventDefault(); setRdvFormData(prev => ({ ...prev, conf_profession_madame: String(prof.id) })); setRdvProfMmeDisplay(prof.nom || ''); setShowRdvSuggestionsMme(false); }}
+                            >
+                              {prof.nom}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Type de Contrat MME</label></td>
+                  <td>
+                    <select
+                      className="form-control"
+                      value={rdvFormData.conf_type_contrat_madame || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_type_contrat_madame: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {(typeContratRdv || []).map(t => (
+                        <option key={t.id} value={t.id}>{t.nom}</option>
                       ))}
-                  </div>
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Type de Contrat MME</label>
-                <select
-                  className="form-control"
-                  value={rdvFormData.conf_type_contrat_madame || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_type_contrat_madame: e.target.value})}
-                >
-                  <option value="">Sélectionner</option>
-                  {(typeContratRdv || []).map(t => (
-                    <option key={t.id} value={t.id}>{t.nom}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Revenu</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={rdvFormData.conf_revenu || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_revenu: e.target.value})}
-                  placeholder="Revenu"
-                />
-              </div>
-              <div className="form-group">
-                <label>Crédit</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={rdvFormData.conf_credit || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_credit: e.target.value})}
-                  placeholder="Crédit"
-                />
-              </div>
-              <div className="form-group">
-                <label>Mode de chauffage</label>
-                <select
-                  className="form-control"
-                  value={rdvFormData.conf_mode_chauffage || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_mode_chauffage: e.target.value})}
-                >
-                  <option value="">Sélectionner</option>
-                  {(modeChauffage || []).map(mode => (
-                    <option key={mode.id} value={mode.id}>{mode.nom || mode.titre || `Mode ${mode.id}`}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Consommations électrique</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={rdvFormData.conf_consommation_electricite || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_electricite: e.target.value})}
-                  placeholder="Ex: 800 €/an"
-                />
-              </div>
-              <div className="form-group">
-                <label>Consommations chauffage</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={rdvFormData.conf_consommation_chauffage || ''}
-                  onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_chauffage: e.target.value})}
-                  placeholder="Ex: 1500 €/an"
-                />
-              </div>
-            </div>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Revenu</label></td>
+                  <td>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={rdvFormData.conf_revenu || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_revenu: e.target.value})}
+                      placeholder="Revenu"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Crédit</label></td>
+                  <td>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={rdvFormData.conf_credit || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_credit: e.target.value})}
+                      placeholder="Crédit"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Mode de chauffage</label></td>
+                  <td>
+                    <select
+                      className="form-control"
+                      value={rdvFormData.conf_mode_chauffage || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_mode_chauffage: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {(modeChauffage || []).map(mode => (
+                        <option key={mode.id} value={mode.id}>{mode.nom || mode.titre || `Mode ${mode.id}`}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Consommations électrique</label></td>
+                  <td>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={rdvFormData.conf_consommation_electricite || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_electricite: e.target.value})}
+                      placeholder="Ex: 800 €/an"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Consommations chauffage</label></td>
+                  <td>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={rdvFormData.conf_consommation_chauffage || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_chauffage: e.target.value})}
+                      placeholder="Ex: 1500 €/an"
+                    />
+                  </td>
+                </tr>
 
-            {/* Champs spécifiques selon le produit */}
-            {(() => {
-              // Identifier le produit sélectionné
-              const selectedProduit = produits?.find(p => String(p.id) === String(rdvFormData.produit));
-              const isPAC = selectedProduit?.nom?.toUpperCase().includes('PAC') || rdvFormData.produit === '1';
-              const isPV = selectedProduit?.nom?.toUpperCase().includes('PV') || rdvFormData.produit === '2';
-              
-              return (
-                <>
-                  {/* Champs spécifiques PAC */}
-                  {isPAC && (
+                {/* Champs spécifiques PAC */}
+                {(() => {
+                  const selectedProduit = produits?.find(p => String(p.id) === String(rdvFormData.produit));
+                  const isPAC = selectedProduit?.nom?.toUpperCase().includes('PAC') || rdvFormData.produit === '1';
+                  if (!isPAC) return null;
+                  return (
                     <>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label htmlFor="rdv_surface_chauffee">Surface chauffée (m²)</label>
+                      <tr>
+                        <td><label htmlFor="rdv_surface_chauffee">Surface chauffée (m²)</label></td>
+                        <td>
                           <input
                             type="number"
                             id="rdv_surface_chauffee"
@@ -7756,9 +7788,11 @@ const CreateRdvModal = ({
                             onChange={(e) => setRdvFormData({...rdvFormData, surface_chauffee: e.target.value})}
                             placeholder="Ex: 100"
                           />
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="rdv_consommation_chauffage">Consommation chauffage (€)</label>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><label htmlFor="rdv_consommation_chauffage">Consommation chauffage (€)</label></td>
+                        <td>
                           <input
                             type="text"
                             id="rdv_consommation_chauffage"
@@ -7767,11 +7801,11 @@ const CreateRdvModal = ({
                             onChange={(e) => setRdvFormData({...rdvFormData, consommation_chauffage: e.target.value})}
                             placeholder="Ex: 1500 €/an"
                           />
-                        </div>
-                      </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label htmlFor="rdv_mode_chauffage">Mode de chauffage</label>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><label htmlFor="rdv_mode_chauffage">Mode de chauffage</label></td>
+                        <td>
                           <select
                             id="rdv_mode_chauffage"
                             className="form-control"
@@ -7785,9 +7819,11 @@ const CreateRdvModal = ({
                               </option>
                             ))}
                           </select>
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="rdv_annee_systeme">Année système chauffage</label>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><label htmlFor="rdv_annee_systeme">Année système chauffage</label></td>
+                        <td>
                           <input
                             type="number"
                             id="rdv_annee_systeme"
@@ -7796,17 +7832,21 @@ const CreateRdvModal = ({
                             onChange={(e) => setRdvFormData({...rdvFormData, annee_systeme_chauffage: e.target.value})}
                             placeholder="Ex: 2010"
                           />
-                        </div>
-                      </div>
+                        </td>
+                      </tr>
                     </>
-                  )}
-
-                  {/* Champs spécifiques PV */}
-                  {isPV && (
+                  );
+                })()}
+                {/* Champs spécifiques PV */}
+                {(() => {
+                  const selectedProduit = produits?.find(p => String(p.id) === String(rdvFormData.produit));
+                  const isPV = selectedProduit?.nom?.toUpperCase().includes('PV') || rdvFormData.produit === '2';
+                  if (!isPV) return null;
+                  return (
                     <>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label htmlFor="rdv_surface_habitable">Surface habitable (m²)</label>
+                      <tr>
+                        <td><label htmlFor="rdv_surface_habitable">Surface habitable (m²)</label></td>
+                        <td>
                           <input
                             type="number"
                             id="rdv_surface_habitable"
@@ -7816,9 +7856,11 @@ const CreateRdvModal = ({
                             placeholder="Ex: 120"
                             min="0"
                           />
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="rdv_orientation">Orientation toiture</label>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><label htmlFor="rdv_orientation">Orientation toiture</label></td>
+                        <td>
                           <select
                             id="rdv_orientation"
                             className="form-control"
@@ -7836,9 +7878,11 @@ const CreateRdvModal = ({
                             <option value="SUD-EST">SUD-EST</option>
                             <option value="SUD-OUEST">SUD-OUEST</option>
                           </select>
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="rdv_zones_ombres">Zones ombres</label>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><label htmlFor="rdv_zones_ombres">Zones ombres</label></td>
+                        <td>
                           <select
                             id="rdv_zones_ombres"
                             className="form-control"
@@ -7849,11 +7893,11 @@ const CreateRdvModal = ({
                             <option value="OUI">OUI</option>
                             <option value="NON">NON</option>
                           </select>
-                        </div>
-                      </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label htmlFor="rdv_site_classe">Site classé</label>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><label htmlFor="rdv_site_classe">Site classé</label></td>
+                        <td>
                           <select
                             id="rdv_site_classe"
                             className="form-control"
@@ -7864,9 +7908,11 @@ const CreateRdvModal = ({
                             <option value="OUI">OUI</option>
                             <option value="NON">NON</option>
                           </select>
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="rdv_consommation_elec">Consommation électricité (€)</label>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><label htmlFor="rdv_consommation_elec">Consommation électricité (€)</label></td>
+                        <td>
                           <input
                             type="text"
                             id="rdv_consommation_elec"
@@ -7875,11 +7921,11 @@ const CreateRdvModal = ({
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_electricite: e.target.value})}
                             placeholder="Ex: 800 €/an"
                           />
-                        </div>
-                      </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label htmlFor="rdv_nb_pans">Nombre de pans</label>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><label htmlFor="rdv_nb_pans">Nombre de pans</label></td>
+                        <td>
                           <input
                             type="number"
                             id="rdv_nb_pans"
@@ -7889,25 +7935,25 @@ const CreateRdvModal = ({
                             onChange={(e) => setRdvFormData({...rdvFormData, nb_pans: e.target.value})}
                             placeholder="Ex: 4"
                           />
-                        </div>
-                      </div>
+                        </td>
+                      </tr>
                     </>
-                  )}
-                </>
-              );
-            })()}
-
-            {/* Commentaire */}
-            <div className="form-group">
-              <label htmlFor="rdv_commentaire">Commentaire Confirmation</label>
-              <textarea
-                id="rdv_commentaire"
-                className="form-control"
-                rows="4"
-                value={rdvFormData.conf_commentaire_produit}
-                onChange={(e) => setRdvFormData({...rdvFormData, conf_commentaire_produit: e.target.value})}
-              />
-            </div>
+                  );
+                })()}
+                <tr>
+                  <td><label htmlFor="rdv_commentaire">Commentaire Confirmation</label></td>
+                  <td>
+                    <textarea
+                      id="rdv_commentaire"
+                      className="form-control"
+                      rows="4"
+                      value={rdvFormData.conf_commentaire_produit}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_commentaire_produit: e.target.value})}
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
             <div className="modal-actions">
               <button type="button" className="btn-cancel" onClick={onClose}>
