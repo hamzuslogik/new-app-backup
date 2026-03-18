@@ -7246,19 +7246,6 @@ const CreateRdvModal = ({
     });
   }, [ficheData, setRdvFormData]);
 
-  // Afficher le nom de la profession dans l'autocomplete quand ficheData ou rdvFormData a un id
-  useEffect(() => {
-    if (!professionsRdv?.length) return;
-    if (rdvFormData.conf_profession_monsieur) {
-      const p = professionsRdv.find(pr => String(pr.id) === String(rdvFormData.conf_profession_monsieur));
-      if (p?.nom && (rdvProfMrDisplay === '' || rdvProfMrDisplay === p.nom)) setRdvProfMrDisplay(p.nom);
-    }
-    if (rdvFormData.conf_profession_madame) {
-      const p = professionsRdv.find(pr => String(pr.id) === String(rdvFormData.conf_profession_madame));
-      if (p?.nom && (rdvProfMmeDisplay === '' || rdvProfMmeDisplay === p.nom)) setRdvProfMmeDisplay(p.nom);
-    }
-  }, [professionsRdv, rdvFormData.conf_profession_monsieur, rdvFormData.conf_profession_madame]);
-
   // Récupérer les modes de chauffage pour les champs PAC
   const { data: modeChauffage } = useQuery('mode-chauffage', async () => {
     const res = await api.get('/management/mode-chauffage');
@@ -7277,6 +7264,19 @@ const CreateRdvModal = ({
   const [rdvProfMmeDisplay, setRdvProfMmeDisplay] = useState('');
   const [showRdvSuggestionsMr, setShowRdvSuggestionsMr] = useState(false);
   const [showRdvSuggestionsMme, setShowRdvSuggestionsMme] = useState(false);
+
+  // Afficher le nom de la profession dans l'autocomplete quand ficheData ou rdvFormData a un id (après déclaration de professionsRdv / state)
+  useEffect(() => {
+    if (!professionsRdv?.length) return;
+    if (rdvFormData.conf_profession_monsieur) {
+      const p = professionsRdv.find(pr => String(pr.id) === String(rdvFormData.conf_profession_monsieur));
+      if (p?.nom && (rdvProfMrDisplay === '' || rdvProfMrDisplay === p.nom)) setRdvProfMrDisplay(p.nom);
+    }
+    if (rdvFormData.conf_profession_madame) {
+      const p = professionsRdv.find(pr => String(pr.id) === String(rdvFormData.conf_profession_madame));
+      if (p?.nom && (rdvProfMmeDisplay === '' || rdvProfMmeDisplay === p.nom)) setRdvProfMmeDisplay(p.nom);
+    }
+  }, [professionsRdv, rdvFormData.conf_profession_monsieur, rdvFormData.conf_profession_madame]);
 
   const { data: produits, isLoading: isLoadingProduits, error: produitsError } = useQuery(
     'produits-modal', 
