@@ -513,6 +513,11 @@ router.get('/', authenticate, async (req, res) => {
     let params = [];
     let histoJoinForFichesHisto = '';
     let histoParamsForFichesHisto = [];
+    /** JOIN utilisateurs pour afficher le confirmateur de la dernière ligne fiches_histo dans la plage (dashboard confirmateur) */
+    let histoDernierConfDisplayJoin = '';
+    let histoDernierConfSelect = '';
+    /** Plage date_creation (fiches_histo) pour filtre EXISTS fallback confirmateur */
+    let confirmateurDernierHistoPlage = null;
     if (hasKoFilter) {
       whereConditions.push('(fiche.ko = ? OR (fiche.ko IS NULL AND ? = 0))');
       params.push(koForWhere, koForWhere);
@@ -875,12 +880,26 @@ router.get('/', authenticate, async (req, res) => {
         const timeStart = time_debut && String(time_debut).trim() !== '' ? time_debut : '00:00:00';
         const timeEnd = time_fin && String(time_fin).trim() !== '' ? time_fin : '23:59:59';
         
-        // Filtre "fiches statuées par le confirmateur connecté" : INNER JOIN sur fiches_histo (bien plus rapide que EXISTS)
+        // Filtre dashboard confirmateur : dernière ligne fiches_histo dans la plage (MAX(id)) doit avoir id_confirmateur = connecté.
+        // Si un autre confirmateur passe après sur la même période, seul lui voit la fiche (source de vérité = fiches_histo, pas fiches).
         if (date_champ === 'fiches_histo') {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
-          histoJoinForFichesHisto = `INNER JOIN (SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_confirmateur = ? AND date_creation >= ? AND date_creation <= ?) histo_ids ON fiche.id = histo_ids.id_fiche`;
-          histoParamsForFichesHisto = [req.user.id, startDatetime, endDatetime];
+          confirmateurDernierHistoPlage = { start: startDatetime, end: endDatetime };
+          histoJoinForFichesHisto = `INNER JOIN (
+            SELECT fh.id_fiche, fh.id_confirmateur AS histo_dernier_conf_id
+            FROM fiches_histo fh
+            INNER JOIN (
+              SELECT id_fiche, MAX(id) AS max_id
+              FROM fiches_histo
+              WHERE date_creation >= ? AND date_creation <= ?
+              GROUP BY id_fiche
+            ) histo_last_in_range ON fh.id_fiche = histo_last_in_range.id_fiche AND fh.id = histo_last_in_range.max_id
+            WHERE fh.id_confirmateur = ?
+          ) histo_ids ON fiche.id = histo_ids.id_fiche`;
+          histoParamsForFichesHisto = [startDatetime, endDatetime, req.user.id];
+          histoDernierConfDisplayJoin = 'LEFT JOIN utilisateurs u_histolast ON u_histolast.id = histo_ids.histo_dernier_conf_id';
+          histoDernierConfSelect = ', u_histolast.pseudo as histo_dernier_confirmateur_pseudo';
         } else if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
           // Fiches confirmées : basé sur fiches_histo (id_etat=7, date_creation dans la plage)
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
@@ -969,13 +988,30 @@ router.get('/', authenticate, async (req, res) => {
     if (req.user.fonction === 6 && isActiveSearch) {
       const scopedByOwnHistoJoin = histoJoinForFichesHisto && date_champ === 'fiches_histo';
       if (!scopedByOwnHistoJoin) {
-        whereConditions.push(
-          'EXISTS (SELECT 1 FROM fiches_histo fh_conf_dashboard WHERE fh_conf_dashboard.id_fiche = fiche.id AND fh_conf_dashboard.id_confirmateur = ?)'
-        );
-        params.push(req.user.id);
-        console.log(`[FICHES-${requestId}] Confirmateur: filtre EXISTS fiches_histo (id_confirmateur=${req.user.id}) — périmètre fiches touchées`);
+        if (confirmateurDernierHistoPlage) {
+          whereConditions.push(
+            `EXISTS (
+              SELECT 1 FROM fiches_histo fh_conf_dashboard
+              WHERE fh_conf_dashboard.id_fiche = fiche.id
+              AND fh_conf_dashboard.id_confirmateur = ?
+              AND fh_conf_dashboard.id = (
+                SELECT MAX(fh2.id) FROM fiches_histo fh2
+                WHERE fh2.id_fiche = fiche.id
+                AND fh2.date_creation >= ? AND fh2.date_creation <= ?
+              )
+            )`
+          );
+          params.push(req.user.id, confirmateurDernierHistoPlage.start, confirmateurDernierHistoPlage.end);
+          console.log(`[FICHES-${requestId}] Confirmateur: EXISTS dernière ligne fiches_histo dans la plage (id_confirmateur=${req.user.id})`);
+        } else {
+          whereConditions.push(
+            'EXISTS (SELECT 1 FROM fiches_histo fh_conf_dashboard WHERE fh_conf_dashboard.id_fiche = fiche.id AND fh_conf_dashboard.id_confirmateur = ?)'
+          );
+          params.push(req.user.id);
+          console.log(`[FICHES-${requestId}] Confirmateur: filtre EXISTS fiches_histo (id_confirmateur=${req.user.id}) — sans plage dates`);
+        }
       } else {
-        console.log(`[FICHES-${requestId}] Confirmateur: périmètre via JOIN fiches_histo (id_confirmateur + plage date_creation)`);
+        console.log(`[FICHES-${requestId}] Confirmateur: périmètre via JOIN dernière ligne fiches_histo dans la plage (id_confirmateur = connecté)`);
       }
     }
 
@@ -1040,6 +1076,7 @@ router.get('/', authenticate, async (req, res) => {
        u1.pseudo as confirmateur_pseudo,
        u2.pseudo as confirmateur_2_pseudo,
        u3.pseudo as confirmateur_3_pseudo
+       ${histoDernierConfSelect}
        ${qualifSelect}
        FROM fiches fiche
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
@@ -1052,6 +1089,7 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN utilisateurs u2 ON fiche.id_confirmateur_2 = u2.id
        LEFT JOIN utilisateurs u3 ON fiche.id_confirmateur_3 = u3.id
        ${histoJoinForFichesHisto}
+       ${histoDernierConfDisplayJoin}
        ${qualifJoin}
        ${whereClause}
        GROUP BY fiche.id

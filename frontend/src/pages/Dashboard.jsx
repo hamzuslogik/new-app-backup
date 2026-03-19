@@ -643,6 +643,10 @@ const Dashboard = () => {
 
   // Obtenir les confirmateurs formatés : pour SIGNER avec 2-3 confirmateurs → afficher tous ; sinon → dernier uniquement
   const getConfirmateursFormatted = (fiche) => {
+    // Session confirmateur : afficher le pseudo issu de la dernière ligne fiches_histo dans la période (pas la table fiches)
+    if (user?.fonction === 6 && fiche.histo_dernier_confirmateur_pseudo) {
+      return fiche.histo_dernier_confirmateur_pseudo;
+    }
     const conf1 = fiche.id_confirmateur ? getUserName(fiche.id_confirmateur) : '';
     const conf2 = fiche.id_confirmateur_2 ? getUserName(fiche.id_confirmateur_2) : '';
     const conf3 = fiche.id_confirmateur_3 ? getUserName(fiche.id_confirmateur_3) : '';
@@ -1396,15 +1400,16 @@ const Dashboard = () => {
             </h2>
             {user?.fonction === 6 && appliedFilters.date_champ === 'fiches_histo' && (
               <p className="dashboard-confirmateur-subtitle">
+                Liste : dernière action sur la période dans fiches_histo = vous (si un autre confirmateur repasse après, la fiche apparaît chez lui).{' '}
                 {appliedFilters.date_debut === appliedFilters.date_fin
                   ? (() => {
                       const today = new Date();
                       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                       return appliedFilters.date_debut === todayStr
-                        ? 'Fiches touchées par moi aujourd’hui (historique)'
-                        : `Fiches touchées par moi le ${appliedFilters.date_debut} (historique)`;
+                        ? 'Période : aujourd’hui.'
+                        : `Période : le ${appliedFilters.date_debut}.`;
                     })()
-                  : `Fiches touchées par moi entre le ${appliedFilters.date_debut || '…'} et le ${appliedFilters.date_fin || '…'} (historique)`}
+                  : `Période : du ${appliedFilters.date_debut || '…'} au ${appliedFilters.date_fin || '…'}.`}
               </p>
             )}
           </div>
@@ -1457,8 +1462,12 @@ const Dashboard = () => {
                     <th onClick={() => handleSort('État Final')} className="sortable-header">
                       {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
                     </th>
-                    <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
-                      Confirmateur {getSortIcon('Confirmateur')}
+                    <th
+                      onClick={() => handleSort('Confirmateur')}
+                      className="sortable-header"
+                      title={user?.fonction === 6 ? 'Confirmateur ayant effectué la dernière action sur la période (fiches_histo)' : undefined}
+                    >
+                      Confirmateur{user?.fonction === 6 ? ' (historique)' : ''} {getSortIcon('Confirmateur')}
                     </th>
                     <th onClick={() => handleSort('Commercial')} className="sortable-header">
                       Commercial {getSortIcon('Commercial')}
