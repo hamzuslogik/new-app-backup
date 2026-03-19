@@ -1129,37 +1129,31 @@ router.get('/', authenticate, async (req, res) => {
         fiche.compte_rendu_commercial_pseudo = crByFiche.get(fiche.id) || null;
       });
 
-      // Confirmateurs affichés depuis fiches_histo : uniquement lignes CONFIRMER (7) ou CLIENT HONORE A SUIVRE (9),
-      // avec au moins un id_confirmateur / id_confirmateur_2 / id_confirmateur_3 renseigné sur la ligne.
-      // Affichage réservé aux fiches dont l'état final actuel est 7 ou 9.
-      const ETATS_HISTO_CONF_PSEUDO = [7, 9];
-      const histoConfRows = await query(
-        `SELECT id_fiche, id_confirmateur, id_confirmateur_2, id_confirmateur_3, id
-         FROM fiches_histo
-         WHERE id_fiche IN (${placeholders})
-           AND id_etat IN (7, 9)
-           AND (
-             (id_confirmateur IS NOT NULL AND id_confirmateur > 0)
-             OR (id_confirmateur_2 IS NOT NULL AND id_confirmateur_2 > 0)
-             OR (id_confirmateur_3 IS NOT NULL AND id_confirmateur_3 > 0)
-           )
-         ORDER BY id_fiche ASC, id ASC`,
+      // Colonne Confirmateur (Dashboard / listes) : confirmateur(s) de la DERNIÈRE ligne fiches_histo (MAX(id)),
+      // champs id_confirmateur, id_confirmateur_2, id_confirmateur_3 sur cette ligne uniquement.
+      const lastHistoConfRows = await query(
+        `SELECT fh.id_fiche, fh.id_confirmateur, fh.id_confirmateur_2, fh.id_confirmateur_3
+         FROM fiches_histo fh
+         INNER JOIN (
+           SELECT id_fiche, MAX(id) AS max_id
+           FROM fiches_histo
+           WHERE id_fiche IN (${placeholders})
+           GROUP BY id_fiche
+         ) fh_last ON fh.id_fiche = fh_last.id_fiche AND fh.id = fh_last.max_id`,
         ficheIds
       );
       const confIdsByFiche = new Map();
-      for (const row of histoConfRows) {
+      for (const row of lastHistoConfRows) {
         const fid = Number(row.id_fiche);
         if (!Number.isFinite(fid)) continue;
-        if (!confIdsByFiche.has(fid)) confIdsByFiche.set(fid, []);
-        const arr = confIdsByFiche.get(fid);
-        if (arr.length >= 3) continue;
         const candidates = [row.id_confirmateur, row.id_confirmateur_2, row.id_confirmateur_3]
           .map((n) => Number(n))
           .filter((n) => Number.isFinite(n) && n > 0);
+        const uniq = [];
         for (const cid of candidates) {
-          if (arr.length >= 3) break;
-          if (!arr.includes(cid)) arr.push(cid);
+          if (!uniq.includes(cid)) uniq.push(cid);
         }
+        confIdsByFiche.set(fid, uniq.slice(0, 3));
       }
       const allConfIds = [...new Set(ficheIds.flatMap((fid) => confIdsByFiche.get(Number(fid)) || []))];
       let idToPseudo = new Map();
@@ -1169,11 +1163,6 @@ router.get('/', authenticate, async (req, res) => {
         idToPseudo = new Map(userRows.map((u) => [Number(u.id), u.pseudo]));
       }
       fiches.forEach((fiche) => {
-        const etat = Number(fiche.id_etat_final);
-        if (!ETATS_HISTO_CONF_PSEUDO.includes(etat)) {
-          fiche.histo_confirmateurs_pseudo = null;
-          return;
-        }
         const ids = confIdsByFiche.get(Number(fiche.id)) || [];
         const parts = ids.map((id) => idToPseudo.get(id) || `ID${id}`).filter(Boolean);
         fiche.histo_confirmateurs_pseudo = parts.length > 0 ? parts.join(' | ') : null;
