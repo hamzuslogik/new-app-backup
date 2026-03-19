@@ -46,6 +46,32 @@ function getConfFieldsForHisto(source = {}, fallback = {}) {
   return { cols, vals };
 }
 
+/** Parse id état pour comparaisons fiables (évite 7 !== "7" et historique manquant) */
+function parseEtatId(v) {
+  if (v === undefined || v === null || v === '') return NaN;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/**
+ * Faut-il insérer une ligne fiches_histo sur PUT /fiches/:id ?
+ * — Changement d'état (numérique), ou même état avec mise à jour des infos liées (sous-état, RDV, commentaire, etc.)
+ */
+function shouldInsertFichesHistoPut(ficheData, fiche) {
+  const newEt = parseEtatId(ficheData.id_etat_final);
+  if (!Number.isFinite(newEt)) return false;
+  const oldEt = parseEtatId(fiche.id_etat_final);
+  if (!Number.isFinite(oldEt) || newEt !== oldEt) return true;
+  return (
+    ficheData.id_sous_etat !== undefined ||
+    ficheData.conf_commentaire_produit !== undefined ||
+    ficheData.date_rdv_time !== undefined ||
+    ficheData.date_sign_time !== undefined ||
+    ficheData.conf_rdv_avec !== undefined ||
+    ficheData.id_commercial !== undefined
+  );
+}
+
 /**
  * Enregistre un audit dans la table controle_qualite (page Contrôle Qualité).
  * En cas d'erreur (ex: table absente), log uniquement pour ne pas casser la réponse.
@@ -3557,8 +3583,8 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       }
     }
     
-    // Si modification de l'état final, créer une entrée dans l'historique
-    if (field === 'id_etat_final' && value && value !== fiche.id_etat_final) {
+    // Si modification de l'état final, créer une entrée dans l'historique (comparaison numérique : 7 et "7" = même état)
+    if (field === 'id_etat_final' && value != null && value !== '' && parseEtatId(value) !== parseEtatId(fiche.id_etat_final)) {
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
       
       // Attribuer id_qualite si c'est un utilisateur qualité et que c'est la première modification
@@ -3579,9 +3605,10 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       
       const histoConf = getHistoConfirmateur(req, fiche);
       const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
+      const dateRdvHisto = fiche.date_rdv_time || null;
       await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation) VALUES (?, ?, ?, ?, ?)`,
-        [id, value, histoConf, histoSousEtat, now]
+        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, parseInt(value, 10), histoConf, histoSousEtat, dateRdvHisto, now]
       );
       
       // Si on passe de l'état CONFIRMER (7) à un état du groupe 2, supprimer la date du RDV
@@ -4164,7 +4191,7 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
     );
 
     // Enregistrer dans l'historique (avec id_confirmateur : connecté ou choisi par RE/RP/admin/backoffice) + conf_* si état 7
-    if (oldEtatId !== newEtatId) {
+    if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
       const histoConf = getHistoConfirmateur(req, fiche);
       const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
       let dateRdvHisto = null;
@@ -4273,8 +4300,8 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
       });
     }
 
-    // Vérifier que la fiche existe (id_sous_etat pour fiches_histo)
-    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat FROM fiches WHERE id = ?', [id]);
+    // Vérifier que la fiche existe (id_sous_etat, date_rdv_time pour fiches_histo)
+    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time FROM fiches WHERE id = ?', [id]);
     if (!fiche) {
       return res.status(404).json({
         success: false,
@@ -4324,12 +4351,13 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
     );
 
     // Enregistrer dans l'historique si changement d'état
-    if (oldEtatId !== newEtatId) {
+    if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
       const histoConf = getHistoConfirmateur(req, fiche);
       const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
+      const dateRdvHisto = fiche.date_rdv_time || null;
       await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation) VALUES (?, ?, ?, ?, ?)`,
-        [id, newEtatId, histoConf, histoSousEtat, now]
+        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, newEtatId, histoConf, histoSousEtat, dateRdvHisto, now]
       );
 
       // Logger la modification
@@ -4411,7 +4439,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
         message: 'Vous n\'avez pas la permission de valider des fiches qualité'
       });
     }
-    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat FROM fiches WHERE id = ?', [id]);
+    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time FROM fiches WHERE id = ?', [id]);
     if (!fiche) {
       return res.status(404).json({
         success: false,
@@ -4467,11 +4495,12 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
       [newEtatId, id_sous_etat, commentaire_ko || null, now, now, id]
     );
     
-    if (oldEtatId !== newEtatId) {
+    if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
       const histoConf = getHistoConfirmateur(req, fiche);
+      const dateRdvHistoKo = fiche.date_rdv_time || null;
       await query(
-        'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation) VALUES (?, ?, ?, ?, ?)',
-        [id, newEtatId, histoConf, id_sous_etat, now]
+        'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)',
+        [id, newEtatId, histoConf, id_sous_etat, dateRdvHistoKo, now]
       );
       await logModification(
         id,
@@ -4565,7 +4594,7 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
         message: 'Vous n\'avez pas la permission de valider des fiches qualité'
       });
     }
-    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat FROM fiches WHERE id = ?', [id]);
+    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time FROM fiches WHERE id = ?', [id]);
     if (!fiche) {
       return res.status(404).json({
         success: false,
@@ -4612,11 +4641,12 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
       [newEtatId, id_sous_etat, commentaire_hc || null, now, now, id]
     );
     
-    if (oldEtatId !== newEtatId) {
+    if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
       const histoConf = getHistoConfirmateur(req, fiche);
+      const dateRdvHistoHc = fiche.date_rdv_time || null;
       await query(
-        'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_creation) VALUES (?, ?, ?, ?, ?)',
-        [id, newEtatId, histoConf, id_sous_etat, now]
+        'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)',
+        [id, newEtatId, histoConf, id_sous_etat, dateRdvHistoHc, now]
       );
       await logModification(
         id,
@@ -5149,42 +5179,66 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
     }
 
-    // Gérer le changement d'état
-    if (ficheData.id_etat_final && ficheData.id_etat_final !== fiche.id_etat_final) {
-    const oldEtatId = fiche.id_etat_final;
-    const newEtatId = parseInt(ficheData.id_etat_final);
-    
-    // Mettre à jour automatiquement date_appel_time lors du changement d'état
-    ficheData.date_appel_time = now;
-    
-    // Si on passe de l'état CONFIRMER (7) à un état du groupe 2, supprimer la date du RDV
-    if (oldEtatId === 7 && newEtatId !== 7) {
-      // Récupérer le groupe du nouvel état
-      const newEtat = await queryOne(
-        'SELECT groupe FROM etats WHERE id = ?',
-        [newEtatId]
-      );
-      
-      // Si le nouvel état est dans le groupe 2, supprimer date_rdv_time
-      if (newEtat && (newEtat.groupe === 2 || newEtat.groupe === '2')) {
-        ficheData.date_rdv_time = null;
-        console.log(`Date RDV sera supprimée pour la fiche ${id} : passage de l'état CONFIRMER (7) à l'état ${newEtatId} (groupe 2)`);
+    // Gérer le changement d'état + historique fiches_histo (changement réel ou même état avec infos mises à jour)
+    if (shouldInsertFichesHistoPut(ficheData, fiche)) {
+      const oldEtatId = parseEtatId(fiche.id_etat_final);
+      const newEtatId = parseEtatId(ficheData.id_etat_final);
+
+      // Mettre à jour automatiquement date_appel_time lors d'un enregistrement lié à l'état
+      ficheData.date_appel_time = now;
+
+      // Si on passe de l'état CONFIRMER (7) à un état du groupe 2, supprimer la date du RDV
+      if (oldEtatId === 7 && newEtatId !== 7) {
+        const newEtat = await queryOne(
+          'SELECT groupe FROM etats WHERE id = ?',
+          [newEtatId]
+        );
+
+        if (newEtat && (newEtat.groupe === 2 || newEtat.groupe === '2')) {
+          ficheData.date_rdv_time = null;
+          console.log(`Date RDV sera supprimée pour la fiche ${id} : passage de l'état CONFIRMER (7) à l'état ${newEtatId} (groupe 2)`);
+        }
       }
-    }
-    
-    // Créer une entrée dans l'historique (id_confirmateur, id_sous_etat) + champs conf_* si état 7
-    const histoConf = getHistoConfirmateur(req, fiche);
-    const histoSousEtat = (ficheData.id_sous_etat != null) ? ficheData.id_sous_etat : ((fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null);
-    const dateRdvHisto = ficheData.date_rdv_time || fiche.date_rdv_time || null;
-    const isEtat7 = parseInt(ficheData.id_etat_final) === 7;
-    const { cols: confCols, vals: confVals } = isEtat7 ? getConfFieldsForHisto(ficheData, fiche) : { cols: [], vals: [] };
-    const histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
-    const histoPlaceholders = histoCols.map(() => '?').join(', ');
-    const histoValues = [id, ficheData.id_etat_final, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
-    await query(
-      `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
-      histoValues
-    );
+
+      // Créer une entrée dans l'historique (id_confirmateur, id_sous_etat) + champs conf_* si état 7 + champs utiles pour les autres états
+      const histoConf = getHistoConfirmateur(req, fiche);
+      const histoSousEtat = Object.prototype.hasOwnProperty.call(ficheData, 'id_sous_etat')
+        ? ficheData.id_sous_etat
+        : (fiche && fiche.id_sous_etat != null ? fiche.id_sous_etat : null);
+      const dateRdvHisto = Object.prototype.hasOwnProperty.call(ficheData, 'date_rdv_time')
+        ? (ficheData.date_rdv_time === '' ? null : ficheData.date_rdv_time)
+        : (fiche.date_rdv_time || null);
+      const isEtat7 = newEtatId === 7;
+      const { cols: confCols, vals: confVals } = isEtat7 ? getConfFieldsForHisto(ficheData, fiche) : { cols: [], vals: [] };
+      const histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
+      const histoValues = [id, newEtatId, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
+
+      const pushHistoCol = (col, val) => {
+        if (histoCols.includes(col)) return;
+        histoCols.push(col);
+        histoValues.push(val);
+      };
+
+      if (!isEtat7 && Object.prototype.hasOwnProperty.call(ficheData, 'conf_commentaire_produit')) {
+        pushHistoCol('conf_commentaire_produit', ficheData.conf_commentaire_produit === '' ? null : ficheData.conf_commentaire_produit);
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'conf_rdv_avec')) {
+        pushHistoCol('conf_rdv_avec', ficheData.conf_rdv_avec === '' ? null : ficheData.conf_rdv_avec);
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'date_sign_time')) {
+        pushHistoCol('date_sign_time', ficheData.date_sign_time === '' ? null : ficheData.date_sign_time);
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial')) {
+        const ic = ficheData.id_commercial;
+        const n = ic === '' || ic === undefined || ic === null ? NaN : parseInt(ic, 10);
+        pushHistoCol('id_commercial', Number.isFinite(n) ? n : null);
+      }
+
+      const histoPlaceholders = histoCols.map(() => '?').join(', ');
+      await query(
+        `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
+        histoValues
+      );
     }
 
     // Calculer la consommation si surface_chauffee ou consommation_chauffage change
