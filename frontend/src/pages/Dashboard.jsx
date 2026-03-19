@@ -289,8 +289,8 @@ const Dashboard = () => {
         // Si on fait une recherche par critère uniquement, ne pas appliquer les filtres de date par défaut
         // Supprimer les dates si elles sont les dates d'aujourd'hui (valeurs par défaut) et qu'on cherche par critère
         if (key === 'date_debut' || key === 'date_fin' || key === 'date_champ' || key === 'time_debut' || key === 'time_fin') {
-          // Si critere est rempli : recherche globale (sauf session confirmateur : garder fiches_histo + plage)
-          if (searchParams.critere && user?.fonction !== 6) {
+          // Si critere est rempli : recherche globale (y compris confirmateur : enlever plage / date_champ par défaut)
+          if (searchParams.critere) {
             const today = new Date().toISOString().split('T')[0];
             if (key === 'date_debut' && searchParams.date_debut === today) {
               delete searchParams[key];
@@ -311,24 +311,28 @@ const Dashboard = () => {
         }
       });
 
-      // Session confirmateur : toujours fiches_histo (actions du connecté) + plage de dates pour l'API
+      // Session confirmateur : fiches_histo + plage sauf si recherche par critère (résultats globaux côté API)
+      const critTrim =
+        typeof searchParams.critere === 'string' ? searchParams.critere.trim() : '';
       if (user?.fonction === 6) {
         if (searchParams.id_etat_final === 7 || searchParams.id_etat_final === '' || searchParams.id_etat_final == null) {
           delete searchParams.id_etat_final;
         }
-        searchParams.date_champ = 'fiches_histo';
-        const { dateStr, timeStart, timeEnd } = getTodayDateRange();
-        if (!searchParams.date_debut || String(searchParams.date_debut).trim() === '') {
-          searchParams.date_debut = dateStr;
-        }
-        if (!searchParams.date_fin || String(searchParams.date_fin).trim() === '') {
-          searchParams.date_fin = dateStr;
-        }
-        if (!searchParams.time_debut || String(searchParams.time_debut).trim() === '') {
-          searchParams.time_debut = timeStart;
-        }
-        if (!searchParams.time_fin || String(searchParams.time_fin).trim() === '') {
-          searchParams.time_fin = timeEnd;
+        if (!critTrim) {
+          searchParams.date_champ = 'fiches_histo';
+          const { dateStr, timeStart, timeEnd } = getTodayDateRange();
+          if (!searchParams.date_debut || String(searchParams.date_debut).trim() === '') {
+            searchParams.date_debut = dateStr;
+          }
+          if (!searchParams.date_fin || String(searchParams.date_fin).trim() === '') {
+            searchParams.date_fin = dateStr;
+          }
+          if (!searchParams.time_debut || String(searchParams.time_debut).trim() === '') {
+            searchParams.time_debut = timeStart;
+          }
+          if (!searchParams.time_fin || String(searchParams.time_fin).trim() === '') {
+            searchParams.time_fin = timeEnd;
+          }
         }
       }
 
@@ -1398,20 +1402,6 @@ const Dashboard = () => {
                   ? `Résultats de la recherche ${pagination.total}` 
                   : `${pagination.total}`}
             </h2>
-            {user?.fonction === 6 && appliedFilters.date_champ === 'fiches_histo' && (
-              <p className="dashboard-confirmateur-subtitle">
-                Liste : dernière action sur la période dans fiches_histo = vous (si un autre confirmateur repasse après, la fiche apparaît chez lui).{' '}
-                {appliedFilters.date_debut === appliedFilters.date_fin
-                  ? (() => {
-                      const today = new Date();
-                      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                      return appliedFilters.date_debut === todayStr
-                        ? 'Période : aujourd’hui.'
-                        : `Période : le ${appliedFilters.date_debut}.`;
-                    })()
-                  : `Période : du ${appliedFilters.date_debut || '…'} au ${appliedFilters.date_fin || '…'}.`}
-              </p>
-            )}
           </div>
           {(isFetchingList) && (
             <div className="search-loading-indicator">

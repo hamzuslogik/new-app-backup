@@ -539,6 +539,11 @@ router.get('/', authenticate, async (req, res) => {
                           req.query.id_confirmateur || req.query.id_re || req.query.id_centre;
     console.log(`[FICHES-${requestId}] isActiveSearch=${!!isActiveSearch} (fiche_search=${!!req.query.fiche_search}, affectation=${!!req.query.affectation}, suivi=${!!req.query.suivi}, critere=${!!req.query.critere})`);
 
+    /** Confirmateur : recherche par critère ou tel → résultats globaux, sans filtre « dernier histo / moi » */
+    const hasCritereOuTelSearch =
+      (critere !== undefined && critere !== null && String(critere).trim() !== '') ||
+      (tel !== undefined && tel !== null && String(tel).trim() !== '');
+
     if (!isActiveSearch) {
       if (req.user.fonction === 5) {
         // Commerciaux : RDV du jour avec état final 7
@@ -881,8 +886,8 @@ router.get('/', authenticate, async (req, res) => {
         const timeEnd = time_fin && String(time_fin).trim() !== '' ? time_fin : '23:59:59';
         
         // Filtre dashboard confirmateur : dernière ligne fiches_histo dans la plage (MAX(id)) doit avoir id_confirmateur = connecté.
-        // Si un autre confirmateur passe après sur la même période, seul lui voit la fiche (source de vérité = fiches_histo, pas fiches).
-        if (date_champ === 'fiches_histo') {
+        // Désactivé si recherche par critère / tel : résultats indépendants du confirmateur connecté.
+        if (date_champ === 'fiches_histo' && !(req.user.fonction === 6 && hasCritereOuTelSearch)) {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           confirmateurDernierHistoPlage = { start: startDatetime, end: endDatetime };
@@ -900,6 +905,8 @@ router.get('/', authenticate, async (req, res) => {
           histoParamsForFichesHisto = [startDatetime, endDatetime, req.user.id];
           histoDernierConfDisplayJoin = 'LEFT JOIN utilisateurs u_histolast ON u_histolast.id = histo_ids.histo_dernier_conf_id';
           histoDernierConfSelect = ', u_histolast.pseudo as histo_dernier_confirmateur_pseudo';
+        } else if (date_champ === 'fiches_histo' && req.user.fonction === 6 && hasCritereOuTelSearch) {
+          console.log(`[FICHES-${requestId}] Confirmateur: critère/tel — pas de JOIN fiches_histo (recherche globale)`);
         } else if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
           // Fiches confirmées : basé sur fiches_histo (id_etat=7, date_creation dans la plage)
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
@@ -985,7 +992,8 @@ router.get('/', authenticate, async (req, res) => {
 
     // Session confirmateur (Dashboard / fiche_search) : uniquement des fiches ayant au moins une entrée
     // fiches_histo avec id_confirmateur = utilisateur connecté, sauf si le JOIN fiches_histo le garantit déjà.
-    if (req.user.fonction === 6 && isActiveSearch) {
+    // Pas de périmètre confirmateur si recherche par critère / tel (résultats globaux).
+    if (req.user.fonction === 6 && isActiveSearch && !hasCritereOuTelSearch) {
       const scopedByOwnHistoJoin = histoJoinForFichesHisto && date_champ === 'fiches_histo';
       if (!scopedByOwnHistoJoin) {
         if (confirmateurDernierHistoPlage) {
