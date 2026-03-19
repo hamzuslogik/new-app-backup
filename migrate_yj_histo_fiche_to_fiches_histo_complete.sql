@@ -686,7 +686,9 @@ SET @select_values = CONCAT(@select_values,
 );
 
 -- Construire la requête complète
--- IMPORTANT : On migre TOUTES les entrées historiques avec id_fiche valide (NOT NULL et > 0)
+-- IMPORTANT : On migre les entrées avec id_fiche valide (NOT NULL et > 0).
+-- Anti-doublons : ne pas insérer si une ligne existe déjà dans fiches_histo avec le même
+-- id_fiche, id_etat et date_creation à ±5 secondes (tolérance arrondis / re-migration).
 SET @sql_query = CONCAT(
     'INSERT INTO `fiches_histo` (', @insert_columns, ') ',
     'SELECT ',
@@ -694,6 +696,12 @@ SET @sql_query = CONCAT(
     'FROM `yj_histo_fiche` hf ',
     'WHERE ',
     @id_fiche_select, ' IS NOT NULL AND ', @id_fiche_select, ' > 0 ',
+    'AND NOT EXISTS (',
+        'SELECT 1 FROM `fiches_histo` fh_dup ',
+        'WHERE fh_dup.`id_fiche` = ', @id_fiche_select, ' ',
+        'AND fh_dup.`id_etat` = ', @id_etat_select, ' ',
+        'AND ABS(TIMESTAMPDIFF(SECOND, fh_dup.`date_creation`, ', @date_creation_select, ')) <= 5',
+    ') ',
     'ORDER BY ', @id_fiche_select, ', ', @date_creation_select
 );
 
@@ -907,10 +915,9 @@ SET SQL_SAFE_UPDATES = 1;
 --    (l'historique sera disponible dès que la fiche sera créée)
 -- 5. Si l'état n'est pas trouvé, l'état par défaut (1 = EN-ATTENTE) est utilisé
 -- 6. DISTINCT a été retiré pour garantir que toutes les entrées historiques sont migrées
--- 7. La tolérance de doublons est de 1 seconde pour éviter les doublons dus aux arrondis de dates
--- 8. CORRECTION IMPORTANTE : La condition NOT EXISTS vérifie maintenant la combinaison complète
---    (id_fiche, id_etat, date_creation) pour permettre la migration de toutes les lignes
---    même si elles ont le même id_fiche et id_etat mais des dates différentes
+-- 7. Tolérance ±5 secondes sur date_creation (alignée sur la requête de diagnostic « non migrées »)
+-- 8. NOT EXISTS sur (id_fiche, id_etat, date_creation) : relancer le script ne recrée pas les mêmes lignes ;
+--    deux transitions distinctes même jour restent migrées si leurs date_creation diffèrent de plus de 5 s
 --
 -- 9. Le script ramène tous les champs possibles de yj_histo_fiche vers fiches_histo.
 --    Détection insensible à la casse. Mapping explicite :

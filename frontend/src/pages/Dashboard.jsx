@@ -115,6 +115,20 @@ const Dashboard = () => {
       if (newFilters.id_etat_final) {
         newFilters.id_etat_final = parseInt(newFilters.id_etat_final);
       }
+      if (user?.fonction === 6) {
+        newFilters.date_champ = 'fiches_histo';
+        const t = new Date();
+        const todayStr = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        if (!newFilters.date_debut || String(newFilters.date_debut).trim() === '') {
+          newFilters.date_debut = todayStr;
+        }
+        if (!newFilters.date_fin || String(newFilters.date_fin).trim() === '') {
+          newFilters.date_fin = todayStr;
+        }
+        if (newFilters.id_etat_final === 7 || newFilters.id_etat_final === '7') {
+          delete newFilters.id_etat_final;
+        }
+      }
       setFilters(newFilters);
       setAppliedFilters(newFilters);
       setShowFilters(true);
@@ -275,8 +289,8 @@ const Dashboard = () => {
         // Si on fait une recherche par critère uniquement, ne pas appliquer les filtres de date par défaut
         // Supprimer les dates si elles sont les dates d'aujourd'hui (valeurs par défaut) et qu'on cherche par critère
         if (key === 'date_debut' || key === 'date_fin' || key === 'date_champ' || key === 'time_debut' || key === 'time_fin') {
-          // Si critere est rempli et que les dates sont les dates d'aujourd'hui, les supprimer pour permettre une recherche globale
-          if (searchParams.critere) {
+          // Si critere est rempli : recherche globale (sauf session confirmateur : garder fiches_histo + plage)
+          if (searchParams.critere && user?.fonction !== 6) {
             const today = new Date().toISOString().split('T')[0];
             if (key === 'date_debut' && searchParams.date_debut === today) {
               delete searchParams[key];
@@ -287,7 +301,6 @@ const Dashboard = () => {
               return;
             }
             if ((key === 'date_champ' || key === 'time_debut' || key === 'time_fin') && searchParams.critere) {
-              // Supprimer ces paramètres si on cherche uniquement par critère
               delete searchParams[key];
               return;
             }
@@ -298,16 +311,27 @@ const Dashboard = () => {
         }
       });
 
-      // Session confirmateur : utiliser fiches_histo (fiches statuées par le confirmateur)
+      // Session confirmateur : toujours fiches_histo (actions du connecté) + plage de dates pour l'API
       if (user?.fonction === 6) {
         if (searchParams.id_etat_final === 7 || searchParams.id_etat_final === '' || searchParams.id_etat_final == null) {
           delete searchParams.id_etat_final;
         }
-        if (searchParams.date_champ === 'fiches_histo_confirmation') {
-          searchParams.date_champ = 'fiches_histo';
+        searchParams.date_champ = 'fiches_histo';
+        const { dateStr, timeStart, timeEnd } = getTodayDateRange();
+        if (!searchParams.date_debut || String(searchParams.date_debut).trim() === '') {
+          searchParams.date_debut = dateStr;
+        }
+        if (!searchParams.date_fin || String(searchParams.date_fin).trim() === '') {
+          searchParams.date_fin = dateStr;
+        }
+        if (!searchParams.time_debut || String(searchParams.time_debut).trim() === '') {
+          searchParams.time_debut = timeStart;
+        }
+        if (!searchParams.time_fin || String(searchParams.time_fin).trim() === '') {
+          searchParams.time_fin = timeEnd;
         }
       }
-      
+
       return searchParams;
     }
     
@@ -1291,20 +1315,24 @@ const Dashboard = () => {
                 <div className="form-group">
                   <label>Champ de date</label>
                   <select
-                    value={filters.date_champ || ''}
+                    value={user?.fonction === 6 ? 'fiches_histo' : (filters.date_champ || '')}
                     onChange={(e) => handleFilterChange('date_champ', e.target.value)}
+                    disabled={user?.fonction === 6}
+                    title={user?.fonction === 6 ? 'Session confirmateur : uniquement vos actions (fiches_histo)' : undefined}
                   >
-                    <option value="">Sélectionnez date</option>
-                    <option value="date_modif_time">Date Modification</option>
-                    <option value="date_insert_time">Date Insertion</option>
-                    <option value="date_appel_time">Date d'appel</option>
-                    {user?.fonction !== 3 && (
-                      <option value="date_rdv_time">Date Planning</option>
-                    )}
                     {user?.fonction === 6 ? (
-                      <option value="fiches_histo">Date statut (fiches_histo)</option>
+                      <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
                     ) : (
-                      <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
+                      <>
+                        <option value="">Sélectionnez date</option>
+                        <option value="date_modif_time">Date Modification</option>
+                        <option value="date_insert_time">Date Insertion</option>
+                        <option value="date_appel_time">Date d'appel</option>
+                        {user?.fonction !== 3 && (
+                          <option value="date_rdv_time">Date Planning</option>
+                        )}
+                        <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
+                      </>
                     )}
                   </select>
                 </div>
@@ -1366,13 +1394,19 @@ const Dashboard = () => {
                   ? `Résultats de la recherche ${pagination.total}` 
                   : `${pagination.total}`}
             </h2>
-            {user?.fonction === 6 && appliedFilters.date_champ === 'fiches_histo' && appliedFilters.date_debut === appliedFilters.date_fin && (() => {
-              const today = new Date();
-              const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-              return appliedFilters.date_debut === todayStr ? (
-                <p className="dashboard-confirmateur-subtitle">Fiches modifiées par moi dans la journée</p>
-              ) : null;
-            })()}
+            {user?.fonction === 6 && appliedFilters.date_champ === 'fiches_histo' && (
+              <p className="dashboard-confirmateur-subtitle">
+                {appliedFilters.date_debut === appliedFilters.date_fin
+                  ? (() => {
+                      const today = new Date();
+                      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                      return appliedFilters.date_debut === todayStr
+                        ? 'Fiches touchées par moi aujourd’hui (historique)'
+                        : `Fiches touchées par moi le ${appliedFilters.date_debut} (historique)`;
+                    })()
+                  : `Fiches touchées par moi entre le ${appliedFilters.date_debut || '…'} et le ${appliedFilters.date_fin || '…'} (historique)`}
+              </p>
+            )}
           </div>
           {(isFetchingList) && (
             <div className="search-loading-indicator">
@@ -1899,20 +1933,24 @@ const Dashboard = () => {
                 <div className="form-group">
                   <label>Champ de date</label>
                   <select
-                    value={filters.date_champ || ''}
+                    value={user?.fonction === 6 ? 'fiches_histo' : (filters.date_champ || '')}
                     onChange={(e) => handleFilterChange('date_champ', e.target.value)}
+                    disabled={user?.fonction === 6}
+                    title={user?.fonction === 6 ? 'Session confirmateur : uniquement vos actions (fiches_histo)' : undefined}
                   >
-                    <option value="">Sélectionnez date</option>
-                    <option value="date_modif_time">Date Modification</option>
-                    <option value="date_insert_time">Date Insertion</option>
-                    <option value="date_appel_time">Date d'appel</option>
-                    {user?.fonction !== 3 && (
-                      <option value="date_rdv_time">Date Planning</option>
-                    )}
                     {user?.fonction === 6 ? (
-                      <option value="fiches_histo">Date statut (fiches_histo)</option>
+                      <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
                     ) : (
-                      <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
+                      <>
+                        <option value="">Sélectionnez date</option>
+                        <option value="date_modif_time">Date Modification</option>
+                        <option value="date_insert_time">Date Insertion</option>
+                        <option value="date_appel_time">Date d'appel</option>
+                        {user?.fonction !== 3 && (
+                          <option value="date_rdv_time">Date Planning</option>
+                        )}
+                        <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
+                      </>
                     )}
                   </select>
                 </div>

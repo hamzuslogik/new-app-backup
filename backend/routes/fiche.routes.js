@@ -564,16 +564,8 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_commercial = ?');
         params.push(req.user.id);
       } else if (req.user.fonction === 6) {
-        // Confirmateurs : en recherche par critère (tel, CP, etc.), afficher le résultat quel que soit id_confirmateur
-        // Si date_champ=fiches_histo : fiches_histo filtre déjà par id_confirmateur=connecté, pas besoin de COALESCE
-        const hasRechercheParCritere = !!(req.query.tel || critere);
-        const useFichesHisto = req.query.date_champ === 'fiches_histo';
-        if (hasRechercheParCritere) {
-          // Ne pas filtrer par confirmateur : afficher toute fiche correspondant à la recherche
-        } else if (!useFichesHisto) {
-          whereConditions.push('COALESCE(fiche.id_confirmateur_3, fiche.id_confirmateur_2, fiche.id_confirmateur) = ?');
-          params.push(req.user.id);
-        }
+        // Confirmateurs : périmètre "fiches touchées par le connecté" appliqué après les filtres de date
+        // (EXISTS sur fiches_histo ou JOIN si date_champ=fiches_histo). Ne pas filtrer ici par COALESCE.
       }
     }
 
@@ -969,6 +961,21 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.date_insert_time >= ? AND fiche.date_insert_time <= ?');
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`);
         console.log(`[FICHES-${requestId}] Filtre par défaut: fiches créées aujourd'hui (date_insert_time)`);
+      }
+    }
+
+    // Session confirmateur (Dashboard / fiche_search) : uniquement des fiches ayant au moins une entrée
+    // fiches_histo avec id_confirmateur = utilisateur connecté, sauf si le JOIN fiches_histo le garantit déjà.
+    if (req.user.fonction === 6 && isActiveSearch) {
+      const scopedByOwnHistoJoin = histoJoinForFichesHisto && date_champ === 'fiches_histo';
+      if (!scopedByOwnHistoJoin) {
+        whereConditions.push(
+          'EXISTS (SELECT 1 FROM fiches_histo fh_conf_dashboard WHERE fh_conf_dashboard.id_fiche = fiche.id AND fh_conf_dashboard.id_confirmateur = ?)'
+        );
+        params.push(req.user.id);
+        console.log(`[FICHES-${requestId}] Confirmateur: filtre EXISTS fiches_histo (id_confirmateur=${req.user.id}) — périmètre fiches touchées`);
+      } else {
+        console.log(`[FICHES-${requestId}] Confirmateur: périmètre via JOIN fiches_histo (id_confirmateur + plage date_creation)`);
       }
     }
 
