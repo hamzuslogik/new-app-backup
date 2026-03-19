@@ -36,6 +36,9 @@ const TIME_SLOTS = [
   { hour: '19:30:00', name: '20H ( 19h30 à 20h )' }
 ];
 
+// États sans transition possible (aligné sur backend management.routes.js) : pas de « nouvel état »
+const ETATS_SANS_NOUVEL_ETAT = [22, 25, 26, 34, 35]; // ANNULER 2 FOIS, REFUSER 2 FOIS, RDV ANNULER 2 FOIS, HHC FINANCEMENT, HHC TECHNIQUE
+
 // Helper pour calculer le timeKey à partir d'une heure (HH:MM:SS)
 // Évite les problèmes de fuseau horaire en calculant directement les secondes depuis minuit UTC
 function hourToTimeKey(hour) {
@@ -670,9 +673,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     });
   };
 
-  // Initialiser les données NRP si la fiche est déjà en état NRP
+  // Initialiser les données NRP si la fiche est déjà en état NRP (y compris après re-sélection du même état dans la liste)
   useEffect(() => {
-    if (ficheData && ficheData.id_etat_final === 2 && !selectedEtat) {
+    if (ficheData && ficheData.id_etat_final === 2 && (selectedEtat === null || selectedEtat === 2)) {
       // Si la fiche est en état NRP, initialiser les données du formulaire
       if (ficheData.date_appel_time) {
         const dateAppel = new Date(ficheData.date_appel_time);
@@ -1357,16 +1360,31 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // Gérer le changement d'état
   const handleEtatChange = (newEtatId) => {
     setSelectedEtat(newEtatId);
-    // Si l'état est 19 (Rappel pour Bureau), initialiser la date rappel à J+2 à 09:00
+    // Si l'état est 19 (Rappel pour Bureau) : si déjà en 19, reprendre la date/heure de la fiche ; sinon J+2 à 09:00
     if (newEtatId === 19) {
-      const inTwoDays = new Date();
-      inTwoDays.setDate(inTwoDays.getDate() + 2);
-      const dateRappelStr = inTwoDays.toISOString().split('T')[0];
-      setEtatFormData(prev => ({
-        ...prev,
-        date_rappel_date: dateRappelStr,
-        date_rappel_time: '09:00'
-      }));
+      if (Number(ficheData?.id_etat_final) === 19 && ficheData?.date_rdv_time) {
+        const raw = String(ficheData.date_rdv_time);
+        const parts = raw.split(/[\sT]/);
+        const dateRappelStr = parts[0] || '';
+        const timePart = parts[1] || '09:00:00';
+        const dateRappelTime = timePart.substring(0, 5);
+        setEtatFormData(prev => ({
+          ...prev,
+          date_rappel_date: dateRappelStr,
+          date_rappel_time: dateRappelTime,
+          id_sous_etat: ficheData.id_sous_etat != null ? String(ficheData.id_sous_etat) : (prev.id_sous_etat || ''),
+          conf_commentaire_produit: ficheData.conf_commentaire_produit || prev.conf_commentaire_produit || ''
+        }));
+      } else {
+        const inTwoDays = new Date();
+        inTwoDays.setDate(inTwoDays.getDate() + 2);
+        const dateRappelStr = inTwoDays.toISOString().split('T')[0];
+        setEtatFormData(prev => ({
+          ...prev,
+          date_rappel_date: dateRappelStr,
+          date_rappel_time: '09:00'
+        }));
+      }
     }
     // Si l'état est 7 (confirmer), initialiser les valeurs du formulaire
     if (newEtatId === 7) {
@@ -1632,6 +1650,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     try {
       if (!selectedEtat) {
         alert('Veuillez sélectionner un état');
+        return;
+      }
+
+      if (ficheData?.id_etat_final != null && ETATS_SANS_NOUVEL_ETAT.includes(Number(ficheData.id_etat_final))) {
+        alert('Impossible de modifier l\'état : la fiche est dans un état définitif (annuler ou refus 2 fois, RDV annuler 2 fois, HHC financement à vérifier ou HHC technique).');
         return;
       }
 
@@ -2071,6 +2094,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   }
 
   const fiche = ficheData;
+
+  const isChangementEtatBloque = fiche.id_etat_final != null && ETATS_SANS_NOUVEL_ETAT.includes(Number(fiche.id_etat_final));
 
   const userFonctionTop = user ? Number(user.fonction) : null;
   const canEditModificationRapideTop = userFonctionTop === 14 || userFonctionTop === 13 || userFonctionTop === 11 || (typeof hasPermission === 'function' && hasPermission('fiche_quick_edit'));
@@ -4052,7 +4077,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
             {/* Afficher les formulaires pour les commerciaux après sélection d'une option (uniquement si on édite un compte rendu ou si on crée un nouveau) */}
             {/* Formulaire SIGNER (états 13, 44, 45) pour commerciaux */}
-            {[13, 44, 45].includes(selectedEtat) && selectedEtat !== ficheData?.id_etat_final && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
+            {[13, 44, 45].includes(selectedEtat) && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
                 <div className="etat-form">
                   <h3>Informations Signature</h3>
@@ -4393,7 +4418,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   </div>
 
                   <div className="form-actions">
-                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
@@ -4413,7 +4438,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             )}
 
             {/* Formulaire pour états 9, 12, 23, 34 pour commerciaux */}
-            {[9, 12, 23, 34].includes(selectedEtat) && selectedEtat !== ficheData?.id_etat_final && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
+            {[9, 12, 23, 34].includes(selectedEtat) && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
                 <div className="etat-form">
                   <h3>Commentaire</h3>
@@ -4429,7 +4454,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     />
                   </div>
                   <div className="form-actions">
-                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
@@ -4441,7 +4466,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             )}
 
             {/* Formulaire ANNULER À REPROGRAMMER (état 8) pour commerciaux */}
-            {selectedEtat === 8 && selectedEtat !== ficheData?.id_etat_final && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
+            {selectedEtat === 8 && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
                 <div className="etat-form">
                   {/* Pour l'option "Porte / Imprévu / NRP", le commercial ne remplit que le commentaire.
@@ -4521,7 +4546,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   </div>
 
                   <div className="form-actions">
-                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
@@ -4551,8 +4576,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 <select
                   id="id_etat_final"
                   className="form-control"
-                  value={selectedEtat !== null ? selectedEtat : ((Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13 || Number(user?.fonction) === 11) && fiche.id_etat_final ? fiche.id_etat_final : '')}
-                  onChange={(e) => handleEtatChange(e.target.value ? parseInt(e.target.value) : null)}
+                  value={selectedEtat != null ? String(selectedEtat) : ''}
+                  disabled={isChangementEtatBloque}
+                  onChange={(e) => handleEtatChange(e.target.value ? parseInt(e.target.value, 10) : null)}
                 >
                   <option value="">Choisissez un état</option>
                   {/* Afficher l'état actuel comme option visible dans la liste (surtout pour les confirmateurs) */}
@@ -4617,6 +4643,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     </optgroup>
                   )}
                 </select>
+                {isChangementEtatBloque && (
+                  <p style={{ marginTop: '10px', color: '#666', fontSize: '0.9em' }}>
+                    Cette fiche est dans un état définitif : le changement d&apos;état n&apos;est plus possible.
+                  </p>
+                )}
             </div>
 
             {showHistoConfirmateurDropdown && (
@@ -4638,7 +4669,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             )}
 
             {/* Formulaire de confirmation (état 7) */}
-            {selectedEtat === 7 && selectedEtat !== fiche.id_etat_final && (
+            {selectedEtat === 7 && (
               <div className="confirmation-form">
                 <h3>Informations de confirmation</h3>
                 <table className="rdv-form-table">
@@ -5183,7 +5214,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             )}
 
             {/* Formulaire NRP (état 2) */}
-            {selectedEtat === 2 && selectedEtat !== fiche.id_etat_final && (
+            {selectedEtat === 2 && (
               <div className="nrp-form" style={{ marginTop: '20px' }}>
                 <h3>Informations NRP</h3>
 
@@ -5219,7 +5250,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   <button
                     className="btn-confirm"
                     onClick={handleEtatSubmit}
-                    disabled={etatSubmitting}
+                    disabled={etatSubmitting || isChangementEtatBloque}
                   >
                     {etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}
                   </button>
@@ -5242,7 +5273,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             )}
 
             {/* Formulaire ANNULER À REPROGRAMMER (état 8) - visible aussi pour commerciaux (mais seulement si pas déjà dans section compte rendu) */}
-            {selectedEtat === 8 && selectedEtat !== fiche.id_etat_final && !(user?.fonction === 5 && compteRenduOption) && (
+            {selectedEtat === 8 && !(user?.fonction === 5 && compteRenduOption) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Informations Annuler à Reprogrammer</h3>
                 
@@ -5316,7 +5347,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 </div>
 
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setEtatFormData({...etatFormData, conf_rdv_date: '', conf_rdv_time: '', id_sous_etat: '', conf_rdv_avec: '', conf_commentaire_produit: ''});
@@ -5326,7 +5357,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             )}
 
             {/* Formulaire RAPPEL POUR BUREAU (état 19) */}
-            {selectedEtat === 19 && selectedEtat !== fiche.id_etat_final && (
+            {selectedEtat === 19 && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Informations Rappel pour Bureau</h3>
                 
@@ -5385,7 +5416,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 </div>
 
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setEtatFormData({...etatFormData, date_rappel_date: '', date_rappel_time: '', id_sous_etat: '', conf_commentaire_produit: ''});
@@ -5395,7 +5426,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             )}
 
             {/* Formulaire SIGNER (états 13, 44, 45) - visible aussi pour commerciaux (mais seulement si pas déjà dans section compte rendu) */}
-            {[13, 44, 45].includes(selectedEtat) && selectedEtat !== fiche.id_etat_final && !(user?.fonction === 5 && compteRenduOption) && (
+            {[13, 44, 45].includes(selectedEtat) && !(user?.fonction === 5 && compteRenduOption) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Informations Signature</h3>
                 
@@ -5743,7 +5774,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 </div>
 
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     if (user?.fonction === 5) {
@@ -5764,7 +5795,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             )}
 
             {/* Formulaire SIGNER RETRACTER (états 16, 38) */}
-            {[16, 38].includes(selectedEtat) && selectedEtat !== fiche.id_etat_final && (
+            {[16, 38].includes(selectedEtat) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Informations Signer Retracter</h3>
                 
@@ -5814,7 +5845,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 </div>
 
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setEtatFormData({...etatFormData, id_commercial: '', id_commercial_2: '', conf_commentaire_produit: ''});
@@ -5824,7 +5855,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             )}
 
             {/* Formulaire Honoré à suivre (état 9) - version étendue pour Admin, Backoffice, RP Confirmation, RE Confirmation */}
-            {selectedEtat === 9 && selectedEtat !== fiche.id_etat_final && isAdminSessionHonoreSuivre && (
+            {selectedEtat === 9 && isAdminSessionHonoreSuivre && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Honoré à suivre</h3>
                 <div className="form-row">
@@ -5881,7 +5912,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   />
                 </div>
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setCompteRenduOption('');
@@ -5892,7 +5923,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             )}
 
             {/* Formulaire pour états 9 (si non admin session), 12 (REFUSER), 23 (HORS CIBLE CONFIRMATEUR), 34 (HHC FINANCEMENT A VERIFIER) */}
-            {[9, 12, 23, 34].includes(selectedEtat) && selectedEtat !== fiche.id_etat_final && !(selectedEtat === 9 && isAdminSessionHonoreSuivre) && (
+            {[9, 12, 23, 34].includes(selectedEtat) && !(selectedEtat === 9 && isAdminSessionHonoreSuivre) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Commentaire</h3>
                 <div className="form-group">
@@ -5906,7 +5937,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   />
                 </div>
                 <div className="form-actions">
-                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+                  <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setCompteRenduOption('');
@@ -5922,13 +5953,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
              selectedEtat !== 2 && 
              selectedEtat !== 8 && 
              selectedEtat !== 19 && 
-             ![9, 12, 13, 16, 23, 34, 38, 44, 45].includes(selectedEtat) && 
-             selectedEtat !== fiche.id_etat_final && (
+             ![9, 12, 13, 16, 23, 34, 38, 44, 45].includes(selectedEtat) && (
               <div className="form-actions" style={{ marginTop: '20px' }}>
                 <button
                   className="btn-confirm"
                   onClick={handleEtatSubmit}
-                  disabled={etatSubmitting}
+                  disabled={etatSubmitting || isChangementEtatBloque}
                 >
                   {etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
