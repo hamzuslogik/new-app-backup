@@ -641,11 +641,7 @@ const Dashboard = () => {
     fiche?.id_etat_final === ID_ETAT_ANNULER_A_REPROGRAMMER &&
     fiche?.has_etat_changed_by_compte_rendu === true;
 
-  // États SIGNER (TOUT SIGNER) : 13, 16, 44, 45
-  const ETATS_SIGNER = [13, 16, 44, 45];
-  const isFicheSigner = (fiche) => fiche?.id_etat_final && ETATS_SIGNER.includes(Number(fiche.id_etat_final));
-
-  // Confirmateur affiché : jusqu'à 3 pseudos depuis fiches_histo (ordre première apparition), sinon table fiches
+  // Confirmateur affiché : pseudos depuis dernière ligne fiches_histo (API), sinon table fiches — ordre confirmateur 1 | 2 | 3
   const getConfirmateursFormatted = (fiche) => {
     if (fiche.histo_confirmateurs_pseudo && String(fiche.histo_confirmateurs_pseudo).trim() !== '') {
       return fiche.histo_confirmateurs_pseudo;
@@ -653,17 +649,8 @@ const Dashboard = () => {
     const conf1 = fiche.id_confirmateur ? getUserName(fiche.id_confirmateur) : '';
     const conf2 = fiche.id_confirmateur_2 ? getUserName(fiche.id_confirmateur_2) : '';
     const conf3 = fiche.id_confirmateur_3 ? getUserName(fiche.id_confirmateur_3) : '';
-    const nbConfirmateurs = [conf1, conf2, conf3].filter(Boolean).length;
-
-    // Tout signer + 2 ou 3 confirmateurs : afficher tous
-    if (isFicheSigner(fiche) && nbConfirmateurs >= 2) {
-      return [conf1, conf2, conf3].filter(Boolean).join(' | ');
-    }
-    // Sinon : afficher uniquement le dernier (ordre 3, 2, 1)
-    if (conf3) return conf3;
-    if (conf2) return conf2;
-    if (conf1) return conf1;
-    return '';
+    const parts = [conf1, conf2, conf3].filter(Boolean);
+    return parts.length > 0 ? parts.join(' | ') : '';
   };
 
   // Quand "Inclure 2ème confirmateur" est coché et un confirmateur est sélectionné : afficher Confirmateur 1 | Confirmateur 2 | Confirmateur 3, avec le sélectionné mis en avant
