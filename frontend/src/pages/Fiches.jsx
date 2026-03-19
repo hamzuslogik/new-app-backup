@@ -449,8 +449,11 @@ const Fiches = () => {
     isEtatGroupe0(etatId) ? getEtatName(etatId) : 'Validé';
 
   // Obtenir les confirmateurs formatés (avec confirmateur 2 et 3 si existent)
-  // Priorité aux pseudos renvoyés par l'API (pour RE Confirmation : afficher le nom même si hors équipe)
+  // Priorité : jusqu'à 3 confirmateurs distincts fiches_histo (API), puis table fiches
   const getConfirmateursFormatted = (fiche) => {
+    if (fiche.histo_confirmateurs_pseudo && String(fiche.histo_confirmateurs_pseudo).trim() !== '') {
+      return fiche.histo_confirmateurs_pseudo;
+    }
     const confirmateursList = [];
     
     if (fiche.id_confirmateur) {

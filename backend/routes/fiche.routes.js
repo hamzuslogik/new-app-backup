@@ -513,9 +513,6 @@ router.get('/', authenticate, async (req, res) => {
     let params = [];
     let histoJoinForFichesHisto = '';
     let histoParamsForFichesHisto = [];
-    /** JOIN utilisateurs pour afficher le confirmateur de la dernière ligne fiches_histo dans la plage (dashboard confirmateur) */
-    let histoDernierConfDisplayJoin = '';
-    let histoDernierConfSelect = '';
     /** Plage date_creation (fiches_histo) pour filtre EXISTS fallback confirmateur */
     let confirmateurDernierHistoPlage = null;
     if (hasKoFilter) {
@@ -903,8 +900,6 @@ router.get('/', authenticate, async (req, res) => {
             WHERE fh.id_confirmateur = ?
           ) histo_ids ON fiche.id = histo_ids.id_fiche`;
           histoParamsForFichesHisto = [startDatetime, endDatetime, req.user.id];
-          histoDernierConfDisplayJoin = 'LEFT JOIN utilisateurs u_histolast ON u_histolast.id = histo_ids.histo_dernier_conf_id';
-          histoDernierConfSelect = ', u_histolast.pseudo as histo_dernier_confirmateur_pseudo';
         } else if (date_champ === 'fiches_histo' && req.user.fonction === 6 && hasCritereOuTelSearch) {
           console.log(`[FICHES-${requestId}] Confirmateur: critère/tel — pas de JOIN fiches_histo (recherche globale)`);
         } else if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
@@ -1063,7 +1058,7 @@ router.get('/', authenticate, async (req, res) => {
     const qualifSelect = qualifTableExists 
       ? ', qualif.code as qualification_code' 
       : ', CASE WHEN fiche.id_qualif IS NOT NULL AND fiche.id_qualif != "" AND fiche.id_qualif != "0" THEN fiche.id_qualif ELSE NULL END as qualification_code';
-    
+
     // Récupérer les fiches avec historique et décalages
     // Optimisation: utiliser une sous-requête pour l'historique au lieu de GROUP_CONCAT avec JOIN
     // Cela évite de créer un produit cartésien qui peut ralentir la requête
@@ -1084,7 +1079,6 @@ router.get('/', authenticate, async (req, res) => {
        u1.pseudo as confirmateur_pseudo,
        u2.pseudo as confirmateur_2_pseudo,
        u3.pseudo as confirmateur_3_pseudo
-       ${histoDernierConfSelect}
        ${qualifSelect}
        FROM fiches fiche
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
@@ -1097,7 +1091,6 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN utilisateurs u2 ON fiche.id_confirmateur_2 = u2.id
        LEFT JOIN utilisateurs u3 ON fiche.id_confirmateur_3 = u3.id
        ${histoJoinForFichesHisto}
-       ${histoDernierConfDisplayJoin}
        ${qualifJoin}
        ${whereClause}
        GROUP BY fiche.id
@@ -1134,6 +1127,37 @@ router.get('/', authenticate, async (req, res) => {
       fiches.forEach((fiche) => {
         fiche.has_etat_changed_by_compte_rendu = crByFiche.has(fiche.id);
         fiche.compte_rendu_commercial_pseudo = crByFiche.get(fiche.id) || null;
+      });
+
+      // Jusqu'à 3 confirmateurs distincts depuis fiches_histo (ordre de première apparition, lignes triées par id)
+      const histoConfRows = await query(
+        `SELECT id_fiche, id_confirmateur FROM fiches_histo
+         WHERE id_fiche IN (${placeholders}) AND id_confirmateur IS NOT NULL AND id_confirmateur > 0
+         ORDER BY id_fiche ASC, id ASC`,
+        ficheIds
+      );
+      const confIdsByFiche = new Map();
+      for (const row of histoConfRows) {
+        const fid = Number(row.id_fiche);
+        if (!Number.isFinite(fid)) continue;
+        if (!confIdsByFiche.has(fid)) confIdsByFiche.set(fid, []);
+        const arr = confIdsByFiche.get(fid);
+        if (arr.length >= 3) continue;
+        const cid = Number(row.id_confirmateur);
+        if (!Number.isFinite(cid) || cid <= 0) continue;
+        if (!arr.includes(cid)) arr.push(cid);
+      }
+      const allConfIds = [...new Set(ficheIds.flatMap((fid) => confIdsByFiche.get(Number(fid)) || []))];
+      let idToPseudo = new Map();
+      if (allConfIds.length > 0) {
+        const ph = allConfIds.map(() => '?').join(',');
+        const userRows = await query(`SELECT id, pseudo FROM utilisateurs WHERE id IN (${ph})`, allConfIds);
+        idToPseudo = new Map(userRows.map((u) => [Number(u.id), u.pseudo]));
+      }
+      fiches.forEach((fiche) => {
+        const ids = confIdsByFiche.get(Number(fiche.id)) || [];
+        const parts = ids.map((id) => idToPseudo.get(id) || `ID${id}`).filter(Boolean);
+        fiche.histo_confirmateurs_pseudo = parts.length > 0 ? parts.join(' | ') : null;
       });
     }
 

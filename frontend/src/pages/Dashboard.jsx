@@ -645,11 +645,10 @@ const Dashboard = () => {
   const ETATS_SIGNER = [13, 16, 44, 45];
   const isFicheSigner = (fiche) => fiche?.id_etat_final && ETATS_SIGNER.includes(Number(fiche.id_etat_final));
 
-  // Obtenir les confirmateurs formatés : pour SIGNER avec 2-3 confirmateurs → afficher tous ; sinon → dernier uniquement
+  // Confirmateur affiché : jusqu'à 3 pseudos depuis fiches_histo (ordre première apparition), sinon table fiches
   const getConfirmateursFormatted = (fiche) => {
-    // Session confirmateur : afficher le pseudo issu de la dernière ligne fiches_histo dans la période (pas la table fiches)
-    if (user?.fonction === 6 && fiche.histo_dernier_confirmateur_pseudo) {
-      return fiche.histo_dernier_confirmateur_pseudo;
+    if (fiche.histo_confirmateurs_pseudo && String(fiche.histo_confirmateurs_pseudo).trim() !== '') {
+      return fiche.histo_confirmateurs_pseudo;
     }
     const conf1 = fiche.id_confirmateur ? getUserName(fiche.id_confirmateur) : '';
     const conf2 = fiche.id_confirmateur_2 ? getUserName(fiche.id_confirmateur_2) : '';
@@ -1452,12 +1451,8 @@ const Dashboard = () => {
                     <th onClick={() => handleSort('État Final')} className="sortable-header">
                       {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
                     </th>
-                    <th
-                      onClick={() => handleSort('Confirmateur')}
-                      className="sortable-header"
-                      title={user?.fonction === 6 ? 'Confirmateur ayant effectué la dernière action sur la période (fiches_histo)' : undefined}
-                    >
-                      Confirmateur{user?.fonction === 6 ? ' (historique)' : ''} {getSortIcon('Confirmateur')}
+                    <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
+                      Confirmateur {getSortIcon('Confirmateur')}
                     </th>
                     <th onClick={() => handleSort('Commercial')} className="sortable-header">
                       Commercial {getSortIcon('Commercial')}
