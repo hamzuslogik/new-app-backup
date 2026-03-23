@@ -2094,16 +2094,8 @@ const normalizePhone = (value) => {
   let digits = String(value).replace(/\D/g, '');
   if (!digits) return '';
 
-  if (digits.startsWith('0033')) {
-    digits = `0${digits.slice(4)}`;
-  } else if (digits.startsWith('33')) {
-    digits = `0${digits.slice(2)}`;
-  }
-
-  if (digits.length > 10) {
-    digits = digits.slice(-10);
-  }
-  return digits;
+  // Normalisation demandee: uniquement ajouter 0 en tete si absent.
+  return digits.startsWith('0') ? digits : `0${digits}`;
 };
 
 const splitRawPhones = (content) =>
