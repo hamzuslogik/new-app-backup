@@ -1964,6 +1964,17 @@ router.post('/fiches-export', authenticate, async (req, res) => {
       });
     }
 
+    console.log('[fiches-export] Payload recu:', {
+      date_field,
+      date_start,
+      date_end,
+      etat_ids,
+      sous_etat_ids,
+      centre_ids,
+      departements,
+      selected_fields: safeSelectedFields
+    });
+
     const selectSql = safeSelectedFields
       .map((field) => `${FICHE_EXPORT_FIELDS[field]} AS \`${field}\``)
       .join(', ');
@@ -2022,7 +2033,11 @@ router.post('/fiches-export', authenticate, async (req, res) => {
       LIMIT 200000
     `;
 
+    console.log('[fiches-export] SQL executee:', sql.replace(/\s+/g, ' ').trim());
+    console.log('[fiches-export] Params SQL:', params);
+
     const rows = await query(sql, params);
+    console.log('[fiches-export] Nb lignes retournees:', Array.isArray(rows) ? rows.length : 0);
 
     res.json({
       success: true,
