@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave, FaFileExport } from 'react-icons/fa';
+import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave, FaFileExport, FaPhone } from 'react-icons/fa';
 import CentresTab from '../components/management/CentresTab';
 import FinancementTab from '../components/management/FinancementTab';
 import UtilisateursTab from '../components/management/UtilisateursTab';
@@ -16,6 +16,7 @@ import FournisseursSMSTab from '../components/management/FournisseursSMSTab';
 import SMSCategoriesTab from '../components/management/SMSCategoriesTab';
 import WorkflowsTab from '../components/management/WorkflowsTab';
 import FichesExtractionTab from '../components/management/FichesExtractionTab';
+import FichesHashFromTelTab from '../components/management/FichesHashFromTelTab';
 import GlobalSearch from '../components/management/GlobalSearch';
 import './Management.css';
 
@@ -49,6 +50,7 @@ const Management = () => {
     { id: 'sms-categories', label: 'Catégories SMS', icon: FaEnvelope },
     { id: 'workflows', label: 'Workflows', icon: FaProjectDiagram },
     { id: 'fiches-extraction', label: 'Extraction fiches', icon: FaFileExport },
+    { id: 'fiches-hash-tel', label: 'Hash depuis tel', icon: FaPhone },
   ];
 
   const handleGlobalSearchSelect = (type, item) => {
@@ -91,6 +93,8 @@ const Management = () => {
         return <WorkflowsTab />;
       case 'fiches-extraction':
         return <FichesExtractionTab />;
+      case 'fiches-hash-tel':
+        return <FichesHashFromTelTab />;
       default:
         return <CentresTab />;
     }

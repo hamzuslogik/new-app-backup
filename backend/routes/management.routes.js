@@ -2,8 +2,13 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const XLSX = require('xlsx');
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const { query, queryOne, transaction } = require('../config/database');
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
 const hashPassword = (password) => {
@@ -2077,6 +2082,135 @@ router.post('/fiches-export', authenticate, async (req, res) => {
       success: false,
       message: 'Erreur serveur lors de l\'extraction des fiches'
     });
+  }
+});
+
+// =====================================================
+// HASH + TEL DEPUIS FICHIER DE TELEPHONES
+// =====================================================
+
+const normalizePhone = (value) => {
+  if (value === null || value === undefined) return '';
+  let digits = String(value).replace(/\D/g, '');
+  if (!digits) return '';
+
+  if (digits.startsWith('0033')) {
+    digits = `0${digits.slice(4)}`;
+  } else if (digits.startsWith('33')) {
+    digits = `0${digits.slice(2)}`;
+  }
+
+  if (digits.length > 10) {
+    digits = digits.slice(-10);
+  }
+  return digits;
+};
+
+const splitRawPhones = (content) =>
+  String(content || '')
+    .split(/[\n\r,;\t]+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+const sqlNormalizeCol = (col) =>
+  `RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(${col}, ''), ' ', ''), '.', ''), '-', ''), '/', ''), '(', ''), ')', ''), '+', ''), 10)`;
+
+router.post('/fiches-hash-from-phones', authenticate, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Fichier requis' });
+    }
+
+    const ext = path.extname(req.file.originalname || '').toLowerCase();
+    let rawPhones = [];
+
+    if (ext === '.xlsx' || ext === '.xls') {
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false });
+      rawPhones = rows.flat().map((v) => String(v || '').trim()).filter(Boolean);
+    } else {
+      rawPhones = splitRawPhones(req.file.buffer.toString('utf-8'));
+    }
+
+    const normalizedInputRows = rawPhones
+      .map((raw) => ({ tel_input: raw, tel_normalized: normalizePhone(raw) }))
+      .filter((row) => row.tel_normalized.length >= 9);
+
+    const uniquePhones = [...new Set(normalizedInputRows.map((row) => row.tel_normalized))];
+
+    if (uniquePhones.length === 0) {
+      return res.json({
+        success: true,
+        data: [],
+        meta: { total_input: rawPhones.length, total_valid: 0, total_found: 0 }
+      });
+    }
+
+    const foundMap = new Map();
+    const chunkSize = 500;
+
+    for (let i = 0; i < uniquePhones.length; i += chunkSize) {
+      const chunk = uniquePhones.slice(i, i + chunkSize);
+      const placeholders = chunk.map(() => '?').join(',');
+
+      const sql = `
+        SELECT
+          f.hash,
+          f.tel,
+          f.gsm1,
+          f.gsm2,
+          ${sqlNormalizeCol('f.tel')} AS tel_norm,
+          ${sqlNormalizeCol('f.gsm1')} AS gsm1_norm,
+          ${sqlNormalizeCol('f.gsm2')} AS gsm2_norm
+        FROM fiches f
+        WHERE
+          ${sqlNormalizeCol('f.tel')} IN (${placeholders})
+          OR ${sqlNormalizeCol('f.gsm1')} IN (${placeholders})
+          OR ${sqlNormalizeCol('f.gsm2')} IN (${placeholders})
+      `;
+
+      const rows = await query(sql, [...chunk, ...chunk, ...chunk]);
+      for (const row of rows || []) {
+        const candidates = [row.tel_norm, row.gsm1_norm, row.gsm2_norm]
+          .map((v) => normalizePhone(v))
+          .filter(Boolean);
+        for (const phone of candidates) {
+          if (!foundMap.has(phone)) {
+            foundMap.set(phone, {
+              hash: row.hash,
+              tel_db: row.tel || row.gsm1 || row.gsm2 || ''
+            });
+          }
+        }
+      }
+    }
+
+    const resultRows = normalizedInputRows.map((row) => {
+      const found = foundMap.get(row.tel_normalized);
+      return {
+        tel_input: row.tel_input,
+        tel_normalized: row.tel_normalized,
+        hash: found?.hash || '',
+        tel_db: found?.tel_db || '',
+        trouve: found ? 1 : 0
+      };
+    });
+
+    const totalFound = resultRows.filter((row) => row.trouve === 1).length;
+
+    res.json({
+      success: true,
+      data: resultRows,
+      meta: {
+        total_input: rawPhones.length,
+        total_valid: normalizedInputRows.length,
+        total_found: totalFound
+      }
+    });
+  } catch (error) {
+    console.error('Erreur fiches-hash-from-phones:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la recherche hash/tel' });
   }
 });
 
