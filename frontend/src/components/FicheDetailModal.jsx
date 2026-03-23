@@ -15,6 +15,11 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
   const previousPath = React.useRef(location.pathname);
   const modalContentRef = React.useRef(null);
   const isDirectAccess = React.useRef(false);
+  const searchParams = new URLSearchParams(location.search);
+  // Mode verrouille uniquement en manuel: ?overlay=1&close=0
+  // (pas de fermeture via clic exterieur/Echap)
+  const isOverlayLocked =
+    searchParams.get('overlay') === '1' && searchParams.get('close') === '0';
 
   // Ne plus bloquer le scroll du body - le modal utilise le scroll de la page
   // useModalScrollLock(!!ficheHash);
@@ -52,8 +57,9 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
     // Sauvegarder le chemin actuel seulement si on n'est pas déjà sur /fiches/:id
     if (!isOnFicheRoute) {
       previousPath.current = location.pathname;
-      // Mettre à jour l'URL avec ?overlay=1 pour qu'un refresh rouvre le modal (pas la page plein écran)
-      window.history.pushState(null, '', `/fiches/${ficheHash}?overlay=1`);
+      // Mettre à jour l'URL avec ?overlay=auto pour qu'un refresh rouvre le modal (pas la page plein ecran)
+      // overlay=1 est reserve au mode manuel "verrouille"
+      window.history.pushState(null, '', `/fiches/${ficheHash}?overlay=auto`);
     }
     
     return () => {
@@ -78,7 +84,7 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
   // Écouter la touche Escape pour fermer le modal
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape' && ficheHash) {
+      if (e.key === 'Escape' && ficheHash && !isOverlayLocked) {
         onClose();
       }
     };
@@ -90,7 +96,7 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [ficheHash, onClose]);
+  }, [ficheHash, onClose, isOverlayLocked]);
 
   // Déterminer la couleur du border selon l'état de la fiche
   const getEtatColor = () => {
@@ -112,7 +118,10 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
   const etatColor = getEtatColor();
 
   const modalContent = (
-    <div className="fiche-detail-modal-overlay" onClick={onClose}>
+    <div
+      className="fiche-detail-modal-overlay"
+      onClick={isOverlayLocked ? undefined : onClose}
+    >
       <div 
         ref={modalContentRef}
         className="fiche-detail-modal-content" 

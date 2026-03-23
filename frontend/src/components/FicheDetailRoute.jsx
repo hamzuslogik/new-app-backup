@@ -15,9 +15,12 @@ const FicheDetailRoute = () => {
     if (id && !hasOpened.current) {
       hasOpened.current = true;
 
-      // Si l'URL contient ?overlay=1, ouvrir en modal et revenir à la page précédente (ou dashboard si refresh)
+      // Si l'URL contient ?overlay=1 ou ?overlay=auto, ouvrir en modal et revenir a la page precedente (ou dashboard si refresh)
+      // overlay=1&close=0: mode manuel verrouille (pas de fermeture par clic exterieur/Echap)
+      // overlay=auto: mode standard genere automatiquement par l'app
       const searchParams = new URLSearchParams(location.search);
-      if (searchParams.get('overlay') === '1') {
+      const overlayMode = searchParams.get('overlay');
+      if (overlayMode === '1' || overlayMode === 'auto') {
         openFicheDetail(id);
         if (window.history.length > 1) {
           navigate(-1);
