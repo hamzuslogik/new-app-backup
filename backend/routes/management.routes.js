@@ -1878,4 +1878,166 @@ router.delete('/sms-categories/:id', authenticate, checkPermission(1, 2, 7, 11),
   }
 });
 
+// =====================================================
+// EXTRACTION FICHES (CSV / EXCEL)
+// =====================================================
+
+const FICHE_EXPORT_FIELDS = {
+  id: 'f.id',
+  hash: 'f.hash',
+  civ: 'f.civ',
+  nom: 'f.nom',
+  prenom: 'f.prenom',
+  tel: 'f.tel',
+  gsm1: 'f.gsm1',
+  gsm2: 'f.gsm2',
+  email: 'f.email',
+  adresse: 'f.adresse',
+  cp: 'f.cp',
+  ville: 'f.ville',
+  produit: 'f.produit',
+  id_centre: 'f.id_centre',
+  centre_titre: 'c.titre',
+  id_etat_final: 'f.id_etat_final',
+  etat_titre: 'e.titre',
+  id_sous_etat: 'f.id_sous_etat',
+  sous_etat_titre: 'se.titre',
+  id_confirmateur: 'f.id_confirmateur',
+  id_confirmateur_2: 'f.id_confirmateur_2',
+  id_confirmateur_3: 'f.id_confirmateur_3',
+  id_commercial: 'f.id_commercial',
+  id_commercial_2: 'f.id_commercial_2',
+  id_agent: 'f.id_agent',
+  commentaire: 'f.commentaire',
+  date_insert_time: 'f.date_insert_time',
+  date_modif_time: 'f.date_modif_time',
+  date_appel_time: 'f.date_appel_time',
+  date_rdv_time: 'f.date_rdv_time',
+  archive: 'f.archive',
+  ko: 'f.ko',
+  active: 'f.active',
+  valider: 'f.valider'
+};
+
+const FICHE_EXPORT_ALLOWED_DATE_FIELDS = [
+  'date_insert_time',
+  'date_modif_time',
+  'date_appel_time',
+  'date_rdv_time'
+];
+
+router.post('/fiches-export', authenticate, async (req, res) => {
+  try {
+    const {
+      date_field,
+      date_start,
+      date_end,
+      etat_ids = [],
+      sous_etat_ids = [],
+      centre_ids = [],
+      departements = [],
+      selected_fields = []
+    } = req.body || {};
+
+    if (!date_field || !FICHE_EXPORT_ALLOWED_DATE_FIELDS.includes(String(date_field))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Champ de date invalide'
+      });
+    }
+
+    if (!date_start || !date_end) {
+      return res.status(400).json({
+        success: false,
+        message: 'La période (date début et date fin) est obligatoire'
+      });
+    }
+
+    const safeSelectedFields = Array.isArray(selected_fields)
+      ? selected_fields.filter((field) => FICHE_EXPORT_FIELDS[field])
+      : [];
+
+    if (safeSelectedFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez sélectionner au moins un champ à extraire'
+      });
+    }
+
+    const selectSql = safeSelectedFields
+      .map((field) => `${FICHE_EXPORT_FIELDS[field]} AS \`${field}\``)
+      .join(', ');
+
+    const whereConditions = [];
+    const params = [];
+
+    whereConditions.push(`f.${date_field} IS NOT NULL`);
+    whereConditions.push(`f.${date_field} >= ?`);
+    whereConditions.push(`f.${date_field} <= ?`);
+    params.push(`${date_start} 00:00:00`, `${date_end} 23:59:59`);
+
+    const etatIds = Array.isArray(etat_ids)
+      ? etat_ids.map((v) => parseInt(v, 10)).filter((v) => Number.isInteger(v) && v > 0)
+      : [];
+    if (etatIds.length > 0) {
+      whereConditions.push(`f.id_etat_final IN (${etatIds.map(() => '?').join(',')})`);
+      params.push(...etatIds);
+    }
+
+    const sousEtatIds = Array.isArray(sous_etat_ids)
+      ? sous_etat_ids.map((v) => parseInt(v, 10)).filter((v) => Number.isInteger(v) && v > 0)
+      : [];
+    if (sousEtatIds.length > 0) {
+      whereConditions.push(`f.id_sous_etat IN (${sousEtatIds.map(() => '?').join(',')})`);
+      params.push(...sousEtatIds);
+    }
+
+    const centreIds = Array.isArray(centre_ids)
+      ? centre_ids.map((v) => parseInt(v, 10)).filter((v) => Number.isInteger(v) && v > 0)
+      : [];
+    if (centreIds.length > 0) {
+      whereConditions.push(`f.id_centre IN (${centreIds.map(() => '?').join(',')})`);
+      params.push(...centreIds);
+    }
+
+    const depCodes = Array.isArray(departements)
+      ? departements
+          .map((d) => String(d || '').trim())
+          .filter((d) => d.length > 0)
+      : [];
+    if (depCodes.length > 0) {
+      const depOr = depCodes.map(() => 'TRIM(f.cp) LIKE ?').join(' OR ');
+      whereConditions.push(`(${depOr})`);
+      params.push(...depCodes.map((d) => `${d}%`));
+    }
+
+    const sql = `
+      SELECT ${selectSql}
+      FROM fiches f
+      LEFT JOIN etats e ON f.id_etat_final = e.id
+      LEFT JOIN sous_etat se ON f.id_sous_etat = se.id
+      LEFT JOIN centres c ON f.id_centre = c.id
+      ${whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''}
+      ORDER BY f.${date_field} DESC
+      LIMIT 200000
+    `;
+
+    const rows = await query(sql, params);
+
+    res.json({
+      success: true,
+      data: rows || [],
+      meta: {
+        count: Array.isArray(rows) ? rows.length : 0
+      }
+    });
+  } catch (error) {
+    console.error('Erreur extraction fiches:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de l\'extraction des fiches'
+    });
+  }
+});
+
 module.exports = router;

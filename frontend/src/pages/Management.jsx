@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave } from 'react-icons/fa';
+import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave, FaFileExport } from 'react-icons/fa';
 import CentresTab from '../components/management/CentresTab';
 import FinancementTab from '../components/management/FinancementTab';
 import UtilisateursTab from '../components/management/UtilisateursTab';
@@ -15,6 +15,7 @@ import SousEtatTab from '../components/management/SousEtatTab';
 import FournisseursSMSTab from '../components/management/FournisseursSMSTab';
 import SMSCategoriesTab from '../components/management/SMSCategoriesTab';
 import WorkflowsTab from '../components/management/WorkflowsTab';
+import FichesExtractionTab from '../components/management/FichesExtractionTab';
 import GlobalSearch from '../components/management/GlobalSearch';
 import './Management.css';
 
@@ -47,6 +48,7 @@ const Management = () => {
     { id: 'fournisseurs-sms', label: 'Fournisseurs SMS', icon: FaSms },
     { id: 'sms-categories', label: 'Catégories SMS', icon: FaEnvelope },
     { id: 'workflows', label: 'Workflows', icon: FaProjectDiagram },
+    { id: 'fiches-extraction', label: 'Extraction fiches', icon: FaFileExport },
   ];
 
   const handleGlobalSearchSelect = (type, item) => {
@@ -87,6 +89,8 @@ const Management = () => {
         return <SMSCategoriesTab />;
       case 'workflows':
         return <WorkflowsTab />;
+      case 'fiches-extraction':
+        return <FichesExtractionTab />;
       default:
         return <CentresTab />;
     }
