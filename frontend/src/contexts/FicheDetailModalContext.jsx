@@ -5,13 +5,16 @@ const FicheDetailModalContext = createContext(null);
 
 export const FicheDetailModalProvider = ({ children }) => {
   const [selectedFicheHash, setSelectedFicheHash] = useState(null);
+  const [modalOptions, setModalOptions] = useState({});
 
-  const openFicheDetail = (ficheHash) => {
+  const openFicheDetail = (ficheHash, options = {}) => {
     setSelectedFicheHash(ficheHash);
+    setModalOptions(options);
   };
 
   const closeFicheDetail = () => {
     setSelectedFicheHash(null);
+    setModalOptions({});
   };
 
   return (
@@ -21,6 +24,7 @@ export const FicheDetailModalProvider = ({ children }) => {
         <FicheDetailModal
           ficheHash={selectedFicheHash}
           onClose={closeFicheDetail}
+          options={modalOptions}
         />
       )}
     </FicheDetailModalContext.Provider>

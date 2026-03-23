@@ -21,7 +21,8 @@ const FicheDetailRoute = () => {
       const searchParams = new URLSearchParams(location.search);
       const overlayMode = searchParams.get('overlay');
       if (overlayMode === '1' || overlayMode === 'auto') {
-        openFicheDetail(id);
+        const closeMode = searchParams.get('close');
+        openFicheDetail(id, { closeMode });
         if (window.history.length > 1) {
           navigate(-1);
         } else {

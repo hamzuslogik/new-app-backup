@@ -9,17 +9,19 @@ import api from '../config/api';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import '../pages/Dashboard.css';
 
-const FicheDetailModal = ({ ficheHash, onClose }) => {
+const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const previousPath = React.useRef(`${location.pathname}${location.search}`);
   const modalContentRef = React.useRef(null);
   const isDirectAccess = React.useRef(false);
   const searchParams = new URLSearchParams(location.search);
+  const lockedFromOption = options?.closeMode === '0';
   // Mode verrouille uniquement en manuel: ?overlay=1&close=0
   // (pas de fermeture via clic exterieur/Echap)
   const isOverlayLocked =
-    searchParams.get('overlay') === '1' && searchParams.get('close') === '0';
+    lockedFromOption ||
+    (searchParams.get('overlay') === '1' && searchParams.get('close') === '0');
 
   // Ne plus bloquer le scroll du body - le modal utilise le scroll de la page
   // useModalScrollLock(!!ficheHash);
@@ -63,6 +65,9 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
       if (!nextSearchParams.get('overlay')) {
         nextSearchParams.set('overlay', 'auto');
       }
+      if (options?.closeMode === '0') {
+        nextSearchParams.set('close', '0');
+      }
 
       const nextSearch = nextSearchParams.toString();
       const nextUrl = nextSearch
@@ -82,7 +87,7 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
         navigate('/dashboard', { replace: true });
       }
     };
-  }, [ficheHash, location.pathname, navigate]);
+  }, [ficheHash, location.pathname, location.search, navigate, options?.closeMode]);
 
   // Focuser le modal à l'ouverture
   useEffect(() => {
