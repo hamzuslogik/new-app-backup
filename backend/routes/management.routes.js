@@ -2022,6 +2022,17 @@ router.post('/fiches-export', authenticate, async (req, res) => {
       params.push(...depCodes.map((d) => `${d}%`));
     }
 
+    console.log('[fiches-export] Filtres normalises:', {
+      date_field: date_field,
+      date_start: date_start,
+      date_end: date_end,
+      etat_count: etatIds.length,
+      sous_etat_count: sousEtatIds.length,
+      centre_count: centreIds.length,
+      departement_count: depCodes.length,
+      fields_count: safeSelectedFields.length
+    });
+
     const sql = `
       SELECT ${selectSql}
       FROM fiches f

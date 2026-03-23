@@ -105,14 +105,30 @@ const FichesExtractionTab = () => {
 
   const exportMutation = useMutation(
     async () => {
+      const allEtatIds = etatsData.map((item) => String(item.id));
+      const allSousEtatIds = sousEtatsData.map((item) => String(item.id));
+      const allCentreIds = centresData.map((item) => String(item.id));
+      const allDepartementCodes = departementsData.map((item) => String(item.departement_code));
+
+      const etatIdsToSend =
+        allEtatIds.length > 0 && selectedEtatIds.length === allEtatIds.length ? [] : selectedEtatIds;
+      const sousEtatIdsToSend =
+        allSousEtatIds.length > 0 && selectedSousEtatIds.length === allSousEtatIds.length ? [] : selectedSousEtatIds;
+      const centreIdsToSend =
+        allCentreIds.length > 0 && selectedCentreIds.length === allCentreIds.length ? [] : selectedCentreIds;
+      const departementsToSend =
+        allDepartementCodes.length > 0 && selectedDepartements.length === allDepartementCodes.length
+          ? []
+          : selectedDepartements;
+
       const response = await api.post('/management/fiches-export', {
         date_field: dateField,
         date_start: dateStart,
         date_end: dateEnd,
-        etat_ids: selectedEtatIds,
-        sous_etat_ids: selectedSousEtatIds,
-        centre_ids: selectedCentreIds,
-        departements: selectedDepartements,
+        etat_ids: etatIdsToSend,
+        sous_etat_ids: sousEtatIdsToSend,
+        centre_ids: centreIdsToSend,
+        departements: departementsToSend,
         selected_fields: selectedFields
       });
       return response.data;
@@ -206,7 +222,20 @@ const FichesExtractionTab = () => {
               multiple
               size={8}
               value={selectedEtatIds}
-              onChange={(e) => setSelectedEtatIds(extractMultiSelectValues(e))}
+              onChange={(e) => {
+                const nextEtatIds = extractMultiSelectValues(e);
+                setSelectedEtatIds(nextEtatIds);
+
+                // Nettoyer les sous-etats devenus incompatibles avec les etats selectionnes.
+                if (nextEtatIds.length === 0) return;
+                const selectedEtatSet = new Set(nextEtatIds.map((id) => Number(id)));
+                setSelectedSousEtatIds((prev) =>
+                  prev.filter((sousEtatId) => {
+                    const sousEtat = sousEtatsData.find((item) => String(item.id) === String(sousEtatId));
+                    return sousEtat ? selectedEtatSet.has(Number(sousEtat.id_etat)) : false;
+                  })
+                );
+              }}
             >
               {etatsData.map((etat) => (
                 <option key={etat.id} value={String(etat.id)}>
