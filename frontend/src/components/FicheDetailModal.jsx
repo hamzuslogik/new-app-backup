@@ -12,7 +12,7 @@ import '../pages/Dashboard.css';
 const FicheDetailModal = ({ ficheHash, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const previousPath = React.useRef(location.pathname);
+  const previousPath = React.useRef(`${location.pathname}${location.search}`);
   const modalContentRef = React.useRef(null);
   const isDirectAccess = React.useRef(false);
   const searchParams = new URLSearchParams(location.search);
@@ -56,10 +56,20 @@ const FicheDetailModal = ({ ficheHash, onClose }) => {
     
     // Sauvegarder le chemin actuel seulement si on n'est pas déjà sur /fiches/:id
     if (!isOnFicheRoute) {
-      previousPath.current = location.pathname;
-      // Mettre à jour l'URL avec ?overlay=auto pour qu'un refresh rouvre le modal (pas la page plein ecran)
-      // overlay=1 est reserve au mode manuel "verrouille"
-      window.history.pushState(null, '', `/fiches/${ficheHash}?overlay=auto`);
+      previousPath.current = `${location.pathname}${location.search}`;
+
+      // Preserver d'eventuels parametres manuels (overlay=1&close=0), sinon fallback overlay=auto.
+      const nextSearchParams = new URLSearchParams(location.search);
+      if (!nextSearchParams.get('overlay')) {
+        nextSearchParams.set('overlay', 'auto');
+      }
+
+      const nextSearch = nextSearchParams.toString();
+      const nextUrl = nextSearch
+        ? `/fiches/${ficheHash}?${nextSearch}`
+        : `/fiches/${ficheHash}`;
+
+      window.history.pushState(null, '', nextUrl);
     }
     
     return () => {
