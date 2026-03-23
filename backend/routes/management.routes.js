@@ -92,11 +92,17 @@ router.delete('/centres/:id', authenticate, checkPermission(1, 2, 7, 11), async 
 
 // Récupérer tous les départements (accessible à tous)
 // Pour la page de gestion, on affiche tous les départements, même ceux désactivés
+// ?actif_only=1 : uniquement les départements actifs (etat > 0), ex. extraction fiches
 router.get('/departements', authenticate, async (req, res) => {
   try {
-    const departements = await query(
-      'SELECT * FROM departements ORDER BY departement_code ASC'
-    );
+    const actifOnly =
+      req.query.actif_only === '1' ||
+      req.query.actif_only === 1 ||
+      req.query.actif_only === 'true';
+    const sql = actifOnly
+      ? 'SELECT * FROM departements WHERE etat > 0 ORDER BY departement_code ASC'
+      : 'SELECT * FROM departements ORDER BY departement_code ASC';
+    const departements = await query(sql);
     res.json({ success: true, data: departements });
   } catch (error) {
     console.error('Erreur:', error);
@@ -1932,6 +1938,8 @@ router.post('/fiches-export', authenticate, async (req, res) => {
       date_field,
       date_start,
       date_end,
+      time_start,
+      time_end,
       etat_ids = [],
       sous_etat_ids = [],
       centre_ids = [],
@@ -1968,6 +1976,8 @@ router.post('/fiches-export', authenticate, async (req, res) => {
       date_field,
       date_start,
       date_end,
+      time_start,
+      time_end,
       etat_ids,
       sous_etat_ids,
       centre_ids,
@@ -1981,11 +1991,13 @@ router.post('/fiches-export', authenticate, async (req, res) => {
 
     const whereConditions = [];
     const params = [];
+    const safeTimeStart = typeof time_start === 'string' && time_start.trim() ? time_start.trim() : '00:00';
+    const safeTimeEnd = typeof time_end === 'string' && time_end.trim() ? time_end.trim() : '23:59';
 
     whereConditions.push(`f.${date_field} IS NOT NULL`);
     whereConditions.push(`f.${date_field} >= ?`);
     whereConditions.push(`f.${date_field} <= ?`);
-    params.push(`${date_start} 00:00:00`, `${date_end} 23:59:59`);
+    params.push(`${date_start} ${safeTimeStart}:00`, `${date_end} ${safeTimeEnd}:59`);
 
     const etatIds = Array.isArray(etat_ids)
       ? etat_ids.map((v) => parseInt(v, 10)).filter((v) => Number.isInteger(v) && v > 0)
@@ -2026,6 +2038,8 @@ router.post('/fiches-export', authenticate, async (req, res) => {
       date_field: date_field,
       date_start: date_start,
       date_end: date_end,
+      time_start: safeTimeStart,
+      time_end: safeTimeEnd,
       etat_count: etatIds.length,
       sous_etat_count: sousEtatIds.length,
       centre_count: centreIds.length,

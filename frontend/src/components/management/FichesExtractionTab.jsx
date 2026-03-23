@@ -65,11 +65,23 @@ const DEFAULT_FIELDS = [
 const extractMultiSelectValues = (event) =>
   Array.from(event.target.selectedOptions, (option) => option.value);
 
+/** Liste vide ou « tout sélectionné » => pas de filtre côté API (inclure tout). */
+const normalizeIdsForExport = (selectedIds, allIds) => {
+  const all = Array.isArray(allIds) ? allIds.map(String) : [];
+  const selected = Array.isArray(selectedIds) ? selectedIds.map(String) : [];
+  if (all.length === 0) return [];
+  if (selected.length === 0) return [];
+  if (selected.length === all.length) return [];
+  return selected;
+};
+
 const FichesExtractionTab = () => {
   const today = new Date().toISOString().split('T')[0];
   const [dateField, setDateField] = useState('date_modif_time');
   const [dateStart, setDateStart] = useState(today);
   const [dateEnd, setDateEnd] = useState(today);
+  const [timeStart, setTimeStart] = useState('00:00');
+  const [timeEnd, setTimeEnd] = useState('23:59');
   const [selectedEtatIds, setSelectedEtatIds] = useState([]);
   const [selectedSousEtatIds, setSelectedSousEtatIds] = useState([]);
   const [selectedCentreIds, setSelectedCentreIds] = useState([]);
@@ -92,8 +104,8 @@ const FichesExtractionTab = () => {
     return res.data.data || [];
   });
 
-  const { data: departementsData = [] } = useQuery('departements-export', async () => {
-    const res = await api.get('/management/departements');
+  const { data: departementsData = [] } = useQuery('departements-export-actifs', async () => {
+    const res = await api.get('/management/departements', { params: { actif_only: 1 } });
     return res.data.data || [];
   });
 
@@ -110,21 +122,17 @@ const FichesExtractionTab = () => {
       const allCentreIds = centresData.map((item) => String(item.id));
       const allDepartementCodes = departementsData.map((item) => String(item.departement_code));
 
-      const etatIdsToSend =
-        allEtatIds.length > 0 && selectedEtatIds.length === allEtatIds.length ? [] : selectedEtatIds;
-      const sousEtatIdsToSend =
-        allSousEtatIds.length > 0 && selectedSousEtatIds.length === allSousEtatIds.length ? [] : selectedSousEtatIds;
-      const centreIdsToSend =
-        allCentreIds.length > 0 && selectedCentreIds.length === allCentreIds.length ? [] : selectedCentreIds;
-      const departementsToSend =
-        allDepartementCodes.length > 0 && selectedDepartements.length === allDepartementCodes.length
-          ? []
-          : selectedDepartements;
+      const etatIdsToSend = normalizeIdsForExport(selectedEtatIds, allEtatIds);
+      const sousEtatIdsToSend = normalizeIdsForExport(selectedSousEtatIds, allSousEtatIds);
+      const centreIdsToSend = normalizeIdsForExport(selectedCentreIds, allCentreIds);
+      const departementsToSend = normalizeIdsForExport(selectedDepartements, allDepartementCodes);
 
       const response = await api.post('/management/fiches-export', {
         date_field: dateField,
         date_start: dateStart,
         date_end: dateEnd,
+        time_start: timeStart,
+        time_end: timeEnd,
         etat_ids: etatIdsToSend,
         sous_etat_ids: sousEtatIdsToSend,
         centre_ids: centreIdsToSend,
@@ -217,6 +225,17 @@ const FichesExtractionTab = () => {
 
         <div className="form-row" style={{ marginBottom: '16px' }}>
           <div className="form-group">
+            <label>Heure debut</label>
+            <input type="time" value={timeStart} onChange={(e) => setTimeStart(e.target.value)} required />
+          </div>
+          <div className="form-group">
+            <label>Heure fin</label>
+            <input type="time" value={timeEnd} onChange={(e) => setTimeEnd(e.target.value)} required />
+          </div>
+        </div>
+
+        <div className="form-row" style={{ marginBottom: '16px' }}>
+          <div className="form-group">
             <label>Etats (multi-selection)</label>
             <select
               multiple
@@ -243,7 +262,7 @@ const FichesExtractionTab = () => {
                 </option>
               ))}
             </select>
-            <small>Ctrl/Cmd + clic pour selectionner plusieurs etats</small>
+            <small>Ctrl/Cmd + clic pour selectionner plusieurs etats. Vide = tous les etats.</small>
           </div>
 
           <div className="form-group">
@@ -260,7 +279,7 @@ const FichesExtractionTab = () => {
                 </option>
               ))}
             </select>
-            <small>Filtrage automatique selon les etats selectionnes</small>
+            <small>Filtrage selon les etats selectionnes. Vide = tous les sous-etats.</small>
           </div>
         </div>
 
@@ -279,10 +298,11 @@ const FichesExtractionTab = () => {
                 </option>
               ))}
             </select>
+            <small>Vide = tous les centres.</small>
           </div>
 
           <div className="form-group">
-            <label>Departements / CP (multi-selection)</label>
+            <label>Departements / CP (actifs uniquement)</label>
             <select
               multiple
               size={8}
@@ -295,6 +315,7 @@ const FichesExtractionTab = () => {
                 </option>
               ))}
             </select>
+            <small>Vide = tous les departements.</small>
           </div>
         </div>
 
