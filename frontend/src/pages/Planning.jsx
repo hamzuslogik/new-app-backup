@@ -10,6 +10,7 @@ import { fr } from 'date-fns/locale';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './Planning.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -68,6 +69,7 @@ const TIME_SLOTS = [
 ];
 
 const Planning = () => {
+  useForceDesktopViewport('planning-page');
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();

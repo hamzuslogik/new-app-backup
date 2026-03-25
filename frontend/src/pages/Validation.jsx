@@ -7,8 +7,10 @@ import { FaCheck, FaTimes, FaCalendarAlt, FaFilter, FaEye, FaEyeSlash } from 're
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Validation.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Validation = () => {
+  useForceDesktopViewport('validation-page');
   const { user } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
   const [showDetails, setShowDetails] = useState(true);

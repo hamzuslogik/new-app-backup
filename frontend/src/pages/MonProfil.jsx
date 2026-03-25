@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../config/api';
 import './MonProfil.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const MonProfil = () => {
+  useForceDesktopViewport('mon-profil-page');
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

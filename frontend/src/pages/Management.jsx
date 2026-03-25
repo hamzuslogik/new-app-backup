@@ -19,8 +19,10 @@ import FichesExtractionTab from '../components/management/FichesExtractionTab';
 import FichesHashFromTelTab from '../components/management/FichesHashFromTelTab';
 import GlobalSearch from '../components/management/GlobalSearch';
 import './Management.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Management = () => {
+  useForceDesktopViewport('management-page-forced');
   const [activeTab, setActiveTab] = useState(() => {
     const saved = localStorage.getItem('management_active_tab');
     return saved || 'centres';

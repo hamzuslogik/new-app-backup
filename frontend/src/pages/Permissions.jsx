@@ -10,8 +10,10 @@ import PermissionSummary from '../components/permissions/PermissionSummary';
 import PermissionTester from '../components/permissions/PermissionTester';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './Permissions.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Permissions = () => {
+  useForceDesktopViewport('permissions-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedFonction, setSelectedFonction] = useState(null);

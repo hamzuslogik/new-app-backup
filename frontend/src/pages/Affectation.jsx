@@ -5,8 +5,10 @@ import api from '../config/api';
 import { FaUserCheck } from 'react-icons/fa';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Affectation.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Affectation = () => {
+  useForceDesktopViewport('affectation-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedFiches, setSelectedFiches] = useState([]);

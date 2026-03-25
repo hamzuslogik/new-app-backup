@@ -6,6 +6,7 @@ import api from '../config/api';
 import { FaChevronLeft, FaChevronRight, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './PlanningHebdomadaire.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -61,6 +62,7 @@ const JOURS = [
 ];
 
 const PlanningHebdomadaire = () => {
+  useForceDesktopViewport('planning-hebdomadaire-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   

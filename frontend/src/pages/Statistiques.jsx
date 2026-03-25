@@ -5,8 +5,10 @@ import api from '../config/api';
 import { FaChartBar } from 'react-icons/fa';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './Statistiques.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Statistiques = () => {
+  useForceDesktopViewport('statistiques-page');
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('centre'); // centre, confirmateur, commercial, agent, statko
   const [statType, setStatType] = useState('net'); // net, taux, repartition, part_total, barres, camembert

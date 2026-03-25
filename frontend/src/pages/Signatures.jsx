@@ -6,8 +6,10 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './Signatures.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Signatures = () => {
+  useForceDesktopViewport('signatures-page');
   const [dateDebut, setDateDebut] = useState(() => getFirstOfMonthLocal());
   const [dateFin, setDateFin] = useState(() => getTodayLocal());
   const [selectedConfirmateur, setSelectedConfirmateur] = useState('');

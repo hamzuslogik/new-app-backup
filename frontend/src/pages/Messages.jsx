@@ -5,8 +5,10 @@ import api from '../config/api';
 import { FaPaperPlane, FaUser, FaSearch, FaComments, FaCircle } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Messages.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Messages = () => {
+  useForceDesktopViewport('messages-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState(null);

@@ -8,10 +8,12 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import EditCompteRenduModal from '../components/EditCompteRenduModal';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './CompteRendu.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const getTodayISO = () => new Date().toISOString().split('T')[0];
 
 const CompteRendu = () => {
+  useForceDesktopViewport('compterendu-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedStatutPending, setSelectedStatutPending] = useState(user.fonction === 5 ? 'pending' : 'all');

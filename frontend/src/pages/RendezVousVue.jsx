@@ -5,6 +5,7 @@ import { FaCalendarDay, FaUserCheck, FaUserSlash, FaChartLine } from 'react-icon
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './RendezVousVue.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const fetchRdvVue = async (type, date) => {
   const res = await api.get('/planning/rdv-vue', {
@@ -14,6 +15,7 @@ const fetchRdvVue = async (type, date) => {
 };
 
 const RendezVousVue = () => {
+  useForceDesktopViewport('rendezvous-vue-page');
   const today = new Date().toISOString().split('T')[0];
   const [activeTab, setActiveTab] = useState('jour');
   const [dateJour, setDateJour] = useState(today);

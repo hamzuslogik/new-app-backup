@@ -6,8 +6,10 @@ import api from '../config/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import './SystemMessages.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const SystemMessages = () => {
+  useForceDesktopViewport('system-messages-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);

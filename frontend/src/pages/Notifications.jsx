@@ -8,8 +8,10 @@ import api from '../config/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Notifications.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Notifications = () => {
+  useForceDesktopViewport('notifications-page');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'

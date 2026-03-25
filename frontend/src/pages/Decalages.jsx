@@ -7,6 +7,7 @@ import { FaClock, FaUser, FaFileAlt, FaCheck, FaTimes, FaSearch, FaFilter, FaSyn
 import { toast } from 'react-toastify';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import './Decalages.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -28,6 +29,7 @@ function getMondayOfWeek(year, week) {
 }
 
 const Decalages = () => {
+  useForceDesktopViewport('decalages-page');
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
