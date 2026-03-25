@@ -68,6 +68,52 @@ const AffectationDep = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Forcer le rendu desktop sur mobile (meme approche que Dashboard)
+  useEffect(() => {
+    const originalViewport = document.querySelector('meta[name="viewport"]');
+    const originalContent = originalViewport?.getAttribute('content') || '';
+
+    let viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) {
+      viewport = document.createElement('meta');
+      viewport.setAttribute('name', 'viewport');
+      document.head.appendChild(viewport);
+    }
+    viewport.setAttribute('content', 'width=1400');
+
+    document.body.classList.add('affectation-dep-page');
+    document.documentElement.classList.add('affectation-dep-page');
+
+    document.documentElement.style.minWidth = '1400px';
+    document.documentElement.style.width = 'auto';
+    document.documentElement.style.maxWidth = 'none';
+    document.documentElement.style.overflowX = 'auto';
+    document.body.style.minWidth = '1400px';
+    document.body.style.width = 'auto';
+    document.body.style.maxWidth = 'none';
+    document.body.style.overflowX = 'auto';
+
+    return () => {
+      if (originalViewport && originalContent) {
+        originalViewport.setAttribute('content', originalContent);
+      } else if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1');
+      }
+
+      document.body.classList.remove('affectation-dep-page');
+      document.documentElement.classList.remove('affectation-dep-page');
+
+      document.documentElement.style.minWidth = '';
+      document.documentElement.style.width = '';
+      document.documentElement.style.maxWidth = '';
+      document.documentElement.style.overflowX = '';
+      document.body.style.minWidth = '';
+      document.body.style.width = '';
+      document.body.style.maxWidth = '';
+      document.body.style.overflowX = '';
+    };
+  }, []);
   
   // Vérifier si l'utilisateur est admin (fonction 1, 2, 7, ou 11)
   const isAdmin = user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 11;
