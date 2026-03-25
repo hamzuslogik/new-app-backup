@@ -149,9 +149,11 @@ const Dashboard = () => {
         time_debut: '00:00:00',
         time_fin: '23:59:59',
       };
-      setFilters(defaultApplied);
+      // Garder le formulaire de filtres "initialisé" (non pré-rempli),
+      // tout en affichant les résultats par défaut via appliedFilters.
+      setFilters(getInitialFilters());
       setAppliedFilters(defaultApplied);
-      setShowFilters(true);
+      setShowFilters(false);
     }
   }, [searchParams, user]);
 
