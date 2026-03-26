@@ -172,6 +172,27 @@ const CompteRendu = () => {
     return '#ffc107';
   };
 
+  const getEtatColorById = (idEtat) => {
+    const etat = etats.find((e) => Number(e.id) === Number(idEtat));
+    return etat?.color || '#6c757d';
+  };
+
+  const hexToRgba = (hex, alpha = 1) => {
+    if (!hex || typeof hex !== 'string') return `rgba(255, 193, 7, ${alpha})`;
+    const clean = hex.replace('#', '');
+    const valid = clean.length === 3 || clean.length === 6;
+    if (!valid) return `rgba(255, 193, 7, ${alpha})`;
+
+    const normalized = clean.length === 3
+      ? clean.split('').map((c) => c + c).join('')
+      : clean;
+
+    const r = parseInt(normalized.slice(0, 2), 16);
+    const g = parseInt(normalized.slice(2, 4), 16);
+    const b = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
   return (
     <div className="compte-rendu-page">
       <div className="page-header">
@@ -247,7 +268,11 @@ const CompteRendu = () => {
                 <div
                   key={cr.id}
                   className={`compte-rendu-card statut-${cr.statut}`}
-                  style={{ borderLeft: `4px solid ${getCardColorByEtat(cr)}` }}
+                  style={{
+                    border: `1px solid ${getCardColorByEtat(cr)}`,
+                    borderLeft: `4px solid ${getCardColorByEtat(cr)}`,
+                    background: hexToRgba(getCardColorByEtat(cr), 0.08)
+                  }}
                 >
                   <div className="cr-header">
                     <div className="cr-info">
@@ -318,8 +343,37 @@ const CompteRendu = () => {
                       <div className="cr-field">
                         <strong>État:</strong>
                         <div className="cr-text">
-                          {cr.etat_titre && <span>État: {cr.etat_titre}</span>}
-                          {cr.sous_etat_titre && <span> - Sous-état: {cr.sous_etat_titre}</span>}
+                          {cr.etat_titre && (
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                marginLeft: 8,
+                                padding: '2px 10px',
+                                borderRadius: 999,
+                                border: `1px solid ${getEtatColorById(cr.id_etat_final)}`,
+                                background: hexToRgba(getEtatColorById(cr.id_etat_final), 0.16),
+                                color: '#1f2937',
+                                fontWeight: 600
+                              }}
+                            >
+                              {cr.etat_titre}
+                            </span>
+                          )}
+                          {cr.sous_etat_titre && (
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                marginLeft: 8,
+                                padding: '2px 10px',
+                                borderRadius: 999,
+                                border: `1px solid ${getEtatColorById(cr.id_etat_final)}`,
+                                background: hexToRgba(getEtatColorById(cr.id_etat_final), 0.08),
+                                color: '#374151'
+                              }}
+                            >
+                              {cr.sous_etat_titre}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
