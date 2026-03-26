@@ -3016,6 +3016,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
     let commercial = null;
     let confirmateur = null;
     let etat = null;
+    let sousEtat = null;
     let produit = null;
 
     try {
@@ -3092,6 +3093,14 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
     } catch (e) { 
       console.log('Erreur etat:', e.message);
       console.error('Erreur lors de la récupération de l\'état:', e);
+    }
+
+    try {
+      if (fiche.id_sous_etat) {
+        sousEtat = await queryOne('SELECT titre FROM sous_etat WHERE id = ?', [fiche.id_sous_etat]);
+      }
+    } catch (e) {
+      console.log('Erreur sous_etat:', e.message);
     }
 
     // Récupérer la qualification si id_qualif existe
@@ -3217,6 +3226,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       etat_final_titre: etat?.titre || null,
       etat_final_color: etat?.color || null,
       etat_final_groupe: etat?.groupe || null,
+      sous_etat_titre: sousEtat?.titre || null,
       // Ajouter id_etat_final pour vérification côté frontend
       id_etat_final_verified: fiche.id_etat_final,
       has_etat_changed_by_compte_rendu: hasEtatChangedByCompteRendu,
@@ -3237,10 +3247,12 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         `SELECT histo.*,
          etat.titre as etat_titre,
          etat.color as etat_color,
+         se.titre as sous_etat_titre,
          u_histo.pseudo as histo_confirmateur_pseudo,
          u_cr.pseudo as cr_commercial_pseudo
          FROM fiches_histo histo
          LEFT JOIN etats etat ON histo.id_etat = etat.id
+         LEFT JOIN sous_etat se ON histo.id_sous_etat = se.id
          LEFT JOIN utilisateurs u_histo ON histo.id_confirmateur = u_histo.id
          LEFT JOIN utilisateurs u_cr ON histo.id_commercial_cr = u_cr.id
          WHERE histo.id_fiche = ? 
@@ -3250,17 +3262,6 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       
       // Enrichir chaque entrée de l'historique avec les données de la fiche actuelle
       if (historique && historique.length > 0 && fiche) {
-        // Vérifier si id_sous_etat existe dans la table
-        let sousEtatInfo = null;
-        try {
-          if (fiche.id_sous_etat) {
-            sousEtatInfo = await queryOne('SELECT titre FROM sous_etat WHERE id = ?', [fiche.id_sous_etat]);
-          }
-        } catch (e) {
-          // Colonne id_sous_etat n'existe probablement pas dans fiches
-          console.log('Impossible de récupérer le sous-état (colonne peut ne pas exister):', e.message);
-        }
-        
         historique = historique.map(histo => ({
           ...histo,
           histo_id_confirmateur: histo.id_confirmateur,
@@ -3305,7 +3306,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           conf_site_classe: fiche.conf_site_classe || null,
           conf_consommation_electricite: fiche.conf_consommation_electricite || null,
           nb_pans: fiche.nb_pans || null,
-          sous_etat_titre: sousEtatInfo?.titre || null,
+          sous_etat_titre: histo.sous_etat_titre || null,
           cq_etat: cq_etat || null,
           cq_dossier: cq_dossier || null,
           commentaire_qualite: fiche.commentaire_qualite || null,

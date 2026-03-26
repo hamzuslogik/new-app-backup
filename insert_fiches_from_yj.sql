@@ -159,7 +159,7 @@ INSERT INTO `fiches` (
   `age_madame`, `revenu_foyer`, `credit_foyer`, `situation_conjugale`, `nb_enfants`,
   `profession_mr`, `profession_madame`, `commentaire`, `id_agent`, `id_centre`, `id_insert`,
   `id_confirmateur`, `id_confirmateur_2`, `id_confirmateur_3`, `id_qualite`, `id_qualif`,
-  `id_commercial`, `id_commercial_2`, `id_etat_final`, `date_appel`, `date_appel_time`, `date_insert`,
+  `id_commercial`, `id_commercial_2`, `id_etat_final`, `id_sous_etat`, `date_appel`, `date_appel_time`, `date_insert`,
   `date_insert_time`, `date_audit`, `date_confirmation`, `date_qualif`, `date_rdv`,
   `date_rdv_time`, `date_affect`, `date_sign`, `date_sign_time`, `date_modif_time`,
   `archive`, `ko`, `hc`, `active`, `valider`, `conf_commentaire_produit`, `conf_consommations`,
@@ -367,6 +367,48 @@ SELECT
       ELSE NULL
     END
   ) as `id_etat_final`,
+  -- Sous-etat: conversion yj_fiche.sous_etat -> fiches.id_sous_etat via (id_etat + titre)
+  (
+    SELECT se.`id`
+    FROM `sous_etat` se
+    WHERE se.`id_etat` = COALESCE(
+      (SELECT `id` FROM `etats` e WHERE TRIM(UPPER(e.`titre`)) = TRIM(UPPER(`yj_fiche`.`etat_final`)) LIMIT 1),
+      CASE
+        WHEN `etat_final` = 'EN-ATTENTE' THEN 1
+        WHEN `etat_final` = 'NRP' THEN 2
+        WHEN `etat_final` = 'ANNULER' THEN 5
+        WHEN `etat_final` = 'CONFIRMER' THEN 7
+        WHEN `etat_final` = 'ANNULER ET A REPROGRAMMER' THEN 8
+        WHEN `etat_final` = 'CLIENT HONORE A SUIVRE' THEN 9
+        WHEN `etat_final` = 'RDV ANNULER' THEN 11
+        WHEN `etat_final` = 'REFUSER' THEN 12
+        WHEN `etat_final` = 'SIGNER' THEN 13
+        WHEN `etat_final` = 'SIGNER RETRACTER' THEN 16
+        WHEN `etat_final` = 'RAPPEL POUR BUREAU' THEN 19
+        WHEN `etat_final` = 'ANNULER 2 FOIS' THEN 22
+        WHEN `etat_final` = 'HORS CIBLE CONFIRMATEUR' THEN 23
+        WHEN `etat_final` = 'HORS CIBLE AGE / DOUBLON / LOCATAIRE' THEN 6
+        WHEN `etat_final` = 'HORS CIBLE FINANCEMENT' THEN 24
+        WHEN `etat_final` = 'REFUSER 2 FOIS' THEN 25
+        WHEN `etat_final` = 'RDV ANNULER 2 FOIS' THEN 26
+        WHEN `etat_final` = 'HORS CIBLE AIR AIR' THEN 29
+        WHEN `etat_final` = 'SIGNER RETRACTER 2 FOIS' THEN 38
+        WHEN `etat_final` = 'HHC FINANCEMENT A VERIFIER' THEN 34
+        WHEN `etat_final` = 'HHC TECHNIQUE' THEN 35
+        WHEN `etat_final` = 'HHC ERREUR CONFIRMATEUR' THEN 36
+        WHEN `etat_final` = 'HHC MENSONGE CLIENT' THEN 37
+        WHEN `etat_final` = 'SIGNER COMPLET' THEN 45
+        WHEN `etat_final` = 'SIGNER PM' THEN 44
+        WHEN `etat_final` = 'VT EN COURS' THEN 48
+        WHEN `etat_final` = 'VT OK' THEN 47
+        WHEN `etat_final` = 'TH POSE OK' THEN 49
+        WHEN `etat_final` = 'TH PAIEMENT OK' THEN 50
+        ELSE NULL
+      END
+    )
+    AND TRIM(UPPER(se.`titre`)) = TRIM(UPPER(`yj_fiche`.`sous_etat`))
+    LIMIT 1
+  ) as `id_sous_etat`,
   -- Date appel: convertir datetime vers bigint (timestamp Unix)
   CASE 
     WHEN `date_heure_appel` != '0000-00-00 00:00:00' AND `date_heure_appel` IS NOT NULL
@@ -525,6 +567,7 @@ ON DUPLICATE KEY UPDATE
   `ville` = VALUES(`ville`),
   `etude` = VALUES(`etude`),
   `id_etat_final` = VALUES(`id_etat_final`),
+  `id_sous_etat` = VALUES(`id_sous_etat`),
   `id_agent` = VALUES(`id_agent`),
   `id_centre` = VALUES(`id_centre`),
   `id_commercial` = VALUES(`id_commercial`),
