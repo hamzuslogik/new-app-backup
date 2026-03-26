@@ -742,8 +742,36 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       }
     };
 
+    // Colonnes réellement modifiables sur la table fiches
+    const updatableFicheFields = new Set([
+      'nom', 'prenom', 'civ', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville',
+      'situation_conjugale', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
+      'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
+      'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage',
+      'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
+      'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
+      'date_rdv_time', 'date_appel_time', 'date_sign_time', 'id_centre', 'id_commercial',
+      'id_commercial_2', 'id_etat_final', 'id_qualif', 'rdv_urgent', 'commentaire',
+      'commentaire_qualite', 'commentaire_commercial', 'type_contrat_mr', 'type_contrat_madame',
+      'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
+      'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
+      'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
+      'conf_consommation_electricite', 'conf_rdv_avec'
+    ]);
+
     // Ajouter les modifications JSON et enregistrer dans modifica
     for (const [key, value] of Object.entries(modifications)) {
+      // Les champs conf_rdv_date/conf_rdv_time n'existent pas en DB.
+      // Ils sont traités plus bas pour alimenter date_rdv_time.
+      if (key === 'conf_rdv_date' || key === 'conf_rdv_time') {
+        continue;
+      }
+
+      // Évite les erreurs SQL sur clés non persistables (compatibilité anciens CR).
+      if (!updatableFicheFields.has(key)) {
+        continue;
+      }
+
       const oldValue = ancienneFiche[key];
       const newValue = value;
       
@@ -754,6 +782,20 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       
       fields.push(`\`${key}\` = ?`);
       values.push(value);
+    }
+
+    // Annuler à reprogrammer: convertir conf_rdv_date + conf_rdv_time vers date_rdv_time
+    if (modifications.conf_rdv_date) {
+      const rdvTime = modifications.conf_rdv_time || '09:00';
+      const newDateRdvTime = `${modifications.conf_rdv_date} ${rdvTime}:00`;
+      const oldDateRdvTime = ancienneFiche.date_rdv_time;
+      if (oldDateRdvTime !== newDateRdvTime) {
+        await logModification(compteRendu.id_fiche, user.id, 'date_rdv_time', oldDateRdvTime, newDateRdvTime, now);
+      }
+      if (!fields.includes('`date_rdv_time` = ?')) {
+        fields.push('`date_rdv_time` = ?');
+        values.push(newDateRdvTime);
+      }
     }
 
     // Ajouter l'état final si présent dans le compte rendu
