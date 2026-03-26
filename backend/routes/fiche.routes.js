@@ -216,6 +216,14 @@ const decodeFicheId = (hash) => {
 // Middleware pour convertir le hash en ID dans les paramètres
 const hashToIdMiddleware = async (req, res, next) => {
   try {
+    const looksLikePhoneNumber = (value) => {
+      if (value === null || value === undefined) return false;
+      const s = String(value).trim();
+      // Autoriser formats usuels: 0612345678, 33612345678, +33612345678, 06 12 34 56 78
+      const digits = s.replace(/\D/g, '');
+      return digits.length >= 10 && digits.length <= 14;
+    };
+
     const findFicheIdByPhone = async (rawPhone) => {
       if (!rawPhone) return null;
       const trimmed = String(rawPhone).trim();
@@ -257,6 +265,16 @@ const hashToIdMiddleware = async (req, res, next) => {
       if (decodedId) {
         req.params.id = decodedId;
       } else {
+        // Si ça ressemble à un numéro de téléphone, PRIORITÉ à la recherche téléphone
+        // (évite 0610895976 -> parseInt -> 610895976, faux ID)
+        if (looksLikePhoneNumber(req.params.id)) {
+          const phoneMatchedId = await findFicheIdByPhone(req.params.id);
+          if (phoneMatchedId) {
+            req.params.id = phoneMatchedId;
+            return next();
+          }
+        }
+
         // Si le décodage échoue, essayer de parser comme ID direct (pour compatibilité)
         const directId = parseInt(req.params.id, 10);
         if (!isNaN(directId) && directId > 0) {
@@ -301,6 +319,16 @@ const hashToIdMiddleware = async (req, res, next) => {
         req.params.id = decodedId;
         delete req.params.hash;
       } else {
+        // Si ça ressemble à un téléphone, le rechercher avant parseInt
+        if (looksLikePhoneNumber(req.params.hash)) {
+          const phoneMatchedId = await findFicheIdByPhone(req.params.hash);
+          if (phoneMatchedId) {
+            req.params.id = phoneMatchedId;
+            delete req.params.hash;
+            return next();
+          }
+        }
+
         // Si le décodage échoue, essayer de parser comme ID direct (pour compatibilité)
         const directId = parseInt(req.params.hash, 10);
         if (!isNaN(directId) && directId > 0) {
