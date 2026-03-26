@@ -216,6 +216,43 @@ const decodeFicheId = (hash) => {
 // Middleware pour convertir le hash en ID dans les paramètres
 const hashToIdMiddleware = async (req, res, next) => {
   try {
+    // Cache court pour éviter une requête DB à chaque hit
+    if (!global.__phoneUrlSearchSettingCache) {
+      global.__phoneUrlSearchSettingCache = { value: true, expiresAt: 0 };
+    }
+    const getPhoneUrlSearchEnabled = async () => {
+      const now = Date.now();
+      if (global.__phoneUrlSearchSettingCache.expiresAt > now) {
+        return global.__phoneUrlSearchSettingCache.value;
+      }
+      try {
+        const tableExists = await queryOne(
+          `SELECT COUNT(*) as count
+           FROM information_schema.tables
+           WHERE table_schema = DATABASE()
+           AND table_name = 'global_settings'`
+        );
+        if (!tableExists || Number(tableExists.count) === 0) {
+          global.__phoneUrlSearchSettingCache = { value: true, expiresAt: now + 60000 };
+          return true;
+        }
+        const row = await queryOne(
+          'SELECT setting_value FROM global_settings WHERE setting_key = ?',
+          ['phone_url_search_enabled']
+        );
+        const raw = row?.setting_value;
+        const enabled = raw === undefined || raw === null
+          ? true
+          : !(String(raw).toLowerCase() === '0' || String(raw).toLowerCase() === 'false');
+        global.__phoneUrlSearchSettingCache = { value: enabled, expiresAt: now + 60000 };
+        return enabled;
+      } catch (e) {
+        // En cas d'erreur, rester permissif pour ne pas bloquer la navigation
+        global.__phoneUrlSearchSettingCache = { value: true, expiresAt: now + 15000 };
+        return true;
+      }
+    };
+
     const looksLikePhoneNumber = (value) => {
       if (value === null || value === undefined) return false;
       const s = String(value).trim();
@@ -267,7 +304,7 @@ const hashToIdMiddleware = async (req, res, next) => {
       } else {
         // Si ça ressemble à un numéro de téléphone, PRIORITÉ à la recherche téléphone
         // (évite 0610895976 -> parseInt -> 610895976, faux ID)
-        if (looksLikePhoneNumber(req.params.id)) {
+        if (looksLikePhoneNumber(req.params.id) && await getPhoneUrlSearchEnabled()) {
           const phoneMatchedId = await findFicheIdByPhone(req.params.id);
           if (phoneMatchedId) {
             req.params.id = phoneMatchedId;
@@ -320,7 +357,7 @@ const hashToIdMiddleware = async (req, res, next) => {
         delete req.params.hash;
       } else {
         // Si ça ressemble à un téléphone, le rechercher avant parseInt
-        if (looksLikePhoneNumber(req.params.hash)) {
+        if (looksLikePhoneNumber(req.params.hash) && await getPhoneUrlSearchEnabled()) {
           const phoneMatchedId = await findFicheIdByPhone(req.params.hash);
           if (phoneMatchedId) {
             req.params.id = phoneMatchedId;

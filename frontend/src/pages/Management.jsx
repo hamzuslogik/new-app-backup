@@ -17,6 +17,7 @@ import SMSCategoriesTab from '../components/management/SMSCategoriesTab';
 import WorkflowsTab from '../components/management/WorkflowsTab';
 import FichesExtractionTab from '../components/management/FichesExtractionTab';
 import FichesHashFromTelTab from '../components/management/FichesHashFromTelTab';
+import GlobalSettingsTab from '../components/management/GlobalSettingsTab';
 import GlobalSearch from '../components/management/GlobalSearch';
 import './Management.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -53,6 +54,7 @@ const Management = () => {
     { id: 'workflows', label: 'Workflows', icon: FaProjectDiagram },
     { id: 'fiches-extraction', label: 'Extraction fiches', icon: FaFileExport },
     { id: 'fiches-hash-tel', label: 'Hash depuis tel', icon: FaPhone },
+    { id: 'global-settings', label: 'Parametres globaux', icon: FaCog },
   ];
 
   const handleGlobalSearchSelect = (type, item) => {
@@ -97,6 +99,8 @@ const Management = () => {
         return <FichesExtractionTab />;
       case 'fiches-hash-tel':
         return <FichesHashFromTelTab />;
+      case 'global-settings':
+        return <GlobalSettingsTab />;
       default:
         return <CentresTab />;
     }

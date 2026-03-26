@@ -2206,4 +2206,55 @@ router.post('/fiches-hash-from-phones', authenticate, upload.single('file'), asy
   }
 });
 
+// =====================================================
+// PARAMETRES GLOBAUX
+// =====================================================
+
+const ensureGlobalSettingsTable = async () => {
+  await query(`
+    CREATE TABLE IF NOT EXISTS global_settings (
+      setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
+      setting_value VARCHAR(255) DEFAULT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      updated_by INT(11) DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+};
+
+router.get('/global-settings/phone-url-search-enabled', authenticate, async (req, res) => {
+  try {
+    await ensureGlobalSettingsTable();
+    const row = await queryOne(
+      'SELECT setting_value FROM global_settings WHERE setting_key = ?',
+      ['phone_url_search_enabled']
+    );
+    const raw = row?.setting_value;
+    const enabled = raw === undefined || raw === null
+      ? true
+      : !(String(raw).toLowerCase() === '0' || String(raw).toLowerCase() === 'false');
+
+    res.json({ success: true, data: { enabled } });
+  } catch (error) {
+    console.error('Erreur lecture paramètre global phone_url_search_enabled:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+router.put('/global-settings/phone-url-search-enabled', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    await ensureGlobalSettingsTable();
+    const enabled = !!req.body?.enabled;
+    await query(
+      `INSERT INTO global_settings (setting_key, setting_value, updated_by)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by), updated_at = CURRENT_TIMESTAMP`,
+      ['phone_url_search_enabled', enabled ? '1' : '0', req.user?.id || null]
+    );
+    res.json({ success: true, message: 'Paramètre global mis à jour', data: { enabled } });
+  } catch (error) {
+    console.error('Erreur mise à jour paramètre global phone_url_search_enabled:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;
