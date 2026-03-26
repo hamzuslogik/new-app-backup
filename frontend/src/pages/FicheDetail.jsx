@@ -3454,22 +3454,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         gap: '15px'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                          {/* Sous-état */}
-                          {etatActuel.sous_etat_titre && (
-                            <span
-                              style={{
-                                padding: '6px 12px',
-                                borderRadius: '6px',
-                                backgroundColor: '#e8e8e8',
-                                color: '#333',
-                                fontSize: '13px',
-                                fontWeight: 'bold',
-                                border: '1px solid #ccc'
-                              }}
-                            >
-                              {etatActuel.sous_etat_titre}
-                            </span>
-                          )}
                           {/* État */}
                           <span
                             style={{
@@ -3490,6 +3474,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                             ) : null}
                             {etatActuel.etat_titre}
                           </span>
+                          {/* Sous-état */}
+                          {etatActuel.sous_etat_titre && (
+                            <span
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                backgroundColor: '#e8e8e8',
+                                color: '#333',
+                                fontSize: '13px',
+                                fontWeight: 'bold',
+                                border: '1px solid #ccc'
+                              }}
+                            >
+                              {etatActuel.sous_etat_titre}
+                            </span>
+                          )}
                         </div>
                         <span style={{ 
                           color: '#666', 
@@ -3686,20 +3686,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               >
                                 <div className="historique-header" style={{ marginBottom: '10px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                    {histo.sous_etat_titre && (
-                                      <span
-                                        style={{
-                                          padding: '4px 10px',
-                                          borderRadius: '4px',
-                                          backgroundColor: '#e0e0e0',
-                                          color: '#333',
-                                          fontSize: '12px',
-                                          fontWeight: 'bold'
-                                        }}
-                                      >
-                                        {histo.sous_etat_titre}
-                                      </span>
-                                    )}
                                     <span
                                       className="historique-etat"
                                       style={{
@@ -3716,6 +3702,20 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                       )}
                                       {histo.etat_titre || 'État inconnu'}
                                     </span>
+                                    {histo.sous_etat_titre && (
+                                      <span
+                                        style={{
+                                          padding: '4px 10px',
+                                          borderRadius: '4px',
+                                          backgroundColor: '#e0e0e0',
+                                          color: '#333',
+                                          fontSize: '12px',
+                                          fontWeight: 'bold'
+                                        }}
+                                      >
+                                        {histo.sous_etat_titre}
+                                      </span>
+                                    )}
                                     <span className="historique-date" style={{ color: '#666', fontSize: '13px', marginLeft: 'auto' }}>
                                       {histo.date_creation ? new Date(histo.date_creation).toLocaleString('fr-FR') : '-'}
                                     </span>
