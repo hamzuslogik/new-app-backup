@@ -162,6 +162,16 @@ const CompteRendu = () => {
   const isRPConfirmation = Number(user.fonction) === 13; // RP Confirmation = fonction 13
   const canApprove = isAdmin || isRPConfirmation; // Admins et RP Confirmation peuvent approuver / modifier
 
+  const getCardColorByEtat = (cr) => {
+    const etat = etats.find((e) => Number(e.id) === Number(cr.id_etat_final));
+    if (etat?.color) return etat.color;
+
+    // Fallback sur la couleur du statut CR si aucun état final n'est défini.
+    if (cr.statut === 'approved') return '#28a745';
+    if (cr.statut === 'rejected') return '#dc3545';
+    return '#ffc107';
+  };
+
   return (
     <div className="compte-rendu-page">
       <div className="page-header">
@@ -234,7 +244,11 @@ const CompteRendu = () => {
           ) : compteRendusPending.length > 0 ? (
             <div className="compte-rendu-list">
               {compteRendusPending.map((cr) => (
-                <div key={cr.id} className={`compte-rendu-card statut-${cr.statut}`}>
+                <div
+                  key={cr.id}
+                  className={`compte-rendu-card statut-${cr.statut}`}
+                  style={{ borderLeft: `4px solid ${getCardColorByEtat(cr)}` }}
+                >
                   <div className="cr-header">
                     <div className="cr-info">
                       <div className="cr-title">

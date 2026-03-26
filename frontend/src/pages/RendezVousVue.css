@@ -127,6 +127,15 @@
   letter-spacing: 0.02em;
 }
 
+.rdv-vue-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.rdv-vue-table th.sortable:hover {
+  background: #f0f4f8;
+}
+
 .rdv-vue-table tbody tr:hover {
   background: #f9f9f9;
 }

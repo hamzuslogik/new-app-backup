@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import api from '../config/api';
 import { FaCalendarDay, FaUserCheck, FaUserSlash, FaChartLine } from 'react-icons/fa';
@@ -19,6 +19,7 @@ const RendezVousVue = () => {
   const today = new Date().toISOString().split('T')[0];
   const [activeTab, setActiveTab] = useState('jour');
   const [dateJour, setDateJour] = useState(today);
+  const [sortConfig, setSortConfig] = useState({ key: 'date_rdv_time', direction: 'asc' });
 
   const { data: dataJour, isLoading: loadingJour } = useQuery(
     ['rdv-vue', 'jour', dateJour],
@@ -59,6 +60,49 @@ const RendezVousVue = () => {
     (activeTab === 'affilie' && loadingAffilie) ||
     (activeTab === 'non_affilie' && loadingNonAffilie) ||
     (activeTab === 'production_rdv' && loadingProductionRdv);
+
+  const getSortValue = (fiche, key) => {
+    switch (key) {
+      case 'fiche':
+        return `${fiche.nom || ''} ${fiche.prenom || ''}`.trim().toLowerCase();
+      case 'adresse':
+        return `${fiche.adresse || ''} ${fiche.cp || ''} ${fiche.ville || ''}`.trim().toLowerCase();
+      case 'date_rdv_time':
+        return fiche.date_rdv_time ? new Date(fiche.date_rdv_time).getTime() : 0;
+      case 'commerciaux':
+        return `${fiche.commercial_pseudo || ''} ${fiche.commercial2_pseudo || ''}`.trim().toLowerCase();
+      case 'etat':
+        return `${fiche.etat_titre || fiche.id_etat_final || ''}`.toString().toLowerCase();
+      default:
+        return '';
+    }
+  };
+
+  const sortedList = useMemo(() => {
+    const copied = [...list];
+    copied.sort((a, b) => {
+      const valA = getSortValue(a, sortConfig.key);
+      const valB = getSortValue(b, sortConfig.key);
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return copied;
+  }, [list, sortConfig]);
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const getSortIndicator = (key) => {
+    if (sortConfig.key !== key) return ' <> ';
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
 
   return (
     <div className="rdv-vue-page">
@@ -117,16 +161,16 @@ const RendezVousVue = () => {
             <table className="rdv-vue-table">
               <thead>
                 <tr>
-                  <th>Fiche</th>
-                  <th>Adresse</th>
-                  <th>Date / heure RDV</th>
-                  <th>Commercial(s)</th>
-                  <th>État</th>
+                  <th className="sortable" onClick={() => handleSort('fiche')}>Fiche{getSortIndicator('fiche')}</th>
+                  <th className="sortable" onClick={() => handleSort('adresse')}>Adresse{getSortIndicator('adresse')}</th>
+                  <th className="sortable" onClick={() => handleSort('date_rdv_time')}>Date / heure RDV{getSortIndicator('date_rdv_time')}</th>
+                  <th className="sortable" onClick={() => handleSort('commerciaux')}>Commercial(s){getSortIndicator('commerciaux')}</th>
+                  <th className="sortable" onClick={() => handleSort('etat')}>État{getSortIndicator('etat')}</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {list.map((f) => (
+                {sortedList.map((f) => (
                   <tr key={f.id}>
                     <td>
                       <strong>{f.nom}</strong> {f.prenom}
