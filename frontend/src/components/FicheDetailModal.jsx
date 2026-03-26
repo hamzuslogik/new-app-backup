@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from 'react-query';
@@ -22,9 +22,6 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const isOverlayLocked =
     lockedFromOption ||
     (searchParams.get('overlay') === '1' && searchParams.get('close') === '0');
-  const [phoneSearch, setPhoneSearch] = useState('');
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState('');
 
   // Ne plus bloquer le scroll du body - le modal utilise le scroll de la page
   // useModalScrollLock(!!ficheHash);
@@ -145,45 +142,6 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
 
   const etatColor = getEtatColor();
 
-  const handlePhoneSearch = async (e) => {
-    e.preventDefault();
-    const value = (phoneSearch || '').trim();
-    if (!value) return;
-
-    setSearchLoading(true);
-    setSearchError('');
-    try {
-      const res = await api.get('/fiches', {
-        params: {
-          fiche_search: 1,
-          critere: value,
-          critere_champ: 'tel', // backend: tel => tel OR gsm1 OR gsm2
-          page: 1,
-          limit: 1,
-          include_archive: 1
-        }
-      });
-
-      const first = res?.data?.data?.[0];
-      const targetHash = first?.hash;
-      if (!targetHash) {
-        setSearchError('Aucune fiche trouvée pour ce numéro.');
-        return;
-      }
-
-      if (String(targetHash) === String(ficheHash)) {
-        setSearchError('Cette fiche est déjà ouverte.');
-        return;
-      }
-
-      navigate(`/fiches/${targetHash}?overlay=auto&close=0`);
-      setPhoneSearch('');
-    } catch (err) {
-      setSearchError('Erreur lors de la recherche de fiche.');
-    } finally {
-      setSearchLoading(false);
-    }
-  };
 
   const modalContent = (
     <div
@@ -204,31 +162,6 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
         <button className="fiche-detail-modal-close" onClick={onClose}>
           <FaTimes />
         </button>
-        {isOverlayLocked && (
-          <div style={{ marginBottom: '12px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', background: '#fafafa' }}>
-            <form onSubmit={handlePhoneSearch} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input
-                type="text"
-                value={phoneSearch}
-                onChange={(e) => setPhoneSearch(e.target.value)}
-                placeholder="Rechercher par tel / gsm1 / gsm2"
-                style={{ flex: 1, padding: '8px 10px', border: '1px solid #ccc', borderRadius: '4px' }}
-              />
-              <button
-                type="submit"
-                disabled={searchLoading}
-                style={{ padding: '8px 12px', borderRadius: '4px', border: 'none', background: '#1976d2', color: '#fff', cursor: 'pointer' }}
-              >
-                {searchLoading ? 'Recherche...' : 'Rechercher'}
-              </button>
-            </form>
-            {searchError && (
-              <div style={{ marginTop: '6px', color: '#b42318', fontSize: '12px' }}>
-                {searchError}
-              </div>
-            )}
-          </div>
-        )}
         <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
           <FicheDetail ficheHash={ficheHash} onClose={onClose} isModal={true} />
         </RouteParamsProvider>

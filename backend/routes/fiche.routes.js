@@ -214,8 +214,42 @@ const decodeFicheId = (hash) => {
 };
 
 // Middleware pour convertir le hash en ID dans les paramètres
-const hashToIdMiddleware = (req, res, next) => {
+const hashToIdMiddleware = async (req, res, next) => {
   try {
+    const findFicheIdByPhone = async (rawPhone) => {
+      if (!rawPhone) return null;
+      const trimmed = String(rawPhone).trim();
+      if (!trimmed) return null;
+
+      // Normaliser: garder uniquement les chiffres
+      const digits = trimmed.replace(/\D/g, '');
+      const variants = new Set([trimmed]);
+      if (digits) {
+        variants.add(digits);
+        if (digits.startsWith('33') && digits.length >= 11) {
+          variants.add(`0${digits.slice(2)}`);
+        }
+        if (digits.startsWith('0')) {
+          variants.add(`33${digits.slice(1)}`);
+        }
+      }
+
+      const vals = Array.from(variants).filter(Boolean);
+      if (vals.length === 0) return null;
+
+      const placeholders = vals.map(() => '?').join(',');
+      const found = await queryOne(
+        `SELECT id FROM fiches
+         WHERE tel IN (${placeholders})
+            OR gsm1 IN (${placeholders})
+            OR gsm2 IN (${placeholders})
+         ORDER BY id DESC
+         LIMIT 1`,
+        [...vals, ...vals, ...vals]
+      );
+      return found?.id || null;
+    };
+
     // Gérer le paramètre 'id'
     if (req.params.id) {
       // Essayer de décoder le hash
@@ -228,6 +262,13 @@ const hashToIdMiddleware = (req, res, next) => {
         if (!isNaN(directId) && directId > 0) {
           req.params.id = directId;
         } else {
+          // Si ce n'est ni un hash ni un id, essayer comme numéro de téléphone (tel/gsm1/gsm2)
+          const phoneMatchedId = await findFicheIdByPhone(req.params.id);
+          if (phoneMatchedId) {
+            req.params.id = phoneMatchedId;
+            return next();
+          }
+
           // Logger pour le débogage avec plus de détails
           console.error('Identifiant de fiche invalide dans hashToIdMiddleware (param id):', {
             id: req.params.id,
@@ -266,6 +307,14 @@ const hashToIdMiddleware = (req, res, next) => {
           req.params.id = directId;
           delete req.params.hash;
         } else {
+          // Fallback: autoriser /fiches/<tel> en résolvant via tel/gsm1/gsm2
+          const phoneMatchedId = await findFicheIdByPhone(req.params.hash);
+          if (phoneMatchedId) {
+            req.params.id = phoneMatchedId;
+            delete req.params.hash;
+            return next();
+          }
+
           // Logger pour le débogage
           console.error('Hash de fiche invalide dans hashToIdMiddleware (param hash):', {
             hash: req.params.hash,
