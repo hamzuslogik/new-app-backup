@@ -54,8 +54,15 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   useEffect(() => {
     // Détecter si on est déjà sur la route /fiches/:id (accès direct, sans overlay)
     const isOnFicheRoute = location.pathname === `/fiches/${ficheHash}`;
+    const isAnotherFicheRoute = location.pathname.startsWith('/fiches/') && !isOnFicheRoute;
     isDirectAccess.current = isOnFicheRoute;
     
+    // Si l'utilisateur navigue déjà vers une autre fiche (/fiches/:autreHash),
+    // ne pas écraser l'URL avec l'ancien hash du modal en cours.
+    if (isAnotherFicheRoute) {
+      return undefined;
+    }
+
     // Sauvegarder le chemin actuel seulement si on n'est pas déjà sur /fiches/:id
     if (!isOnFicheRoute) {
       previousPath.current = `${location.pathname}${location.search}`;

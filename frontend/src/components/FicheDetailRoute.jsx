@@ -8,12 +8,14 @@ const FicheDetailRoute = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { openFicheDetail } = useFicheDetailModal();
-  const hasOpened = useRef(false);
+  const lastHandledRef = useRef('');
   const [isDirectAccess, setIsDirectAccess] = useState(false);
 
   useEffect(() => {
-    if (id && !hasOpened.current) {
-      hasOpened.current = true;
+    if (id) {
+      const routeKey = `${id}|${location.search || ''}`;
+      if (lastHandledRef.current === routeKey) return;
+      lastHandledRef.current = routeKey;
 
       // Si l'URL contient ?overlay=1 ou ?overlay=auto, ouvrir en modal et revenir a la page precedente (ou dashboard si refresh)
       // overlay=1&close=0: mode manuel verrouille (pas de fermeture par clic exterieur/Echap)
