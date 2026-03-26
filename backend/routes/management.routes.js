@@ -2243,13 +2243,19 @@ router.get('/global-settings/phone-url-search-enabled', authenticate, async (req
 router.put('/global-settings/phone-url-search-enabled', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     await ensureGlobalSettingsTable();
-    const enabled = !!req.body?.enabled;
+    const rawEnabled = req.body?.enabled;
+    const enabled = rawEnabled === true ||
+      rawEnabled === 1 ||
+      rawEnabled === '1' ||
+      (typeof rawEnabled === 'string' && rawEnabled.toLowerCase() === 'true');
     await query(
       `INSERT INTO global_settings (setting_key, setting_value, updated_by)
        VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by), updated_at = CURRENT_TIMESTAMP`,
       ['phone_url_search_enabled', enabled ? '1' : '0', req.user?.id || null]
     );
+    // Invalider / mettre à jour le cache global utilisé par hashToIdMiddleware
+    global.__phoneUrlSearchSettingCache = { value: enabled, expiresAt: Date.now() + 5000 };
     res.json({ success: true, message: 'Paramètre global mis à jour', data: { enabled } });
   } catch (error) {
     console.error('Erreur mise à jour paramètre global phone_url_search_enabled:', error);

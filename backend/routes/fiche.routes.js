@@ -233,7 +233,7 @@ const hashToIdMiddleware = async (req, res, next) => {
            AND table_name = 'global_settings'`
         );
         if (!tableExists || Number(tableExists.count) === 0) {
-          global.__phoneUrlSearchSettingCache = { value: true, expiresAt: now + 60000 };
+          global.__phoneUrlSearchSettingCache = { value: true, expiresAt: now + 5000 };
           return true;
         }
         const row = await queryOne(
@@ -244,11 +244,11 @@ const hashToIdMiddleware = async (req, res, next) => {
         const enabled = raw === undefined || raw === null
           ? true
           : !(String(raw).toLowerCase() === '0' || String(raw).toLowerCase() === 'false');
-        global.__phoneUrlSearchSettingCache = { value: enabled, expiresAt: now + 60000 };
+        global.__phoneUrlSearchSettingCache = { value: enabled, expiresAt: now + 5000 };
         return enabled;
       } catch (e) {
         // En cas d'erreur, rester permissif pour ne pas bloquer la navigation
-        global.__phoneUrlSearchSettingCache = { value: true, expiresAt: now + 15000 };
+        global.__phoneUrlSearchSettingCache = { value: true, expiresAt: now + 3000 };
         return true;
       }
     };
