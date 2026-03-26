@@ -19,10 +19,12 @@ SELECT DISTINCT
   TRIM(yf.sous_etat) AS titre
 FROM `yj_fiche` yf
 INNER JOIN `etats` e
-  ON TRIM(yf.etat_final) COLLATE utf8mb4_unicode_ci = TRIM(e.titre) COLLATE utf8mb4_unicode_ci
+  ON TRIM(CONVERT(yf.etat_final USING utf8mb4)) COLLATE utf8mb4_unicode_ci
+   = TRIM(CONVERT(e.titre USING utf8mb4)) COLLATE utf8mb4_unicode_ci
 LEFT JOIN `sous_etat` se
   ON se.id_etat = e.id
- AND TRIM(se.titre) COLLATE utf8mb4_unicode_ci = TRIM(yf.sous_etat) COLLATE utf8mb4_unicode_ci
+ AND TRIM(CONVERT(se.titre USING utf8mb4)) COLLATE utf8mb4_unicode_ci
+  = TRIM(CONVERT(yf.sous_etat USING utf8mb4)) COLLATE utf8mb4_unicode_ci
 WHERE yf.sous_etat IS NOT NULL
   AND TRIM(yf.sous_etat) <> ''
   AND yf.etat_final IS NOT NULL
