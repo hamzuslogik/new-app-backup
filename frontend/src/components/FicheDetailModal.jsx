@@ -84,17 +84,20 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
       window.history.pushState(null, '', nextUrl);
     }
     
+    return undefined;
+  }, [ficheHash, location.pathname, location.search, navigate, options?.closeMode]);
+
+  // Cleanup uniquement au démontage du modal (pas à chaque changement de hash),
+  // pour éviter d'écraser l'URL lors d'une navigation fiche -> autre fiche.
+  useEffect(() => {
     return () => {
-      // Restaurer le chemin précédent quand le modal se ferme
-      // Seulement si on n'était pas déjà sur /fiches/:id (pas d'accès direct)
-      if (!isDirectAccess.current && previousPath.current && previousPath.current !== `/fiches/${ficheHash}`) {
+      if (!isDirectAccess.current && previousPath.current) {
         window.history.pushState(null, '', previousPath.current);
       } else if (isDirectAccess.current) {
-        // Si accès direct, naviguer vers le dashboard quand on ferme
         navigate('/dashboard', { replace: true });
       }
     };
-  }, [ficheHash, location.pathname, location.search, navigate, options?.closeMode]);
+  }, [navigate]);
 
   // Focuser le modal à l'ouverture
   useEffect(() => {

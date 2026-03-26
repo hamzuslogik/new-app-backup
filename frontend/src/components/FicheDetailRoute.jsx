@@ -25,11 +25,10 @@ const FicheDetailRoute = () => {
       if (overlayMode === '1' || overlayMode === 'auto') {
         const closeMode = searchParams.get('close');
         openFicheDetail(id, { closeMode });
-        if (window.history.length > 1) {
-          navigate(-1);
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
+        // IMPORTANT:
+        // Ne pas faire navigate(-1) ici, sinon en ouverture via webform (Vicidial),
+        // on peut revenir a l'ancien hash et bloquer URL/contenu sur la fiche precedente.
+        // On garde l'URL courante /fiches/:id?overlay=... et on laisse le modal s'afficher.
         return;
       }
 
