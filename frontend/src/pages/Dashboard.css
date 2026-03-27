@@ -2163,7 +2163,7 @@ body.dashboard-page {
 
 .fiche-detail-modal-content {
   position: relative;
-  background: #ebebeb;
+  background: #f3f4f6;
   border-radius: 8px;
   max-width: 70%;
   min-width: 350px;
@@ -2178,24 +2178,8 @@ body.dashboard-page {
   box-sizing: border-box !important;
   padding: 8px;
   padding-bottom: 20px; /* Espace en bas pour que le bouton soit visible */
-  background: #ebebeb;
+  background: #f3f4f6;
   margin: 20px auto; /* Centrer et ajouter de l'espace */
-}
-
-/* Uniformiser tout le fond interne du détail fiche dans le modal */
-.fiche-detail-modal-content .fiche-detail,
-.fiche-detail-modal-content .fiche-sections,
-.fiche-detail-modal-content .fiche-section,
-.fiche-detail-modal-content .fiche-actions-menu,
-.fiche-detail-modal-content .etat-change-section,
-.fiche-detail-modal-content .confirmation-form,
-.fiche-detail-modal-content .sms-form,
-.fiche-detail-modal-content .modifica-tab,
-.fiche-detail-modal-content .planning-tab,
-.fiche-detail-modal-content .sms-tab,
-.fiche-detail-modal-content .no-results,
-.fiche-detail-modal-content .no-modifications {
-  background: #ebebeb !important;
 }
 
 /* Adapter le planning à la largeur du modal */
