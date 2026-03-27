@@ -1687,7 +1687,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
       // Validation : sous-état obligatoire si la liste des sous-états est présente
       if (etatsAvecSousEtats.includes(selectedEtat) && sousEtats && sousEtats.length > 0 && !(selectedEtat === 8 && isCommercialPorteImprevuNrp)) {
-        const idSousEtat = selectedEtat === 2 && !editingCompteRendu
+        const idSousEtat = selectedEtat === 2
           ? (nrpFormData.id_sous_etat || '').toString().trim()
           : (etatFormData.id_sous_etat || '').toString().trim();
         if (!idSousEtat) {
@@ -1699,15 +1699,21 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       // Validation : commentaire obligatoire lorsque le formulaire le propose
       const etatsAvecCommentaire = [2, 8, 9, 12, 19, 23, 34, 13, 44, 45, 16, 38];
       if (etatsAvecCommentaire.includes(selectedEtat)) {
-        const comment = (selectedEtat === 2 && !editingCompteRendu)
+        const comment = (selectedEtat === 2)
           ? (nrpFormData.conf_commentaire_produit || '').trim()
-          : ([12, 23, 34].includes(selectedEtat)
+          : ([12, 19, 23, 34].includes(selectedEtat)
             ? (etatFormData.motif_qualif || '').trim()
             : (etatFormData.conf_commentaire_produit || '').trim());
         if (!comment) {
           alert('Veuillez saisir un commentaire.');
           return;
         }
+      }
+
+      // HHC FINANCEMENT A VERIFIER (34) : "Appel avec qui" obligatoire
+      if (selectedEtat === 34 && !(etatFormData.conf_rdv_avec || '').trim()) {
+        alert('Veuillez renseigner "Appel avec qui".');
+        return;
       }
 
       // Si on modifie un compte rendu existant
@@ -1722,11 +1728,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         const modifications = {};
         const updateData = {
           id_etat_final: selectedEtat,
-          commentaire: etatFormData.conf_commentaire_produit || ''
+          commentaire: selectedEtat === 2
+            ? (nrpFormData.conf_commentaire_produit || '')
+            : (etatFormData.conf_commentaire_produit || '')
         };
         // Pour "Porte / Imprévu / NRP" (état 8), le commercial ne modifie que le commentaire.
         if (!isCommercialPorteImprevuNrp) {
-          updateData.id_sous_etat = etatFormData.id_sous_etat ? parseInt(etatFormData.id_sous_etat) : null;
+          updateData.id_sous_etat = selectedEtat === 2
+            ? (nrpFormData.id_sous_etat ? parseInt(nrpFormData.id_sous_etat) : null)
+            : (etatFormData.id_sous_etat ? parseInt(etatFormData.id_sous_etat) : null);
         }
 
         // Pour SIGNER, ajouter les champs Phase 3
@@ -1849,6 +1859,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         }
         if ([12, 23, 34].includes(selectedEtat) && etatFormData.motif_qualif) {
           updateData.motif_qualif = etatFormData.motif_qualif;
+        }
+        if (selectedEtat === 34 && etatFormData.conf_rdv_avec) {
+          updateData.conf_rdv_avec = etatFormData.conf_rdv_avec;
         }
         // Pour Honoré à suivre (9), ajouter A Rappeler le (toutes sessions)
         if (selectedEtat === 9) {
@@ -2668,14 +2681,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               {renderField('Adresse', 'adresse', fiche.adresse, 'textarea')}
               {renderField('Code postal', 'cp', fiche.cp)}
               {renderField('Ville', 'ville', fiche.ville)}
-              {renderField('Situation conjugale', 'situation_conjugale', fiche.situation_conjugale, 'select', [
-                { value: 'MARIE', label: 'Marié' },
-                { value: 'CELIBATAIRE', label: 'Célibataire' },
-                { value: 'CONCUBINAGE', label: 'Concubinage' },
-                { value: 'VEUF/VEUVE', label: 'Veuf/Veuve' },
-                { value: 'DIVORCE', label: 'Divorcé' },
-                { value: 'PAXE', label: 'Pacsé' }
-              ])}
             </tbody>
           </table>
         </div>
@@ -6044,6 +6049,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             {[12, 23, 34].includes(selectedEtat) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Commentaire</h3>
+                {selectedEtat === 34 && (
+                  <div className="form-group">
+                    <label htmlFor="etat_conf_rdv_avec_34">Appel avec qui :</label>
+                    <select
+                      id="etat_conf_rdv_avec_34"
+                      className="form-control"
+                      value={etatFormData.conf_rdv_avec || ''}
+                      onChange={(e) => setEtatFormData({...etatFormData, conf_rdv_avec: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="MR">MR</option>
+                      <option value="MME">MME</option>
+                      <option value="AUTRE">AUTRE</option>
+                    </select>
+                  </div>
+                )}
                 <div className="form-group">
                   <label htmlFor="etat_conf_commentaire_simple">Commentaire :</label>
                   <textarea
@@ -6059,7 +6080,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setCompteRenduOption('');
-                    setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: ''});
+                    setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: '', conf_rdv_avec: ''});
                   }}>Annuler</button>
                 </div>
               </div>
