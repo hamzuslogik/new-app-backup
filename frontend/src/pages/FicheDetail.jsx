@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { FaEdit, FaCheck, FaTimes, FaCalendar, FaUser, FaUserPlus, FaPhone, FaMapMarkerAlt, FaHome, FaBriefcase, FaFileAlt, FaHistory, FaArrowLeft, FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaSms, FaListAlt, FaInfoCircle, FaFilePdf } from 'react-icons/fa';
+import { FaEdit, FaCheck, FaTimes, FaCalendar, FaUser, FaUserPlus, FaPhone, FaMapMarkerAlt, FaHome, FaBriefcase, FaFileAlt, FaHistory, FaArrowLeft, FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaReplyAll, FaSms, FaListAlt, FaInfoCircle, FaFilePdf } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -116,6 +116,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const [rdvSubmitting, setRdvSubmitting] = useState(false);
   const [etatSubmitting, setEtatSubmitting] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null); // { date, hour }
+  const [showConfirmConfFields, setShowConfirmConfFields] = useState(false);
   const [rdvFormData, setRdvFormData] = useState({
     date_rdv_time: '',
     id_etat_final: 7, // CONFIRMER par défaut
@@ -151,7 +152,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     annee_systeme_chauffage: '',
     conf_commentaire_produit: ''
   });
-  
+
   // État pour le formulaire de confirmation
   const [selectedEtat, setSelectedEtat] = useState(null);
   const [histoConfirmateurId, setHistoConfirmateurId] = useState('');
@@ -191,6 +192,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const [confProfMmeDisplay, setConfProfMmeDisplay] = useState('');
   const [showSuggestionsMr, setShowSuggestionsMr] = useState(false);
   const [showSuggestionsMme, setShowSuggestionsMme] = useState(false);
+
+  useEffect(() => {
+    if (selectedEtat === 7) {
+      setShowConfirmConfFields(false);
+    }
+  }, [selectedEtat]);
 
   // État pour le formulaire NRP
   const [nrpFormData, setNrpFormData] = useState({
@@ -413,7 +420,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         // On ne pré-sélectionne pas automatiquement
       }
       
-      if (sousEtatToSelect && !etatFormData.id_sous_etat) {
+      // Ne pas présélectionner automatiquement le sous-état pour garder "Sélectionner" par défaut.
+      if (sousEtatToSelect && !etatFormData.id_sous_etat && selectedEtat !== 19 && selectedEtat !== 2) {
         setEtatFormData({ ...etatFormData, id_sous_etat: String(sousEtatToSelect.id) });
       }
     }
@@ -683,7 +691,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         setNrpFormData({
           date_appel_date: dateAppel.toISOString().split('T')[0],
           date_appel_time: dateAppel.toTimeString().slice(0, 5),
-          id_sous_etat: ficheData.id_sous_etat ? String(ficheData.id_sous_etat) : '',
+          id_sous_etat: '',
           conf_commentaire_produit: ficheData.conf_commentaire_produit || ''
         });
       } else {
@@ -691,7 +699,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         setNrpFormData({
           date_appel_date: '',
           date_appel_time: '',
-          id_sous_etat: ficheData.id_sous_etat ? String(ficheData.id_sous_etat) : '',
+          id_sous_etat: '',
           conf_commentaire_produit: ficheData.conf_commentaire_produit || ''
         });
       }
@@ -1376,7 +1384,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           ...prev,
           date_rappel_date: dateRappelStr,
           date_rappel_time: dateRappelTime,
-          id_sous_etat: ficheData.id_sous_etat != null ? String(ficheData.id_sous_etat) : (prev.id_sous_etat || ''),
+          id_sous_etat: '',
           conf_commentaire_produit: '',
           motif_qualif: ''
         }));
@@ -4704,6 +4712,29 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             {selectedEtat === 7 && (
               <div className="confirmation-form">
                 <h3>Informations de confirmation</h3>
+                <div style={{ marginBottom: '10px', display: 'flex', gap: '8px' }}>
+                  {!showConfirmConfFields ? (
+                    <button
+                      type="button"
+                      className="btn-cancel"
+                      onClick={() => setShowConfirmConfFields(true)}
+                      title="Afficher les champs conf_"
+                    >
+                      <FaReplyAll style={{ marginRight: '6px' }} />
+                      Afficher champs conf_
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-cancel"
+                      onClick={() => setShowConfirmConfFields(false)}
+                      title="Réduire les champs conf_"
+                    >
+                      <FaChevronUp style={{ marginRight: '6px' }} />
+                      Réduire champs conf_
+                    </button>
+                  )}
+                </div>
                 <table className="rdv-form-table">
                   <tbody>
                     <tr>
@@ -4800,6 +4831,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         />
                       </td>
                     </tr>
+                    {showConfirmConfFields && (
+                      <>
                     <tr>
                       <td><label htmlFor="conf_rdv_avec">RDV pris avec :</label></td>
                       <td>
@@ -5204,6 +5237,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         />
                       </td>
                     </tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
 
@@ -7293,6 +7328,7 @@ const CreateRdvModal = ({
   rdvSubmitting = false
 }) => {
   const isConfirmateurSession = Number(user?.fonction) === 6;
+  const [showRdvConfFields, setShowRdvConfFields] = useState(false);
 
   const getConfirmateurLabel = (id) => {
     if (!id) return '';
@@ -7430,6 +7466,10 @@ const CreateRdvModal = ({
     console.log('produitsError:', produitsError);
   }, [produits, isLoadingProduits, produitsError]);
 
+  useEffect(() => {
+    setShowRdvConfFields(false);
+  }, [selectedSlot?.date, selectedSlot?.hour]);
+
   const dateFormatted = selectedSlot 
     ? formatRdvDateTime(`${selectedSlot.date} ${String(selectedSlot.hour).substring(0, 5)}`)
     : '';
@@ -7456,6 +7496,29 @@ const CreateRdvModal = ({
             const idMme = await resolveProfessionId(api, rdvProfMmeDisplay, rdvFormData.conf_profession_madame, professionsRdv);
             onSubmit({ ...rdvFormData, conf_profession_monsieur: idMr, conf_profession_madame: idMme });
           }}>
+            <div style={{ marginBottom: '10px', display: 'flex', gap: '8px' }}>
+              {!showRdvConfFields ? (
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setShowRdvConfFields(true)}
+                  title="Afficher les champs conf_"
+                >
+                  <FaReplyAll style={{ marginRight: '6px' }} />
+                  Afficher champs conf_
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setShowRdvConfFields(false)}
+                  title="Réduire les champs conf_"
+                >
+                  <FaChevronUp style={{ marginRight: '6px' }} />
+                  Réduire champs conf_
+                </button>
+              )}
+            </div>
             <table className="rdv-form-table">
               <tbody>
                 {/* RDV urgent */}
@@ -7662,6 +7725,8 @@ const CreateRdvModal = ({
                     </select>
                   </td>
                 </tr>
+                {showRdvConfFields && (
+                  <>
                 <tr>
                   <td><label htmlFor="rdv_avec">RDV pris avec</label></td>
                   <td>
@@ -8073,6 +8138,8 @@ const CreateRdvModal = ({
                     />
                   </td>
                 </tr>
+                  </>
+                )}
               </tbody>
             </table>
 
