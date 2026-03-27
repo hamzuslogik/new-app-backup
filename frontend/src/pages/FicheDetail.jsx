@@ -3555,7 +3555,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                           marginTop: '20px', 
                           paddingTop: '20px', 
                           borderTop: '2px solid #e0e0e0',
-                          backgroundColor: '#fafafa',
+                          backgroundColor: '#ebebeb',
                           padding: '15px',
                           borderRadius: '6px'
                         }}>
@@ -3604,7 +3604,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
                   {/* Contrôle Qualité (états signer : 13, 16, 44, 45) */}
                   {[13, 16, 44, 45].includes(fiche.id_etat_final) && (
-                    <div className="fiche-section" style={{ marginTop: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+                    <div className="fiche-section" style={{ marginTop: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#ebebeb' }}>
                       <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '15px', fontWeight: 'bold' }}>
                         Contrôle Qualité
                       </h3>
