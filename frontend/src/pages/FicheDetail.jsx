@@ -5256,7 +5256,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     id="nrp_id_sous_etat"
                     className="form-control"
                     value={nrpFormData.id_sous_etat}
-                    onChange={(e) => setNrpFormData({...nrpFormData, id_sous_etat: e.target.value})}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const selectedSousEtat = sousEtats.find(se => String(se.id) === String(selectedId));
+                      setNrpFormData({
+                        ...nrpFormData,
+                        id_sous_etat: selectedId,
+                        // Préremplit le commentaire avec le sous-état choisi.
+                        // Le confirmateur peut ensuite le modifier librement.
+                        conf_commentaire_produit: selectedSousEtat?.titre || ''
+                      });
+                    }}
                   >
                     <option value="">Sélectionner</option>
                     {sousEtats.map(setat => (
@@ -5424,7 +5434,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                       id="etat_id_sous_etat_19"
                       className="form-control"
                       value={etatFormData.id_sous_etat}
-                      onChange={(e) => setEtatFormData({...etatFormData, id_sous_etat: e.target.value})}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const selectedSousEtat = sousEtats.find(se => String(se.id) === String(selectedId));
+                        setEtatFormData({
+                          ...etatFormData,
+                          id_sous_etat: selectedId,
+                          // Préremplit le commentaire avec le sous-état choisi.
+                          // Le confirmateur peut ensuite le modifier librement.
+                          motif_qualif: selectedSousEtat?.titre || ''
+                        });
+                      }}
                     >
                       <option value="">Sélectionner</option>
                       {sousEtats.map(setat => (
