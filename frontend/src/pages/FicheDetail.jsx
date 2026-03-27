@@ -1836,16 +1836,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         }
       } else if (selectedEtat === 19) {
         // RAPPEL POUR BUREAU
-        // Demande métier: au passage en "RAPPEL POUR BUREAU", définir "A rappeler"
-        // sur la date/heure actuelle.
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const min = String(now.getMinutes()).padStart(2, '0');
-        const ss = String(now.getSeconds()).padStart(2, '0');
-        updateData.date_rdv_time = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+        // Enregistrer la date de rappel choisie dans date_rdv_time
+        // pour affichage cohérent dans l'historique et l'état actuel.
+        if (etatFormData.date_rappel_date) {
+          const dateRappelStr = `${etatFormData.date_rappel_date} ${etatFormData.date_rappel_time || '09:00'}:00`;
+          updateData.date_rdv_time = dateRappelStr;
+        }
         if (etatFormData.id_sous_etat) {
           updateData.id_sous_etat = parseInt(etatFormData.id_sous_etat);
         }
