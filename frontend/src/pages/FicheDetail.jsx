@@ -376,7 +376,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // Admin session (1 admin, 11 backoffice, 13 RP confirmation, 14 RE confirmation) : formulaire honoré à suivre étendu
   const isAdminSessionHonoreSuivre = [1, 11, 13, 14].includes(Number(user?.fonction));
 
-  // Pré-remplir A Rappeler le (J+2 jours ouvrés) quand admin session sélectionne état 9 (Honoré à suivre)
+  // Pré-remplir A Rappeler le (J+2 jours ouvrés) quand l'état 9 (Honoré à suivre) est sélectionné
   useEffect(() => {
     const addWorkingDays = (date, days) => {
       const result = new Date(date);
@@ -388,7 +388,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       }
       return result;
     };
-    if (selectedEtat === 9 && isAdminSessionHonoreSuivre) {
+    if (selectedEtat === 9) {
       const dateRappel = addWorkingDays(new Date(), 2);
       const dateRappelStr = dateRappel.toISOString().split('T')[0];
       setEtatFormData(prev => ({
@@ -397,7 +397,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         date_rappel_time: prev.date_rappel_time || '09:00'
       }));
     }
-  }, [selectedEtat, isAdminSessionHonoreSuivre]);
+  }, [selectedEtat]);
 
   // Pré-remplir les sous-états selon l'option de compte rendu sélectionnée
   useEffect(() => {
@@ -1800,10 +1800,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         }
       } else if (selectedEtat === 19) {
         // RAPPEL POUR BUREAU
-        if (etatFormData.date_rappel_date) {
-          const dateRappelStr = `${etatFormData.date_rappel_date} ${etatFormData.date_rappel_time || '00:00'}:00`;
-          updateData.date_rdv_time = dateRappelStr;
-        }
+        // Demande métier: au passage en "RAPPEL POUR BUREAU", définir "A rappeler"
+        // sur la date/heure actuelle.
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        updateData.date_rdv_time = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
         if (etatFormData.id_sous_etat) {
           updateData.id_sous_etat = parseInt(etatFormData.id_sous_etat);
         }
@@ -1815,14 +1821,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         if (etatFormData.conf_commentaire_produit) {
           updateData.conf_commentaire_produit = etatFormData.conf_commentaire_produit;
         }
-        // Admin session (1, 11, 13, 14) : pour Honoré à suivre (9), ajouter A Rappeler le, Commercial
-        if (selectedEtat === 9 && isAdminSessionHonoreSuivre) {
+        // Pour Honoré à suivre (9), ajouter A Rappeler le (toutes sessions)
+        if (selectedEtat === 9) {
           if (etatFormData.date_rappel_date) {
             const dateRappelStr = `${etatFormData.date_rappel_date} ${etatFormData.date_rappel_time || '09:00'}:00`;
             updateData.date_rdv_time = dateRappelStr;
           }
+          // Session admin/backoffice/RP/RE: possibilité d'assigner le commercial
           if (etatFormData.id_commercial) {
-            updateData.id_commercial = parseInt(etatFormData.id_commercial);
+            if (isAdminSessionHonoreSuivre) {
+              updateData.id_commercial = parseInt(etatFormData.id_commercial);
+            }
           }
         }
       } else if ([13, 44, 45].includes(selectedEtat)) {
@@ -1944,10 +1953,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           id_sous_etat: '',
           conf_commentaire_produit: ''
         });
-        // Ne pas afficher "État fiche modifié" après la création d'un compte rendu (message déjà affiché pour le compte rendu)
-        if (!res.data.data?.id_compte_rendu) {
-          alert('État de la fiche mis à jour avec succès');
-        }
+        // Pas d'alerte de succès ici pour éviter la popup lors de la validation de l'état.
       }
       setEtatSubmitting(false);
     } catch (error) {
@@ -3142,7 +3148,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
+                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateTime(etatData.date_rdv_time) });
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // ANNULER ET A REPROGRAMMER (8)
@@ -5854,8 +5860,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               </div>
             )}
 
-            {/* Formulaire Honoré à suivre (état 9) - version étendue pour Admin, Backoffice, RP Confirmation, RE Confirmation */}
-            {selectedEtat === 9 && isAdminSessionHonoreSuivre && (
+            {/* Formulaire Honoré à suivre (état 9) */}
+            {selectedEtat === 9 && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Honoré à suivre</h3>
                 <div className="form-row">
@@ -5887,20 +5893,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   </div>
                   <small style={{ color: '#6c757d' }}>Remplie automatiquement à l&apos;enregistrement</small>
                 </div>
-                <div className="form-group">
-                  <label htmlFor="etat_commercial_9">Commercial :</label>
-                  <select
-                    id="etat_commercial_9"
-                    className="form-control"
-                    value={etatFormData.id_commercial}
-                    onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    {(commerciaux || []).filter(c => c.etat > 0 || c.etat == null).map(c => (
-                      <option key={c.id} value={c.id}>{c.pseudo || `${c.prenom || ''} ${c.nom || ''}`.trim() || c.id}</option>
-                    ))}
-                  </select>
-                </div>
+                {isAdminSessionHonoreSuivre && (
+                  <div className="form-group">
+                    <label htmlFor="etat_commercial_9">Commercial :</label>
+                    <select
+                      id="etat_commercial_9"
+                      className="form-control"
+                      value={etatFormData.id_commercial}
+                      onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {(commerciaux || []).filter(c => c.etat > 0 || c.etat == null).map(c => (
+                        <option key={c.id} value={c.id}>{c.pseudo || `${c.prenom || ''} ${c.nom || ''}`.trim() || c.id}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="form-group">
                   <label htmlFor="etat_conf_commentaire_9">Commentaire :</label>
                   <textarea
@@ -5922,8 +5930,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               </div>
             )}
 
-            {/* Formulaire pour états 9 (si non admin session), 12 (REFUSER), 23 (HORS CIBLE CONFIRMATEUR), 34 (HHC FINANCEMENT A VERIFIER) */}
-            {[9, 12, 23, 34].includes(selectedEtat) && !(selectedEtat === 9 && isAdminSessionHonoreSuivre) && (
+            {/* Formulaire pour états 12 (REFUSER), 23 (HORS CIBLE CONFIRMATEUR), 34 (HHC FINANCEMENT A VERIFIER) */}
+            {[12, 23, 34].includes(selectedEtat) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Commentaire</h3>
                 <div className="form-group">
