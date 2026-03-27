@@ -2578,7 +2578,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         border: `8px solid ${etatColor}`,
         borderRadius: '8px',
         padding: '20px',
-        backgroundColor: '#fff'
+        backgroundColor: isModal ? '#ebebeb' : '#fff'
       }}
     >
       <div className="fiche-detail-header">
