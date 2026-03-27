@@ -208,6 +208,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     id_sous_etat: '',
     conf_rdv_avec: '',
     conf_commentaire_produit: '',
+    motif_qualif: '',
     // Pour état 19 (RAPPEL POUR BUREAU)
     date_rappel_date: '',
     date_rappel_time: '',
@@ -1360,6 +1361,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // Gérer le changement d'état
   const handleEtatChange = (newEtatId) => {
     setSelectedEtat(newEtatId);
+    if ([12, 23, 34].includes(newEtatId)) {
+      setEtatFormData(prev => ({ ...prev, motif_qualif: '' }));
+    }
     // Si l'état est 19 (Rappel pour Bureau) : si déjà en 19, reprendre la date/heure de la fiche ; sinon J+2 à 09:00
     if (newEtatId === 19) {
       if (Number(ficheData?.id_etat_final) === 19 && ficheData?.date_rdv_time) {
@@ -1677,7 +1681,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       if (etatsAvecCommentaire.includes(selectedEtat)) {
         const comment = (selectedEtat === 2 && !editingCompteRendu)
           ? (nrpFormData.conf_commentaire_produit || '').trim()
-          : (etatFormData.conf_commentaire_produit || '').trim();
+          : ([12, 23, 34].includes(selectedEtat)
+            ? (etatFormData.motif_qualif || '').trim()
+            : (etatFormData.conf_commentaire_produit || '').trim());
         if (!comment) {
           alert('Veuillez saisir un commentaire.');
           return;
@@ -1818,8 +1824,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         }
       } else if ([9, 12, 23, 34].includes(selectedEtat)) {
         // CLIENT HONORE A SUIVRE (9), REFUSER (12), HORS CIBLE CONFIRMATEUR (23), HHC FINANCEMENT A VERIFIER (34)
-        if (etatFormData.conf_commentaire_produit) {
+        if (selectedEtat === 9 && etatFormData.conf_commentaire_produit) {
           updateData.conf_commentaire_produit = etatFormData.conf_commentaire_produit;
+        }
+        if ([12, 23, 34].includes(selectedEtat) && etatFormData.motif_qualif) {
+          updateData.motif_qualif = etatFormData.motif_qualif;
         }
         // Pour Honoré à suivre (9), ajouter A Rappeler le (toutes sessions)
         if (selectedEtat === 9) {
@@ -3848,11 +3857,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               } else if (cr.id_etat_final === 12) {
                                 setCompteRenduOption('deballé_sans_suite');
                                 setSelectedEtat(12);
-                                setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || ''});
+                                setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: cr.commentaire || ''});
                               } else if (cr.id_etat_final === 34) {
                                 setCompteRenduOption('infinançable');
                                 setSelectedEtat(34);
-                                setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || ''});
+                                setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: cr.commentaire || ''});
                               } else if (cr.id_etat_final === 35) {
                                 setCompteRenduOption('infaisabilité_technique');
                                 setSelectedEtat(35);
@@ -3934,13 +3943,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                       setSelectedEtat(12); // REFUSER
                       setEtatFormData({
                         ...etatFormData,
-                        conf_commentaire_produit: ''
+                        conf_commentaire_produit: '',
+                        motif_qualif: ''
                       });
                     } else if (e.target.value === 'infinançable') {
                       setSelectedEtat(34); // HHC FINANCEMENT A VERIFIER
                       setEtatFormData({
                         ...etatFormData,
-                        conf_commentaire_produit: ''
+                        conf_commentaire_produit: '',
+                        motif_qualif: ''
                       });
                     } else if (e.target.value === 'infaisabilité_technique') {
                       setSelectedEtat(35); // HCC TECHNIQUE
@@ -4018,13 +4029,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                             setSelectedEtat(12); // REFUSER
                             setEtatFormData({
                               ...etatFormData,
-                              conf_commentaire_produit: ''
+                              conf_commentaire_produit: '',
+                              motif_qualif: ''
                             });
                           } else if (e.target.value === 'infinançable') {
                             setSelectedEtat(34); // HHC FINANCEMENT A VERIFIER
                             setEtatFormData({
                               ...etatFormData,
-                              conf_commentaire_produit: ''
+                              conf_commentaire_produit: '',
+                              motif_qualif: ''
                             });
                           } else if (e.target.value === 'infaisabilité_technique') {
                             setSelectedEtat(35); // HCC TECHNIQUE
@@ -5940,8 +5953,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     id="etat_conf_commentaire_simple"
                     className="form-control"
                     rows="4"
-                    value={etatFormData.conf_commentaire_produit}
-                    onChange={(e) => setEtatFormData({...etatFormData, conf_commentaire_produit: e.target.value})}
+                    value={etatFormData.motif_qualif}
+                    onChange={(e) => setEtatFormData({...etatFormData, motif_qualif: e.target.value})}
                   />
                 </div>
                 <div className="form-actions">
@@ -5949,7 +5962,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setCompteRenduOption('');
-                    setEtatFormData({...etatFormData, conf_commentaire_produit: ''});
+                    setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: ''});
                   }}>Annuler</button>
                 </div>
               </div>

@@ -3772,7 +3772,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'conf_presence_couple', 'conf_profession_monsieur', 'conf_profession_madame',
       'date_rdv_time', 'date_appel_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final',
-      'rdv_urgent', 'rdv_seul', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'type_contrat_mr', 'type_contrat_madame',
+      'rdv_urgent', 'rdv_seul', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
       'conf_type_contrat_mr', 'conf_type_contrat_madame',
       'cq_etat', 'cq_dossier', 'observations_cq'
     ];
@@ -5045,7 +5045,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
         'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
         'date_rdv_time', 'date_appel_time', 'id_centre', 'id_commercial',
-        'id_commercial_2', 'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'type_contrat_mr', 'type_contrat_madame',
+        'id_commercial_2', 'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
         'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
         'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
         'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
@@ -5379,7 +5379,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
       'date_rdv_time', 'date_appel_time', 'date_modif_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final', 'id_sous_etat',
-      'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'type_contrat_mr', 'type_contrat_madame',
+      'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
       // Champs de confirmation
       'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
       'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
