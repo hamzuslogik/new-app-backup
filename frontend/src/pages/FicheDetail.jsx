@@ -1364,7 +1364,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     if ([12, 23, 34].includes(newEtatId)) {
       setEtatFormData(prev => ({ ...prev, motif_qualif: '' }));
     }
-    // Si l'état est 19 (Rappel pour Bureau) : si déjà en 19, reprendre la date/heure de la fiche ; sinon J+2 à 09:00
+    // Si l'état est 19 (Rappel pour Bureau) : si déjà en 19, reprendre la date/heure de la fiche ; sinon date/heure actuelles
     if (newEtatId === 19) {
       if (Number(ficheData?.id_etat_final) === 19 && ficheData?.date_rdv_time) {
         const raw = String(ficheData.date_rdv_time);
@@ -1380,13 +1380,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           conf_commentaire_produit: ficheData.conf_commentaire_produit || prev.conf_commentaire_produit || ''
         }));
       } else {
-        const inTwoDays = new Date();
-        inTwoDays.setDate(inTwoDays.getDate() + 2);
-        const dateRappelStr = inTwoDays.toISOString().split('T')[0];
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
         setEtatFormData(prev => ({
           ...prev,
-          date_rappel_date: dateRappelStr,
-          date_rappel_time: '09:00'
+          date_rappel_date: `${yyyy}-${mm}-${dd}`,
+          date_rappel_time: `${hh}:${min}`
         }));
       }
     }
