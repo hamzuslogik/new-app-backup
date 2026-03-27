@@ -98,6 +98,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // Vérifier si l'utilisateur est qualité qualification (fonction 2, 8, 12)
   const userFonction = user?.fonction != null ? Number(user.fonction) : null;
   const isQualiteQualif = userFonction === 2 || userFonction === 8 || userFonction === 12;
+  const isConfirmateurSession = userFonction === 6;
+  const getConfirmateurLabel = (id) => {
+    if (!id) return '';
+    const found = confirmateurs?.find(c => String(c.id) === String(id));
+    return found?.pseudo || `ID: ${id}`;
+  };
   
   // Rediriger vers l'onglet fiches si l'utilisateur qualité qualification est sur un onglet masqué
   useEffect(() => {
@@ -4759,13 +4765,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                           className="form-control"
                           value={confFormData.id_confirmateur}
                           onChange={(e) => setConfFormData({...confFormData, id_confirmateur: e.target.value})}
+                          disabled={isConfirmateurSession}
                         >
-                          <option value="">Sélectionner</option>
-                          {confirmateurs?.map(conf => (
-                            <option key={conf.id} value={conf.id}>
-                              {conf.pseudo}
-                            </option>
-                          ))}
+                          <option value="">{isConfirmateurSession ? '—' : 'Sélectionner'}</option>
+                          {isConfirmateurSession ? (
+                            confFormData.id_confirmateur ? (
+                              <option value={confFormData.id_confirmateur}>
+                                {getConfirmateurLabel(confFormData.id_confirmateur)}
+                              </option>
+                            ) : null
+                          ) : (
+                            confirmateurs?.map(conf => (
+                              <option key={conf.id} value={conf.id}>
+                                {conf.pseudo}
+                              </option>
+                            ))
+                          )}
                         </select>
                       </td>
                     </tr>
@@ -4777,13 +4792,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                           className="form-control"
                           value={confFormData.id_confirmateur_2}
                           onChange={(e) => setConfFormData({...confFormData, id_confirmateur_2: e.target.value})}
+                          disabled={isConfirmateurSession}
                         >
                           <option value="">Aucun</option>
-                          {confirmateurs?.map(conf => (
-                            <option key={conf.id} value={conf.id}>
-                              {conf.pseudo}
-                            </option>
-                          ))}
+                          {isConfirmateurSession ? (
+                            confFormData.id_confirmateur_2 ? (
+                              <option value={confFormData.id_confirmateur_2}>
+                                {getConfirmateurLabel(confFormData.id_confirmateur_2)}
+                              </option>
+                            ) : null
+                          ) : (
+                            confirmateurs?.map(conf => (
+                              <option key={conf.id} value={conf.id}>
+                                {conf.pseudo}
+                              </option>
+                            ))
+                          )}
                         </select>
                       </td>
                     </tr>
@@ -4795,13 +4819,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                           className="form-control"
                           value={confFormData.id_confirmateur_3}
                           onChange={(e) => setConfFormData({...confFormData, id_confirmateur_3: e.target.value})}
+                          disabled={isConfirmateurSession}
                         >
                           <option value="">Aucun</option>
-                          {confirmateurs?.map(conf => (
-                            <option key={conf.id} value={conf.id}>
-                              {conf.pseudo}
-                            </option>
-                          ))}
+                          {isConfirmateurSession ? (
+                            confFormData.id_confirmateur_3 ? (
+                              <option value={confFormData.id_confirmateur_3}>
+                                {getConfirmateurLabel(confFormData.id_confirmateur_3)}
+                              </option>
+                            ) : null
+                          ) : (
+                            confirmateurs?.map(conf => (
+                              <option key={conf.id} value={conf.id}>
+                                {conf.pseudo}
+                              </option>
+                            ))
+                          )}
                         </select>
                       </td>
                     </tr>
@@ -5167,16 +5200,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         <tr>
                           <td><label htmlFor="conf_zones_ombres">Zones ombres :</label></td>
                           <td>
-                            <select
+                            <input
+                              type="text"
                               id="conf_zones_ombres"
                               className="form-control"
                               value={confFormData.conf_zones_ombres}
                               onChange={(e) => setConfFormData({...confFormData, conf_zones_ombres: e.target.value})}
-                            >
-                              <option value="">Sélectionner</option>
-                              <option value="OUI">OUI</option>
-                              <option value="NON">NON</option>
-                            </select>
+                              placeholder="Ex: Arbres, cheminée, bâtiment voisin..."
+                            />
                           </td>
                         </tr>
                         <tr>
@@ -8065,16 +8096,14 @@ const CreateRdvModal = ({
                       <tr>
                         <td><label htmlFor="rdv_zones_ombres">Zones ombres</label></td>
                         <td>
-                          <select
+                          <input
+                            type="text"
                             id="rdv_zones_ombres"
                             className="form-control"
                             value={rdvFormData.conf_zones_ombres}
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_zones_ombres: e.target.value})}
-                          >
-                            <option value="">Sélectionner</option>
-                            <option value="OUI">OUI</option>
-                            <option value="NON">NON</option>
-                          </select>
+                            placeholder="Ex: Arbres, cheminée, bâtiment voisin..."
+                          />
                         </td>
                       </tr>
                       <tr>
