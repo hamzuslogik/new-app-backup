@@ -65,6 +65,7 @@ function shouldInsertFichesHistoPut(ficheData, fiche) {
   return (
     ficheData.id_sous_etat !== undefined ||
     ficheData.conf_commentaire_produit !== undefined ||
+    ficheData.motif_qualif !== undefined ||
     ficheData.date_rdv_time !== undefined ||
     ficheData.date_sign_time !== undefined ||
     ficheData.conf_rdv_avec !== undefined ||
@@ -5206,6 +5207,17 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
     }
 
+    // Changement d'état: stocker le commentaire métier dans motif_qualif côté fiches
+    // (rétrocompat: certains écrans envoient encore conf_commentaire_produit).
+    const hasEtatChange = parseEtatId(ficheData?.id_etat_final) !== parseEtatId(fiche?.id_etat_final);
+    if (
+      hasEtatChange &&
+      !Object.prototype.hasOwnProperty.call(ficheData, 'motif_qualif') &&
+      Object.prototype.hasOwnProperty.call(ficheData, 'conf_commentaire_produit')
+    ) {
+      ficheData.motif_qualif = ficheData.conf_commentaire_produit;
+    }
+
     // Mettre à jour la date de modification
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     ficheData.date_modif_time = now;
@@ -5335,8 +5347,15 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         histoValues.push(val);
       };
 
-      if (!isEtat7 && Object.prototype.hasOwnProperty.call(ficheData, 'conf_commentaire_produit')) {
-        pushHistoCol('conf_commentaire_produit', ficheData.conf_commentaire_produit === '' ? null : ficheData.conf_commentaire_produit);
+      if (!isEtat7) {
+        // Historique: enregistrer le commentaire dans conf_commentaire_produit.
+        // Priorité à conf_commentaire_produit, sinon fallback motif_qualif.
+        const hasConfComment = Object.prototype.hasOwnProperty.call(ficheData, 'conf_commentaire_produit');
+        const hasMotifQualif = Object.prototype.hasOwnProperty.call(ficheData, 'motif_qualif');
+        if (hasConfComment || hasMotifQualif) {
+          const histoComment = hasConfComment ? ficheData.conf_commentaire_produit : ficheData.motif_qualif;
+          pushHistoCol('conf_commentaire_produit', histoComment === '' ? null : histoComment);
+        }
       }
       if (Object.prototype.hasOwnProperty.call(ficheData, 'conf_rdv_avec')) {
         pushHistoCol('conf_rdv_avec', ficheData.conf_rdv_avec === '' ? null : ficheData.conf_rdv_avec);

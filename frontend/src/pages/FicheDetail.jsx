@@ -2683,10 +2683,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               {Number(user?.fonction) === 11 &&
                 renderField('Commentaire (Agent Qualification)', 'commentaire', fiche.commentaire || '-', 'textarea')}
               
-              {/* Logique d'affichage selon l'état de la fiche :
-                  - Si fiche confirmée (état 7) : afficher conf_commentaire_produit (commentaire confirmateur)
-                  - Sinon : afficher commentaire_qualite (commentaire qualité) */}
-              {fiche.id_etat_final === 7 ? (
+              {/* Session confirmateur: si commentaire_qualite est vide -> conf_commentaire_produit, sinon -> commentaire.
+                  Autres sessions: logique historique (état 7 => conf_commentaire_produit, sinon commentaire_qualite). */}
+              {Number(user?.fonction) === 6 ? (
+                renderField(
+                  'Commentaire',
+                  'commentaire',
+                  (!(fiche.commentaire_qualite || '').trim() ? fiche.conf_commentaire_produit : fiche.commentaire) || '-',
+                  'textarea'
+                )
+              ) : fiche.id_etat_final === 7 ? (
                 renderField('Commentaire', 'conf_commentaire_produit', fiche.conf_commentaire_produit || '-', 'textarea')
               ) : (
                 renderField('Commentaire', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')
