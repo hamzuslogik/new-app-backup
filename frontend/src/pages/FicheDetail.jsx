@@ -4712,7 +4712,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             {selectedEtat === 7 && (
               <div className="confirmation-form">
                 <h3>Informations de confirmation</h3>
-                <div style={{ marginBottom: '10px', display: 'flex', gap: '8px' }}>
+                <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'flex-end' }}>
                   {!showConfirmConfFields ? (
                     <button
                       type="button"
@@ -4720,8 +4720,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                       onClick={() => setShowConfirmConfFields(true)}
                       title="Afficher les champs conf_"
                     >
-                      <FaReplyAll style={{ marginRight: '6px' }} />
-                      Afficher champs conf_
+                      <FaReplyAll size={20} />
                     </button>
                   ) : (
                     <button
@@ -4730,8 +4729,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                       onClick={() => setShowConfirmConfFields(false)}
                       title="Réduire les champs conf_"
                     >
-                      <FaChevronUp style={{ marginRight: '6px' }} />
-                      Réduire champs conf_
+                      <FaChevronUp size={20} />
                     </button>
                   )}
                 </div>
@@ -7496,7 +7494,7 @@ const CreateRdvModal = ({
             const idMme = await resolveProfessionId(api, rdvProfMmeDisplay, rdvFormData.conf_profession_madame, professionsRdv);
             onSubmit({ ...rdvFormData, conf_profession_monsieur: idMr, conf_profession_madame: idMme });
           }}>
-            <div style={{ marginBottom: '10px', display: 'flex', gap: '8px' }}>
+            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'flex-end' }}>
               {!showRdvConfFields ? (
                 <button
                   type="button"
@@ -7504,8 +7502,7 @@ const CreateRdvModal = ({
                   onClick={() => setShowRdvConfFields(true)}
                   title="Afficher les champs conf_"
                 >
-                  <FaReplyAll style={{ marginRight: '6px' }} />
-                  Afficher champs conf_
+                  <FaReplyAll size={20} />
                 </button>
               ) : (
                 <button
@@ -7514,8 +7511,7 @@ const CreateRdvModal = ({
                   onClick={() => setShowRdvConfFields(false)}
                   title="Réduire les champs conf_"
                 >
-                  <FaChevronUp style={{ marginRight: '6px' }} />
-                  Réduire champs conf_
+                  <FaChevronUp size={20} />
                 </button>
               )}
             </div>
