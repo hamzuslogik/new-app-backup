@@ -3366,6 +3366,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               
               // Dernière entrée historique = passage à l'état actuel (pour date_creation et from_compte_rendu)
               const lastHisto = fiche.historique && fiche.historique.length > 0 ? fiche.historique[fiche.historique.length - 1] : null;
+              const lastHistoEtatActuel = (lastHisto && lastHisto.id_etat === fiche.id_etat_final) ? lastHisto : null;
               const dateCreationEtatActuel = (lastHisto && lastHisto.id_etat === fiche.id_etat_final) ? lastHisto.date_creation : (fiche.date_modif_time || fiche.date_insert_time || null);
               
               // Construire l'objet état actuel à partir des données de la fiche
@@ -3378,7 +3379,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 confirmateur_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur)?.pseudo || null,
                 confirmateur_2_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_2)?.pseudo || null,
                 confirmateur_3_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_3)?.pseudo || null,
-                conf_commentaire_produit: fiche.conf_commentaire_produit || null,
+                conf_commentaire_produit: lastHistoEtatActuel?.conf_commentaire_produit || fiche.conf_commentaire_produit || null,
                 commentaire_qualite: fiche.commentaire_qualite || null,
                 commentaire_commercial: fiche.commentaire_commercial || null,
                 conf_rdv_avec: fiche.conf_rdv_avec || null,
