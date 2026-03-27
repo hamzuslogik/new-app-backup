@@ -116,7 +116,9 @@ const Dashboard = () => {
         newFilters.id_etat_final = parseInt(newFilters.id_etat_final);
       }
       if (user?.fonction === 6) {
-        newFilters.date_champ = 'fiches_histo';
+        if (!newFilters.date_champ || String(newFilters.date_champ).trim() === '') {
+          newFilters.date_champ = 'fiches_histo';
+        }
         const t = new Date();
         const todayStr = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
         if (!newFilters.date_debut || String(newFilters.date_debut).trim() === '') {
@@ -321,7 +323,9 @@ const Dashboard = () => {
           delete searchParams.id_etat_final;
         }
         if (!critTrim) {
-          searchParams.date_champ = 'fiches_histo';
+          if (!searchParams.date_champ || String(searchParams.date_champ).trim() === '') {
+            searchParams.date_champ = 'fiches_histo';
+          }
           const { dateStr, timeStart, timeEnd } = getTodayDateRange();
           if (!searchParams.date_debut || String(searchParams.date_debut).trim() === '') {
             searchParams.date_debut = dateStr;
@@ -1311,25 +1315,18 @@ const Dashboard = () => {
                 <div className="form-group">
                   <label>Champ de date</label>
                   <select
-                    value={user?.fonction === 6 ? 'fiches_histo' : (filters.date_champ || '')}
+                    value={filters.date_champ || ''}
                     onChange={(e) => handleFilterChange('date_champ', e.target.value)}
-                    disabled={user?.fonction === 6}
-                    title={user?.fonction === 6 ? 'Session confirmateur : uniquement vos actions (fiches_histo)' : undefined}
                   >
-                    {user?.fonction === 6 ? (
-                      <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
-                    ) : (
-                      <>
-                        <option value="">Sélectionnez date</option>
-                        <option value="date_modif_time">Date Modification</option>
-                        <option value="date_insert_time">Date Insertion</option>
-                        <option value="date_appel_time">Date d'appel</option>
-                        {user?.fonction !== 3 && (
-                          <option value="date_rdv_time">Date Planning</option>
-                        )}
-                        <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
-                      </>
+                    <option value="">Sélectionnez date</option>
+                    <option value="date_modif_time">Date Modification</option>
+                    <option value="date_insert_time">Date Insertion</option>
+                    <option value="date_appel_time">Date d'appel</option>
+                    {user?.fonction !== 3 && (
+                      <option value="date_rdv_time">Date Planning</option>
                     )}
+                    <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
+                    <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                   </select>
                 </div>
               </div>
@@ -1916,25 +1913,18 @@ const Dashboard = () => {
                 <div className="form-group">
                   <label>Champ de date</label>
                   <select
-                    value={user?.fonction === 6 ? 'fiches_histo' : (filters.date_champ || '')}
+                    value={filters.date_champ || ''}
                     onChange={(e) => handleFilterChange('date_champ', e.target.value)}
-                    disabled={user?.fonction === 6}
-                    title={user?.fonction === 6 ? 'Session confirmateur : uniquement vos actions (fiches_histo)' : undefined}
                   >
-                    {user?.fonction === 6 ? (
-                      <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
-                    ) : (
-                      <>
-                        <option value="">Sélectionnez date</option>
-                        <option value="date_modif_time">Date Modification</option>
-                        <option value="date_insert_time">Date Insertion</option>
-                        <option value="date_appel_time">Date d'appel</option>
-                        {user?.fonction !== 3 && (
-                          <option value="date_rdv_time">Date Planning</option>
-                        )}
-                        <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
-                      </>
+                    <option value="">Sélectionnez date</option>
+                    <option value="date_modif_time">Date Modification</option>
+                    <option value="date_insert_time">Date Insertion</option>
+                    <option value="date_appel_time">Date d'appel</option>
+                    {user?.fonction !== 3 && (
+                      <option value="date_rdv_time">Date Planning</option>
                     )}
+                    <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
+                    <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                   </select>
                 </div>
 

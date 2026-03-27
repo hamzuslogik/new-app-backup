@@ -5253,6 +5253,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         </tr>
                       </>
                     )}
+                      </>
+                    )}
 
                     <tr>
                       <td><label htmlFor="conf_commentaire_produit">Commentaire :</label></td>
@@ -5266,8 +5268,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         />
                       </td>
                     </tr>
-                      </>
-                    )}
                   </tbody>
                 </table>
 
@@ -8151,6 +8151,8 @@ const CreateRdvModal = ({
                     </>
                   );
                 })()}
+                  </>
+                )}
                 <tr>
                   <td><label htmlFor="rdv_commentaire">Commentaire Confirmation</label></td>
                   <td>
@@ -8163,8 +8165,6 @@ const CreateRdvModal = ({
                     />
                   </td>
                 </tr>
-                  </>
-                )}
               </tbody>
             </table>
 
