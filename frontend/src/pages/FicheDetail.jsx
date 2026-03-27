@@ -1377,7 +1377,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           date_rappel_date: dateRappelStr,
           date_rappel_time: dateRappelTime,
           id_sous_etat: ficheData.id_sous_etat != null ? String(ficheData.id_sous_etat) : (prev.id_sous_etat || ''),
-          conf_commentaire_produit: ficheData.conf_commentaire_produit || prev.conf_commentaire_produit || ''
+          conf_commentaire_produit: '',
+          motif_qualif: ''
         }));
       } else {
         const now = new Date();
@@ -1389,7 +1390,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         setEtatFormData(prev => ({
           ...prev,
           date_rappel_date: `${yyyy}-${mm}-${dd}`,
-          date_rappel_time: `${hh}:${min}`
+          date_rappel_time: `${hh}:${min}`,
+          conf_commentaire_produit: '',
+          motif_qualif: ''
         }));
       }
     }
@@ -1822,8 +1825,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         if (etatFormData.id_sous_etat) {
           updateData.id_sous_etat = parseInt(etatFormData.id_sous_etat);
         }
-        if (etatFormData.conf_commentaire_produit) {
-          updateData.conf_commentaire_produit = etatFormData.conf_commentaire_produit;
+        if (etatFormData.motif_qualif) {
+          updateData.motif_qualif = etatFormData.motif_qualif;
         }
       } else if ([9, 12, 23, 34].includes(selectedEtat)) {
         // CLIENT HONORE A SUIVRE (9), REFUSER (12), HORS CIBLE CONFIRMATEUR (23), HHC FINANCEMENT A VERIFIER (34)
@@ -5432,8 +5435,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     id="etat_conf_commentaire_19"
                     className="form-control"
                     rows="4"
-                    value={etatFormData.conf_commentaire_produit}
-                    onChange={(e) => setEtatFormData({...etatFormData, conf_commentaire_produit: e.target.value})}
+                    value={etatFormData.motif_qualif}
+                    onChange={(e) => setEtatFormData({...etatFormData, motif_qualif: e.target.value})}
                   />
                 </div>
 
@@ -5441,7 +5444,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
-                    setEtatFormData({...etatFormData, date_rappel_date: '', date_rappel_time: '', id_sous_etat: '', conf_commentaire_produit: ''});
+                    setEtatFormData({...etatFormData, date_rappel_date: '', date_rappel_time: '', id_sous_etat: '', conf_commentaire_produit: '', motif_qualif: ''});
                   }}>Annuler</button>
                 </div>
               </div>
