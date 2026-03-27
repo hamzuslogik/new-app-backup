@@ -2182,6 +2182,22 @@ body.dashboard-page {
   margin: 20px auto; /* Centrer et ajouter de l'espace */
 }
 
+/* Uniformiser tout le fond interne du détail fiche dans le modal */
+.fiche-detail-modal-content .fiche-detail,
+.fiche-detail-modal-content .fiche-sections,
+.fiche-detail-modal-content .fiche-section,
+.fiche-detail-modal-content .fiche-actions-menu,
+.fiche-detail-modal-content .etat-change-section,
+.fiche-detail-modal-content .confirmation-form,
+.fiche-detail-modal-content .sms-form,
+.fiche-detail-modal-content .modifica-tab,
+.fiche-detail-modal-content .planning-tab,
+.fiche-detail-modal-content .sms-tab,
+.fiche-detail-modal-content .no-results,
+.fiche-detail-modal-content .no-modifications {
+  background: #ebebeb !important;
+}
+
 /* Adapter le planning à la largeur du modal */
 .fiche-detail-modal-content .planning-tab {
   width: 100% !important;
