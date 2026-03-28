@@ -1442,14 +1442,7 @@ const Dashboard = () => {
           </div>
         ) : !isFetchingList && fiches.length === 0 ? (
           <div className="no-results">
-            {!appliedFilters.fiche_search ? (
-              <p>
-                Utilisez les filtres puis cliquez sur <strong>RECHERCHE</strong> pour charger les fiches. Un chargement
-                sans critère serait trop long pour tous les profils.
-              </p>
-            ) : (
-              <p>Aucune fiche trouvée{debouncedQuickSearch ? ` pour "${debouncedQuickSearch}"` : ''}</p>
-            )}
+            <p>Aucune fiche trouvée{debouncedQuickSearch ? ` pour "${debouncedQuickSearch}"` : ''}</p>
           </div>
         ) : (
           <>

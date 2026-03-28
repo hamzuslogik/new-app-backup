@@ -53,6 +53,15 @@ function parseEtatId(v) {
   return Number.isFinite(n) ? n : NaN;
 }
 
+/** Limite les clauses IN (...) sur les id_fiche après un SELECT massif — sinon ER_NET_PACKET_TOO_LARGE / max_allowed_packet */
+const FICHE_IDS_IN_CHUNK = 2000;
+
+function chunkArray(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
 /**
  * Faut-il insérer une ligne fiches_histo sur PUT /fiches/:id ?
  * — Changement d'état (numérique), ou même état avec mise à jour des infos liées (sous-état, RDV, commentaire, etc.)
@@ -1352,8 +1361,11 @@ router.get('/', authenticate, async (req, res) => {
     // Enrichir les fiches : has_etat_changed_by_compte_rendu + compte_rendu_commercial_pseudo (dernier CR approuvé)
     if (fiches.length > 0) {
       const ficheIds = fiches.map((f) => f.id);
-      const placeholders = ficheIds.map(() => '?').join(',');
-      const crQuery = `
+      const crWithCommercial = [];
+      const lastHistoConfRows = [];
+      for (const chunk of chunkArray(ficheIds, FICHE_IDS_IN_CHUNK)) {
+        const placeholders = chunk.map(() => '?').join(',');
+        const crQuery = `
         SELECT cr.id_fiche, u.pseudo as compte_rendu_commercial_pseudo
         FROM compte_rendu_pending cr
         LEFT JOIN utilisateurs u ON cr.id_commercial = u.id
@@ -1365,7 +1377,21 @@ router.get('/', authenticate, async (req, res) => {
         ) last_cr ON cr.id_fiche = last_cr.id_fiche AND cr.id = last_cr.max_id
         WHERE cr.statut = 'approved'
       `;
-      const crWithCommercial = await query(crQuery, ficheIds);
+        crWithCommercial.push(...(await query(crQuery, chunk)));
+        lastHistoConfRows.push(
+          ...(await query(
+            `SELECT fh.id_fiche, fh.id_confirmateur, fh.id_confirmateur_2, fh.id_confirmateur_3
+         FROM fiches_histo fh
+         INNER JOIN (
+           SELECT id_fiche, MAX(id) AS max_id
+           FROM fiches_histo
+           WHERE id_fiche IN (${placeholders})
+           GROUP BY id_fiche
+         ) fh_last ON fh.id_fiche = fh_last.id_fiche AND fh.id = fh_last.max_id`,
+            chunk
+          ))
+        );
+      }
       const crByFiche = new Map(crWithCommercial.map((r) => [r.id_fiche, r.compte_rendu_commercial_pseudo || null]));
       fiches.forEach((fiche) => {
         fiche.has_etat_changed_by_compte_rendu = crByFiche.has(fiche.id);
@@ -1374,17 +1400,6 @@ router.get('/', authenticate, async (req, res) => {
 
       // Colonne Confirmateur (Dashboard / listes) : confirmateur(s) de la DERNIÈRE ligne fiches_histo (MAX(id)),
       // champs id_confirmateur, id_confirmateur_2, id_confirmateur_3 sur cette ligne uniquement.
-      const lastHistoConfRows = await query(
-        `SELECT fh.id_fiche, fh.id_confirmateur, fh.id_confirmateur_2, fh.id_confirmateur_3
-         FROM fiches_histo fh
-         INNER JOIN (
-           SELECT id_fiche, MAX(id) AS max_id
-           FROM fiches_histo
-           WHERE id_fiche IN (${placeholders})
-           GROUP BY id_fiche
-         ) fh_last ON fh.id_fiche = fh_last.id_fiche AND fh.id = fh_last.max_id`,
-        ficheIds
-      );
       const confIdsByFiche = new Map();
       for (const row of lastHistoConfRows) {
         const fid = Number(row.id_fiche);
@@ -1415,8 +1430,10 @@ router.get('/', authenticate, async (req, res) => {
     // État actuel = compte rendu : vrai ssi la dernière entrée fiches_histo a from_compte_rendu = 1 (pour affichage <CR> colonne état final)
     if (fiches.length > 0) {
       const ficheIds = fiches.map((f) => f.id);
-      const placeholders = ficheIds.map(() => '?').join(',');
-      const currentStateFromCrQuery = `
+      const currentStateFromCrRows = [];
+      for (const chunk of chunkArray(ficheIds, FICHE_IDS_IN_CHUNK)) {
+        const placeholders = chunk.map(() => '?').join(',');
+        const currentStateFromCrQuery = `
         SELECT fh.id_fiche
         FROM fiches_histo fh
         INNER JOIN (
@@ -1427,7 +1444,8 @@ router.get('/', authenticate, async (req, res) => {
         ) last ON fh.id_fiche = last.id_fiche AND fh.id = last.max_id
         WHERE fh.from_compte_rendu = 1
       `;
-      const currentStateFromCrRows = await query(currentStateFromCrQuery, ficheIds);
+        currentStateFromCrRows.push(...(await query(currentStateFromCrQuery, chunk)));
+      }
       const currentStateFromCrSet = new Set(currentStateFromCrRows.map((r) => r.id_fiche));
       fiches.forEach((fiche) => {
         fiche.current_state_from_compte_rendu = currentStateFromCrSet.has(fiche.id);
@@ -1876,8 +1894,10 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
     // donc si la fiche réapparaît au planning c'est qu'elle a été réaffectée → afficher "non rédigé".
     if (fiches.length > 0) {
       const ficheIds = fiches.map(f => f.id);
-      const placeholders = ficheIds.map(() => '?').join(',');
-      const compteRenduQuery = `
+      const fichesAvecCompteRendu = [];
+      for (const chunk of chunkArray(ficheIds, FICHE_IDS_IN_CHUNK)) {
+        const placeholders = chunk.map(() => '?').join(',');
+        const compteRenduQuery = `
         SELECT DISTINCT cr.id_fiche
         FROM compte_rendu_pending cr
         INNER JOIN fiches f ON f.id = cr.id_fiche
@@ -1885,7 +1905,8 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
           AND (cr.id_commercial = f.id_commercial OR cr.id_commercial = f.id_commercial_2)
           AND cr.statut = 'pending'
       `;
-      const fichesAvecCompteRendu = await query(compteRenduQuery, ficheIds);
+        fichesAvecCompteRendu.push(...(await query(compteRenduQuery, chunk)));
+      }
       const ficheIdsAvecCompteRendu = new Set(fichesAvecCompteRendu.map(cr => cr.id_fiche));
       fiches.forEach(fiche => {
         fiche.has_compte_rendu = ficheIdsAvecCompteRendu.has(fiche.id);
