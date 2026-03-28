@@ -68,9 +68,12 @@ const MesRappels = () => {
       };
       if (isConfirmateur) {
         params.id_confirmateur = user?.id;
+        // API confirmateur : inclure fiches où le connecté est conf. 2 ou 3 (sinon seul id_confirmateur est testé)
+        params.include_confirmateur_2 = 1;
       } else if (isREConfirmation) {
         if (idConfirmateurFilter && idConfirmateurFilter !== 'all') {
           params.id_confirmateur = idConfirmateurFilter;
+          params.include_confirmateur_2 = 1;
         }
       } else if (isRPConfirmation) {
         if (idREFilter && idREFilter !== 'all') {
