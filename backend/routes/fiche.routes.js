@@ -647,17 +647,6 @@ router.get('/', authenticate, async (req, res) => {
       idEtatFinalForWhere = undefined;
       koForWhere = 1;
     }
-    // Confirmateur : le client envoie souvent id_etat_final=7 en chaîne « 7 » (filtre « confirmé » pour les autres profils) — ne pas l’appliquer
-    if (
-      req.user.fonction === 6 &&
-      id_etat_final !== undefined &&
-      id_etat_final !== null &&
-      String(id_etat_final).trim() !== '' &&
-      parseInt(String(id_etat_final), 10) === 7
-    ) {
-      idEtatFinalForWhere = undefined;
-    }
-
     // ko : si fourni (ex. ko=1 pour fiches KO), on filtre par ko ; sinon on affiche toutes les fiches (pas de filtre ko=0 par défaut)
     const hasKoFilter = koForWhere !== undefined && koForWhere !== null && koForWhere !== '';
     let whereConditions = ['fiche.active = 1'];

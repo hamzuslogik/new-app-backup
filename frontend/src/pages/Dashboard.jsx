@@ -127,41 +127,23 @@ const Dashboard = () => {
         newFilters.include_confirmateur_2 =
           v === true || v === 1 || v === '1' || v === 'true';
       }
-      if (user?.fonction === 6) {
-        if (!newFilters.date_champ || String(newFilters.date_champ).trim() === '') {
-          newFilters.date_champ = 'fiches_histo';
-        }
-        const t = new Date();
-        const todayStr = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-        if (!newFilters.date_debut || String(newFilters.date_debut).trim() === '') {
-          newFilters.date_debut = todayStr;
-        }
-        if (!newFilters.date_fin || String(newFilters.date_fin).trim() === '') {
-          newFilters.date_fin = todayStr;
-        }
-        if (newFilters.id_etat_final === 7 || newFilters.id_etat_final === '7') {
-          delete newFilters.id_etat_final;
-        }
-      }
+      // Ne pas pré-remplir dates / état depuis l’URL : uniquement ce qui est dans les paramètres
       setFilters(newFilters);
       setAppliedFilters(newFilters);
       setShowFilters(true);
     } else if (Object.keys(urlParams).length === 0 && user) {
-      // Pas de paramètres : afficher par défaut les RDV créés aujourd'hui (confirmations du jour = fiches_histo id_etat=7, date_creation)
-      // Session confirmateur : fiches modifiées dans la journée par le confirmateur (fiches_histo id_confirmateur = connecté, date_creation = aujourd'hui)
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      // Aucun état ni plage date par défaut : tout afficher tant que l’utilisateur ne choisit pas un filtre
       const defaultApplied = {
         ...getInitialFilters(),
         page: 1,
         limit: 999999,
         fiche_search: true,
-        id_etat_final: user.fonction === 6 ? '' : 7,
-        date_champ: user.fonction === 6 ? 'fiches_histo' : 'fiches_histo_confirmation',
-        date_debut: todayStr,
-        date_fin: todayStr,
-        time_debut: '00:00:00',
-        time_fin: '23:59:59',
+        id_etat_final: '',
+        date_champ: '',
+        date_debut: '',
+        date_fin: '',
+        time_debut: '',
+        time_fin: '',
         ...(user.fonction === 6 ? { include_confirmateur_2: false } : {}),
       };
       // Garder le formulaire de filtres "initialisé" (non pré-rempli),
@@ -334,40 +316,6 @@ const Dashboard = () => {
         }
       });
 
-      // Session confirmateur : fiches_histo + plage sauf si recherche par critère (résultats globaux côté API)
-      const critTrim =
-        typeof searchParams.critere === 'string' ? searchParams.critere.trim() : '';
-      if (user?.fonction === 6) {
-        // Les query params sont des chaînes : "7" !== 7, donc normaliser (état 7 = filtre « confirmé » réservé aux autres profils)
-        const etatN =
-          searchParams.id_etat_final !== undefined &&
-          searchParams.id_etat_final !== null &&
-          String(searchParams.id_etat_final).trim() !== ''
-            ? Number(searchParams.id_etat_final)
-            : NaN;
-        if (!Number.isFinite(etatN) || etatN === 7) {
-          delete searchParams.id_etat_final;
-        }
-        if (!critTrim) {
-          if (!searchParams.date_champ || String(searchParams.date_champ).trim() === '') {
-            searchParams.date_champ = 'fiches_histo';
-          }
-          const { dateStr, timeStart, timeEnd } = getTodayDateRange();
-          if (!searchParams.date_debut || String(searchParams.date_debut).trim() === '') {
-            searchParams.date_debut = dateStr;
-          }
-          if (!searchParams.date_fin || String(searchParams.date_fin).trim() === '') {
-            searchParams.date_fin = dateStr;
-          }
-          if (!searchParams.time_debut || String(searchParams.time_debut).trim() === '') {
-            searchParams.time_debut = timeStart;
-          }
-          if (!searchParams.time_fin || String(searchParams.time_fin).trim() === '') {
-            searchParams.time_fin = timeEnd;
-          }
-        }
-      }
-
       return searchParams;
     }
     
@@ -381,21 +329,15 @@ const Dashboard = () => {
       baseParams.include_archive = 1;
     }
     
-    // Par défaut : fiches + fiches_histo (pas confirmations)
-    // Non-confirmateur : fiches confirmées = fiches_histo id_etat=7 dans la plage
-    // Session confirmateur : fiches_histo = fiches statuées par le confirmateur connecté
     const defaultParams = {
       ...baseParams,
       fiche_search: 1,
-      date_champ: user?.fonction === 6 ? 'fiches_histo' : 'fiches_histo_confirmation',
-      date_debut: dateStr,
-      date_fin: dateStr,
-      time_debut: timeStart,
-      time_fin: timeEnd,
+      date_champ: '',
+      date_debut: '',
+      date_fin: '',
+      time_debut: '',
+      time_fin: '',
     };
-    if (user?.fonction !== 6) {
-      defaultParams.id_etat_final = 7;
-    }
     if (src.id_centre) {
       defaultParams.id_centre = src.id_centre;
     }
