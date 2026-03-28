@@ -63,6 +63,23 @@ function chunkArray(arr, size) {
 }
 
 /**
+ * Confirmateur : la fiche est « à lui » ssi la dernière ligne fiches_histo (MAX(id)) a id_confirmateur = lui
+ * et date_creation dans la plage. Toute nouvelle ligne par un autre conf. devient la dernière → la fiche bascule.
+ */
+function whereConfirmateurDerniereLigneHistoDansPlage(startDatetime, endDatetime, userId) {
+  return {
+    clause: `EXISTS (
+      SELECT 1 FROM fiches_histo fh_last
+      WHERE fh_last.id_fiche = fiche.id
+        AND fh_last.id = (SELECT MAX(fh2.id) FROM fiches_histo fh2 WHERE fh2.id_fiche = fiche.id)
+        AND fh_last.id_confirmateur = ?
+        AND fh_last.date_creation >= ? AND fh_last.date_creation <= ?
+    )`,
+    params: [userId, startDatetime, endDatetime],
+  };
+}
+
+/**
  * Faut-il insérer une ligne fiches_histo sur PUT /fiches/:id ?
  * — Changement d'état (numérique), ou même état avec mise à jour des infos liées (sous-état, RDV, commentaire, etc.)
  */
@@ -776,14 +793,13 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_agent = ?');
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id);
       } else if (req.user.fonction === 6) {
-        // Confirmateurs : fiches pour lesquelles le connecté a au moins une ligne fiches_histo aujourd'hui (changement d'état)
-        whereConditions.push(`EXISTS (
-          SELECT 1 FROM fiches_histo fh_mes
-          WHERE fh_mes.id_fiche = fiche.id
-            AND fh_mes.id_confirmateur = ?
-            AND fh_mes.date_creation >= ? AND fh_mes.date_creation <= ?
-        )`);
-        params.push(req.user.id, `${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`);
+        const w = whereConfirmateurDerniereLigneHistoDansPlage(
+          `${y_m_d} 00:00:00`,
+          `${y_m_d} 23:59:59`,
+          req.user.id
+        );
+        whereConditions.push(w.clause);
+        params.push(...w.params);
       }
     } else {
       // Filtres par fonction quand recherche active
@@ -1107,21 +1123,17 @@ router.get('/', authenticate, async (req, res) => {
         const timeStart = time_debut && String(time_debut).trim() !== '' ? time_debut : '00:00:00';
         const timeEnd = time_fin && String(time_fin).trim() !== '' ? time_fin : '23:59:59';
         
-        // fiches_histo : confirmateur 6 → plage sur fiche.date_modif_time uniquement (table fiches), pas de sous-requête fiches_histo
-        // (évite AND trop restrictif avec id_confirmateur sur fiche). Autres profils : JOIN dernière ligne dans la plage.
+        // fiches_histo : confirmateur 6 → dernière ligne fiches_histo (MAX(id)) = connecté + date_creation dans la plage.
+        // Autres profils : JOIN dernière ligne dont la date_creation est dans la plage.
         if (date_champ === 'fiches_histo' && !(req.user.fonction === 6 && hasCritereOuTelSearch)) {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           if (req.user.fonction === 6 && !hasCritereOuTelSearch) {
-            whereConditions.push(`EXISTS (
-              SELECT 1 FROM fiches_histo fh_mes
-              WHERE fh_mes.id_fiche = fiche.id
-                AND fh_mes.id_confirmateur = ?
-                AND fh_mes.date_creation >= ? AND fh_mes.date_creation <= ?
-            )`);
-            params.push(req.user.id, startDatetime, endDatetime);
+            const w = whereConfirmateurDerniereLigneHistoDansPlage(startDatetime, endDatetime, req.user.id);
+            whereConditions.push(w.clause);
+            params.push(...w.params);
             console.log(
-              `[FICHES-${requestId}] CONF6 date_champ=fiches_histo → EXISTS fiches_histo id_confirmateur=${req.user.id} [${startDatetime}] — [${endDatetime}]`
+              `[FICHES-${requestId}] CONF6 date_champ=fiches_histo → dernière ligne histo = conf ${req.user.id} [${startDatetime}] — [${endDatetime}]`
             );
           } else {
             histoJoinForFichesHisto = `INNER JOIN (
@@ -1224,7 +1236,7 @@ router.get('/', authenticate, async (req, res) => {
 
     // Session confirmateur (Dashboard / fiche_search) : périmètre depuis la table fiches — id_confirmateur (1er) ;
     // id_confirmateur_2 et id_confirmateur_3 si include_confirmateur_2=1. La plage « Mes actions (fiches_histo) »
-    // est gérée ci-dessus via EXISTS sur fiches_histo : ne pas restreindre en plus sur fiche.id_confirmateur.
+    // est gérée ci-dessus via dernière ligne fiches_histo : ne pas restreindre en plus sur fiche.id_confirmateur.
     if (req.user.fonction === 6 && isActiveSearch && !hasCritereOuTelSearch && date_champ !== 'fiches_histo') {
       if (includeConfSlots) {
         whereConditions.push(
