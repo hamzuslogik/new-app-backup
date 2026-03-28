@@ -63,21 +63,21 @@ function chunkArray(arr, size) {
 }
 
 /**
- * Confirmateur : dernière ligne fiches_histo (MAX(id) par fiche) = connecté + date_creation dans la plage.
- * INNER JOIN (au lieu d’EXISTS corrélé) pour un plan plus stable côté MySQL.
+ * Confirmateur : lignes fiches_histo du jour (plage date_creation) pour le connecté,
+ * et qui sont la dernière ligne de la fiche (pas de fh2 avec même id_fiche et id > fh.id).
+ * Évite un GROUP BY sur toute la table fiches_histo. Index utiles : (id_confirmateur, date_creation), (id_fiche, id).
  */
 function confirmateurDerniereLigneHistoJoin(startDatetime, endDatetime, userId) {
   return {
     joinSql: `INNER JOIN (
     SELECT fh.id_fiche
     FROM fiches_histo fh
-    INNER JOIN (
-      SELECT id_fiche, MAX(id) AS max_id
-      FROM fiches_histo
-      GROUP BY id_fiche
-    ) mx ON fh.id_fiche = mx.id_fiche AND fh.id = mx.max_id
     WHERE fh.id_confirmateur = ?
       AND fh.date_creation >= ? AND fh.date_creation <= ?
+      AND NOT EXISTS (
+        SELECT 1 FROM fiches_histo fh2
+        WHERE fh2.id_fiche = fh.id_fiche AND fh2.id > fh.id
+      )
   ) histo_conf_last ON fiche.id = histo_conf_last.id_fiche`,
     params: [userId, startDatetime, endDatetime],
   };
