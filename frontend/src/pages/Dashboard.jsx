@@ -407,6 +407,11 @@ const Dashboard = () => {
     etatsPhase1 = [];
     etatsPhase2 = etatsPhase2.filter(e => isEtatAllowedForConfirmateur(e, CONFIRMATEUR_ETATS_PHASE2));
     etatsPhase3 = etatsPhase3.filter(e => isEtatAllowedForConfirmateurPhase3(e));
+    // « Annuler à reprogrammer » (id 8) est souvent en phase 0/1 en base : il était exclu du filtre. On l’ajoute pour la recherche.
+    const etatAnnulerRepro = (etats || []).find((e) => Number(e.id) === 8);
+    if (etatAnnulerRepro && !etatsPhase2.some((e) => Number(e.id) === 8)) {
+      etatsPhase2 = [etatAnnulerRepro, ...etatsPhase2];
+    }
   }
 
   const sousEtatsForSelectedEtat = (sousEtatsData || []).filter(
