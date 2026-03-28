@@ -63,20 +63,47 @@ function chunkArray(arr, size) {
 }
 
 /**
- * Confirmateur : la fiche est « à lui » ssi la dernière ligne fiches_histo (MAX(id)) a id_confirmateur = lui
- * et date_creation dans la plage. Toute nouvelle ligne par un autre conf. devient la dernière → la fiche bascule.
+ * Confirmateur : dernière ligne fiches_histo (MAX(id) par fiche) = connecté + date_creation dans la plage.
+ * INNER JOIN (au lieu d’EXISTS corrélé) pour un plan plus stable côté MySQL.
  */
-function whereConfirmateurDerniereLigneHistoDansPlage(startDatetime, endDatetime, userId) {
+function confirmateurDerniereLigneHistoJoin(startDatetime, endDatetime, userId) {
   return {
-    clause: `EXISTS (
-      SELECT 1 FROM fiches_histo fh_last
-      WHERE fh_last.id_fiche = fiche.id
-        AND fh_last.id = (SELECT MAX(fh2.id) FROM fiches_histo fh2 WHERE fh2.id_fiche = fiche.id)
-        AND fh_last.id_confirmateur = ?
-        AND fh_last.date_creation >= ? AND fh_last.date_creation <= ?
-    )`,
+    joinSql: `INNER JOIN (
+    SELECT fh.id_fiche
+    FROM fiches_histo fh
+    INNER JOIN (
+      SELECT id_fiche, MAX(id) AS max_id
+      FROM fiches_histo
+      GROUP BY id_fiche
+    ) mx ON fh.id_fiche = mx.id_fiche AND fh.id = mx.max_id
+    WHERE fh.id_confirmateur = ?
+      AND fh.date_creation >= ? AND fh.date_creation <= ?
+  ) histo_conf_last ON fiche.id = histo_conf_last.id_fiche`,
     params: [userId, startDatetime, endDatetime],
   };
+}
+
+/** Remplit id_etat_histo (GROUP_CONCAT des id_etat) sans sous-requête corrélée par ligne sur le SELECT principal */
+async function attachIdEtatHistoToFiches(fiches) {
+  if (!fiches?.length) return;
+  const map = new Map();
+  const ids = fiches.map((f) => f.id);
+  for (const chunk of chunkArray(ids, FICHE_IDS_IN_CHUNK)) {
+    const ph = chunk.map(() => '?').join(',');
+    const rows = await query(
+      `SELECT id_fiche, GROUP_CONCAT(DISTINCT id_etat ORDER BY id ASC SEPARATOR ',') AS id_etat_histo
+       FROM fiches_histo
+       WHERE id_fiche IN (${ph})
+       GROUP BY id_fiche`,
+      chunk
+    );
+    for (const r of rows) {
+      map.set(r.id_fiche, r.id_etat_histo);
+    }
+  }
+  for (const f of fiches) {
+    f.id_etat_histo = map.get(f.id) ?? null;
+  }
 }
 
 /**
@@ -793,13 +820,13 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_agent = ?');
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id);
       } else if (req.user.fonction === 6) {
-        const w = whereConfirmateurDerniereLigneHistoDansPlage(
+        const j = confirmateurDerniereLigneHistoJoin(
           `${y_m_d} 00:00:00`,
           `${y_m_d} 23:59:59`,
           req.user.id
         );
-        whereConditions.push(w.clause);
-        params.push(...w.params);
+        histoJoinForFichesHisto = j.joinSql;
+        histoParamsForFichesHisto = j.params;
       }
     } else {
       // Filtres par fonction quand recherche active
@@ -1129,11 +1156,11 @@ router.get('/', authenticate, async (req, res) => {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           if (req.user.fonction === 6 && !hasCritereOuTelSearch) {
-            const w = whereConfirmateurDerniereLigneHistoDansPlage(startDatetime, endDatetime, req.user.id);
-            whereConditions.push(w.clause);
-            params.push(...w.params);
+            const j = confirmateurDerniereLigneHistoJoin(startDatetime, endDatetime, req.user.id);
+            histoJoinForFichesHisto = j.joinSql;
+            histoParamsForFichesHisto = j.params;
             console.log(
-              `[FICHES-${requestId}] CONF6 date_champ=fiches_histo → dernière ligne histo = conf ${req.user.id} [${startDatetime}] — [${endDatetime}]`
+              `[FICHES-${requestId}] CONF6 date_champ=fiches_histo → JOIN dernière ligne histo = conf ${req.user.id} [${startDatetime}] — [${endDatetime}]`
             );
           } else {
             histoJoinForFichesHisto = `INNER JOIN (
@@ -1333,10 +1360,7 @@ router.get('/', authenticate, async (req, res) => {
        cq_e.titre as cqe,
        cq_d.titre as cqd,
        install.nom as installeur,
-       (SELECT GROUP_CONCAT(DISTINCT id_etat ORDER BY id ASC SEPARATOR ',') 
-        FROM fiches_histo 
-        WHERE id_fiche = fiche.id 
-        LIMIT 100) as id_etat_histo,
+       NULL as id_etat_histo,
        decale.message as decale_message,
        decale.expediteur as decale_expediteur,
        decale_etat.titre as etat_dec,
@@ -1369,6 +1393,8 @@ router.get('/', authenticate, async (req, res) => {
     const fiches = await query(selectQuery, selectParams);
     const selectDuration = Date.now() - selectStartTime;
     console.log(`[FICHES-${requestId}] SELECT query: ${selectDuration}ms → ${fiches.length} fiches`);
+
+    await attachIdEtatHistoToFiches(fiches);
 
     // Enrichir les fiches : has_etat_changed_by_compte_rendu + compte_rendu_commercial_pseudo (dernier CR approuvé)
     if (fiches.length > 0) {
