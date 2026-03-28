@@ -10,6 +10,8 @@ import './MesRappels.css';
 
 // État 19 = RAPPEL POUR BUREAU (date rappel stockée dans date_rdv_time)
 const ETAT_RAPPEL_BUREAU = 19;
+// État 8 = Annuler à reprogrammer
+const ETAT_ANNULER_A_REPROGRAMMER = 8;
 const FONCTION_CONFIRMATEUR = 6;
 const FONCTION_RE_CONFIRMATION = 14;
 const FONCTION_RP_CONFIRMATION = 13;
@@ -25,9 +27,12 @@ const MesRappels = () => {
   }
 
   const today = new Date().toISOString().split('T')[0];
+  const [activeTab, setActiveTab] = useState('bureau'); // 'bureau' | 'annuler_repro'
   const [dateRappel, setDateRappel] = useState(today);
   const [idConfirmateurFilter, setIdConfirmateurFilter] = useState(isREConfirmation ? 'all' : null);
   const [idREFilter, setIdREFilter] = useState(isRPConfirmation ? 'all' : null);
+
+  const etatIdForTab = activeTab === 'annuler_repro' ? ETAT_ANNULER_A_REPROGRAMMER : ETAT_RAPPEL_BUREAU;
 
   // Utilisateurs pour RE (équipe) et RP (liste des RE sous le RP)
   const { data: usersData } = useQuery(
@@ -48,11 +53,11 @@ const MesRappels = () => {
     : [];
 
   const { data, isLoading, error } = useQuery(
-    ['mes-rappels', dateRappel, user?.id, idConfirmateurFilter, idREFilter],
+    ['mes-rappels', activeTab, etatIdForTab, dateRappel, user?.id, idConfirmateurFilter, idREFilter],
     async () => {
       const params = {
         fiche_search: 1,
-        id_etat_final: ETAT_RAPPEL_BUREAU,
+        id_etat_final: etatIdForTab,
         date_champ: 'date_rdv_time',
         date_debut: dateRappel,
         date_fin: dateRappel,
@@ -86,18 +91,6 @@ const MesRappels = () => {
 
   const rappels = data || [];
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '–';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   const getConfirmateurPseudo = (fiche) => {
     const id = fiche.id_confirmateur;
     if (!id) return '–';
@@ -125,17 +118,49 @@ const MesRappels = () => {
   const titre =
     isRPConfirmation ? 'Rappels par RE' : isREConfirmation ? "Rappels de l'équipe" : 'Mes rappels';
 
-  const description = isRPConfirmation
+  const descriptionBureau = isRPConfirmation
     ? 'Rappels bureau des confirmateurs de vos RE Confirmation, filtrés par RE et par date de rappel (qualification « Rappel pour bureau »).'
     : isREConfirmation
       ? "Rappels bureau des confirmateurs de votre équipe, filtrés par confirmateur et par date de rappel (qualification « Rappel pour bureau »)."
       : 'Rappels bureau du confirmateur connecté, filtrés par la date de rappel indiquée lors de la qualification « Rappel pour bureau ».';
+
+  const descriptionAnnuler = isRPConfirmation
+    ? 'Fiches en « Annuler à reprogrammer », filtrées par RE et par date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu.'
+    : isREConfirmation
+      ? "Fiches en « Annuler à reprogrammer », filtrées par confirmateur et par date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu."
+      : 'Fiches en « Annuler à reprogrammer » vous concernant, filtrées par la date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu (sinon repro confirmateurs).';
+
+  const description = activeTab === 'annuler_repro' ? descriptionAnnuler : descriptionBureau;
+
+  const origineLabel = (fiche) =>
+    fiche.current_state_from_compte_rendu === true ? 'Compte rendu' : 'Repro confirmateurs';
 
   return (
     <div className="mes-rappels-page">
       <div className="mes-rappels-header">
         <h1>{titre}</h1>
         <p className="mes-rappels-description">{description}</p>
+      </div>
+
+      <div className="mes-rappels-tabs" role="tablist" aria-label="Type de rappels">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'bureau'}
+          className={`mes-rappels-tab ${activeTab === 'bureau' ? 'mes-rappels-tab--active' : ''}`}
+          onClick={() => setActiveTab('bureau')}
+        >
+          Rappel pour bureau
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'annuler_repro'}
+          className={`mes-rappels-tab ${activeTab === 'annuler_repro' ? 'mes-rappels-tab--active' : ''}`}
+          onClick={() => setActiveTab('annuler_repro')}
+        >
+          Annuler à reprogrammer
+        </button>
       </div>
 
       <div className="mes-rappels-filters">
@@ -202,7 +227,9 @@ const MesRappels = () => {
                   ? 'Aucun RE Confirmation sous votre responsabilité.'
                   : isREConfirmation && idConfirmateurFilter === 'all' && confirmateursEquipe.length === 0
                     ? 'Aucun confirmateur dans votre équipe.'
-                    : 'Aucun rappel bureau pour les critères sélectionnés.'
+                    : activeTab === 'annuler_repro'
+                      ? 'Aucune fiche « Annuler à reprogrammer » pour les critères sélectionnés.'
+                      : 'Aucun rappel bureau pour les critères sélectionnés.'
                 }
               </div>
             ) : (
@@ -212,6 +239,7 @@ const MesRappels = () => {
                     <tr>
                       {isRPConfirmation && <th>RE Confirmation</th>}
                       {(isREConfirmation || isRPConfirmation) && <th>Confirmateur</th>}
+                      {activeTab === 'annuler_repro' && <th>Origine</th>}
                       <th>Civ.</th>
                       <th>Nom</th>
                       <th>Prénom</th>
@@ -228,6 +256,19 @@ const MesRappels = () => {
                         )}
                         {(isREConfirmation || isRPConfirmation) && (
                           <td data-label="Confirmateur">{getConfirmateurPseudo(fiche)}</td>
+                        )}
+                        {activeTab === 'annuler_repro' && (
+                          <td data-label="Origine">
+                            <span
+                              className={
+                                fiche.current_state_from_compte_rendu === true
+                                  ? 'mes-rappels-origine mes-rappels-origine--cr'
+                                  : 'mes-rappels-origine mes-rappels-origine--repro'
+                              }
+                            >
+                              {origineLabel(fiche)}
+                            </span>
+                          </td>
                         )}
                         <td data-label="Civ.">{fiche.civ || '–'}</td>
                         <td data-label="Nom">{fiche.nom || '–'}</td>
