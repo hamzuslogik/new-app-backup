@@ -640,6 +640,67 @@ router.get('/', authenticate, async (req, res) => {
       include_archive === true ||
       include_archive === 'true';
 
+    const ficheSearchFlag =
+      req.query.fiche_search === '1' ||
+      req.query.fiche_search === 1 ||
+      req.query.fiche_search === true ||
+      req.query.fiche_search === 'true';
+
+    /** Évite COUNT/SELECT sur toute la table (ex. ?fiche_search=1 seul → ~800k lignes) */
+    const qNarrow = (v) =>
+      v !== undefined && v !== null && String(v).trim() !== '';
+    if (ficheSearchFlag) {
+      const hasNarrowing =
+        qNarrow(id_etat_final) ||
+        qNarrow(id_sous_etat) ||
+        qNarrow(date_champ) ||
+        qNarrow(date_debut) ||
+        qNarrow(date_fin) ||
+        qNarrow(critere) ||
+        qNarrow(critere_champ) ||
+        qNarrow(tel) ||
+        qNarrow(cp) ||
+        qNarrow(nom) ||
+        qNarrow(prenom) ||
+        qNarrow(produit) ||
+        qNarrow(id_commercial) ||
+        qNarrow(id_confirmateur) ||
+        qNarrow(id_re) ||
+        qNarrow(id_centre) ||
+        qNarrow(id_agent) ||
+        qNarrow(affectation) ||
+        qNarrow(suivi) ||
+        qNarrow(day_rdv) ||
+        qNarrow(ko) ||
+        qNarrow(hc) ||
+        qNarrow(rdv_valid) ||
+        qNarrow(rdv_non_valid) ||
+        qNarrow(rdv_affilie) ||
+        qNarrow(rdv_non_affilie) ||
+        qNarrow(sgn_week) ||
+        qNarrow(sgn_month) ||
+        qNarrow(prof_ret) ||
+        qNarrow(prof_celib) ||
+        qNarrow(include_ko) ||
+        qNarrow(req.query.annuler_repro_type) ||
+        qNarrow(req.query.qualification_code) ||
+        includeArchive ||
+        qNarrow(w) ||
+        qNarrow(y) ||
+        yesterday === '1' ||
+        yesterday === 1 ||
+        tomorrow === '1' ||
+        tomorrow === 1;
+      if (!hasNarrowing) {
+        return res.status(400).json({
+          success: false,
+          code: 'FICHES_SEARCH_TOO_BROAD',
+          message:
+            'Recherche trop large : indiquez au moins un critère (état, dates, téléphone, code postal, commercial, etc.).',
+        });
+      }
+    }
+
     // Ne pas chercher par id_etat 54 pour les fiches KO : uniquement ko=1
     let idEtatFinalForWhere = id_etat_final;
     let koForWhere = ko;
@@ -706,10 +767,14 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.id_agent = ?');
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id);
       } else if (req.user.fonction === 6) {
-        // Confirmateurs : uniquement les fiches où le connecté est le dernier confirmateur (3, sinon 2, sinon 1)
-        whereConditions.push('fiche.date_modif_time >= ? AND fiche.date_modif_time <= ?');
-        whereConditions.push('COALESCE(fiche.id_confirmateur_3, fiche.id_confirmateur_2, fiche.id_confirmateur) = ?');
-        params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id);
+        // Confirmateurs : fiches pour lesquelles le connecté a au moins une ligne fiches_histo aujourd'hui (changement d'état)
+        whereConditions.push(`EXISTS (
+          SELECT 1 FROM fiches_histo fh_mes
+          WHERE fh_mes.id_fiche = fiche.id
+            AND fh_mes.id_confirmateur = ?
+            AND fh_mes.date_creation >= ? AND fh_mes.date_creation <= ?
+        )`);
+        params.push(req.user.id, `${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`);
       }
     } else {
       // Filtres par fonction quand recherche active
@@ -1039,12 +1104,15 @@ router.get('/', authenticate, async (req, res) => {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           if (req.user.fonction === 6 && !hasCritereOuTelSearch) {
-            whereConditions.push(
-              'fiche.date_modif_time IS NOT NULL AND fiche.date_modif_time != \'\' AND fiche.date_modif_time >= ? AND fiche.date_modif_time <= ?'
-            );
-            params.push(startDatetime, endDatetime);
+            whereConditions.push(`EXISTS (
+              SELECT 1 FROM fiches_histo fh_mes
+              WHERE fh_mes.id_fiche = fiche.id
+                AND fh_mes.id_confirmateur = ?
+                AND fh_mes.date_creation >= ? AND fh_mes.date_creation <= ?
+            )`);
+            params.push(req.user.id, startDatetime, endDatetime);
             console.log(
-              `[FICHES-${requestId}] CONF6 date_champ=fiches_histo → filtre fiches.date_modif_time plage [${startDatetime}] — [${endDatetime}]`
+              `[FICHES-${requestId}] CONF6 date_champ=fiches_histo → EXISTS fiches_histo id_confirmateur=${req.user.id} [${startDatetime}] — [${endDatetime}]`
             );
           } else {
             histoJoinForFichesHisto = `INNER JOIN (
@@ -1147,8 +1215,8 @@ router.get('/', authenticate, async (req, res) => {
 
     // Session confirmateur (Dashboard / fiche_search) : périmètre depuis la table fiches — id_confirmateur (1er) ;
     // id_confirmateur_2 et id_confirmateur_3 si include_confirmateur_2=1. La plage « Mes actions (fiches_histo) »
-    // est gérée ci-dessus via EXISTS sur fiches_histo. Pas d’assignation fiche si recherche critère/tel (résultats globaux).
-    if (req.user.fonction === 6 && isActiveSearch && !hasCritereOuTelSearch) {
+    // est gérée ci-dessus via EXISTS sur fiches_histo : ne pas restreindre en plus sur fiche.id_confirmateur.
+    if (req.user.fonction === 6 && isActiveSearch && !hasCritereOuTelSearch && date_champ !== 'fiches_histo') {
       if (includeConfSlots) {
         whereConditions.push(
           '(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)'

@@ -12,6 +12,64 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Dashboard.css';
 
+/** Aligné sur le garde-fou backend : fiche_search seul ne doit pas lancer une requête sur toute la table. */
+function dashboardUrlHasNarrowingCriteria(params) {
+  const q = (k) => {
+    const v = params[k];
+    return v !== undefined && v !== null && String(v).trim() !== '';
+  };
+  return (
+    q('id_etat_final') ||
+    q('id_sous_etat') ||
+    q('date_champ') ||
+    q('date_debut') ||
+    q('date_fin') ||
+    q('critere') ||
+    q('critere_champ') ||
+    q('rdv_valid') ||
+    q('rdv_non_valid') ||
+    q('rdv_affilie') ||
+    q('rdv_non_affilie') ||
+    q('sgn_week') ||
+    q('sgn_month') ||
+    q('prof_ret') ||
+    q('prof_celib') ||
+    q('include_ko') ||
+    q('tel') ||
+    q('cp') ||
+    q('nom') ||
+    q('prenom') ||
+    q('produit') ||
+    q('id_commercial') ||
+    q('id_confirmateur') ||
+    q('id_re') ||
+    q('id_centre') ||
+    q('id_agent') ||
+    q('affectation') ||
+    q('suivi') ||
+    q('day_rdv') ||
+    q('ko') ||
+    q('hc') ||
+    q('annuler_repro_type') ||
+    q('qualification_code') ||
+    params.include_archive === '1' ||
+    params.include_archive === 'true' ||
+    q('w') ||
+    q('y') ||
+    params.yesterday === '1' ||
+    params.tomorrow === '1'
+  );
+}
+
+function getTodayDateRange() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
+  return { dateStr, timeStart: '00:00:00', timeEnd: '23:59:59' };
+}
+
 const Dashboard = () => {
   const { user, hasPermission } = useAuth();
   const { setAutoHide, isDesktop, isMobile } = useSidebar();
@@ -109,10 +167,15 @@ const Dashboard = () => {
   // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
   const [appliedFilters, setAppliedFilters] = useState(getInitialFilters);
   
-  // Lire les paramètres de l'URL ou afficher par défaut les fiches confirmées du jour (basé fiches_histo)
+  // Lire l’URL ; sans query : défaut confirmateur = actions du jour (fiches_histo), autres = confirmées du jour
   useEffect(() => {
     const urlParams = Object.fromEntries(searchParams.entries());
-    if (Object.keys(urlParams).length > 0 && urlParams.fiche_search === '1') {
+    const hasUrl = Object.keys(urlParams).length > 0;
+    if (hasUrl && urlParams.fiche_search === '1' && !dashboardUrlHasNarrowingCriteria(urlParams)) {
+      setSearchParams({}, { replace: true });
+      return;
+    }
+    if (hasUrl && urlParams.fiche_search === '1') {
       const newFilters = {
         page: parseInt(urlParams.page) || 1,
         limit: parseInt(urlParams.limit) || 999999,
@@ -132,12 +195,12 @@ const Dashboard = () => {
       setAppliedFilters(newFilters);
       setShowFilters(true);
     } else if (Object.keys(urlParams).length === 0 && user) {
-      // Aucun état ni plage date par défaut : tout afficher tant que l’utilisateur ne choisit pas un filtre
+      // Aucun état ni plage date par défaut : ne pas lancer /fiches au montage (toutes sessions — requête trop lourde sans critères)
       const defaultApplied = {
         ...getInitialFilters(),
         page: 1,
         limit: 999999,
-        fiche_search: true,
+        fiche_search: false,
         id_etat_final: '',
         date_champ: '',
         date_debut: '',
@@ -209,23 +272,6 @@ const Dashboard = () => {
       return [];
     }
   });
-
-  // Calculer la date d'aujourd'hui (début et fin de journée)
-  const getTodayDateRange = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    
-    // Format: YYYY-MM-DD
-    const dateStr = `${year}-${month}-${day}`;
-    
-    return { 
-      dateStr,
-      timeStart: '00:00:00',
-      timeEnd: '23:59:59'
-    };
-  };
 
   // Construire les paramètres selon l'onglet actif (utilise appliedFilters = filtres envoyés à l'API)
   const getQueryParams = (sourceFilters) => {
@@ -1396,7 +1442,14 @@ const Dashboard = () => {
           </div>
         ) : !isFetchingList && fiches.length === 0 ? (
           <div className="no-results">
-            <p>Aucune fiche trouvée{debouncedQuickSearch ? ` pour "${debouncedQuickSearch}"` : ''}</p>
+            {!appliedFilters.fiche_search ? (
+              <p>
+                Utilisez les filtres puis cliquez sur <strong>RECHERCHE</strong> pour charger les fiches. Un chargement
+                sans critère serait trop long pour tous les profils.
+              </p>
+            ) : (
+              <p>Aucune fiche trouvée{debouncedQuickSearch ? ` pour "${debouncedQuickSearch}"` : ''}</p>
+            )}
           </div>
         ) : (
           <>
