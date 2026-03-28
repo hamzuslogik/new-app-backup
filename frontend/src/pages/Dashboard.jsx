@@ -338,7 +338,14 @@ const Dashboard = () => {
       const critTrim =
         typeof searchParams.critere === 'string' ? searchParams.critere.trim() : '';
       if (user?.fonction === 6) {
-        if (searchParams.id_etat_final === 7 || searchParams.id_etat_final === '' || searchParams.id_etat_final == null) {
+        // Les query params sont des chaînes : "7" !== 7, donc normaliser (état 7 = filtre « confirmé » réservé aux autres profils)
+        const etatN =
+          searchParams.id_etat_final !== undefined &&
+          searchParams.id_etat_final !== null &&
+          String(searchParams.id_etat_final).trim() !== ''
+            ? Number(searchParams.id_etat_final)
+            : NaN;
+        if (!Number.isFinite(etatN) || etatN === 7) {
           delete searchParams.id_etat_final;
         }
         if (!critTrim) {
