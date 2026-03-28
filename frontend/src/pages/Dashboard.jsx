@@ -195,24 +195,41 @@ const Dashboard = () => {
       setAppliedFilters(newFilters);
       setShowFilters(true);
     } else if (Object.keys(urlParams).length === 0 && user) {
-      // Aucun état ni plage date par défaut : ne pas lancer /fiches au montage (toutes sessions — requête trop lourde sans critères)
-      const defaultApplied = {
-        ...getInitialFilters(),
-        page: 1,
-        limit: 999999,
-        fiche_search: false,
-        id_etat_final: '',
-        date_champ: '',
-        date_debut: '',
-        date_fin: '',
-        time_debut: '',
-        time_fin: '',
-        ...(user.fonction === 6 ? { include_confirmateur_2: false } : {}),
-      };
-      // Garder le formulaire de filtres "initialisé" (non pré-rempli),
-      // tout en affichant les résultats par défaut via appliedFilters.
-      setFilters(getFiltersForUser(user));
-      setAppliedFilters(defaultApplied);
+      const { dateStr, timeStart, timeEnd } = getTodayDateRange();
+      // Confirmateur : liste du jour sans toucher au filtre (backend = dernière ligne fiches_histo).
+      // Autres profils : fiches confirmées (état 7) du jour via fiches_histo_confirmation.
+      if (user.fonction === 6) {
+        const defaultApplied = {
+          ...getInitialFilters(),
+          page: 1,
+          limit: 999999,
+          fiche_search: true,
+          id_etat_final: '',
+          date_champ: 'fiches_histo',
+          date_debut: dateStr,
+          date_fin: dateStr,
+          time_debut: timeStart,
+          time_fin: timeEnd,
+          include_confirmateur_2: false,
+        };
+        setFilters(defaultApplied);
+        setAppliedFilters(defaultApplied);
+      } else {
+        const defaultApplied = {
+          ...getInitialFilters(),
+          page: 1,
+          limit: 999999,
+          fiche_search: true,
+          id_etat_final: 7,
+          date_champ: 'fiches_histo_confirmation',
+          date_debut: dateStr,
+          date_fin: dateStr,
+          time_debut: timeStart,
+          time_fin: timeEnd,
+        };
+        setFilters(defaultApplied);
+        setAppliedFilters(defaultApplied);
+      }
       setShowFilters(false);
     }
   }, [searchParams, user]);
