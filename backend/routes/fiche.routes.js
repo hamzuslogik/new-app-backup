@@ -660,6 +660,7 @@ router.get('/', authenticate, async (req, res) => {
         include_confirmateur_2 === 1 ||
         include_confirmateur_2 === true ||
         include_confirmateur_2 === 'true');
+
     if (hasKoFilter) {
       whereConditions.push('(fiche.ko = ? OR (fiche.ko IS NULL AND ? = 0))');
       params.push(koForWhere, koForWhere);
@@ -685,6 +686,12 @@ router.get('/', authenticate, async (req, res) => {
     const hasCritereOuTelSearch =
       (critere !== undefined && critere !== null && String(critere).trim() !== '') ||
       (tel !== undefined && tel !== null && String(tel).trim() !== '');
+
+    if (req.user.fonction === 6 && req.query.fiche_search) {
+      console.log(
+        `[FICHES-${requestId}] CONF6_FILTRE: fiche_search=1 isActiveSearch=${!!isActiveSearch} date_champ=${date_champ ?? '(vide)'} date_debut=${date_debut ?? ''} date_fin=${date_fin ?? ''} time_debut=${time_debut ?? ''} time_fin=${time_fin ?? ''} include_confirmateur_2(raw)=${JSON.stringify(include_confirmateur_2)} includeConfSlots=${includeConfSlots} hasCritereOuTelSearch=${hasCritereOuTelSearch}`
+      );
+    }
 
     if (!isActiveSearch) {
       if (req.user.fonction === 5) {
@@ -1027,19 +1034,19 @@ router.get('/', authenticate, async (req, res) => {
         const timeStart = time_debut && String(time_debut).trim() !== '' ? time_debut : '00:00:00';
         const timeEnd = time_fin && String(time_fin).trim() !== '' ? time_fin : '23:59:59';
         
-        // fiches_histo : plage sur date_creation (confirmateur 6 : au moins une ligne histo « moi » dans la plage ; assignation fiche séparée).
-        // Autres profils : JOIN dernière ligne dans la plage (comportement historique).
+        // fiches_histo : confirmateur 6 → plage sur fiche.date_modif_time uniquement (table fiches), pas de sous-requête fiches_histo
+        // (évite AND trop restrictif avec id_confirmateur sur fiche). Autres profils : JOIN dernière ligne dans la plage.
         if (date_champ === 'fiches_histo' && !(req.user.fonction === 6 && hasCritereOuTelSearch)) {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           if (req.user.fonction === 6 && !hasCritereOuTelSearch) {
-            whereConditions.push(`EXISTS (
-              SELECT 1 FROM fiches_histo fh
-              WHERE fh.id_fiche = fiche.id
-              AND fh.date_creation >= ? AND fh.date_creation <= ?
-              AND fh.id_confirmateur = ?
-            )`);
-            params.push(startDatetime, endDatetime, req.user.id);
+            whereConditions.push(
+              'fiche.date_modif_time IS NOT NULL AND fiche.date_modif_time != \'\' AND fiche.date_modif_time >= ? AND fiche.date_modif_time <= ?'
+            );
+            params.push(startDatetime, endDatetime);
+            console.log(
+              `[FICHES-${requestId}] CONF6 date_champ=fiches_histo → filtre fiches.date_modif_time plage [${startDatetime}] — [${endDatetime}]`
+            );
           } else {
             histoJoinForFichesHisto = `INNER JOIN (
             SELECT fh.id_fiche, fh.id_confirmateur AS histo_dernier_conf_id
@@ -1181,6 +1188,14 @@ router.get('/', authenticate, async (req, res) => {
       console.log(`[FICHES-${requestId}] [AGENT_QUALIF] COUNT SQL:`, countSql);
       console.log(`[FICHES-${requestId}] [AGENT_QUALIF] COUNT params:`, JSON.stringify(countParams));
     }
+    if (req.user.fonction === 6 && isActiveSearch) {
+      const countSqlPreview = `SELECT COUNT(DISTINCT fiche.id) as total FROM fiches fiche ${histoJoinForFichesHisto} ${qualifJoinForCount} ${whereClause}`;
+      console.log(`[FICHES-${requestId}] CONF6_COUNT_SQL:`, countSqlPreview);
+      console.log(`[FICHES-${requestId}] CONF6_COUNT_PARAMS (${countParams.length}):`, JSON.stringify(countParams));
+      console.log(
+        `[FICHES-${requestId}] CONF6_JOINS: histoJoin=${histoJoinForFichesHisto ? 'oui' : 'non'} qualifJoin=${qualifJoinForCount ? 'oui' : 'non'}`
+      );
+    }
 
     // Compter le total
     const countStartTime = Date.now();
@@ -1191,6 +1206,25 @@ router.get('/', authenticate, async (req, res) => {
     const total = countResult.total;
     const countDuration = Date.now() - countStartTime;
     console.log(`[FICHES-${requestId}] COUNT query: ${countDuration}ms → total=${total} fiches`);
+
+    if (req.user.fonction === 6 && isActiveSearch && Number(total) === 0) {
+      try {
+        const baseArchive = '(fiche.active = 1 AND (fiche.archive = 0 OR fiche.archive IS NULL))';
+        const d1 = await queryOne(
+          `SELECT COUNT(*) as c FROM fiches fiche WHERE ${baseArchive} AND fiche.id_confirmateur = ?`,
+          [req.user.id]
+        );
+        const d2 = await queryOne(
+          `SELECT COUNT(*) as c FROM fiches fiche WHERE ${baseArchive} AND (fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)`,
+          [req.user.id, req.user.id, req.user.id]
+        );
+        console.log(
+          `[FICHES-${requestId}] CONF6_DIAG (total=0): fiches avec id_confirmateur=${req.user.id} → ${d1.c} | avec id en conf1/2/3 → ${d2.c} (repère: absence d’assignation vs filtres date/état/permissions)`
+        );
+      } catch (e) {
+        console.warn(`[FICHES-${requestId}] CONF6_DIAG erreur:`, e?.message || e);
+      }
+    }
 
     // Calculer la pagination
     const offset = (page - 1) * limit;
