@@ -656,6 +656,15 @@ router.get('/', authenticate, async (req, res) => {
     let histoParamsForFichesHisto = [];
     /** Plage date_creation (fiches_histo) pour filtre EXISTS fallback confirmateur */
     let confirmateurDernierHistoPlage = null;
+    /** Confirmateur (6) + include_confirmateur_2=1 : périmètre déjà appliqué en WHERE (EXISTS OU conf2/conf3), ne pas dupliquer */
+    let confirmateurIncludeSlotsPending = false;
+
+    const includeConfSlots =
+      req.user.fonction === 6 &&
+      (include_confirmateur_2 === '1' ||
+        include_confirmateur_2 === 1 ||
+        include_confirmateur_2 === true ||
+        include_confirmateur_2 === 'true');
     if (hasKoFilter) {
       whereConditions.push('(fiche.ko = ? OR (fiche.ko IS NULL AND ? = 0))');
       params.push(koForWhere, koForWhere);
@@ -1025,11 +1034,30 @@ router.get('/', authenticate, async (req, res) => {
         
         // Filtre dashboard confirmateur : dernière ligne fiches_histo dans la plage (MAX(id)) doit avoir id_confirmateur = connecté.
         // Désactivé si recherche par critère / tel : résultats indépendants du confirmateur connecté.
+        // include_confirmateur_2 (session confirmateur) : ajoute aussi les fiches où le connecté est en conf2 ou conf3 (sans INNER JOIN).
         if (date_champ === 'fiches_histo' && !(req.user.fonction === 6 && hasCritereOuTelSearch)) {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           confirmateurDernierHistoPlage = { start: startDatetime, end: endDatetime };
-          histoJoinForFichesHisto = `INNER JOIN (
+          if (includeConfSlots && req.user.fonction === 6) {
+            confirmateurIncludeSlotsPending = true;
+            whereConditions.push(`(
+              EXISTS (
+                SELECT 1 FROM fiches_histo fh
+                INNER JOIN (
+                  SELECT id_fiche, MAX(id) AS max_id
+                  FROM fiches_histo
+                  WHERE date_creation >= ? AND date_creation <= ?
+                  GROUP BY id_fiche
+                ) histo_last_in_range ON fh.id_fiche = histo_last_in_range.id_fiche AND fh.id = histo_last_in_range.max_id
+                WHERE fh.id_fiche = fiche.id AND fh.id_confirmateur = ?
+              )
+              OR fiche.id_confirmateur_2 = ?
+              OR fiche.id_confirmateur_3 = ?
+            )`);
+            params.push(startDatetime, endDatetime, req.user.id, req.user.id, req.user.id);
+          } else {
+            histoJoinForFichesHisto = `INNER JOIN (
             SELECT fh.id_fiche, fh.id_confirmateur AS histo_dernier_conf_id
             FROM fiches_histo fh
             INNER JOIN (
@@ -1040,7 +1068,8 @@ router.get('/', authenticate, async (req, res) => {
             ) histo_last_in_range ON fh.id_fiche = histo_last_in_range.id_fiche AND fh.id = histo_last_in_range.max_id
             WHERE fh.id_confirmateur = ?
           ) histo_ids ON fiche.id = histo_ids.id_fiche`;
-          histoParamsForFichesHisto = [startDatetime, endDatetime, req.user.id];
+            histoParamsForFichesHisto = [startDatetime, endDatetime, req.user.id];
+          }
         } else if (date_champ === 'fiches_histo' && req.user.fonction === 6 && hasCritereOuTelSearch) {
           console.log(`[FICHES-${requestId}] Confirmateur: critère/tel — pas de JOIN fiches_histo (recherche globale)`);
         } else if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
@@ -1130,11 +1159,42 @@ router.get('/', authenticate, async (req, res) => {
     // fiches_histo avec id_confirmateur = utilisateur connecté, sauf si le JOIN fiches_histo le garantit déjà.
     // Pas de périmètre confirmateur si recherche par critère / tel (résultats globaux).
     if (req.user.fonction === 6 && isActiveSearch && !hasCritereOuTelSearch) {
-      const scopedByOwnHistoJoin = histoJoinForFichesHisto && date_champ === 'fiches_histo';
-      if (!scopedByOwnHistoJoin) {
-        if (confirmateurDernierHistoPlage) {
-          whereConditions.push(
-            `EXISTS (
+      if (confirmateurIncludeSlotsPending) {
+        console.log(`[FICHES-${requestId}] Confirmateur: périmètre incl. 2e/3e (WHERE EXISTS dernière ligne OU id_confirmateur_2/3)`);
+      } else {
+        const scopedByOwnHistoJoin = histoJoinForFichesHisto && date_champ === 'fiches_histo';
+        if (!scopedByOwnHistoJoin) {
+          if (confirmateurDernierHistoPlage) {
+            if (includeConfSlots) {
+              whereConditions.push(
+                `(
+              EXISTS (
+                SELECT 1 FROM fiches_histo fh_conf_dashboard
+                WHERE fh_conf_dashboard.id_fiche = fiche.id
+                AND fh_conf_dashboard.id_confirmateur = ?
+                AND fh_conf_dashboard.id = (
+                  SELECT MAX(fh2.id) FROM fiches_histo fh2
+                  WHERE fh2.id_fiche = fiche.id
+                  AND fh2.date_creation >= ? AND fh2.date_creation <= ?
+                )
+              )
+              OR fiche.id_confirmateur_2 = ?
+              OR fiche.id_confirmateur_3 = ?
+            )`
+              );
+              params.push(
+                req.user.id,
+                confirmateurDernierHistoPlage.start,
+                confirmateurDernierHistoPlage.end,
+                req.user.id,
+                req.user.id
+              );
+              console.log(
+                `[FICHES-${requestId}] Confirmateur: EXISTS plage + conf2/conf3 (id_confirmateur=${req.user.id})`
+              );
+            } else {
+              whereConditions.push(
+                `EXISTS (
               SELECT 1 FROM fiches_histo fh_conf_dashboard
               WHERE fh_conf_dashboard.id_fiche = fiche.id
               AND fh_conf_dashboard.id_confirmateur = ?
@@ -1144,18 +1204,32 @@ router.get('/', authenticate, async (req, res) => {
                 AND fh2.date_creation >= ? AND fh2.date_creation <= ?
               )
             )`
-          );
-          params.push(req.user.id, confirmateurDernierHistoPlage.start, confirmateurDernierHistoPlage.end);
-          console.log(`[FICHES-${requestId}] Confirmateur: EXISTS dernière ligne fiches_histo dans la plage (id_confirmateur=${req.user.id})`);
+              );
+              params.push(req.user.id, confirmateurDernierHistoPlage.start, confirmateurDernierHistoPlage.end);
+              console.log(`[FICHES-${requestId}] Confirmateur: EXISTS dernière ligne fiches_histo dans la plage (id_confirmateur=${req.user.id})`);
+            }
+          } else if (includeConfSlots) {
+            whereConditions.push(
+              `(
+              EXISTS (SELECT 1 FROM fiches_histo fh_conf_dashboard WHERE fh_conf_dashboard.id_fiche = fiche.id AND fh_conf_dashboard.id_confirmateur = ?)
+              OR fiche.id_confirmateur_2 = ?
+              OR fiche.id_confirmateur_3 = ?
+            )`
+            );
+            params.push(req.user.id, req.user.id, req.user.id);
+            console.log(
+              `[FICHES-${requestId}] Confirmateur: EXISTS fiches_histo OU conf2/conf3 (id_confirmateur=${req.user.id})`
+            );
+          } else {
+            whereConditions.push(
+              'EXISTS (SELECT 1 FROM fiches_histo fh_conf_dashboard WHERE fh_conf_dashboard.id_fiche = fiche.id AND fh_conf_dashboard.id_confirmateur = ?)'
+            );
+            params.push(req.user.id);
+            console.log(`[FICHES-${requestId}] Confirmateur: filtre EXISTS fiches_histo (id_confirmateur=${req.user.id}) — sans plage dates`);
+          }
         } else {
-          whereConditions.push(
-            'EXISTS (SELECT 1 FROM fiches_histo fh_conf_dashboard WHERE fh_conf_dashboard.id_fiche = fiche.id AND fh_conf_dashboard.id_confirmateur = ?)'
-          );
-          params.push(req.user.id);
-          console.log(`[FICHES-${requestId}] Confirmateur: filtre EXISTS fiches_histo (id_confirmateur=${req.user.id}) — sans plage dates`);
+          console.log(`[FICHES-${requestId}] Confirmateur: périmètre via JOIN dernière ligne fiches_histo dans la plage (id_confirmateur = connecté)`);
         }
-      } else {
-        console.log(`[FICHES-${requestId}] Confirmateur: périmètre via JOIN dernière ligne fiches_histo dans la plage (id_confirmateur = connecté)`);
       }
     }
 

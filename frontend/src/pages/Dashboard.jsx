@@ -98,6 +98,13 @@ const Dashboard = () => {
     annuler_repro_type: '', // '' = tous, 'compte_rendu' ou 'repro_confirmateurs' (visible si état = Annuler à reprogrammer)
     include_confirmateur_2: true,
   });
+
+  /** Filtres initiaux : confirmateur (6) — case « inclure 2e confirmateur » décochée (réservée à une recherche explicite). */
+  const getFiltersForUser = (u) => {
+    const base = getInitialFilters();
+    if (u?.fonction === 6) return { ...base, include_confirmateur_2: false };
+    return base;
+  };
   const [filters, setFilters] = useState(getInitialFilters);
   // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
   const [appliedFilters, setAppliedFilters] = useState(getInitialFilters);
@@ -114,6 +121,11 @@ const Dashboard = () => {
       };
       if (newFilters.id_etat_final) {
         newFilters.id_etat_final = parseInt(newFilters.id_etat_final);
+      }
+      if (newFilters.include_confirmateur_2 !== undefined && newFilters.include_confirmateur_2 !== null) {
+        const v = newFilters.include_confirmateur_2;
+        newFilters.include_confirmateur_2 =
+          v === true || v === 1 || v === '1' || v === 'true';
       }
       if (user?.fonction === 6) {
         if (!newFilters.date_champ || String(newFilters.date_champ).trim() === '') {
@@ -150,10 +162,11 @@ const Dashboard = () => {
         date_fin: todayStr,
         time_debut: '00:00:00',
         time_fin: '23:59:59',
+        ...(user.fonction === 6 ? { include_confirmateur_2: false } : {}),
       };
       // Garder le formulaire de filtres "initialisé" (non pré-rempli),
       // tout en affichant les résultats par défaut via appliedFilters.
-      setFilters(getInitialFilters());
+      setFilters(getFiltersForUser(user));
       setAppliedFilters(defaultApplied);
       setShowFilters(false);
     }
@@ -273,10 +286,16 @@ const Dashboard = () => {
           }
           return;
         }
-        // include_confirmateur_2 : n'envoyer que si un confirmateur est sélectionné (1 = inclure 2ème/3ème, 0 = 1er uniquement)
+        // include_confirmateur_2 : autre profil = avec id_confirmateur ; confirmateur (6) = uniquement si coché (recherche), sinon ne pas envoyer (défaut API inchangé)
         if (key === 'include_confirmateur_2') {
           if (searchParams.id_confirmateur) {
             searchParams.include_confirmateur_2 = searchParams.include_confirmateur_2 ? 1 : 0;
+          } else if (user?.fonction === 6) {
+            if (searchParams.include_confirmateur_2) {
+              searchParams.include_confirmateur_2 = 1;
+            } else {
+              delete searchParams.include_confirmateur_2;
+            }
           } else {
             delete searchParams.include_confirmateur_2;
           }
@@ -520,7 +539,7 @@ const Dashboard = () => {
   };
 
   const handleReset = () => {
-    const initial = getInitialFilters();
+    const initial = getFiltersForUser(user);
     setFilters(initial);
     setAppliedFilters(initial);
   };
@@ -1329,6 +1348,21 @@ const Dashboard = () => {
                     <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                   </select>
                 </div>
+
+                {/* Confirmateur : inclure fiches en 2e / 3e slot — uniquement après recherche (param envoyé si coché) */}
+                {user?.fonction === 6 && (
+                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      id="include_confirmateur_2_session"
+                      checked={!!filters.include_confirmateur_2}
+                      onChange={(e) => handleFilterChange('include_confirmateur_2', e.target.checked)}
+                    />
+                    <label htmlFor="include_confirmateur_2_session" style={{ marginBottom: 0 }}>
+                      Inclure 2ème confirmateur
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
           </form>
@@ -1927,6 +1961,20 @@ const Dashboard = () => {
                     <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                   </select>
                 </div>
+
+                {user?.fonction === 6 && (
+                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      id="include_confirmateur_2_session_mobile"
+                      checked={!!filters.include_confirmateur_2}
+                      onChange={(e) => handleFilterChange('include_confirmateur_2', e.target.checked)}
+                    />
+                    <label htmlFor="include_confirmateur_2_session_mobile" style={{ marginBottom: 0 }}>
+                      Inclure 2ème confirmateur
+                    </label>
+                  </div>
+                )}
 
                 {/* Date début */}
                 <div className="form-group">
