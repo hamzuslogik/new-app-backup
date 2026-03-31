@@ -1593,11 +1593,12 @@ const Dashboard = () => {
                                 <span
                                   style={{
                                     position: 'absolute',
-                                    top: '-3px',
-                                    right: '-3px',
-                                    width: '10px',
-                                    height: '10px',
-                                    border: '2px solid #9e9e9e',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    width: '14px',
+                                    height: '14px',
+                                    border: '3px solid #9e9e9e',
                                     borderRadius: '1px',
                                     backgroundColor: 'transparent',
                                     boxSizing: 'border-box'
