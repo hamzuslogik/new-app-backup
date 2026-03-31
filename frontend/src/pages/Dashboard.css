@@ -2169,7 +2169,8 @@ body.dashboard-page {
   min-width: 350px;
   width: 70%;
   min-height: 100vh; /* Prendre au moins la hauteur de la fenêtre */
-  overflow: visible; /* Pas de scroll interne, utiliser le scroll de la page */
+  overflow-x: hidden; /* Empêcher la barre horizontale */
+  overflow-y: visible; /* Garder le comportement vertical actuel */
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
   transition: border-color 0.3s ease;
@@ -2183,7 +2184,7 @@ body.dashboard-page {
 }
 
 .fiche-detail-modal-topbar {
-  width: auto;
+  width: calc(100% + 16px);
   margin: -8px -8px 10px -8px;
   min-height: 86px;
   background: #00d100;
@@ -2507,14 +2508,14 @@ body.dashboard-page {
 /* Permettre le scroll si nécessaire */
 .fiche-detail-modal-content .planning-tab .fiche-detail {
   overflow-x: hidden !important;
-  overflow-y: auto !important;
+  overflow-y: visible !important;
 }
 
 /* Wrapper pour le contenu scrollable */
 .fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar) {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow-y: visible;
   overflow-x: hidden;
   max-width: 100% !important;
   width: 100% !important;
@@ -2525,7 +2526,7 @@ body.dashboard-page {
 
 /* Activer le scroll horizontal en mobile pour le contenu du modal */
 @media (max-width: 768px) {
-  .fiche-detail-modal-content > *:not(.fiche-detail-modal-close) {
+  .fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar) {
     overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
     -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
   }
@@ -2537,7 +2538,7 @@ body.dashboard-page {
 }
 
 @media (max-width: 480px) {
-  .fiche-detail-modal-content > *:not(.fiche-detail-modal-close) {
+  .fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar) {
     overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
     -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
   }
