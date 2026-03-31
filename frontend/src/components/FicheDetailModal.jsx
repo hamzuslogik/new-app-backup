@@ -162,6 +162,10 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
         <button className="fiche-detail-modal-close" onClick={onClose} aria-label="Fermer">
           <FaTimes />
         </button>
+        <div className="fiche-detail-modal-banner">
+          <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-banner-logo" />
+          <span className="fiche-detail-modal-banner-title">DETAIL FICHE</span>
+        </div>
         <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
           <FicheDetail ficheHash={ficheHash} onClose={onClose} isModal={true} />
         </RouteParamsProvider>
