@@ -72,10 +72,19 @@ function hourToTimeKey(hour) {
 }
 
 function triggerPlanningWorkflow(triggerType, req, payload = {}) {
+  const weekNum = payload.week !== undefined && payload.week !== null ? parseInt(payload.week, 10) : null;
+  const depCode = payload.dep !== undefined && payload.dep !== null ? String(payload.dep) : null;
+  const enrichedPayload = {
+    ...payload,
+    week: Number.isFinite(weekNum) ? weekNum : payload.week,
+    semaine: Number.isFinite(weekNum) ? weekNum : payload.week, // alias FR pour templates workflow
+    dep: depCode,
+    departement: depCode, // alias FR pour templates workflow
+  };
   executeWorkflow(triggerType, {
     user: req.user,
-    planning: payload,
-    changes: payload,
+    planning: enrichedPayload,
+    changes: enrichedPayload,
   }).catch((error) => {
     console.error(`[WORKFLOW] Erreur lors de l'exécution des workflows (${triggerType}):`, error);
   });
