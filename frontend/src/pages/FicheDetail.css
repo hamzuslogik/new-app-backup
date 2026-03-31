@@ -339,7 +339,7 @@
 }
 
 .fiche-details-table tr {
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 2px solid #8a8a8a;
 }
 
 .fiche-details-table tr:last-child {

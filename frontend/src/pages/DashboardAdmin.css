@@ -2120,7 +2120,7 @@ body.dashboard-admin-page {
 }
 
 .fiche-detail-modal-content .fiche-details-table tr {
-  border-bottom: 0.5px solid #e0e0e0;
+  border-bottom: 1.5px solid #8a8a8a;
   line-height: 0.4 !important;
   margin: 0 !important;
   padding: 0 !important;
