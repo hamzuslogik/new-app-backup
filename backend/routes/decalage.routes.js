@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { authenticate, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
+const { executeWorkflow } = require('../services/workflow/workflow-executor');
 
 // Clé secrète pour encoder/décoder les IDs (même que dans fiche.routes.js)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -417,6 +418,22 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
       message: 'Décalage créé avec succès',
       data: { id: result.insertId }
     });
+    executeWorkflow('decalage_created', {
+      fiche: { id: idFicheNum, date_rdv_time: fiche?.date_rdv_time || null },
+      user: req.user,
+      decalage: {
+        id: result.insertId,
+        id_fiche: idFicheNum,
+        expediteur: req.user.id,
+        destination: parseInt(destination, 10),
+        id_etat: id_etat || 1,
+        date_prevu: dateRdvOriginale,
+        date_nouvelle: dateNouvelle,
+        date_creation: now,
+      },
+    }).catch((wfError) => {
+      console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (decalage_created):', wfError);
+    });
   } catch (error) {
     console.error('Erreur lors de la création du décalage:', error);
     res.status(500).json({
@@ -635,6 +652,25 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       success: true,
       message: 'Statut du décalage mis à jour'
     });
+    if (estValide) {
+      executeWorkflow('decalage_accepted', {
+        fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_nouvelle || decalage.date_prevu || null } : null,
+        user: req.user,
+        decalage: {
+          id: parseInt(id, 10),
+          id_fiche: decalage.id_fiche,
+          old_etat: decalage.id_etat,
+          new_etat: id_etat,
+          expediteur: decalage.expediteur,
+          destination: decalage.destination,
+          date_prevu: decalage.date_prevu,
+          date_nouvelle: decalage.date_nouvelle,
+          modifie_le: now,
+        },
+      }).catch((wfError) => {
+        console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (decalage_accepted):', wfError);
+      });
+    }
   } catch (error) {
     console.error('Erreur lors de la mise à jour du statut:', error);
     res.status(500).json({

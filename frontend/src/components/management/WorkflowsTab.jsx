@@ -528,6 +528,10 @@ const WorkflowsTab = () => {
                         <option value="rdv_validated">RDV validé</option>
                         <option value="compte_rendu_created">Compte rendu créé</option>
                         <option value="compte_rendu_approved">Compte rendu approuvé</option>
+                        <option value="planning_created">Planning créé</option>
+                        <option value="planning_updated">Planning modifié</option>
+                        <option value="decalage_created">Décalage créé</option>
+                        <option value="decalage_accepted">Décalage accepté</option>
                         <option value="scheduled">Programmé (cron)</option>
                       </select>
                     </div>

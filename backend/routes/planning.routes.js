@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
+const { executeWorkflow } = require('../services/workflow/workflow-executor');
 const { encodeFicheId } = require('./fiche.routes');
 
 // Helper pour obtenir le lundi d'une semaine ISO (plus robuste pour les transitions d'année)
@@ -68,6 +69,16 @@ function hourToId(hour) {
 function hourToTimeKey(hour) {
   const [hours, minutes, seconds] = hour.split(':').map(Number);
   return hours * 3600 + minutes * 60 + (seconds || 0);
+}
+
+function triggerPlanningWorkflow(triggerType, req, payload = {}) {
+  executeWorkflow(triggerType, {
+    user: req.user,
+    planning: payload,
+    changes: payload,
+  }).catch((error) => {
+    console.error(`[WORKFLOW] Erreur lors de l'exécution des workflows (${triggerType}):`, error);
+  });
 }
 
 // Créneaux horaires
@@ -664,6 +675,14 @@ router.post('/create', authenticate, checkPermission(1, 2, 7), async (req, res) 
       success: true,
       message: 'Planning créé avec succès'
     });
+    triggerPlanningWorkflow('planning_created', req, {
+      week,
+      year,
+      dep,
+      nbr_com: parseInt(nbr_com, 10),
+      type,
+      source: 'planning_create',
+    });
   } catch (error) {
     console.error('Erreur lors de la création du planning:', error);
     res.status(500).json({
@@ -714,6 +733,15 @@ router.put('/availability/toggle-closed', authenticate, checkPermission(1), asyn
           message: newIsClosed === 1 ? 'Créneau fermé' : 'Créneau ouvert'
         }
       });
+      triggerPlanningWorkflow('planning_updated', req, {
+        week,
+        year,
+        dep,
+        date,
+        hour,
+        is_closed: newIsClosed,
+        source: 'planning_toggle_closed',
+      });
     } else {
       // Créer la ligne avec is_closed = 1
       await query(
@@ -729,6 +757,15 @@ router.put('/availability/toggle-closed', authenticate, checkPermission(1), asyn
           is_closed: 1,
           message: 'Créneau fermé'
         }
+      });
+      triggerPlanningWorkflow('planning_created', req, {
+        week,
+        year,
+        dep,
+        date,
+        hour,
+        is_closed: 1,
+        source: 'planning_toggle_closed_create',
       });
     }
   } catch (error) {
@@ -788,6 +825,16 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
         success: true,
         data: `${value}|${date}|${hourId}|hour`
       });
+      triggerPlanningWorkflow('planning_updated', req, {
+        week,
+        year,
+        dep,
+        date,
+        hour,
+        value: parseInt(value, 10),
+        scope: 'hour',
+        source: 'planning_availability_update',
+      });
     } else if (type === 'day') {
       // Modifier tous les créneaux d'un jour
       // Pour chaque créneau horaire, mettre à jour ou créer
@@ -842,6 +889,15 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
       res.json({
         success: true,
         data: `${value}|${date}`
+      });
+      triggerPlanningWorkflow('planning_updated', req, {
+        week,
+        year,
+        dep,
+        date,
+        value: parseInt(value, 10),
+        scope: 'day',
+        source: 'planning_availability_update',
       });
     } else {
       return res.status(400).json({
@@ -1218,6 +1274,15 @@ router.post('/hebdomadaire', authenticate, checkPermission(1, 2, 7), async (req,
     res.json({
       success: true,
       message: 'Disponibilité ajoutée avec succès'
+    });
+    triggerPlanningWorkflow('planning_created', req, {
+      year: yearNum,
+      week: weekNum,
+      dep,
+      jour,
+      nombre_commercial: nbrCom,
+      forcer: forcer === 'CRENAUX' ? 1 : 0,
+      source: 'planning_hebdomadaire_create',
     });
   } catch (error) {
     console.error('Erreur lors de la création de la disponibilité:', error);
