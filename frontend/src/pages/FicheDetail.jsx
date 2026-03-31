@@ -205,16 +205,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   }, [selectedEtat]);
 
-  useEffect(() => {
-    if (!ficheData?.date_rdv_time) return;
-    const raw = String(ficheData.date_rdv_time);
-    const normalized = raw.includes('T') ? raw.replace('T', ' ') : raw;
-    const [datePart, timePart] = normalized.split(' ');
-    const hhmm = (timePart || '').slice(0, 5);
-    if (datePart) setValidationRdvDate(datePart);
-    if (hhmm) setValidationRdvTime(hhmm);
-  }, [ficheData?.date_rdv_time]);
-
   // État pour le formulaire NRP
   const [nrpFormData, setNrpFormData] = useState({
     date_appel_date: '',
@@ -485,6 +475,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       refetchOnReconnect: isModal // Rafraîchir quand la connexion est rétablie (modal uniquement)
     }
   );
+
+  useEffect(() => {
+    if (!ficheData?.date_rdv_time) return;
+    const raw = String(ficheData.date_rdv_time);
+    const normalized = raw.includes('T') ? raw.replace('T', ' ') : raw;
+    const [datePart, timePart] = normalized.split(' ');
+    const hhmm = (timePart || '').slice(0, 5);
+    if (datePart) setValidationRdvDate(datePart);
+    if (hhmm) setValidationRdvTime(hhmm);
+  }, [ficheData?.date_rdv_time]);
 
   // États : pour confirmateur (6), matrice de transitions selon l'état actuel de la fiche
   const { data: etats } = useQuery(
