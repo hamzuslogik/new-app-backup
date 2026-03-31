@@ -2459,11 +2459,11 @@ body.dashboard-page {
     max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     width: 98% !important;
     min-width: 95% !important;
-    max-height: 98vh !important;
-    height: 98vh !important;
+    max-height: none !important;
+    height: auto !important;
     min-height: 95vh !important;
-    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
-    overflow-y: auto !important; /* Garder le scroll vertical */
+    overflow-x: hidden !important; /* Pas de scroll horizontal */
+    overflow-y: visible !important; /* Pas de scroll vertical interne */
     -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
   }
 }
@@ -2479,12 +2479,12 @@ body.dashboard-page {
     max-width: 100% !important; /* Largeur maximale pour très petits écrans */
     width: 100% !important;
     min-width: 98% !important;
-    max-height: 100vh !important;
-    height: 100vh !important;
+    max-height: none !important;
+    height: auto !important;
     min-height: 98vh !important;
     border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
-    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
-    overflow-y: auto !important; /* Garder le scroll vertical */
+    overflow-x: hidden !important; /* Pas de scroll horizontal */
+    overflow-y: visible !important; /* Pas de scroll vertical interne */
     -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
   }
 }
@@ -2527,24 +2527,24 @@ body.dashboard-page {
 /* Activer le scroll horizontal en mobile pour le contenu du modal */
 @media (max-width: 768px) {
   .fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar) {
-    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
+    overflow-x: hidden !important; /* Pas de scroll horizontal en mobile */
     -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
   }
 
   .fiche-detail-modal-content .planning-tab .fiche-detail {
-    overflow-x: auto !important; /* Activer le scroll horizontal pour le planning en mobile */
+    overflow-x: hidden !important; /* Pas de scroll horizontal pour le planning */
     -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
   }
 }
 
 @media (max-width: 480px) {
   .fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar) {
-    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
+    overflow-x: hidden !important; /* Pas de scroll horizontal en mobile */
     -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
   }
 
   .fiche-detail-modal-content .planning-tab .fiche-detail {
-    overflow-x: auto !important; /* Activer le scroll horizontal pour le planning en mobile */
+    overflow-x: hidden !important; /* Pas de scroll horizontal pour le planning */
     -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
   }
 }
@@ -3064,7 +3064,8 @@ body.dashboard-page {
     width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     min-width: 95% !important; /* Largeur minimale en mode mobile */
     min-height: 100vh !important; /* Prendre au moins la hauteur de la fenêtre */
-    overflow: visible !important; /* Pas de scroll interne, utiliser le scroll de la page */
+    overflow-x: hidden !important; /* Pas de scroll horizontal */
+    overflow-y: visible !important; /* Pas de scroll vertical interne */
     border-radius: 8px !important; /* Rétablir le border-radius */
     display: flex !important;
     flex-direction: column !important;
@@ -3202,12 +3203,12 @@ body.dashboard-page {
     max-width: 100% !important; /* Largeur maximale pour très petits écrans */
     min-width: 98% !important; /* Largeur minimale même sur très petits écrans */
     width: 100% !important; /* Largeur maximale pour très petits écrans */
-    height: 80vh !important; /* Hauteur fixe de 80% - laisser de l'espace en bas */
+    height: auto !important;
     min-height: 60vh !important; /* Hauteur minimale */
-    max-height: 80vh !important; /* Limiter à 80% pour laisser de l'espace en bas */
+    max-height: none !important;
     border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
-    overflow-x: auto !important; /* Activer le scroll horizontal en mobile */
-    overflow-y: auto !important; /* Garder le scroll vertical */
+    overflow-x: hidden !important; /* Pas de scroll horizontal */
+    overflow-y: visible !important; /* Pas de scroll vertical interne */
     -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
     display: flex !important;
     flex-direction: column !important;
@@ -3219,7 +3220,7 @@ body.dashboard-page {
   /* Optimiser encore plus pour très petits écrans */
   .fiche-detail-modal-content .fiche-detail {
     padding: 12px !important;
-    overflow-y: auto;
+    overflow-y: visible;
     flex: 1;
     font-size: 16px !important;
     line-height: 1.5 !important;
