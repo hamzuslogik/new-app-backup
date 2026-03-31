@@ -7,8 +7,6 @@ return [
         'username' => 'root',
         'password' => '',
         'charset' => 'utf8mb4',
-    ],
-    // Utilisee pour generer le hash fiche (meme principe que le backend Node)
-    'fiche_hash_secret' => 'your-secret-key-change-in-production',
+    ]
 ];
 

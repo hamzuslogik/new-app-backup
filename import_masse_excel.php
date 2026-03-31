@@ -39,7 +39,7 @@ function db(array $cfg): PDO
 
 function normalize_key(string $s): string
 {
-    $s = trim(mb_strtolower($s));
+    $s = function_exists('mb_strtolower') ? trim(mb_strtolower($s, 'UTF-8')) : trim(strtolower($s));
     $replacements = ['é' => 'e', 'è' => 'e', 'ê' => 'e', 'à' => 'a', 'ç' => 'c', 'ù' => 'u', 'ï' => 'i', 'î' => 'i', 'ô' => 'o'];
     $s = strtr($s, $replacements);
     $s = preg_replace('/[^a-z0-9]/', '', $s) ?? '';
@@ -69,13 +69,6 @@ function clean_phone($value): string
         $digits = '0' . $digits;
     }
     return $digits;
-}
-
-function encode_fiche_hash(int $id, string $secret): string
-{
-    $hash = hash_hmac('sha256', (string)$id, $secret);
-    $encodedId = rtrim(strtr(base64_encode((string)$id), '+/', '-_'), '=');
-    return substr($hash, 0, 16) . $encodedId;
 }
 
 function parse_excel(string $filePath): array
