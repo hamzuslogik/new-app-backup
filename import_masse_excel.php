@@ -11,6 +11,14 @@ if (!file_exists($configPath)) {
 }
 $config = require $configPath;
 
+$phpCfg = $config['php'] ?? [];
+if (!empty($phpCfg['memory_limit'])) {
+    @ini_set('memory_limit', (string)$phpCfg['memory_limit']);
+}
+if (isset($phpCfg['max_execution_time'])) {
+    @ini_set('max_execution_time', (string)$phpCfg['max_execution_time']);
+}
+
 $autoloadPath = __DIR__ . '/vendor/autoload.php';
 if (!file_exists($autoloadPath)) {
     http_response_code(500);
@@ -73,13 +81,30 @@ function clean_phone($value): string
 
 function parse_excel(string $filePath): array
 {
-    $spreadsheet = IOFactory::load($filePath);
+    $reader = IOFactory::createReaderForFile($filePath);
+    if (method_exists($reader, 'setReadDataOnly')) {
+        $reader->setReadDataOnly(true);
+    }
+    if (method_exists($reader, 'setReadEmptyCells')) {
+        $reader->setReadEmptyCells(false);
+    }
+    $spreadsheet = $reader->load($filePath);
     $sheet = $spreadsheet->getSheet(0);
     $rows = $sheet->toArray('', true, true, false);
+    if (method_exists($spreadsheet, 'disconnectWorksheets')) {
+        $spreadsheet->disconnectWorksheets();
+    }
+    unset($spreadsheet, $reader);
+    if (function_exists('gc_collect_cycles')) {
+        gc_collect_cycles();
+    }
+
     if (count($rows) === 0) {
         return [[], []];
     }
-    $headers = array_map(static fn($h) => trim((string)$h), $rows[0]);
+    $headers = array_map(static function ($h) {
+        return trim((string)$h);
+    }, $rows[0]);
     $data = [];
     for ($i = 1; $i < count($rows); $i++) {
         $row = $rows[$i];
@@ -97,7 +122,38 @@ function parse_excel(string $filePath): array
             $data[] = $assoc;
         }
     }
+    unset($rows);
+    if (function_exists('gc_collect_cycles')) {
+        gc_collect_cycles();
+    }
     return [$headers, $data];
+}
+
+/**
+ * Doublon yj_fiche archive=0 : un numero importe correspond a tel/gsm1/gsm2 en base (comparaison exacte apres clean_phone cote import).
+ * Les numeros en base doivent etre stockes au meme format (chiffres, ex. 0612345678) pour que le mode sql soit fiable.
+ */
+function find_existing_yj_fiche_by_phones(PDO $pdo, string $tel, string $gsm1, string $gsm2): ?array
+{
+    $nums = array_values(array_unique(array_filter([$tel, $gsm1, $gsm2], static function ($v) {
+        return $v !== '';
+    })));
+    if ($nums === []) {
+        return null;
+    }
+    $parts = [];
+    $params = [];
+    foreach ($nums as $n) {
+        $parts[] = '(tel = ? OR gsm1 = ? OR gsm2 = ?)';
+        $params[] = $n;
+        $params[] = $n;
+        $params[] = $n;
+    }
+    $sql = 'SELECT etat_final, date_insertion FROM yj_fiche WHERE archive = 0 AND (' . implode(' OR ', $parts) . ') LIMIT 1';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $row = $stmt->fetch();
+    return $row === false ? null : $row;
 }
 
 function first_matching_key(array $row, string $wanted): ?string
@@ -204,21 +260,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Table yj_fiche introuvable.');
             }
 
+            $dupMode = strtolower((string)($config['duplicate_check'] ?? 'memory'));
             $existingPhones = [];
-            $stmtPhones = $pdo->query("SELECT id, nom, prenom, tel, gsm1, gsm2, etat_final, date_insertion
-                                       FROM yj_fiche
-                                       WHERE archive = 0
-                                         AND ((tel IS NOT NULL AND tel != '')
-                                           OR (gsm1 IS NOT NULL AND gsm1 != '')
-                                           OR (gsm2 IS NOT NULL AND gsm2 != ''))");
-            foreach ($stmtPhones as $f) {
-                foreach (['tel', 'gsm1', 'gsm2'] as $k) {
-                    $p = clean_phone($f[$k] ?? '');
-                    if ($p !== '') {
-                        $existingPhones[$p] = $f;
+            if ($dupMode === 'memory') {
+                $stmtPhones = $pdo->query("SELECT id, nom, prenom, tel, gsm1, gsm2, etat_final, date_insertion
+                                           FROM yj_fiche
+                                           WHERE archive = 0
+                                             AND ((tel IS NOT NULL AND tel != '')
+                                               OR (gsm1 IS NOT NULL AND gsm1 != '')
+                                               OR (gsm2 IS NOT NULL AND gsm2 != ''))");
+                foreach ($stmtPhones as $f) {
+                    foreach (['tel', 'gsm1', 'gsm2'] as $k) {
+                        $p = clean_phone($f[$k] ?? '');
+                        if ($p !== '') {
+                            $existingPhones[$p] = $f;
+                        }
                     }
                 }
+                unset($stmtPhones);
             }
+
+            // Numeros deja inseres pendant ce run (transaction pas encore visible en SQL)
+            $phonesInsertedThisRun = [];
 
             $inserted = 0;
             $duplicates = 0;
@@ -259,20 +322,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     $dupPhone = '';
+                    $existing = null;
                     foreach ([$fiche['tel'], $fiche['gsm1'], $fiche['gsm2']] as $p) {
-                        if ($p !== '' && isset($existingPhones[$p])) {
+                        if ($p !== '' && isset($phonesInsertedThisRun[$p])) {
                             $dupPhone = $p;
+                            $existing = $phonesInsertedThisRun[$p];
                             break;
                         }
                     }
-                    if ($dupPhone !== '') {
+                    if ($dupPhone === '' && $dupMode === 'memory') {
+                        foreach ([$fiche['tel'], $fiche['gsm1'], $fiche['gsm2']] as $p) {
+                            if ($p !== '' && isset($existingPhones[$p])) {
+                                $dupPhone = $p;
+                                $existing = $existingPhones[$p];
+                                break;
+                            }
+                        }
+                    } elseif ($dupPhone === '' && $dupMode === 'sql') {
+                        $existing = find_existing_yj_fiche_by_phones($pdo, $fiche['tel'], $fiche['gsm1'], $fiche['gsm2']);
+                        if ($existing !== null) {
+                            $dupPhone = $fiche['tel'] !== '' ? $fiche['tel'] : ($fiche['gsm1'] !== '' ? $fiche['gsm1'] : $fiche['gsm2']);
+                        }
+                    }
+                    if ($dupPhone !== '' && $existing !== null) {
                         $duplicates++;
-                        $existing = $existingPhones[$dupPhone];
                         $notInserted[] = [
                             'nom' => $fiche['nom'],
                             'prenom' => $fiche['prenom'],
                             'tel' => $dupPhone,
-                            'raison' => 'Fiche existante archive=0',
+                            'raison' => isset($phonesInsertedThisRun[$dupPhone]) ? 'Doublon dans le fichier (deja insere)' : 'Fiche existante archive=0',
                             'etat_actuel' => $existing['etat_final'] ?? '',
                             'date_insertion_existante' => $existing['date_insertion'] ?? '',
                         ];
@@ -327,9 +405,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmtInsert = $pdo->prepare($insertSql);
                     $stmtInsert->execute(array_combine($placeholders, array_values($insertData)));
 
+                    $runMeta = ['etat_final' => 'EN-ATTENTE', 'date_insertion' => $nowTime];
                     foreach ([$fiche['tel'], $fiche['gsm1'], $fiche['gsm2']] as $p) {
                         if ($p !== '') {
-                            $existingPhones[$p] = ['etat_final' => 'EN-ATTENTE', 'date_insertion' => $nowTime];
+                            $phonesInsertedThisRun[$p] = $runMeta;
+                            if ($dupMode === 'memory') {
+                                $existingPhones[$p] = $runMeta;
+                            }
                         }
                     }
                     $inserted++;

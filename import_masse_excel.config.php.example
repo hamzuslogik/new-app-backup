@@ -7,6 +7,15 @@ return [
         'username' => 'root',
         'password' => '',
         'charset' => 'utf8mb4',
-    ]
+    ],
+
+    // Limites PHP (upload_max / post_max ne s'appliquent pas toujours via ini_set : voir php.ini Apache)
+    'php' => [
+        'memory_limit' => '512M',
+        'max_execution_time' => '600',
+    ],
+
+    // memory = charge tous les numeros existants en RAM (rapide). sql = une requete par ligne (economise la RAM si beaucoup de yj_fiche)
+    'duplicate_check' => 'sql',
 ];
 
