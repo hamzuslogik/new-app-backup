@@ -571,6 +571,8 @@ router.post('/create', authenticate, checkPermission(1, 2, 7), async (req, res) 
     const now = new Date();
     const timestamp = Math.floor(now.getTime() / 1000);
     const dateModifTime = now.toISOString().slice(0, 19).replace('T', ' ');
+    let createdAtLeastOne = false;
+    let updatedAtLeastOne = false;
 
     // Supprimer l'ancien planning s'il existe
     await query(
@@ -819,6 +821,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
            WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
           [parseInt(value), timestamp, dateModifTime, week, year, dep, date, hour]
         );
+        updatedAtLeastOne = true;
       } else {
         // Créer si n'existe pas
         await query(
@@ -827,6 +830,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
            VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)`,
           [week, year, dep, date, hour, parseInt(value), timestamp, dateModifTime]
         );
+        createdAtLeastOne = true;
       }
 
       const hourId = hourToId(hour);
@@ -834,7 +838,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
         success: true,
         data: `${value}|${date}|${hourId}|hour`
       });
-      triggerPlanningWorkflow('planning_updated', req, {
+      triggerPlanningWorkflow(createdAtLeastOne ? 'planning_created' : 'planning_updated', req, {
         week,
         year,
         dep,
@@ -861,6 +865,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
              WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
             [parseInt(value), timestamp, dateModifTime, week, year, dep, date, slot.hour]
           );
+          updatedAtLeastOne = true;
         } else {
           await query(
             `INSERT INTO planning_availablity 
@@ -868,6 +873,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
              VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
             [week, year, dep, date, slot.hour, parseInt(value), timestamp, dateModifTime]
           );
+          createdAtLeastOne = true;
         }
       }
 
@@ -885,6 +891,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
            WHERE week = ? AND year = ? AND dep = ? AND date_day = ?`,
           [parseInt(value), timestamp, dateModifTime, week, year, dep, date]
         );
+        updatedAtLeastOne = true;
       } else {
         const dayTimestamp = Math.floor(new Date(date).getTime() / 1000);
         await query(
@@ -893,13 +900,14 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [week, year, parseInt(value), dep, dayTimestamp, date, timestamp, dateModifTime]
         );
+        createdAtLeastOne = true;
       }
 
       res.json({
         success: true,
         data: `${value}|${date}`
       });
-      triggerPlanningWorkflow('planning_updated', req, {
+      triggerPlanningWorkflow(createdAtLeastOne ? 'planning_created' : 'planning_updated', req, {
         week,
         year,
         dep,
