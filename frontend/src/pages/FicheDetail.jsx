@@ -3864,10 +3864,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                           alignItems: 'center',
                           userSelect: 'none',
                           padding: '12px 15px',
-                          backgroundColor: '#f5f5f5',
+                          backgroundColor: '#000000',
+                          color: '#ffffff',
                           borderRadius: '6px',
                           marginBottom: '15px',
-                          border: '1px solid #ddd'
+                          border: '1px solid #000000'
                         }}
                         onClick={() => setShowHistorique(!showHistorique)}
                       >
