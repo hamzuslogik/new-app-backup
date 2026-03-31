@@ -159,7 +159,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
           ['--etat-color']: etatColor,
         }}
       >
-        <div className="fiche-detail-modal-topbar">
+        <div className="fiche-detail-modal-topbar" style={{ backgroundColor: etatColor }}>
           <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-topbar-logo" />
           <h2 className="fiche-detail-modal-topbar-title">DETAIL FICHE</h2>
           <button className="fiche-detail-modal-topbar-close" onClick={onClose} aria-label="Fermer">
