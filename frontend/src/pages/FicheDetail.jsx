@@ -505,6 +505,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
   // Onglet Affectation : visible par administrateur (1), backoffice (11), RE confirmation (14), RP confirmation (13)
   const showAffectationTab = [1, 11, 13, 14].includes(Number(user?.fonction));
+  const isAdminSession = [1, 2, 7].includes(Number(user?.fonction));
   
   // Vérifier si c'est un R2 (deuxième commercial assigné)
   const isR2 = isCommercial && ficheData && Number(ficheData.id_commercial_2) === Number(user?.id);
@@ -4885,7 +4886,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     }
                     return null; // Déjà affiché dans les phases
                   })()}
-                  {etatsPhase0.length > 0 && (
+                  {!isAdminSession && etatsPhase0.length > 0 && (
                     <optgroup label="PHASE 0">
                       {etatsPhase0.map(etat => (
                         <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
