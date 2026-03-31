@@ -806,6 +806,8 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
     const now = new Date();
     const timestamp = Math.floor(now.getTime() / 1000);
     const dateModifTime = now.toISOString().slice(0, 19).replace('T', ' ');
+    let createdAtLeastOne = false;
+    let updatedAtLeastOne = false;
 
     if (type === 'hour' && hour) {
       // Vérifier si la ligne existe
