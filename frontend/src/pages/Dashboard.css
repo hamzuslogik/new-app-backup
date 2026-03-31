@@ -2183,8 +2183,8 @@ body.dashboard-page {
 }
 
 .fiche-detail-modal-topbar {
-  width: 100%;
-  margin: 0 0 10px 0;
+  width: calc(100% + 16px);
+  margin: -8px -8px 10px -8px;
   min-height: 86px;
   background: #00d100;
   display: flex;
@@ -2511,7 +2511,7 @@ body.dashboard-page {
 }
 
 /* Wrapper pour le contenu scrollable */
-.fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar) {
+.fiche-detail-modal-content > *:not(.fiche-detail-modal-close) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
