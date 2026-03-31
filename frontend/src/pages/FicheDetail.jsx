@@ -3872,11 +3872,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         }}
                         onClick={() => setShowHistorique(!showHistorique)}
                       >
-                        <span style={{ fontWeight: 'bold', fontSize: '15px' }}>
-                          <FaHistory style={{ marginRight: '8px' }} />
+                        <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#ffffff' }}>
+                          <FaHistory style={{ marginRight: '8px', color: '#ffffff' }} />
                           Historique des états ({fiche.historique.length} entrée{fiche.historique.length > 1 ? 's' : ''})
                         </span>
-                        {showHistorique ? <FaChevronUp /> : <FaChevronDown />}
+                        {showHistorique ? <FaChevronUp style={{ color: '#ffffff' }} /> : <FaChevronDown style={{ color: '#ffffff' }} />}
                       </div>
                       
                       {showHistorique && (
