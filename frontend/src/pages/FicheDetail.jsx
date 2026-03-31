@@ -7053,6 +7053,7 @@ const PlanningViewForModal = ({
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [cellAvailabilityValues, setCellAvailabilityValues] = useState({});
+  const [pendingAvailabilityEdits, setPendingAvailabilityEdits] = useState({});
   
   // Synchroniser le state local avec les données reçues
   useEffect(() => {
@@ -7111,22 +7112,40 @@ const PlanningViewForModal = ({
   const handleCellAvailabilityChange = (date, hour, value) => {
     const key = `${date}-${hour}`;
     if (value === '' || value === null || value === undefined) {
-      setCellAvailabilityValues({ ...cellAvailabilityValues, [key]: '' });
+      setPendingAvailabilityEdits((prev) => ({ ...prev, [key]: '' }));
       return;
     }
     const numValue = parseInt(value);
     if (isNaN(numValue) || numValue < 0) {
       return;
     }
-    // Mettre à jour le state local immédiatement pour l'affichage
-    setCellAvailabilityValues({ ...cellAvailabilityValues, [key]: numValue });
-    // Appeler la fonction de mise à jour
+    // Édition locale uniquement : la valeur n'est sauvegardée qu'au clic sur Valider.
+    setPendingAvailabilityEdits((prev) => ({ ...prev, [key]: numValue }));
+  };
+
+  const handleValidateCellAvailability = (date, hour, fallbackValue = 0) => {
+    const key = `${date}-${hour}`;
+    const rawValue = pendingAvailabilityEdits[key];
+    const valueToSave = rawValue === '' || rawValue === null || rawValue === undefined
+      ? 0
+      : parseInt(rawValue, 10);
+    if (isNaN(valueToSave) || valueToSave < 0) return;
     if (onUpdateAvailability) {
-      console.log('Updating availability:', { date, hour, value: numValue });
-      onUpdateAvailability(date, hour, numValue, 'hour');
-    } else {
-      console.warn('onUpdateAvailability is not defined');
+      onUpdateAvailability(date, hour, valueToSave, 'hour');
     }
+    setCellAvailabilityValues((prev) => ({ ...prev, [key]: valueToSave }));
+    setPendingAvailabilityEdits((prev) => {
+      const { [key]: _removed, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const handleCancelCellAvailability = (date, hour) => {
+    const key = `${date}-${hour}`;
+    setPendingAvailabilityEdits((prev) => {
+      const { [key]: _removed, ...rest } = prev;
+      return rest;
+    });
   };
 
   return (
@@ -7293,13 +7312,7 @@ const PlanningViewForModal = ({
                               </div>
                             </div>
                             {canEditThis && (
-                              <input
-                                type="number"
-                                className="availability-input"
-                                value={cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined 
-                                  ? cellAvailabilityValues[`${day.date}-${slot.hour}`] 
-                                  : (availabilityCount !== null ? availabilityCount : '')}
-                                onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
+                              <div
                                 onClick={(e) => e.stopPropagation()}
                                 onFocus={(e) => e.stopPropagation()}
                                 style={{
@@ -7307,12 +7320,52 @@ const PlanningViewForModal = ({
                                   left: '50%',
                                   top: '50%',
                                   transform: 'translate(-50%, -50%)',
-                                  zIndex: 10
+                                  zIndex: 10,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
                                 }}
-                                min="0"
-                                placeholder="-"
-                                title="Modifier la disponibilité (Backspace pour effacer puis saisir la nouvelle valeur)"
-                              />
+                              >
+                                <input
+                                  type="number"
+                                  className="availability-input"
+                                  value={pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined
+                                    ? pendingAvailabilityEdits[`${day.date}-${slot.hour}`]
+                                    : (cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined
+                                      ? cellAvailabilityValues[`${day.date}-${slot.hour}`]
+                                      : (availabilityCount !== null ? availabilityCount : ''))}
+                                  onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
+                                  min="0"
+                                  placeholder="-"
+                                  title="Saisir la valeur puis cliquer sur Valider"
+                                />
+                                {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
+                                  <>
+                                    <button
+                                      className="save-btn"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleValidateCellAvailability(day.date, slot.hour, availabilityCount ?? 0);
+                                      }}
+                                      title="Valider"
+                                      style={{ padding: '2px 6px', fontSize: '10px' }}
+                                    >
+                                      <FaCheck />
+                                    </button>
+                                    <button
+                                      className="cancel-btn"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCancelCellAvailability(day.date, slot.hour);
+                                      }}
+                                      title="Annuler"
+                                      style={{ padding: '2px 6px', fontSize: '10px' }}
+                                    >
+                                      <FaTimes />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </>
                         ) : isAvailable && !isBlocked ? (
@@ -7325,13 +7378,7 @@ const PlanningViewForModal = ({
                               </div>
                             </div>
                             {canEditThis && (
-                              <input
-                                type="number"
-                                className="availability-input"
-                                value={cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined 
-                                  ? cellAvailabilityValues[`${day.date}-${slot.hour}`] 
-                                  : ''}
-                                onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
+                              <div
                                 onClick={(e) => e.stopPropagation()}
                                 onFocus={(e) => e.stopPropagation()}
                                 style={{
@@ -7339,12 +7386,52 @@ const PlanningViewForModal = ({
                                   left: '50%',
                                   top: '50%',
                                   transform: 'translate(-50%, -50%)',
-                                  zIndex: 10
+                                  zIndex: 10,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
                                 }}
-                                min="0"
-                                placeholder="-"
-                                title="Modifier la disponibilité (Backspace pour effacer puis saisir la nouvelle valeur)"
-                              />
+                              >
+                                <input
+                                  type="number"
+                                  className="availability-input"
+                                  value={pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined
+                                    ? pendingAvailabilityEdits[`${day.date}-${slot.hour}`]
+                                    : (cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined
+                                      ? cellAvailabilityValues[`${day.date}-${slot.hour}`]
+                                      : '')}
+                                  onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
+                                  min="0"
+                                  placeholder="-"
+                                  title="Saisir la valeur puis cliquer sur Valider"
+                                />
+                                {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
+                                  <>
+                                    <button
+                                      className="save-btn"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleValidateCellAvailability(day.date, slot.hour, 0);
+                                      }}
+                                      title="Valider"
+                                      style={{ padding: '2px 6px', fontSize: '10px' }}
+                                    >
+                                      <FaCheck />
+                                    </button>
+                                    <button
+                                      className="cancel-btn"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCancelCellAvailability(day.date, slot.hour);
+                                      }}
+                                      title="Annuler"
+                                      style={{ padding: '2px 6px', fontSize: '10px' }}
+                                    >
+                                      <FaTimes />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </>
                         ) : null}
