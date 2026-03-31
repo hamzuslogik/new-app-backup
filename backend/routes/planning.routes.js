@@ -573,8 +573,6 @@ router.post('/create', authenticate, checkPermission(1, 2, 7), async (req, res) 
     const dateModifTime = now.toISOString().slice(0, 19).replace('T', ' ');
     let createdAtLeastOne = false;
     let updatedAtLeastOne = false;
-    let createdAtLeastOne = false;
-    let updatedAtLeastOne = false;
 
     // Supprimer l'ancien planning s'il existe
     await query(
@@ -721,6 +719,8 @@ router.put('/availability/toggle-closed', authenticate, checkPermission(1), asyn
     const now = new Date();
     const timestamp = Math.floor(now.getTime() / 1000);
     const dateModifTime = now.toISOString().slice(0, 19).replace('T', ' ');
+    let createdAtLeastOne = false;
+    let updatedAtLeastOne = false;
 
     // Vérifier si la ligne existe
     const existing = await queryOne(
