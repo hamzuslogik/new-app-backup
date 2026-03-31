@@ -12,6 +12,8 @@ import './MesRappels.css';
 const ETAT_RAPPEL_BUREAU = 19;
 // État 8 = Annuler à reprogrammer
 const ETAT_ANNULER_A_REPROGRAMMER = 8;
+// État 9 = Client honoré à suivre
+const ETAT_HONORE_A_SUIVRE = 9;
 const FONCTION_CONFIRMATEUR = 6;
 const FONCTION_RE_CONFIRMATION = 14;
 const FONCTION_RP_CONFIRMATION = 13;
@@ -27,12 +29,17 @@ const MesRappels = () => {
   }
 
   const today = new Date().toISOString().split('T')[0];
-  const [activeTab, setActiveTab] = useState('bureau'); // 'bureau' | 'annuler_repro'
+  const [activeTab, setActiveTab] = useState('bureau'); // 'bureau' | 'annuler_repro' | 'honore_suivre'
   const [dateRappel, setDateRappel] = useState(today);
   const [idConfirmateurFilter, setIdConfirmateurFilter] = useState(isREConfirmation ? 'all' : null);
   const [idREFilter, setIdREFilter] = useState(isRPConfirmation ? 'all' : null);
 
-  const etatIdForTab = activeTab === 'annuler_repro' ? ETAT_ANNULER_A_REPROGRAMMER : ETAT_RAPPEL_BUREAU;
+  const etatIdForTab =
+    activeTab === 'annuler_repro'
+      ? ETAT_ANNULER_A_REPROGRAMMER
+      : activeTab === 'honore_suivre'
+        ? ETAT_HONORE_A_SUIVRE
+        : ETAT_RAPPEL_BUREAU;
 
   // Utilisateurs pour RE (équipe) et RP (liste des RE sous le RP)
   const { data: usersData } = useQuery(
@@ -125,15 +132,26 @@ const MesRappels = () => {
     ? 'Rappels bureau des confirmateurs de vos RE Confirmation, filtrés par RE et par date de rappel (qualification « Rappel pour bureau »).'
     : isREConfirmation
       ? "Rappels bureau des confirmateurs de votre équipe, filtrés par confirmateur et par date de rappel (qualification « Rappel pour bureau »)."
-      : 'Rappels bureau du confirmateur connecté, filtrés par la date de rappel indiquée lors de la qualification « Rappel pour bureau ».';
+    : '';
 
   const descriptionAnnuler = isRPConfirmation
     ? 'Fiches en « Annuler à reprogrammer », filtrées par RE et par date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu.'
     : isREConfirmation
       ? "Fiches en « Annuler à reprogrammer », filtrées par confirmateur et par date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu."
-      : 'Fiches en « Annuler à reprogrammer » vous concernant, filtrées par la date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu (sinon repro confirmateurs).';
+    : '';
 
-  const description = activeTab === 'annuler_repro' ? descriptionAnnuler : descriptionBureau;
+  const descriptionHonore = isRPConfirmation
+    ? 'Fiches en « Honoré à suivre », filtrées par RE et par date de rappel.'
+    : isREConfirmation
+      ? "Fiches en « Honoré à suivre », filtrées par confirmateur et par date de rappel."
+      : 'Fiches en « Honoré à suivre » vous concernant, filtrées par la date de rappel.';
+
+  const description =
+    activeTab === 'annuler_repro'
+      ? descriptionAnnuler
+      : activeTab === 'honore_suivre'
+        ? descriptionHonore
+        : descriptionBureau;
 
   const origineLabel = (fiche) =>
     fiche.current_state_from_compte_rendu === true ? 'Compte rendu' : 'Repro confirmateurs';
@@ -163,6 +181,15 @@ const MesRappels = () => {
           onClick={() => setActiveTab('annuler_repro')}
         >
           Annuler à reprogrammer
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'honore_suivre'}
+          className={`mes-rappels-tab ${activeTab === 'honore_suivre' ? 'mes-rappels-tab--active' : ''}`}
+          onClick={() => setActiveTab('honore_suivre')}
+        >
+          Honoré à suivre
         </button>
       </div>
 
@@ -232,6 +259,8 @@ const MesRappels = () => {
                     ? 'Aucun confirmateur dans votre équipe.'
                     : activeTab === 'annuler_repro'
                       ? 'Aucune fiche « Annuler à reprogrammer » pour les critères sélectionnés.'
+                      : activeTab === 'honore_suivre'
+                        ? 'Aucune fiche « Honoré à suivre » pour les critères sélectionnés.'
                       : 'Aucun rappel bureau pour les critères sélectionnés.'
                 }
               </div>
