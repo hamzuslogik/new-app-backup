@@ -81,6 +81,18 @@ function triggerPlanningWorkflow(triggerType, req, payload = {}) {
     dep: depCode,
     departement: depCode, // alias FR pour templates workflow
   };
+  console.log(`[WORKFLOW][PLANNING] Trigger ${triggerType}`, JSON.stringify({
+    user_id: req?.user?.id,
+    fonction: req?.user?.fonction,
+    dep: enrichedPayload.dep,
+    semaine: enrichedPayload.semaine,
+    week: enrichedPayload.week,
+    date: enrichedPayload.date,
+    hour: enrichedPayload.hour,
+    scope: enrichedPayload.scope,
+    source: enrichedPayload.source,
+    value: enrichedPayload.value,
+  }));
   executeWorkflow(triggerType, {
     user: req.user,
     planning: enrichedPayload,
@@ -838,11 +850,16 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
       }
 
       const hourId = hourToId(hour);
+      const selectedTrigger = createdAtLeastOne ? 'planning_created' : 'planning_updated';
+      console.log(`[PLANNING][availability] hour saved => ${selectedTrigger}`, JSON.stringify({
+        week, year, dep, date, hour, value: parseInt(value, 10),
+        createdAtLeastOne, updatedAtLeastOne
+      }));
       res.json({
         success: true,
         data: `${value}|${date}|${hourId}|hour`
       });
-      triggerPlanningWorkflow(createdAtLeastOne ? 'planning_created' : 'planning_updated', req, {
+      triggerPlanningWorkflow(selectedTrigger, req, {
         week,
         year,
         dep,
@@ -907,11 +924,16 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
         createdAtLeastOne = true;
       }
 
+      const selectedTrigger = createdAtLeastOne ? 'planning_created' : 'planning_updated';
+      console.log(`[PLANNING][availability] day saved => ${selectedTrigger}`, JSON.stringify({
+        week, year, dep, date, value: parseInt(value, 10),
+        createdAtLeastOne, updatedAtLeastOne
+      }));
       res.json({
         success: true,
         data: `${value}|${date}`
       });
-      triggerPlanningWorkflow(createdAtLeastOne ? 'planning_created' : 'planning_updated', req, {
+      triggerPlanningWorkflow(selectedTrigger, req, {
         week,
         year,
         dep,
