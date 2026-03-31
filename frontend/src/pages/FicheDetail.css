@@ -333,6 +333,14 @@
   font-weight: bold;
 }
 
+/* Forcer le titre "Historique des états" en blanc */
+.historique-title-bar,
+.historique-title-bar span,
+.historique-title-bar svg,
+.historique-title-bar * {
+  color: #ffffff !important;
+}
+
 .fiche-details-table {
   width: 100%;
   border-collapse: collapse;

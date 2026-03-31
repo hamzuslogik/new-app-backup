@@ -3856,7 +3856,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   {user?.fonction !== 5 && fiche.historique && fiche.historique.length > 0 && (
                     <>
                       <div 
-                        className="section-title" 
+                        className="section-title historique-title-bar" 
                         style={{ 
                           cursor: 'pointer', 
                           display: 'flex', 
