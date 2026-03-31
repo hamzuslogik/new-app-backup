@@ -249,6 +249,7 @@ const Dashboard = () => {
   }, [showSearchModal, user?.fonction]);
 
   const [selectedFicheHash, setSelectedFicheHash] = useState(null);
+  const [lastViewedFicheHash, setLastViewedFicheHash] = useState(null);
 
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
@@ -1578,12 +1579,29 @@ const Dashboard = () => {
                             {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
                           </div>
                           <button
-                            onClick={() => setSelectedFicheHash(fiche.hash)}
+                            onClick={() => {
+                              setSelectedFicheHash(fiche.hash);
+                              setLastViewedFicheHash(fiche.hash);
+                            }}
                             className="btn-detail"
                             title="Voir les détails"
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                           >
-                            <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
+                            <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
+                              {lastViewedFicheHash === fiche.hash && (
+                                <span
+                                  style={{
+                                    position: 'absolute',
+                                    width: '8px',
+                                    height: '8px',
+                                    border: '1.5px solid #ffffff',
+                                    borderRadius: '1px',
+                                    boxSizing: 'border-box'
+                                  }}
+                                />
+                              )}
+                            </span>
                           </button>
                         </td>
                       </tr>
