@@ -1133,6 +1133,18 @@ function getFieldValue(field, eventData) {
 /**
  * Remplace les variables dans une chaîne
  */
+function formatTemplateValue(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch (e) {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
 function replaceVariables(template, eventData) {
   if (typeof template !== 'string') {
     return template;
@@ -1140,7 +1152,8 @@ function replaceVariables(template, eventData) {
 
   return template.replace(/\{([^}]+)\}/g, (match, key) => {
     const value = getFieldValue(key, eventData);
-    return value !== null && value !== undefined ? String(value) : match;
+    const formatted = formatTemplateValue(value);
+    return formatted !== null ? formatted : match;
   });
 }
 

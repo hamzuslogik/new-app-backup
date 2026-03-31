@@ -20,7 +20,8 @@ const TRIGGER_VARIABLES = {
   fiche_updated: [
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.cp}',
     '{fiche.id_etat_final}', '{fiche.date_modif_time}', '{fiche.date_rdv_time}',
-    '{changes}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+    '{changes}', '{changes.id_etat_final}', '{changes.date_rdv_time}', '{changes.id_sous_etat}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   etat_changed: [
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_etat_final}',
@@ -53,12 +54,16 @@ const TRIGGER_VARIABLES = {
   planning_created: [
     '{planning.week}', '{planning.semaine}', '{planning.dep}', '{planning.departement}',
     '{planning.date}', '{planning.hour}', '{planning.scope}', '{planning.source}', '{planning.value}',
-    '{changes}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+    '{changes}', '{changes.week}', '{changes.semaine}', '{changes.dep}', '{changes.departement}',
+    '{changes.date}', '{changes.hour}', '{changes.scope}', '{changes.source}', '{changes.value}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   planning_updated: [
     '{planning.week}', '{planning.semaine}', '{planning.dep}', '{planning.departement}',
     '{planning.date}', '{planning.hour}', '{planning.scope}', '{planning.source}', '{planning.value}',
-    '{changes}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+    '{changes}', '{changes.week}', '{changes.semaine}', '{changes.dep}', '{changes.departement}',
+    '{changes.date}', '{changes.hour}', '{changes.scope}', '{changes.source}', '{changes.value}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   decalage_created: [
     '{fiche.id}', '{fiche.date_rdv_time}',
