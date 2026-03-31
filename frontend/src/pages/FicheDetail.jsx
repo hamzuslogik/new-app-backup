@@ -433,6 +433,30 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   }, [sousEtats, compteRenduOption, selectedEtat]);
 
+  // NRP (2) : sous-état et commentaire par défaut = "Appel raccroché"
+  useEffect(() => {
+    if (selectedEtat !== 2 || !Array.isArray(sousEtats) || sousEtats.length === 0) return;
+
+    const defaultSousEtat = sousEtats.find((se) =>
+      (se?.titre || '').toLowerCase().includes('raccroch')
+    );
+
+    if (!defaultSousEtat) return;
+
+    setNrpFormData((prev) => {
+      // Ne pas écraser un choix/saisie déjà fait
+      if ((prev.id_sous_etat || '').toString().trim()) return prev;
+
+      return {
+        ...prev,
+        id_sous_etat: String(defaultSousEtat.id),
+        conf_commentaire_produit: (prev.conf_commentaire_produit || '').trim()
+          ? prev.conf_commentaire_produit
+          : (defaultSousEtat.titre || 'Appel raccroché')
+      };
+    });
+  }, [selectedEtat, sousEtats]);
+
   // Récupérer la fiche (utiliser le hash au lieu de l'ID) avec rafraîchissement automatique toutes les 5 secondes
   const { data: ficheData, isLoading } = useQuery(
     ['fiche', hash],
