@@ -573,6 +573,8 @@ router.post('/create', authenticate, checkPermission(1, 2, 7), async (req, res) 
     const dateModifTime = now.toISOString().slice(0, 19).replace('T', ' ');
     let createdAtLeastOne = false;
     let updatedAtLeastOne = false;
+    let createdAtLeastOne = false;
+    let updatedAtLeastOne = false;
 
     // Supprimer l'ancien planning s'il existe
     await query(
@@ -924,11 +926,13 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
     }
   } catch (error) {
     console.error('Erreur lors de la modification de la disponibilité:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la modification de la disponibilité',
-      error: error.message
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la modification de la disponibilité',
+        error: error.message
+      });
+    }
   }
 });
 
