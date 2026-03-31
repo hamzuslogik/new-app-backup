@@ -508,6 +508,13 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   
   // Vérifier si c'est un R2 (deuxième commercial assigné)
   const isR2 = isCommercial && ficheData && Number(ficheData.id_commercial_2) === Number(user?.id);
+
+  const getCommercialDisplayName = (id) => {
+    if (!id) return '';
+    const found = (commerciaux || []).find((c) => String(c.id) === String(id));
+    return found?.pseudo || `${found?.prenom || ''} ${found?.nom || ''}`.trim() || '';
+  };
+  const commercialAffecteNom = getCommercialDisplayName(ficheData?.id_commercial || affectationCommercial);
   
   // Rediriger vers l'onglet fiches si un commercial est sur un onglet désactivé
   useEffect(() => {
@@ -2663,7 +2670,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             className={`fiche-tab ${activeTab === 'affectation' ? 'active' : ''}`}
             onClick={() => setActiveTab('affectation')}
           >
-            <FaUserPlus /> Affectation
+            <FaUserPlus /> {commercialAffecteNom ? `${commercialAffecteNom} | ` : ''}Affectation
           </button>
         )}
         {/* Masquer les onglets Planning et SMS pour les utilisateurs qualité qualification (fonction 2, 8, 12) et commerciaux */}
@@ -6623,6 +6630,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       {activeTab === 'affectation' && showAffectationTab && (
         <div className="fiche-section affectation-tab" style={{ padding: '20px' }}>
           <h2 className="section-title"><FaUserPlus /> Affectation commerciale</h2>
+          <p style={{ color: '#333', marginBottom: '8px', fontWeight: 700 }}>
+            Commercial affecte: {commercialAffecteNom || 'Aucun'}
+          </p>
           <p style={{ color: '#666', marginBottom: '20px' }}>
             Affectez cette fiche à un commercial.
           </p>
