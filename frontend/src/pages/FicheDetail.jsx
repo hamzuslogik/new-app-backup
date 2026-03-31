@@ -3498,6 +3498,44 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               const crPseudoEtatActuel = isCurrentStateFromCR ? (lastHisto.cr_commercial_pseudo || '') : '';
               
               const detailItemsActuel = renderEtatDetails(etatActuel);
+              const normalizeEtatTitle = (v) =>
+                String(v || '')
+                  .toLowerCase()
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .trim();
+
+              const historiquePriorityState = (() => {
+                const hist = Array.isArray(fiche.historique) ? fiche.historique : [];
+                if (hist.length === 0) return null;
+
+                const hasSigned = (h) => {
+                  const id = Number(h?.id_etat);
+                  const t = normalizeEtatTitle(h?.etat_titre);
+                  return [13, 44, 45, 16].includes(id) || t.includes('sign');
+                };
+                const hasASuivre = (h) => {
+                  const id = Number(h?.id_etat);
+                  const t = normalizeEtatTitle(h?.etat_titre);
+                  return id === 9 || (t.includes('honore') && t.includes('suivr'));
+                };
+                const hasARepro = (h) => {
+                  const id = Number(h?.id_etat);
+                  const t = normalizeEtatTitle(h?.etat_titre);
+                  return id === 8 || (t.includes('annuler') && t.includes('repro'));
+                };
+
+                const signedState = hist.find(hasSigned);
+                if (signedState) return { label: 'Signé', color: signedState.etat_color || '#4CAF50' };
+
+                const aSuivreState = hist.find(hasASuivre);
+                if (aSuivreState) return { label: 'Honoré à suivre', color: aSuivreState.etat_color || '#f7a219' };
+
+                const aReproState = hist.find(hasARepro);
+                if (aReproState) return { label: 'Annuler à reprogrammer', color: aReproState.etat_color || '#9cbfc8' };
+
+                return null;
+              })();
               
               return (
                 <>
@@ -3862,6 +3900,23 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   {/* Section Historique - Pliable (masquée en session commercial) */}
                   {user?.fonction !== 5 && fiche.historique && fiche.historique.length > 0 && (
                     <>
+                      {historiquePriorityState && (
+                        <div
+                          style={{
+                            width: '100%',
+                            marginBottom: '10px',
+                            padding: '10px 12px',
+                            borderRadius: '6px',
+                            backgroundColor: historiquePriorityState.color,
+                            color: historiquePriorityState.color === '#ffffff' || historiquePriorityState.color === '#fff' ? '#000' : '#fff',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            fontSize: '16px'
+                          }}
+                        >
+                          {historiquePriorityState.label}
+                        </div>
+                      )}
                       <div 
                         className="section-title historique-title-bar" 
                         style={{ 
