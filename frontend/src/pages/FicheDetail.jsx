@@ -2877,7 +2877,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
          user.fonction !== 3 && 
          ficheData && !([13, 16, 38, 45, 44].includes(ficheData.id_etat_final)) &&
          ficheData.date_rdv_time && (
-          <div className="fiche-section decalage-form">
+          <div className="fiche-section decalage-form" style={{ order: 9999 }}>
             <h2 className="section-title" style={{ 
               background: '#9cbfc8', 
               color: '#fff', 
