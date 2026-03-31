@@ -2872,7 +2872,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             - Pas si commercial (5) avec compte rendu existant
             - Doit avoir la permission decalage_create
             - Doit avoir une date de RDV */}
-        {hasPermission('decalage_create') && 
+        {false && hasPermission('decalage_create') && 
          user.fonction !== 6 && 
          user.fonction !== 3 && 
          ficheData && !([13, 16, 38, 45, 44].includes(ficheData.id_etat_final)) &&
@@ -6362,6 +6362,252 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Formulaire de décalage de RDV — déplacé tout en bas de la page détails fiche */}
+        {hasPermission('decalage_create') && 
+         user.fonction !== 6 && 
+         user.fonction !== 3 && 
+         ficheData && !([13, 16, 38, 45, 44].includes(ficheData.id_etat_final)) &&
+         ficheData.date_rdv_time && (
+          <div className="fiche-section decalage-form" style={{ marginTop: '24px' }}>
+            <h2 className="section-title" style={{ 
+              background: '#9cbfc8', 
+              color: '#fff', 
+              padding: '10px', 
+              textAlign: 'center',
+              marginBottom: '0',
+              fontSize: '13.6px',
+              fontWeight: 'bold'
+            }}>
+              Demande de décalage
+            </h2>
+            
+            {decalagesData && decalagesData.length > 0 && (
+              <div style={{ 
+                border: '1px solid #e0e0e0', 
+                borderTop: 'none', 
+                padding: '15px',
+                background: '#f9f9f9',
+                marginBottom: '10px'
+              }}>
+                <h3 style={{ marginTop: '0', marginBottom: '10px', fontSize: '11.9px', fontWeight: 'bold' }}>
+                  Demande de décalage ({decalagesData.length})
+                </h3>
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  {decalagesData.map((decalage, index) => (
+                    <div key={decalage.id || index} style={{ 
+                      background: '#fff', 
+                      padding: '10px', 
+                      marginBottom: '8px', 
+                      borderRadius: '4px',
+                      border: '1px solid #ddd'
+                    }}>
+                      <div style={{ fontSize: '10.2px', color: '#666' }}>
+                        <strong>Demande #{index + 1}</strong> - 
+                        Créée le: {decalage.date_creation ? new Date(decalage.date_creation).toLocaleString('fr-FR') : 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '10.2px', marginTop: '5px' }}>
+                        <strong>Nouvelle date:</strong> {decalage.date_nouvelle ? formatRdvDateTime(decalage.date_nouvelle) : (decalage.date_prevu ? formatRdvDateTime(decalage.date_prevu) : 'N/A')}
+                      </div>
+                      {decalage.message && (
+                        <div style={{ fontSize: '10.2px', marginTop: '5px', fontStyle: 'italic', color: '#555' }}>
+                          "{decalage.message}"
+                        </div>
+                      )}
+                      {decalage.etat_dec && (
+                        <div style={{ fontSize: '10.2px', marginTop: '5px' }}>
+                          <strong>État:</strong> {decalage.etat_dec}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: '10px', fontSize: '10.2px', color: '#666', fontStyle: 'italic' }}>
+                  Vous pouvez créer une nouvelle demande de décalage ci-dessous.
+                </div>
+              </div>
+            )}
+            
+            <div style={{ 
+              border: '1px solid #e0e0e0', 
+              borderTop: 'none', 
+              padding: '15px',
+              background: '#fff'
+            }}>
+              <div className="form-group">
+                <label htmlFor="select_minutes_bottom">Décalage de :</label>
+                <select
+                  id="select_minutes_bottom"
+                  className="form-control"
+                  value={decalageFormData.select_minutes}
+                  onChange={(e) => {
+                    const minutes = parseInt(e.target.value);
+                    const dateRdvOriginale = ficheData?.date_rdv_time || decalageFormData.date_prevu || '';
+                    if (minutes > 0 && dateRdvOriginale) {
+                      try {
+                        const originalDate = new Date(dateRdvOriginale);
+                        if (isNaN(originalDate.getTime())) {
+                          alert('Erreur : la date de rendez-vous originale est invalide.');
+                          return;
+                        }
+                        const newDate = new Date(originalDate);
+                        newDate.setMinutes(newDate.getMinutes() + minutes);
+                        const year = newDate.getFullYear();
+                        const month = String(newDate.getMonth() + 1).padStart(2, '0');
+                        const day = String(newDate.getDate()).padStart(2, '0');
+                        const hours = String(newDate.getHours()).padStart(2, '0');
+                        const mins = String(newDate.getMinutes()).padStart(2, '0');
+                        const secs = String(newDate.getSeconds()).padStart(2, '0');
+                        const formattedNewDate = `${year}-${month}-${day} ${hours}:${mins}:${secs}`;
+                        setDecalageFormData(prev => ({
+                          ...prev,
+                          select_minutes: e.target.value,
+                          nouvelle_date: formattedNewDate,
+                          date_prevu: dateRdvOriginale
+                        }));
+                      } catch (error) {
+                        alert('Erreur lors du calcul de la nouvelle date. Veuillez réessayer.');
+                      }
+                    } else {
+                      setDecalageFormData(prev => ({
+                        ...prev,
+                        select_minutes: e.target.value,
+                        nouvelle_date: '',
+                        date_prevu: dateRdvOriginale
+                      }));
+                    }
+                  }}
+                >
+                  <option value="0">SÉLECTIONNER</option>
+                  <option value="10">10 MIN</option>
+                  <option value="15">15 MIN</option>
+                  <option value="20">20 MIN</option>
+                  <option value="25">25 MIN</option>
+                  <option value="30">30 MIN</option>
+                  <option value="35">35 MIN</option>
+                  <option value="40">40 MIN</option>
+                  <option value="45">45 MIN</option>
+                  <option value="50">50 MIN</option>
+                  <option value="55">55 MIN</option>
+                  <option value="60">1 HEURE</option>
+                  <option value="75">1H15</option>
+                  <option value="90">1H30</option>
+                  <option value="105">1H45</option>
+                  <option value="120">2 HEURES</option>
+                </select>
+              </div>
+
+              {decalageFormData.nouvelle_date && (
+                <div className="form-group" style={{ 
+                  background: '#e8f5e9', 
+                  padding: '10px', 
+                  borderRadius: '4px',
+                  marginBottom: '15px',
+                  border: '2px solid #4caf50'
+                }}>
+                  <strong>📅 Nouvelle date/heure :</strong> 
+                  <span style={{ display: 'block', marginTop: '5px', fontSize: '13.6px', fontWeight: 'bold', color: '#2e7d32' }}>
+                    {(() => {
+                      try {
+                        const date = new Date(decalageFormData.nouvelle_date);
+                        if (isNaN(date.getTime())) return decalageFormData.nouvelle_date;
+                        return date.toLocaleString('fr-FR', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
+                      } catch (error) {
+                        return decalageFormData.nouvelle_date;
+                      }
+                    })()}
+                  </span>
+                  {ficheData?.date_rdv_time && (
+                    <div style={{ marginTop: '8px', fontSize: '10.2px', color: '#666', fontStyle: 'italic' }}>
+                      Date originale : {formatRdvDateTime(ficheData.date_rdv_time)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {user.fonction === 5 && (
+                <div className="form-group">
+                  <label htmlFor="id_confirmateur_dec_bottom">Confirmateur :</label>
+                  {ficheData?.id_confirmateur ? (
+                    <div style={{ background: '#f0f0f0', padding: '10px', borderRadius: '4px', fontWeight: 'bold' }}>
+                      {confirmateurs?.find(c => c.id === ficheData.id_confirmateur)?.pseudo || `ID: ${ficheData.id_confirmateur}`}
+                    </div>
+                  ) : (
+                    <div style={{ color: 'red', fontStyle: 'italic' }}>
+                      Aucun confirmateur assigné à cette fiche. Veuillez assigner un confirmateur avant de créer un décalage.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {([1, 2, 7].includes(user.fonction)) && (
+                <div className="form-group">
+                  <label htmlFor="id_confirmateur_dec_bottom">Confirmateur :</label>
+                  <select
+                    id="id_confirmateur_dec_bottom"
+                    className="form-control"
+                    value={decalageFormData.id_confirmateur || (fiche?.id_confirmateur ? String(fiche.id_confirmateur) : '')}
+                    onChange={(e) => {
+                      setDecalageFormData({...decalageFormData, id_confirmateur: e.target.value});
+                    }}
+                    required
+                  >
+                    <option value="">SÉLECTIONNER UN CONFIRMATEUR</option>
+                    {confirmateurs?.map(conf => (
+                      <option key={conf.id} value={conf.id}>
+                        {conf.pseudo}
+                      </option>
+                    ))}
+                  </select>
+                  {!decalageFormData.id_confirmateur && !fiche?.id_confirmateur && (
+                    <small style={{ color: '#666', fontStyle: 'italic' }}>
+                      Sélectionnez un confirmateur depuis la liste
+                    </small>
+                  )}
+                </div>
+              )}
+
+              <div className="form-group">
+                <label htmlFor="message_dec_bottom">Message du décalage :</label>
+                <textarea
+                  id="message_dec_bottom"
+                  className="form-control"
+                  rows="4"
+                  value={decalageFormData.message}
+                  onChange={(e) => {
+                    setDecalageFormData({...decalageFormData, message: e.target.value});
+                  }}
+                  placeholder="Saisissez le message expliquant le décalage..."
+                />
+              </div>
+
+              <div className="form-actions" style={{ textAlign: 'center', marginTop: '15px' }}>
+                <button
+                  className="btn-confirm"
+                  onClick={handleDecalageSubmit}
+                  disabled={decalageMutation.isLoading}
+                  style={{
+                    display: 'table',
+                    width: 'max-content',
+                    margin: '0 auto',
+                    borderRadius: '7px',
+                    fontWeight: 'bold',
+                    padding: '10px 20px'
+                  }}
+                >
+                  {decalageMutation.isLoading ? 'Envoi...' : 'Demande de décalage'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
