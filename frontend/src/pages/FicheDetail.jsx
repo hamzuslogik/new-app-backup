@@ -7603,6 +7603,7 @@ const PlanningViewForModal = ({
                     // Utiliser d'abord la disponibilité du planning, sinon celle de availability
                     const availabilityFromPlanning = dayPlanning?.av ?? null;
                     const availData = availability?.[day.date]?.[slot.hour];
+                    const isClosed = availData?.is_closed === 1;
                     const availabilityCount = availabilityFromPlanning !== null ? availabilityFromPlanning : (availData?.nbr_com ?? null);
                     // availability peut être null (pas de planning créé), 0 (bloqué), ou > 0 (disponible)
                     const hasPlanning = availabilityCount !== null && availabilityCount !== undefined;
@@ -7632,8 +7633,8 @@ const PlanningViewForModal = ({
                     // On marque simplement le créneau si on a des RDV
                     const currentFicheInSlot = false;
                     const isEditing = editingCell === `${day.date}-${slot.hour}`;
-                    // canEditThis : uniquement pour les administrateurs (fonction 1) et si le créneau n'est pas bloqué
-                    const canEditThis = canEdit && !isBlocked;
+                    // canEditThis : éditable même si valeur = 0 ; bloqué seulement si le créneau est fermé (is_closed=1)
+                    const canEditThis = canEdit && !isClosed;
                     
                     return (
                       <td
