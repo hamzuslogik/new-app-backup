@@ -205,6 +205,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   }, [selectedEtat]);
 
+  useEffect(() => {
+    if (!ficheData?.date_rdv_time) return;
+    const raw = String(ficheData.date_rdv_time);
+    const normalized = raw.includes('T') ? raw.replace('T', ' ') : raw;
+    const [datePart, timePart] = normalized.split(' ');
+    const hhmm = (timePart || '').slice(0, 5);
+    if (datePart) setValidationRdvDate(datePart);
+    if (hhmm) setValidationRdvTime(hhmm);
+  }, [ficheData?.date_rdv_time]);
+
   // État pour le formulaire NRP
   const [nrpFormData, setNrpFormData] = useState({
     date_appel_date: '',
@@ -273,6 +283,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // États pour le formulaire de validation
   const [confRdvAvecValue, setConfRdvAvecValue] = useState('');
   const [confPresenceCoupleValue, setConfPresenceCoupleValue] = useState('');
+  const [showValidationCardForm, setShowValidationCardForm] = useState(false);
+  const [validationRdvDate, setValidationRdvDate] = useState('');
+  const [validationRdvTime, setValidationRdvTime] = useState('');
   const [showHistorique, setShowHistorique] = useState(false); // État pour contrôler l'affichage de l'historique
 
   // Contrôle Qualité (états signer) : formulaire par fiche (clé = hash)
@@ -3173,7 +3186,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
         {/* État actuel et Historique */}
         {(fiche.id_etat_final || (fiche.historique && fiche.historique.length > 0)) && (
-          <div className="fiche-section">
+          <div className="fiche-section etat-current-history-section">
             {/* Fonction réutilisable pour afficher les détails selon l'état */}
             {(() => {
               const renderEtatDetails = (etatData) => {
@@ -3197,7 +3210,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RAPPEL POUR BUREAU (19)
                 else if (etatId === 19) {
@@ -3209,7 +3222,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateTime(etatData.date_rdv_time) });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // ANNULER ET A REPROGRAMMER (8)
                 else if (etatId === 8) {
@@ -3221,7 +3234,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // CLIENT HONORE A SUIVRE (9)
                 else if (etatId === 9) {
@@ -3234,7 +3247,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RDV ANNULER (11)
                 else if (etatId === 11) {
@@ -3267,7 +3280,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // HHC FINANCEMENT A VERIFIER (34)
                 else if (etatId === 34) {
@@ -3278,7 +3291,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // HCC TECHNIQUE (35)
                 else if (etatId === 35) {
@@ -3290,7 +3303,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.commercial_pseudo) items.push({ label: 'Commercial', value: etatData.commercial_pseudo });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // SIGNER, SIGNER RETRACTER, SIGNER COMPLET, SIGNER PM (13, 16, 45, 44) - Phase 3
                 else if ([13, 16, 45, 44].includes(etatId)) {
@@ -3334,7 +3347,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     items.push({ label: 'Commentaire confirmateur', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'Date RDV', value: formatRdvDateTime(etatData.date_rdv_time) });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                   // Champs conf_ (affichés uniquement si non vides)
                   if (etatData.conf_rdv_avec) items.push({ label: 'RDV pris avec', value: etatData.conf_rdv_avec });
                   if (etatData.conf_appel_tunisie_avec) items.push({ label: 'Appel en Tunisie avec', value: etatData.conf_appel_tunisie_avec });
@@ -3397,7 +3410,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   } else if (etatData.conf_commentaire_produit && !etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date passage à l\'état', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
+                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 
                 return items;
@@ -3487,7 +3500,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                       className="etat-actuel-card"
                       style={{
                         padding: '20px',
-                        border: `4px solid ${etatActuel.etat_color}`,
+                        border: '6px solid #000000',
                         borderRadius: '8px',
                         marginBottom: '20px',
                         backgroundColor: '#ffffff',
@@ -3621,6 +3634,138 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               </div>
                             ))}
                           </div>
+                        </div>
+                      )}
+
+                      {fiche.id_etat_final === 7 && hasPermission('fiche_validate') && (
+                        <div style={{
+                          marginTop: '16px',
+                          padding: '14px',
+                          background: '#f8f9fa',
+                          border: '2px solid #000',
+                          borderRadius: '6px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <strong>Validation de la fiche</strong>
+                            <button
+                              type="button"
+                              className="btn-validate"
+                              onClick={() => setShowValidationCardForm((prev) => !prev)}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            >
+                              <FaCheck />
+                              {showValidationCardForm ? 'Masquer' : 'Valider'}
+                            </button>
+                          </div>
+
+                          {showValidationCardForm && (
+                            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label htmlFor="validation_rdv_date_inline" style={{ fontWeight: 600, fontSize: '13px' }}>Date RDV</label>
+                                  <input
+                                    id="validation_rdv_date_inline"
+                                    type="date"
+                                    value={validationRdvDate || ''}
+                                    onChange={(e) => setValidationRdvDate(e.target.value)}
+                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label htmlFor="validation_rdv_time_inline" style={{ fontWeight: 600, fontSize: '13px' }}>Heure RDV</label>
+                                  <input
+                                    id="validation_rdv_time_inline"
+                                    type="time"
+                                    value={validationRdvTime || ''}
+                                    onChange={(e) => setValidationRdvTime(e.target.value)}
+                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                                  />
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                className="btn-save"
+                                disabled={updateFieldMutation.isLoading || !validationRdvDate || !validationRdvTime}
+                                onClick={async () => {
+                                  try {
+                                    await updateFieldMutation.mutateAsync({
+                                      field: 'date_rdv_time',
+                                      value: `${validationRdvDate} ${validationRdvTime}:00`
+                                    });
+                                    alert('Heure du RDV mise à jour avec succès');
+                                  } catch (err) {
+                                    // Erreur déjà gérée par la mutation
+                                  }
+                                }}
+                              >
+                                {updateFieldMutation.isLoading ? 'Mise à jour...' : 'Enregistrer heure RDV'}
+                              </button>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label htmlFor="conf_rdv_avec_validation_inline" style={{ fontWeight: 600, fontSize: '13px' }}>
+                                  Avec qui le RDV a-t-il été validé ? (optionnel)
+                                </label>
+                                <select
+                                  id="conf_rdv_avec_validation_inline"
+                                  value={confRdvAvecValue || ''}
+                                  onChange={(e) => setConfRdvAvecValue(e.target.value)}
+                                  style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                                >
+                                  <option value="">Sélectionner...</option>
+                                  <option value="MR">Mr</option>
+                                  <option value="MME">Mme</option>
+                                  <option value="MR et MME">Mr et Mme</option>
+                                </select>
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label htmlFor="conf_presence_couple_validation_inline" style={{ fontWeight: '600', fontSize: '13px' }}>
+                                  Présence du couple <span style={{ color: 'red' }}>*</span>
+                                </label>
+                                <select
+                                  id="conf_presence_couple_validation_inline"
+                                  value={confPresenceCoupleValue || ''}
+                                  onChange={(e) => setConfPresenceCoupleValue(e.target.value)}
+                                  style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                                >
+                                  <option value="">Sélectionner...</option>
+                                  <option value="OUI">OUI</option>
+                                  <option value="NON">NON</option>
+                                </select>
+                              </div>
+
+                              {fiche.valider > 0 ? (
+                                <button
+                                  className="btn-validate cancel"
+                                  onClick={() => {
+                                    if (window.confirm('Voulez-vous annuler la validation de cette fiche ?')) {
+                                      validateMutation.mutate({ type_valid: '0' });
+                                    }
+                                  }}
+                                  disabled={validateMutation.isLoading}
+                                  title="Annuler la validation"
+                                >
+                                  Annuler la validation
+                                </button>
+                              ) : (
+                                <button
+                                  className="btn-validate"
+                                  onClick={() => {
+                                    validateMutation.mutate({
+                                      type_valid: `1${confRdvAvecValue ? '-' + confRdvAvecValue : ''}`,
+                                      conf_rdv_avec: confRdvAvecValue || null,
+                                      conf_presence_couple: confPresenceCoupleValue || null
+                                    });
+                                  }}
+                                  disabled={validateMutation.isLoading || !confPresenceCoupleValue}
+                                  title="Valider la fiche confirmée"
+                                >
+                                  {validateMutation.isLoading ? 'Validation...' : 'Valider la fiche'}
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -6137,7 +6282,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         )}
 
         {/* Section de validation - seulement pour les fiches confirmées (état 7) et si permission accordée */}
-        {fiche.id_etat_final === 7 && hasPermission('fiche_validate') && (
+        {false && fiche.id_etat_final === 7 && hasPermission('fiche_validate') && (
           <div className="fiche-section validation-section-bottom">
             <h2 className="section-title">Validation de la fiche</h2>
             {fiche.valider > 0 ? (

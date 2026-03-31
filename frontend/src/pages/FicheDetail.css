@@ -298,6 +298,19 @@
   gap: 24px;
 }
 
+/* Ordre demandé: État actuel -> Historique -> Changement état -> Demande décalage */
+.fiche-sections > .etat-current-history-section {
+  order: -4;
+}
+
+.fiche-sections > .etat-change-section {
+  order: -3;
+}
+
+.fiche-sections > .decalage-form {
+  order: -2;
+}
+
 .fiche-section {
   background: white;
   border-radius: 7px;
@@ -307,9 +320,12 @@
 
 .section-title {
   margin: 0 0 16px 0;
+  padding: 8px 12px;
   padding-bottom: 12px;
   border-bottom: 2px solid #9cbfc8;
-  color: #9cbfc8;
+  background-color: #000000;
+  color: #ffffff;
+  border-radius: 4px;
   font-size: 17px;
   font-weight: bold;
 }
