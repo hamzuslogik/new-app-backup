@@ -573,6 +573,8 @@ router.post('/create', authenticate, checkPermission(1, 2, 7), async (req, res) 
     const dateModifTime = now.toISOString().slice(0, 19).replace('T', ' ');
     let createdAtLeastOne = false;
     let updatedAtLeastOne = false;
+    let createdAtLeastOne = false;
+    let updatedAtLeastOne = false;
 
     // Supprimer l'ancien planning s'il existe
     await query(
