@@ -12,23 +12,66 @@ import useLocalStorage from '../../hooks/useLocalStorage';
 import './ManagementTab.css';
 
 const TRIGGER_VARIABLES = {
-  fiche_created: ['{fiche.*}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
-  fiche_updated: ['{fiche.*}', '{changes.*}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
-  etat_changed: ['{fiche.*}', '{old_etat}', '{new_etat}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
-  rdv_created: ['{fiche.*}', '{old_date_rdv_time}', '{new_date_rdv_time}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
-  rdv_validated: ['{fiche.*}', '{old_valider}', '{new_valider}', '{conf_rdv_avec}', '{conf_presence_couple}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
-  compte_rendu_created: ['{fiche.*}', '{compte_rendu.id}', '{compte_rendu.id_fiche}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
-  compte_rendu_approved: ['{fiche.*}', '{compte_rendu.*}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  fiche_created: [
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.cp}',
+    '{fiche.id_etat_final}', '{fiche.date_insert_time}', '{fiche.date_modif_time}', '{fiche.date_rdv_time}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  fiche_updated: [
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.cp}',
+    '{fiche.id_etat_final}', '{fiche.date_modif_time}', '{fiche.date_rdv_time}',
+    '{changes}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  etat_changed: [
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_etat_final}',
+    '{old_etat}', '{new_etat}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  rdv_created: [
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.date_rdv_time}',
+    '{old_date_rdv_time}', '{new_date_rdv_time}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  rdv_validated: [
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.valider}',
+    '{old_valider}', '{new_valider}', '{conf_rdv_avec}', '{conf_presence_couple}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  compte_rendu_created: [
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
+    '{compte_rendu.id}', '{compte_rendu.id_fiche}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  compte_rendu_approved: [
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
+    '{compte_rendu.id}', '{compte_rendu.id_fiche}', '{compte_rendu.statut}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
   demande_insertion_created: [
     '{fiche.id}', '{fiche.hash}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
     '{demande_insertion.id}', '{demande_insertion.id_fiche_existante}', '{demande_insertion.id_agent}',
-    '{demande_insertion.agent_pseudo}', '{demande_insertion.donnees_fiche.*}', '{demande_insertion.date_demande}',
+    '{demande_insertion.agent_pseudo}', '{demande_insertion.donnees_fiche}', '{demande_insertion.date_demande}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
-  planning_created: ['{planning.*}', '{planning.dep}', '{planning.departement}', '{planning.week}', '{planning.semaine}', '{changes.*}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
-  planning_updated: ['{planning.*}', '{planning.dep}', '{planning.departement}', '{planning.week}', '{planning.semaine}', '{changes.*}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
-  decalage_created: ['{fiche.id}', '{fiche.date_rdv_time}', '{decalage.*}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
-  decalage_accepted: ['{fiche.id}', '{fiche.date_rdv_time}', '{decalage.*}', '{decalage.old_etat}', '{decalage.new_etat}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  planning_created: [
+    '{planning.week}', '{planning.semaine}', '{planning.dep}', '{planning.departement}',
+    '{planning.date}', '{planning.hour}', '{planning.scope}', '{planning.source}', '{planning.value}',
+    '{changes}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  planning_updated: [
+    '{planning.week}', '{planning.semaine}', '{planning.dep}', '{planning.departement}',
+    '{planning.date}', '{planning.hour}', '{planning.scope}', '{planning.source}', '{planning.value}',
+    '{changes}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  decalage_created: [
+    '{fiche.id}', '{fiche.date_rdv_time}',
+    '{decalage.id}', '{decalage.id_fiche}', '{decalage.expediteur}', '{decalage.destination}', '{decalage.id_etat}',
+    '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.date_creation}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  decalage_accepted: [
+    '{fiche.id}', '{fiche.date_rdv_time}',
+    '{decalage.id}', '{decalage.id_fiche}', '{decalage.old_etat}', '{decalage.new_etat}',
+    '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
   scheduled: ['{workflow_id}', '{workflow_nom}', '{cron_expression}', '{scheduled_at}']
 };
 
@@ -560,7 +603,7 @@ const WorkflowsTab = () => {
                     <div style={{ padding: '10px', background: '#fff3cd', borderRadius: '6px', fontSize: '12px', marginBottom: '10px' }}>
                       <strong>Variables disponibles pour ce déclencheur :</strong>
                       <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {(TRIGGER_VARIABLES[trigger.type] || ['{fiche.*}', '{user.*}']).map((v) => (
+                        {(TRIGGER_VARIABLES[trigger.type] || ['{user.id}']).map((v) => (
                           <code key={`${trigger.type}-${v}`} style={{ background: '#fff', padding: '2px 6px', borderRadius: '4px' }}>
                             {v}
                           </code>
