@@ -146,28 +146,20 @@ router.get('/', authenticate, async (req, res) => {
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     } else if (userFonction === 14) {
-      const confirmateursIds = await query(
-        'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
-        [req.user.id]
-      );
-      if (confirmateursIds.length === 0) {
-        notifications = [];
-      } else {
-        const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
-           FROM notifications n
-           LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-           ${NOTIF_JOIN_EXP}
-           WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-           AND n.type = 'decalage_request'
-           ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-        const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
-           FROM notifications n
-           LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-           WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-           AND n.type = 'decalage_request'
-           ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-        notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
-      }
+      // RE Confirmation : afficher toutes les notifications réellement destinées au RE.
+      // Ne pas dépendre de l'existence actuelle de confirmateurs actifs (sinon notifications "disparaissent").
+      const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
+         FROM notifications n
+         LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
+         ${NOTIF_JOIN_EXP}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
+         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+      const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
+         FROM notifications n
+         LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
+         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
+      notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     } else if (userFonction === 5) {
       // Commerciaux : demandes d'insertion, décalages (demande + réponse)
       const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
@@ -275,25 +267,15 @@ router.get('/count', authenticate, async (req, res) => {
       );
       count = result?.count || 0;
     } else if (userFonction === 14) {
-      // RE Confirmation (superviseur des confirmateurs) : compter les notifications de décalage pour leurs confirmateurs
-      const confirmateursIds = await query(
-        'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
+      // RE Confirmation : compter toutes les notifications non lues destinées au RE.
+      const result = await queryOne(
+        `SELECT COUNT(*) as count
+         FROM notifications
+         WHERE destination = ?
+         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}`,
         [req.user.id]
       );
-      
-      if (confirmateursIds.length === 0) {
-        count = 0;
-      } else {
-        const result = await queryOne(
-          `SELECT COUNT(*) as count
-           FROM notifications
-           WHERE destination = ?
-           AND lu = 0 ${COUNT_ARCHIVE_CONDITION}
-           AND type = 'decalage_request'`,
-          [req.user.id]
-        );
-        count = result?.count || 0;
-      }
+      count = result?.count || 0;
     } else if (userFonction === 5) {
       // Commerciaux : compter demandes d'insertion, décalages et réponses de décalages
       const result = await queryOne(
