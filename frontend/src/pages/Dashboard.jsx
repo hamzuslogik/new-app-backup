@@ -196,6 +196,7 @@ const Dashboard = () => {
       setShowFilters(true);
     } else if (Object.keys(urlParams).length === 0 && user) {
       const { dateStr, timeStart, timeEnd } = getTodayDateRange();
+      const emptyUiFilters = getFiltersForUser(user);
       // Confirmateur : liste du jour sans toucher au filtre (backend = dernière ligne fiches_histo).
       // Autres profils : fiches confirmées (état 7) du jour via fiches_histo_confirmation.
       if (user.fonction === 6) {
@@ -212,7 +213,8 @@ const Dashboard = () => {
           time_fin: timeEnd,
           include_confirmateur_2: false,
         };
-        setFilters(defaultApplied);
+        // UI vide, mais résultats par défaut conservés
+        setFilters(emptyUiFilters);
         setAppliedFilters(defaultApplied);
       } else {
         const defaultApplied = {
@@ -227,7 +229,8 @@ const Dashboard = () => {
           time_debut: timeStart,
           time_fin: timeEnd,
         };
-        setFilters(defaultApplied);
+        // UI vide, mais résultats par défaut conservés
+        setFilters(emptyUiFilters);
         setAppliedFilters(defaultApplied);
       }
       setShowFilters(false);
