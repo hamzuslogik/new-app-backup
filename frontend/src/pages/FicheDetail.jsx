@@ -7775,7 +7775,7 @@ const PlanningViewForModal = ({
                                         handleValidateCellAvailability(day.date, slot.hour, availabilityCount ?? 0);
                                       }}
                                       title="Valider"
-                                      style={{ padding: '2px 6px', fontSize: '10px' }}
+                                      style={{ padding: '1px 4px', fontSize: '8px', lineHeight: 1 }}
                                     >
                                       <FaCheck />
                                     </button>
@@ -7786,7 +7786,7 @@ const PlanningViewForModal = ({
                                         handleCancelCellAvailability(day.date, slot.hour);
                                       }}
                                       title="Annuler"
-                                      style={{ padding: '2px 6px', fontSize: '10px' }}
+                                      style={{ padding: '1px 4px', fontSize: '8px', lineHeight: 1 }}
                                     >
                                       <FaTimes />
                                     </button>
@@ -7841,7 +7841,7 @@ const PlanningViewForModal = ({
                                         handleValidateCellAvailability(day.date, slot.hour, 0);
                                       }}
                                       title="Valider"
-                                      style={{ padding: '2px 6px', fontSize: '10px' }}
+                                      style={{ padding: '1px 4px', fontSize: '8px', lineHeight: 1 }}
                                     >
                                       <FaCheck />
                                     </button>
@@ -7852,7 +7852,7 @@ const PlanningViewForModal = ({
                                         handleCancelCellAvailability(day.date, slot.hour);
                                       }}
                                       title="Annuler"
-                                      style={{ padding: '2px 6px', fontSize: '10px' }}
+                                      style={{ padding: '1px 4px', fontSize: '8px', lineHeight: 1 }}
                                     >
                                       <FaTimes />
                                     </button>
