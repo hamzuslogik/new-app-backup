@@ -2183,7 +2183,7 @@ body.dashboard-page {
 }
 
 .fiche-detail-modal-topbar {
-  width: calc(100% + 16px);
+  width: calc(100% + 14px);
   margin: -8px -8px 10px -8px;
   min-height: 86px;
   background: #00d100;
