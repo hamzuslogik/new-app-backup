@@ -308,7 +308,7 @@
 }
 
 .fiche-sections > .decalage-form {
-  order: -2;
+  order: 999;
 }
 
 .fiche-section {

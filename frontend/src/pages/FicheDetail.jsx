@@ -3969,8 +3969,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             - Commerciaux (5) : peuvent changer uniquement vers les états de Phase 3 (groupe = 3) ou CONFIRMER (état 7)
             - Confirmateurs (6) : peuvent changer l'état des fiches qui leur sont assignées
         */}
-        {/* Section Compte rendu : commerciaux propriétaires, Admin (1,2,7) et RP Confirmation (13) peuvent voir et modifier */}
-        {((user?.fonction === 5 && (Number(ficheData?.id_commercial) === Number(user?.id) || Number(ficheData?.id_commercial_2) === Number(user?.id))) || [1, 2, 7].includes(Number(user?.fonction)) || Number(user?.fonction) === 13) && (
+        {/* Section Compte rendu : visible uniquement en session commercial propriétaire */}
+        {(user?.fonction === 5 && (Number(ficheData?.id_commercial) === Number(user?.id) || Number(ficheData?.id_commercial_2) === Number(user?.id))) && (
           <>
             {/* Afficher les comptes rendu en attente uniquement (masquer après approbation/rejet) */}
             {ficheData?.comptes_rendus && ficheData.comptes_rendus.some((cr) => cr.statut === 'pending') && (
