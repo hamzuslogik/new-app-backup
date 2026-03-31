@@ -11,6 +11,27 @@ import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import './ManagementTab.css';
 
+const TRIGGER_VARIABLES = {
+  fiche_created: ['{fiche.*}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  fiche_updated: ['{fiche.*}', '{changes.*}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  etat_changed: ['{fiche.*}', '{old_etat}', '{new_etat}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  rdv_created: ['{fiche.*}', '{old_date_rdv_time}', '{new_date_rdv_time}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  rdv_validated: ['{fiche.*}', '{old_valider}', '{new_valider}', '{conf_rdv_avec}', '{conf_presence_couple}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  compte_rendu_created: ['{fiche.*}', '{compte_rendu.id}', '{compte_rendu.id_fiche}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  compte_rendu_approved: ['{fiche.*}', '{compte_rendu.*}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  demande_insertion_created: [
+    '{fiche.id}', '{fiche.hash}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
+    '{demande_insertion.id}', '{demande_insertion.id_fiche_existante}', '{demande_insertion.id_agent}',
+    '{demande_insertion.agent_pseudo}', '{demande_insertion.donnees_fiche.*}', '{demande_insertion.date_demande}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  planning_created: ['{planning.*}', '{planning.dep}', '{planning.departement}', '{planning.week}', '{planning.semaine}', '{changes.*}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  planning_updated: ['{planning.*}', '{planning.dep}', '{planning.departement}', '{planning.week}', '{planning.semaine}', '{changes.*}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  decalage_created: ['{fiche.id}', '{fiche.date_rdv_time}', '{decalage.*}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  decalage_accepted: ['{fiche.id}', '{fiche.date_rdv_time}', '{decalage.*}', '{decalage.old_etat}', '{decalage.new_etat}', '{user.id}', '{user.pseudo}', '{user.fonction}'],
+  scheduled: ['{workflow_id}', '{workflow_nom}', '{cron_expression}', '{scheduled_at}']
+};
+
 const WorkflowsTab = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -528,12 +549,23 @@ const WorkflowsTab = () => {
                         <option value="rdv_validated">RDV validé</option>
                         <option value="compte_rendu_created">Compte rendu créé</option>
                         <option value="compte_rendu_approved">Compte rendu approuvé</option>
+                        <option value="demande_insertion_created">Demande d'insertion créée</option>
                         <option value="planning_created">Planning créé</option>
                         <option value="planning_updated">Planning modifié</option>
                         <option value="decalage_created">Décalage créé</option>
                         <option value="decalage_accepted">Décalage accepté</option>
                         <option value="scheduled">Programmé (cron)</option>
                       </select>
+                    </div>
+                    <div style={{ padding: '10px', background: '#fff3cd', borderRadius: '6px', fontSize: '12px', marginBottom: '10px' }}>
+                      <strong>Variables disponibles pour ce déclencheur :</strong>
+                      <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {(TRIGGER_VARIABLES[trigger.type] || ['{fiche.*}', '{user.*}']).map((v) => (
+                          <code key={`${trigger.type}-${v}`} style={{ background: '#fff', padding: '2px 6px', borderRadius: '4px' }}>
+                            {v}
+                          </code>
+                        ))}
+                      </div>
                     </div>
                     {trigger.type === 'etat_changed' && (
                       <>

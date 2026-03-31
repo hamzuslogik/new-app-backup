@@ -5,6 +5,7 @@ const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = r
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
 const { triggerWorkflowOnFicheCreated, triggerWorkflowOnFicheUpdated, triggerWorkflowOnEtatChanged, triggerWorkflowOnRdvValidated } = require('../middleware/workflow.middleware');
 const { query, queryOne } = require('../config/database');
+const { executeWorkflow } = require('../services/workflow/workflow-executor');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -4184,54 +4185,27 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
         [existingFiche.id]
       );
       
-      // Créer des notifications pour tous les utilisateurs backoffice (fonction 11)
-      // Récupérer tous les utilisateurs backoffice actifs (fonction 11) et l'utilisateur spécifique 2668
-      const backofficeUsers = await query(
-        `SELECT id FROM utilisateurs WHERE (fonction = 11 OR id = 2668) AND etat > 0`
-      );
-      
-      if (backofficeUsers && backofficeUsers.length > 0) {
-        const agentPseudo = agentInfo?.pseudo || 'Agent inconnu';
-        const ficheNom = ficheExistanteInfo?.nom || '';
-        const fichePrenom = ficheExistanteInfo?.prenom || '';
-        const ficheTel = ficheExistanteInfo?.tel || '';
-        const ficheHash = ficheExistanteInfo?.hash || encodeFicheId(existingFiche.id);
-        
-        const message = `Nouvelle demande d'insertion de fiche par ${agentPseudo}. Fiche existante : ${ficheNom} ${fichePrenom} (${ficheTel}).`;
-        const metadata = JSON.stringify({
-          id_demande: demandeResult.insertId,
+      // Notifications manuelles supprimées : déclenchement workflow dédié
+      executeWorkflow('demande_insertion_created', {
+        user: req.user,
+        fiche: {
+          id: existingFiche.id,
+          hash: ficheExistanteInfo?.hash || encodeFicheId(existingFiche.id),
+          nom: ficheExistanteInfo?.nom || null,
+          prenom: ficheExistanteInfo?.prenom || null,
+          tel: ficheExistanteInfo?.tel || null,
+        },
+        demande_insertion: {
+          id: demandeResult.insertId,
           id_fiche_existante: existingFiche.id,
           id_agent: agentId,
-          agent_pseudo: agentPseudo,
-          fiche_nom: ficheNom,
-          fiche_prenom: fichePrenom,
-          fiche_tel: ficheTel
-        });
-        
-        // Créer une notification pour chaque utilisateur backoffice
-        const notificationValues = backofficeUsers.map(user => [
-          'demande_insertion',
-          existingFiche.id,
-          message,
-          user.id,
-          now,
-          0, // lu = 0 (non lue)
-          metadata
-        ]);
-        
-        if (notificationValues.length > 0) {
-          const placeholders = notificationValues.map(() => '(?, ?, ?, ?, ?, 0, ?)').join(', ');
-          const flatValues = notificationValues.flat();
-          
-          await query(
-            `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-             VALUES ${placeholders}`,
-            flatValues
-          ).catch(err => {
-            console.error('Erreur lors de la création des notifications pour les utilisateurs backoffice:', err);
-          });
-        }
-      }
+          agent_pseudo: agentInfo?.pseudo || null,
+          donnees_fiche: ficheData,
+          date_demande: now,
+        },
+      }).catch((wfError) => {
+        console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (demande_insertion_created):', wfError);
+      });
       
       return res.status(200).json({
         success: true,

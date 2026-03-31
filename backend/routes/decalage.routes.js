@@ -326,92 +326,7 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
       console.log('Impossible d\'enregistrer dans modifica:', err.message);
     }
 
-    // Récupérer les informations de la fiche pour la notification
-    const ficheInfo = await queryOne(
-      'SELECT nom, prenom, tel, date_rdv_time FROM fiches WHERE id = ?',
-      [idFicheNum]
-    );
-
-    // Récupérer les informations de l'expéditeur
-    const expediteurInfo = await queryOne(
-      'SELECT pseudo FROM utilisateurs WHERE id = ?',
-      [req.user.id]
-    );
-
-    // Créer une notification pour le confirmateur (destinataire) et son superviseur
-    const notificationMessage = `Nouvelle demande de décalage de RDV de ${expediteurInfo?.pseudo || 'un utilisateur'} pour ${ficheInfo?.nom || ''} ${ficheInfo?.prenom || ''} (${ficheInfo?.tel || ''})`;
-    
-    const metadata = JSON.stringify({
-      id_decalage: result.insertId,
-      date_rdv_original: ficheInfo?.date_rdv_time || null,
-      date_rdv_nouvelle: date_prevu,
-      expediteur_pseudo: expediteurInfo?.pseudo || null
-    });
-
-    // Notification pour le confirmateur (destinataire)
-    if (destination && notificationMessage && notificationMessage.trim() !== '') {
-      await query(
-          `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-           VALUES (?, ?, ?, ?, ?, 0, ?)`,
-          ['decalage_request', idFicheNum, notificationMessage.trim(), destination, now, metadata]
-      ).catch(err => {
-        console.error('Erreur lors de la création de la notification pour le confirmateur:', err);
-      });
-    }
-
-    // Récupérer le superviseur du confirmateur (chef_equipe)
-    const confirmateurInfo = await queryOne(
-      'SELECT chef_equipe FROM utilisateurs WHERE id = ? AND etat > 0',
-      [destination]
-    );
-
-    // Créer une notification pour le superviseur du confirmateur s'il existe
-    if (confirmateurInfo?.chef_equipe && notificationMessage && notificationMessage.trim() !== '') {
-      await query(
-        `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-         VALUES (?, ?, ?, ?, ?, 0, ?)`,
-        ['decalage_request', idFicheNum, notificationMessage.trim(), confirmateurInfo.chef_equipe, now, metadata]
-      ).catch(err => {
-        console.error('Erreur lors de la création de la notification pour le superviseur:', err);
-      });
-    }
-
-    // Créer également une notification pour tous les admins (fonctions 1, 2, 7)
-    const admins = await query(
-      'SELECT id FROM utilisateurs WHERE fonction IN (1, 2, 7) AND etat > 0 AND id != ?',
-      [req.user.id] // Exclure l'utilisateur actuel s'il est admin
-    );
-
-    if (admins && admins.length > 0) {
-      const adminNotificationMessage = `Nouvelle demande de décalage de RDV créée par ${expediteurInfo?.pseudo || 'un utilisateur'} pour ${ficheInfo?.nom || ''} ${ficheInfo?.prenom || ''} (${ficheInfo?.tel || ''})`;
-      
-      if (adminNotificationMessage && adminNotificationMessage.trim() !== '') {
-        const adminValues = admins
-          .filter(admin => admin && admin.id) // Filtrer les admins valides
-          .map(admin => [
-            'decalage_request',
-            idFicheNum,
-            adminNotificationMessage.trim(),
-            admin.id,
-            now,
-            0,
-            metadata
-          ]);
-        
-        if (adminValues.length > 0) {
-          const adminPlaceholders = adminValues.map(() => '(?, ?, ?, ?, ?, 0, ?)').join(', ');
-          const adminFlatValues = adminValues.flat();
-
-          await query(
-            `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-             VALUES ${adminPlaceholders}`,
-            adminFlatValues
-          ).catch(err => {
-            console.error('Erreur lors de la création des notifications admin:', err);
-          });
-        }
-      }
-    }
+    // Notifications manuelles désactivées: la création de décalage passe par le workflow "decalage_created".
 
     res.status(201).json({
       success: true,
@@ -598,8 +513,8 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       console.log('Impossible d\'enregistrer dans modifica:', err.message);
     }
 
-    // Créer une notification pour le commercial émetteur (expediteur) si le statut est accepté ou refusé
-    if (estValide || estRefuse) {
+    // Notification manuelle conservée uniquement pour le refus (l'acceptation passe par workflow "decalage_accepted")
+    if (estRefuse) {
       try {
         // Récupérer les informations de la fiche et du confirmateur
         const ficheInfo = await queryOne(
@@ -617,19 +532,14 @@ router.put('/:id/statut', authenticate, async (req, res) => {
           [decalage.expediteur]
         );
 
-        let notificationMessage = '';
-        if (estValide) {
-          notificationMessage = `Votre demande de décalage de RDV pour ${ficheInfo?.nom || ''} ${ficheInfo?.prenom || ''} (${ficheInfo?.tel || ''}) a été acceptée par ${confirmateurInfo?.pseudo || 'le confirmateur'}.`;
-        } else if (estRefuse) {
-          notificationMessage = `Votre demande de décalage de RDV pour ${ficheInfo?.nom || ''} ${ficheInfo?.prenom || ''} (${ficheInfo?.tel || ''}) a été refusée par ${confirmateurInfo?.pseudo || 'le confirmateur'}.`;
-        }
+        const notificationMessage = `Votre demande de décalage de RDV pour ${ficheInfo?.nom || ''} ${ficheInfo?.prenom || ''} (${ficheInfo?.tel || ''}) a été refusée par ${confirmateurInfo?.pseudo || 'le confirmateur'}.`;
 
         const notificationMetadata = JSON.stringify({
           id_decalage: id,
           id_fiche: decalage.id_fiche,
           date_rdv_original: decalage.date_prevu || null,
           date_rdv_nouvelle: decalage.date_nouvelle || null,
-          statut: estValide ? 'accepte' : 'refuse',
+          statut: 'refuse',
           confirmateur_pseudo: confirmateurInfo?.pseudo || null
         });
 
