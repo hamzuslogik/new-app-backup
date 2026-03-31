@@ -2182,6 +2182,59 @@ body.dashboard-page {
   margin: 20px auto; /* Centrer et ajouter de l'espace */
 }
 
+.fiche-detail-modal-topbar {
+  width: calc(100% + 16px);
+  margin: -8px -8px 10px -8px;
+  min-height: 86px;
+  background: #00d100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 10px 52px 10px 14px;
+  box-sizing: border-box;
+}
+
+.fiche-detail-modal-topbar-logo {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 64px;
+  width: auto;
+  object-fit: contain;
+}
+
+.fiche-detail-modal-topbar-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #000000;
+  text-transform: uppercase;
+}
+
+.fiche-detail-modal-topbar-close {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 22px;
+  padding: 4px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fiche-detail-modal-topbar-close:hover {
+  color: #f3f4f6;
+}
+
 /* Adapter le planning à la largeur du modal */
 .fiche-detail-modal-content .planning-tab {
   width: 100% !important;

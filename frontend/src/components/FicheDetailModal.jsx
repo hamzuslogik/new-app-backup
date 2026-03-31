@@ -159,9 +159,13 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
           ['--etat-color']: etatColor,
         }}
       >
-        <button className="fiche-detail-modal-close" onClick={onClose}>
-          <FaTimes />
-        </button>
+        <div className="fiche-detail-modal-topbar">
+          <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-topbar-logo" />
+          <h2 className="fiche-detail-modal-topbar-title">DETAIL FICHE</h2>
+          <button className="fiche-detail-modal-topbar-close" onClick={onClose} aria-label="Fermer">
+            <FaTimes />
+          </button>
+        </div>
         <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
           <FicheDetail ficheHash={ficheHash} onClose={onClose} isModal={true} />
         </RouteParamsProvider>
