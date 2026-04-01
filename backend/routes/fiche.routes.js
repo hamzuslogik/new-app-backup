@@ -3357,6 +3357,13 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       }
     } catch (e) { console.log('Erreur confirmateur3:', e.message); }
 
+    let qualite_user = null;
+    try {
+      if (fiche.id_qualite) {
+        qualite_user = await queryOne('SELECT pseudo, color FROM utilisateurs WHERE id = ?', [fiche.id_qualite]);
+      }
+    } catch (e) { console.log('Erreur id_qualite:', e.message); }
+
     try {
       if (fiche.id_etat_final) {
         etat = await queryOne('SELECT titre, color, groupe FROM etats WHERE id = ?', [fiche.id_etat_final]);
@@ -3500,6 +3507,8 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       confirmateur_2_color: confirmateur2?.color || null,
       confirmateur_3_pseudo: confirmateur3?.pseudo || null,
       confirmateur_3_color: confirmateur3?.color || null,
+      qualite_pseudo: qualite_user?.pseudo || null,
+      qualite_color: qualite_user?.color || null,
       etat_final_titre: etat?.titre || null,
       etat_final_color: etat?.color || null,
       etat_final_groupe: etat?.groupe || null,

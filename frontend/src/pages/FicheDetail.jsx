@@ -2726,9 +2726,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           </table>
         </div>
 
-        {/* Section Détails de l'étude */}
+        {/* Section étude : titre = VALIDE par pseudo agent qualité (id_qualite) */}
         <div className="fiche-section">
-          <h2 className="section-title">Détails de l'étude</h2>
+          <h2 className="section-title">
+            {fiche.id_qualite && (fiche.qualite_pseudo || '').trim()
+              ? `VALIDE par ${String(fiche.qualite_pseudo).trim()}`
+              : fiche.id_qualite
+                ? "VALIDE par —"
+                : "Détails de l'étude"}
+          </h2>
           <table className="fiche-details-table">
             <tbody>
               {renderField('Étude à faire pour', 'produit',
