@@ -2829,10 +2829,9 @@ body.dashboard-page {
   max-width: 10% !important;
 }
 
-/* Hauteur overlay : valeurs d’origine divisées par 3 */
 .fiche-detail-modal-content .fiche-details-table tr {
   border-bottom: 1.5px solid #8a8a8a;
-  line-height: calc(0.4 / 3) !important;
+  line-height: 0.4 !important;
   margin: 0 !important;
   padding: 0 !important;
   height: auto !important;
@@ -2841,16 +2840,16 @@ body.dashboard-page {
 }
 
 .fiche-detail-modal-content .fiche-details-table td {
-  line-height: calc(0.4 / 3) !important;
+  line-height: 0.4 !important;
   margin: 0 !important;
-  padding: 0 calc(2px / 3) !important;
+  padding: 0 2px !important;
   vertical-align: middle !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr {
   height: auto !important;
   min-height: 0 !important;
-  max-height: calc(8px / 3) !important;
+  max-height: 8px !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr td {
@@ -2870,7 +2869,7 @@ body.dashboard-page {
   opacity: 1 !important;
   text-align: center !important;
   vertical-align: middle !important;
-  padding: 0 calc(2px / 3) !important;
+  padding: 0 2px !important;
 }
 
 /* Assurer que les boutons dans les tableaux sont visibles */
@@ -2880,12 +2879,12 @@ body.dashboard-page {
   visibility: visible !important;
   opacity: 1 !important;
   width: auto !important;
-  min-width: calc(20px / 3) !important;
+  min-width: 20px !important;
   max-width: none !important;
-  padding: 0 calc(4px / 3) !important;
+  padding: 0 4px !important;
   margin: 0 !important;
   font-size: 8px !important;
-  height: calc(14px / 3) !important;
+  height: 14px !important;
   line-height: 1 !important;
 }
 
@@ -3130,29 +3129,29 @@ body.dashboard-page {
 
   .fiche-detail-modal-content .fiche-details-table tr {
     display: table-row !important;
-    line-height: calc(0.9 / 3) !important;
-    max-height: calc(15px / 3) !important;
+    line-height: 0.9 !important;
+    max-height: 15px !important;
   }
 
   .fiche-detail-modal-content .fiche-details-table td {
     display: table-cell !important;
-    padding: 0 calc(2px / 3) !important;
-    line-height: calc(0.9 / 3) !important;
+    padding: 0 2px !important;
+    line-height: 0.9 !important;
     margin: 0 !important;
   }
   
   .fiche-detail-modal-content .fiche-details-table tr {
-    max-height: calc(18px / 3) !important;
-    line-height: calc(0.9 / 3) !important;
+    max-height: 18px !important;
+    line-height: 0.9 !important;
   }
 
   /* Alignement des labels à gauche */
   .fiche-detail-modal-content .field-label,
   .fiche-detail-modal-content .fiche-detail .field-label {
     text-align: left !important;
-    padding: calc(4px / 3) calc(6px / 3) !important;
+    padding: 4px 6px !important;
     font-size: 15px !important;
-    line-height: calc(1.4 / 3) !important;
+    line-height: 1.4 !important;
     max-height: none !important;
     font-weight: 700 !important;
     margin: 0 !important;
@@ -3164,9 +3163,9 @@ body.dashboard-page {
   .fiche-detail-modal-content .fiche-detail .field-value {
     text-align: center !important;
     width: 30% !important;
-    padding: calc(4px / 3) calc(6px / 3) !important;
+    padding: 4px 6px !important;
     font-size: 15px !important;
-    line-height: calc(1.4 / 3) !important;
+    line-height: 1.4 !important;
     max-height: none !important;
     margin: 0 !important;
   }
@@ -3175,7 +3174,7 @@ body.dashboard-page {
   .fiche-detail-modal-content .field-actions,
   .fiche-detail-modal-content .fiche-detail .field-actions {
     text-align: right !important;
-    padding: calc(1px / 3) calc(6px / 3) !important;
+    padding: 1px 6px !important;
     margin: 0 !important;
     width: auto !important;
     display: flex !important;
@@ -3289,29 +3288,29 @@ body.dashboard-page {
 
   .fiche-detail-modal-content .fiche-details-table tr {
     display: table-row !important;
-    line-height: calc(0.9 / 3) !important;
-    max-height: calc(15px / 3) !important;
+    line-height: 0.9 !important;
+    max-height: 15px !important;
   }
 
   .fiche-detail-modal-content .fiche-details-table td {
     display: table-cell !important;
-    padding: 0 calc(2px / 3) !important;
-    line-height: calc(0.9 / 3) !important;
+    padding: 0 2px !important;
+    line-height: 0.9 !important;
     margin: 0 !important;
   }
   
   .fiche-detail-modal-content .fiche-details-table tr {
-    max-height: calc(18px / 3) !important;
-    line-height: calc(0.9 / 3) !important;
+    max-height: 18px !important;
+    line-height: 0.9 !important;
   }
 
   /* Alignement des labels à gauche */
   .fiche-detail-modal-content .field-label,
   .fiche-detail-modal-content .fiche-detail .field-label {
     text-align: left !important;
-    padding: calc(4px / 3) calc(6px / 3) !important;
+    padding: 4px 6px !important;
     font-size: 15px !important;
-    line-height: calc(1.4 / 3) !important;
+    line-height: 1.4 !important;
     max-height: none !important;
     font-weight: 700 !important;
   }
@@ -3321,9 +3320,9 @@ body.dashboard-page {
   .fiche-detail-modal-content .fiche-detail .field-value {
     text-align: center !important;
     width: 30% !important;
-    padding: calc(4px / 3) calc(6px / 3) !important;
+    padding: 4px 6px !important;
     font-size: 15px !important;
-    line-height: calc(1.4 / 3) !important;
+    line-height: 1.4 !important;
     max-height: none !important;
     font-weight: 600 !important;
   }
@@ -3332,7 +3331,7 @@ body.dashboard-page {
   .fiche-detail-modal-content .field-actions,
   .fiche-detail-modal-content .fiche-detail .field-actions {
     text-align: right !important;
-    padding: calc(1px / 3) calc(4px / 3) !important;
+    padding: 1px 4px !important;
     width: auto !important;
     display: flex !important;
     justify-content: flex-end !important;
