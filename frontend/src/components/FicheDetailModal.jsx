@@ -167,7 +167,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
           style={{ height: '72px', minHeight: '72px', maxHeight: '72px', flex: '0 0 72px' }}
         >
           <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-banner-logo" />
-          <span className="fiche-detail-modal-banner-title">DETAIL FICHE</span>
+          <span className="fiche-detail-modal-banner-title">DETAILS FICHE</span>
         </div>
         <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
           <FicheDetail ficheHash={ficheHash} onClose={onClose} isModal={true} />
