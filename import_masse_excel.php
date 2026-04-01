@@ -167,6 +167,140 @@ function first_matching_key(array $row, string $wanted): ?string
     return null;
 }
 
+function get_mapped_cell_value(array $row, string $excelColumn): string
+{
+    if ($excelColumn === '') {
+        return '';
+    }
+    $realKey = first_matching_key($row, $excelColumn);
+    if ($realKey !== null) {
+        return trim((string)($row[$realKey] ?? ''));
+    }
+    return trim((string)($row[$excelColumn] ?? ''));
+}
+
+function coerce_for_yj_column($value, array $meta)
+{
+    $t = $meta['type'];
+    if (in_array($t, ['int', 'integer', 'bigint', 'smallint', 'tinyint', 'mediumint'], true)) {
+        return (int)$value;
+    }
+    if (in_array($t, ['decimal', 'float', 'double'], true)) {
+        return $value === '' ? 0 : 0 + (float)$value;
+    }
+    return (string)$value;
+}
+
+function suggest_map_header(string $dbCol, array $headers, array $autoMapAliases): string
+{
+    foreach ($headers as $h) {
+        if (normalize_key((string)$h) === normalize_key($dbCol)) {
+            return (string)$h;
+        }
+    }
+    foreach ($headers as $h) {
+        foreach (($autoMapAliases[$dbCol] ?? []) as $alias) {
+            if (normalize_key((string)$h) === normalize_key((string)$alias)) {
+                return (string)$h;
+            }
+        }
+    }
+    return '';
+}
+
+function build_yj_insert_row(array $tableCols, array $mappedRow, string $nomCentre, string $nowTime): array
+{
+    $insertData = [];
+    foreach ($tableCols as $colName => $meta) {
+        if ($colName === 'id') {
+            continue;
+        }
+        if ($colName === 'nom_agent') {
+            $insertData[$colName] = 'AG001';
+            continue;
+        }
+        if ($colName === 'nom_centre') {
+            $insertData[$colName] = $nomCentre;
+            continue;
+        }
+        if ($colName === 'archive') {
+            $insertData[$colName] = 0;
+            continue;
+        }
+        if ($colName === 'date_insertion') {
+            $insertData[$colName] = $nowTime;
+            continue;
+        }
+        if ($colName === 'etat_final') {
+            $insertData[$colName] = 'EN-ATTENTE';
+            continue;
+        }
+        if ($colName === 'date_heure_mod') {
+            $insertData[$colName] = $nowTime;
+            continue;
+        }
+
+        if (array_key_exists($colName, $mappedRow)) {
+            $v = $mappedRow[$colName];
+            if ($v !== null && $v !== '') {
+                $insertData[$colName] = coerce_for_yj_column($v, $meta);
+                continue;
+            }
+        }
+
+        if ($meta['default'] !== null) {
+            $insertData[$colName] = $meta['default'];
+            continue;
+        }
+        if ($meta['nullable']) {
+            $insertData[$colName] = null;
+            continue;
+        }
+        $type = $meta['type'];
+        if (in_array($type, ['int', 'integer', 'bigint', 'smallint', 'tinyint', 'mediumint', 'decimal', 'float', 'double'], true)) {
+            $insertData[$colName] = 0;
+        } elseif (in_array($type, ['datetime', 'timestamp'], true)) {
+            $insertData[$colName] = $nowTime;
+        } elseif ($type === 'date') {
+            $insertData[$colName] = date('Y-m-d');
+        } else {
+            $insertData[$colName] = '';
+        }
+    }
+    return $insertData;
+}
+
+function collect_mapped_yj_row(array $row, array $mapping, array $commentaireMergeHeaders, array $allowedDbCols): array
+{
+    $out = [];
+    foreach ($allowedDbCols as $dbCol) {
+        $excelCol = trim((string)($mapping[$dbCol] ?? ''));
+        if ($excelCol === '') {
+            continue;
+        }
+        $out[$dbCol] = get_mapped_cell_value($row, $excelCol);
+    }
+
+    $parts = [];
+    $base = trim((string)($out['commentaire'] ?? ''));
+    if ($base !== '') {
+        $parts[] = $base;
+    }
+    foreach ($commentaireMergeHeaders as $header) {
+        $header = trim((string)$header);
+        if ($header === '') {
+            continue;
+        }
+        $v = get_mapped_cell_value($row, $header);
+        if ($v !== '') {
+            $parts[] = $v;
+        }
+    }
+    $out['commentaire'] = implode(' / ', $parts);
+
+    return $out;
+}
+
 function get_table_columns(PDO $pdo, string $tableName): array
 {
     $sql = "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT
@@ -187,20 +321,46 @@ function get_table_columns(PDO $pdo, string $tableName): array
     return $cols;
 }
 
-$dbFields = [
-    'nom', 'prenom', 'adresse', 'cp', 'ville', 'tel', 'gsm1', 'gsm2', 'email', 'commentaire'
+$yjFieldsCoord = ['civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'Adresse', 'cp', 'ville', 'commentaire'];
+
+$yjFieldsPerso = [
+    'profession_mr', 'profession_mme', 'age_mr', 'age_mme', 'enfant_encharge', 'situation_conju', 'revenu', 'credit',
+    'credit_autre', 'credit_immobilier', 'site_classe', 'zones_ombres', 'chemines', 'nb_chemines', 'surface_disponible',
+    'motif_qualification', 'nom_commercial', 'nom_commercial_2', 'id_commercial', 'nom_confirmateur', 'nom_confirmateur_2',
+    'nom_confirmateur_3', 'id_confirmateur', 'id_agent', 'id_qualite', 'nom_qualite', 'id_centre', 'entretient',
+    'conf_presence_couple', 'conf_revenu', 'conf_credit', 'pac_propritaire_maison', 'adresse_ip', 'exportation', 'favorite',
+    'color', 'PENALITE', 'DETAIL_PENALITE', 'observation_qualite', 'valider',
 ];
+
+$yjFieldsTechnique = [
+    'maison_orientation', 'etude', 'etude_observation', 'installation', 'installation_type', 'installation_annee',
+    'installation_production', 'installation_prix', 'etat_qualite', 'date_heure_appel', 'date_heure_playning', 'sous_etat',
+    'conf_rdv_avec', 'conf_prise_autre_personne', 'conf_profession_monsieur', 'conf_profession', 'conf_profession_detail',
+    'conf_profession_madame', 'conf_profession_mme', 'conf_profession_detail_mme', 'conf_deja_fait_etude', 'conf_detail_etude',
+    'conf_deja_installe', 'conf_type_installation', 'conf_annee_installation', 'conf_production_installation',
+    'conf_prix_installation', 'conf_annulee_precedemment', 'conf_annulee_precedemment_par', 'conf_energie',
+    'conf_consommations', 'conf_consommation_chauffage', 'conf_commentaire_produit', 'pac_consomation', 'pac_surface_habitable',
+    'pac_nombre_pieces', 'pac_age_maison', 'pac_annee_chauf', 'pac_surface_chauf', 'ph3_pac', 'ph3_attente', 'ph3_alimentation',
+    'ph3_type', 'ph3_prix', 'ph3_puissance', 'ph3_ballon', 'ph3_nbr_unite', 'ph3_nbr_group', 'ph3_rr_model', 'ph3_installateur',
+    'ph3_mensualite', 'ph3_bonus_15', 'ph3_bonus_30', 'decalage', 'valeur_mensualite', 'nbr_annee_finance', 'cq_etat',
+    'cq_dossier', 'cq_observations', 'cq_date_modif', 'ph3_marque_pac', 'ph3_marque_ballon', 'Isolation',
+];
+
+$yjAllMapFields = array_values(array_unique(array_merge($yjFieldsCoord, $yjFieldsPerso, $yjFieldsTechnique)));
+
 $autoMapAliases = [
     'nom' => ['nom', 'lastname', 'last_name'],
     'prenom' => ['prenom', 'firstname', 'first_name'],
-    'adresse' => ['adresse', 'address', 'address1'],
+    'Adresse' => ['adresse', 'address', 'address1'],
     'cp' => ['cp', 'codepostal', 'postalcode', 'zip'],
     'ville' => ['ville', 'city'],
     'tel' => ['tel', 'telephone', 'phone', 'mobile', 'portable'],
     'gsm1' => ['gsm1', 'gsm', 'mobile1', 'tel2', 'telephone2'],
     'gsm2' => ['gsm2', 'mobile2', 'tel3', 'telephone3'],
-    'email' => ['email', 'mail'],
     'commentaire' => ['commentaire', 'comment', 'notes', 'note'],
+    'civ' => ['civ', 'civilite', 'title'],
+    'conf_consommations' => ['consommation', 'conso'],
+    'conf_produit' => ['conf_produit', 'produit', 'product', 'type_produit'],
 ];
 
 $step = 'upload';
@@ -247,6 +407,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $mapping = $_POST['map'] ?? [];
+            $commentaireMerge = isset($_POST['commentaire_merge']) && is_array($_POST['commentaire_merge'])
+                ? $_POST['commentaire_merge'] : [];
             $nomCentre = trim((string)($_POST['nom_centre'] ?? ''));
             $produit = (int)($_POST['produit'] ?? 0);
             if ($nomCentre === '' || $produit <= 0) {
@@ -259,6 +421,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($tableCols)) {
                 throw new RuntimeException('Table yj_fiche introuvable.');
             }
+            $allowedMapCols = array_values(array_intersect($yjAllMapFields, array_keys($tableCols)));
 
             $dupMode = strtolower((string)($config['duplicate_check'] ?? 'memory'));
             $existingPhones = [];
@@ -291,39 +454,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
             foreach ($rows as $row) {
                 try {
-                    $fiche = ['nom' => '', 'prenom' => '', 'adresse' => '', 'cp' => '', 'ville' => '', 'tel' => '', 'gsm1' => '', 'gsm2' => '', 'email' => '', 'commentaire' => ''];
-                    foreach ($dbFields as $field) {
-                        $column = trim((string)($mapping[$field] ?? ''));
-                        if ($column === '') {
-                            continue;
+                    $mappedRow = collect_mapped_yj_row($row, $mapping, $commentaireMerge, $allowedMapCols);
+
+                    foreach (['tel', 'gsm1', 'gsm2'] as $ph) {
+                        if (array_key_exists($ph, $mappedRow)) {
+                            $mappedRow[$ph] = clean_phone($mappedRow[$ph]);
                         }
-                        $realKey = first_matching_key($row, $column);
-                        $value = (string)($realKey !== null ? ($row[$realKey] ?? '') : '');
-                        $fiche[$field] = trim($value);
                     }
+                    $tel = $mappedRow['tel'] ?? '';
+                    $gsm1 = $mappedRow['gsm1'] ?? '';
+                    $gsm2 = $mappedRow['gsm2'] ?? '';
 
-                    $fiche['tel'] = clean_phone($fiche['tel']);
-                    $fiche['gsm1'] = clean_phone($fiche['gsm1']);
-                    $fiche['gsm2'] = clean_phone($fiche['gsm2']);
-
-                    if ($fiche['cp'] !== '') {
-                        $cpDigits = preg_replace('/\D+/', '', $fiche['cp']) ?? '';
+                    if (array_key_exists('cp', $mappedRow) && $mappedRow['cp'] !== '') {
+                        $cpDigits = preg_replace('/\D+/', '', (string)$mappedRow['cp']) ?? '';
                         if (strlen($cpDigits) === 4) {
                             $cpDigits = '0' . $cpDigits;
                         }
                         if ($cpDigits !== '' && strlen($cpDigits) !== 5) {
                             throw new RuntimeException('Code postal invalide');
                         }
-                        $fiche['cp'] = $cpDigits;
+                        $mappedRow['cp'] = $cpDigits;
                     }
 
-                    if ($fiche['tel'] === '' && $fiche['gsm1'] === '' && $fiche['gsm2'] === '') {
+                    if (!isset($mappedRow['id_centre']) || trim((string)$mappedRow['id_centre']) === '') {
+                        $mappedRow['id_centre'] = $idCentreForm;
+                    }
+                    if ($confProduitForm !== '' && (!isset($mappedRow['conf_produit']) || trim((string)$mappedRow['conf_produit']) === '')) {
+                        $mappedRow['conf_produit'] = $confProduitForm;
+                    }
+
+                    if ($tel === '' && $gsm1 === '' && $gsm2 === '') {
                         throw new RuntimeException('Aucun telephone (tel/gsm1/gsm2)');
                     }
 
                     $dupPhone = '';
                     $existing = null;
-                    foreach ([$fiche['tel'], $fiche['gsm1'], $fiche['gsm2']] as $p) {
+                    foreach ([$tel, $gsm1, $gsm2] as $p) {
                         if ($p !== '' && isset($phonesInsertedThisRun[$p])) {
                             $dupPhone = $p;
                             $existing = $phonesInsertedThisRun[$p];
@@ -331,7 +497,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                     if ($dupPhone === '' && $dupMode === 'memory') {
-                        foreach ([$fiche['tel'], $fiche['gsm1'], $fiche['gsm2']] as $p) {
+                        foreach ([$tel, $gsm1, $gsm2] as $p) {
                             if ($p !== '' && isset($existingPhones[$p])) {
                                 $dupPhone = $p;
                                 $existing = $existingPhones[$p];
@@ -339,16 +505,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                         }
                     } elseif ($dupPhone === '' && $dupMode === 'sql') {
-                        $existing = find_existing_yj_fiche_by_phones($pdo, $fiche['tel'], $fiche['gsm1'], $fiche['gsm2']);
+                        $existing = find_existing_yj_fiche_by_phones($pdo, $tel, $gsm1, $gsm2);
                         if ($existing !== null) {
-                            $dupPhone = $fiche['tel'] !== '' ? $fiche['tel'] : ($fiche['gsm1'] !== '' ? $fiche['gsm1'] : $fiche['gsm2']);
+                            $dupPhone = $tel !== '' ? $tel : ($gsm1 !== '' ? $gsm1 : $gsm2);
                         }
                     }
                     if ($dupPhone !== '' && $existing !== null) {
                         $duplicates++;
                         $notInserted[] = [
-                            'nom' => $fiche['nom'],
-                            'prenom' => $fiche['prenom'],
+                            'nom' => $mappedRow['nom'] ?? '',
+                            'prenom' => $mappedRow['prenom'] ?? '',
                             'tel' => $dupPhone,
                             'raison' => isset($phonesInsertedThisRun[$dupPhone]) ? 'Doublon dans le fichier (deja insere)' : 'Fiche existante archive=0',
                             'etat_actuel' => $existing['etat_final'] ?? '',
@@ -358,55 +524,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     $nowTime = date('Y-m-d H:i:s');
-                    $insertData = [];
-                    foreach ($tableCols as $colName => $meta) {
-                        if ($colName === 'id') {
-                            continue;
-                        }
-                        if ($colName === 'nom') { $insertData[$colName] = $fiche['nom']; continue; }
-                        if ($colName === 'prenom') { $insertData[$colName] = $fiche['prenom']; continue; }
-                        if ($colName === 'Adresse') { $insertData[$colName] = $fiche['adresse']; continue; }
-                        if ($colName === 'cp') { $insertData[$colName] = $fiche['cp']; continue; }
-                        if ($colName === 'ville') { $insertData[$colName] = $fiche['ville']; continue; }
-                        if ($colName === 'tel') { $insertData[$colName] = $fiche['tel']; continue; }
-                        if ($colName === 'gsm1') { $insertData[$colName] = $fiche['gsm1']; continue; }
-                        if ($colName === 'gsm2') { $insertData[$colName] = $fiche['gsm2']; continue; }
-                        if ($colName === 'commentaire') { $insertData[$colName] = $fiche['commentaire']; continue; }
-                        if ($colName === 'nom_agent') { $insertData[$colName] = 'AG001'; continue; }
-                        if ($colName === 'nom_centre') { $insertData[$colName] = $nomCentre; continue; }
-                        if ($colName === 'conf_produit') { $insertData[$colName] = (string)$produit; continue; }
-                        if ($colName === 'archive') { $insertData[$colName] = 0; continue; }
-                        if ($colName === 'date_insertion') { $insertData[$colName] = $nowTime; continue; }
-                        if ($colName === 'etat_final') { $insertData[$colName] = 'EN-ATTENTE'; continue; }
-
-                        if ($meta['default'] !== null) {
-                            $insertData[$colName] = $meta['default'];
-                            continue;
-                        }
-                        if ($meta['nullable']) {
-                            $insertData[$colName] = null;
-                            continue;
-                        }
-                        $type = $meta['type'];
-                        if (in_array($type, ['int', 'integer', 'bigint', 'smallint', 'tinyint', 'mediumint', 'decimal', 'float', 'double'], true)) {
-                            $insertData[$colName] = 0;
-                        } elseif (in_array($type, ['datetime', 'timestamp'], true)) {
-                            $insertData[$colName] = $nowTime;
-                        } elseif ($type === 'date') {
-                            $insertData[$colName] = date('Y-m-d');
-                        } else {
-                            $insertData[$colName] = '';
-                        }
-                    }
+                    $insertData = build_yj_insert_row($tableCols, $mappedRow, $nomCentre, $produit, $nowTime);
 
                     $cols = array_keys($insertData);
-                    $placeholders = array_map(static fn($c) => ':' . $c, $cols);
+                    $placeholders = array_map(static function ($c) {
+                        return ':' . $c;
+                    }, $cols);
                     $insertSql = "INSERT INTO yj_fiche (`" . implode('`,`', $cols) . "`) VALUES (" . implode(',', $placeholders) . ")";
                     $stmtInsert = $pdo->prepare($insertSql);
                     $stmtInsert->execute(array_combine($placeholders, array_values($insertData)));
 
                     $runMeta = ['etat_final' => 'EN-ATTENTE', 'date_insertion' => $nowTime];
-                    foreach ([$fiche['tel'], $fiche['gsm1'], $fiche['gsm2']] as $p) {
+                    foreach ([$tel, $gsm1, $gsm2] as $p) {
                         if ($p !== '') {
                             $phonesInsertedThisRun[$p] = $runMeta;
                             if ($dupMode === 'memory') {
@@ -417,10 +546,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $inserted++;
                 } catch (Throwable $e) {
                     $errors++;
+                    $nomCol = trim((string)($mapping['nom'] ?? ''));
+                    $preCol = trim((string)($mapping['prenom'] ?? ''));
+                    $telCol = trim((string)($mapping['tel'] ?? ''));
+                    $gsmCol = trim((string)($mapping['gsm1'] ?? ''));
                     $notInserted[] = [
-                        'nom' => $row[$mapping['nom'] ?? ''] ?? '',
-                        'prenom' => $row[$mapping['prenom'] ?? ''] ?? '',
-                        'tel' => $row[$mapping['tel'] ?? ''] ?? ($row[$mapping['gsm1'] ?? ''] ?? ''),
+                        'nom' => $nomCol !== '' ? get_mapped_cell_value($row, $nomCol) : '',
+                        'prenom' => $preCol !== '' ? get_mapped_cell_value($row, $preCol) : '',
+                        'tel' => $telCol !== '' ? get_mapped_cell_value($row, $telCol) : ($gsmCol !== '' ? get_mapped_cell_value($row, $gsmCol) : ''),
                         'raison' => $e->getMessage(),
                     ];
                 }
@@ -471,6 +604,10 @@ function selected($a, $b): string { return ((string)$a === (string)$b) ? 'select
     input,select,button{width:100%;padding:8px;box-sizing:border-box}
     .btn{background:#0f62fe;color:#fff;border:0;border-radius:6px;cursor:pointer}
     .alert{padding:10px;border-radius:6px;background:#fff3cd;border:1px solid #ffecb5}
+    .mapping-section h4{margin:18px 0 10px;color:#333;border-bottom:1px solid #ddd;padding-bottom:6px}
+    select[multiple]{min-height:140px;font-size:13px}
+    .col-map{flex:1;min-width:200px;max-width:340px}
+    .help-small{font-size:12px;color:#555;margin-top:6px}
   </style>
 </head>
 <body>
@@ -496,34 +633,76 @@ function selected($a, $b): string { return ((string)$a === (string)$b) ? 'select
         <input type="hidden" name="action" value="import">
         <div class="row">
           <div class="col"><label>nom_centre</label><input type="text" name="nom_centre" required></div>
-          <div class="col"><label>produit (id)</label><input type="number" name="produit" required></div>
+          <div class="col"><label>id_centre</label><input type="number" name="id_centre" required step="1" title="ID centre (integer)"></div>
+          <div class="col"><label>conf_produit (texte, défaut)</label><input type="text" name="conf_produit" placeholder="Si aucune colonne Excel n’est mappée sur conf_produit"></div>
         </div>
+        <p class="help-small">Les fiches importées ont pour <code>etat_final</code> la valeur <strong>EN-ATTENTE</strong>. <code>conf_produit</code> en base est un libellé (varchar), pas un identifiant numérique — vous pouvez le mapper depuis une colonne Excel ou utiliser le champ défaut ci-dessus. <code>id_centre</code> du formulaire s’applique à chaque ligne si la colonne <code>id_centre</code> n’est pas renseignée pour cette ligne.</p>
         <br>
-        <div class="row">
-          <?php foreach ($dbFields as $field): ?>
-            <?php
-              $default = '';
-              foreach ($headers as $h) {
-                  foreach (($autoMapAliases[$field] ?? [$field]) as $alias) {
-                      if (normalize_key($h) === normalize_key($alias)) {
-                          $default = $h;
-                          break 2;
-                      }
-                  }
-              }
-            ?>
-            <div class="col">
-              <label><?php echo htmlspecialchars($field); ?></label>
-              <select name="map[<?php echo htmlspecialchars($field); ?>]">
-                <option value="">-- non mappe --</option>
-                <?php foreach ($headers as $h): ?>
-                  <option value="<?php echo htmlspecialchars($h); ?>" <?php echo selected($default, $h); ?>><?php echo htmlspecialchars($h); ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-          <?php endforeach; ?>
+
+        <div class="mapping-section">
+          <h4>Coordonnées et identité</h4>
+          <div class="row">
+            <?php foreach ($yjFieldsCoord as $dbCol): ?>
+              <?php $def = suggest_map_header($dbCol, $headers, $autoMapAliases); ?>
+              <div class="col col-map">
+                <label><?php echo htmlspecialchars($dbCol); ?></label>
+                <select name="map[<?php echo htmlspecialchars($dbCol); ?>]">
+                  <option value="">-- non mappe --</option>
+                  <?php foreach ($headers as $h): ?>
+                    <option value="<?php echo htmlspecialchars($h); ?>" <?php echo selected($def, $h); ?>><?php echo htmlspecialchars($h); ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+            <?php endforeach; ?>
+          </div>
         </div>
-        <br>
+
+        <div class="mapping-section">
+          <h4>Commentaire : colonnes supplémentaires (multiselect)</h4>
+          <p class="help-small">Les valeurs des colonnes choisies sont ajoutées au commentaire, dans l’ordre, séparées par <strong>espace / espace</strong> (<code> / </code>). Maintenez Ctrl (ou Cmd) pour en sélectionner plusieurs. La colonne mappée sur <code>commentaire</code> ci‑dessus reste en premier si elle est renseignée.</p>
+          <select name="commentaire_merge[]" multiple size="10">
+            <?php foreach ($headers as $h): ?>
+              <option value="<?php echo htmlspecialchars($h); ?>"><?php echo htmlspecialchars($h); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <div class="mapping-section">
+          <h4>Critères personnels (yj_fiche)</h4>
+          <div class="row">
+            <?php foreach ($yjFieldsPerso as $dbCol): ?>
+              <?php $def = suggest_map_header($dbCol, $headers, $autoMapAliases); ?>
+              <div class="col col-map">
+                <label><?php echo htmlspecialchars($dbCol); ?></label>
+                <select name="map[<?php echo htmlspecialchars($dbCol); ?>]">
+                  <option value="">-- non mappe --</option>
+                  <?php foreach ($headers as $h): ?>
+                    <option value="<?php echo htmlspecialchars($h); ?>" <?php echo selected($def, $h); ?>><?php echo htmlspecialchars($h); ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+
+        <div class="mapping-section">
+          <h4>Critères techniques (yj_fiche)</h4>
+          <div class="row">
+            <?php foreach ($yjFieldsTechnique as $dbCol): ?>
+              <?php $def = suggest_map_header($dbCol, $headers, $autoMapAliases); ?>
+              <div class="col col-map">
+                <label><?php echo htmlspecialchars($dbCol); ?></label>
+                <select name="map[<?php echo htmlspecialchars($dbCol); ?>]">
+                  <option value="">-- non mappe --</option>
+                  <?php foreach ($headers as $h): ?>
+                    <option value="<?php echo htmlspecialchars($h); ?>" <?php echo selected($def, $h); ?>><?php echo htmlspecialchars($h); ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+
         <br>
         <button class="btn" type="submit">Importer</button>
       </form>
