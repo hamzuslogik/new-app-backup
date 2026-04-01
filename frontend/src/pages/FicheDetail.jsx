@@ -9,7 +9,7 @@ import { useRouteParams } from '../contexts/RouteParamsContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
-import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, format } from 'date-fns';
+import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, format, addMonths } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
 import './FicheDetail.css';
 
@@ -34,57 +34,64 @@ function parseFicheDateAppel(fiche) {
   return null;
 }
 
-/** Préfixe du type « Jeudi, il y a 3 jours — » pour la ligne date d'appel (détails uniquement). */
-function formatDateAppelRelativePrefix(date) {
+/** Texte relatif après la date absolue : « Jeudi, il y a 1 mois et 1 semaine » (détails fiche uniquement). */
+function formatDateAppelRelativeDescription(date) {
   if (!date || Number.isNaN(date.getTime())) return '';
   const now = new Date();
   const weekday = format(date, 'EEEE', { locale: frLocale });
-  const dayLabel = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : '';
+  const dayLabel = weekday ? `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ` : '';
 
   if (date > now) {
-    return dayLabel ? `${dayLabel}, dans le futur — ` : 'Dans le futur — ';
+    return `${dayLabel}dans le futur`;
   }
 
   const diffMins = differenceInMinutes(now, date);
   const diffHrs = differenceInHours(now, date);
   const diffDays = differenceInDays(now, date);
-  const diffMonths = differenceInMonths(now, date);
 
   if (diffDays >= 365) {
-    return dayLabel ? `${dayLabel}, il y a longtemps — ` : 'Il y a longtemps — ';
+    return `${dayLabel}il y a longtemps`;
   }
 
   if (diffMins < 1) {
-    return dayLabel ? `${dayLabel}, à l'instant — ` : `À l'instant — `;
+    return `${dayLabel}à l'instant`;
   }
   if (diffMins < 60) {
-    return dayLabel
-      ? `${dayLabel}, il y a ${diffMins} minute${diffMins > 1 ? 's' : ''} — `
-      : `Il y a ${diffMins} minute${diffMins > 1 ? 's' : ''} — `;
+    return `${dayLabel}il y a ${diffMins} minute${diffMins > 1 ? 's' : ''}`;
   }
   if (diffHrs < 24) {
-    return dayLabel
-      ? `${dayLabel}, il y a ${diffHrs} heure${diffHrs > 1 ? 's' : ''} — `
-      : `Il y a ${diffHrs} heure${diffHrs > 1 ? 's' : ''} — `;
+    return `${dayLabel}il y a ${diffHrs} heure${diffHrs > 1 ? 's' : ''}`;
   }
   if (diffDays < 7) {
-    return dayLabel
-      ? `${dayLabel}, il y a ${diffDays} jour${diffDays > 1 ? 's' : ''} — `
-      : `Il y a ${diffDays} jour${diffDays > 1 ? 's' : ''} — `;
+    return `${dayLabel}il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
   }
   if (diffDays < 30) {
     const w = Math.floor(diffDays / 7);
     const d = diffDays % 7;
     let rel = `il y a ${w} semaine${w > 1 ? 's' : ''}`;
     if (d > 0) rel += `, ${d} jour${d > 1 ? 's' : ''}`;
-    return dayLabel ? `${dayLabel}, ${rel} — ` : `${rel} — `;
+    return `${dayLabel}${rel}`;
   }
-  if (diffMonths < 12) {
-    return dayLabel
-      ? `${dayLabel}, il y a ${diffMonths} mois — `
-      : `Il y a ${diffMonths} mois — `;
+  // ≥ 30 jours et &lt; 1 an : mois calendaires + reste en semaines (et jours si besoin)
+  const fullMonths = differenceInMonths(now, date);
+  if (fullMonths >= 1) {
+    const afterMonths = addMonths(date, fullMonths);
+    const remDays = Math.max(0, differenceInDays(now, afterMonths));
+    const weeks = Math.floor(remDays / 7);
+    const days = remDays % 7;
+    let rel = `il y a ${fullMonths} mois`;
+    if (weeks > 0) {
+      rel += ` et ${weeks} semaine${weeks > 1 ? 's' : ''}`;
+    } else if (days > 0) {
+      rel += ` et ${days} jour${days > 1 ? 's' : ''}`;
+    }
+    return `${dayLabel}${rel}`;
   }
-  return dayLabel ? `${dayLabel}, il y a longtemps — ` : 'Il y a longtemps — ';
+  const w = Math.floor(diffDays / 7);
+  const d = diffDays % 7;
+  let rel = `il y a ${w} semaine${w > 1 ? 's' : ''}`;
+  if (d > 0) rel += `, ${d} jour${d > 1 ? 's' : ''}`;
+  return `${dayLabel}${rel}`;
 }
 
 // Résout l'id d'une profession : si le libellé existe en base on le renvoie, sinon on crée la profession et on renvoie le nouvel id
@@ -2921,7 +2928,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     : fiche.date_appel_date
                       ? dAppel.toLocaleDateString('fr-FR')
                       : dAppel.toLocaleString('fr-FR');
-                  return `${formatDateAppelRelativePrefix(dAppel)}${absolute}`;
+                  return `${absolute} — ${formatDateAppelRelativeDescription(dAppel)}`;
                 })(),
                 null, null, true)}
               {renderField('Entretien en tunisie avec', 'conf_rdv_avec', fiche.conf_rdv_avec || fiche.rdv_avec || '-', 'select', [
