@@ -149,11 +149,47 @@ function find_existing_yj_fiche_by_phones(PDO $pdo, string $tel, string $gsm1, s
         $params[] = $n;
         $params[] = $n;
     }
-    $sql = 'SELECT id, nom_centre, etat_final, date_insertion FROM yj_fiche WHERE archive = 0 AND (' . implode(' OR ', $parts) . ') LIMIT 1';
+    $sql = 'SELECT id, nom_centre, tel, gsm1, gsm2, etat_final, date_insertion FROM yj_fiche WHERE archive = 0 AND (' . implode(' OR ', $parts) . ') LIMIT 1';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    $row = $stmt->fetch();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return $row === false ? null : $row;
+}
+
+/** Champs yj_fiche (tel / gsm1 / gsm2) où le numéro normalisé apparaît. */
+function yj_fiche_phone_match_labels(array $ficheRow, string $normalizedPhone): string
+{
+    if ($normalizedPhone === '') {
+        return '';
+    }
+    $hits = [];
+    foreach (['tel', 'gsm1', 'gsm2'] as $field) {
+        if (clean_phone($ficheRow[$field] ?? '') === $normalizedPhone) {
+            $hits[] = $field;
+        }
+    }
+
+    return $hits === [] ? '' : implode(', ', $hits);
+}
+
+/** Champs import (tel / gsm1 / gsm2) qui portent ce numéro sur la ligne courante. */
+function import_row_phone_match_labels(string $tel, string $gsm1, string $gsm2, string $normalizedPhone): string
+{
+    if ($normalizedPhone === '') {
+        return '';
+    }
+    $hits = [];
+    if ($tel === $normalizedPhone && $tel !== '') {
+        $hits[] = 'tel';
+    }
+    if ($gsm1 === $normalizedPhone && $gsm1 !== '') {
+        $hits[] = 'gsm1';
+    }
+    if ($gsm2 === $normalizedPhone && $gsm2 !== '') {
+        $hits[] = 'gsm2';
+    }
+
+    return implode(', ', $hits);
 }
 
 function first_matching_key(array $row, string $wanted): ?string
@@ -355,6 +391,17 @@ function normalize_excel_datetime($value): string
     return '';
 }
 
+/** Date seule YYYY-MM-DD pour date_heure_appel (pas de validation stricte : parsing best-effort). */
+function normalize_excel_date_ymd($value): string
+{
+    $dt = normalize_excel_datetime($value);
+    if ($dt !== '' && preg_match('/^(\d{4}-\d{2}-\d{2})/', $dt, $m)) {
+        return $m[1];
+    }
+
+    return '';
+}
+
 function suggest_map_header(string $dbCol, array $headers, array $autoMapAliases): string
 {
     foreach ($headers as $h) {
@@ -387,6 +434,10 @@ function build_yj_insert_row(array $tableCols, array $mappedRow, string $nomCent
             $insertData[$colName] = $nomCentre;
             continue;
         }
+        if ($colName === 'nom_qualite') {
+            $insertData[$colName] = 'TECHNIQUE';
+            continue;
+        }
         if ($colName === 'archive') {
             $insertData[$colName] = 0;
             continue;
@@ -404,7 +455,8 @@ function build_yj_insert_row(array $tableCols, array $mappedRow, string $nomCent
             continue;
         }
         if ($colName === 'date_heure_appel') {
-            $insertData[$colName] = normalize_excel_datetime($mappedRow['date_heure_appel'] ?? '');
+            $parsedDateAppel = normalize_excel_date_ymd($mappedRow['date_heure_appel'] ?? '');
+            $insertData[$colName] = $parsedDateAppel !== '' ? $parsedDateAppel : date('Y-m-d');
             continue;
         }
 
@@ -613,6 +665,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                              AND ((tel IS NOT NULL AND tel != '')
                                                OR (gsm1 IS NOT NULL AND gsm1 != '')
                                                OR (gsm2 IS NOT NULL AND gsm2 != ''))");
+                $stmtPhones->setFetchMode(PDO::FETCH_ASSOC);
                 foreach ($stmtPhones as $f) {
                     foreach (['tel', 'gsm1', 'gsm2'] as $k) {
                         $p = clean_phone($f[$k] ?? '');
@@ -631,6 +684,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $duplicates = 0;
             $errors = 0;
             $notInserted = [];
+
+            $probeTime = date('Y-m-d H:i:s');
+            $probeInsert = build_yj_insert_row($tableCols, [], $nomCentre, $probeTime);
+            $insertColNames = array_keys($probeInsert);
+            $insertPlaceholders = array_map(static function ($c) {
+                return ':' . $c;
+            }, $insertColNames);
+            $insertSqlStatic = 'INSERT INTO yj_fiche (`' . implode('`,`', $insertColNames) . '`) VALUES (' . implode(',', $insertPlaceholders) . ')';
+            $stmtInsert = $pdo->prepare($insertSqlStatic);
 
             $pdo->beginTransaction();
             foreach ($rows as $row) {
@@ -670,10 +732,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $dupPhone = '';
                     $existing = null;
+                    $dupSource = null;
                     foreach ([$tel, $gsm1, $gsm2] as $p) {
                         if ($p !== '' && isset($phonesInsertedThisRun[$p])) {
                             $dupPhone = $p;
                             $existing = $phonesInsertedThisRun[$p];
+                            $dupSource = 'file';
                             break;
                         }
                     }
@@ -682,6 +746,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             if ($p !== '' && isset($existingPhones[$p])) {
                                 $dupPhone = $p;
                                 $existing = $existingPhones[$p];
+                                $dupSource = 'memory';
                                 break;
                             }
                         }
@@ -689,16 +754,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $existing = find_existing_yj_fiche_by_phones($pdo, $tel, $gsm1, $gsm2);
                         if ($existing !== null) {
                             $dupPhone = $tel !== '' ? $tel : ($gsm1 !== '' ? $gsm1 : $gsm2);
+                            $dupSource = 'sql';
                         }
                     }
                     if ($dupPhone !== '' && $existing !== null) {
                         $duplicates++;
+                        if ($dupSource === 'file') {
+                            $champs = import_row_phone_match_labels($tel, $gsm1, $gsm2, $dupPhone);
+                            $raisonDoublon = 'Doublon dans le fichier (deja insere) — numero sur champ(s) import: ' . ($champs !== '' ? $champs : $dupPhone);
+                        } else {
+                            $champs = yj_fiche_phone_match_labels($existing, $dupPhone);
+                            $raisonDoublon = 'Existe deja en base (archive=0) — numero sur champ(s): ' . ($champs !== '' ? $champs : 'tel / gsm1 / gsm2');
+                        }
                         $notInserted[] = [
                             'existing_id' => $existing['id'] ?? null,
                             'nom' => $mappedRow['nom'] ?? '',
                             'prenom' => $mappedRow['prenom'] ?? '',
                             'tel' => $dupPhone,
-                            'raison' => isset($phonesInsertedThisRun[$dupPhone]) ? 'Doublon dans le fichier (deja insere)' : 'Fiche existante archive=0',
+                            'raison' => $raisonDoublon,
                             'nom_centre' => $existing['nom_centre'] ?? '',
                             'etat_actuel' => $existing['etat_final'] ?? '',
                             'date_insertion_existante' => $existing['date_insertion'] ?? '',
@@ -709,13 +782,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $nowTime = date('Y-m-d H:i:s');
                     $insertData = build_yj_insert_row($tableCols, $mappedRow, $nomCentre, $nowTime);
 
-                    $cols = array_keys($insertData);
-                    $placeholders = array_map(static function ($c) {
-                        return ':' . $c;
-                    }, $cols);
-                    $insertSql = "INSERT INTO yj_fiche (`" . implode('`,`', $cols) . "`) VALUES (" . implode(',', $placeholders) . ")";
-                    $stmtInsert = $pdo->prepare($insertSql);
-                    $stmtInsert->execute(array_combine($placeholders, array_values($insertData)));
+                    $paramsInsert = [];
+                    foreach ($insertColNames as $c) {
+                        $paramsInsert[':' . $c] = $insertData[$c];
+                    }
+                    $stmtInsert->execute($paramsInsert);
 
                     $runMeta = ['etat_final' => 'EN-ATTENTE', 'date_insertion' => $nowTime];
                     foreach ([$tel, $gsm1, $gsm2] as $p) {
