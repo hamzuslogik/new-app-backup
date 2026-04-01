@@ -2119,9 +2119,10 @@ body.dashboard-admin-page {
   max-width: 10% !important;
 }
 
+/* Hauteur overlay : valeurs d’origine divisées par 3 (aligné Dashboard.css) */
 .fiche-detail-modal-content .fiche-details-table tr {
   border-bottom: 1.5px solid #8a8a8a;
-  line-height: 0.4 !important;
+  line-height: calc(0.4 / 3) !important;
   margin: 0 !important;
   padding: 0 !important;
   height: auto !important;
@@ -2130,16 +2131,16 @@ body.dashboard-admin-page {
 }
 
 .fiche-detail-modal-content .fiche-details-table td {
-  line-height: 0.4 !important;
+  line-height: calc(0.4 / 3) !important;
   margin: 0 !important;
-  padding: 0 2px !important;
+  padding: 0 calc(2px / 3) !important;
   vertical-align: middle !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr {
   height: auto !important;
   min-height: 0 !important;
-  max-height: 8px !important;
+  max-height: calc(8px / 3) !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr td {
@@ -2159,7 +2160,7 @@ body.dashboard-admin-page {
   opacity: 1 !important;
   text-align: center !important;
   vertical-align: middle !important;
-  padding: 0 2px !important;
+  padding: 0 calc(2px / 3) !important;
 }
 
 /* Assurer que les boutons dans les tableaux sont visibles */
@@ -2169,12 +2170,12 @@ body.dashboard-admin-page {
   visibility: visible !important;
   opacity: 1 !important;
   width: auto !important;
-  min-width: 20px !important;
+  min-width: calc(20px / 3) !important;
   max-width: none !important;
-  padding: 0 4px !important;
+  padding: 0 calc(4px / 3) !important;
   margin: 0 !important;
   font-size: 8px !important;
-  height: 14px !important;
+  height: calc(14px / 3) !important;
   line-height: 1 !important;
 }
 
