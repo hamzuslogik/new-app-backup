@@ -9,7 +9,83 @@ import { useRouteParams } from '../contexts/RouteParamsContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
+import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, format } from 'date-fns';
+import { fr as frLocale } from 'date-fns/locale';
 import './FicheDetail.css';
+
+/** Date d'appel exploitable pour affichage (détails fiche, pas historique). */
+function parseFicheDateAppel(fiche) {
+  if (!fiche) return null;
+  if (fiche.date_appel_time) {
+    const d = new Date(fiche.date_appel_time);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (fiche.date_appel_date) {
+    const d = new Date(fiche.date_appel_date);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (fiche.date_appel != null && fiche.date_appel !== '') {
+    const n = Number(fiche.date_appel);
+    if (!Number.isNaN(n)) {
+      const d = new Date(n * 1000);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+  }
+  return null;
+}
+
+/** Préfixe du type « Jeudi, il y a 3 jours — » pour la ligne date d'appel (détails uniquement). */
+function formatDateAppelRelativePrefix(date) {
+  if (!date || Number.isNaN(date.getTime())) return '';
+  const now = new Date();
+  const weekday = format(date, 'EEEE', { locale: frLocale });
+  const dayLabel = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : '';
+
+  if (date > now) {
+    return dayLabel ? `${dayLabel}, dans le futur — ` : 'Dans le futur — ';
+  }
+
+  const diffMins = differenceInMinutes(now, date);
+  const diffHrs = differenceInHours(now, date);
+  const diffDays = differenceInDays(now, date);
+  const diffMonths = differenceInMonths(now, date);
+
+  if (diffDays >= 365) {
+    return dayLabel ? `${dayLabel}, il y a longtemps — ` : 'Il y a longtemps — ';
+  }
+
+  if (diffMins < 1) {
+    return dayLabel ? `${dayLabel}, à l'instant — ` : `À l'instant — `;
+  }
+  if (diffMins < 60) {
+    return dayLabel
+      ? `${dayLabel}, il y a ${diffMins} minute${diffMins > 1 ? 's' : ''} — `
+      : `Il y a ${diffMins} minute${diffMins > 1 ? 's' : ''} — `;
+  }
+  if (diffHrs < 24) {
+    return dayLabel
+      ? `${dayLabel}, il y a ${diffHrs} heure${diffHrs > 1 ? 's' : ''} — `
+      : `Il y a ${diffHrs} heure${diffHrs > 1 ? 's' : ''} — `;
+  }
+  if (diffDays < 7) {
+    return dayLabel
+      ? `${dayLabel}, il y a ${diffDays} jour${diffDays > 1 ? 's' : ''} — `
+      : `Il y a ${diffDays} jour${diffDays > 1 ? 's' : ''} — `;
+  }
+  if (diffDays < 30) {
+    const w = Math.floor(diffDays / 7);
+    const d = diffDays % 7;
+    let rel = `il y a ${w} semaine${w > 1 ? 's' : ''}`;
+    if (d > 0) rel += `, ${d} jour${d > 1 ? 's' : ''}`;
+    return dayLabel ? `${dayLabel}, ${rel} — ` : `${rel} — `;
+  }
+  if (diffMonths < 12) {
+    return dayLabel
+      ? `${dayLabel}, il y a ${diffMonths} mois — `
+      : `Il y a ${diffMonths} mois — `;
+  }
+  return dayLabel ? `${dayLabel}, il y a longtemps — ` : 'Il y a longtemps — ';
+}
 
 // Résout l'id d'une profession : si le libellé existe en base on le renvoie, sinon on crée la profession et on renvoie le nouvel id
 async function resolveProfessionId(apiClient, displayName, currentId, professionsList) {
@@ -2837,10 +2913,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   : (typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_madame))?.nom || fiche.type_contrat_madame || '-'),
                 'select', typeContrat)}
               {renderField('Date & Heure d\'appel', 'date_appel_time', 
-                (fiche.date_appel_time || fiche.date_appel_date) 
-                  ? (fiche.date_appel_time ? new Date(fiche.date_appel_time).toLocaleString('fr-FR') : 
-                     (fiche.date_appel_date ? new Date(fiche.date_appel_date).toLocaleDateString('fr-FR') : '-'))
-                  : '-',
+                (() => {
+                  const dAppel = parseFicheDateAppel(fiche);
+                  if (!dAppel) return '-';
+                  const absolute = fiche.date_appel_time
+                    ? dAppel.toLocaleString('fr-FR')
+                    : fiche.date_appel_date
+                      ? dAppel.toLocaleDateString('fr-FR')
+                      : dAppel.toLocaleString('fr-FR');
+                  return `${formatDateAppelRelativePrefix(dAppel)}${absolute}`;
+                })(),
                 null, null, true)}
               {renderField('Entretien en tunisie avec', 'conf_rdv_avec', fiche.conf_rdv_avec || fiche.rdv_avec || '-', 'select', [
                 { value: 'MR', label: 'Mr' },
