@@ -198,10 +198,12 @@ function normalize_excel_datetime($value): string
         return '';
     }
 
-    // Excel serial date/time value (e.g. 45259.5)
-    if (is_numeric($s)) {
+    // Excel serial date/time (ex. 45259.5) — pas une année seule (1900–2100) ni du texte
+    if (is_numeric($s) && strpos($s, '/') === false && strpos($s, '-') === false && !preg_match('/[a-zA-Zàâäéèêëïîôùûüç]/u', $s)) {
         $serial = (float)$s;
-        if ($serial > 0) {
+        $asInt = (int)round($serial);
+        $isLikelyYearOnly = ($serial == $asInt && $asInt >= 1900 && $asInt <= 2100 && strpos($s, '.') === false);
+        if (!$isLikelyYearOnly && $serial > 1 && $serial < 1000000) {
             $unix = (int)round(($serial - 25569) * 86400);
             if ($unix > 0) {
                 return gmdate('Y-m-d H:i:s', $unix);
@@ -209,14 +211,125 @@ function normalize_excel_datetime($value): string
         }
     }
 
-    $s = str_replace('T', ' ', $s);
+    $s = str_replace(['T', 't'], ' ', $s);
     $s = preg_replace('/\s+/', ' ', $s) ?? $s;
+
+    // Heure type 14h30, 14 h 30, 14h (FR)
+    $s = preg_replace_callback(
+        '/\b(\d{1,2})\s*h\s*(\d{2})(?:\s*(?::(\d{2}))?)?\b/iu',
+        static function ($m) {
+            $h = (int)$m[1];
+            $i = (int)$m[2];
+            $sec = isset($m[3]) && $m[3] !== '' ? (int)$m[3] : 0;
+
+            return sprintf('%02d:%02d:%02d', $h, $i, $sec);
+        },
+        $s
+    ) ?? $s;
+
+    // Jours de la semaine (FR) en tête de chaîne
+    $s = preg_replace(
+        '/^(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s*,?\s*/iu',
+        '',
+        $s
+    ) ?? $s;
+
+    $s = preg_replace('/^le\s+/iu', '', $s) ?? $s;
+
+    // Mois français / abréviations → anglais (pour strtotime)
+    $frToEn = [
+        'janvier' => 'January',
+        'février' => 'February',
+        'fevrier' => 'February',
+        'mars' => 'March',
+        'avril' => 'April',
+        'mai' => 'May',
+        'juin' => 'June',
+        'juillet' => 'July',
+        'août' => 'August',
+        'aout' => 'August',
+        'septembre' => 'September',
+        'octobre' => 'October',
+        'novembre' => 'November',
+        'décembre' => 'December',
+        'decembre' => 'December',
+        'janv.' => 'Jan',
+        'févr.' => 'Feb',
+        'fevr.' => 'Feb',
+        'avr.' => 'Apr',
+        'juil.' => 'Jul',
+        'sept.' => 'Sep',
+        'oct.' => 'Oct',
+        'nov.' => 'Nov',
+        'déc.' => 'Dec',
+        'dec.' => 'Dec',
+        'janv' => 'Jan',
+        'févr' => 'Feb',
+        'fevr' => 'Feb',
+        'avr' => 'Apr',
+        'juil' => 'Jul',
+        'sept' => 'Sep',
+        'oct' => 'Oct',
+        'nov' => 'Nov',
+        'déc' => 'Dec',
+        'dec' => 'Dec',
+    ];
+    uksort($frToEn, static function ($a, $b) {
+        return strlen($b) <=> strlen($a);
+    });
+    foreach ($frToEn as $fr => $en) {
+        $s = preg_replace('/\b' . preg_quote($fr, '/') . '\b/iu', $en, $s) ?? $s;
+    }
+
+    $s = preg_replace('/\s+à\s+/iu', ' ', $s) ?? $s;
+    $s = preg_replace('/\s*,\s*/', ' ', $s) ?? $s;
+    $s = trim(preg_replace('/\s+/', ' ', $s) ?? $s);
+
+    $tryDateTimeFormats = static function (string $str): ?string {
+        $formats = [
+            'd/m/Y H:i:s',
+            'd/m/Y H:i',
+            'd/m/Y G:i:s',
+            'd/m/Y G:i',
+            'd/m/Y',
+            'd-m-Y H:i:s',
+            'd-m-Y H:i',
+            'd-m-Y',
+            'd.m.Y H:i:s',
+            'd.m.Y H:i',
+            'd.m.Y',
+            'Y-m-d H:i:s',
+            'Y-m-d H:i',
+            'Y-m-d',
+            'd M Y H:i:s',
+            'd M Y H:i',
+            'd M Y',
+            'j M Y H:i:s',
+            'j M Y H:i',
+            'j M Y',
+            'M j, Y H:i:s',
+            'M j, Y H:i',
+            'M j, Y',
+        ];
+        foreach ($formats as $fmt) {
+            $dt = DateTime::createFromFormat($fmt, $str);
+            if ($dt instanceof DateTime) {
+                $err = DateTime::getLastErrors();
+                if (is_array($err) && ($err['error_count'] ?? 0) === 0 && ($err['warning_count'] ?? 0) === 0) {
+                    return $dt->format('Y-m-d H:i:s');
+                }
+            }
+        }
+
+        return null;
+    };
 
     // dd/mm/yyyy [hh:mm[:ss]]
     if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/', $s, $m)) {
         $h = isset($m[4]) ? (int)$m[4] : 0;
         $i = isset($m[5]) ? (int)$m[5] : 0;
         $sec = isset($m[6]) ? (int)$m[6] : 0;
+
         return sprintf('%04d-%02d-%02d %02d:%02d:%02d', (int)$m[3], (int)$m[2], (int)$m[1], $h, $i, $sec);
     }
 
@@ -225,7 +338,13 @@ function normalize_excel_datetime($value): string
         $h = isset($m[4]) ? (int)$m[4] : 0;
         $i = isset($m[5]) ? (int)$m[5] : 0;
         $sec = isset($m[6]) ? (int)$m[6] : 0;
+
         return sprintf('%04d-%02d-%02d %02d:%02d:%02d', (int)$m[1], (int)$m[2], (int)$m[3], $h, $i, $sec);
+    }
+
+    $parsed = $tryDateTimeFormats($s);
+    if ($parsed !== null) {
+        return $parsed;
     }
 
     $ts = strtotime($s);
@@ -379,7 +498,7 @@ function clear_import_session(): void
     unset($_SESSION['import_file'], $_SESSION['import_headers'], $_SESSION['import_preview']);
 }
 
-$yjFieldsCoord = ['civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'Adresse', 'cp', 'ville', 'commentaire'];
+$yjFieldsCoord = ['civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'Adresse', 'cp', 'ville', 'conf_produit', 'commentaire'];
 
 $yjFieldsPerso = [
     'profession_mr', 'profession_mme', 'age_mr', 'age_mme', 'enfant_encharge', 'situation_conju', 'revenu', 'credit',
@@ -419,6 +538,7 @@ $autoMapAliases = [
     'civ' => ['civ', 'civilite', 'title'],
     'conf_consommations' => ['consommation', 'conso'],
     'conf_produit' => ['conf_produit', 'produit', 'product', 'type_produit'],
+    'date_heure_appel' => ['date appel', 'date d appel', 'date_appel', 'appel', 'rdv', 'date rdv'],
 ];
 
 $step = 'upload';
@@ -633,6 +753,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['last_import_result'] = $result;
             $step = 'done';
             clear_import_session();
+        } elseif ($action === 'archive_bulk') {
+            $rawIds = $_POST['fiche_ids'] ?? [];
+            if (!is_array($rawIds)) {
+                $rawIds = [];
+            }
+            $ids = array_values(array_unique(array_filter(array_map('intval', $rawIds), static function ($id) {
+                return $id > 0;
+            })));
+            if ($ids === []) {
+                throw new RuntimeException('Aucune fiche selectionnee pour archivage.');
+            }
+
+            $pdo = db($config);
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $stmt = $pdo->prepare("UPDATE yj_fiche SET archive = 1 WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+            $n = $stmt->rowCount();
+
+            $message = $n > 0
+                ? "{$n} fiche(s) archivee(s)."
+                : 'Aucune fiche archivee (IDs introuvables ou deja archivees).';
+
+            $result = $_SESSION['last_import_result'] ?? null;
+            $idSet = array_flip($ids);
+            if (is_array($result) && !empty($result['notInserted']) && is_array($result['notInserted'])) {
+                $result['notInserted'] = array_values(array_filter($result['notInserted'], static function ($row) use ($idSet) {
+                    $eid = (int)($row['existing_id'] ?? 0);
+
+                    return $eid === 0 || !isset($idSet[$eid]);
+                }));
+                $_SESSION['last_import_result'] = $result;
+            }
+            $step = 'done';
+        } elseif ($action === 'export_not_inserted') {
+            $resultToExport = $_SESSION['last_import_result'] ?? null;
+            $rows = (is_array($resultToExport) && !empty($resultToExport['notInserted']) && is_array($resultToExport['notInserted']))
+                ? $resultToExport['notInserted']
+                : [];
+            if ($rows === []) {
+                throw new RuntimeException("Aucune ligne a exporter.");
+            }
+
+            $filename = 'contacts_non_inseres_' . date('Ymd_His') . '.csv';
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+
+            $out = fopen('php://output', 'wb');
+            if ($out === false) {
+                throw new RuntimeException("Impossible de generer le fichier CSV.");
+            }
+
+            // BOM UTF-8 pour Excel
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['Nom', 'Prenom', 'Tel', 'Raison', 'Nom centre', 'Etat actuel', 'Date insertion existante'], ';');
+            foreach ($rows as $ni) {
+                fputcsv($out, [
+                    (string)($ni['nom'] ?? ''),
+                    (string)($ni['prenom'] ?? ''),
+                    (string)($ni['tel'] ?? ''),
+                    (string)($ni['raison'] ?? ''),
+                    (string)($ni['nom_centre'] ?? ''),
+                    (string)($ni['etat_actuel'] ?? ''),
+                    (string)($ni['date_insertion_existante'] ?? ''),
+                ], ';');
+            }
+            fclose($out);
+            exit;
         } elseif ($action === 'archive') {
             $ficheId = (int)($_POST['fiche_id'] ?? 0);
             if ($ficheId <= 0) {
@@ -690,7 +879,9 @@ function selected($a, $b): string { return ((string)$a === (string)$b) ? 'select
     .col{flex:1;min-width:180px}
     label{display:block;margin-bottom:6px;font-weight:600}
     input,select,button{width:100%;padding:8px;box-sizing:border-box}
+    .result-table input[type=checkbox]{width:auto;margin:0}
     .btn{background:#0f62fe;color:#fff;border:0;border-radius:6px;cursor:pointer}
+    .btn-inline{width:auto;display:inline-block;padding:8px 14px}
     .alert{padding:10px;border-radius:6px;background:#fff3cd;border:1px solid #ffecb5}
     .mapping-section h4{margin:18px 0 10px;color:#333;border-bottom:1px solid #ddd;padding-bottom:6px}
     select[multiple]{min-height:140px;font-size:13px}
@@ -812,31 +1003,58 @@ function selected($a, $b): string { return ((string)$a === (string)$b) ? 'select
       <h3>Resultat import</h3>
       <p>Total: <?php echo (int)$result['total']; ?> | Inseres: <?php echo (int)$result['inserted']; ?> | Doublons: <?php echo (int)$result['duplicates']; ?> | Erreurs: <?php echo (int)$result['errors']; ?></p>
       <?php if (!empty($result['notInserted'])): ?>
-        <table>
-          <thead><tr><th>Nom</th><th>Prenom</th><th>Tel</th><th>Raison</th><th>Nom centre</th><th>Etat actuel</th><th>Date insertion existante</th><th>Action</th></tr></thead>
-          <tbody>
-          <?php foreach ($result['notInserted'] as $ni): ?>
-            <tr>
-              <td><?php echo htmlspecialchars((string)($ni['nom'] ?? '')); ?></td>
-              <td><?php echo htmlspecialchars((string)($ni['prenom'] ?? '')); ?></td>
-              <td><?php echo htmlspecialchars((string)($ni['tel'] ?? '')); ?></td>
-              <td><?php echo htmlspecialchars((string)($ni['raison'] ?? '')); ?></td>
-              <td><?php echo htmlspecialchars((string)($ni['nom_centre'] ?? '')); ?></td>
-              <td><?php echo htmlspecialchars((string)($ni['etat_actuel'] ?? '')); ?></td>
-              <td><?php echo htmlspecialchars((string)($ni['date_insertion_existante'] ?? '')); ?></td>
-              <td>
-                <?php if (!empty($ni['existing_id'])): ?>
-                  <form method="post" style="margin:0">
-                    <input type="hidden" name="action" value="archive">
-                    <input type="hidden" name="fiche_id" value="<?php echo (int)$ni['existing_id']; ?>">
-                    <button class="btn" type="submit">Archiver</button>
-                  </form>
-                <?php endif; ?>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-          </tbody>
-        </table>
+        <form method="post" style="margin:0 0 10px;display:inline-block">
+          <input type="hidden" name="action" value="export_not_inserted">
+          <button class="btn btn-inline" type="submit">Exporter la liste (CSV)</button>
+        </form>
+        <form method="post" class="result-table">
+          <input type="hidden" name="action" value="archive_bulk">
+          <p style="margin:0 0 12px">
+            <button class="btn btn-inline" type="submit">Archiver la selection</button>
+            <span class="help-small" style="margin-left:10px">Cochez les lignes puis validez (fiches existantes uniquement).</span>
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px"><input type="checkbox" id="check_all_notinserted" title="Tout cocher"></th>
+                <th>Nom</th>
+                <th>Prenom</th>
+                <th>Tel</th>
+                <th>Raison</th>
+                <th>Nom centre</th>
+                <th>Etat actuel</th>
+                <th>Date insertion existante</th>
+              </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($result['notInserted'] as $ni): ?>
+              <tr>
+                <td>
+                  <?php if (!empty($ni['existing_id'])): ?>
+                    <input class="cb-archive-fiche" type="checkbox" name="fiche_ids[]" value="<?php echo (int)$ni['existing_id']; ?>">
+                  <?php endif; ?>
+                </td>
+                <td><?php echo htmlspecialchars((string)($ni['nom'] ?? '')); ?></td>
+                <td><?php echo htmlspecialchars((string)($ni['prenom'] ?? '')); ?></td>
+                <td><?php echo htmlspecialchars((string)($ni['tel'] ?? '')); ?></td>
+                <td><?php echo htmlspecialchars((string)($ni['raison'] ?? '')); ?></td>
+                <td><?php echo htmlspecialchars((string)($ni['nom_centre'] ?? '')); ?></td>
+                <td><?php echo htmlspecialchars((string)($ni['etat_actuel'] ?? '')); ?></td>
+                <td><?php echo htmlspecialchars((string)($ni['date_insertion_existante'] ?? '')); ?></td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+        </form>
+        <script>
+        (function () {
+          var m = document.getElementById('check_all_notinserted');
+          if (!m) return;
+          m.addEventListener('change', function () {
+            document.querySelectorAll('.cb-archive-fiche').forEach(function (c) { c.checked = m.checked; });
+          });
+        })();
+        </script>
       <?php endif; ?>
     </div>
   <?php endif; ?>
