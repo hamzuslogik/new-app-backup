@@ -2816,44 +2816,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 { value: 'PAXE', label: 'Pacsé' }
               ])}
               {renderField('Nombre d\'enfants en Charges', 'nb_enfants', fiche.nb_enfants || '-', 'number')}
-              {renderField('Date & Heure d\'appel', 'date_appel_time', 
-                (fiche.date_appel_time || fiche.date_appel_date) 
-                  ? (fiche.date_appel_time ? new Date(fiche.date_appel_time).toLocaleString('fr-FR') : 
-                     (fiche.date_appel_date ? new Date(fiche.date_appel_date).toLocaleDateString('fr-FR') : '-'))
-                  : '-',
-                null, null, true)}
-              {renderField('Entretien en tunisie avec', 'conf_rdv_avec', fiche.conf_rdv_avec || fiche.rdv_avec || '-', 'select', [
-                { value: 'MR', label: 'Mr' },
-                { value: 'MME', label: 'Mme' }
-              ])}
-              {renderField('Agent', 'id_agent',
-                agents?.find(a => a.id === fiche.id_agent)?.pseudo || fiche.agent_pseudo || '-',
-                null, null)}
-              {renderField('Centre', 'id_centre',
-                centres?.find(c => c.id === fiche.id_centre)?.titre || fiche.centre_titre || '-',
-                'select', centres)}
-              {renderField('Présence du couple', 'rdv_seul',
-                (() => {
-                  const raw = (fiche.conf_presence_couple !== undefined && fiche.conf_presence_couple !== null && String(fiche.conf_presence_couple).trim() !== '')
-                    ? String(fiche.conf_presence_couple).toUpperCase()
-                    : (fiche.conf_rdv_avec || fiche.rdv_avec)
-                      ? (fiche.conf_rdv_avec === 'SEUL' || fiche.rdv_avec === 'SEUL' ? 'NON' : 'OUI')
-                      : null;
-                  return raw || '-';
-                })(),
-                'select', [
-                  { value: 'OUI', label: 'Oui (couple présent)' },
-                  { value: 'NON', label: 'Non (RDV seul)' }
-                ])}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Section Informations professionnelles */}
-        <div className="fiche-section">
-          <h2 className="section-title">Informations professionnelles</h2>
-          <table className="fiche-details-table">
-            <tbody>
               {renderField('Profession Du MR', 'profession_mr',
                 (fiche.conf_profession_monsieur != null && String(fiche.conf_profession_monsieur).trim() !== '')
                   ? (professions?.find(p => p.id == fiche.conf_profession_monsieur || (p.nom && String(p.nom).toLowerCase() === String(fiche.conf_profession_monsieur).toLowerCase()))?.nom || fiche.conf_profession_monsieur)
@@ -2874,6 +2836,32 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   ? (typeContrat?.find(t => String(t.id) === String(fiche.conf_type_contrat_madame))?.nom || fiche.conf_type_contrat_madame || '-')
                   : (typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_madame))?.nom || fiche.type_contrat_madame || '-'),
                 'select', typeContrat)}
+              {renderField('Date & Heure d\'appel', 'date_appel_time', 
+                (fiche.date_appel_time || fiche.date_appel_date) 
+                  ? (fiche.date_appel_time ? new Date(fiche.date_appel_time).toLocaleString('fr-FR') : 
+                     (fiche.date_appel_date ? new Date(fiche.date_appel_date).toLocaleDateString('fr-FR') : '-'))
+                  : '-',
+                null, null, true)}
+              {renderField('Entretien en tunisie avec', 'conf_rdv_avec', fiche.conf_rdv_avec || fiche.rdv_avec || '-', 'select', [
+                { value: 'MR', label: 'Mr' },
+                { value: 'MME', label: 'Mme' }
+              ])}
+              {renderField('Centre', 'id_centre',
+                centres?.find(c => c.id === fiche.id_centre)?.titre || fiche.centre_titre || '-',
+                'select', centres)}
+              {renderField('Présence du couple', 'rdv_seul',
+                (() => {
+                  const raw = (fiche.conf_presence_couple !== undefined && fiche.conf_presence_couple !== null && String(fiche.conf_presence_couple).trim() !== '')
+                    ? String(fiche.conf_presence_couple).toUpperCase()
+                    : (fiche.conf_rdv_avec || fiche.rdv_avec)
+                      ? (fiche.conf_rdv_avec === 'SEUL' || fiche.rdv_avec === 'SEUL' ? 'NON' : 'OUI')
+                      : null;
+                  return raw || '-';
+                })(),
+                'select', [
+                  { value: 'OUI', label: 'Oui (couple présent)' },
+                  { value: 'NON', label: 'Non (RDV seul)' }
+                ])}
             </tbody>
           </table>
         </div>
