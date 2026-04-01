@@ -550,6 +550,36 @@ function clear_import_session(): void
     unset($_SESSION['import_file'], $_SESSION['import_headers'], $_SESSION['import_preview']);
 }
 
+/**
+ * Apres archivage des fiches existantes : enregistre les lignes Excel associees pour insertion validee ensuite.
+ *
+ * @param int[] $archivedIds
+ */
+function queue_pending_inserts_after_archive(array $archivedIds, array $notInsertedRows): void
+{
+    if ($archivedIds === [] || $notInsertedRows === []) {
+        return;
+    }
+    $idSet = array_flip($archivedIds);
+    if (!isset($_SESSION['pending_yj_inserts']) || !is_array($_SESSION['pending_yj_inserts'])) {
+        $_SESSION['pending_yj_inserts'] = [];
+    }
+    $nomCentre = (string)($_SESSION['last_import_nom_centre'] ?? '');
+    foreach ($notInsertedRows as $row) {
+        $eid = (int)($row['existing_id'] ?? 0);
+        if ($eid <= 0 || !isset($idSet[$eid])) {
+            continue;
+        }
+        if (empty($row['pending_mapped_row']) || !is_array($row['pending_mapped_row'])) {
+            continue;
+        }
+        $_SESSION['pending_yj_inserts'][] = [
+            'mapped_row' => $row['pending_mapped_row'],
+            'nom_centre' => $nomCentre,
+        ];
+    }
+}
+
 $yjFieldsCoord = ['civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'Adresse', 'cp', 'ville', 'conf_produit', 'commentaire'];
 
 $yjFieldsPerso = [
@@ -822,8 +852,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'notInserted' => $notInserted,
             ];
             $_SESSION['last_import_result'] = $result;
+            $_SESSION['last_import_nom_centre'] = $nomCentre;
             $step = 'done';
             clear_import_session();
+        } elseif ($action === 'confirm_pending_inserts') {
+            $pending = $_SESSION['pending_yj_inserts'] ?? [];
+            if (!is_array($pending) || $pending === []) {
+                throw new RuntimeException('Aucune insertion en attente.');
+            }
+
+            $pdo = db($config);
+            $tableCols = get_table_columns($pdo, 'yj_fiche');
+            if (empty($tableCols)) {
+                throw new RuntimeException('Table yj_fiche introuvable.');
+            }
+
+            $probeTime = date('Y-m-d H:i:s');
+            $probeInsert = build_yj_insert_row($tableCols, [], '_probe_', $probeTime);
+            $insertColNames = array_keys($probeInsert);
+            $insertPlaceholders = array_map(static function ($c) {
+                return ':' . $c;
+            }, $insertColNames);
+            $insertSqlStatic = 'INSERT INTO yj_fiche (`' . implode('`,`', $insertColNames) . '`) VALUES (' . implode(',', $insertPlaceholders) . ')';
+            $stmtInsert = $pdo->prepare($insertSqlStatic);
+
+            $ok = 0;
+            $fail = 0;
+            $pdo->beginTransaction();
+            try {
+                foreach ($pending as $item) {
+                    if (!is_array($item) || empty($item['mapped_row']) || !is_array($item['mapped_row'])) {
+                        $fail++;
+                        continue;
+                    }
+                    $mappedRow = $item['mapped_row'];
+                    $nc = trim((string)($item['nom_centre'] ?? ''));
+                    if ($nc === '') {
+                        $nc = (string)($_SESSION['last_import_nom_centre'] ?? '');
+                    }
+                    $nowTime = date('Y-m-d H:i:s');
+                    $insertData = build_yj_insert_row($tableCols, $mappedRow, $nc, $nowTime);
+                    $paramsInsert = [];
+                    foreach ($insertColNames as $c) {
+                        $paramsInsert[':' . $c] = $insertData[$c];
+                    }
+                    try {
+                        $stmtInsert->execute($paramsInsert);
+                        $ok++;
+                    } catch (Throwable $e) {
+                        $fail++;
+                    }
+                }
+                $pdo->commit();
+            } catch (Throwable $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+
+            unset($_SESSION['pending_yj_inserts']);
+            $message = "Insertions validees: {$ok} reussie(s)" . ($fail > 0 ? ", {$fail} echec(s)." : '.');
+            $step = 'done';
         } elseif ($action === 'archive_bulk') {
             $rawIds = $_POST['fiche_ids'] ?? [];
             if (!is_array($rawIds)) {
@@ -849,12 +937,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = $_SESSION['last_import_result'] ?? null;
             $idSet = array_flip($ids);
             if (is_array($result) && !empty($result['notInserted']) && is_array($result['notInserted'])) {
+                queue_pending_inserts_after_archive($ids, $result['notInserted']);
                 $result['notInserted'] = array_values(array_filter($result['notInserted'], static function ($row) use ($idSet) {
                     $eid = (int)($row['existing_id'] ?? 0);
 
                     return $eid === 0 || !isset($idSet[$eid]);
                 }));
                 $_SESSION['last_import_result'] = $result;
+            }
+            $pendingCount = count($_SESSION['pending_yj_inserts'] ?? []);
+            if ($pendingCount > 0) {
+                $message .= " {$pendingCount} contact(s) en attente d'insertion — validez ci-dessous.";
             }
             $step = 'done';
         } elseif ($action === 'export_not_inserted') {
@@ -911,10 +1004,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $result = $_SESSION['last_import_result'] ?? null;
             if (is_array($result) && !empty($result['notInserted']) && is_array($result['notInserted'])) {
+                queue_pending_inserts_after_archive([$ficheId], $result['notInserted']);
                 $result['notInserted'] = array_values(array_filter($result['notInserted'], static function ($row) use ($ficheId) {
                     return (int)($row['existing_id'] ?? 0) !== $ficheId;
                 }));
                 $_SESSION['last_import_result'] = $result;
+            }
+            $pendingCount = count($_SESSION['pending_yj_inserts'] ?? []);
+            if ($pendingCount > 0) {
+                $message .= " {$pendingCount} contact(s) en attente d'insertion — validez ci-dessous.";
             }
             $step = 'done';
         }
@@ -931,6 +1029,11 @@ $headers = $headers ?: $sessionHeaders;
 $preview = $preview ?: $sessionPreview;
 if ($result === null && isset($_SESSION['last_import_result']) && is_array($_SESSION['last_import_result'])) {
     $result = $_SESSION['last_import_result'];
+}
+
+$pendingYjInserts = $_SESSION['pending_yj_inserts'] ?? [];
+if (!is_array($pendingYjInserts)) {
+    $pendingYjInserts = [];
 }
 
 function selected($a, $b): string { return ((string)$a === (string)$b) ? 'selected' : ''; }
@@ -963,6 +1066,42 @@ function selected($a, $b): string { return ((string)$a === (string)$b) ? 'select
 <body>
   <h1>Import en masse Excel (PHP)</h1>
   <?php if ($message !== ''): ?><div class="alert"><?php echo htmlspecialchars($message); ?></div><?php endif; ?>
+
+  <?php if (!empty($pendingYjInserts)): ?>
+    <div class="box" style="border-color:#0f62fe">
+      <h3>Insertion apres archivage (validation)</h3>
+      <p class="help-small">Les fiches en conflit ont ete archivees. Les lignes ci-dessous correspondent aux nouveaux contacts a inserer. Cliquez sur le bouton pour les creer dans <code>yj_fiche</code>.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Prenom</th>
+            <th>Tel</th>
+            <th>Gsm1</th>
+            <th>Gsm2</th>
+            <th>Nom centre (import)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($pendingYjInserts as $p): ?>
+            <?php $mr = $p['mapped_row'] ?? []; ?>
+            <tr>
+              <td><?php echo htmlspecialchars((string)($mr['nom'] ?? '')); ?></td>
+              <td><?php echo htmlspecialchars((string)($mr['prenom'] ?? '')); ?></td>
+              <td><?php echo htmlspecialchars((string)($mr['tel'] ?? '')); ?></td>
+              <td><?php echo htmlspecialchars((string)($mr['gsm1'] ?? '')); ?></td>
+              <td><?php echo htmlspecialchars((string)($mr['gsm2'] ?? '')); ?></td>
+              <td><?php echo htmlspecialchars((string)($p['nom_centre'] ?? '')); ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+      <form method="post" style="margin-top:12px">
+        <input type="hidden" name="action" value="confirm_pending_inserts">
+        <button class="btn" type="submit">Valider et inserer les nouveaux contacts</button>
+      </form>
+    </div>
+  <?php endif; ?>
 
   <div class="box">
     <form method="post" enctype="multipart/form-data">

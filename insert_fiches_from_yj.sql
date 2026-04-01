@@ -7,6 +7,11 @@
 -- Ce script suppose que la table yj_fiche existe déjà dans la base de données.
 -- Si elle n'existe pas, vous devez d'abord exécuter yj_fiche.sql
 --
+-- yj_fiche.id_qualite n'est pas utilise (toujours NULL en pratique). fiches.id_qualite
+-- est rempli uniquement via nom_qualite -> utilisateurs.pseudo.
+-- Executer AVANT ce script : ensure_utilisateurs_nom_qualite_from_yj_fiche.sql
+-- (cree les utilisateurs manquants, inactifs, pour que la resolution fonctionne)
+--
 -- Ce script migre toutes les fiches de yj_fiche vers la nouvelle table fiches
 -- en adaptant les noms de colonnes et en convertissant les types de données.
 --
@@ -150,6 +155,7 @@ DELIMITER ;
 --   yj_fiche.nom_confirmateur_2 (varchar) -> fiches.id_confirmateur_2 (int) - conversion via table utilisateurs
 --   yj_fiche.nom_confirmateur_3 (varchar) -> fiches.id_confirmateur_3 (int) - conversion via table utilisateurs
 --   yj_fiche.commentaire -> fiches.conf_commentaire_produit (commentaire confirmateur / compte rendu)
+--   yj_fiche.nom_qualite uniquement -> fiches.id_qualite via utilisateurs.pseudo (yj_fiche.id_qualite ignore)
 
 INSERT INTO `fiches` (
   `id`, `civ`, `nom`, `prenom`, `tel`, `gsm1`, `gsm2`, `adresse`, `cp`, `ville`,
@@ -304,7 +310,15 @@ SELECT
     THEN (SELECT `id` FROM `utilisateurs` WHERE TRIM(UPPER(`pseudo`)) = UPPER(TRIM(`yj_fiche`.`nom_confirmateur_3`)) LIMIT 1)
     ELSE NULL
   END as `id_confirmateur_3`,
-  `id_qualite`,
+  CASE
+    WHEN NULLIF(TRIM(`nom_qualite`), '') IS NOT NULL
+    THEN (
+      SELECT `id` FROM `utilisateurs`
+      WHERE TRIM(UPPER(`pseudo`)) = TRIM(UPPER(`yj_fiche`.`nom_qualite`))
+      LIMIT 1
+    )
+    ELSE NULL
+  END as `id_qualite`,
   NULL as `id_qualif`, -- Pas de champ direct dans yj_fiche
   -- id_commercial: utiliser id_commercial si présent, sinon chercher via nom_commercial
   COALESCE(
@@ -574,6 +588,7 @@ ON DUPLICATE KEY UPDATE
   `id_confirmateur` = VALUES(`id_confirmateur`),
   `id_confirmateur_2` = VALUES(`id_confirmateur_2`),
   `id_confirmateur_3` = VALUES(`id_confirmateur_3`),
+  `id_qualite` = VALUES(`id_qualite`),
   `date_rdv_time` = VALUES(`date_rdv_time`),
   `date_modif_time` = VALUES(`date_modif_time`),
   `conf_commentaire_produit` = VALUES(`conf_commentaire_produit`),
