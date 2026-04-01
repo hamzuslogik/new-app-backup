@@ -2717,7 +2717,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           {fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : 'PV')}
         </div>
         <h1>
-          <FaInfoCircle /> Détail de la fiche
+          <FaInfoCircle /> Détails de la fiche
           {isR2 && <span style={{ 
             marginLeft: '10px', 
             fontSize: '0.7em', 
