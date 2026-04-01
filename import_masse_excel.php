@@ -149,7 +149,7 @@ function find_existing_yj_fiche_by_phones(PDO $pdo, string $tel, string $gsm1, s
         $params[] = $n;
         $params[] = $n;
     }
-    $sql = 'SELECT etat_final, date_insertion FROM yj_fiche WHERE archive = 0 AND (' . implode(' OR ', $parts) . ') LIMIT 1';
+    $sql = 'SELECT id, nom_centre, etat_final, date_insertion FROM yj_fiche WHERE archive = 0 AND (' . implode(' OR ', $parts) . ') LIMIT 1';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $row = $stmt->fetch();
@@ -189,6 +189,51 @@ function coerce_for_yj_column($value, array $meta)
         return $value === '' ? 0 : 0 + (float)$value;
     }
     return (string)$value;
+}
+
+function normalize_excel_datetime($value): string
+{
+    $s = trim((string)$value);
+    if ($s === '') {
+        return '';
+    }
+
+    // Excel serial date/time value (e.g. 45259.5)
+    if (is_numeric($s)) {
+        $serial = (float)$s;
+        if ($serial > 0) {
+            $unix = (int)round(($serial - 25569) * 86400);
+            if ($unix > 0) {
+                return gmdate('Y-m-d H:i:s', $unix);
+            }
+        }
+    }
+
+    $s = str_replace('T', ' ', $s);
+    $s = preg_replace('/\s+/', ' ', $s) ?? $s;
+
+    // dd/mm/yyyy [hh:mm[:ss]]
+    if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/', $s, $m)) {
+        $h = isset($m[4]) ? (int)$m[4] : 0;
+        $i = isset($m[5]) ? (int)$m[5] : 0;
+        $sec = isset($m[6]) ? (int)$m[6] : 0;
+        return sprintf('%04d-%02d-%02d %02d:%02d:%02d', (int)$m[3], (int)$m[2], (int)$m[1], $h, $i, $sec);
+    }
+
+    // yyyy-mm-dd [hh:mm[:ss]]
+    if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/', $s, $m)) {
+        $h = isset($m[4]) ? (int)$m[4] : 0;
+        $i = isset($m[5]) ? (int)$m[5] : 0;
+        $sec = isset($m[6]) ? (int)$m[6] : 0;
+        return sprintf('%04d-%02d-%02d %02d:%02d:%02d', (int)$m[1], (int)$m[2], (int)$m[3], $h, $i, $sec);
+    }
+
+    $ts = strtotime($s);
+    if ($ts !== false) {
+        return date('Y-m-d H:i:s', $ts);
+    }
+
+    return '';
 }
 
 function suggest_map_header(string $dbCol, array $headers, array $autoMapAliases): string
@@ -231,12 +276,16 @@ function build_yj_insert_row(array $tableCols, array $mappedRow, string $nomCent
             $insertData[$colName] = $nowTime;
             continue;
         }
+        if ($colName === 'date_heure_playning' || $colName === 'date_heure_mod') {
+            $insertData[$colName] = '';
+            continue;
+        }
         if ($colName === 'etat_final') {
             $insertData[$colName] = 'EN-ATTENTE';
             continue;
         }
-        if ($colName === 'date_heure_mod') {
-            $insertData[$colName] = $nowTime;
+        if ($colName === 'date_heure_appel') {
+            $insertData[$colName] = normalize_excel_datetime($mappedRow['date_heure_appel'] ?? '');
             continue;
         }
 
@@ -438,6 +487,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $existingPhones = [];
             if ($dupMode === 'memory') {
                 $stmtPhones = $pdo->query("SELECT id, nom, prenom, tel, gsm1, gsm2, etat_final, date_insertion
+                                           , nom_centre
                                            FROM yj_fiche
                                            WHERE archive = 0
                                              AND ((tel IS NOT NULL AND tel != '')
@@ -524,10 +574,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($dupPhone !== '' && $existing !== null) {
                         $duplicates++;
                         $notInserted[] = [
+                            'existing_id' => $existing['id'] ?? null,
                             'nom' => $mappedRow['nom'] ?? '',
                             'prenom' => $mappedRow['prenom'] ?? '',
                             'tel' => $dupPhone,
                             'raison' => isset($phonesInsertedThisRun[$dupPhone]) ? 'Doublon dans le fichier (deja insere)' : 'Fiche existante archive=0',
+                            'nom_centre' => $existing['nom_centre'] ?? '',
                             'etat_actuel' => $existing['etat_final'] ?? '',
                             'date_insertion_existante' => $existing['date_insertion'] ?? '',
                         ];
@@ -578,8 +630,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'errors' => $errors,
                 'notInserted' => $notInserted,
             ];
+            $_SESSION['last_import_result'] = $result;
             $step = 'done';
             clear_import_session();
+        } elseif ($action === 'archive') {
+            $ficheId = (int)($_POST['fiche_id'] ?? 0);
+            if ($ficheId <= 0) {
+                throw new RuntimeException('ID fiche invalide pour archivage.');
+            }
+
+            $pdo = db($config);
+            $stmt = $pdo->prepare("UPDATE yj_fiche SET archive = 1 WHERE id = :id");
+            $stmt->execute([':id' => $ficheId]);
+
+            if ($stmt->rowCount() > 0) {
+                $message = "Fiche #{$ficheId} archivee.";
+            } else {
+                $message = "Aucune fiche archivee pour l'ID #{$ficheId}.";
+            }
+
+            $result = $_SESSION['last_import_result'] ?? null;
+            if (is_array($result) && !empty($result['notInserted']) && is_array($result['notInserted'])) {
+                $result['notInserted'] = array_values(array_filter($result['notInserted'], static function ($row) use ($ficheId) {
+                    return (int)($row['existing_id'] ?? 0) !== $ficheId;
+                }));
+                $_SESSION['last_import_result'] = $result;
+            }
+            $step = 'done';
         }
     } catch (Throwable $e) {
         $message = 'Erreur: ' . $e->getMessage();
@@ -592,6 +669,9 @@ $sessionHeaders = $_SESSION['import_headers'] ?? [];
 $sessionPreview = $_SESSION['import_preview'] ?? [];
 $headers = $headers ?: $sessionHeaders;
 $preview = $preview ?: $sessionPreview;
+if ($result === null && isset($_SESSION['last_import_result']) && is_array($_SESSION['last_import_result'])) {
+    $result = $_SESSION['last_import_result'];
+}
 
 function selected($a, $b): string { return ((string)$a === (string)$b) ? 'selected' : ''; }
 ?>
@@ -733,7 +813,7 @@ function selected($a, $b): string { return ((string)$a === (string)$b) ? 'select
       <p>Total: <?php echo (int)$result['total']; ?> | Inseres: <?php echo (int)$result['inserted']; ?> | Doublons: <?php echo (int)$result['duplicates']; ?> | Erreurs: <?php echo (int)$result['errors']; ?></p>
       <?php if (!empty($result['notInserted'])): ?>
         <table>
-          <thead><tr><th>Nom</th><th>Prenom</th><th>Tel</th><th>Raison</th><th>Etat actuel</th><th>Date insertion existante</th></tr></thead>
+          <thead><tr><th>Nom</th><th>Prenom</th><th>Tel</th><th>Raison</th><th>Nom centre</th><th>Etat actuel</th><th>Date insertion existante</th><th>Action</th></tr></thead>
           <tbody>
           <?php foreach ($result['notInserted'] as $ni): ?>
             <tr>
@@ -741,8 +821,18 @@ function selected($a, $b): string { return ((string)$a === (string)$b) ? 'select
               <td><?php echo htmlspecialchars((string)($ni['prenom'] ?? '')); ?></td>
               <td><?php echo htmlspecialchars((string)($ni['tel'] ?? '')); ?></td>
               <td><?php echo htmlspecialchars((string)($ni['raison'] ?? '')); ?></td>
+              <td><?php echo htmlspecialchars((string)($ni['nom_centre'] ?? '')); ?></td>
               <td><?php echo htmlspecialchars((string)($ni['etat_actuel'] ?? '')); ?></td>
               <td><?php echo htmlspecialchars((string)($ni['date_insertion_existante'] ?? '')); ?></td>
+              <td>
+                <?php if (!empty($ni['existing_id'])): ?>
+                  <form method="post" style="margin:0">
+                    <input type="hidden" name="action" value="archive">
+                    <input type="hidden" name="fiche_id" value="<?php echo (int)$ni['existing_id']; ?>">
+                    <button class="btn" type="submit">Archiver</button>
+                  </form>
+                <?php endif; ?>
+              </td>
             </tr>
           <?php endforeach; ?>
           </tbody>
