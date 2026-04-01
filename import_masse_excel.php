@@ -321,6 +321,15 @@ function get_table_columns(PDO $pdo, string $tableName): array
     return $cols;
 }
 
+function clear_import_session(): void
+{
+    $oldFile = $_SESSION['import_file'] ?? null;
+    if (is_string($oldFile) && $oldFile !== '' && file_exists($oldFile)) {
+        @unlink($oldFile);
+    }
+    unset($_SESSION['import_file'], $_SESSION['import_headers'], $_SESSION['import_preview']);
+}
+
 $yjFieldsCoord = ['civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'Adresse', 'cp', 'ville', 'commentaire'];
 
 $yjFieldsPerso = [
@@ -373,6 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     try {
         if ($action === 'upload') {
+            clear_import_session();
             if (!isset($_FILES['excel']) || $_FILES['excel']['error'] !== UPLOAD_ERR_OK) {
                 throw new RuntimeException('Fichier invalide.');
             }
@@ -410,9 +420,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $commentaireMerge = isset($_POST['commentaire_merge']) && is_array($_POST['commentaire_merge'])
                 ? $_POST['commentaire_merge'] : [];
             $nomCentre = trim((string)($_POST['nom_centre'] ?? ''));
-            $produit = (int)($_POST['produit'] ?? 0);
-            if ($nomCentre === '' || $produit <= 0) {
-                throw new RuntimeException('nom_centre et produit sont obligatoires.');
+            $idCentreForm = trim((string)($_POST['id_centre'] ?? ''));
+            $confProduitForm = trim((string)($_POST['conf_produit'] ?? ''));
+            if ($nomCentre === '' || $idCentreForm === '' || !ctype_digit($idCentreForm)) {
+                throw new RuntimeException('nom_centre et id_centre (entier) sont obligatoires.');
             }
 
             [$headers, $rows] = parse_excel($filePath);
@@ -524,7 +535,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     $nowTime = date('Y-m-d H:i:s');
-                    $insertData = build_yj_insert_row($tableCols, $mappedRow, $nomCentre, $produit, $nowTime);
+                    $insertData = build_yj_insert_row($tableCols, $mappedRow, $nomCentre, $nowTime);
 
                     $cols = array_keys($insertData);
                     $placeholders = array_map(static function ($c) {
@@ -568,22 +579,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'notInserted' => $notInserted,
             ];
             $step = 'done';
+            clear_import_session();
         }
     } catch (Throwable $e) {
         $message = 'Erreur: ' . $e->getMessage();
     }
+} else {
+    clear_import_session();
 }
 
 $sessionHeaders = $_SESSION['import_headers'] ?? [];
 $sessionPreview = $_SESSION['import_preview'] ?? [];
-if ($step === 'upload' && !empty($sessionHeaders) && !empty($sessionPreview)) {
-    $step = 'mapping';
-    $headers = $sessionHeaders;
-    $preview = $sessionPreview;
-} else {
-    $headers = $headers ?: $sessionHeaders;
-    $preview = $preview ?: $sessionPreview;
-}
+$headers = $headers ?: $sessionHeaders;
+$preview = $preview ?: $sessionPreview;
 
 function selected($a, $b): string { return ((string)$a === (string)$b) ? 'selected' : ''; }
 ?>
@@ -614,17 +622,15 @@ function selected($a, $b): string { return ((string)$a === (string)$b) ? 'select
   <h1>Import en masse Excel (PHP)</h1>
   <?php if ($message !== ''): ?><div class="alert"><?php echo htmlspecialchars($message); ?></div><?php endif; ?>
 
-  <?php if ($step === 'upload'): ?>
-    <div class="box">
-      <form method="post" enctype="multipart/form-data">
-        <input type="hidden" name="action" value="upload">
-        <label>Fichier Excel (.xlsx/.xls)</label>
-        <input type="file" name="excel" accept=".xlsx,.xls" required>
-        <br><br>
-        <button class="btn" type="submit">Charger et previsualiser</button>
-      </form>
-    </div>
-  <?php endif; ?>
+  <div class="box">
+    <form method="post" enctype="multipart/form-data">
+      <input type="hidden" name="action" value="upload">
+      <label>Fichier Excel (.xlsx/.xls)</label>
+      <input type="file" name="excel" accept=".xlsx,.xls" required>
+      <br><br>
+      <button class="btn" type="submit">Charger et previsualiser</button>
+    </form>
+  </div>
 
   <?php if ($step === 'mapping'): ?>
     <div class="box">
