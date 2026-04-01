@@ -2119,10 +2119,9 @@ body.dashboard-admin-page {
   max-width: 10% !important;
 }
 
-/* Aligné sur Dashboard.css : modal détail fiche lisible */
 .fiche-detail-modal-content .fiche-details-table tr {
   border-bottom: 1.5px solid #8a8a8a;
-  line-height: 1.35 !important;
+  line-height: 0.4 !important;
   margin: 0 !important;
   padding: 0 !important;
   height: auto !important;
@@ -2131,22 +2130,22 @@ body.dashboard-admin-page {
 }
 
 .fiche-detail-modal-content .fiche-details-table td {
-  line-height: 1.35 !important;
+  line-height: 0.4 !important;
   margin: 0 !important;
-  padding: 5px 8px !important;
-  vertical-align: top !important;
+  padding: 0 2px !important;
+  vertical-align: middle !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr {
   height: auto !important;
   min-height: 0 !important;
-  max-height: none !important;
+  max-height: 8px !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr td {
-  vertical-align: top !important;
-  padding-top: 5px !important;
-  padding-bottom: 5px !important;
+  vertical-align: middle !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   margin: 0 !important;
 }
 
@@ -2159,8 +2158,8 @@ body.dashboard-admin-page {
   visibility: visible !important;
   opacity: 1 !important;
   text-align: center !important;
-  vertical-align: top !important;
-  padding: 5px 8px !important;
+  vertical-align: middle !important;
+  padding: 0 2px !important;
 }
 
 /* Assurer que les boutons dans les tableaux sont visibles */
@@ -2180,12 +2179,12 @@ body.dashboard-admin-page {
 }
 
 .fiche-detail-modal-content .fiche-section {
-  margin-bottom: 10px !important;
-  padding: 12px 14px !important;
+  margin-bottom: 1px !important;
+  padding: 1px !important;
 }
 
 .fiche-detail-modal-content .fiche-sections {
-  gap: 14px !important;
+  gap: 3px !important;
 }
 
 .fiche-detail-modal-content .section-title {
