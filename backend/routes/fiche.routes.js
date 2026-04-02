@@ -1005,19 +1005,25 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push(qualificationCondition);
       params.push(req.query.qualification_code);
     }
-    // Annuler à reprogrammer (id 8) : affiner par COMPTE RENDU ou REPRO CONFIRMATEURS
-    // Uniquement les fiches dont l'état actuel (dernière entrée historio) est 8 et provient d'un CR (from_compte_rendu)
+    // Annuler à reprogrammer (id 8) et Client honoré à suivre (id 9) : affiner par COMPTE RENDU ou REPRO CONFIRMATEURS
+    // Uniquement les fiches dont l'état actuel (dernière entrée historio) est 8 ou 9 et provient d'un CR (from_compte_rendu)
     const annulerReproType = req.query.annuler_repro_type;
-    if (annulerReproType && (idEtatFinalForWhere === 8 || idEtatFinalForWhere === '8')) {
-      const lastHistoIs8FromCR = `EXISTS (
+    const arEtatId =
+      idEtatFinalForWhere === 8 || idEtatFinalForWhere === '8'
+        ? 8
+        : idEtatFinalForWhere === 9 || idEtatFinalForWhere === '9'
+          ? 9
+          : null;
+    if (annulerReproType && arEtatId !== null) {
+      const lastHistoIsEtatFromCR = `EXISTS (
         SELECT 1 FROM fiches_histo fh
-        WHERE fh.id_fiche = fiche.id AND fh.id_etat = 8 AND fh.from_compte_rendu = 1
+        WHERE fh.id_fiche = fiche.id AND fh.id_etat = ${arEtatId} AND fh.from_compte_rendu = 1
         AND fh.id = (SELECT MAX(fh2.id) FROM fiches_histo fh2 WHERE fh2.id_fiche = fiche.id)
       )`;
       if (annulerReproType === 'compte_rendu') {
-        whereConditions.push(lastHistoIs8FromCR);
+        whereConditions.push(lastHistoIsEtatFromCR);
       } else if (annulerReproType === 'repro_confirmateurs') {
-        whereConditions.push(`NOT (${lastHistoIs8FromCR})`);
+        whereConditions.push(`NOT (${lastHistoIsEtatFromCR})`);
       }
     }
     if (id_sous_etat !== undefined && id_sous_etat !== null && id_sous_etat !== '' && id_sous_etat !== 'tout') {

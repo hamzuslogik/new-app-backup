@@ -33,7 +33,7 @@ const Fiches = () => {
     id_sous_etat: '',
     id_agent: '',
     id_etat_final: '',
-    annuler_repro_type: '', // '' = tous, 'compte_rendu' ou 'repro_confirmateurs' (visible si état = Annuler à reprogrammer)
+    annuler_repro_type: '', // '' = tous, 'compte_rendu' ou 'repro_confirmateurs' (Annuler à reprogrammer ou Client honoré à suivre)
     date_champ: '',
     date_debut: '',
     date_fin: '',
@@ -440,8 +440,13 @@ const Fiches = () => {
     return etat?.titre || '';
   };
 
-  // Afficher <CR> dans la colonne état final uniquement si l'état actuel provient d'un compte rendu (dernière entrée historio with from_compte_rendu)
-  const showCRPrefix = (fiche) => fiche?.current_state_from_compte_rendu === true;
+  // <CR> si état 8 ou 9 et dernière ligne historio = compte rendu (aligné Dashboard)
+  const ID_ETAT_ANNULER_A_REPROGRAMMER = 8;
+  const ID_ETAT_HONORE_A_SUIVRE = 9;
+  const showCRPrefix = (fiche) =>
+    (Number(fiche?.id_etat_final) === ID_ETAT_ANNULER_A_REPROGRAMMER ||
+      Number(fiche?.id_etat_final) === ID_ETAT_HONORE_A_SUIVRE) &&
+    fiche?.current_state_from_compte_rendu === true;
 
   // Agent qualification : si état dans groupe 0, afficher l'état, sinon "Validé"
   const isEtatGroupe0 = (etatId) => etatsPhase0.some(e => Number(e.id) === Number(etatId));
@@ -814,8 +819,8 @@ const Fiches = () => {
                 </div>
               )}
 
-              {/* Affiner Annuler à reprogrammer : COMPTE RENDU ou REPRO CONFIRMATEURS */}
-              {Number(filters.id_etat_final) === 8 && (
+              {/* Annuler à reprogrammer / Honoré à suivre : COMPTE RENDU ou REPRO CONFIRMATEURS */}
+              {(Number(filters.id_etat_final) === 8 || Number(filters.id_etat_final) === 9) && (
                 <div className="form-group">
                   <label>Source</label>
                   <select

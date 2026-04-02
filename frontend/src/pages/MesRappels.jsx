@@ -33,6 +33,7 @@ const MesRappels = () => {
   const [dateRappel, setDateRappel] = useState(today);
   const [idConfirmateurFilter, setIdConfirmateurFilter] = useState(isREConfirmation ? 'all' : null);
   const [idREFilter, setIdREFilter] = useState(isRPConfirmation ? 'all' : null);
+  const [origineFilter, setOrigineFilter] = useState(''); // '' | 'compte_rendu' | 'repro_confirmateurs' (onglets repro / honoré)
 
   const etatIdForTab =
     activeTab === 'annuler_repro'
@@ -60,7 +61,7 @@ const MesRappels = () => {
     : [];
 
   const { data, isLoading, error } = useQuery(
-    ['mes-rappels', activeTab, etatIdForTab, dateRappel, user?.id, idConfirmateurFilter, idREFilter],
+    ['mes-rappels', activeTab, etatIdForTab, dateRappel, user?.id, idConfirmateurFilter, idREFilter, origineFilter],
     async () => {
       const params = {
         fiche_search: 1,
@@ -73,6 +74,12 @@ const MesRappels = () => {
         limit: 9999,
         page: 1,
       };
+      if (
+        origineFilter &&
+        (activeTab === 'annuler_repro' || activeTab === 'honore_suivre')
+      ) {
+        params.annuler_repro_type = origineFilter;
+      }
       if (isConfirmateur) {
         params.id_confirmateur = user?.id;
         // API confirmateur : inclure fiches où le connecté est conf. 2 ou 3 (sinon seul id_confirmateur est testé)
@@ -141,10 +148,10 @@ const MesRappels = () => {
     : '';
 
   const descriptionHonore = isRPConfirmation
-    ? 'Fiches en « Honoré à suivre », filtrées par RE et par date de rappel.'
+    ? 'Fiches en « Honoré à suivre », filtrées par RE et par date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu.'
     : isREConfirmation
-      ? "Fiches en « Honoré à suivre », filtrées par confirmateur et par date de rappel."
-      : 'Fiches en « Honoré à suivre » vous concernant, filtrées par la date de rappel.';
+      ? "Fiches en « Honoré à suivre », filtrées par confirmateur et par date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu."
+      : 'Fiches en « Honoré à suivre » vous concernant, filtrées par la date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu.';
 
   const description =
     activeTab === 'annuler_repro'
@@ -271,7 +278,7 @@ const MesRappels = () => {
                     <tr>
                       {isRPConfirmation && <th>RE Confirmation</th>}
                       {(isREConfirmation || isRPConfirmation) && <th>Confirmateur</th>}
-                      {activeTab === 'annuler_repro' && <th>Origine</th>}
+                      {(activeTab === 'annuler_repro' || activeTab === 'honore_suivre') && <th>Origine</th>}
                       <th>Civ.</th>
                       <th>Nom</th>
                       <th>Prénom</th>
@@ -289,7 +296,7 @@ const MesRappels = () => {
                         {(isREConfirmation || isRPConfirmation) && (
                           <td data-label="Confirmateur">{getConfirmateurPseudo(fiche)}</td>
                         )}
-                        {activeTab === 'annuler_repro' && (
+                        {(activeTab === 'annuler_repro' || activeTab === 'honore_suivre') && (
                           <td data-label="Origine">
                             <span
                               className={

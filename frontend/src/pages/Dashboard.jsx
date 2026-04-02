@@ -153,7 +153,7 @@ const Dashboard = () => {
     ko: '', // '' = tous, '0' = fiches OK, '1' = fiches KO
     id_centre: '',
     id_sous_etat: '',
-    annuler_repro_type: '', // '' = tous, 'compte_rendu' ou 'repro_confirmateurs' (visible si état = Annuler à reprogrammer)
+    annuler_repro_type: '', // '' = tous, 'compte_rendu' ou 'repro_confirmateurs' (visible si état = Annuler à reprogrammer ou Client honoré à suivre)
     include_confirmateur_2: true,
   });
 
@@ -479,6 +479,10 @@ const Dashboard = () => {
     if (etatAnnulerRepro && !etatsPhase2.some((e) => Number(e.id) === 8)) {
       etatsPhase2 = [etatAnnulerRepro, ...etatsPhase2];
     }
+    const etatHonoreASuivre = (etats || []).find((e) => Number(e.id) === 9);
+    if (etatHonoreASuivre && !etatsPhase2.some((e) => Number(e.id) === 9)) {
+      etatsPhase2 = [etatHonoreASuivre, ...etatsPhase2];
+    }
   }
 
   const sousEtatsForSelectedEtat = (sousEtatsData || []).filter(
@@ -681,10 +685,12 @@ const Dashboard = () => {
     return lignes.join('\n');
   };
 
-  // id_etat 8 = Annuler à reprogrammer : afficher <CR> uniquement si l'état ACTUEL vient d'un compte rendu
+  // id_etat 8 = Annuler à reprogrammer, 9 = Client honoré à suivre : <CR> si l'état ACTUEL vient d'un compte rendu
   const ID_ETAT_ANNULER_A_REPROGRAMMER = 8;
+  const ID_ETAT_HONORE_A_SUIVRE = 9;
   const showCRPrefix = (fiche) =>
-    Number(fiche?.id_etat_final) === ID_ETAT_ANNULER_A_REPROGRAMMER &&
+    (Number(fiche?.id_etat_final) === ID_ETAT_ANNULER_A_REPROGRAMMER ||
+      Number(fiche?.id_etat_final) === ID_ETAT_HONORE_A_SUIVRE) &&
     fiche?.current_state_from_compte_rendu === true;
 
   // Confirmateur affiché : pseudos depuis dernière ligne fiches_histo (API), sinon table fiches — ordre confirmateur 1 | 2 | 3
@@ -1164,8 +1170,8 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Affiner Annuler à reprogrammer : COMPTE RENDU ou REPRO CONFIRMATEURS */}
-                {Number(filters.id_etat_final) === 8 && (
+                {/* Affiner Annuler à reprogrammer / Honoré à suivre : COMPTE RENDU ou REPRO CONFIRMATEURS */}
+                {(Number(filters.id_etat_final) === 8 || Number(filters.id_etat_final) === 9) && (
                   <div className="form-group">
                     <label>Source</label>
                     <select
@@ -1971,7 +1977,7 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {Number(filters.id_etat_final) === 8 && (
+                {(Number(filters.id_etat_final) === 8 || Number(filters.id_etat_final) === 9) && (
                   <div className="form-group">
                     <label>Source</label>
                     <select
