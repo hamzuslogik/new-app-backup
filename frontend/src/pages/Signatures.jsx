@@ -18,6 +18,8 @@ const Signatures = () => {
   const [dateFin, setDateFin] = useState(() => getTodayLocal());
   const [selectedConfirmateur, setSelectedConfirmateur] = useState('');
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState('date_planning');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [activeTab, setActiveTab] = useState('actives'); // actives | rejetees
   const limit = 50;
   const [modalState, setModalState] = useState({
@@ -54,13 +56,15 @@ const Signatures = () => {
 
   // Récupérer la liste des signatures
   const { data: signaturesData, isLoading: isLoadingSignatures } = useQuery(
-    ['signatures', dateDebut, dateFin, selectedConfirmateur, page],
+    ['signatures', dateDebut, dateFin, selectedConfirmateur, page, sortBy, sortOrder],
     async () => {
       const params = {
         date_debut: dateDebut,
         date_fin: dateFin,
         page,
-        limit
+        limit,
+        sort_by: sortBy,
+        sort_order: sortOrder
       };
       if (selectedConfirmateur) {
         params.id_confirmateur = selectedConfirmateur;
@@ -193,6 +197,21 @@ const Signatures = () => {
       addConfirmateurMutation.mutate({ signatureId, idConfirmateur });
     }
   }
+
+  function handleSort(nextSortBy) {
+    if (sortBy === nextSortBy) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(nextSortBy);
+      setSortOrder(nextSortBy === 'date_planning' ? 'desc' : 'asc');
+    }
+    setPage(1);
+  }
+
+  const sortIndicator = (key) => {
+    if (sortBy !== key) return '↕';
+    return sortOrder === 'asc' ? '▲' : '▼';
+  };
 
   const formatNumber = (num) => {
     if (num === null || num === undefined) return '0';
@@ -437,6 +456,24 @@ const Signatures = () => {
         </div>
 
         <h2>{activeTab === 'actives' ? 'Liste des Signatures' : 'Liste des Signatures rejetées'}</h2>
+        {activeTab === 'actives' && (
+          <div className="list-filter-row">
+            <label>Filtre confirmateur :</label>
+            <select
+              value={selectedConfirmateur}
+              onChange={(e) => {
+                setSelectedConfirmateur(e.target.value);
+                setPage(1);
+              }}
+              className="form-control"
+            >
+              <option value="">Tous</option>
+              {confirmateursData?.map(conf => (
+                <option key={conf.id} value={conf.id}>{conf.pseudo}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {(activeTab === 'actives' ? isLoadingSignatures : isLoadingRejected) ? (
           <div className="loading">Chargement des signatures...</div>
@@ -447,11 +484,22 @@ const Signatures = () => {
                 <thead>
                   {activeTab === 'actives' ? (
                     <tr>
-                      <th>Date planning (RDV)</th>
-                      <th>Confirmateur</th>
+                      <th className="sortable-header" onClick={() => handleSort('date_planning')}>
+                        Date planning (RDV) <span>{sortIndicator('date_planning')}</span>
+                      </th>
+                      <th className="sortable-header" onClick={() => handleSort('date_heure')}>
+                        Date / heure signature <span>{sortIndicator('date_heure')}</span>
+                      </th>
+                      <th className="sortable-header" onClick={() => handleSort('confirmateur')}>
+                        Confirmateur <span>{sortIndicator('confirmateur')}</span>
+                      </th>
                       <th>Fiche</th>
-                      <th>Téléphone</th>
-                      <th>Score</th>
+                      <th className="sortable-header" onClick={() => handleSort('telephone')}>
+                        Téléphone <span>{sortIndicator('telephone')}</span>
+                      </th>
+                      <th className="sortable-header" onClick={() => handleSort('score')}>
+                        Score <span>{sortIndicator('score')}</span>
+                      </th>
                       {isAdminSession && <th>Actions</th>}
                     </tr>
                   ) : (
@@ -475,6 +523,7 @@ const Signatures = () => {
                             ? formatRdvDateTime(sig.date_planning)
                             : (sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-')}
                         </td>
+                        <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                         <td>{sig.confirmateur_pseudo || 'Inconnu'}</td>
                         <td>
                           {sig.id_fiche ? (

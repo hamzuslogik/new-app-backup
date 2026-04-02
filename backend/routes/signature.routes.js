@@ -51,6 +51,8 @@ router.get('/', authenticate, async (req, res) => {
       id_confirmateur, 
       id_fiche,
       id_etat_final,
+      sort_by = 'date_planning',
+      sort_order = 'desc',
       page = 1,
       limit = 50
     } = req.query;
@@ -103,6 +105,15 @@ router.get('/', authenticate, async (req, res) => {
     // Calculer la pagination
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const limitValue = parseInt(limit);
+    const normalizedOrder = String(sort_order).toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+    const sortMap = {
+      date_planning: 'f.date_rdv_time',
+      date_heure: 's.date_heure',
+      confirmateur: 'u.pseudo',
+      score: 's.ajoute',
+      telephone: 'COALESCE(s.tel, f.tel)'
+    };
+    const sortColumn = sortMap[sort_by] || 'f.date_rdv_time';
 
     // Récupérer les signatures (date de planning = f.date_rdv_time)
     const signatures = await query(
@@ -126,7 +137,7 @@ router.get('/', authenticate, async (req, res) => {
       INNER JOIN fiches f ON s.id_fiche = f.id
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
       ${whereClause}
-      ORDER BY f.date_rdv_time DESC, s.date_heure DESC
+      ORDER BY ${sortColumn} ${normalizedOrder}, s.date_heure DESC, s.id DESC
       LIMIT ? OFFSET ?`,
       [...params, limitValue, offset]
     );
@@ -310,28 +321,29 @@ router.get('/stats', authenticate, async (req, res) => {
     let fichesConfirmeesByConfirmateur = {};
     if (date_debut && date_fin) {
       const confParams = [startDateStr, endDateStr];
-      const fcRows = await query(
-        `SELECT id_confirmateur as confirmateur_id, COUNT(*) as nb_fiches_confirmees
-         FROM confirmations
-         WHERE id_confirmateur IS NOT NULL AND id_confirmateur > 0
-           AND (date_rdv_time >= ? AND date_rdv_time <= ?)
-         GROUP BY id_confirmateur`,
-        confParams
-      ).catch(() => []); // si la table ou colonne n'existe pas, rester vide
-      (fcRows || []).forEach(row => {
-        fichesConfirmeesByConfirmateur[row.confirmateur_id] = parseInt(row.nb_fiches_confirmees || 0);
-      });
-      // Fallback: si date_rdv_time n'existe pas, essayer date_planning
-      if (Object.keys(fichesConfirmeesByConfirmateur).length === 0) {
-        const fcRowsPlan = await query(
+      const colRows = await query(
+        `SELECT COLUMN_NAME
+         FROM information_schema.columns
+         WHERE table_schema = DATABASE()
+           AND table_name = 'confirmations'
+           AND COLUMN_NAME IN ('date_rdv_time', 'date_planning')`
+      ).catch(() => []);
+
+      const availableCols = new Set((colRows || []).map(r => r.COLUMN_NAME));
+      let dateCol = null;
+      if (availableCols.has('date_rdv_time')) dateCol = 'date_rdv_time';
+      else if (availableCols.has('date_planning')) dateCol = 'date_planning';
+
+      if (dateCol) {
+        const fcRows = await query(
           `SELECT id_confirmateur as confirmateur_id, COUNT(*) as nb_fiches_confirmees
            FROM confirmations
            WHERE id_confirmateur IS NOT NULL AND id_confirmateur > 0
-             AND date_planning >= ? AND date_planning <= ?
+             AND ${dateCol} >= ? AND ${dateCol} <= ?
            GROUP BY id_confirmateur`,
           confParams
         ).catch(() => []);
-        (fcRowsPlan || []).forEach(row => {
+        (fcRows || []).forEach(row => {
           fichesConfirmeesByConfirmateur[row.confirmateur_id] = parseInt(row.nb_fiches_confirmees || 0);
         });
       }

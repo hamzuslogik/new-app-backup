@@ -353,6 +353,28 @@
   color: #fff;
 }
 
+.list-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.list-filter-row .form-control {
+  max-width: 260px;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-header span {
+  margin-left: 6px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
 /* Signatures List Section */
 .signatures-list-section {
   margin-bottom: 32px;
