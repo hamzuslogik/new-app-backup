@@ -13,6 +13,32 @@ function getLastDayOfMonthLocal() {
   return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
 }
 
+function isAdminSession(fonction) {
+  return [1, 11].includes(Number(fonction));
+}
+
+async function ensureSignaturesRejeteesTable() {
+  await query(
+    `CREATE TABLE IF NOT EXISTS signatures_rejetees (
+      id INT NOT NULL AUTO_INCREMENT,
+      signature_id INT NOT NULL,
+      id_fiche INT NULL,
+      confirmateur INT NULL,
+      ajoute DECIMAL(10,2) NULL,
+      date_heure DATETIME NULL,
+      tel VARCHAR(255) NULL,
+      motif TEXT NOT NULL,
+      id_rejete_par INT NOT NULL,
+      date_rejet TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY idx_signature_id (signature_id),
+      KEY idx_id_fiche (id_fiche),
+      KEY idx_confirmateur (confirmateur),
+      KEY idx_date_rejet (date_rejet)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+  );
+}
+
 // =====================================================
 // ROUTE: GET /api/signature
 // Récupérer la liste des signatures avec filtres (par date de planning = date_rdv_time de la fiche)
@@ -120,6 +146,92 @@ router.get('/', authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des signatures',
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// ROUTE: GET /api/signature/rejetees
+// Liste des signatures rejetées (admin)
+// =====================================================
+router.get('/rejetees', authenticate, async (req, res) => {
+  try {
+    if (!isAdminSession(req.user?.fonction)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
+    }
+
+    await ensureSignaturesRejeteesTable();
+    const { date_debut, date_fin, id_confirmateur, page = 1, limit = 50 } = req.query;
+    const whereConditions = ['1=1'];
+    const params = [];
+
+    if (date_debut) {
+      whereConditions.push('sr.date_rejet >= ?');
+      params.push(`${date_debut} 00:00:00`);
+    }
+    if (date_fin) {
+      whereConditions.push('sr.date_rejet <= ?');
+      params.push(`${date_fin} 23:59:59`);
+    }
+    if (id_confirmateur) {
+      whereConditions.push('sr.confirmateur = ?');
+      params.push(id_confirmateur);
+    }
+
+    const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
+    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const limitValue = parseInt(limit, 10);
+
+    const totalRow = await queryOne(
+      `SELECT COUNT(*) as total FROM signatures_rejetees sr ${whereClause}`,
+      params
+    );
+
+    const rows = await query(
+      `SELECT
+        sr.id,
+        sr.signature_id,
+        sr.id_fiche,
+        sr.confirmateur,
+        sr.ajoute,
+        sr.date_heure,
+        sr.tel,
+        sr.motif,
+        sr.id_rejete_par,
+        sr.date_rejet,
+        u_conf.pseudo as confirmateur_pseudo,
+        u_rej.pseudo as rejete_par_pseudo,
+        f.hash as fiche_hash,
+        f.date_rdv_time as date_planning,
+        f.nom as fiche_nom,
+        f.prenom as fiche_prenom,
+        f.tel as fiche_tel
+      FROM signatures_rejetees sr
+      LEFT JOIN utilisateurs u_conf ON sr.confirmateur = u_conf.id
+      LEFT JOIN utilisateurs u_rej ON sr.id_rejete_par = u_rej.id
+      LEFT JOIN fiches f ON sr.id_fiche = f.id
+      ${whereClause}
+      ORDER BY sr.date_rejet DESC, sr.id DESC
+      LIMIT ? OFFSET ?`,
+      [...params, limitValue, offset]
+    );
+
+    return res.json({
+      success: true,
+      data: rows,
+      pagination: {
+        page: parseInt(page, 10),
+        limit: limitValue,
+        total: totalRow?.total || 0,
+        totalPages: Math.ceil((totalRow?.total || 0) / limitValue)
+      }
+    });
+  } catch (error) {
+    console.error('Erreur récupération signatures rejetées:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des signatures rejetées',
       error: error.message
     });
   }
@@ -467,6 +579,248 @@ router.get('/kpi', authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des KPI',
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// ROUTE: POST /api/signature/:id/rejeter
+// Déplace une signature dans signatures_rejetees avec motif
+// =====================================================
+router.post('/:id/rejeter', authenticate, async (req, res) => {
+  try {
+    if (!isAdminSession(req.user?.fonction)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé'
+      });
+    }
+
+    const signatureId = Number(req.params.id);
+    const motif = (req.body?.motif || '').toString().trim();
+
+    if (!signatureId || Number.isNaN(signatureId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID signature invalide'
+      });
+    }
+    if (!motif) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le motif est obligatoire'
+      });
+    }
+
+    const sig = await queryOne('SELECT * FROM signature WHERE id = ?', [signatureId]);
+    if (!sig) {
+      return res.status(404).json({
+        success: false,
+        message: 'Signature introuvable'
+      });
+    }
+
+    await ensureSignaturesRejeteesTable();
+    await query('START TRANSACTION');
+    try {
+      await query(
+        `INSERT INTO signatures_rejetees
+          (signature_id, id_fiche, confirmateur, ajoute, date_heure, tel, motif, id_rejete_par, date_rejet)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [sig.id, sig.id_fiche || null, sig.confirmateur || null, sig.ajoute || null, sig.date_heure || null, sig.tel || null, motif, req.user.id]
+      );
+
+      await query('DELETE FROM signature WHERE id = ?', [signatureId]);
+      await query('COMMIT');
+    } catch (txErr) {
+      await query('ROLLBACK');
+      throw txErr;
+    }
+
+    return res.json({
+      success: true,
+      message: 'Signature rejetée et déplacée avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur rejet signature:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors du rejet de la signature',
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// ROUTE: PATCH /api/signature/:id/confirmateur
+// Modifie le propriétaire d'une signature
+// =====================================================
+router.patch('/:id/confirmateur', authenticate, async (req, res) => {
+  try {
+    if (!isAdminSession(req.user?.fonction)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé'
+      });
+    }
+
+    const signatureId = Number(req.params.id);
+    const confirmateurId = Number(req.body?.id_confirmateur);
+    if (!signatureId || Number.isNaN(signatureId)) {
+      return res.status(400).json({ success: false, message: 'ID signature invalide' });
+    }
+    if (!confirmateurId || Number.isNaN(confirmateurId)) {
+      return res.status(400).json({ success: false, message: 'ID confirmateur invalide' });
+    }
+
+    const sig = await queryOne('SELECT id, id_fiche FROM signature WHERE id = ?', [signatureId]);
+    if (!sig) {
+      return res.status(404).json({ success: false, message: 'Signature introuvable' });
+    }
+
+    const conf = await queryOne('SELECT id FROM utilisateurs WHERE id = ? AND fonction = 6', [confirmateurId]);
+    if (!conf) {
+      return res.status(400).json({ success: false, message: 'Confirmateur invalide' });
+    }
+
+    await query('UPDATE signature SET confirmateur = ? WHERE id = ?', [confirmateurId, signatureId]);
+    return res.json({ success: true, message: 'Confirmateur modifié avec succès' });
+  } catch (error) {
+    console.error('Erreur modification confirmateur signature:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la modification du confirmateur',
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// ROUTE: POST /api/signature/:id/confirmateurs
+// Ajoute un 2e/3e confirmateur en insérant une ligne signature
+// =====================================================
+router.post('/:id/confirmateurs', authenticate, async (req, res) => {
+  try {
+    if (!isAdminSession(req.user?.fonction)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé'
+      });
+    }
+
+    const signatureId = Number(req.params.id);
+    const confirmateurId = Number(req.body?.id_confirmateur);
+    if (!signatureId || Number.isNaN(signatureId)) {
+      return res.status(400).json({ success: false, message: 'ID signature invalide' });
+    }
+    if (!confirmateurId || Number.isNaN(confirmateurId)) {
+      return res.status(400).json({ success: false, message: 'ID confirmateur invalide' });
+    }
+
+    const baseSig = await queryOne('SELECT * FROM signature WHERE id = ?', [signatureId]);
+    if (!baseSig) {
+      return res.status(404).json({ success: false, message: 'Signature de base introuvable' });
+    }
+    if (!baseSig.id_fiche) {
+      return res.status(400).json({ success: false, message: 'Impossible d’ajouter un confirmateur : id_fiche absent' });
+    }
+
+    const conf = await queryOne('SELECT id FROM utilisateurs WHERE id = ? AND fonction = 6', [confirmateurId]);
+    if (!conf) {
+      return res.status(400).json({ success: false, message: 'Confirmateur invalide' });
+    }
+
+    const duplicate = await queryOne(
+      `SELECT id FROM signature
+       WHERE id_fiche = ? AND confirmateur = ?
+       ORDER BY id DESC LIMIT 1`,
+      [baseSig.id_fiche, confirmateurId]
+    );
+    if (duplicate) {
+      return res.status(409).json({
+        success: false,
+        message: 'Ce confirmateur existe déjà pour cette fiche'
+      });
+    }
+
+    await query(
+      `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        baseSig.id_fiche,
+        confirmateurId,
+        baseSig.ajoute ?? 0,
+        baseSig.date_heure || new Date(),
+        baseSig.tel || null
+      ]
+    );
+
+    return res.json({
+      success: true,
+      message: 'Confirmateur ajouté avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur ajout confirmateur signature:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l’ajout du confirmateur',
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// ROUTE: POST /api/signature/rejetees/:id/restaurer
+// Restaure une signature rejetée vers la table signature
+// =====================================================
+router.post('/rejetees/:id/restaurer', authenticate, async (req, res) => {
+  try {
+    if (!isAdminSession(req.user?.fonction)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
+    }
+
+    await ensureSignaturesRejeteesTable();
+    const rejectedId = Number(req.params.id);
+    if (!rejectedId || Number.isNaN(rejectedId)) {
+      return res.status(400).json({ success: false, message: 'ID rejet invalide' });
+    }
+
+    const row = await queryOne('SELECT * FROM signatures_rejetees WHERE id = ?', [rejectedId]);
+    if (!row) {
+      return res.status(404).json({ success: false, message: 'Signature rejetée introuvable' });
+    }
+
+    await query('START TRANSACTION');
+    try {
+      await query(
+        `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          row.id_fiche || null,
+          row.confirmateur || null,
+          row.ajoute ?? 0,
+          row.date_heure || new Date(),
+          row.tel || null
+        ]
+      );
+
+      await query('DELETE FROM signatures_rejetees WHERE id = ?', [rejectedId]);
+      await query('COMMIT');
+    } catch (txErr) {
+      await query('ROLLBACK');
+      throw txErr;
+    }
+
+    return res.json({
+      success: true,
+      message: 'Signature restaurée avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur restauration signature rejetée:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la restauration de la signature',
       error: error.message
     });
   }
