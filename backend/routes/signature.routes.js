@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
-const { query, queryOne } = require('../config/database');
+const { query, queryOne, transaction } = require('../config/database');
 
 function getFirstOfMonthLocal() {
   const d = new Date();
@@ -634,21 +634,16 @@ router.post('/:id/rejeter', authenticate, async (req, res) => {
     }
 
     await ensureSignaturesRejeteesTable();
-    await query('START TRANSACTION');
-    try {
-      await query(
+    await transaction(async (connection) => {
+      await connection.execute(
         `INSERT INTO signatures_rejetees
           (signature_id, id_fiche, confirmateur, ajoute, date_heure, tel, motif, id_rejete_par, date_rejet)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [sig.id, sig.id_fiche || null, sig.confirmateur || null, sig.ajoute || null, sig.date_heure || null, sig.tel || null, motif, req.user.id]
       );
 
-      await query('DELETE FROM signature WHERE id = ?', [signatureId]);
-      await query('COMMIT');
-    } catch (txErr) {
-      await query('ROLLBACK');
-      throw txErr;
-    }
+      await connection.execute('DELETE FROM signature WHERE id = ?', [signatureId]);
+    });
 
     return res.json({
       success: true,
@@ -803,9 +798,8 @@ router.post('/rejetees/:id/restaurer', authenticate, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Signature rejetée introuvable' });
     }
 
-    await query('START TRANSACTION');
-    try {
-      await query(
+    await transaction(async (connection) => {
+      await connection.execute(
         `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
          VALUES (?, ?, ?, ?, ?)`,
         [
@@ -817,12 +811,8 @@ router.post('/rejetees/:id/restaurer', authenticate, async (req, res) => {
         ]
       );
 
-      await query('DELETE FROM signatures_rejetees WHERE id = ?', [rejectedId]);
-      await query('COMMIT');
-    } catch (txErr) {
-      await query('ROLLBACK');
-      throw txErr;
-    }
+      await connection.execute('DELETE FROM signatures_rejetees WHERE id = ?', [rejectedId]);
+    });
 
     return res.json({
       success: true,
