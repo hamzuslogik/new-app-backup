@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-toastify';
 import api from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle, FaKey, FaCopy, FaCheck, FaPowerOff, FaCheckCircle } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle, FaKey, FaCopy, FaCheck, FaPowerOff, FaCheckCircle, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import LoadingSpinner from '../common/LoadingSpinner';
 import Tooltip from '../common/Tooltip';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
@@ -15,6 +15,7 @@ const UtilisateursTab = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useLocalStorage('management_utilisateurs_search', '');
+  const [sort, setSort] = useState({ key: 'id', direction: 'asc' });
   const [generatedToken, setGeneratedToken] = useState(null);
   const [tokenCopied, setTokenCopied] = useState(false);
   const [formData, setFormData] = useState({
@@ -406,7 +407,7 @@ const UtilisateursTab = () => {
         </div>
         {searchTerm && (
           <span className="search-results-count">
-            {filteredData.length} résultat(s) trouvé(s)
+            {sortedData.length} résultat(s) trouvé(s)
           </span>
         )}
       </div>
@@ -831,7 +832,7 @@ const UtilisateursTab = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="9" className="text-center">
+                <td colSpan="10" className="text-center">
                   {searchTerm ? 'Aucun résultat trouvé' : 'Aucun utilisateur trouvé'}
                 </td>
               </tr>

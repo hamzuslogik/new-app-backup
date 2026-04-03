@@ -94,11 +94,11 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
 
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etats || []);
 
-  const etatsAvecSousEtats = [2, 8, 13, 16, 19, 44, 45];
+  const etatsAvecListeSousEtats = [2, 8, 11, 12, 13, 16, 19, 44, 45];
   const { data: sousEtatsData = [] } = useQuery(
     ['sous-etat', formData.id_etat_final],
     async () => {
-      if (!formData.id_etat_final || !etatsAvecSousEtats.includes(parseInt(formData.id_etat_final))) {
+      if (!formData.id_etat_final || !etatsAvecListeSousEtats.includes(parseInt(formData.id_etat_final, 10))) {
         return [];
       }
       try {
@@ -108,7 +108,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
         return [];
       }
     },
-    { enabled: !!formData.id_etat_final && etatsAvecSousEtats.includes(parseInt(formData.id_etat_final)) }
+    { enabled: !!formData.id_etat_final && etatsAvecListeSousEtats.includes(parseInt(formData.id_etat_final, 10)) }
   );
 
   const { data: installateursData = [] } = useQuery('installateurs', async () => {
@@ -143,6 +143,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
   const isEtatAnnulerRepro = idEtat === 8;
   const isEtatHonoreSuivre = idEtat === 9;
   const isEtatCommentaireSeul = [9, 12, 23, 34, 35].includes(idEtat);
+  const isEtat11ou12 = idEtat === 11 || idEtat === 12;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -167,7 +168,10 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
     const data = {
       id_etat_final: formData.id_etat_final || null,
       id_sous_etat: formData.id_sous_etat || null,
-      commentaire: formData.commentaire || null,
+      commentaire:
+        isEtat11ou12 && !(formData.id_sous_etat && String(formData.id_sous_etat).trim() !== '')
+          ? null
+          : formData.commentaire || null,
       modifications: mods,
       ph3_installateur: isEtatSigner ? (formData.ph3_installateur || null) : null,
       ph3_pac: isEtatSigner ? (formData.ph3_pac || null) : null,
@@ -260,15 +264,15 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
             </select>
           </div>
 
-          {formData.id_etat_final && etatsAvecSousEtats.includes(parseInt(formData.id_etat_final)) && (
+          {formData.id_etat_final && etatsAvecListeSousEtats.includes(parseInt(formData.id_etat_final, 10)) && (
             <div className="form-group">
-              <label>Sous-état:</label>
+              <label>{isEtat11ou12 ? 'Sous-état (facultatif) :' : 'Sous-état :'}</label>
               <select
                 value={formData.id_sous_etat}
                 onChange={(e) => setFormData({ ...formData, id_sous_etat: e.target.value })}
                 disabled={readOnly}
               >
-                <option value="">Sélectionner un sous-état</option>
+                <option value="">{isEtat11ou12 ? '—' : 'Sélectionner un sous-état'}</option>
                 {sousEtatsData.map(sousEtat => (
                   <option key={sousEtat.id} value={sousEtat.id}>{sousEtat.titre}</option>
                 ))}
@@ -276,15 +280,17 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
             </div>
           )}
 
-          <div className="form-group">
-            <label>Commentaire:</label>
-            <textarea
-              value={formData.commentaire}
-              onChange={(e) => setFormData({ ...formData, commentaire: e.target.value })}
-              rows={4}
-              disabled={readOnly}
-            />
-          </div>
+          {(!isEtat11ou12 || (formData.id_sous_etat && String(formData.id_sous_etat).trim() !== '')) && (
+            <div className="form-group">
+              <label>Commentaire{isEtat11ou12 ? ' (facultatif) :' : ' :'}</label>
+              <textarea
+                value={formData.commentaire}
+                onChange={(e) => setFormData({ ...formData, commentaire: e.target.value })}
+                rows={4}
+                disabled={readOnly}
+              />
+            </div>
+          )}
 
           {/* État 9 - Honoré à suivre : Date rappel (J+2 par défaut, modifiable) */}
           {isEtatHonoreSuivre && (

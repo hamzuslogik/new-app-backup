@@ -456,9 +456,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   });
 
-  // Récupérer les sous-états dynamiquement selon l'état sélectionné
-  // États qui ont des sous-états : 2 (NRP), 8 (ANNULER À REPROGRAMMER), 13 (SIGNER), 16 (SIGNER RETRACTER), 19 (RAPPEL POUR BUREAU), 44 (SIGNER PM), 45 (SIGNER COMPLET)
-  const etatsAvecSousEtats = [2, 8, 13, 16, 19, 44, 45];
+  // Sous-états chargés depuis l'API pour ces états (11 RDV ANNULER, 12 REFUSER : liste affichée, sélection facultative)
+  const etatsAvecListeSousEtats = [2, 8, 11, 12, 13, 16, 19, 44, 45];
+  // Sous-état obligatoire seulement pour ces états lorsque la liste existe (pas 11 ni 12)
+  const etatsSousEtatObligatoire = [2, 8, 13, 16, 19, 44, 45];
   const { data: sousEtats = [] } = useQuery(
     ['sous-etat', selectedEtat],
     async () => {
@@ -470,7 +471,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         return [];
       }
     },
-    { enabled: selectedEtat !== null && etatsAvecSousEtats.includes(selectedEtat) }
+    { enabled: selectedEtat !== null && etatsAvecListeSousEtats.includes(selectedEtat) }
   );
 
   // Admin session (1 admin, 11 backoffice, 13 RP confirmation, 14 RE confirmation) : formulaire honoré à suivre étendu
@@ -1813,25 +1814,32 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       const isCommercialPorteImprevuNrp =
         Number(user?.fonction) === 5 && compteRenduOption === 'porte_imprevu_nrp' && Number(selectedEtat) === 8;
 
-      // Validation : sous-état obligatoire si la liste des sous-états est présente
-      if (etatsAvecSousEtats.includes(selectedEtat) && sousEtats && sousEtats.length > 0 && !(selectedEtat === 8 && isCommercialPorteImprevuNrp)) {
-        const idSousEtat = selectedEtat === 2
-          ? (nrpFormData.id_sous_etat || '').toString().trim()
-          : (etatFormData.id_sous_etat || '').toString().trim();
+      // Validation : sous-état obligatoire si la liste existe (sauf états 11 et 12 où il est facultatif)
+      if (
+        etatsSousEtatObligatoire.includes(selectedEtat) &&
+        sousEtats &&
+        sousEtats.length > 0 &&
+        !(selectedEtat === 8 && isCommercialPorteImprevuNrp)
+      ) {
+        const idSousEtat =
+          selectedEtat === 2
+            ? (nrpFormData.id_sous_etat || '').toString().trim()
+            : (etatFormData.id_sous_etat || '').toString().trim();
         if (!idSousEtat) {
           alert('Veuillez sélectionner un sous-état.');
           return;
         }
       }
 
-      // Validation : commentaire obligatoire lorsque le formulaire le propose
-      const etatsAvecCommentaire = [2, 8, 9, 12, 19, 23, 34, 13, 44, 45, 16, 38];
+      // Validation : commentaire obligatoire lorsque le formulaire le propose (11 et 12 : commentaire facultatif)
+      const etatsAvecCommentaire = [2, 8, 9, 19, 23, 34, 13, 44, 45, 16, 38];
       if (etatsAvecCommentaire.includes(selectedEtat)) {
-        const comment = (selectedEtat === 2)
-          ? (nrpFormData.conf_commentaire_produit || '').trim()
-          : ([12, 19, 23, 34].includes(selectedEtat)
-            ? (etatFormData.motif_qualif || '').trim()
-            : (etatFormData.conf_commentaire_produit || '').trim());
+        const comment =
+          selectedEtat === 2
+            ? (nrpFormData.conf_commentaire_produit || '').trim()
+            : [19, 23, 34].includes(selectedEtat)
+              ? (etatFormData.motif_qualif || '').trim()
+              : (etatFormData.conf_commentaire_produit || '').trim();
         if (!comment) {
           alert('Veuillez saisir un commentaire.');
           return;
@@ -1976,12 +1984,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         if (etatFormData.motif_qualif) {
           updateData.motif_qualif = etatFormData.motif_qualif;
         }
-      } else if ([9, 12, 23, 34].includes(selectedEtat)) {
-        // CLIENT HONORE A SUIVRE (9), REFUSER (12), HORS CIBLE CONFIRMATEUR (23), HHC FINANCEMENT A VERIFIER (34)
+      } else if ([9, 11, 12, 23, 34].includes(selectedEtat)) {
+        // CLIENT HONORE A SUIVRE (9), RDV ANNULER (11), REFUSER (12), HORS CIBLE (23), HHC FINANCEMENT (34)
         if (selectedEtat === 9 && etatFormData.conf_commentaire_produit) {
           updateData.conf_commentaire_produit = etatFormData.conf_commentaire_produit;
         }
-        if ([12, 23, 34].includes(selectedEtat) && etatFormData.motif_qualif) {
+        if ([11, 12].includes(selectedEtat)) {
+          if (etatFormData.id_sous_etat) {
+            updateData.id_sous_etat = parseInt(etatFormData.id_sous_etat, 10);
+            if (etatFormData.motif_qualif) updateData.motif_qualif = etatFormData.motif_qualif;
+          }
+        } else if ([23, 34].includes(selectedEtat) && etatFormData.motif_qualif) {
           updateData.motif_qualif = etatFormData.motif_qualif;
         }
         if (selectedEtat === 34 && etatFormData.conf_rdv_avec) {
@@ -6357,10 +6370,26 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               </div>
             )}
 
-            {/* Formulaire pour états 12 (REFUSER), 23 (HORS CIBLE CONFIRMATEUR), 34 (HHC FINANCEMENT A VERIFIER) */}
-            {[12, 23, 34].includes(selectedEtat) && (
+            {/* États 11 (RDV ANNULER), 12 (REFUSER) : sous-état facultatif ; commentaire affiché et facultatif si sous-état choisi. 23, 34 : inchangé */}
+            {[11, 12, 23, 34].includes(selectedEtat) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
-                <h3>Commentaire</h3>
+                <h3>{[11, 12].includes(selectedEtat) ? 'RDV annulé / Refus' : 'Commentaire'}</h3>
+                {[11, 12].includes(selectedEtat) && sousEtats.length > 0 && (
+                  <div className="form-group">
+                    <label htmlFor="etat_id_sous_etat_11_12">Sous-état (facultatif) :</label>
+                    <select
+                      id="etat_id_sous_etat_11_12"
+                      className="form-control"
+                      value={etatFormData.id_sous_etat || ''}
+                      onChange={(e) => setEtatFormData({ ...etatFormData, id_sous_etat: e.target.value })}
+                    >
+                      <option value="">—</option>
+                      {sousEtats.map((se) => (
+                        <option key={se.id} value={String(se.id)}>{se.titre}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 {selectedEtat === 34 && (
                   <div className="form-group">
                     <label htmlFor="etat_conf_rdv_avec_34">Appel avec qui :</label>
@@ -6377,22 +6406,26 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     </select>
                   </div>
                 )}
-                <div className="form-group">
-                  <label htmlFor="etat_conf_commentaire_simple">Commentaire :</label>
-                  <textarea
-                    id="etat_conf_commentaire_simple"
-                    className="form-control"
-                    rows="4"
-                    value={etatFormData.motif_qualif}
-                    onChange={(e) => setEtatFormData({...etatFormData, motif_qualif: e.target.value})}
-                  />
-                </div>
+                {([23, 34].includes(selectedEtat) || ([11, 12].includes(selectedEtat) && (etatFormData.id_sous_etat || '').toString().trim() !== '')) && (
+                  <div className="form-group">
+                    <label htmlFor="etat_conf_commentaire_simple">
+                      Commentaire{[11, 12].includes(selectedEtat) ? ' (facultatif)' : ''} :
+                    </label>
+                    <textarea
+                      id="etat_conf_commentaire_simple"
+                      className="form-control"
+                      rows="4"
+                      value={etatFormData.motif_qualif}
+                      onChange={(e) => setEtatFormData({...etatFormData, motif_qualif: e.target.value})}
+                    />
+                  </div>
+                )}
                 <div className="form-actions">
                   <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
                     setSelectedEtat(null);
                     setCompteRenduOption('');
-                    setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: '', conf_rdv_avec: ''});
+                    setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: '', conf_rdv_avec: '', id_sous_etat: ''});
                   }}>Annuler</button>
                 </div>
               </div>
@@ -6404,7 +6437,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
              selectedEtat !== 2 && 
              selectedEtat !== 8 && 
              selectedEtat !== 19 && 
-             ![9, 12, 13, 16, 23, 34, 38, 44, 45].includes(selectedEtat) && (
+             ![9, 11, 12, 13, 16, 23, 34, 38, 44, 45].includes(selectedEtat) && (
               <div className="form-actions" style={{ marginTop: '20px' }}>
                 <button
                   className="btn-confirm"

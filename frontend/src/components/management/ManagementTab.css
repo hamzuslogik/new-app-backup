@@ -529,3 +529,33 @@
   }
 }
 
+/* Tri en-têtes — onglet Utilisateurs */
+.utilisateurs-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.utilisateurs-sort-btn:hover {
+  color: var(--primary-color, #9cbfc8);
+}
+
+.utilisateurs-sort-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+  font-size: 0.85em;
+}
+
+.utilisateurs-sort-icon--muted {
+  opacity: 0.35;
+}
+
