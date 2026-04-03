@@ -361,8 +361,13 @@
 }
 
 .data-table thead {
-  background-color: var(--dark-bg);
-  color: white;
+  background-color: #1a1a1a;
+  color: #fff;
+}
+
+.data-table thead th {
+  background-color: #1a1a1a;
+  color: #fff;
 }
 
 .data-table th,
@@ -376,10 +381,13 @@
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  background-color: #1a1a1a;
+  color: #fff;
 }
 
 .data-table-th-sortable:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: #1a1a1a;
+  color: #fff;
 }
 
 .data-table-th-sortable-inner {
