@@ -666,16 +666,25 @@ const Dashboard = () => {
   // Libellé d'état à afficher : priorité au etat_titre renvoyé par l'API (affiche tous les états en session confirmateur, ex. en attente)
   const getEtatDisplayName = (fiche) => (fiche?.etat_titre || getEtatName(fiche?.id_etat_final) || '').trim();
 
-  // Bulle au survol : nom prénom client, téléphone, puis commentaire. Si état changé par compte rendu → commentaire commercial, sinon commentaire confirmateur.
+  // Bulle au survol : nom, téléphone, puis commentaire.
+  // — État actuel issu d’un compte rendu (dernière ligne fiches_histo.from_compte_rendu) → commentaire commercial (fiches).
+  // — Sinon, si état ≠ Confirmer (7) → commentaire saisi au changement d’état (conf_commentaire_produit de la dernière ligne fiches_histo).
+  // — Sinon (Confirmer) → conf_commentaire_produit sur la fiche.
   const getTooltipComment = (fiche) => {
     const nom = (fiche?.nom ?? '').trim();
     const prenom = (fiche?.prenom ?? '').trim();
     const tel = (fiche?.tel ?? '').trim();
-    const useCommentaireCommercial = fiche?.has_etat_changed_by_compte_rendu === true;
-    const commentaire = (useCommentaireCommercial
-      ? (fiche?.commentaire_commercial ?? '')
-      : (fiche?.conf_commentaire_produit ?? '')
-    ).trim();
+    const etatCr = fiche?.current_state_from_compte_rendu === true;
+    const idEtat = Number(fiche?.id_etat_final);
+    const isConfirmer = idEtat === 7;
+    let commentaire = '';
+    if (etatCr) {
+      commentaire = (fiche?.commentaire_commercial ?? '').trim();
+    } else if (!isConfirmer) {
+      commentaire = (fiche?.histo_last_conf_commentaire ?? '').trim();
+    } else {
+      commentaire = (fiche?.conf_commentaire_produit ?? '').trim();
+    }
     const commentaireStr = commentaire.length > 500 ? commentaire.slice(0, 497) + '...' : commentaire;
     const lignes = [
       [nom, prenom].filter(Boolean).join(' '),

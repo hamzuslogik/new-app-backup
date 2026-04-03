@@ -1425,7 +1425,8 @@ router.get('/', authenticate, async (req, res) => {
         crWithCommercial.push(...(await query(crQuery, chunk)));
         lastHistoConfRows.push(
           ...(await query(
-            `SELECT fh.id_fiche, fh.id_confirmateur, fh.id_confirmateur_2, fh.id_confirmateur_3
+            `SELECT fh.id_fiche, fh.id_confirmateur, fh.id_confirmateur_2, fh.id_confirmateur_3,
+              fh.conf_commentaire_produit AS histo_last_conf_commentaire
          FROM fiches_histo fh
          INNER JOIN (
            SELECT id_fiche, MAX(id) AS max_id
@@ -1445,10 +1446,12 @@ router.get('/', authenticate, async (req, res) => {
 
       // Colonne Confirmateur (Dashboard / listes) : confirmateur(s) de la DERNIÈRE ligne fiches_histo (MAX(id)),
       // champs id_confirmateur, id_confirmateur_2, id_confirmateur_3 sur cette ligne uniquement.
+      const histoLastCommentByFiche = new Map();
       const confIdsByFiche = new Map();
       for (const row of lastHistoConfRows) {
         const fid = Number(row.id_fiche);
         if (!Number.isFinite(fid)) continue;
+        histoLastCommentByFiche.set(fid, row.histo_last_conf_commentaire ?? null);
         const candidates = [row.id_confirmateur, row.id_confirmateur_2, row.id_confirmateur_3]
           .map((n) => Number(n))
           .filter((n) => Number.isFinite(n) && n > 0);
@@ -1466,6 +1469,7 @@ router.get('/', authenticate, async (req, res) => {
         idToPseudo = new Map(userRows.map((u) => [Number(u.id), u.pseudo]));
       }
       fiches.forEach((fiche) => {
+        fiche.histo_last_conf_commentaire = histoLastCommentByFiche.get(Number(fiche.id)) ?? null;
         const ids = confIdsByFiche.get(Number(fiche.id)) || [];
         const parts = ids.map((id) => idToPseudo.get(id) || `ID${id}`).filter(Boolean);
         fiche.histo_confirmateurs_pseudo = parts.length > 0 ? parts.join(' | ') : null;
