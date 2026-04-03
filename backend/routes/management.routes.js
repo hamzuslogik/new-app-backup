@@ -417,6 +417,66 @@ router.get('/utilisateurs', authenticate, async (req, res) => {
   }
 });
 
+// Liste en lecture seule des utilisateurs rattachés (RE Confirmation → confirmateurs ; Superviseur qualification → agents)
+router.get('/utilisateurs/mon-equipe', authenticate, async (req, res) => {
+  try {
+    const fn = Number(req.user.fonction);
+    let sousFonction = null;
+    let roleLabel = '';
+    if (fn === 14) {
+      sousFonction = 6;
+      roleLabel = 'confirmateurs';
+    } else if (fn === 2) {
+      sousFonction = 3;
+      roleLabel = 'agents qualification';
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès réservé aux RE Confirmation et aux Superviseurs qualification',
+      });
+    }
+
+    const sql = `SELECT u.id, u.nom, u.prenom, u.pseudo, u.login, u.mail, u.tel, u.fonction, u.centre, u.genre, u.etat, u.color, u.chef_equipe, u.id_rp_qualif,
+       f.titre as fonction_titre,
+       c.titre as centre_titre,
+       supervisor.pseudo as supervisor_pseudo,
+       rp.pseudo as rp_qualif_pseudo
+       FROM utilisateurs u
+       LEFT JOIN fonctions f ON u.fonction = f.id
+       LEFT JOIN centres c ON u.centre = c.id
+       LEFT JOIN utilisateurs supervisor ON u.chef_equipe = supervisor.id
+       LEFT JOIN utilisateurs rp ON u.id_rp_qualif = rp.id
+       WHERE u.chef_equipe = ? AND u.fonction = ? AND u.etat > 0
+       ORDER BY u.pseudo ASC`;
+
+    let rows = await query(sql, [req.user.id, sousFonction]);
+
+    for (const userRow of rows) {
+      if (userRow.fonction === 9) {
+        const userCentres = await query(
+          `SELECT c.id, c.titre
+           FROM utilisateurs_centres uc
+           LEFT JOIN centres c ON uc.id_centre = c.id
+           WHERE uc.id_utilisateur = ? AND c.etat > 0
+           ORDER BY c.titre ASC`,
+          [userRow.id]
+        );
+        userRow.centres = userCentres.map((c) => ({ id: c.id, titre: c.titre }));
+        userRow.centres_ids = userCentres.map((c) => c.id);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: rows,
+      meta: { role: roleLabel, sous_fonction: sousFonction },
+    });
+  } catch (error) {
+    console.error('Erreur mon-equipe:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Créer un utilisateur
 router.post('/utilisateurs', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {

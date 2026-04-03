@@ -319,6 +319,14 @@ const Sidebar = ({ collapsed }) => {
       customCheck: (item, user) => [6, 13, 14].includes(Number(user?.fonction)),
     },
     {
+      path: '/mon-equipe',
+      label: 'Utilisateurs',
+      icon: FaUsers,
+      permission: null,
+      visible: true,
+      customCheck: (item, user) => [2, 14].includes(Number(user?.fonction)),
+    },
+    {
       path: '/rappels-bureau',
       label: 'Rappels Bureau',
       icon: FaCalendarAlt,

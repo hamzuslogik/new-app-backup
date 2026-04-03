@@ -1,0 +1,122 @@
+.mon-equipe-page {
+  padding: 1.25rem 1.5rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.mon-equipe-error {
+  padding: 2rem;
+  color: #c0392b;
+}
+
+.mon-equipe-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.35rem;
+  margin: 0 0 0.35rem 0;
+}
+
+.mon-equipe-header-icon {
+  color: #9cbfc8;
+}
+
+.mon-equipe-subtitle {
+  margin: 0;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.mon-equipe-context {
+  margin: 0.6rem 0 0;
+  font-size: 0.88rem;
+  color: #666;
+}
+
+.mon-equipe-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.25rem 0 0.75rem;
+}
+
+.mon-equipe-search {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+  max-width: 420px;
+}
+
+.mon-equipe-search input {
+  width: 100%;
+  padding: 0.5rem 0.65rem 0.5rem 2.25rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.mon-equipe-search-icon {
+  position: absolute;
+  left: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.mon-equipe-count {
+  font-size: 0.88rem;
+  color: #666;
+}
+
+.mon-equipe-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.mon-equipe-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.mon-equipe-table th,
+.mon-equipe-table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.mon-equipe-table thead th {
+  background: #f7f9fa;
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+}
+
+.mon-equipe-table tbody tr:hover {
+  background: #fafcfd;
+}
+
+.mon-equipe-empty {
+  text-align: center;
+  color: #777;
+  padding: 1.5rem !important;
+}
+
+.mon-equipe-badge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  background: #eee;
+  color: #555;
+}
+
+.mon-equipe-badge--ok {
+  background: #e8f6ef;
+  color: #1e7e34;
+}
