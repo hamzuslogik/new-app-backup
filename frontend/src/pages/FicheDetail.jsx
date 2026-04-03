@@ -122,6 +122,9 @@ const TIME_SLOTS = [
 // États sans transition possible (aligné sur backend management.routes.js) : pas de « nouvel état »
 const ETATS_SANS_NOUVEL_ETAT = [22, 25, 26, 34, 35]; // ANNULER 2 FOIS, REFUSER 2 FOIS, RDV ANNULER 2 FOIS, HHC FINANCEMENT, HHC TECHNIQUE
 
+/** Annuler, Annuler 2×, RDV annuler, RDV annuler 2×, HHC financement à vérifier, Hors cible air air — commentaire (motif_qualif) en détails fiche. */
+const ETATS_AVEC_COMMENTAIRE_MOTIF = [5, 22, 11, 26, 34, 29];
+
 // Helper pour calculer le timeKey à partir d'une heure (HH:MM:SS)
 // Évite les problèmes de fuseau horaire en calculant directement les secondes depuis minuit UTC
 function hourToTimeKey(hour) {
@@ -2297,6 +2300,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   };
 
   const etatColor = getEtatColor();
+  const etatActuelHeaderColor = (() => {
+    const c = String(etatColor || '').trim().toLowerCase();
+    if (c === '#ffffff' || c === '#fff' || c === 'white') return '#333333';
+    return etatColor;
+  })();
 
   const etatActuelHeaderTitre = fiche.id_etat_final
     ? (fiche.etat_final_titre || etats?.find((e) => e.id === fiche.id_etat_final)?.titre || 'État inconnu')
@@ -2749,9 +2757,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             }}>R2</span>}
           </h1>
         </div>
-        <div className="fiche-detail-etat-actuel">
+        <div className="fiche-detail-etat-actuel" style={{ color: etatActuelHeaderColor }}>
           <span className="fiche-detail-etat-label">État actuel :</span>
-          <span className="fiche-detail-etat-value" style={{ color: etatColor }}>
+          <span className="fiche-detail-etat-value">
             {etatActuelHeaderTitre
               ? `${etatActuelHeaderTitre}${etatActuelHeaderSous ? ` · ${etatActuelHeaderSous}` : ''}`
               : '—'}
@@ -2816,6 +2824,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         <>
           {/* Détails de la fiche */}
           <div className="fiche-sections">
+        {ETATS_AVEC_COMMENTAIRE_MOTIF.includes(Number(fiche.id_etat_final)) && (
+          <div className="fiche-section">
+            <h2 className="section-title">Commentaire sur l&apos;état</h2>
+            <table className="fiche-details-table">
+              <tbody>
+                {renderField('Commentaire', 'motif_qualif', fiche.motif_qualif || '-', 'textarea')}
+              </tbody>
+            </table>
+          </div>
+        )}
         {/* Section Données personnelles */}
         <div className="fiche-section">
           <h2 className="section-title">Données personnelles</h2>
@@ -3315,13 +3333,19 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   etatData.confirmateur_2_pseudo,
                   etatData.confirmateur_3_pseudo
                 ].filter(Boolean).join(', ') || '-';
+                const auteurChangementEtat =
+                  etatData.histo_confirmateur_pseudo != null && String(etatData.histo_confirmateur_pseudo).trim() !== ''
+                    ? String(etatData.histo_confirmateur_pseudo).trim()
+                    : '';
+                const labelConfirmateur =
+                  auteurChangementEtat !== '' ? `${auteurChangementEtat} — Confirmateur` : 'Confirmateur';
                 
                 const items = [];
                 
                 // NRP (2)
                 if (etatId === 2) {
                   if (etatData.sous_etat_titre) items.push({ label: 'Sous-état', value: etatData.sous_etat_titre });
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3333,7 +3357,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // RAPPEL POUR BUREAU (19)
                 else if (etatId === 19) {
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3345,7 +3369,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // ANNULER ET A REPROGRAMMER (8)
                 else if (etatId === 8) {
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3357,7 +3381,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // CLIENT HONORE A SUIVRE (9)
                 else if (etatId === 9) {
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   if (etatData.confirmateur_2_pseudo) items.push({ label: 'Confirmateur 2', value: etatData.confirmateur_2_pseudo });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
@@ -3370,7 +3394,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // RDV ANNULER (11)
                 else if (etatId === 11) {
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3381,7 +3405,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // RDV ANNULER 2 FOIS (26)
                 else if (etatId === 26) {
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3392,7 +3416,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // REFUSER (12)
                 else if (etatId === 12) {
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3403,7 +3427,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // HHC FINANCEMENT A VERIFIER (34)
                 else if (etatId === 34) {
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3414,7 +3438,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // HCC TECHNIQUE (35)
                 else if (etatId === 35) {
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3459,7 +3483,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // CONFIRMER (7) — afficher tous les champs conf_ remplis (non null) ; si entrée CR : commentaire commercial uniquement
                 else if (etatId === 7) {
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   if (etatData.from_compte_rendu && etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial (compte rendu)', value: etatData.commentaire_commercial, fullWidth: true });
                   } else if (!etatData.from_compte_rendu && etatData.conf_commentaire_produit) {
@@ -3518,7 +3542,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // Par défaut
                 else {
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'Confirmateur', value: confirmateursList });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelConfirmateur, value: confirmateursList });
                   // Afficher le commentaire commercial s'il existe (après création d'un compte rendu approuvé)
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3546,6 +3570,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 etat_titre: fiche.etat_final_titre || etats?.find(e => e.id === fiche.id_etat_final)?.titre || 'État inconnu',
                 etat_color: fiche.etat_final_color || etats?.find(e => e.id === fiche.id_etat_final)?.color || '#3498db',
                 sous_etat_titre: fiche.sous_etat_titre || null,
+                // Pseudo utilisateur ayant enregistré le passage à cet état (colonne id_confirmateur de la ligne fiches_histo)
+                histo_confirmateur_pseudo: lastHistoEtatActuel?.histo_confirmateur_pseudo || null,
                 // Utiliser les données actuelles de la fiche
                 confirmateur_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur)?.pseudo || null,
                 confirmateur_2_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_2)?.pseudo || null,
@@ -4107,11 +4133,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                       {histo.date_creation ? new Date(histo.date_creation).toLocaleString('fr-FR') : '-'}
                                     </span>
                                   </div>
-                                  {histo.histo_confirmateur_pseudo && (
-                                    <div className="historique-user" style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                                      Changé par : {histo.histo_confirmateur_pseudo}
-                                    </div>
-                                  )}
                                 </div>
                                 
                                 {detailItems.length > 0 && (
