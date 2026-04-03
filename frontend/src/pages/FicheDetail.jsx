@@ -2298,6 +2298,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
   const etatColor = getEtatColor();
 
+  const etatActuelHeaderTitre = fiche.id_etat_final
+    ? (fiche.etat_final_titre || etats?.find((e) => e.id === fiche.id_etat_final)?.titre || 'État inconnu')
+    : null;
+  const etatActuelHeaderSous = fiche.sous_etat_titre || null;
+
   // Fonction pour générer le PDF
   const generatePDF = () => {
     if (!fiche) return;
@@ -2723,25 +2728,35 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       }}
     >
       <div className="fiche-detail-header">
-        <div className="fiche-type-badge" style={{ 
-          backgroundColor: fiche.produit_color || (fiche.produit === 1 ? '#66D5D4' : '#FFE441'),
-          color: fiche.produit === 1 ? 'white' : 'black'
-        }}>
-          {fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : 'PV')}
+        <div className="fiche-detail-header-title">
+          <div className="fiche-type-badge" style={{ 
+            backgroundColor: fiche.produit_color || (fiche.produit === 1 ? '#66D5D4' : '#FFE441'),
+            color: fiche.produit === 1 ? 'white' : 'black'
+          }}>
+            {fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : 'PV')}
+          </div>
+          <h1>
+            <FaInfoCircle /> Détails de la fiche
+            {isR2 && <span style={{ 
+              marginLeft: '10px', 
+              fontSize: '0.7em', 
+              fontWeight: 'normal',
+              color: '#e74c3c',
+              backgroundColor: '#fff',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              border: '1px solid #e74c3c'
+            }}>R2</span>}
+          </h1>
         </div>
-        <h1>
-          <FaInfoCircle /> Détails de la fiche
-          {isR2 && <span style={{ 
-            marginLeft: '10px', 
-            fontSize: '0.7em', 
-            fontWeight: 'normal',
-            color: '#e74c3c',
-            backgroundColor: '#fff',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            border: '1px solid #e74c3c'
-          }}>R2</span>}
-        </h1>
+        <div className="fiche-detail-etat-actuel">
+          <span className="fiche-detail-etat-label">État actuel :</span>
+          <span className="fiche-detail-etat-value" style={{ color: etatColor }}>
+            {etatActuelHeaderTitre
+              ? `${etatActuelHeaderTitre}${etatActuelHeaderSous ? ` · ${etatActuelHeaderSous}` : ''}`
+              : '—'}
+          </span>
+        </div>
       </div>
 
       {/* Onglets */}
