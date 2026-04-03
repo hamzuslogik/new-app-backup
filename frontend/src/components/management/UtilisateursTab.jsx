@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-toastify';
 import api from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle, FaKey, FaCopy, FaCheck, FaPowerOff, FaCheckCircle, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle, FaKey, FaCopy, FaCheck, FaPowerOff, FaCheckCircle } from 'react-icons/fa';
 import LoadingSpinner from '../common/LoadingSpinner';
 import Tooltip from '../common/Tooltip';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
@@ -15,7 +15,6 @@ const UtilisateursTab = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useLocalStorage('management_utilisateurs_search', '');
-  const [sort, setSort] = useState({ key: 'id', direction: 'asc' });
   const [generatedToken, setGeneratedToken] = useState(null);
   const [tokenCopied, setTokenCopied] = useState(false);
   const [formData, setFormData] = useState({
@@ -87,96 +86,6 @@ const UtilisateursTab = () => {
       item.id?.toString().includes(term)
     );
   }, [utilisateurs, searchTerm]);
-
-  const toggleSort = (key) => {
-    setSort((prev) =>
-      prev.key === key
-        ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-        : { key, direction: 'asc' }
-    );
-  };
-
-  const SortHeader = ({ colKey, label }) => (
-    <th
-      className="data-table-th-sortable"
-      scope="col"
-      onClick={() => toggleSort(colKey)}
-      title="Trier"
-    >
-      <span className="data-table-th-sortable-inner">
-        {label}
-        {sort.key === colKey ? (
-          sort.direction === 'asc' ? (
-            <FaSortUp className="data-table-sort-icon" aria-hidden />
-          ) : (
-            <FaSortDown className="data-table-sort-icon" aria-hidden />
-          )
-        ) : (
-          <FaSort className="data-table-sort-icon data-table-sort-icon--muted" aria-hidden />
-        )}
-      </span>
-    </th>
-  );
-
-  const sortedData = useMemo(() => {
-    const list = [...filteredData];
-    const { key, direction } = sort;
-    const mult = direction === 'asc' ? 1 : -1;
-
-    const supervisorPseudo = (u) =>
-      u.chef_equipe
-        ? utilisateurs?.find((x) => x.id === u.chef_equipe)?.pseudo || u.supervisor_pseudo || ''
-        : '';
-    const rpPseudo = (u) =>
-      u.id_rp_qualif
-        ? utilisateurs?.find((x) => x.id === u.id_rp_qualif)?.pseudo || u.rp_qualif_pseudo || ''
-        : '';
-    const centreLabel = (u) =>
-      u.fonction === 9 && u.centres?.length
-        ? u.centres.map((c) => c.titre).join(', ')
-        : u.centre_titre || '';
-
-    list.sort((a, b) => {
-      let cmp = 0;
-      switch (key) {
-        case 'id':
-          cmp = (Number(a.id) || 0) - (Number(b.id) || 0);
-          return cmp * mult;
-        case 'pseudo':
-          cmp = String(a.pseudo || '').localeCompare(String(b.pseudo || ''), 'fr', { sensitivity: 'base' });
-          break;
-        case 'nom':
-          cmp = `${a.nom || ''} ${a.prenom || ''}`.trim().localeCompare(`${b.nom || ''} ${b.prenom || ''}`.trim(), 'fr', {
-            sensitivity: 'base',
-          });
-          break;
-        case 'login':
-          cmp = String(a.login || '').localeCompare(String(b.login || ''), 'fr', { sensitivity: 'base' });
-          break;
-        case 'fonction':
-          cmp = String(a.fonction_titre || '').localeCompare(String(b.fonction_titre || ''), 'fr', {
-            sensitivity: 'base',
-          });
-          break;
-        case 'centre':
-          cmp = centreLabel(a).localeCompare(centreLabel(b), 'fr', { sensitivity: 'base' });
-          break;
-        case 'supervisor':
-          cmp = supervisorPseudo(a).localeCompare(supervisorPseudo(b), 'fr', { sensitivity: 'base' });
-          break;
-        case 'rp':
-          cmp = rpPseudo(a).localeCompare(rpPseudo(b), 'fr', { sensitivity: 'base' });
-          break;
-        case 'etat':
-          cmp = (Number(a.etat) || 0) - (Number(b.etat) || 0);
-          return cmp * mult;
-        default:
-          return 0;
-      }
-      return cmp * mult;
-    });
-    return list;
-  }, [filteredData, sort, utilisateurs]);
 
   const createMutation = useMutation(
     async (data) => {
@@ -843,21 +752,21 @@ const UtilisateursTab = () => {
         <table className="data-table">
           <thead>
             <tr>
-              <SortHeader colKey="id" label="ID" />
-              <SortHeader colKey="pseudo" label="Pseudo" />
-              <SortHeader colKey="nom" label="Nom" />
-              <SortHeader colKey="login" label="Login" />
-              <SortHeader colKey="fonction" label="Fonction" />
-              <SortHeader colKey="centre" label="Centre" />
-              <SortHeader colKey="supervisor" label="Superviseur / RE Confirmation" />
-              <SortHeader colKey="rp" label="RP Qualification" />
-              <SortHeader colKey="etat" label="État" />
+              <th>ID</th>
+              <th>Pseudo</th>
+              <th>Nom</th>
+              <th>Login</th>
+              <th>Fonction</th>
+              <th>Centre</th>
+              <th>Superviseur / RE Confirmation</th>
+              <th>RP Qualification</th>
+              <th>État</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {sortedData && sortedData.length > 0 ? (
-              sortedData.map((user) => (
+            {filteredData && filteredData.length > 0 ? (
+              filteredData.map((user) => (
                 <tr key={user.id}>
                   <td data-label="">{user.id}</td>
                   <td data-label="Pseudo:">{user.pseudo}</td>
