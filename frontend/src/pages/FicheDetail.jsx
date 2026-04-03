@@ -3342,6 +3342,13 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   auteurChangementEtat !== ''
                     ? auteurChangementEtat
                     : (confirmateursList !== '-' ? confirmateursList : '-');
+                /** Confirmer, Honoré à suivre, Signer : afficher confirmateurs 1, 2 et 3 s'ils existent ; sinon repli sur l'auteur. */
+                const ETATS_AVEC_CONF123 = [7, 9, 13, 16, 44, 45];
+                const valeurConfirmateurEtatListe = ETATS_AVEC_CONF123.includes(Number(etatId))
+                  ? (confirmateursList !== '-' ? confirmateursList : valeurConfirmateurAffichee)
+                  : valeurConfirmateurAffichee;
+                const hasAnyConfirmateurAssigne =
+                  !!(etatData.confirmateur_pseudo || etatData.confirmateur_2_pseudo || etatData.confirmateur_3_pseudo);
                 
                 const items = [];
                 
@@ -3384,8 +3391,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // CLIENT HONORE A SUIVRE (9)
                 else if (etatId === 9) {
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
-                  if (etatData.confirmateur_2_pseudo) items.push({ label: 'Confirmateur 2', value: etatData.confirmateur_2_pseudo });
+                  if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurEtatListe });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3454,7 +3460,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 // SIGNER, SIGNER RETRACTER, SIGNER COMPLET, SIGNER PM (13, 16, 45, 44) - Phase 3
                 else if ([13, 16, 45, 44].includes(etatId)) {
                   if (etatData.sous_etat_titre) items.push({ label: 'SOUS ETAT', value: etatData.sous_etat_titre });
-                  if (etatData.confirmateur_pseudo) items.push({ label: 'PSEUDO', value: confirmateursList });
+                  if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurEtatListe });
                   // Afficher le commentaire commercial s'il existe (après création d'un compte rendu approuvé)
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -3486,7 +3492,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 }
                 // CONFIRMER (7) — afficher tous les champs conf_ remplis (non null) ; si entrée CR : commentaire commercial uniquement
                 else if (etatId === 7) {
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                  if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurEtatListe });
                   if (etatData.from_compte_rendu && etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial (compte rendu)', value: etatData.commentaire_commercial, fullWidth: true });
                   } else if (!etatData.from_compte_rendu && etatData.conf_commentaire_produit) {
