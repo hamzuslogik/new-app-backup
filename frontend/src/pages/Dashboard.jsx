@@ -702,16 +702,29 @@ const Dashboard = () => {
       Number(fiche?.id_etat_final) === ID_ETAT_HONORE_A_SUIVRE) &&
     fiche?.current_state_from_compte_rendu === true;
 
-  // Confirmateur affiché : pseudos depuis dernière ligne fiches_histo (API), sinon table fiches — ordre confirmateur 1 | 2 | 3
+  /** Aligné détails fiche : Confirmer, Honoré à suivre, Signer → confirmateurs 1, 2 et 3 sur la fiche ; sinon dernière ligne histo puis fiche. */
+  const ETATS_DASHBOARD_CONF123 = [7, 9, 13, 16, 44, 45];
   const getConfirmateursFormatted = (fiche) => {
+    const etatId = Number(fiche?.id_etat_final);
+    const conf123FromFiche = () => {
+      const conf1 = fiche.id_confirmateur ? getUserName(fiche.id_confirmateur) : '';
+      const conf2 = fiche.id_confirmateur_2 ? getUserName(fiche.id_confirmateur_2) : '';
+      const conf3 = fiche.id_confirmateur_3 ? getUserName(fiche.id_confirmateur_3) : '';
+      const parts = [conf1, conf2, conf3].filter(Boolean);
+      return parts.length > 0 ? parts.join(' | ') : '';
+    };
+    if (ETATS_DASHBOARD_CONF123.includes(etatId)) {
+      const fromFiche = conf123FromFiche();
+      if (fromFiche) return fromFiche;
+      if (fiche.histo_confirmateurs_pseudo && String(fiche.histo_confirmateurs_pseudo).trim() !== '') {
+        return fiche.histo_confirmateurs_pseudo;
+      }
+      return '';
+    }
     if (fiche.histo_confirmateurs_pseudo && String(fiche.histo_confirmateurs_pseudo).trim() !== '') {
       return fiche.histo_confirmateurs_pseudo;
     }
-    const conf1 = fiche.id_confirmateur ? getUserName(fiche.id_confirmateur) : '';
-    const conf2 = fiche.id_confirmateur_2 ? getUserName(fiche.id_confirmateur_2) : '';
-    const conf3 = fiche.id_confirmateur_3 ? getUserName(fiche.id_confirmateur_3) : '';
-    const parts = [conf1, conf2, conf3].filter(Boolean);
-    return parts.length > 0 ? parts.join(' | ') : '';
+    return conf123FromFiche();
   };
 
   // Quand "Inclure 2ème confirmateur" est coché et un confirmateur est sélectionné : afficher Confirmateur 1 | Confirmateur 2 | Confirmateur 3, avec le sélectionné mis en avant
