@@ -13,19 +13,23 @@ CREATE TABLE IF NOT EXISTS `global_settings` (
 
 -- Paramètre existant (recherche fiche par téléphone dans l’URL)
 INSERT INTO `global_settings` (`setting_key`, `setting_value`, `updated_by`)
-SELECT 'phone_url_search_enabled', '1', NULL
-WHERE NOT EXISTS (SELECT 1 FROM `global_settings` WHERE `setting_key` = 'phone_url_search_enabled');
+SELECT t.k, t.v, NULL
+FROM (SELECT 'phone_url_search_enabled' AS k, '1' AS v) AS t
+WHERE NOT EXISTS (SELECT 1 FROM `global_settings` AS g WHERE g.`setting_key` = t.k);
 
 -- Sécurité : blocage après tentatives échouées (0 = désactivé)
 INSERT INTO `global_settings` (`setting_key`, `setting_value`, `updated_by`)
-SELECT 'failed_login_max_before_ip_block', '0', NULL
-WHERE NOT EXISTS (SELECT 1 FROM `global_settings` WHERE `setting_key` = 'failed_login_max_before_ip_block');
+SELECT t.k, t.v, NULL
+FROM (SELECT 'failed_login_max_before_ip_block' AS k, '0' AS v) AS t
+WHERE NOT EXISTS (SELECT 1 FROM `global_settings` AS g WHERE g.`setting_key` = t.k);
 
 INSERT INTO `global_settings` (`setting_key`, `setting_value`, `updated_by`)
-SELECT 'failed_login_window_minutes', '60', NULL
-WHERE NOT EXISTS (SELECT 1 FROM `global_settings` WHERE `setting_key` = 'failed_login_window_minutes');
+SELECT t.k, t.v, NULL
+FROM (SELECT 'failed_login_window_minutes' AS k, '60' AS v) AS t
+WHERE NOT EXISTS (SELECT 1 FROM `global_settings` AS g WHERE g.`setting_key` = t.k);
 
 -- Durée de session JWT (aligner sur JWT_EXPIRE si vous utilisez une autre valeur, ex. 7d)
 INSERT INTO `global_settings` (`setting_key`, `setting_value`, `updated_by`)
-SELECT 'session_lifetime', '24h', NULL
-WHERE NOT EXISTS (SELECT 1 FROM `global_settings` WHERE `setting_key` = 'session_lifetime');
+SELECT t.k, t.v, NULL
+FROM (SELECT 'session_lifetime' AS k, '24h' AS v) AS t
+WHERE NOT EXISTS (SELECT 1 FROM `global_settings` AS g WHERE g.`setting_key` = t.k);

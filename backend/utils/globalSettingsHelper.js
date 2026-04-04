@@ -18,11 +18,13 @@ async function ensureDefaultGlobalSettingsRows() {
     ['session_lifetime', sessionDefault]
   ];
   for (const [key, val] of defaults) {
+    // Sous-requête dérivée : compatible MariaDB (pas de SELECT … WHERE sans FROM)
     await query(
       `INSERT INTO global_settings (setting_key, setting_value, updated_by)
-       SELECT ?, ?, NULL
-       WHERE NOT EXISTS (SELECT 1 FROM global_settings WHERE setting_key = ?)`,
-      [key, val, key]
+       SELECT t.k, t.v, NULL
+       FROM (SELECT ? AS k, ? AS v) AS t
+       WHERE NOT EXISTS (SELECT 1 FROM global_settings g WHERE g.setting_key = t.k)`,
+      [key, val]
     );
   }
 }
