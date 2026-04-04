@@ -30,18 +30,28 @@ router.post('/login', async (req, res) => {
 
     const securitySettings = await getSecuritySettings();
     const clientIp = getNormalizedClientIpForRateLimit(req);
-    if (securitySettings.failedLoginMaxBeforeIpBlock > 0 && clientIp) {
-      const failCount = await countFailedLoginAttemptsForIp(
-        clientIp,
-        securitySettings.failedLoginWindowMinutes
+    const maxBrute = securitySettings.failedLoginMaxBeforeIpBlock;
+    const fenetreMin = securitySettings.failedLoginWindowMinutes;
+
+    if (maxBrute > 0 && clientIp) {
+      const failCount = await countFailedLoginAttemptsForIp(clientIp, fenetreMin);
+      console.log(
+        `[auth/login] anti-brute-force ip=${clientIp} échecs_dans_fenêtre=${failCount} seuil=${maxBrute} fenêtre_min=${fenetreMin}`
       );
-      if (failCount >= securitySettings.failedLoginMaxBeforeIpBlock) {
+      if (failCount >= maxBrute) {
+        console.warn(
+          `[auth/login] refus HTTP 429 — IP ${clientIp} : ${failCount} tentative(s) échouée(s) comptée(s) ≥ seuil ${maxBrute} (fenêtre ${fenetreMin} min)`
+        );
         return res.status(429).json({
           success: false,
           message:
             'Trop de tentatives de connexion depuis cette adresse. Veuillez patienter avant de réessayer.'
         });
       }
+    } else if (maxBrute > 0 && !clientIp) {
+      console.warn(
+        '[auth/login] anti-brute-force activé (seuil>0) mais IP client indéterminée — pas de blocage par IP pour cette requête'
+      );
     }
 
     // Récupérer l'utilisateur avec ses relations
@@ -130,6 +140,10 @@ router.post('/login', async (req, res) => {
       expiresIn = process.env.JWT_EXPIRE || '24h';
     }
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn });
+
+    console.log(
+      `[auth/login] connexion réussie userId=${user.id} login=${user.login} ip=${clientIp || '—'} expiresIn=${expiresIn}`
+    );
 
     // Retourner les informations utilisateur (sans le mot de passe)
     const { mdp, ...userWithoutPassword } = user;

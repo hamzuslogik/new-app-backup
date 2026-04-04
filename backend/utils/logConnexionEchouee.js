@@ -18,13 +18,17 @@ async function logConnexionEchouee({ login, idUtilisateur, req, raison }) {
     const ip = getNormalizedClientIpForRateLimit(req);
     const loginStr =
       login != null && String(login).trim() !== '' ? String(login).trim().slice(0, 128) : null;
+    const uid = idUtilisateur != null ? Number(idUtilisateur) : null;
+    console.log(
+      `[connexion-echouee] journalisation raison=${raison} login=${loginStr || '—'} ip=${ip || '—'} id_utilisateur=${uid ?? '—'}`
+    );
     await query(
       `INSERT INTO connexions_echouees (login, id_utilisateur, adresse_ip, raison_echec)
        VALUES (?, ?, ?, ?)`,
-      [loginStr, idUtilisateur != null ? Number(idUtilisateur) : null, ip ? ip : null, String(raison).slice(0, 64)]
+      [loginStr, uid, ip ? ip : null, String(raison).slice(0, 64)]
     );
   } catch (e) {
-    console.error('logConnexionEchouee:', e.message);
+    console.error('[connexion-echouee] échec INSERT:', e.message);
   }
 }
 
