@@ -2757,9 +2757,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             }}>R2</span>}
           </h1>
         </div>
-        <div className="fiche-detail-etat-actuel" style={{ color: etatActuelHeaderColor }}>
+        <div className="fiche-detail-etat-actuel">
           <span className="fiche-detail-etat-label">État actuel :</span>
-          <span className="fiche-detail-etat-value">
+          <span
+            className="fiche-detail-etat-value"
+            style={{ color: etatActuelHeaderColor }}
+          >
             {etatActuelHeaderTitre
               ? `${etatActuelHeaderTitre}${etatActuelHeaderSous ? ` · ${etatActuelHeaderSous}` : ''}`
               : '—'}
