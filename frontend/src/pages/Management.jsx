@@ -40,6 +40,7 @@ const Management = () => {
   const tabs = [
     { id: 'centres', label: 'Centres', icon: FaBuilding },
     { id: 'utilisateurs', label: 'Utilisateurs', icon: FaUsers },
+    { id: 'connexions-echouees', label: 'Connexions échouées', icon: FaLock },
     { id: 'departements', label: 'Départements', icon: FaMapMarkerAlt },
     { id: 'produits', label: 'Produits', icon: FaBox },
     { id: 'fonctions', label: 'Fonctions', icon: FaUserTie },
