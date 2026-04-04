@@ -31,6 +31,7 @@ const statistiqueV2Routes = require('./routes/statistique-v2.routes');
 const systemMessagesRoutes = require('./routes/systemMessages.routes');
 const alertesRoutes = require('./routes/alertes.routes');
 const remarquesRoutes = require('./routes/remarques.routes');
+const { ensureGlobalSettingsTable } = require('./utils/globalSettingsHelper');
 
 // Créer l'application Express
 const app = express();
@@ -103,6 +104,9 @@ app.listen(PORT, () => {
   console.log(`🚀 Serveur démarré sur le port ${PORT}`);
   console.log(`📡 Environnement: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 API disponible sur: http://localhost:${PORT}/api`);
+  ensureGlobalSettingsTable().catch((err) =>
+    console.error('Initialisation global_settings:', err.message)
+  );
 });
 
 // Démarrer le planificateur de workflows (scheduled)

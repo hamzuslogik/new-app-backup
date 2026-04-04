@@ -8,6 +8,12 @@ const XLSX = require('xlsx');
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const { query, queryOne, transaction } = require('../config/database');
 const { isValidIpRuleString } = require('../utils/ipAllowlist');
+const {
+  ensureGlobalSettingsTable,
+  getSecuritySettings,
+  invalidateSecuritySettingsCache,
+  isValidJwtExpiresIn
+} = require('../utils/globalSettingsHelper');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -896,11 +902,17 @@ router.post('/utilisateurs/generate-token', authenticate, async (req, res) => {
       });
     }
 
-    // Générer le token JWT
+    const sec = await getSecuritySettings();
+    let expiresIn = sec.sessionLifetime;
+    try {
+      jwt.sign({ _t: 1 }, process.env.JWT_SECRET, { expiresIn });
+    } catch {
+      expiresIn = process.env.JWT_EXPIRE || '7d';
+    }
     const token = jwt.sign(
       { userId: user.id },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      { expiresIn }
     );
 
     res.json({
@@ -917,7 +929,7 @@ router.post('/utilisateurs/generate-token', authenticate, async (req, res) => {
           centre: user.centre,
           centre_titre: user.centre_titre
         },
-        expiresIn: process.env.JWT_EXPIRE || '7d'
+        expiresIn
       }
     });
   } catch (error) {
@@ -2473,16 +2485,92 @@ router.post('/fiches-hash-from-phones', authenticate, upload.single('file'), asy
 // PARAMETRES GLOBAUX
 // =====================================================
 
-const ensureGlobalSettingsTable = async () => {
-  await query(`
-    CREATE TABLE IF NOT EXISTS global_settings (
-      setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
-      setting_value VARCHAR(255) DEFAULT NULL,
-      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      updated_by INT(11) DEFAULT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `);
-};
+// Lecture : tout utilisateur authentifié (écran gestion). Écriture : admin / backoffice (PUT).
+router.get('/global-settings/security', authenticate, async (req, res) => {
+  try {
+    await ensureGlobalSettingsTable();
+    const s = await getSecuritySettings();
+    res.json({
+      success: true,
+      data: {
+        failedLoginMaxBeforeIpBlock: s.failedLoginMaxBeforeIpBlock,
+        failedLoginWindowMinutes: s.failedLoginWindowMinutes,
+        sessionLifetime: s.sessionLifetime,
+        envJwtExpireFallback: process.env.JWT_EXPIRE || '24h'
+      }
+    });
+  } catch (error) {
+    console.error('Erreur GET /global-settings/security:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+router.put('/global-settings/security', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    await ensureGlobalSettingsTable();
+    const maxRaw = req.body?.failedLoginMaxBeforeIpBlock;
+    const winRaw = req.body?.failedLoginWindowMinutes;
+    const sessionRaw = req.body?.sessionLifetime;
+
+    const maxN = parseInt(maxRaw, 10);
+    const winN = parseInt(winRaw, 10);
+
+    if (!Number.isFinite(maxN) || maxN < 0 || maxN > 100000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nombre max de tentatives invalide (0 à 100000, 0 = désactivé)'
+      });
+    }
+    if (!Number.isFinite(winN) || winN < 1 || winN > 10080) {
+      return res.status(400).json({
+        success: false,
+        message: 'Fenêtre (minutes) invalide (1 à 10080)'
+      });
+    }
+    if (sessionRaw == null || String(sessionRaw).trim() === '') {
+      return res.status(400).json({ success: false, message: 'Durée de session requise' });
+    }
+    if (!isValidJwtExpiresIn(sessionRaw)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Durée de session invalide. Exemples : 30m, 8h, 24h, 7d (voir documentation jsonwebtoken expiresIn)'
+      });
+    }
+
+    const uid = req.user?.id || null;
+    await query(
+      `INSERT INTO global_settings (setting_key, setting_value, updated_by) VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by), updated_at = CURRENT_TIMESTAMP`,
+      ['failed_login_max_before_ip_block', String(maxN), uid]
+    );
+    await query(
+      `INSERT INTO global_settings (setting_key, setting_value, updated_by) VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by), updated_at = CURRENT_TIMESTAMP`,
+      ['failed_login_window_minutes', String(winN), uid]
+    );
+    await query(
+      `INSERT INTO global_settings (setting_key, setting_value, updated_by) VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by), updated_at = CURRENT_TIMESTAMP`,
+      ['session_lifetime', String(sessionRaw).trim(), uid]
+    );
+
+    invalidateSecuritySettingsCache();
+    const s = await getSecuritySettings();
+    res.json({
+      success: true,
+      message: 'Paramètres de sécurité mis à jour',
+      data: {
+        failedLoginMaxBeforeIpBlock: s.failedLoginMaxBeforeIpBlock,
+        failedLoginWindowMinutes: s.failedLoginWindowMinutes,
+        sessionLifetime: s.sessionLifetime
+      }
+    });
+  } catch (error) {
+    console.error('Erreur PUT /global-settings/security:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
 
 router.get('/global-settings/phone-url-search-enabled', authenticate, async (req, res) => {
   try {

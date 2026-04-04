@@ -4,8 +4,13 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { query, queryOne } = require('../config/database');
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
-const { isClientIpAllowedForFonction } = require('../utils/ipAllowlist');
+const {
+  isClientIpAllowedForFonction,
+  getClientIp,
+  normalizeClientIp
+} = require('../utils/ipAllowlist');
 const { logConnexionEchouee, RAISON } = require('../utils/logConnexionEchouee');
+const { getSecuritySettings, countFailedLoginAttemptsForIp } = require('../utils/globalSettingsHelper');
 
 // Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
 const hashPassword = (password) => {
@@ -22,6 +27,22 @@ router.post('/login', async (req, res) => {
         success: false,
         message: 'Login et mot de passe requis'
       });
+    }
+
+    const securitySettings = await getSecuritySettings();
+    const clientIp = normalizeClientIp(getClientIp(req));
+    if (securitySettings.failedLoginMaxBeforeIpBlock > 0 && clientIp) {
+      const failCount = await countFailedLoginAttemptsForIp(
+        clientIp,
+        securitySettings.failedLoginWindowMinutes
+      );
+      if (failCount >= securitySettings.failedLoginMaxBeforeIpBlock) {
+        return res.status(429).json({
+          success: false,
+          message:
+            'Trop de tentatives de connexion depuis cette adresse. Veuillez patienter avant de réessayer.'
+        });
+      }
     }
 
     // Récupérer l'utilisateur avec ses relations
@@ -103,12 +124,13 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Générer le token JWT
-    const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE }
-    );
+    let expiresIn = securitySettings.sessionLifetime;
+    try {
+      jwt.sign({ _check: 1 }, process.env.JWT_SECRET, { expiresIn });
+    } catch {
+      expiresIn = process.env.JWT_EXPIRE || '24h';
+    }
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn });
 
     // Retourner les informations utilisateur (sans le mot de passe)
     const { mdp, ...userWithoutPassword } = user;
@@ -117,6 +139,7 @@ router.post('/login', async (req, res) => {
       success: true,
       message: 'Connexion réussie',
       token,
+      expiresIn,
       user: {
         id: user.id,
         login: user.login,
