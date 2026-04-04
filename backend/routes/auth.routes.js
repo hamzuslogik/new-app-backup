@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { query, queryOne } = require('../config/database');
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
+const { isClientIpAllowedForFonction } = require('../utils/ipAllowlist');
 
 // Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
 const hashPassword = (password) => {
@@ -25,6 +26,7 @@ router.post('/login', async (req, res) => {
     // Récupérer l'utilisateur avec ses relations
     const user = await queryOne(
       `SELECT u.*, f.titre as fonction_titre, f.etat as fonction_etat,
+       f.ip_acces_tous AS fonction_ip_acces_tous,
        c.titre as centre_titre, c.etat as centre_etat
        FROM utilisateurs u
        LEFT JOIN fonctions f ON u.fonction = f.id
@@ -56,6 +58,23 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'Votre compte, fonction ou centre est désactivé'
+      });
+    }
+
+    const allowAllIp =
+      user.fonction_ip_acces_tous == null || Number(user.fonction_ip_acces_tous) === 1;
+    let ipRules = [];
+    if (!allowAllIp && user.fonction != null) {
+      ipRules = (
+        await query('SELECT ip_rule FROM fonction_ips_autorisees WHERE id_fonction = ?', [
+          user.fonction
+        ])
+      ).map((r) => r.ip_rule);
+    }
+    if (!isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Connexion non autorisée depuis cette adresse IP pour votre fonction.'
       });
     }
 

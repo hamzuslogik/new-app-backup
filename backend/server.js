@@ -35,6 +35,11 @@ const remarquesRoutes = require('./routes/remarques.routes');
 // Créer l'application Express
 const app = express();
 
+// Derrière un reverse proxy (nginx) : req.ip et X-Forwarded-For corrects pour les restrictions IP
+if (process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',

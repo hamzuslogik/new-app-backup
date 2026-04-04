@@ -7,6 +7,7 @@ const path = require('path');
 const XLSX = require('xlsx');
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const { query, queryOne, transaction } = require('../config/database');
+const { isValidIpRuleString } = require('../utils/ipAllowlist');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -14,6 +15,40 @@ const upload = multer({ storage: multer.memoryStorage() });
 const hashPassword = (password) => {
   return crypto.createHash('sha256').update(password).digest('hex');
 };
+
+function parseIpRulesFromBody(body) {
+  const raw = body.ips_autorisees;
+  if (raw == null) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((s) => String(s).trim()).filter(Boolean).slice(0, 500);
+  }
+  if (typeof raw === 'string') {
+    return raw.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean).slice(0, 500);
+  }
+  return [];
+}
+
+async function attachIpsToFonctions(fonctions) {
+  if (!fonctions || fonctions.length === 0) return fonctions;
+  const ids = fonctions.map((f) => f.id);
+  const ph = ids.map(() => '?').join(',');
+  const rows = await query(
+    `SELECT id_fonction, ip_rule FROM fonction_ips_autorisees WHERE id_fonction IN (${ph}) ORDER BY id`,
+    ids
+  );
+  const map = new Map();
+  for (const r of rows) {
+    const fid = Number(r.id_fonction);
+    if (!map.has(fid)) map.set(fid, []);
+    map.get(fid).push(r.ip_rule);
+  }
+  return fonctions.map((f) => ({
+    ...f,
+    ip_acces_tous:
+      f.ip_acces_tous !== undefined && f.ip_acces_tous !== null ? Number(f.ip_acces_tous) : 1,
+    ips_autorisees: map.get(Number(f.id)) || []
+  }));
+}
 
 // =====================================================
 // CENTRES
@@ -185,7 +220,8 @@ router.get('/fonctions', authenticate, async (req, res) => {
     }
     queryStr += ' ORDER BY titre ASC';
     
-    const fonctions = await query(queryStr);
+    let fonctions = await query(queryStr);
+    fonctions = await attachIpsToFonctions(fonctions);
     res.json({ success: true, data: fonctions });
   } catch (error) {
     console.error('Erreur:', error);
@@ -196,28 +232,66 @@ router.get('/fonctions', authenticate, async (req, res) => {
 // Créer une fonction
 router.post('/fonctions', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
-    const { titre, etat = 1, page_accueil = '/dashboard', groupes_messages_autorises } = req.body;
-    
+    const {
+      titre,
+      etat = 1,
+      page_accueil = '/dashboard',
+      groupes_messages_autorises,
+      ip_acces_tous = 1,
+      ips_autorisees
+    } = req.body;
+
     if (!titre) {
       return res.status(400).json({ success: false, message: 'Le titre est requis' });
     }
 
+    const ipAll = ip_acces_tous === false || ip_acces_tous === 0 || ip_acces_tous === '0' ? 0 : 1;
+    const rules = parseIpRulesFromBody({ ips_autorisees });
+    if (ipAll === 0) {
+      if (rules.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Indiquez au moins une adresse IP ou plage (IPv4 / CIDR), ou choisissez « Toutes les adresses IP ».'
+        });
+      }
+      for (const r of rules) {
+        if (!isValidIpRuleString(r)) {
+          return res.status(400).json({
+            success: false,
+            message: `Adresse IP ou plage invalide (IPv4 ou CIDR, ex. 192.168.1.10 ou 10.0.0.0/24) : ${r}`
+          });
+        }
+      }
+    }
+
     // Convertir groupes_messages_autorises en JSON si c'est un tableau
-    const groupesMessagesJson = groupes_messages_autorises 
-      ? (Array.isArray(groupes_messages_autorises) 
-          ? JSON.stringify(groupes_messages_autorises) 
-          : groupes_messages_autorises)
+    const groupesMessagesJson = groupes_messages_autorises
+      ? Array.isArray(groupes_messages_autorises)
+        ? JSON.stringify(groupes_messages_autorises)
+        : groupes_messages_autorises
       : null;
 
-    const result = await query(
-      'INSERT INTO fonctions (titre, etat, page_accueil, groupes_messages_autorises) VALUES (?, ?, ?, ?)',
-      [titre, etat, page_accueil, groupesMessagesJson]
-    );
+    const insertId = await transaction(async (conn) => {
+      const [result] = await conn.execute(
+        'INSERT INTO fonctions (titre, etat, page_accueil, groupes_messages_autorises, ip_acces_tous) VALUES (?, ?, ?, ?, ?)',
+        [titre, etat, page_accueil, groupesMessagesJson, ipAll]
+      );
+      const newId = result.insertId;
+      if (ipAll === 0 && rules.length > 0) {
+        for (const r of rules) {
+          await conn.execute(
+            'INSERT INTO fonction_ips_autorisees (id_fonction, ip_rule) VALUES (?, ?)',
+            [newId, r]
+          );
+        }
+      }
+      return newId;
+    });
 
     res.status(201).json({
       success: true,
       message: 'Fonction créée avec succès',
-      data: { id: result.insertId }
+      data: { id: insertId }
     });
   } catch (error) {
     console.error('Erreur:', error);
@@ -229,23 +303,56 @@ router.post('/fonctions', authenticate, checkPermission(1, 2, 7, 11), async (req
 router.put('/fonctions/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
-    const { titre, etat, page_accueil, groupes_messages_autorises } = req.body;
+    const { titre, etat, page_accueil, groupes_messages_autorises, ip_acces_tous, ips_autorisees } =
+      req.body;
 
     if (!titre) {
       return res.status(400).json({ success: false, message: 'Le titre est requis' });
     }
 
-    // Convertir groupes_messages_autorises en JSON si c'est un tableau
-    const groupesMessagesJson = groupes_messages_autorises !== undefined
-      ? (Array.isArray(groupes_messages_autorises) 
-          ? JSON.stringify(groupes_messages_autorises) 
-          : (groupes_messages_autorises || null))
-      : null;
+    const ipAll =
+      ip_acces_tous === false || ip_acces_tous === 0 || ip_acces_tous === '0' ? 0 : 1;
+    const rules = parseIpRulesFromBody({ ips_autorisees });
+    if (ipAll === 0) {
+      if (rules.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Indiquez au moins une adresse IP ou plage (IPv4 / CIDR), ou choisissez « Toutes les adresses IP ».'
+        });
+      }
+      for (const r of rules) {
+        if (!isValidIpRuleString(r)) {
+          return res.status(400).json({
+            success: false,
+            message: `Adresse IP ou plage invalide (IPv4 ou CIDR) : ${r}`
+          });
+        }
+      }
+    }
 
-    await query(
-      'UPDATE fonctions SET titre = ?, etat = ?, page_accueil = ?, groupes_messages_autorises = ? WHERE id = ?',
-      [titre, etat, page_accueil || '/dashboard', groupesMessagesJson, id]
-    );
+    // Convertir groupes_messages_autorises en JSON si c'est un tableau
+    const groupesMessagesJson =
+      groupes_messages_autorises !== undefined
+        ? Array.isArray(groupes_messages_autorises)
+          ? JSON.stringify(groupes_messages_autorises)
+          : groupes_messages_autorises || null
+        : null;
+
+    await transaction(async (conn) => {
+      await conn.execute(
+        'UPDATE fonctions SET titre = ?, etat = ?, page_accueil = ?, groupes_messages_autorises = ?, ip_acces_tous = ? WHERE id = ?',
+        [titre, etat, page_accueil || '/dashboard', groupesMessagesJson, ipAll, id]
+      );
+      await conn.execute('DELETE FROM fonction_ips_autorisees WHERE id_fonction = ?', [id]);
+      if (ipAll === 0 && rules.length > 0) {
+        for (const r of rules) {
+          await conn.execute(
+            'INSERT INTO fonction_ips_autorisees (id_fonction, ip_rule) VALUES (?, ?)',
+            [id, r]
+          );
+        }
+      }
+    });
 
     res.json({ success: true, message: 'Fonction mise à jour avec succès' });
   } catch (error) {

@@ -9,11 +9,20 @@ import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import './ManagementTab.css';
 
+const defaultFormData = () => ({
+  titre: '',
+  etat: 1,
+  page_accueil: '/dashboard',
+  groupes_messages_autorises: [],
+  ip_acces_tous: true,
+  ips_text: ''
+});
+
 const FonctionsTab = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useLocalStorage('management_fonctions_search', '');
-  const [formData, setFormData] = useState({ titre: '', etat: 1, page_accueil: '/dashboard', groupes_messages_autorises: [] });
+  const [formData, setFormData] = useState(defaultFormData);
   const queryClient = useQueryClient();
 
   // Raccourcis clavier
@@ -22,7 +31,7 @@ const FonctionsTab = () => {
       if (showForm) {
         setShowForm(false);
         setEditingId(null);
-        setFormData({ titre: '', etat: 1, page_accueil: '/dashboard', groupes_messages_autorises: [] });
+        setFormData(defaultFormData());
       }
     },
     'ctrl+s': (e) => {
@@ -46,10 +55,14 @@ const FonctionsTab = () => {
     if (!fonctions) return [];
     if (!searchTerm.trim()) return fonctions;
     const term = searchTerm.toLowerCase();
-    return fonctions.filter(item => 
-      item.titre?.toLowerCase().includes(term) ||
-      item.id?.toString().includes(term)
-    );
+    return fonctions.filter((item) => {
+      const ipStr = (item.ips_autorisees || []).join(' ');
+      return (
+        item.titre?.toLowerCase().includes(term) ||
+        item.id?.toString().includes(term) ||
+        ipStr.toLowerCase().includes(term)
+      );
+    });
   }, [fonctions, searchTerm]);
 
   // Gérer la sélection/désélection des fonctions pour groupes_messages_autorises
@@ -78,7 +91,7 @@ const FonctionsTab = () => {
         queryClient.invalidateQueries('fonctions');
         toast.success('Fonction créée avec succès');
         setShowForm(false);
-        setFormData({ titre: '', etat: 1, page_accueil: '/dashboard', groupes_messages_autorises: [] });
+        setFormData(defaultFormData());
       },
       onError: (error) => {
         const errorMessage = error.response?.data?.message || 
@@ -109,7 +122,7 @@ const FonctionsTab = () => {
         toast.success('Fonction mise à jour avec succès');
         setShowForm(false);
         setEditingId(null);
-        setFormData({ titre: '', etat: 1, page_accueil: '/dashboard', groupes_messages_autorises: [] });
+        setFormData(defaultFormData());
       },
       onError: (error) => {
         const errorMessage = error.response?.data?.message || 
@@ -157,21 +170,43 @@ const FonctionsTab = () => {
         groupesMessages = [];
       }
     }
-    setFormData({ 
-      titre: fonction.titre, 
-      etat: fonction.etat, 
+    const ipAll = fonction.ip_acces_tous !== 0 && fonction.ip_acces_tous !== false && fonction.ip_acces_tous !== '0';
+    const ipsList = Array.isArray(fonction.ips_autorisees) ? fonction.ips_autorisees : [];
+    setFormData({
+      titre: fonction.titre,
+      etat: fonction.etat,
       page_accueil: fonction.page_accueil || '/dashboard',
-      groupes_messages_autorises: groupesMessages
+      groupes_messages_autorises: groupesMessages,
+      ip_acces_tous: ipAll,
+      ips_text: ipsList.join('\n')
     });
     setShowForm(true);
   };
 
+  const buildSubmitPayload = () => {
+    const ips_autorisees = formData.ip_acces_tous
+      ? []
+      : String(formData.ips_text || '')
+          .split(/[\n,;]+/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+    return {
+      titre: formData.titre,
+      etat: formData.etat,
+      page_accueil: formData.page_accueil,
+      groupes_messages_autorises: formData.groupes_messages_autorises,
+      ip_acces_tous: formData.ip_acces_tous ? 1 : 0,
+      ips_autorisees
+    };
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    const payload = buildSubmitPayload();
     if (editingId) {
-      updateMutation.mutate({ id: editingId, data: formData });
+      updateMutation.mutate({ id: editingId, data: payload });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(payload);
     }
   };
 
@@ -187,7 +222,7 @@ const FonctionsTab = () => {
     <div className="management-tab">
       <div className="tab-header">
         <h2>Gestion des Fonctions</h2>
-        <button className="btn-primary" onClick={() => { setShowForm(true); setEditingId(null); setFormData({ titre: '', etat: 1, page_accueil: '/dashboard' }); }}>
+        <button className="btn-primary" onClick={() => { setShowForm(true); setEditingId(null); setFormData(defaultFormData()); }}>
           <FaPlus /> Ajouter une fonction
         </button>
       </div>
@@ -323,7 +358,7 @@ const FonctionsTab = () => {
                     </>
                   )}
                 </button>
-                <button type="button" className="btn-secondary" onClick={() => { setShowForm(false); setEditingId(null); }}>
+                <button type="button" className="btn-secondary" onClick={() => { setShowForm(false); setEditingId(null); setFormData(defaultFormData()); }}>
                   Annuler <span className="shortcut-hint">(Esc)</span>
                 </button>
               </div>
@@ -340,6 +375,7 @@ const FonctionsTab = () => {
               <th>Titre</th>
               <th>État</th>
               <th>Page d'accueil</th>
+              <th>Accès IP</th>
               <th>Groupes messages</th>
               <th>Actions</th>
             </tr>
@@ -359,6 +395,27 @@ const FonctionsTab = () => {
                     <span className="page-accueil-badge">
                       {fonction.page_accueil || '/dashboard'}
                     </span>
+                  </td>
+                  <td data-label="Accès IP:">
+                    {fonction.ip_acces_tous === 0 || fonction.ip_acces_tous === false ? (
+                      (() => {
+                        const list = Array.isArray(fonction.ips_autorisees) ? fonction.ips_autorisees : [];
+                        if (list.length === 0) {
+                          return <span className="badge badge-danger" title="Aucune règle : connexion impossible">Liste vide</span>;
+                        }
+                        const title = list.join(', ');
+                        const short = list.slice(0, 2).join(', ');
+                        const more = list.length > 2 ? ` +${list.length - 2}` : '';
+                        return (
+                          <span className="groupes-messages-badge" title={title}>
+                            {short}
+                            {more}
+                          </span>
+                        );
+                      })()
+                    ) : (
+                      <span className="groupes-messages-badge all">Toutes</span>
+                    )}
                   </td>
                   <td data-label="Groupes messages:">
                     {fonction.groupes_messages_autorises ? (
@@ -400,7 +457,7 @@ const FonctionsTab = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="6" className="text-center">
+                <td colSpan="7" className="text-center">
                   {searchTerm ? 'Aucun résultat trouvé' : 'Aucune fonction trouvée'}
                 </td>
               </tr>

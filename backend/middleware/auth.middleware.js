@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
-const { queryOne } = require('../config/database');
+const { queryOne, query } = require('../config/database');
+const { isClientIpAllowedForFonction } = require('../utils/ipAllowlist');
 
 // Middleware d'authentification
 const authenticate = async (req, res, next) => {
@@ -21,7 +22,8 @@ const authenticate = async (req, res, next) => {
 
     // Récupérer l'utilisateur depuis la base de données
     const user = await queryOne(
-      `SELECT u.*, f.titre as fonction_titre, f.etat as fonction_etat, 
+      `SELECT u.*, f.titre as fonction_titre, f.etat as fonction_etat,
+       f.ip_acces_tous AS fonction_ip_acces_tous,
        c.titre as centre_titre, c.etat as centre_etat
        FROM utilisateurs u
        LEFT JOIN fonctions f ON u.fonction = f.id
@@ -42,6 +44,23 @@ const authenticate = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         message: 'Votre compte, fonction ou centre est désactivé'
+      });
+    }
+
+    const allowAllIp =
+      user.fonction_ip_acces_tous == null || Number(user.fonction_ip_acces_tous) === 1;
+    let ipRules = [];
+    if (!allowAllIp && user.fonction != null) {
+      ipRules = (
+        await query('SELECT ip_rule FROM fonction_ips_autorisees WHERE id_fonction = ?', [
+          user.fonction
+        ])
+      ).map((r) => r.ip_rule);
+    }
+    if (!isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès non autorisé depuis cette adresse IP pour votre fonction.'
       });
     }
 
