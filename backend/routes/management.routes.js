@@ -51,6 +51,30 @@ async function attachIpsToFonctions(fonctions) {
 }
 
 // =====================================================
+// TENTATIVES DE CONNEXION ÉCHOUÉES (audit)
+// =====================================================
+
+router.get('/connexions-echouees', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
+    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+    const rows = await query(
+      `SELECT c.id, c.date_tentative, c.login, c.id_utilisateur, c.adresse_ip, c.raison_echec,
+              u.pseudo AS utilisateur_pseudo
+       FROM connexions_echouees c
+       LEFT JOIN utilisateurs u ON c.id_utilisateur = u.id
+       ORDER BY c.date_tentative DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Erreur GET /connexions-echouees:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la lecture du journal' });
+  }
+});
+
+// =====================================================
 // CENTRES
 // =====================================================
 

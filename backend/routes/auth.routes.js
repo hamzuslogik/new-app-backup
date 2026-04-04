@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { query, queryOne } = require('../config/database');
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const { isClientIpAllowedForFonction } = require('../utils/ipAllowlist');
+const { logConnexionEchouee, RAISON } = require('../utils/logConnexionEchouee');
 
 // Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
 const hashPassword = (password) => {
@@ -36,6 +37,12 @@ router.post('/login', async (req, res) => {
     );
 
     if (!user) {
+      await logConnexionEchouee({
+        login,
+        idUtilisateur: null,
+        req,
+        raison: RAISON.LOGIN_INCONNU
+      });
       return res.status(401).json({
         success: false,
         message: 'Identifiants incorrects'
@@ -47,6 +54,12 @@ router.post('/login', async (req, res) => {
     const isPasswordValid = user.mdp === hashedPassword;
 
     if (!isPasswordValid) {
+      await logConnexionEchouee({
+        login,
+        idUtilisateur: user.id,
+        req,
+        raison: RAISON.MOT_DE_PASSE_INCORRECT
+      });
       return res.status(401).json({
         success: false,
         message: 'Identifiants incorrects'
@@ -55,6 +68,12 @@ router.post('/login', async (req, res) => {
 
     // Vérifier que l'utilisateur, sa fonction et son centre sont actifs
     if (user.etat === 0 || user.fonction_etat === 0 || user.centre_etat === 0) {
+      await logConnexionEchouee({
+        login,
+        idUtilisateur: user.id,
+        req,
+        raison: RAISON.COMPTE_OU_FONCTION_CENTRE_DESACTIVE
+      });
       return res.status(403).json({
         success: false,
         message: 'Votre compte, fonction ou centre est désactivé'
@@ -72,6 +91,12 @@ router.post('/login', async (req, res) => {
       ).map((r) => r.ip_rule);
     }
     if (!isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req)) {
+      await logConnexionEchouee({
+        login,
+        idUtilisateur: user.id,
+        req,
+        raison: RAISON.IP_NON_AUTORISEE
+      });
       return res.status(403).json({
         success: false,
         message: 'Connexion non autorisée depuis cette adresse IP pour votre fonction.'

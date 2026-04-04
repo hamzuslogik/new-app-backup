@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { queryOne, query } = require('../config/database');
 const { isClientIpAllowedForFonction } = require('../utils/ipAllowlist');
+const { logConnexionEchouee, RAISON } = require('../utils/logConnexionEchouee');
 
 // Middleware d'authentification
 const authenticate = async (req, res, next) => {
@@ -58,6 +59,12 @@ const authenticate = async (req, res, next) => {
       ).map((r) => r.ip_rule);
     }
     if (!isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req)) {
+      await logConnexionEchouee({
+        login: user.login,
+        idUtilisateur: user.id,
+        req,
+        raison: RAISON.IP_NON_AUTORISEE
+      });
       return res.status(403).json({
         success: false,
         message: 'Accès non autorisé depuis cette adresse IP pour votre fonction.'
