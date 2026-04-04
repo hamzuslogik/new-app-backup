@@ -451,8 +451,18 @@ const Dashboard = () => {
 
   // Grouper les états par phase
   const normalizeTitre = (t) => (!t ? '' : String(t).toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim());
-  const CONFIRMATEUR_ETATS_PHASE2 = ['confirmer', 'annuler a reprogrammer', 'client honore a suivre', 'honore hors cible confirmateurs', 'rdv annuler', 'refuser'];
+  const CONFIRMATEUR_ETATS_PHASE2 = [
+    'confirmer',
+    'annuler a reprogrammer',
+    'annuler et a reprogrammer', // libellé base « ANNULER ET A REPROGRAMMER »
+    'client honore a suivre',
+    'honore hors cible confirmateurs',
+    'rdv annuler',
+    'refuser'
+  ];
   const isEtatAllowedForConfirmateur = (e, allowedList) => {
+    const id = Number(e.id);
+    if (id === 8) return true; // Annuler à reprogrammer — toujours proposé en session confirmateur
     const n = normalizeTitre(e.titre);
     return allowedList.some(a => n === a || n.includes(a) || a.includes(n));
   };
