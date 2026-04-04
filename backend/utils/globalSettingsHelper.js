@@ -3,6 +3,30 @@ const { query } = require('../config/database');
 
 let securityCache = { expiresAt: 0, data: null };
 
+/**
+ * Insère les lignes par défaut si absentes (sans écraser une config existante).
+ */
+async function ensureDefaultGlobalSettingsRows() {
+  const sessionDefault =
+    process.env.JWT_EXPIRE && String(process.env.JWT_EXPIRE).trim() !== ''
+      ? String(process.env.JWT_EXPIRE).trim()
+      : '24h';
+  const defaults = [
+    ['phone_url_search_enabled', '1'],
+    ['failed_login_max_before_ip_block', '0'],
+    ['failed_login_window_minutes', '60'],
+    ['session_lifetime', sessionDefault]
+  ];
+  for (const [key, val] of defaults) {
+    await query(
+      `INSERT INTO global_settings (setting_key, setting_value, updated_by)
+       SELECT ?, ?, NULL
+       WHERE NOT EXISTS (SELECT 1 FROM global_settings WHERE setting_key = ?)`,
+      [key, val, key]
+    );
+  }
+}
+
 async function ensureGlobalSettingsTable() {
   await query(`
     CREATE TABLE IF NOT EXISTS global_settings (
@@ -12,6 +36,7 @@ async function ensureGlobalSettingsTable() {
       updated_by INT(11) DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  await ensureDefaultGlobalSettingsRows();
 }
 
 function invalidateSecuritySettingsCache() {
