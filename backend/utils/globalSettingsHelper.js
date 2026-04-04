@@ -13,7 +13,8 @@ async function ensureDefaultGlobalSettingsRows() {
       : '24h';
   const defaults = [
     ['phone_url_search_enabled', '1'],
-    ['failed_login_max_before_ip_block', '0'],
+    // 0 = désactivé ; 5 = bloquer après 5 échecs dans la fenêtre (défaut)
+    ['failed_login_max_before_ip_block', '5'],
     ['failed_login_window_minutes', '60'],
     ['session_lifetime', sessionDefault]
   ];
@@ -95,15 +96,20 @@ async function getSecuritySettings() {
  */
 async function countFailedLoginAttemptsForIp(clientIp, windowMinutes) {
   if (!clientIp) return 0;
-  const rows = await query(
-    `SELECT COUNT(*) AS c FROM connexions_echouees
-     WHERE adresse_ip = ?
-     AND date_tentative >= DATE_SUB(NOW(), INTERVAL ? MINUTE)
-     AND raison_echec IN ('login_inconnu', 'mot_de_passe_incorrect', 'compte_ou_fonction_centre_desactive')`,
-    [clientIp, windowMinutes]
-  );
-  const c = rows[0]?.c ?? 0;
-  return typeof c === 'bigint' ? Number(c) : Number(c);
+  try {
+    const rows = await query(
+      `SELECT COUNT(*) AS c FROM connexions_echouees
+       WHERE adresse_ip = ?
+       AND date_tentative >= DATE_SUB(NOW(), INTERVAL ? MINUTE)
+       AND raison_echec IN ('login_inconnu', 'mot_de_passe_incorrect', 'compte_ou_fonction_centre_desactive')`,
+      [clientIp, windowMinutes]
+    );
+    const c = rows[0]?.c ?? 0;
+    return typeof c === 'bigint' ? Number(c) : Number(c);
+  } catch (e) {
+    console.error('countFailedLoginAttemptsForIp:', e.message);
+    return 0;
+  }
 }
 
 function isValidJwtExpiresIn(value) {

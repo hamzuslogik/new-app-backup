@@ -6,8 +6,7 @@ const { query, queryOne } = require('../config/database');
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const {
   isClientIpAllowedForFonction,
-  getClientIp,
-  normalizeClientIp
+  getNormalizedClientIpForRateLimit
 } = require('../utils/ipAllowlist');
 const { logConnexionEchouee, RAISON } = require('../utils/logConnexionEchouee');
 const { getSecuritySettings, countFailedLoginAttemptsForIp } = require('../utils/globalSettingsHelper');
@@ -30,7 +29,7 @@ router.post('/login', async (req, res) => {
     }
 
     const securitySettings = await getSecuritySettings();
-    const clientIp = normalizeClientIp(getClientIp(req));
+    const clientIp = getNormalizedClientIpForRateLimit(req);
     if (securitySettings.failedLoginMaxBeforeIpBlock > 0 && clientIp) {
       const failCount = await countFailedLoginAttemptsForIp(
         clientIp,

@@ -20,6 +20,17 @@ function normalizeClientIp(raw) {
   return s;
 }
 
+/**
+ * IP normalisée pour audit / anti-brute-force : même logique que le journal connexions_echouees.
+ * Si X-Forwarded-For / req.ip sont vides, retombe sur la socket (souvent utile sans trust proxy).
+ */
+function getNormalizedClientIpForRateLimit(req) {
+  let ip = normalizeClientIp(getClientIp(req));
+  if (ip) return ip;
+  const raw = req.socket?.remoteAddress || req.ip || '';
+  return normalizeClientIp(raw);
+}
+
 function parseIPv4(str) {
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(str).trim());
   if (!m) return null;
@@ -93,6 +104,7 @@ function isValidIpRuleString(rule) {
 module.exports = {
   getClientIp,
   normalizeClientIp,
+  getNormalizedClientIpForRateLimit,
   clientIpMatchesRule,
   clientIpMatchesAnyRule,
   isClientIpAllowedForFonction,
