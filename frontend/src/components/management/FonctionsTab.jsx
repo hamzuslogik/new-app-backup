@@ -345,6 +345,32 @@ const FonctionsTab = () => {
                   )}
                 </div>
               </div>
+              <div className="form-group">
+                <label>
+                  Accès par adresse IP
+                  <Tooltip text="Si « Toutes les adresses IP » est coché, la connexion est autorisée depuis n’importe quelle IPv4. Sinon, indiquez une règle par ligne (IPv4 ou plage CIDR, ex. 203.0.113.5 ou 192.168.0.0/24).">
+                    <FaInfoCircle className="info-icon" />
+                  </Tooltip>
+                </label>
+                <label className="checkbox-label" style={{ marginBottom: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.ip_acces_tous}
+                    onChange={(e) => setFormData({ ...formData, ip_acces_tous: e.target.checked })}
+                  />
+                  <span>Toutes les adresses IP</span>
+                </label>
+                {!formData.ip_acces_tous && (
+                  <textarea
+                    className="search-input"
+                    rows={5}
+                    style={{ width: '100%', fontFamily: 'inherit', resize: 'vertical' }}
+                    placeholder={'Une règle par ligne, ex. :\n203.0.113.10\n10.0.0.0/24'}
+                    value={formData.ips_text}
+                    onChange={(e) => setFormData({ ...formData, ips_text: e.target.value })}
+                  />
+                )}
+              </div>
               <div className="form-actions">
                 <button type="submit" className="btn-primary" disabled={createMutation.isLoading || updateMutation.isLoading}>
                   {createMutation.isLoading || updateMutation.isLoading ? (
