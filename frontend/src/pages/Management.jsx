@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave, FaFileExport, FaPhone } from 'react-icons/fa';
+import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave, FaFileExport, FaPhone, FaLock } from 'react-icons/fa';
 import CentresTab from '../components/management/CentresTab';
 import FinancementTab from '../components/management/FinancementTab';
 import UtilisateursTab from '../components/management/UtilisateursTab';
@@ -18,6 +18,7 @@ import WorkflowsTab from '../components/management/WorkflowsTab';
 import FichesExtractionTab from '../components/management/FichesExtractionTab';
 import FichesHashFromTelTab from '../components/management/FichesHashFromTelTab';
 import GlobalSettingsTab from '../components/management/GlobalSettingsTab';
+import ConnexionsEchoueesTab from '../components/management/ConnexionsEchoueesTab';
 import GlobalSearch from '../components/management/GlobalSearch';
 import './Management.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -69,6 +70,8 @@ const Management = () => {
         return <CentresTab />;
       case 'utilisateurs':
         return <UtilisateursTab />;
+      case 'connexions-echouees':
+        return <ConnexionsEchoueesTab />;
       case 'departements':
         return <DepartementsTab />;
       case 'produits':

@@ -54,23 +54,95 @@ async function attachIpsToFonctions(fonctions) {
 // TENTATIVES DE CONNEXION ÉCHOUÉES (audit)
 // =====================================================
 
+const RAISONS_CONNEXION_ECHOUEE = new Set([
+  'login_inconnu',
+  'mot_de_passe_incorrect',
+  'ip_non_autorisee',
+  'compte_ou_fonction_centre_desactive'
+]);
+
+function buildConnexionsEchoueesWhere(req) {
+  const where = [];
+  const params = [];
+
+  const dateDebut = req.query.date_debut != null ? String(req.query.date_debut).trim() : '';
+  const dateFin = req.query.date_fin != null ? String(req.query.date_fin).trim() : '';
+  if (dateDebut && /^\d{4}-\d{2}-\d{2}$/.test(dateDebut)) {
+    where.push('c.date_tentative >= ?');
+    params.push(`${dateDebut} 00:00:00`);
+  }
+  if (dateFin && /^\d{4}-\d{2}-\d{2}$/.test(dateFin)) {
+    where.push('c.date_tentative <= ?');
+    params.push(`${dateFin} 23:59:59`);
+  }
+
+  const loginQ = req.query.login != null ? String(req.query.login).trim() : '';
+  if (loginQ) {
+    where.push('c.login LIKE ?');
+    params.push(`%${loginQ.slice(0, 128)}%`);
+  }
+
+  const ipQ = req.query.adresse_ip != null ? String(req.query.adresse_ip).trim() : '';
+  if (ipQ) {
+    where.push('c.adresse_ip LIKE ?');
+    params.push(`%${ipQ.slice(0, 64)}%`);
+  }
+
+  const raison = req.query.raison_echec != null ? String(req.query.raison_echec).trim() : '';
+  if (raison && RAISONS_CONNEXION_ECHOUEE.has(raison)) {
+    where.push('c.raison_echec = ?');
+    params.push(raison);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  return { whereSql, params };
+}
+
 router.get('/connexions-echouees', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
     const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+    const { whereSql, params } = buildConnexionsEchoueesWhere(req);
+
+    const countRows = await query(
+      `SELECT COUNT(*) AS total FROM connexions_echouees c ${whereSql}`,
+      params
+    );
+    const totalRaw = countRows[0]?.total ?? 0;
+    const total = typeof totalRaw === 'bigint' ? Number(totalRaw) : Number(totalRaw);
+
     const rows = await query(
       `SELECT c.id, c.date_tentative, c.login, c.id_utilisateur, c.adresse_ip, c.raison_echec,
               u.pseudo AS utilisateur_pseudo
        FROM connexions_echouees c
        LEFT JOIN utilisateurs u ON c.id_utilisateur = u.id
+       ${whereSql}
        ORDER BY c.date_tentative DESC
        LIMIT ? OFFSET ?`,
-      [limit, offset]
+      [...params, limit, offset]
     );
-    res.json({ success: true, data: rows });
+    res.json({ success: true, data: rows, total });
   } catch (error) {
     console.error('Erreur GET /connexions-echouees:', error);
     res.status(500).json({ success: false, message: 'Erreur lors de la lecture du journal' });
+  }
+});
+
+router.delete('/connexions-echouees/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id) || id < 1) {
+      return res.status(400).json({ success: false, message: 'ID invalide' });
+    }
+    const result = await query('DELETE FROM connexions_echouees WHERE id = ?', [id]);
+    const affected = result.affectedRows !== undefined ? result.affectedRows : 0;
+    if (affected === 0) {
+      return res.status(404).json({ success: false, message: 'Entrée introuvable' });
+    }
+    res.json({ success: true, message: 'Entrée supprimée' });
+  } catch (error) {
+    console.error('Erreur DELETE /connexions-echouees/:id:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la suppression' });
   }
 });
 
