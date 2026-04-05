@@ -12,7 +12,10 @@ const {
   ensureGlobalSettingsTable,
   getSecuritySettings,
   invalidateSecuritySettingsCache,
-  isValidJwtExpiresIn
+  isValidJwtExpiresIn,
+  ensureGlobalLoginIpWhitelistTable,
+  getBruteForceWhitelistRules,
+  invalidateBruteForceWhitelistCache
 } = require('../utils/globalSettingsHelper');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -2490,17 +2493,62 @@ router.get('/global-settings/security', authenticate, async (req, res) => {
   try {
     await ensureGlobalSettingsTable();
     const s = await getSecuritySettings();
+    await ensureGlobalLoginIpWhitelistTable();
+    const wlRows = await query(
+      'SELECT ip_rule FROM global_login_ip_whitelist ORDER BY ip_rule ASC'
+    );
+    const loginIpWhitelistRules = (wlRows || []).map((r) => r.ip_rule);
     res.json({
       success: true,
       data: {
         failedLoginMaxBeforeIpBlock: s.failedLoginMaxBeforeIpBlock,
         failedLoginWindowMinutes: s.failedLoginWindowMinutes,
         sessionLifetime: s.sessionLifetime,
-        envJwtExpireFallback: process.env.JWT_EXPIRE || '24h'
+        envJwtExpireFallback: process.env.JWT_EXPIRE || '24h',
+        loginIpWhitelistRules
       }
     });
   } catch (error) {
     console.error('Erreur GET /global-settings/security:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Liste blanche IP : jamais bloquées par le seuil de tentatives échouées à la connexion (HTTP 429)
+router.put('/global-settings/login-ip-whitelist', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    let rules = [];
+    if (Array.isArray(req.body?.rules)) {
+      rules = req.body.rules.map((s) => String(s).trim()).filter(Boolean);
+    } else if (typeof req.body?.rules === 'string') {
+      rules = req.body.rules
+        .split(/[\n,;]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    rules = [...new Set(rules)].slice(0, 500);
+    for (const r of rules) {
+      if (!isValidIpRuleString(r)) {
+        return res.status(400).json({
+          success: false,
+          message: `Adresse ou plage IP invalide : ${r} (IPv4 ou CIDR, ex. 203.0.113.10 ou 10.0.0.0/24)`
+        });
+      }
+    }
+    await ensureGlobalLoginIpWhitelistTable();
+    await query('DELETE FROM global_login_ip_whitelist');
+    for (const r of rules) {
+      await query('INSERT INTO global_login_ip_whitelist (ip_rule) VALUES (?)', [r]);
+    }
+    invalidateBruteForceWhitelistCache();
+    const fresh = await getBruteForceWhitelistRules();
+    res.json({
+      success: true,
+      message: 'Liste blanche connexion mise à jour',
+      data: { loginIpWhitelistRules: fresh }
+    });
+  } catch (error) {
+    console.error('Erreur PUT /global-settings/login-ip-whitelist:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

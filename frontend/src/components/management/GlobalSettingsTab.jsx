@@ -44,6 +44,7 @@ const GlobalSettingsTab = () => {
     failedLoginWindowMinutes: 60,
     sessionLifetime: '24h'
   });
+  const [loginIpWhitelistText, setLoginIpWhitelistText] = useState('');
 
   useEffect(() => {
     if (securityData) {
@@ -52,8 +53,39 @@ const GlobalSettingsTab = () => {
         failedLoginWindowMinutes: securityData.failedLoginWindowMinutes ?? 60,
         sessionLifetime: securityData.sessionLifetime || '24h'
       });
+      const wl = securityData.loginIpWhitelistRules;
+      setLoginIpWhitelistText(Array.isArray(wl) && wl.length ? wl.join('\n') : '');
     }
   }, [securityData]);
+
+  const saveLoginWhitelistMutation = useMutation(
+    async () => {
+      const rules = loginIpWhitelistText
+        .split(/[\n,;]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const res = await api.put('/management/global-settings/login-ip-whitelist', { rules });
+      return res.data;
+    },
+    {
+      onSuccess: (res) => {
+        queryClient.invalidateQueries('global-settings-security');
+        toast.success(res?.message || 'Liste blanche enregistrée');
+        const wl = res?.data?.loginIpWhitelistRules;
+        if (Array.isArray(wl)) {
+          setLoginIpWhitelistText(wl.length ? wl.join('\n') : '');
+        }
+      },
+      onError: (err) => {
+        toast.error(
+          err.response?.data?.message ||
+            err.message ||
+            'Erreur lors de l’enregistrement de la liste blanche',
+          { autoClose: 6000 }
+        );
+      }
+    }
+  );
 
   const saveSecurityMutation = useMutation(
     async () => {
@@ -195,6 +227,32 @@ const GlobalSettingsTab = () => {
                     <code>{securityData.envJwtExpireFallback}</code>
                   </small>
                 )}
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  Liste blanche IP (anti-brute-force connexion)
+                  <Tooltip text="Une adresse IPv4 ou une plage CIDR par ligne (ex. 203.0.113.10 ou 10.0.0.0/24). Ces origines ne recevront pas HTTP 429 pour trop de mots de passe incorrects.">
+                    <FaInfoCircle className="info-icon" />
+                  </Tooltip>
+                </label>
+                <textarea
+                  className="search-input"
+                  rows={6}
+                  style={{ width: '100%', maxWidth: '100%', fontFamily: 'monospace', fontSize: 13 }}
+                  placeholder={'203.0.113.10\n10.0.0.0/24'}
+                  value={loginIpWhitelistText}
+                  onChange={(e) => setLoginIpWhitelistText(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ marginTop: 8 }}
+                  disabled={saveLoginWhitelistMutation.isLoading}
+                  onClick={() => saveLoginWhitelistMutation.mutate()}
+                >
+                  {saveLoginWhitelistMutation.isLoading ? 'Enregistrement…' : 'Enregistrer la liste blanche'}
+                </button>
               </div>
 
               <div>

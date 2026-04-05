@@ -2,6 +2,8 @@ const jwt = require('jsonwebtoken');
 const { query } = require('../config/database');
 
 let securityCache = { expiresAt: 0, data: null };
+let bruteForceWhitelistCache = { expiresAt: 0, rules: null };
+let globalLoginIpWhitelistTableEnsured = false;
 
 /**
  * Insère les lignes par défaut si absentes (sans écraser une config existante).
@@ -122,11 +124,47 @@ function isValidJwtExpiresIn(value) {
   }
 }
 
+async function ensureGlobalLoginIpWhitelistTable() {
+  if (globalLoginIpWhitelistTableEnsured) return;
+  await query(`
+    CREATE TABLE IF NOT EXISTS global_login_ip_whitelist (
+      id INT(11) NOT NULL AUTO_INCREMENT,
+      ip_rule VARCHAR(64) NOT NULL,
+      commentaire VARCHAR(255) NULL DEFAULT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uk_ip_rule (ip_rule)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  globalLoginIpWhitelistTableEnsured = true;
+}
+
+/**
+ * Règles IPv4 / CIDR pour lesquelles le blocage anti-brute-force à la connexion ne s’applique pas.
+ */
+async function getBruteForceWhitelistRules() {
+  if (bruteForceWhitelistCache.rules != null && Date.now() < bruteForceWhitelistCache.expiresAt) {
+    return bruteForceWhitelistCache.rules;
+  }
+  await ensureGlobalLoginIpWhitelistTable();
+  const rows = await query('SELECT ip_rule FROM global_login_ip_whitelist ORDER BY id ASC');
+  const rules = (rows || []).map((r) => r.ip_rule).filter(Boolean);
+  bruteForceWhitelistCache = { rules, expiresAt: Date.now() + 5000 };
+  return rules;
+}
+
+function invalidateBruteForceWhitelistCache() {
+  bruteForceWhitelistCache = { expiresAt: 0, rules: null };
+}
+
 module.exports = {
   ensureGlobalSettingsTable,
   ensureDefaultGlobalSettingsRows,
   getSecuritySettings,
   invalidateSecuritySettingsCache,
   countFailedLoginAttemptsForIp,
-  isValidJwtExpiresIn
+  isValidJwtExpiresIn,
+  ensureGlobalLoginIpWhitelistTable,
+  getBruteForceWhitelistRules,
+  invalidateBruteForceWhitelistCache
 };

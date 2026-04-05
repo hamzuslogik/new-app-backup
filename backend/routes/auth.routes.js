@@ -6,10 +6,15 @@ const { query, queryOne } = require('../config/database');
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const {
   isClientIpAllowedForFonction,
-  getNormalizedClientIpForRateLimit
+  getNormalizedClientIpForRateLimit,
+  clientIpMatchesAnyRule
 } = require('../utils/ipAllowlist');
 const { logConnexionEchouee, RAISON } = require('../utils/logConnexionEchouee');
-const { getSecuritySettings, countFailedLoginAttemptsForIp } = require('../utils/globalSettingsHelper');
+const {
+  getSecuritySettings,
+  countFailedLoginAttemptsForIp,
+  getBruteForceWhitelistRules
+} = require('../utils/globalSettingsHelper');
 const { touchUserActivity } = require('../utils/userActivitySession');
 
 // Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
@@ -33,8 +38,20 @@ router.post('/login', async (req, res) => {
     const clientIp = getNormalizedClientIpForRateLimit(req);
     const maxBrute = securitySettings.failedLoginMaxBeforeIpBlock;
     const fenetreMin = securitySettings.failedLoginWindowMinutes;
+    const bruteWhitelistRules = await getBruteForceWhitelistRules();
+    const skipBruteForWhitelistIp =
+      maxBrute > 0 &&
+      clientIp &&
+      bruteWhitelistRules.length > 0 &&
+      clientIpMatchesAnyRule(clientIp, bruteWhitelistRules);
 
-    if (maxBrute > 0 && clientIp) {
+    if (skipBruteForWhitelistIp) {
+      console.log(
+        `[auth/login] IP ${clientIp} sur liste blanche connexion — seuil anti-brute-force ignoré (${bruteWhitelistRules.length} règle(s))`
+      );
+    }
+
+    if (maxBrute > 0 && clientIp && !skipBruteForWhitelistIp) {
       const failCount = await countFailedLoginAttemptsForIp(clientIp, fenetreMin);
       console.log(
         `[auth/login] anti-brute-force ip=${clientIp} échecs_dans_fenêtre=${failCount} seuil=${maxBrute} fenêtre_min=${fenetreMin}`
