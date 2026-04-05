@@ -27,6 +27,7 @@ function formatPresenceLabel(presence, lastActivity) {
 
 function PresenceDot({ presence, lastActivity, title }) {
   const p = presence || 'offline';
+  if (p === 'offline') return null;
   return (
     <span
       className={`online-indicator online-indicator--${p}`}
@@ -39,6 +40,9 @@ function PresenceDot({ presence, lastActivity, title }) {
 
 function PresenceCaption({ presence, lastActivity }) {
   const p = presence || 'offline';
+  if (p === 'online') {
+    return <span className="presence-caption presence-caption--online"> En ligne</span>;
+  }
   return (
     <span className={`presence-caption presence-caption--${p}`}>
       {' '}

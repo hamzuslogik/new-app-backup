@@ -162,6 +162,7 @@
 
 .presence-caption--online {
   color: #00e676;
+  font-weight: 600;
 }
 
 .presence-caption--away {
@@ -344,6 +345,7 @@
 
 .chat-presence-line--online {
   color: #00e676;
+  font-weight: 600;
 }
 
 .chat-presence-line--away {
