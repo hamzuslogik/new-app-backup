@@ -165,12 +165,10 @@
   font-weight: 600;
 }
 
-.presence-caption--away {
-  color: #9e9e9e;
-}
-
+/* Même ton que l’UI (secondaire) : « Hors ligne », « En ligne il y a … », etc. */
+.presence-caption--away,
 .presence-caption--offline {
-  color: #212121;
+  color: var(--text-muted, #999);
 }
 
 .toggle-users-button {
@@ -348,12 +346,10 @@
   font-weight: 600;
 }
 
-.chat-presence-line--away {
-  color: #9e9e9e;
-}
-
+.chat-presence-line--away,
 .chat-presence-line--offline {
-  color: #212121;
+  color: var(--text-muted, #999);
+  font-weight: 500;
 }
 
 .chat-user-info h3 {

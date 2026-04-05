@@ -4,20 +4,15 @@ const { authenticate } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
 const { getSecuritySettings } = require('../utils/globalSettingsHelper');
 const { sessionLifetimeToIdleMs } = require('../utils/userActivitySession');
+const { lastActivityToUtcMs, nowUtcMysqlString } = require('../utils/userActivityDateTime');
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
 function presenceFromLastActivity(lastActivityValue, idleMs) {
   if (lastActivityValue == null || lastActivityValue === '') return 'offline';
-  let last;
-  if (lastActivityValue instanceof Date) {
-    last = lastActivityValue;
-  } else {
-    const s = String(lastActivityValue);
-    last = new Date(s.includes('T') ? s : s.replace(' ', 'T'));
-  }
-  if (Number.isNaN(last.getTime())) return 'offline';
-  const ageMs = Date.now() - last.getTime();
+  const lastMs = lastActivityToUtcMs(lastActivityValue);
+  if (!Number.isFinite(lastMs)) return 'offline';
+  const ageMs = Date.now() - lastMs;
   if (ageMs > idleMs) return 'offline';
   if (ageMs <= ONLINE_WINDOW_MS) return 'online';
   return 'away';
@@ -87,12 +82,7 @@ router.get('/conversations', authenticate, async (req, res) => {
         MAX(c.date_modif) as last_message_date,
         (SELECT COUNT(*) FROM chats WHERE destination = ? AND expediteur = u.id AND lu = 0) as unread_count,
         (SELECT message FROM chats WHERE (expediteur = u.id AND destination = ?) OR (expediteur = ? AND destination = u.id) ORDER BY date_modif DESC LIMIT 1) as last_message,
-        CASE 
-          WHEN ua.last_activity IS NOT NULL 
-            AND ua.last_activity >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-          THEN 1 
-          ELSE 0 
-        END as is_online
+        DATE_FORMAT(MAX(ua.last_activity), '%Y-%m-%d %H:%i:%s') AS last_activity
        FROM utilisateurs u
        INNER JOIN chats c ON (c.expediteur = u.id AND c.destination = ?) OR (c.expediteur = ? AND c.destination = u.id)
        LEFT JOIN fonctions f ON u.fonction = f.id
@@ -103,9 +93,13 @@ router.get('/conversations', authenticate, async (req, res) => {
       [req.user.id, req.user.id, req.user.id, req.user.id, req.user.id, req.user.id]
     );
 
+    const idleMs = await getSessionIdleMsForPresence();
+    const data = enrichWithPresence(conversations, idleMs);
+
     res.json({
       success: true,
-      data: conversations
+      data,
+      meta: { sessionIdleMs: idleMs }
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des conversations:', error);
@@ -155,7 +149,7 @@ router.get('/conversation/:userId', authenticate, async (req, res) => {
 // Mettre à jour la dernière activité de l'utilisateur
 router.post('/activity', authenticate, async (req, res) => {
   try {
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = nowUtcMysqlString();
     
     // Créer la table user_activity si elle n'existe pas
     await query(`
@@ -195,7 +189,7 @@ router.post('/activity', authenticate, async (req, res) => {
 router.get('/users', authenticate, async (req, res) => {
   try {
     // Mettre à jour l'activité de l'utilisateur actuel
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = nowUtcMysqlString();
     await query(`
       CREATE TABLE IF NOT EXISTS user_activity (
         id INT(11) NOT NULL AUTO_INCREMENT,
@@ -311,7 +305,7 @@ router.get('/users', authenticate, async (req, res) => {
         u.photo, 
         u.genre, 
         f.titre as fonction_titre,
-        ua.last_activity
+        DATE_FORMAT(ua.last_activity, '%Y-%m-%d %H:%i:%s') AS last_activity
        FROM utilisateurs u
        LEFT JOIN fonctions f ON u.fonction = f.id
        LEFT JOIN user_activity ua ON u.id = ua.user_id
@@ -450,8 +444,8 @@ router.post('/', authenticate, async (req, res) => {
       // Si groupes_messages_autorises est NULL, tous les utilisateurs sont autorisés
     }
 
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    
+    const now = nowUtcMysqlString();
+
     const result = await query(
       `INSERT INTO chats (expediteur, destination, message, date_modif, lu)
        VALUES (?, ?, ?, ?, 0)`,

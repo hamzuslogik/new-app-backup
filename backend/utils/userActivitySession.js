@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { query, queryOne } = require('../config/database');
+const { nowUtcMysqlString } = require('./userActivityDateTime');
 
 let userActivityTableEnsured = false;
 let userActivityColumnsEnsured = false;
@@ -74,7 +75,7 @@ async function touchUserActivity(userId) {
   const id = Number(userId);
   if (!Number.isFinite(id) || id < 1) return;
   await ensureUserActivityTable();
-  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const now = nowUtcMysqlString();
   await query(
     `INSERT INTO user_activity (user_id, last_activity)
      VALUES (?, ?)
@@ -110,7 +111,7 @@ async function logUserActivityEvent(userId, nature, detail) {
   }
   try {
     await ensureUserActivityTable();
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = nowUtcMysqlString();
     const row = await queryOne('SELECT activity_events FROM user_activity WHERE user_id = ?', [id]);
     let events = [];
     if (row && row.activity_events) {

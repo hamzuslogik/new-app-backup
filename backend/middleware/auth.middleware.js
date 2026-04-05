@@ -11,6 +11,7 @@ const {
   sessionLifetimeToIdleMs,
   touchUserActivity
 } = require('../utils/userActivitySession');
+const { lastActivityToUtcMs } = require('../utils/userActivityDateTime');
 
 // Middleware d'authentification
 const authenticate = async (req, res, next) => {
@@ -89,11 +90,12 @@ const authenticate = async (req, res, next) => {
     const sec = await getSecuritySettings();
     const idleMs = sessionLifetimeToIdleMs(sec.sessionLifetime);
     const activityRow = await queryOne(
-      'SELECT last_activity FROM user_activity WHERE user_id = ?',
+      `SELECT DATE_FORMAT(last_activity, '%Y-%m-%d %H:%i:%s') AS last_activity
+       FROM user_activity WHERE user_id = ?`,
       [user.id]
     );
     if (activityRow && activityRow.last_activity) {
-      const last = new Date(activityRow.last_activity).getTime();
+      const last = lastActivityToUtcMs(activityRow.last_activity);
       if (Number.isFinite(last) && Date.now() - last > idleMs) {
         console.warn(
           `[auth/middleware] refus HTTP 401 — session inactive userId=${user.id} idle_ms=${idleMs} dernière_activité=${activityRow.last_activity}`
