@@ -5,6 +5,7 @@ import Header from './Header';
 import GlobalKeyboardShortcuts from './common/GlobalKeyboardShortcuts';
 import { FicheDetailModalProvider } from '../contexts/FicheDetailModalContext';
 import { SidebarProvider, useSidebar } from '../contexts/SidebarContext';
+import api from '../config/api';
 import './Layout.css';
 
 const LayoutContent = () => {
@@ -14,6 +15,25 @@ const LayoutContent = () => {
   const [overlayReady, setOverlayReady] = React.useState(false);
   const prevPathnameRef = React.useRef(location.pathname);
   const isInitialMountRef = React.useRef(true);
+  const isFirstNavLogRef = React.useRef(true);
+
+  // Journal d’activité : navigation (après le premier rendu, pour ne pas logger l’URL d’entrée deux fois)
+  React.useEffect(() => {
+    if (isFirstNavLogRef.current) {
+      isFirstNavLogRef.current = false;
+      return;
+    }
+    const path = `${location.pathname}${location.search || ''}`;
+    const t = setTimeout(() => {
+      api
+        .post('/user-activity/log', {
+          nature: 'navigation',
+          detail: JSON.stringify({ path })
+        })
+        .catch(() => {});
+    }, 400);
+    return () => clearTimeout(t);
+  }, [location.pathname, location.search]);
 
   // Fermer automatiquement la sidebar sur mobile/tablet lors du changement de page
   React.useEffect(() => {

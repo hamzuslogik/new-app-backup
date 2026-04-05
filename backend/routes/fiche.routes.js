@@ -5,6 +5,7 @@ const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = r
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
 const { triggerWorkflowOnFicheCreated, triggerWorkflowOnFicheUpdated, triggerWorkflowOnEtatChanged, triggerWorkflowOnRdvValidated } = require('../middleware/workflow.middleware');
 const { query, queryOne } = require('../config/database');
+const { logUserActivityEvent } = require('../utils/userActivitySession');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
@@ -5287,6 +5288,11 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         ]
       );
 
+      logUserActivityEvent(req.user.id, 'fiche_compte_rendu_soumis', {
+        id_fiche: Number(id),
+        id_compte_rendu: compteRenduResult.insertId
+      });
+
       return res.json({
         success: true,
         message: 'Compte rendu créé avec succès, en attente d\'approbation de l\'administrateur',
@@ -5855,6 +5861,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
     }
 
+    logUserActivityEvent(req.user.id, 'fiche_mise_a_jour', { id_fiche: Number(id) });
+
     res.json({
       success: true,
       message: 'Fiche mise à jour avec succès'
@@ -5898,6 +5906,10 @@ router.patch('/:id/archive', authenticate, hashToIdMiddleware, async (req, res) 
       [archive ? 1 : 0, now, id]
     );
 
+    logUserActivityEvent(req.user.id, archive ? 'fiche_archivee' : 'fiche_desarchivee', {
+      id_fiche: Number(id)
+    });
+
     res.json({
       success: true,
       message: archive ? 'Fiche archivée avec succès' : 'Fiche désarchivée avec succès'
@@ -5940,6 +5952,8 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
       `UPDATE fiches SET ko = ?, date_modif_time = ? WHERE id = ?`,
       [ko ? 1 : 0, now, id]
     );
+
+    logUserActivityEvent(req.user.id, ko ? 'fiche_ko_active' : 'fiche_ko_retire', { id_fiche: Number(id) });
 
     res.json({
       success: true,
