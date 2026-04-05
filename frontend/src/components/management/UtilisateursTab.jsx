@@ -406,7 +406,7 @@ const UtilisateursTab = () => {
         </div>
         {searchTerm && (
           <span className="search-results-count">
-            {sortedData.length} résultat(s) trouvé(s)
+            {filteredData.length} résultat(s) trouvé(s)
           </span>
         )}
       </div>
