@@ -100,7 +100,12 @@
 }
 
 .conversation-item.new-conversation {
-  opacity: 0.8;
+  opacity: 1;
+}
+
+/* Ligne « autre utilisateur » : léger fond pour le distinguer sans griser le vert « En ligne » */
+.conversation-item.new-conversation:not(.active) {
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .conversation-avatar {
@@ -163,6 +168,20 @@
 .presence-caption--online {
   color: #00e676;
   font-weight: 600;
+}
+
+/* Garantir le vert même si .conversation-name impose une couleur sur le conteneur */
+.conversation-info .presence-caption.presence-caption--online,
+.conversation-name .presence-caption.presence-caption--online,
+.conversation-item.new-conversation .presence-caption.presence-caption--online {
+  color: #00e676 !important;
+  font-weight: 600;
+}
+
+.conversation-info .online-indicator--online,
+.conversation-item.new-conversation .online-indicator--online {
+  color: #00e676;
+  filter: drop-shadow(0 0 3px rgba(0, 230, 118, 0.9));
 }
 
 /* Même ton que l’UI (secondaire) : « Hors ligne », « En ligne il y a … », etc. */
