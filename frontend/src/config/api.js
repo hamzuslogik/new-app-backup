@@ -29,9 +29,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expiré ou invalide
+      const code = error.response?.data?.code;
+      if (code === 'SESSION_IDLE_EXPIRED') {
+        sessionStorage.setItem('logoutReason', 'idle');
+      }
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('permissions');
       window.location.href = '/login';
     }
     return Promise.reject(error);

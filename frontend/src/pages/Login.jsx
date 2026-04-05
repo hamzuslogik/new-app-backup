@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
@@ -12,6 +12,14 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login: loginUser } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const reason = sessionStorage.getItem('logoutReason');
+    if (reason === 'idle') {
+      sessionStorage.removeItem('logoutReason');
+      toast.info('Session expirée pour inactivité. Veuillez vous reconnecter.');
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

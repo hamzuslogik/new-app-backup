@@ -5,6 +5,12 @@ const {
   getNormalizedClientIpForRateLimit
 } = require('../utils/ipAllowlist');
 const { logConnexionEchouee, RAISON } = require('../utils/logConnexionEchouee');
+const { getSecuritySettings } = require('../utils/globalSettingsHelper');
+const {
+  ensureUserActivityTable,
+  sessionLifetimeToIdleMs,
+  touchUserActivity
+} = require('../utils/userActivitySession');
 
 // Middleware d'authentification
 const authenticate = async (req, res, next) => {
@@ -77,6 +83,29 @@ const authenticate = async (req, res, next) => {
         message: 'Accès non autorisé depuis cette adresse IP pour votre fonction.'
       });
     }
+
+    // Inactivité : même durée que session_lifetime (paramètres globaux) vs user_activity.last_activity
+    await ensureUserActivityTable();
+    const sec = await getSecuritySettings();
+    const idleMs = sessionLifetimeToIdleMs(sec.sessionLifetime);
+    const activityRow = await queryOne(
+      'SELECT last_activity FROM user_activity WHERE user_id = ?',
+      [user.id]
+    );
+    if (activityRow && activityRow.last_activity) {
+      const last = new Date(activityRow.last_activity).getTime();
+      if (Number.isFinite(last) && Date.now() - last > idleMs) {
+        console.warn(
+          `[auth/middleware] refus HTTP 401 — session inactive userId=${user.id} idle_ms=${idleMs} dernière_activité=${activityRow.last_activity}`
+        );
+        return res.status(401).json({
+          success: false,
+          code: 'SESSION_IDLE_EXPIRED',
+          message: 'Session expirée pour inactivité. Veuillez vous reconnecter.'
+        });
+      }
+    }
+    await touchUserActivity(user.id);
 
     // Ajouter l'utilisateur à la requête
     req.user = {

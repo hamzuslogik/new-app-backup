@@ -10,6 +10,7 @@ const {
 } = require('../utils/ipAllowlist');
 const { logConnexionEchouee, RAISON } = require('../utils/logConnexionEchouee');
 const { getSecuritySettings, countFailedLoginAttemptsForIp } = require('../utils/globalSettingsHelper');
+const { touchUserActivity } = require('../utils/userActivitySession');
 
 // Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
 const hashPassword = (password) => {
@@ -144,6 +145,12 @@ router.post('/login', async (req, res) => {
     console.log(
       `[auth/login] connexion réussie userId=${user.id} login=${user.login} ip=${clientIp || '—'} expiresIn=${expiresIn}`
     );
+
+    try {
+      await touchUserActivity(user.id);
+    } catch (e) {
+      console.error('[auth/login] touchUserActivity:', e.message);
+    }
 
     // Retourner les informations utilisateur (sans le mot de passe)
     const { mdp, ...userWithoutPassword } = user;
