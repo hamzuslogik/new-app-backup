@@ -2,6 +2,43 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
+const { getSecuritySettings } = require('../utils/globalSettingsHelper');
+const { sessionLifetimeToIdleMs } = require('../utils/userActivitySession');
+
+const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+
+function presenceFromLastActivity(lastActivityValue, idleMs) {
+  if (lastActivityValue == null || lastActivityValue === '') return 'offline';
+  let last;
+  if (lastActivityValue instanceof Date) {
+    last = lastActivityValue;
+  } else {
+    const s = String(lastActivityValue);
+    last = new Date(s.includes('T') ? s : s.replace(' ', 'T'));
+  }
+  if (Number.isNaN(last.getTime())) return 'offline';
+  const ageMs = Date.now() - last.getTime();
+  if (ageMs > idleMs) return 'offline';
+  if (ageMs <= ONLINE_WINDOW_MS) return 'online';
+  return 'away';
+}
+
+function enrichWithPresence(rows, idleMs) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => {
+    const presence = presenceFromLastActivity(row.last_activity, idleMs);
+    return {
+      ...row,
+      presence,
+      is_online: presence === 'online' ? 1 : 0
+    };
+  });
+}
+
+async function getSessionIdleMsForPresence() {
+  const sec = await getSecuritySettings();
+  return sessionLifetimeToIdleMs(sec.sessionLifetime);
+}
 
 // Nombre de messages non lus pour l'utilisateur connecté (sidebar)
 router.get('/unread-count', authenticate, async (req, res) => {
@@ -267,8 +304,6 @@ router.get('/users', authenticate, async (req, res) => {
       // Si groupes_messages_autorises est NULL, tous les utilisateurs sont autorisés
     }
 
-    // Récupérer tous les utilisateurs avec leur statut de connexion
-    // Un utilisateur est considéré en ligne s'il a eu une activité dans les 5 dernières minutes
     const users = await query(
       `SELECT 
         u.id, 
@@ -276,24 +311,22 @@ router.get('/users', authenticate, async (req, res) => {
         u.photo, 
         u.genre, 
         f.titre as fonction_titre,
-        CASE 
-          WHEN ua.last_activity IS NOT NULL 
-            AND ua.last_activity >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-          THEN 1 
-          ELSE 0 
-        END as is_online,
         ua.last_activity
        FROM utilisateurs u
        LEFT JOIN fonctions f ON u.fonction = f.id
        LEFT JOIN user_activity ua ON u.id = ua.user_id
        WHERE ${whereCondition}
-       ORDER BY is_online DESC, u.pseudo ASC`,
+       ORDER BY u.pseudo ASC`,
       queryParams
     );
 
+    const idleMs = await getSessionIdleMsForPresence();
+    const data = enrichWithPresence(users, idleMs);
+
     res.json({
       success: true,
-      data: users
+      data,
+      meta: { sessionIdleMs: idleMs }
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);

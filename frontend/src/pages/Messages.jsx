@@ -2,10 +2,50 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaPaperPlane, FaUser, FaSearch, FaComments, FaCircle } from 'react-icons/fa';
+import { FaPaperPlane, FaSearch, FaComments, FaCircle } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Messages.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+
+/** @param {'online'|'away'|'offline'} presence */
+function formatPresenceLabel(presence, lastActivity) {
+  if (presence === 'online') return 'En ligne';
+  if (presence === 'offline') return 'Hors ligne';
+  if (presence === 'away' && !lastActivity) return 'Inactif récent';
+  if (!lastActivity) return 'Hors ligne';
+  const raw = lastActivity instanceof Date ? lastActivity.toISOString() : String(lastActivity);
+  const last = new Date(raw.includes('T') ? raw : raw.replace(' ', 'T'));
+  if (Number.isNaN(last.getTime())) return 'Hors ligne';
+  const diffMs = Date.now() - last.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  const hours = Math.floor(diffMs / 3600000);
+  if (minutes < 1) return 'En ligne à l’instant';
+  if (minutes < 60) return `En ligne il y a ${minutes} min`;
+  if (hours < 72) return `En ligne il y a ${hours} h`;
+  return 'Vu il y a longtemps';
+}
+
+function PresenceDot({ presence, lastActivity, title }) {
+  const p = presence || 'offline';
+  return (
+    <span
+      className={`online-indicator online-indicator--${p}`}
+      title={title ?? formatPresenceLabel(p, lastActivity)}
+    >
+      <FaCircle />
+    </span>
+  );
+}
+
+function PresenceCaption({ presence, lastActivity }) {
+  const p = presence || 'offline';
+  return (
+    <span className={`presence-caption presence-caption--${p}`}>
+      {' '}
+      • {formatPresenceLabel(p, lastActivity)}
+    </span>
+  );
+}
 
 const Messages = () => {
   useForceDesktopViewport('messages-page');
@@ -118,6 +158,11 @@ const Messages = () => {
     ];
   }, [conversations, allUsers, showAllUsers]);
 
+  const selectedContact = useMemo(() => {
+    if (!selectedUser) return null;
+    return allContacts.find((c) => c.id === selectedUser.id) || selectedUser;
+  }, [selectedUser, allContacts]);
+
   // Scroll automatique vers le bas quand de nouveaux messages arrivent
   useEffect(() => {
     if (messagesContainerRef.current) {
@@ -220,11 +265,7 @@ const Messages = () => {
                               e.target.src = getDefaultAvatar(contact.genre);
                             }}
                           />
-                          {contact.is_online === 1 && (
-                            <span className="online-indicator" title="En ligne">
-                              <FaCircle />
-                            </span>
-                          )}
+                          <PresenceDot presence={contact.presence} lastActivity={contact.last_activity} />
                           {conv && conv.unread_count > 0 && (
                             <span className="unread-badge">{conv.unread_count}</span>
                           )}
@@ -233,9 +274,10 @@ const Messages = () => {
                           <div className="conversation-header">
                             <span className="conversation-name">
                               {contact.pseudo}
-                              {contact.is_online === 1 && (
-                                <span className="online-text"> • En ligne</span>
-                              )}
+                              <PresenceCaption
+                                presence={contact.presence}
+                                lastActivity={contact.last_activity}
+                              />
                             </span>
                             {conv && conv.last_message_date && (
                               <span className="conversation-time">
@@ -284,11 +326,10 @@ const Messages = () => {
                                     e.target.src = getDefaultAvatar(conv.genre);
                                   }}
                                 />
-                                {userInfo?.is_online === 1 && (
-                                  <span className="online-indicator" title="En ligne">
-                                    <FaCircle />
-                                  </span>
-                                )}
+                                <PresenceDot
+                                  presence={conv.presence || userInfo?.presence}
+                                  lastActivity={conv.last_activity || userInfo?.last_activity}
+                                />
                                 {conv.unread_count > 0 && (
                                   <span className="unread-badge">{conv.unread_count}</span>
                                 )}
@@ -297,9 +338,10 @@ const Messages = () => {
                                 <div className="conversation-header">
                                   <span className="conversation-name">
                                     {conv.pseudo}
-                                    {userInfo?.is_online === 1 && (
-                                      <span className="online-text"> • En ligne</span>
-                                    )}
+                                    <PresenceCaption
+                                      presence={conv.presence || userInfo?.presence}
+                                      lastActivity={conv.last_activity || userInfo?.last_activity}
+                                    />
                                   </span>
                                   <span className="conversation-time">
                                     {formatDate(conv.last_message_date)}
@@ -345,19 +387,13 @@ const Messages = () => {
                                     e.target.src = getDefaultAvatar(u.genre);
                                   }}
                                 />
-                                {u.is_online === 1 && (
-                                  <span className="online-indicator" title="En ligne">
-                                    <FaCircle />
-                                  </span>
-                                )}
+                                <PresenceDot presence={u.presence} lastActivity={u.last_activity} />
                               </div>
                               <div className="conversation-info">
                                 <div className="conversation-header">
                                   <span className="conversation-name">
                                     {u.pseudo}
-                                    {u.is_online === 1 && (
-                                      <span className="online-text"> • En ligne</span>
-                                    )}
+                                    <PresenceCaption presence={u.presence} lastActivity={u.last_activity} />
                                   </span>
                                 </div>
                                 <div className="conversation-preview">
@@ -389,15 +425,24 @@ const Messages = () => {
           <>
             <div className="chat-header">
               <div className="chat-user-info">
-                <img
-                  src={selectedUser.photo || getDefaultAvatar(selectedUser.genre)}
-                  alt={selectedUser.pseudo}
-                  onError={(e) => {
-                    e.target.src = getDefaultAvatar(selectedUser.genre);
-                  }}
-                />
+                <div className="chat-user-avatar-wrap">
+                  <img
+                    src={selectedUser.photo || getDefaultAvatar(selectedUser.genre)}
+                    alt={selectedUser.pseudo}
+                    onError={(e) => {
+                      e.target.src = getDefaultAvatar(selectedUser.genre);
+                    }}
+                  />
+                  <PresenceDot
+                    presence={selectedContact?.presence}
+                    lastActivity={selectedContact?.last_activity}
+                  />
+                </div>
                 <div>
                   <h3>{selectedUser.pseudo}</h3>
+                  <div className={`chat-presence-line chat-presence-line--${selectedContact?.presence || 'offline'}`}>
+                    {formatPresenceLabel(selectedContact?.presence, selectedContact?.last_activity)}
+                  </div>
                   {selectedUser.fonction_titre && (
                     <span className="chat-user-role">{selectedUser.fonction_titre}</span>
                   )}

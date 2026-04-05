@@ -123,14 +123,31 @@
   right: 2px;
   width: 14px;
   height: 14px;
-  background: #4caf50;
   border-radius: 50%;
   border: 2px solid var(--card-bg, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #4caf50;
   font-size: 6.8px;
+  background: transparent;
+}
+
+/* En ligne (activité récente moins de 5 min, session encore valide) : vert vif */
+.online-indicator--online {
+  color: #00e676;
+  filter: drop-shadow(0 0 3px rgba(0, 230, 118, 0.9));
+}
+
+/* Actif mais au-delà de 5 min : gris */
+.online-indicator--away {
+  color: #9e9e9e;
+  filter: none;
+}
+
+/* Session expirée / inactivité ou pas d’activité : noir */
+.online-indicator--offline {
+  color: #212121;
+  filter: none;
 }
 
 .online-indicator svg {
@@ -138,10 +155,21 @@
   height: 100%;
 }
 
-.online-text {
-  color: #4caf50;
+.presence-caption {
   font-size: 0.64rem;
   font-weight: normal;
+}
+
+.presence-caption--online {
+  color: #00e676;
+}
+
+.presence-caption--away {
+  color: #9e9e9e;
+}
+
+.presence-caption--offline {
+  color: #212121;
 }
 
 .toggle-users-button {
@@ -290,11 +318,40 @@
   gap: 9.6px;
 }
 
+.chat-user-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.chat-user-avatar-wrap .online-indicator {
+  bottom: 0;
+  right: 0;
+}
+
 .chat-user-info img {
   width: 40px;
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.chat-presence-line {
+  font-size: 0.72rem;
+  font-weight: 500;
+  margin: 2px 0 0 0;
+  line-height: 1.2;
+}
+
+.chat-presence-line--online {
+  color: #00e676;
+}
+
+.chat-presence-line--away {
+  color: #9e9e9e;
+}
+
+.chat-presence-line--offline {
+  color: #212121;
 }
 
 .chat-user-info h3 {
