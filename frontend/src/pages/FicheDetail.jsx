@@ -2342,23 +2342,23 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     if (fiche.etat_final_color) {
       return fiche.etat_final_color;
     }
-    // Si pas de couleur dans les données, chercher dans la liste des états
-    if (etats && fiche.id_etat_final) {
-      const etat = etats.find(e => e.id === fiche.id_etat_final);
+    if (etats && fiche.id_etat_final != null && fiche.id_etat_final !== '') {
+      const etat = etats.find((e) => Number(e.id) === Number(fiche.id_etat_final));
       return etat?.color || '#3498db';
     }
-    return '#3498db'; // Couleur par défaut
+    return '#3498db';
   };
 
   const etatColor = getEtatColor();
-  const etatActuelHeaderColor = (() => {
-    const c = String(etatColor || '').trim().toLowerCase();
-    if (c === '#ffffff' || c === '#fff' || c === 'white') return '#333333';
-    return etatColor;
-  })();
+  const textColorOnEtatBackground = (bg) => {
+    const c = String(bg || '').trim().toLowerCase();
+    if (c === '#ffffff' || c === '#fff' || c === 'white') return '#000';
+    return '#fff';
+  };
+  const etatHeaderForeground = textColorOnEtatBackground(etatColor);
 
   const etatActuelHeaderTitre = fiche.id_etat_final
-    ? (fiche.etat_final_titre || etats?.find((e) => e.id === fiche.id_etat_final)?.titre || 'État inconnu')
+    ? (fiche.etat_final_titre || etats?.find((e) => Number(e.id) === Number(fiche.id_etat_final))?.titre || 'État inconnu')
     : null;
   const etatActuelHeaderSous = fiche.sous_etat_titre || null;
 
@@ -2809,16 +2809,29 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           </h1>
         </div>
         <div className="fiche-detail-etat-actuel">
-          <span className="fiche-detail-etat-label" style={{ color: etatActuelHeaderColor }}>
-            État actuel :
-          </span>
           <span
-            className="fiche-detail-etat-value"
-            style={{ color: etatActuelHeaderColor }}
+            className="fiche-detail-etat-pill"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              backgroundColor: etatColor,
+              color: etatHeaderForeground,
+              fontSize: '15px',
+              lineHeight: 1.35,
+              maxWidth: '100%',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12)',
+            }}
           >
-            {etatActuelHeaderTitre
-              ? `${etatActuelHeaderTitre}${etatActuelHeaderSous ? ` · ${etatActuelHeaderSous}` : ''}`
-              : '—'}
+            <span className="fiche-detail-etat-label">État actuel :</span>
+            <span className="fiche-detail-etat-value">
+              {etatActuelHeaderTitre
+                ? `${etatActuelHeaderTitre}${etatActuelHeaderSous ? ` · ${etatActuelHeaderSous}` : ''}`
+                : '—'}
+            </span>
           </span>
         </div>
       </div>
@@ -3635,8 +3648,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               // Construire l'objet état actuel à partir des données de la fiche
               const etatActuel = {
                 id_etat: fiche.id_etat_final,
-                etat_titre: fiche.etat_final_titre || etats?.find(e => e.id === fiche.id_etat_final)?.titre || 'État inconnu',
-                etat_color: fiche.etat_final_color || etats?.find(e => e.id === fiche.id_etat_final)?.color || '#3498db',
+                etat_titre: fiche.etat_final_titre || etats?.find((e) => Number(e.id) === Number(fiche.id_etat_final))?.titre || 'État inconnu',
+                etat_color: fiche.etat_final_color || etats?.find((e) => Number(e.id) === Number(fiche.id_etat_final))?.color || '#3498db',
                 sous_etat_titre: fiche.sous_etat_titre || null,
                 // Pseudo utilisateur ayant enregistré le passage à cet état (colonne id_confirmateur de la ligne fiches_histo)
                 histo_confirmateur_pseudo: lastHistoEtatActuel?.histo_confirmateur_pseudo || null,
@@ -5063,7 +5076,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   <option value="">Choisissez un état</option>
                   {/* Afficher l'état actuel comme option visible dans la liste (surtout pour les confirmateurs) */}
                   {fiche.id_etat_final && (() => {
-                    const etatActuel = etats?.find(e => e.id === fiche.id_etat_final);
+                    const etatActuel = etats?.find((e) => Number(e.id) === Number(fiche.id_etat_final));
                     if (!etatActuel) return null;
                     // Vérifier si l'état actuel n'est pas déjà dans les listes de phases
                     const isInPhases = [...etatsPhase0, ...etatsPhase1, ...etatsPhase2, ...etatsPhase3].some(e => e.id === etatActuel.id);

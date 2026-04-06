@@ -32,12 +32,16 @@
   max-width: min(440px, 100%);
 }
 
-.fiche-detail-etat-label {
-  font-weight: 600;
-  margin-right: 4px;
+.fiche-detail-etat-pill {
+  box-sizing: border-box;
 }
 
-.fiche-detail-etat-value {
+.fiche-detail-etat-pill .fiche-detail-etat-label {
+  font-weight: 600;
+  margin-right: 0;
+}
+
+.fiche-detail-etat-pill .fiche-detail-etat-value {
   font-weight: 700;
 }
 
