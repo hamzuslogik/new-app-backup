@@ -146,6 +146,29 @@ body.dashboard-page {
   align-items: center;
 }
 
+.dashboard-header-centre-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboard-header-centre-filter label {
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.dashboard-header-centre-filter select {
+  min-width: 200px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 12px;
+  background: #fff;
+}
+
 .btn-link-fiches {
   display: flex;
   align-items: center;

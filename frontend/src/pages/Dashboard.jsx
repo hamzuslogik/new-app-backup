@@ -442,6 +442,9 @@ const Dashboard = () => {
   const confirmateurs = usersData ? usersData.filter(u => u.fonction === 6 && u.etat > 0) : [];
   const commerciaux = usersData ? usersData.filter(u => u.fonction === 5 && u.etat > 0) : [];
   const centres = centresData ? centresData.filter(c => c.etat > 0) : [];
+  /** Profils multi-centres / gestion : même liste qu’en recherche avancée (excl. commercial seul). */
+  const showCentreDashboardFilter =
+    [1, 2, 3, 6, 7, 8, 9, 11, 12, 13, 14].includes(Number(user?.fonction)) && centres.length > 0;
   // Groupe 0 visible uniquement par RE qualification (2), Agent qualification (3), Qualité qualification (8), RP qualification (12)
   const canSeeGroupe0 = [2, 3, 8, 12].includes(Number(user?.fonction));
   const etats = (etatsData || []).filter(e => {
@@ -535,6 +538,13 @@ const Dashboard = () => {
 
   const handlePageChange = (newPage) => {
     handleFilterChange('page', newPage);
+  };
+
+  /** Filtre centre dans l'en-tête : applique immédiatement (liste + requête API). */
+  const handleDashboardCentreChange = (e) => {
+    const v = e.target.value;
+    setFilters((prev) => ({ ...prev, id_centre: v, page: 1 }));
+    setAppliedFilters((prev) => ({ ...prev, id_centre: v, page: 1 }));
   };
 
   const handleSearch = async (e) => {
@@ -970,6 +980,25 @@ const Dashboard = () => {
             <p>Bienvenue, {user?.pseudo || 'Utilisateur'}</p>
           </div>
         </div>
+        {showCentreDashboardFilter && (
+          <div className="dashboard-header-right">
+            <div className="dashboard-header-centre-filter">
+              <label htmlFor="dashboard-centre-select">Centre</label>
+              <select
+                id="dashboard-centre-select"
+                value={appliedFilters.id_centre != null && appliedFilters.id_centre !== '' ? String(appliedFilters.id_centre) : ''}
+                onChange={handleDashboardCentreChange}
+              >
+                <option value="">Tous</option>
+                {centres.map((centre) => (
+                  <option key={centre.id} value={centre.id}>
+                    {centre.titre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Section des statistiques RDV - visible immédiatement */}
@@ -1354,7 +1383,7 @@ const Dashboard = () => {
                 )}
 
                 {/* Centre */}
-                {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 9) && (
+                {showCentreDashboardFilter && (
                   <div className="form-group">
                     <label>Centre</label>
                     <select
@@ -1907,7 +1936,7 @@ const Dashboard = () => {
                 )}
 
                 {/* Centre */}
-                {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 9) && (
+                {showCentreDashboardFilter && (
                   <div className="form-group">
                     <label>Centre</label>
                     <select
