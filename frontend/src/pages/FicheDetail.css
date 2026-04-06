@@ -793,6 +793,19 @@
   left: 5px;
   right: 5px;
   z-index: 10;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.availability-r2-star {
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1;
+  color: #ca8a04;
+  flex-shrink: 0;
 }
 
 .availability-badge {

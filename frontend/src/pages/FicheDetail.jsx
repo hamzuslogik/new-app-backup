@@ -7886,6 +7886,9 @@ const PlanningViewForModal = ({
                     
                     const hasData = hasPlanning || totalRdvInSlot > 0;
                     const displayAvailability = availabilityCount !== null ? availabilityCount : 0;
+                    const hasR2Placed = rdvs.some(
+                      (rdv) => rdv.id_commercial_2 != null && Number(rdv.id_commercial_2) > 0
+                    );
                     
                     // Couleur du badge : vert si OK, orange si presque plein, rouge si plein (sur le total réel du créneau)
                     let bgColor = '#cccccc';
@@ -8021,6 +8024,15 @@ const PlanningViewForModal = ({
                                   {totalRdvInSlot} / {displayAvailability}
                                 </span>
                               </div>
+                              {hasR2Placed && (
+                                <span
+                                  className="availability-r2-star"
+                                  title="R2 placé (commercial secondaire)"
+                                  aria-label="R2 placé"
+                                >
+                                  ★
+                                </span>
+                              )}
                             </div>
                             {canEditThis && (
                               <div
