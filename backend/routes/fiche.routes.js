@@ -65,23 +65,52 @@ function chunkArray(arr, size) {
 }
 
 /**
- * Confirmateur : lignes fiches_histo du jour (plage date_creation) pour le connecté,
- * et qui sont la dernière ligne de la fiche (pas de fh2 avec même id_fiche et id > fh.id).
- * Évite un GROUP BY sur toute la table fiches_histo. Index utiles : (id_confirmateur, date_creation), (id_fiche, id).
+ * Confirmateur : lignes fiches_histo (plage date_creation) dont l’auteur est userId,
+ * et qui sont la dernière ligne globale de la fiche (pas de fh2 avec même id_fiche et id > fh.id).
+ * includeMultiSlot : si true, la ligne peut être « signée » par userId en id_confirmateur, _2 ou _3 (case Dashboard).
  */
-function confirmateurDerniereLigneHistoJoin(startDatetime, endDatetime, userId) {
+function confirmateurDerniereLigneHistoJoin(startDatetime, endDatetime, userId, includeMultiSlot = false) {
+  const confMatch = includeMultiSlot
+    ? '(fh.id_confirmateur = ? OR fh.id_confirmateur_2 = ? OR fh.id_confirmateur_3 = ?)'
+    : 'fh.id_confirmateur = ?';
+  const headParams = includeMultiSlot ? [userId, userId, userId] : [userId];
   return {
     joinSql: `INNER JOIN (
     SELECT fh.id_fiche
     FROM fiches_histo fh
-    WHERE fh.id_confirmateur = ?
+    WHERE ${confMatch}
       AND fh.date_creation >= ? AND fh.date_creation <= ?
       AND NOT EXISTS (
         SELECT 1 FROM fiches_histo fh2
         WHERE fh2.id_fiche = fh.id_fiche AND fh2.id > fh.id
       )
   ) histo_conf_last ON fiche.id = histo_conf_last.id_fiche`,
-    params: [userId, startDatetime, endDatetime],
+    params: [...headParams, startDatetime, endDatetime],
+  };
+}
+
+/**
+ * Dernière ligne fiches_histo par fiche **dont la date_creation est dans la plage** (autre profil que conf. pur),
+ * puis filtre sur l’auteur de cette ligne (1er confirmateur ou 2e/3e si includeMultiSlot).
+ */
+function fichesHistoLastInRangeJoin(startDatetime, endDatetime, userId, includeMultiSlot = false) {
+  const confClause = includeMultiSlot
+    ? '(fh.id_confirmateur = ? OR fh.id_confirmateur_2 = ? OR fh.id_confirmateur_3 = ?)'
+    : 'fh.id_confirmateur = ?';
+  const tailParams = includeMultiSlot ? [userId, userId, userId] : [userId];
+  return {
+    joinSql: `INNER JOIN (
+    SELECT fh.id_fiche
+    FROM fiches_histo fh
+    INNER JOIN (
+      SELECT id_fiche, MAX(id) AS max_id
+      FROM fiches_histo
+      WHERE date_creation >= ? AND date_creation <= ?
+      GROUP BY id_fiche
+    ) histo_last_in_range ON fh.id_fiche = histo_last_in_range.id_fiche AND fh.id = histo_last_in_range.max_id
+    WHERE ${confClause}
+  ) histo_ids ON fiche.id = histo_ids.id_fiche`,
+    params: [startDatetime, endDatetime, ...tailParams],
   };
 }
 
@@ -776,6 +805,25 @@ router.get('/', authenticate, async (req, res) => {
         include_confirmateur_2 === true ||
         include_confirmateur_2 === 'true');
 
+    const parsedConfIdForHisto =
+      id_confirmateur && id_confirmateur !== 'all' ? parseInt(String(id_confirmateur), 10) : NaN;
+    const histoTargetUserId =
+      Number.isFinite(parsedConfIdForHisto) && parsedConfIdForHisto > 0
+        ? parsedConfIdForHisto
+        : req.user.id;
+
+    const excludeHistoSecondaire =
+      include_confirmateur_2 === '0' ||
+      include_confirmateur_2 === 0 ||
+      include_confirmateur_2 === false ||
+      include_confirmateur_2 === 'false';
+
+    /** Mes actions (fiches_histo) : 2e/3e colonnes sur la ligne d’historique si case cochée ou session conf. avec case cochée */
+    const includeHistoMultiSlot =
+      id_confirmateur && id_confirmateur !== 'all'
+        ? !excludeHistoSecondaire
+        : req.user.fonction === 6 && includeConfSlots;
+
     if (hasKoFilter) {
       whereConditions.push('(fiche.ko = ? OR (fiche.ko IS NULL AND ? = 0))');
       params.push(koForWhere, koForWhere);
@@ -825,7 +873,8 @@ router.get('/', authenticate, async (req, res) => {
         const j = confirmateurDerniereLigneHistoJoin(
           `${y_m_d} 00:00:00`,
           `${y_m_d} 23:59:59`,
-          req.user.id
+          histoTargetUserId,
+          includeHistoMultiSlot
         );
         histoJoinForFichesHisto = j.joinSql;
         histoParamsForFichesHisto = j.params;
@@ -1072,7 +1121,13 @@ router.get('/', authenticate, async (req, res) => {
       }
     // Filtre par confirmateur : pour toutes les sessions Dashboard sauf confirmateur (fonction 6).
     // include_confirmateur_2=0 : uniquement 1er confirmateur ; sinon (défaut) inclure aussi 2ème et 3ème.
-    } else if (id_confirmateur && id_confirmateur !== 'all' && req.user.fonction !== 6) {
+    // Pas de filtre sur les slots fiche si « Mes actions » : le JOIN fiches_histo ci-dessous fait foi.
+    } else if (
+      id_confirmateur &&
+      id_confirmateur !== 'all' &&
+      req.user.fonction !== 6 &&
+      String(date_champ) !== 'fiches_histo'
+    ) {
       const excludeConfirmateur2 = include_confirmateur_2 === '0' || include_confirmateur_2 === 0 || include_confirmateur_2 === false || include_confirmateur_2 === 'false';
       if (excludeConfirmateur2) {
         whereConditions.push('fiche.id_confirmateur = ?');
@@ -1164,25 +1219,29 @@ router.get('/', authenticate, async (req, res) => {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           if (req.user.fonction === 6 && !hasCritereOuTelSearch) {
-            const j = confirmateurDerniereLigneHistoJoin(startDatetime, endDatetime, req.user.id);
+            const j = confirmateurDerniereLigneHistoJoin(
+              startDatetime,
+              endDatetime,
+              histoTargetUserId,
+              includeHistoMultiSlot
+            );
             histoJoinForFichesHisto = j.joinSql;
             histoParamsForFichesHisto = j.params;
             console.log(
-              `[FICHES-${requestId}] CONF6 date_champ=fiches_histo → JOIN dernière ligne histo = conf ${req.user.id} [${startDatetime}] — [${endDatetime}]`
+              `[FICHES-${requestId}] CONF6 date_champ=fiches_histo → JOIN dernière ligne histo = conf ${histoTargetUserId} (multiSlot=${includeHistoMultiSlot}) [${startDatetime}] — [${endDatetime}]`
             );
           } else {
-            histoJoinForFichesHisto = `INNER JOIN (
-            SELECT fh.id_fiche, fh.id_confirmateur AS histo_dernier_conf_id
-            FROM fiches_histo fh
-            INNER JOIN (
-              SELECT id_fiche, MAX(id) AS max_id
-              FROM fiches_histo
-              WHERE date_creation >= ? AND date_creation <= ?
-              GROUP BY id_fiche
-            ) histo_last_in_range ON fh.id_fiche = histo_last_in_range.id_fiche AND fh.id = histo_last_in_range.max_id
-            WHERE fh.id_confirmateur = ?
-          ) histo_ids ON fiche.id = histo_ids.id_fiche`;
-            histoParamsForFichesHisto = [startDatetime, endDatetime, req.user.id];
+            const j = fichesHistoLastInRangeJoin(
+              startDatetime,
+              endDatetime,
+              histoTargetUserId,
+              includeHistoMultiSlot
+            );
+            histoJoinForFichesHisto = j.joinSql;
+            histoParamsForFichesHisto = j.params;
+            console.log(
+              `[FICHES-${requestId}] date_champ=fiches_histo → JOIN histo dans plage = conf ${histoTargetUserId} (multiSlot=${includeHistoMultiSlot}) [${startDatetime}] — [${endDatetime}]`
+            );
           }
         } else if (date_champ === 'fiches_histo' && req.user.fonction === 6 && hasCritereOuTelSearch) {
           console.log(`[FICHES-${requestId}] Confirmateur: critère/tel — pas de JOIN fiches_histo (recherche globale)`);
