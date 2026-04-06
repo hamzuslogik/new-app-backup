@@ -148,10 +148,10 @@ const MesRappels = () => {
     : '';
 
   const descriptionHonore = isRPConfirmation
-    ? 'Fiches en « Honoré à suivre », filtrées par RE et par date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu.'
+    ? 'Fiches en « Honoré à suivre », filtrées par RE et par date de rappel. La colonne Origine indique « Compte rendu » ou « Confirmateur » selon l’origine du passage à cet état.'
     : isREConfirmation
-      ? "Fiches en « Honoré à suivre », filtrées par confirmateur et par date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu."
-      : 'Fiches en « Honoré à suivre » vous concernant, filtrées par la date de rappel. La colonne Origine indique si le passage à cet état provient d’un compte rendu.';
+      ? "Fiches en « Honoré à suivre », filtrées par confirmateur et par date de rappel. La colonne Origine indique « Compte rendu » ou « Confirmateur » selon l’origine du passage à cet état."
+      : 'Fiches en « Honoré à suivre » vous concernant, filtrées par la date de rappel. La colonne Origine indique « Compte rendu » ou « Confirmateur » selon l’origine du passage à cet état.';
 
   const description =
     activeTab === 'annuler_repro'
@@ -160,8 +160,11 @@ const MesRappels = () => {
         ? descriptionHonore
         : descriptionBureau;
 
-  const origineLabel = (fiche) =>
-    fiche.current_state_from_compte_rendu === true ? 'Compte rendu' : 'Repro confirmateurs';
+  const origineLabel = (fiche) => {
+    if (fiche.current_state_from_compte_rendu === true) return 'Compte rendu';
+    if (activeTab === 'honore_suivre') return 'Confirmateur';
+    return 'Repro confirmateurs';
+  };
 
   // Même principe que le tableau du Dashboard : bulle native au survol (nom, téléphone, commentaire).
   const getTooltipComment = (fiche) => {
@@ -331,7 +334,9 @@ const MesRappels = () => {
                               className={
                                 fiche.current_state_from_compte_rendu === true
                                   ? 'mes-rappels-origine mes-rappels-origine--cr'
-                                  : 'mes-rappels-origine mes-rappels-origine--repro'
+                                  : activeTab === 'honore_suivre'
+                                    ? 'mes-rappels-origine mes-rappels-origine--confirmateur'
+                                    : 'mes-rappels-origine mes-rappels-origine--repro'
                               }
                             >
                               {origineLabel(fiche)}

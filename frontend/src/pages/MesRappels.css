@@ -69,6 +69,12 @@
   color: #9a6700;
 }
 
+/* Honoré à suivre : origine « Confirmateur » (hors compte rendu) — même lecture visuelle que repro */
+.mes-rappels-origine--confirmateur {
+  background: #fef5e7;
+  color: #9a6700;
+}
+
 .mes-rappels-filters {
   margin-bottom: 1.5rem;
   display: flex;
