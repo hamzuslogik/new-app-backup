@@ -17,6 +17,10 @@ const UtilisateursTab = () => {
   const [searchTerm, setSearchTerm] = useLocalStorage('management_utilisateurs_search', '');
   const [generatedToken, setGeneratedToken] = useState(null);
   const [tokenCopied, setTokenCopied] = useState(false);
+  const [permanentToken, setPermanentToken] = useState(null);
+  const [permanentTokenCopied, setPermanentTokenCopied] = useState(false);
+
+  const canGeneratePermanentToken = [1, 2, 7].includes(Number(currentUser?.fonction));
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
@@ -273,12 +277,43 @@ const UtilisateursTab = () => {
     }
   );
 
+  const generatePermanentTokenMutation = useMutation(
+    async () => {
+      const response = await api.post('/auth/generate-permanent-token', {});
+      return response.data;
+    },
+    {
+      onSuccess: (data) => {
+        if (data.token) {
+          setPermanentToken(data.token);
+          setPermanentTokenCopied(false);
+          toast.success(data.message || 'Token permanent généré avec succès');
+        }
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de la génération du token permanent');
+      }
+    }
+  );
+
   const handleCopyToken = () => {
     if (generatedToken) {
       navigator.clipboard.writeText(generatedToken).then(() => {
         setTokenCopied(true);
         toast.success('Token copié dans le presse-papiers');
         setTimeout(() => setTokenCopied(false), 2000);
+      }).catch(() => {
+        toast.error('Erreur lors de la copie du token');
+      });
+    }
+  };
+
+  const handleCopyPermanentToken = () => {
+    if (permanentToken) {
+      navigator.clipboard.writeText(permanentToken).then(() => {
+        setPermanentTokenCopied(true);
+        toast.success('Token permanent copié dans le presse-papiers');
+        setTimeout(() => setPermanentTokenCopied(false), 2000);
       }).catch(() => {
         toast.error('Erreur lors de la copie du token');
       });
@@ -315,18 +350,37 @@ const UtilisateursTab = () => {
                 Utilisateur : <strong>{currentUser.pseudo}</strong> ({currentUser.login})
               </p>
             </div>
-            <button
-              className="btn-primary"
-              onClick={() => generateTokenMutation.mutate()}
-              disabled={generateTokenMutation.isLoading}
-              style={{ minWidth: '150px' }}
-            >
-              {generateTokenMutation.isLoading ? 'Génération...' : (
-                <>
-                  <FaKey /> Générer un token
-                </>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => generateTokenMutation.mutate()}
+                disabled={generateTokenMutation.isLoading}
+                style={{ minWidth: '150px' }}
+              >
+                {generateTokenMutation.isLoading ? 'Génération...' : (
+                  <>
+                    <FaKey /> Générer un token
+                  </>
+                )}
+              </button>
+              {canGeneratePermanentToken && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => generatePermanentTokenMutation.mutate()}
+                  disabled={generatePermanentTokenMutation.isLoading}
+                  style={{ minWidth: '180px', borderColor: '#856404', color: '#856404' }}
+                  title="Token JWT sans date d’expiration (réservé administrateurs)"
+                >
+                  {generatePermanentTokenMutation.isLoading ? 'Génération...' : (
+                    <>
+                      <FaKey /> Token permanent
+                    </>
+                  )}
+                </button>
               )}
-            </button>
+            </div>
           </div>
 
           {generatedToken && (
@@ -386,6 +440,67 @@ const UtilisateursTab = () => {
               <p style={{ margin: '10px 0 0 0', fontSize: '10.2px', color: '#666', fontStyle: 'italic' }}>
                 ⚠️ Ce token est valide pour {generateTokenMutation.data?.data?.expiresIn || '7 jours'}. 
                 Conservez-le en sécurité et ne le partagez pas.
+              </p>
+            </div>
+          )}
+
+          {permanentToken && (
+            <div style={{
+              background: '#fff',
+              border: '1px solid #c9a227',
+              borderRadius: '4px',
+              padding: '15px',
+              marginTop: '15px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <label style={{ fontSize: '11.9px', fontWeight: '600', color: '#856404' }}>
+                  Token permanent (sans expiration) :
+                </label>
+                <button
+                  type="button"
+                  onClick={handleCopyPermanentToken}
+                  style={{
+                    padding: '6px 12px',
+                    background: permanentTokenCopied ? '#28a745' : '#856404',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '10.2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {permanentTokenCopied ? (
+                    <>
+                      <FaCheck /> Copié !
+                    </>
+                  ) : (
+                    <>
+                      <FaCopy /> Copier
+                    </>
+                  )}
+                </button>
+              </div>
+              <textarea
+                readOnly
+                value={permanentToken}
+                style={{
+                  width: '100%',
+                  minHeight: '80px',
+                  padding: '10px',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  fontSize: '10.2px',
+                  resize: 'vertical',
+                  background: '#fffdf5'
+                }}
+                onClick={(e) => e.target.select()}
+              />
+              <p style={{ margin: '10px 0 0 0', fontSize: '10.2px', color: '#856404', fontStyle: 'italic' }}>
+                ⚠️ {generatePermanentTokenMutation.data?.warning || 'Ce token n\'expire pas. Conservez-le en sécurité et ne le partagez pas.'}
               </p>
             </div>
           )}
