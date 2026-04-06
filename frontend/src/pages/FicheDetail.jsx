@@ -5618,19 +5618,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                           </td>
                         </tr>
                         <tr>
-                          <td><label htmlFor="conf_consommation_electricite">Consommation électricité (€) :</label></td>
-                          <td>
-                            <input
-                              type="text"
-                              id="conf_consommation_electricite"
-                              className="form-control"
-                              value={confFormData.conf_consommation_electricite}
-                              onChange={(e) => setConfFormData({...confFormData, conf_consommation_electricite: e.target.value})}
-                              placeholder="Ex: 800 €/an"
-                            />
-                          </td>
-                        </tr>
-                        <tr>
                           <td><label htmlFor="conf_nb_pans">Nombre de pans :</label></td>
                           <td>
                             <input
@@ -8879,19 +8866,6 @@ const CreateRdvModal = ({
                             <option value="OUI">OUI</option>
                             <option value="NON">NON</option>
                           </select>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td><label htmlFor="rdv_consommation_elec">Consommation électricité (€)</label></td>
-                        <td>
-                          <input
-                            type="text"
-                            id="rdv_consommation_elec"
-                            className="form-control"
-                            value={rdvFormData.conf_consommation_electricite}
-                            onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_electricite: e.target.value})}
-                            placeholder="Ex: 800 €/an"
-                          />
                         </td>
                       </tr>
                       <tr>
