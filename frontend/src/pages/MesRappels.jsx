@@ -163,6 +163,31 @@ const MesRappels = () => {
   const origineLabel = (fiche) =>
     fiche.current_state_from_compte_rendu === true ? 'Compte rendu' : 'Repro confirmateurs';
 
+  // Même principe que le tableau du Dashboard : bulle native au survol (nom, téléphone, commentaire).
+  const getTooltipComment = (fiche) => {
+    const nom = (fiche?.nom ?? '').trim();
+    const prenom = (fiche?.prenom ?? '').trim();
+    const tel = (fiche?.tel ?? '').trim();
+    const etatCr = fiche?.current_state_from_compte_rendu === true;
+    const idEtat = Number(fiche?.id_etat_final);
+    const isConfirmer = idEtat === 7;
+    let commentaire = '';
+    if (etatCr) {
+      commentaire = (fiche?.commentaire_commercial ?? '').trim();
+    } else if (!isConfirmer) {
+      commentaire = (fiche?.histo_last_conf_commentaire ?? '').trim();
+    } else {
+      commentaire = (fiche?.conf_commentaire_produit ?? '').trim();
+    }
+    const commentaireStr = commentaire.length > 500 ? commentaire.slice(0, 497) + '...' : commentaire;
+    const lignes = [
+      [nom, prenom].filter(Boolean).join(' '),
+      tel,
+      commentaireStr
+    ].filter(Boolean);
+    return lignes.join('\n');
+  };
+
   return (
     <div className="mes-rappels-page">
       <div className="mes-rappels-header">
@@ -289,7 +314,11 @@ const MesRappels = () => {
                   </thead>
                   <tbody>
                     {rappels.map((fiche) => (
-                      <tr key={fiche.hash || fiche.id}>
+                      <tr
+                        key={fiche.hash || fiche.id}
+                        className="mes-rappels-row"
+                        title={getTooltipComment(fiche) || undefined}
+                      >
                         {isRPConfirmation && (
                           <td data-label="RE Confirmation">{getREPseudo(fiche)}</td>
                         )}
