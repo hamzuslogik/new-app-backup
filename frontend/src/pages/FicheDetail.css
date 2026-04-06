@@ -636,6 +636,30 @@
   min-height: 120px !important;
 }
 
+/* Lien info : dashboard filtré par créneau (RE / RP / backoffice) */
+.planning-slot-dashboard-link {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: #0b5ed7;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  line-height: 1;
+  font-size: 13px;
+  text-decoration: none;
+}
+.planning-slot-dashboard-link:hover {
+  color: #084298;
+  background: #fff;
+}
+
 .planning-table td.time-slot-header {
   background: #9cbfc8 !important;
   background-color: #9cbfc8 !important;

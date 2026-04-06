@@ -168,6 +168,39 @@ function timeToSlotHour(timeStr) {
   return null;
 }
 
+/** Plage horaire alignée sur les buckets planning (voir timeToSlotMinuteRanges) pour filtrer date_rdv_time sur le dashboard. */
+function getDashboardTimeRangeForPlanningSlot(slotHour) {
+  const map = {
+    '09:00:00': { time_debut: '09:00:00', time_fin: '10:59:59' },
+    '11:00:00': { time_debut: '11:00:00', time_fin: '12:59:59' },
+    '13:00:00': { time_debut: '13:00:00', time_fin: '15:59:59' },
+    '16:00:00': { time_debut: '16:00:00', time_fin: '17:59:59' },
+    '18:00:00': { time_debut: '18:00:00', time_fin: '19:29:59' },
+    '19:30:00': { time_debut: '19:30:00', time_fin: '20:00:00' }
+  };
+  return map[slotHour] || { time_debut: '00:00:00', time_fin: '23:59:59' };
+}
+
+/** Ouvre le dashboard avec filtres : RDV confirmés (état 7), jour + créneau + département (CP). */
+function buildDashboardUrlForPlanningSlot({ dep, date, slotHour }) {
+  const range = getDashboardTimeRangeForPlanningSlot(slotHour);
+  const params = new URLSearchParams({
+    fiche_search: '1',
+    page: '1',
+    limit: '999999',
+    date_champ: 'date_rdv_time',
+    date_debut: date,
+    date_fin: date,
+    time_debut: range.time_debut,
+    time_fin: range.time_fin,
+    id_etat_final: '7'
+  });
+  if (dep != null && String(dep).trim() !== '') {
+    params.set('cp', String(dep).trim());
+  }
+  return `/dashboard?${params.toString()}`;
+}
+
 const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // En mode modal, utiliser le contexte personnalisé, sinon utiliser useParams
   const routeParams = useRouteParams();
@@ -7119,6 +7152,8 @@ const PlanningTab = ({
   
   // Vérifier si l'utilisateur peut éditer (uniquement fonction 1)
   const canEdit = user?.fonction === 1;
+  /** RE confirmation (14), RP confirmation (13), backoffice (11) : lien dashboard par créneau */
+  const sessionCanOpenSlotDashboard = [14, 13, 11].includes(Number(user?.fonction));
   
   const { data: planningResponse, isLoading: isLoadingPlanning, refetch: refetchPlanning } = useQuery(
     ['planning-modal', planningWeek, planningYear, planningDep],
@@ -7336,6 +7371,7 @@ const PlanningTab = ({
             onUpdateAvailability={handleUpdateAvailability}
             canEdit={canEdit}
             currentFicheHash={ficheHash}
+            sessionCanOpenSlotDashboard={sessionCanOpenSlotDashboard}
           />
         ) : (
           <div className="error">Aucun planning disponible pour le département {planningDep}</div>
@@ -7708,7 +7744,8 @@ const PlanningViewForModal = ({
   onSelectSlot,
   onUpdateAvailability,
   canEdit = false,
-  currentFicheHash // Le hash est passé mais on ne peut plus comparer par ID car il est masqué
+  currentFicheHash, // Le hash est passé mais on ne peut plus comparer par ID car il est masqué
+  sessionCanOpenSlotDashboard = false
 }) => {
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
@@ -7870,6 +7907,11 @@ const PlanningViewForModal = ({
                     // canEditThis : éditable même si valeur = 0 ; bloqué seulement si le créneau est fermé (is_closed=1)
                     const canEditThis = canEdit && !isClosed;
                     
+                    const dashboardSlotHref =
+                      sessionCanOpenSlotDashboard && dep
+                        ? buildDashboardUrlForPlanningSlot({ dep, date: day.date, slotHour: slot.hour })
+                        : null;
+
                     return (
                       <td
                         key={`${day.date}-${slot.hour}`}
@@ -7899,6 +7941,19 @@ const PlanningViewForModal = ({
                           })()
                         }
                       >
+                        {dashboardSlotHref && (
+                          <a
+                            href={dashboardSlotHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="planning-slot-dashboard-link"
+                            title="Ouvrir le tableau de bord : RDV de ce créneau (filtres appliqués)"
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Voir les RDV de ce créneau sur le tableau de bord"
+                          >
+                            <FaInfoCircle />
+                          </a>
+                        )}
                         {/* Badge de disponibilité avec format "X / Y" - TOUJOURS affiché si on a des données */}
                         {isEditing ? (
                           <div className="edit-controls" onClick={(e) => e.stopPropagation()}>
