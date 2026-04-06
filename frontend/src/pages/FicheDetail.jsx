@@ -2809,7 +2809,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           </h1>
         </div>
         <div className="fiche-detail-etat-actuel">
-          <span className="fiche-detail-etat-label">État actuel :</span>
+          <span className="fiche-detail-etat-label" style={{ color: etatActuelHeaderColor }}>
+            État actuel :
+          </span>
           <span
             className="fiche-detail-etat-value"
             style={{ color: etatActuelHeaderColor }}
