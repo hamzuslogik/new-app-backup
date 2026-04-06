@@ -82,6 +82,10 @@ BEGIN
   IF (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = db_name AND TABLE_NAME = 'fiches_histo' AND COLUMN_NAME = 'conf_complement_chauffage') = 0 THEN
     ALTER TABLE `fiches_histo` ADD COLUMN `conf_complement_chauffage` VARCHAR(512) DEFAULT NULL;
   END IF;
+  -- complement_chauffage (qualification, snapshot par ligne d'historique)
+  IF (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = db_name AND TABLE_NAME = 'fiches_histo' AND COLUMN_NAME = 'complement_chauffage') = 0 THEN
+    ALTER TABLE `fiches_histo` ADD COLUMN `complement_chauffage` VARCHAR(512) DEFAULT NULL;
+  END IF;
   -- conf_consommation_chauffage
   IF (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = db_name AND TABLE_NAME = 'fiches_histo' AND COLUMN_NAME = 'conf_consommation_chauffage') = 0 THEN
     ALTER TABLE `fiches_histo` ADD COLUMN `conf_consommation_chauffage` VARCHAR(255) DEFAULT NULL;

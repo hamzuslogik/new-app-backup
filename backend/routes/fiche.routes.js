@@ -3145,10 +3145,14 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
         const histoEtatId = donneesFiche.id_etat_final || 1;
         const isEtat7 = parseInt(histoEtatId) === 7;
         const { cols: confCols, vals: confVals } = isEtat7 ? getConfFieldsForHisto(donneesFiche, {}) : { cols: [], vals: [] };
-        const histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
-        const histoPlaceholders = histoCols.map(() => '?').join(', ');
+        let histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
         const dateRdvHisto = donneesFiche.date_rdv_time || null;
-        const histoValues = [insertId, histoEtatId, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
+        let histoValues = [insertId, histoEtatId, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
+        if (Object.prototype.hasOwnProperty.call(donneesFiche, 'complement_chauffage')) {
+          histoCols.push('complement_chauffage');
+          histoValues.push(donneesFiche.complement_chauffage === '' || donneesFiche.complement_chauffage == null ? null : donneesFiche.complement_chauffage);
+        }
+        const histoPlaceholders = histoCols.map(() => '?').join(', ');
         await query(
           `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
           histoValues
@@ -3596,7 +3600,10 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           revenu_foyer: fiche.revenu_foyer || null,
           credit_foyer: fiche.credit_foyer || null,
           mode_chauffage: fiche.mode_chauffage || null,
-          complement_chauffage: fiche.complement_chauffage || null,
+          complement_chauffage:
+            Object.prototype.hasOwnProperty.call(histo, 'complement_chauffage')
+              ? histo.complement_chauffage
+              : (fiche.complement_chauffage || null),
           produit: fiche.produit || null,
           surface_chauffee: fiche.surface_chauffee || null,
           consommation_chauffage: fiche.consommation_chauffage || null,
@@ -4368,10 +4375,14 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       const histoSousEtat = (ficheData.id_sous_etat != null) ? ficheData.id_sous_etat : null;
       const isEtat7 = parseInt(ficheData.id_etat_final) === 7;
       const { cols: confCols, vals: confVals } = isEtat7 ? getConfFieldsForHisto(ficheData, {}) : { cols: [], vals: [] };
-      const histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
-      const histoPlaceholders = histoCols.map(() => '?').join(', ');
+      let histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
       const dateRdvHisto = ficheData.date_rdv_time || null;
-      const histoValues = [insertId, ficheData.id_etat_final, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
+      let histoValues = [insertId, ficheData.id_etat_final, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'complement_chauffage')) {
+        histoCols.push('complement_chauffage');
+        histoValues.push(ficheData.complement_chauffage === '' || ficheData.complement_chauffage == null ? null : ficheData.complement_chauffage);
+      }
+      const histoPlaceholders = histoCols.map(() => '?').join(', ');
       await query(
         `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
         histoValues
@@ -4483,9 +4494,14 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
           confVals = out.vals;
         }
       }
-      const histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
+      let histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
+      let histoValues = [id, newEtatId, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
+      const ficheQualifSnap = await queryOne('SELECT complement_chauffage FROM fiches WHERE id = ?', [id]);
+      if (ficheQualifSnap) {
+        histoCols.push('complement_chauffage');
+        histoValues.push(ficheQualifSnap.complement_chauffage ?? null);
+      }
       const histoPlaceholders = histoCols.map(() => '?').join(', ');
-      const histoValues = [id, newEtatId, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
       await query(
         `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
         histoValues
@@ -5529,6 +5545,12 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         const ic = ficheData.id_commercial;
         const n = ic === '' || ic === undefined || ic === null ? NaN : parseInt(ic, 10);
         pushHistoCol('id_commercial', Number.isFinite(n) ? n : null);
+      }
+      {
+        const complementSnap = Object.prototype.hasOwnProperty.call(ficheData, 'complement_chauffage')
+          ? (ficheData.complement_chauffage === '' || ficheData.complement_chauffage === null ? null : ficheData.complement_chauffage)
+          : (fiche.complement_chauffage ?? null);
+        pushHistoCol('complement_chauffage', complementSnap);
       }
 
       const histoPlaceholders = histoCols.map(() => '?').join(', ');

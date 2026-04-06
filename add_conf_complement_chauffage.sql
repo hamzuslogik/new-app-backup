@@ -1,5 +1,5 @@
 -- Ajoute sur fiches : conf_complement_chauffage (confirmation), complement_chauffage (qualification)
--- Ajoute sur fiches_histo : conf_complement_chauffage (idempotent)
+-- Ajoute sur fiches_histo : conf_complement_chauffage, complement_chauffage (snapshot qualification par ligne d'historique)
 
 DELIMITER $$
 
@@ -23,6 +23,10 @@ BEGIN
   IF (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = db_name AND TABLE_NAME = 'fiches' AND COLUMN_NAME = 'complement_chauffage') = 0 THEN
     ALTER TABLE `fiches` ADD COLUMN `complement_chauffage` VARCHAR(512) DEFAULT NULL COMMENT 'Complément de chauffage (qualification)';
   END IF;
+
+  IF (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = db_name AND TABLE_NAME = 'fiches_histo' AND COLUMN_NAME = 'complement_chauffage') = 0 THEN
+    ALTER TABLE `fiches_histo` ADD COLUMN `complement_chauffage` VARCHAR(512) DEFAULT NULL COMMENT 'Snapshot complément chauffage (qualification) au moment du passage d''état';
+  END IF;
 END$$
 
 DELIMITER ;
@@ -30,4 +34,4 @@ DELIMITER ;
 CALL add_conf_complement_chauffage_if_missing();
 DROP PROCEDURE IF EXISTS add_conf_complement_chauffage_if_missing;
 
-SELECT 'Migration complément de chauffage : conf_complement_chauffage (fiches + fiches_histo), complement_chauffage (fiches qualification) — terminée.' AS message;
+SELECT 'Migration complément de chauffage : conf_complement_chauffage + complement_chauffage (fiches et fiches_histo) — terminée.' AS message;
