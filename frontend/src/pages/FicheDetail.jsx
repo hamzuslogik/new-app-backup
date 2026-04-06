@@ -1240,7 +1240,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       let needsApproval = false;
       let availabilityCount = null;
       let availabilityFromPlanning = null;
-      let confirmedCount = 0;
+      let rdvCountInSlot = 0;
 
       // Récupérer le nombre de RDV confirmés et la disponibilité depuis le planning
       if (planningWeek && planningYear && planningDep && selectedSlot) {
@@ -1249,19 +1249,13 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             params: { w: planningWeek, y: planningYear, dp: planningDep }
           });
           const planningData = planningRes.data?.data || {};
-          const dayPlanning = planningData[selectedSlot.date]?.time;
-          
-          if (dayPlanning) {
-            const timeKey = hourToTimeKey(selectedSlot.hour);
-            const slotPlanning = dayPlanning[timeKey];
-            if (slotPlanning) {
-              availabilityFromPlanning = slotPlanning.av !== undefined ? slotPlanning.av : null;
-              
-              if (slotPlanning.planning) {
-                confirmedCount = slotPlanning.planning.filter(
-                  rdv => rdv.etat_check !== 'AN' && rdv.etat_check !== 'RS'
-                ).length;
-              }
+          const timeKey = hourToTimeKey(selectedSlot.hour);
+          const slotPlanning = resolveDayPlanningTimeSlot(planningData, selectedSlot.date, timeKey);
+          if (slotPlanning) {
+            availabilityFromPlanning = slotPlanning.av !== undefined ? slotPlanning.av : null;
+            if (slotPlanning.planning) {
+              // Créneau « plein » = tous les RDV renvoyés par l’API (cohérent avec le badge X / Y)
+              rdvCountInSlot = slotPlanning.planning.length;
             }
           }
         } catch (err) {
@@ -1275,7 +1269,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
       // Vérifier si le créneau est disponible ou a atteint sa limite
       if (availabilityCount !== null && availabilityCount !== undefined) {
-        if (availabilityCount === 0 || confirmedCount >= availabilityCount) {
+        if (availabilityCount === 0 || rdvCountInSlot >= availabilityCount) {
           needsApproval = true;
         }
       }
@@ -7882,21 +7876,22 @@ const PlanningViewForModal = ({
                     // Un créneau est disponible s'il a un planning avec disponibilité > 0, OU s'il n'a pas de planning mais n'est pas bloqué
                     const isAvailable = (hasPlanning && availabilityCount > 0) || (!hasPlanning && !isBlocked);
                     
-                    // Compter uniquement les fiches confirmées (état final = 7, pas annulées ni reportées)
+                    // Total RDV dans le créneau = même liste que l’API (toutes les fiches du slot, toutes heures confondues)
+                    const totalRdvInSlot = rdvs.length;
+                    // Fiches sans badge historique annulation pure AN / report RS (affichage secondaire / tolérance créneau)
                     const confirmedRdvs = rdvs.filter(rdv => rdv.etat_check !== 'AN' && rdv.etat_check !== 'RS');
                     const confirmedCount = confirmedRdvs.length;
                     // Compter les fiches réellement validées par le confirmateur (valider == 1, accepte nombre/chaîne/boolean)
                     const validatedCount = rdvs.filter(rdv => (Number(rdv.valider) === 1 || rdv.valider === true || rdv.valider === '1')).length;
                     
-                    // Toujours afficher le badge si on a des données (disponibilité ou fiches confirmées)
-                    const hasData = hasPlanning || confirmedCount > 0;
+                    const hasData = hasPlanning || totalRdvInSlot > 0;
                     const displayAvailability = availabilityCount !== null ? availabilityCount : 0;
                     
-                    // Couleur du badge : vert si OK, orange si presque plein, rouge si plein
+                    // Couleur du badge : vert si OK, orange si presque plein, rouge si plein (sur le total réel du créneau)
                     let bgColor = '#cccccc';
                     if (hasPlanning && availabilityCount > 0) {
-                      bgColor = getAvailabilityColor(confirmedCount, availabilityCount);
-                    } else if (confirmedCount > 0) {
+                      bgColor = getAvailabilityColor(totalRdvInSlot, availabilityCount);
+                    } else if (totalRdvInSlot > 0) {
                       bgColor = '#e74c3c'; // Rouge si des RDV mais pas de planning
                     }
                     
@@ -7927,7 +7922,7 @@ const PlanningViewForModal = ({
                         title={
                           (() => {
                             const validatedLabel = hasData && rdvs.length > 0
-                              ? `${validatedCount} validées / ${rdvs.length} total`
+                              ? `${validatedCount} validées / ${rdvs.length} RDV au créneau${confirmedCount < rdvs.length ? ` (${rdvs.length - confirmedCount} avec historique annul./report)` : ''}`
                               : null;
                             if (isEditing) return 'Modifier la disponibilité';
                             const actionLabel = canEditThis && hasData
@@ -8023,7 +8018,7 @@ const PlanningViewForModal = ({
                             <div className="availability-info">
                               <div className="availability-badge" style={{ backgroundColor: bgColor }}>
                                 <span className="availability-text-compact">
-                                  {confirmedCount} / {displayAvailability}
+                                  {totalRdvInSlot} / {displayAvailability}
                                 </span>
                               </div>
                             </div>
