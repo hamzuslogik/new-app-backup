@@ -122,8 +122,10 @@ const TIME_SLOTS = [
 // États sans transition possible (aligné sur backend management.routes.js) : pas de « nouvel état »
 const ETATS_SANS_NOUVEL_ETAT = [22, 25, 26, 34, 35]; // ANNULER 2 FOIS, REFUSER 2 FOIS, RDV ANNULER 2 FOIS, HHC FINANCEMENT, HHC TECHNIQUE
 
-/** Annuler, Annuler 2×, RDV annuler, RDV annuler 2×, HHC financement à vérifier, Hors cible air air — commentaire (motif_qualif) en détails fiche. */
-const ETATS_AVEC_COMMENTAIRE_MOTIF = [5, 22, 11, 26, 34, 29];
+/** Commentaire (motif_qualif) en détails fiche : annuler, annuler 2×, RDV annuler, RDV annuler 2×, refuser, refuser 2×, hors cible air air, âge/doublon/locataire, financement, HC confirmateur, HHC financement à vérifier. */
+const ETATS_AVEC_COMMENTAIRE_MOTIF = [5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34];
+/** À la validation du passage d'état : commentaire obligatoire (motif_qualif). */
+const ETATS_MOTIF_QUALIF_REQUIS = [5, 6, 11, 12, 22, 24, 25, 26, 29];
 
 // Helper pour calculer le timeKey à partir d'une heure (HH:MM:SS)
 // Évite les problèmes de fuseau horaire en calculant directement les secondes depuis minuit UTC
@@ -1514,7 +1516,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   // Gérer le changement d'état
   const handleEtatChange = (newEtatId) => {
     setSelectedEtat(newEtatId);
-    if ([12, 23, 34].includes(newEtatId)) {
+    if ([5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34].includes(newEtatId)) {
       setEtatFormData(prev => ({ ...prev, motif_qualif: '' }));
     }
     // Si l'état est 19 (Rappel pour Bureau) : si déjà en 19, reprendre la date/heure de la fiche ; sinon date/heure actuelles
@@ -1847,6 +1849,13 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         }
       }
 
+      if (ETATS_MOTIF_QUALIF_REQUIS.includes(selectedEtat)) {
+        if (!(etatFormData.motif_qualif || '').trim()) {
+          alert('Veuillez saisir un commentaire.');
+          return;
+        }
+      }
+
       // Validation : commentaire obligatoire lorsque le formulaire le propose (11 et 12 : commentaire facultatif)
       const etatsAvecCommentaire = [2, 8, 9, 19, 23, 34, 13, 44, 45, 16, 38];
       if (etatsAvecCommentaire.includes(selectedEtat)) {
@@ -2000,16 +2009,18 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         if (etatFormData.motif_qualif) {
           updateData.motif_qualif = etatFormData.motif_qualif;
         }
-      } else if ([9, 11, 12, 23, 34].includes(selectedEtat)) {
-        // CLIENT HONORE A SUIVRE (9), RDV ANNULER (11), REFUSER (12), HORS CIBLE (23), HHC FINANCEMENT (34)
+      } else if ([5, 6, 9, 11, 12, 22, 23, 24, 25, 26, 29, 34].includes(selectedEtat)) {
+        // CLIENT HONORE A SUIVRE (9), RDV ANNULER (11), REFUSER (12), HORS CIBLE (23), HHC FINANCEMENT (34), ANNULER (5), HC ÂGE/DBL/LOC (6), ANNULER 2× (22), HC FINANCEMENT (24), REFUSER 2× (25), RDV ANNULER 2× (26), HC AIR AIR (29)
         if (selectedEtat === 9 && etatFormData.conf_commentaire_produit) {
           updateData.conf_commentaire_produit = etatFormData.conf_commentaire_produit;
         }
         if ([11, 12].includes(selectedEtat)) {
           if (etatFormData.id_sous_etat) {
             updateData.id_sous_etat = parseInt(etatFormData.id_sous_etat, 10);
-            if (etatFormData.motif_qualif) updateData.motif_qualif = etatFormData.motif_qualif;
           }
+          if (etatFormData.motif_qualif) updateData.motif_qualif = etatFormData.motif_qualif;
+        } else if ([5, 6, 22, 24, 25, 26, 29].includes(selectedEtat) && etatFormData.motif_qualif) {
+          updateData.motif_qualif = etatFormData.motif_qualif;
         } else if ([23, 34].includes(selectedEtat) && etatFormData.motif_qualif) {
           updateData.motif_qualif = etatFormData.motif_qualif;
         }
@@ -2947,10 +2958,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               {renderField('Zones d\'ombres', 'zones_ombres',
                 (fiche.conf_zones_ombres != null && String(fiche.conf_zones_ombres).trim() !== '') ? fiche.conf_zones_ombres : (fiche.zones_ombres || '-')
               )}
-              {renderField('Proche d\'un site classé', 'site_classe', fiche.site_classe || fiche.conf_site_classe || '-', 'select', [
-                { value: 'OUI', label: 'Oui' },
-                { value: 'NON', label: 'Non' }
-              ])}
+              {renderField('Proche d\'un site classé', 'site_classe', fiche.site_classe || fiche.conf_site_classe || '-', 'text')}
               {renderField('Âge du MR', 'age_mr', fiche.age_mr || '-', 'number')}
               {renderField('Âge du Madame', 'age_madame', fiche.age_madame || '-', 'number')}
               {renderField('Consommation électricité', 'consommation_electricite',
@@ -6420,10 +6428,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               </div>
             )}
 
-            {/* États 11 (RDV ANNULER), 12 (REFUSER) : sous-état facultatif ; commentaire affiché et facultatif si sous-état choisi. 23, 34 : inchangé */}
-            {[11, 12, 23, 34].includes(selectedEtat) && (
+            {/* États avec commentaire (motif_qualif) : annuler, refus, hors cible, etc. */}
+            {[5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34].includes(selectedEtat) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
-                <h3>{[11, 12].includes(selectedEtat) ? 'RDV annulé / Refus' : 'Commentaire'}</h3>
+                <h3>
+                  {[11, 12].includes(selectedEtat)
+                    ? 'RDV annulé / Refus'
+                    : [23, 34].includes(selectedEtat)
+                      ? 'Informations complémentaires'
+                      : "Commentaire sur l'état"}
+                </h3>
                 {[11, 12].includes(selectedEtat) && sousEtats.length > 0 && (
                   <div className="form-group">
                     <label htmlFor="etat_id_sous_etat_11_12">Sous-état (facultatif) :</label>
@@ -6456,20 +6470,18 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     </select>
                   </div>
                 )}
-                {([23, 34].includes(selectedEtat) || ([11, 12].includes(selectedEtat) && (etatFormData.id_sous_etat || '').toString().trim() !== '')) && (
-                  <div className="form-group">
-                    <label htmlFor="etat_conf_commentaire_simple">
-                      Commentaire{[11, 12].includes(selectedEtat) ? ' (facultatif)' : ''} :
-                    </label>
-                    <textarea
-                      id="etat_conf_commentaire_simple"
-                      className="form-control"
-                      rows="4"
-                      value={etatFormData.motif_qualif}
-                      onChange={(e) => setEtatFormData({...etatFormData, motif_qualif: e.target.value})}
-                    />
-                  </div>
-                )}
+                <div className="form-group">
+                  <label htmlFor="etat_conf_commentaire_simple">
+                    Commentaire * :
+                  </label>
+                  <textarea
+                    id="etat_conf_commentaire_simple"
+                    className="form-control"
+                    rows="4"
+                    value={etatFormData.motif_qualif}
+                    onChange={(e) => setEtatFormData({...etatFormData, motif_qualif: e.target.value})}
+                  />
+                </div>
                 <div className="form-actions">
                   <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
                   <button className="btn-cancel" onClick={() => {
@@ -6487,7 +6499,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
              selectedEtat !== 2 && 
              selectedEtat !== 8 && 
              selectedEtat !== 19 && 
-             ![9, 11, 12, 13, 16, 23, 34, 38, 44, 45].includes(selectedEtat) && (
+             ![5, 6, 9, 11, 12, 13, 16, 22, 23, 24, 25, 26, 29, 34, 38, 44, 45].includes(selectedEtat) && (
               <div className="form-actions" style={{ marginTop: '20px' }}>
                 <button
                   className="btn-confirm"
@@ -8854,18 +8866,16 @@ const CreateRdvModal = ({
                         </td>
                       </tr>
                       <tr>
-                        <td><label htmlFor="rdv_site_classe">Site classé</label></td>
+                        <td><label htmlFor="rdv_site_classe">Proche d&apos;un site classé</label></td>
                         <td>
-                          <select
+                          <input
+                            type="text"
                             id="rdv_site_classe"
                             className="form-control"
-                            value={rdvFormData.conf_site_classe}
+                            value={rdvFormData.conf_site_classe || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_site_classe: e.target.value})}
-                          >
-                            <option value="">Sélectionner</option>
-                            <option value="OUI">OUI</option>
-                            <option value="NON">NON</option>
-                          </select>
+                            placeholder="Ex: Oui, Non, précisions..."
+                          />
                         </td>
                       </tr>
                       <tr>
