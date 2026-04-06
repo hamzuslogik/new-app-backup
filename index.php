@@ -823,6 +823,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'revenu_foyer' => !empty($_POST['revenu_foyer']) ? sanitizeInput($_POST['revenu_foyer']) : null,
             'etude' => !empty($_POST['etude']) ? sanitizeInput($_POST['etude']) : null,
             'mode_chauffage' => !empty($_POST['mode_chauffage']) ? intval($_POST['mode_chauffage']) : null,
+            'complement_chauffage' => !empty(trim($_POST['complement_chauffage'] ?? '')) ? sanitizeInput($_POST['complement_chauffage']) : null,
             'annee_systeme_chauffage' => !empty($_POST['annee_systeme_chauffage']) ? sanitizeInput($_POST['annee_systeme_chauffage']) : null,
             'surface_habitable' => !empty($_POST['surface_habitable']) ? sanitizeInput($_POST['surface_habitable']) : null,
             'surface_chauffee' => !empty($_POST['surface_chauffee']) ? sanitizeInput($_POST['surface_chauffee']) : null,
@@ -1255,6 +1256,10 @@ if (isset($_SESSION['error_message'])) {
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                    <div class="form-group champ-pac" style="display: none;">
+                        <label>Complément de chauffage (qualification)</label>
+                        <input type="text" name="complement_chauffage" placeholder="Ex. : appoint, poêle, précision sur le mode…" maxlength="512">
                     </div>
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Année Système Chauffage</label>

@@ -1248,6 +1248,7 @@ const FicheFormModal = ({
     surface_chauffee: fiche?.surface_chauffee || '',
     annee_systeme_chauffage: fiche?.annee_systeme_chauffage || '',
     mode_chauffage: fiche?.mode_chauffage || '',
+    complement_chauffage: fiche?.complement_chauffage || '',
     consommation_chauffage: fiche?.consommation_chauffage || '',
     consommation_electricite: fiche?.consommation_electricite || '',
     circuit_eau: fiche?.circuit_eau || '',
@@ -1464,6 +1465,16 @@ const FicheFormModal = ({
                       <option key={mode.id} value={mode.id}>{mode.nom}</option>
                     ))}
                   </select>
+                </div>
+                <div className="form-group">
+                  <label>Complément de chauffage (qualification)</label>
+                  <input
+                    type="text"
+                    name="complement_chauffage"
+                    value={formData.complement_chauffage || ''}
+                    onChange={handleChange}
+                    placeholder="Ex : appoint, poêle, précision sur le mode…"
+                  />
                 </div>
                 <div className="form-group">
                   <label>Consommation chauffage</label>
