@@ -3477,7 +3477,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   !!(etatData.confirmateur_pseudo || etatData.confirmateur_2_pseudo || etatData.confirmateur_3_pseudo);
                 
                 const items = [];
-                
+
+                if (etatData.from_compte_rendu) {
+                  const nomCommercial =
+                    etatData.cr_commercial_pseudo || etatData.commercial_pseudo;
+                  const affiche =
+                    nomCommercial && String(nomCommercial).trim() !== ''
+                      ? String(nomCommercial).trim()
+                      : '—';
+                  items.push({ label: 'Commercial', value: affiche });
+                }
+
                 // NRP (2)
                 if (etatId === 2) {
                   if (etatData.sous_etat_titre) items.push({ label: 'Sous-état', value: etatData.sous_etat_titre });
@@ -3763,7 +3773,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 cq_dossier: fiche.cq_dossier || null,
                 observations_cq: fiche.observations_cq || null,
                 date_creation: dateCreationEtatActuel,
-                from_compte_rendu: !!(lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.from_compte_rendu)
+                from_compte_rendu: !!(lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.from_compte_rendu),
+                cr_commercial_pseudo:
+                  lastHistoEtatActuel?.cr_commercial_pseudo || fiche.compte_rendu_commercial_pseudo || null
               };
 
               // Afficher <CR> dans l'état actuel uniquement si cet état vient d'un compte rendu (dernière entrée historio = état actuel et from_compte_rendu)
@@ -3782,6 +3794,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 const hist = Array.isArray(fiche.historique) ? fiche.historique : [];
                 if (hist.length === 0) return null;
 
+                const commercialFromHisto = (h) =>
+                  (h && (h.cr_commercial_pseudo || h.commercial_pseudo)) || '';
+
                 const hasSigned = (h) => {
                   const id = Number(h?.id_etat);
                   const t = normalizeEtatTitle(h?.etat_titre);
@@ -3799,13 +3814,31 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 };
 
                 const signedState = hist.find(hasSigned);
-                if (signedState) return { label: 'Signé', color: signedState.etat_color || '#4CAF50' };
+                if (signedState) {
+                  return {
+                    label: 'Signé',
+                    color: signedState.etat_color || '#4CAF50',
+                    commercialPseudo: commercialFromHisto(signedState)
+                  };
+                }
 
                 const aSuivreState = hist.find(hasASuivre);
-                if (aSuivreState) return { label: 'Honoré à suivre', color: aSuivreState.etat_color || '#f7a219' };
+                if (aSuivreState) {
+                  return {
+                    label: 'Honoré à suivre',
+                    color: aSuivreState.etat_color || '#f7a219',
+                    commercialPseudo: commercialFromHisto(aSuivreState)
+                  };
+                }
 
                 const aReproState = hist.find(hasARepro);
-                if (aReproState) return { label: 'Annuler à reprogrammer', color: aReproState.etat_color || '#9cbfc8' };
+                if (aReproState) {
+                  return {
+                    label: 'Annuler à reprogrammer',
+                    color: aReproState.etat_color || '#9cbfc8',
+                    commercialPseudo: ''
+                  };
+                }
 
                 return null;
               })();
@@ -4188,6 +4221,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                           }}
                         >
                           {historiquePriorityState.label}
+                          {historiquePriorityState.commercialPseudo
+                            ? ` — Commercial : ${historiquePriorityState.commercialPseudo}`
+                            : ''}
                         </div>
                       )}
                       <div 
