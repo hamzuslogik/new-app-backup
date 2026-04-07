@@ -109,6 +109,22 @@ async function resolveProfessionId(apiClient, displayName, currentId, profession
   return currentId || '';
 }
 
+/** La fiche est passée au moins une fois par « honoré à suivre » (état 9) suite à un compte rendu : ligne d’historique ou CR approuvé. */
+function ficheHonoreASuivreViaCompteRendu(fiche) {
+  if (!fiche) return false;
+  const hist = Array.isArray(fiche.historique) ? fiche.historique : [];
+  const fromHisto = hist.some(
+    (h) =>
+      Number(h.id_etat) === 9 &&
+      (h.from_compte_rendu === true || h.from_compte_rendu === 1)
+  );
+  if (fromHisto) return true;
+  const crs = Array.isArray(fiche.comptes_rendus) ? fiche.comptes_rendus : [];
+  return crs.some(
+    (cr) => Number(cr.id_etat_final) === 9 && cr.statut === 'approved'
+  );
+}
+
 // Créneaux horaires
 const TIME_SLOTS = [
   { hour: '09:00:00', name: '9H ( 9h uniquement )' },
@@ -277,7 +293,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     surface_chauffee: '',
     consommation_chauffage: '',
     annee_systeme_chauffage: '',
-    conf_commentaire_produit: ''
+    conf_commentaire_produit: '',
+    id_commercial_2: ''
   });
 
   // État pour le formulaire de confirmation
@@ -1201,7 +1218,13 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
             : '',
       conf_complement_chauffage: ficheData?.conf_complement_chauffage || '',
       annee_systeme_chauffage: ficheData?.annee_systeme_chauffage || '',
-      conf_commentaire_produit: '' // Vide par défaut pour le modal de création RDV
+      conf_commentaire_produit: '', // Vide par défaut pour le modal de création RDV
+      id_commercial_2:
+        ficheHonoreASuivreViaCompteRendu(ficheData) &&
+        ficheData?.id_commercial_2 != null &&
+        Number(ficheData.id_commercial_2) > 0
+          ? String(ficheData.id_commercial_2)
+          : ''
     };
 
     // Session confirmateur (fonction 6) : confirmateur connecté = toujours conf1 ; si conf1 existait → décaler en conf2 ; si conf1 et conf2 existaient → décaler (conf1→conf2, conf2→conf3).
@@ -1322,6 +1345,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         conf_commentaire_produit: data.conf_commentaire_produit || null
       };
 
+      if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
+        if (!data.id_commercial_2 || String(data.id_commercial_2).trim() === '') {
+          alert(
+            'Veuillez sélectionner le commercial secondaire (R2) : la fiche est passée par « honoré à suivre » via compte rendu.'
+          );
+          setRdvSubmitting(false);
+          return;
+        }
+        updateData.id_commercial_2 = parseInt(data.id_commercial_2, 10);
+      }
+
       // Vérifier si le RDV est pour aujourd'hui ou demain
       const rdvDate = new Date(updateData.date_rdv_time);
       const today = new Date();
@@ -1390,7 +1424,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           surface_chauffee: '',
           consommation_chauffage: '',
           annee_systeme_chauffage: '',
-          conf_commentaire_produit: ''
+          conf_commentaire_produit: '',
+          id_commercial_2: ''
         });
         return;
       }
@@ -7040,6 +7075,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           rdvFormData={rdvFormData}
           setRdvFormData={setRdvFormData}
           confirmateurs={confirmateurs}
+          commerciaux={commerciaux}
           onClose={() => {
             setShowRdvModal(false);
             setSelectedSlot(null);
@@ -8194,11 +8230,13 @@ const CreateRdvModal = ({
   rdvFormData, 
   setRdvFormData, 
   confirmateurs,
+  commerciaux,
   onClose, 
   onSubmit,
   rdvSubmitting = false
 }) => {
   const isConfirmateurSession = Number(user?.fonction) === 6;
+  const isHonoreASuivre = ficheHonoreASuivreViaCompteRendu(ficheData);
   const [showRdvConfFields, setShowRdvConfFields] = useState(false);
 
   const getConfirmateurLabel = (id) => {
@@ -8512,6 +8550,36 @@ const CreateRdvModal = ({
                     )}
                   </td>
                 </tr>
+                {isHonoreASuivre && (
+                  <tr>
+                    <td>
+                      <label htmlFor="rdv_id_commercial_2">Commercial secondaire (R2) *</label>
+                    </td>
+                    <td>
+                      <select
+                        id="rdv_id_commercial_2"
+                        className="form-control"
+                        value={rdvFormData.id_commercial_2 || ''}
+                        onChange={(e) =>
+                          setRdvFormData({ ...rdvFormData, id_commercial_2: e.target.value })
+                        }
+                        required
+                      >
+                        <option value="">Sélectionner</option>
+                        {(commerciaux || [])
+                          .filter((u) => u.etat > 0 || u.etat == null)
+                          .map((com) => (
+                            <option key={com.id} value={com.id}>
+                              {com.pseudo}
+                            </option>
+                          ))}
+                      </select>
+                      <small style={{ color: '#666', fontSize: '10.2px', display: 'block', marginTop: '4px' }}>
+                        Fiche déjà passée par « honoré à suivre » (compte rendu) : affectation du 2e commercial (id_commercial_2).
+                      </small>
+                    </td>
+                  </tr>
+                )}
                 <tr>
                   <td><label htmlFor="rdv_confirmateur">Confirmateur *</label></td>
                   <td>
