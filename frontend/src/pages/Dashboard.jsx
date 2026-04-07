@@ -540,13 +540,6 @@ const Dashboard = () => {
     handleFilterChange('page', newPage);
   };
 
-  /** Filtre centre dans l'en-tête : applique immédiatement (liste + requête API). */
-  const handleDashboardCentreChange = (e) => {
-    const v = e.target.value;
-    setFilters((prev) => ({ ...prev, id_centre: v, page: 1 }));
-    setAppliedFilters((prev) => ({ ...prev, id_centre: v, page: 1 }));
-  };
-
   const handleSearch = async (e) => {
     e.preventDefault();
     // Afficher la confirmation uniquement si la recherche n'est pas affinée (risque de recherche lourde)
@@ -980,22 +973,6 @@ const Dashboard = () => {
             <p>Bienvenue, {user?.pseudo || 'Utilisateur'}</p>
           </div>
         </div>
-        {showCentreDashboardFilter && (
-          <div className="dashboard-header-right">
-            <label>Centre</label>
-            <select
-              value={appliedFilters.id_centre != null && appliedFilters.id_centre !== '' ? String(appliedFilters.id_centre) : ''}
-              onChange={handleDashboardCentreChange}
-            >
-              <option value="">Tous</option>
-              {centres.map((centre) => (
-                <option key={centre.id} value={centre.id}>
-                  {centre.titre}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       {/* Section des statistiques RDV - visible immédiatement */}
