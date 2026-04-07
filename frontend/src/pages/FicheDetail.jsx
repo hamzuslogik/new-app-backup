@@ -330,7 +330,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     annee_systeme_chauffage: '',
     surface_chauffee: '',
     consommation_chauffage: '',
-    conf_commentaire_produit: ''
+    conf_commentaire_produit: '',
+    id_commercial_2: ''
   });
   const [confProfMrDisplay, setConfProfMrDisplay] = useState('');
   const [confProfMmeDisplay, setConfProfMmeDisplay] = useState('');
@@ -1684,7 +1685,13 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         annee_systeme_chauffage: ficheData?.annee_systeme_chauffage ? String(ficheData.annee_systeme_chauffage) : '',
         surface_chauffee: ficheData?.surface_chauffee || '',
         consommation_chauffage: ficheData?.consommation_chauffage || '',
-        conf_commentaire_produit: ficheData?.conf_commentaire_produit || ficheData?.commentaire || ''
+        conf_commentaire_produit: ficheData?.conf_commentaire_produit || ficheData?.commentaire || '',
+        id_commercial_2:
+          ficheHonoreASuivreViaCompteRendu(ficheData) &&
+          ficheData?.id_commercial_2 != null &&
+          Number(ficheData.id_commercial_2) > 0
+            ? String(ficheData.id_commercial_2)
+            : ''
       });
     } else {
       setConfFormData({
@@ -1716,7 +1723,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         annee_systeme_chauffage: '',
         surface_chauffee: '',
         consommation_chauffage: '',
-        conf_commentaire_produit: ''
+        conf_commentaire_produit: '',
+        id_commercial_2: ''
       });
       setConfProfMrDisplay('');
       setConfProfMmeDisplay('');
@@ -1732,6 +1740,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       if (!(confFormData.conf_commentaire_produit || '').trim()) {
         alert('Veuillez saisir un commentaire.');
         return;
+      }
+      if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
+        if (!confFormData.id_commercial_2 || String(confFormData.id_commercial_2).trim() === '') {
+          alert('Veuillez sélectionner le commercial secondaire (R2).');
+          return;
+        }
       }
 
       // Construire la date/heure du RDV
@@ -1801,6 +1815,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         conf_commentaire_produit: confFormData.conf_commentaire_produit || null
       };
 
+      if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
+        updateData.id_commercial_2 = parseInt(confFormData.id_commercial_2, 10);
+      }
+
       // Appeler l'API pour mettre à jour
       const res = await api.put(`/fiches/${hash}`, updateData);
       
@@ -1843,7 +1861,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
           annee_systeme_chauffage: '',
           surface_chauffee: '',
           consommation_chauffage: '',
-          conf_commentaire_produit: ''
+          conf_commentaire_produit: '',
+          id_commercial_2: ''
         });
         setConfProfMrDisplay('');
         setConfProfMmeDisplay('');
@@ -5239,6 +5258,33 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         </select>
                       </td>
                     </tr>
+                    {ficheHonoreASuivreViaCompteRendu(ficheData) && (
+                      <tr>
+                        <td>
+                          <label htmlFor="conf_id_commercial_2">Commercial secondaire (R2) *</label>
+                        </td>
+                        <td>
+                          <select
+                            id="conf_id_commercial_2"
+                            className="form-control"
+                            value={confFormData.id_commercial_2 || ''}
+                            onChange={(e) =>
+                              setConfFormData({ ...confFormData, id_commercial_2: e.target.value })
+                            }
+                            required
+                          >
+                            <option value="">Sélectionner</option>
+                            {(commerciaux || [])
+                              .filter((u) => u.etat > 0 || u.etat == null)
+                              .map((com) => (
+                                <option key={com.id} value={com.id}>
+                                  {com.pseudo}
+                                </option>
+                              ))}
+                          </select>
+                        </td>
+                      </tr>
+                    )}
                     <tr>
                       <td><label htmlFor="conf_id_confirmateur">Confirmateur :</label></td>
                       <td>
@@ -8574,9 +8620,6 @@ const CreateRdvModal = ({
                             </option>
                           ))}
                       </select>
-                      <small style={{ color: '#666', fontSize: '10.2px', display: 'block', marginTop: '4px' }}>
-                        Fiche déjà passée par « honoré à suivre » (compte rendu) : affectation du 2e commercial (id_commercial_2).
-                      </small>
                     </td>
                   </tr>
                 )}
