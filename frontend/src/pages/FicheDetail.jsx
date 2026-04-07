@@ -3937,51 +3937,35 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         </span>
                       </div>
                       
-                      {/* Détails de l'état actuel */}
+                      {/* Détails de l'état actuel (même présentation que le bloc détails de l'historique) */}
                       {detailItemsActuel.length > 0 && (
-                        <div style={{ 
-                          marginTop: '20px', 
-                          paddingTop: '20px', 
-                          borderTop: '2px solid #e0e0e0',
-                          backgroundColor: '#fafafa',
-                          padding: '15px',
-                          borderRadius: '6px'
-                        }}>
-                          <h4 style={{ 
-                            marginBottom: '15px', 
-                            fontSize: '15px', 
-                            fontWeight: 'bold',
-                            color: '#333',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}>
+                        <div
+                          style={{
+                            marginTop: '10px',
+                            paddingTop: '10px',
+                            borderTop: '1px solid #ddd',
+                            fontSize: '13px'
+                          }}
+                        >
+                          <h4
+                            style={{
+                              marginBottom: '10px',
+                              fontSize: '15px',
+                              fontWeight: 'bold',
+                              color: '#333',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}
+                          >
                             <FaInfoCircle style={{ color: etatActuel.etat_color }} />
                             Détails de l'état actuel
                           </h4>
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '12px',
-                              fontSize: '14px'
-                            }}
-                          >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {detailItemsActuel.map((item, idx) => (
-                              <div
-                                key={idx}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px',
-                                  backgroundColor: '#fff',
-                                  borderRadius: '4px',
-                                  border: '1px solid #e0e0e0',
-                                  boxSizing: 'border-box',
-                                  lineHeight: 1.45
-                                }}
-                              >
-                                <span style={{ color: '#333', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                  <strong style={{ color: '#555' }}>{item.label}:</strong>{' '}
+                              <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
+                                <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                  <strong>{item.label}:</strong>{' '}
                                   {item.value || '-'}
                                 </span>
                               </div>
