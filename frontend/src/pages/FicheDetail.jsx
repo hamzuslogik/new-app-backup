@@ -3976,13 +3976,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                   backgroundColor: '#fff',
                                   borderRadius: '4px',
                                   border: '1px solid #e0e0e0',
-                                  boxSizing: 'border-box'
+                                  boxSizing: 'border-box',
+                                  lineHeight: 1.45
                                 }}
                               >
-                                <strong style={{ color: '#555', display: 'block', marginBottom: '4px' }}>
-                                  {item.label}:
-                                </strong>
-                                <span style={{ color: '#333', display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                <span style={{ color: '#333', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                  <strong style={{ color: '#555' }}>{item.label}:</strong>{' '}
                                   {item.value || '-'}
                                 </span>
                               </div>
@@ -4313,9 +4312,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                   <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #ddd', fontSize: '13px' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                       {detailItems.map((item, idx) => (
-                                        <div key={idx} style={{ width: '100%' }}>
-                                          <strong style={{ display: 'block', marginBottom: '4px' }}>{item.label}:</strong>
-                                          <span style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                        <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
+                                          <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            <strong>{item.label}:</strong>{' '}
                                             {item.value || '-'}
                                           </span>
                                         </div>
