@@ -3959,27 +3959,30 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                             <FaInfoCircle style={{ color: etatActuel.etat_color }} />
                             Détails de l'état actuel
                           </h4>
-                          <div style={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-                            gap: '12px', 
-                            fontSize: '14px' 
-                          }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '12px',
+                              fontSize: '14px'
+                            }}
+                          >
                             {detailItemsActuel.map((item, idx) => (
-                              <div 
-                                key={idx} 
-                                style={{ 
-                                  gridColumn: item.fullWidth ? '1 / -1' : 'auto',
+                              <div
+                                key={idx}
+                                style={{
+                                  width: '100%',
                                   padding: '8px',
                                   backgroundColor: '#fff',
                                   borderRadius: '4px',
-                                  border: '1px solid #e0e0e0'
+                                  border: '1px solid #e0e0e0',
+                                  boxSizing: 'border-box'
                                 }}
                               >
                                 <strong style={{ color: '#555', display: 'block', marginBottom: '4px' }}>
                                   {item.label}:
                                 </strong>
-                                <span style={{ color: '#333' }}>
+                                <span style={{ color: '#333', display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                   {item.value || '-'}
                                 </span>
                               </div>
@@ -4308,10 +4311,13 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                 
                                 {detailItems.length > 0 && (
                                   <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #ddd', fontSize: '13px' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                       {detailItems.map((item, idx) => (
-                                        <div key={idx} style={{ gridColumn: item.fullWidth ? 'span 2' : 'span 1' }}>
-                                          <strong>{item.label}:</strong> {item.value || '-'}
+                                        <div key={idx} style={{ width: '100%' }}>
+                                          <strong style={{ display: 'block', marginBottom: '4px' }}>{item.label}:</strong>
+                                          <span style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            {item.value || '-'}
+                                          </span>
                                         </div>
                                       ))}
                                     </div>
