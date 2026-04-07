@@ -982,20 +982,18 @@ const Dashboard = () => {
         </div>
         {showCentreDashboardFilter && (
           <div className="dashboard-header-right">
-            <div className="dashboard-header-centre-filter">
-              <label>Centre</label>
-              <select
-                value={appliedFilters.id_centre != null && appliedFilters.id_centre !== '' ? String(appliedFilters.id_centre) : ''}
-                onChange={handleDashboardCentreChange}
-              >
-                <option value="">Tous</option>
-                {centres.map((centre) => (
-                  <option key={centre.id} value={centre.id}>
-                    {centre.titre}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <label>Centre</label>
+            <select
+              value={appliedFilters.id_centre != null && appliedFilters.id_centre !== '' ? String(appliedFilters.id_centre) : ''}
+              onChange={handleDashboardCentreChange}
+            >
+              <option value="">Tous</option>
+              {centres.map((centre) => (
+                <option key={centre.id} value={centre.id}>
+                  {centre.titre}
+                </option>
+              ))}
+            </select>
           </div>
         )}
       </div>
