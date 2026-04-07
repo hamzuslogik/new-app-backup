@@ -983,9 +983,8 @@ const Dashboard = () => {
         {showCentreDashboardFilter && (
           <div className="dashboard-header-right">
             <div className="dashboard-header-centre-filter">
-              <label htmlFor="dashboard-centre-select">Centre</label>
+              <label>Centre</label>
               <select
-                id="dashboard-centre-select"
                 value={appliedFilters.id_centre != null && appliedFilters.id_centre !== '' ? String(appliedFilters.id_centre) : ''}
                 onChange={handleDashboardCentreChange}
               >
