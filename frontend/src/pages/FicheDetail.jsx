@@ -3487,6 +3487,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                       : '—';
                   items.push({ label: 'Commercial', value: affiche });
                 }
+                if (Number(etatId) === 7 && etatData.commercial_2_pseudo) {
+                  items.push({ label: 'Commercial 2', value: etatData.commercial_2_pseudo });
+                }
 
                 // NRP (2)
                 if (etatId === 2) {
@@ -3745,6 +3748,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 date_appel_time: fiche.date_appel_time || null,
                 date_sign_time: fiche.date_sign_time || null,
                 commercial_pseudo: commerciaux?.find(c => c.id === fiche.id_commercial)?.pseudo || null,
+                commercial_2_pseudo: commerciaux?.find(c => c.id === fiche.id_commercial_2)?.pseudo || null,
                 installeur_nom: installateurs?.find(i => i.id === fiche.ph3_installateur)?.nom || null,
                 // Phase 3
                 ph3_pac: fiche.ph3_pac || null,

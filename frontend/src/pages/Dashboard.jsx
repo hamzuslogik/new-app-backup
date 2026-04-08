@@ -662,6 +662,17 @@ const Dashboard = () => {
     return user?.pseudo || '';
   };
 
+  // Affichage commercial dans le tableau: "commercial 1 | commercial 2"
+  // Si commercial 1 est vide mais commercial 2 existe: "| commercial 2"
+  const getCommercialsFormatted = (fiche) => {
+    const c1 = getUserName(fiche?.id_commercial);
+    const c2 = getUserName(fiche?.id_commercial_2);
+    if (c1 && c2) return `${c1} | ${c2}`;
+    if (!c1 && c2) return `| ${c2}`;
+    if (c1 && !c2) return c1;
+    return '';
+  };
+
   // Obtenir le nom du centre
   const getCentreName = (centreId) => {
     if (!centreId || !centresData) return '';
@@ -868,7 +879,7 @@ const Dashboard = () => {
       return getConfirmateursFormatted(fiche).toLowerCase();
     }
     if (key === 'id_commercial') {
-      return getUserName(fiche.id_commercial).toLowerCase();
+      return getCommercialsFormatted(fiche).toLowerCase();
     }
     if (key === 'id_centre') {
       return getCentreName(fiche.id_centre).toLowerCase();
@@ -935,7 +946,7 @@ const Dashboard = () => {
           formatDate(fiche.date_modif_time),
           getEtatName(fiche.id_etat_final),
           getConfirmateursFormatted(fiche),
-          getUserName(fiche.id_commercial),
+          getCommercialsFormatted(fiche),
           getCentreName(fiche.id_centre),
           getProduitName(fiche.produit),
           fiche.valider > 0 ? 'validé' : '',
@@ -1588,7 +1599,7 @@ const Dashboard = () => {
                           </span>
                         </td>
                         <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
-                        <td data-label="Commercial:">{getUserName(fiche.id_commercial)}</td>
+                        <td data-label="Commercial:">{getCommercialsFormatted(fiche) || '-'}</td>
                         <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
                         <td data-label="Produit:">
                           <span 
