@@ -2844,7 +2844,7 @@ body.dashboard-page {
 .fiche-detail-modal-content .fiche-details-table tbody tr {
   height: auto !important;
   min-height: 0 !important;
-  max-height: 8px !important;
+  max-height: 6px !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr td {
