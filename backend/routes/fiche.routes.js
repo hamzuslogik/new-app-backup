@@ -969,8 +969,11 @@ router.get('/', authenticate, async (req, res) => {
       const champRecherche = critere_champ || 'tel';
       
       if (champRecherche === 'tel') {
-        whereConditions.push('(fiche.tel = ? OR fiche.gsm1 = ? OR fiche.gsm2 = ?)');
-        params.push(critere, critere, critere);
+        // Téléphone: garder l'égalité exacte + autoriser une recherche suffixe (%numero)
+        whereConditions.push(
+          '(fiche.tel = ? OR fiche.gsm1 = ? OR fiche.gsm2 = ? OR fiche.tel LIKE ? OR fiche.gsm1 LIKE ? OR fiche.gsm2 LIKE ?)'
+        );
+        params.push(critere, critere, critere, `%${critere}`, `%${critere}`, `%${critere}`);
       } else if (champRecherche === 'cp') {
         whereConditions.push('fiche.cp LIKE ?');
         params.push(`${critere}%`);
