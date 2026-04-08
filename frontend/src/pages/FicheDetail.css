@@ -357,7 +357,7 @@
   padding: 12px 16px;
   padding-bottom: 12px;
   border-bottom: 2px solid #9cbfc8;
-  background-color: #000000;
+  background-color: #332e2e;
   color: #ffffff;
   border-radius: 4px;
   font-size: 21px;
@@ -378,8 +378,8 @@
 }
 
 .fiche-details-table tr {
-  border-bottom: 2px solid #8a8a8a;
-  background-color: #cfcbcb;
+  border-bottom: 1px solid #8a8a8a;
+  background-color: #eee7e7;
 }
 
 .fiche-details-table tr:last-child {
