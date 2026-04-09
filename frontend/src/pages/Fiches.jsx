@@ -1462,7 +1462,7 @@ const FicheFormModal = ({
                   <select name="mode_chauffage" value={formData.mode_chauffage || ''} onChange={handleChange}>
                     <option value="">Sélectionner</option>
                     {modeChauffage.map(mode => (
-                      <option key={mode.id} value={mode.id}>{mode.nom}</option>
+                      <option key={mode.id} value={mode.nom || mode.titre || ''}>{mode.nom || mode.titre || mode.id}</option>
                     ))}
                   </select>
                 </div>

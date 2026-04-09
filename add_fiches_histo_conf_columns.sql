@@ -76,7 +76,7 @@ BEGIN
   END IF;
   -- conf_mode_chauffage
   IF (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = db_name AND TABLE_NAME = 'fiches_histo' AND COLUMN_NAME = 'conf_mode_chauffage') = 0 THEN
-    ALTER TABLE `fiches_histo` ADD COLUMN `conf_mode_chauffage` INT(11) DEFAULT NULL;
+    ALTER TABLE `fiches_histo` ADD COLUMN `conf_mode_chauffage` VARCHAR(255) DEFAULT NULL;
   END IF;
   -- conf_complement_chauffage
   IF (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = db_name AND TABLE_NAME = 'fiches_histo' AND COLUMN_NAME = 'conf_complement_chauffage') = 0 THEN

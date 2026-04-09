@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { FaEdit, FaCheck, FaTimes, FaCalendar, FaUser, FaUserPlus, FaPhone, FaMapMarkerAlt, FaHome, FaBriefcase, FaFileAlt, FaHistory, FaArrowLeft, FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaReplyAll, FaSms, FaListAlt, FaInfoCircle, FaFilePdf } from 'react-icons/fa';
@@ -12,6 +12,22 @@ import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../util
 import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, format, addMonths } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
 import './FicheDetail.css';
+
+/** Libellé mode de chauffage (stocké en texte ; rétrocompat. id table mode_chauffage). */
+function resolveModeChauffageLabel(raw, liste) {
+  if (raw == null || raw === '') return '';
+  const s = String(raw).trim();
+  if (!s) return '';
+  const byNom = liste?.find(
+    (m) =>
+      (m.nom != null && String(m.nom).trim() === s) ||
+      (m.titre != null && String(m.titre).trim() === s)
+  );
+  if (byNom) return byNom.nom || byNom.titre || s;
+  const byId = liste?.find((m) => String(m.id) === s);
+  if (byId) return byId.nom || byId.titre || s;
+  return s;
+}
 
 /** Date d'appel exploitable pour affichage (détails fiche, pas historique). */
 function parseFicheDateAppel(fiche) {
@@ -452,6 +468,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     const res = await api.get('/management/mode-chauffage');
     return res.data.data || [];
   });
+
+  const modeChauffageSelectOptions = useMemo(
+    () =>
+      (modeChauffage || []).map((m) => ({
+        id: m.nom || m.titre || String(m.id),
+        nom: m.nom || m.titre || `Mode ${m.id}`
+      })),
+    [modeChauffage]
+  );
 
   const { data: typeContrat } = useQuery('type-contrat', async () => {
     const res = await api.get('/management/type-contrat');
@@ -1326,7 +1351,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         conf_type_contrat_madame: data.conf_type_contrat_madame ? parseInt(data.conf_type_contrat_madame) : null,
         conf_revenu: data.conf_revenu || null,
         conf_credit: data.conf_credit || null,
-        conf_mode_chauffage: data.conf_mode_chauffage ? parseInt(data.conf_mode_chauffage, 10) : null,
+        conf_mode_chauffage: data.conf_mode_chauffage?.trim() ? data.conf_mode_chauffage.trim() : null,
         conf_complement_chauffage: data.conf_complement_chauffage?.trim() ? data.conf_complement_chauffage.trim() : null,
         conf_consommation_electricite: data.conf_consommation_electricite || null,
         conf_consommation_chauffage: data.conf_consommation_chauffage || null,
@@ -1341,7 +1366,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         // Champs spécifiques PAC
         surface_chauffee: data.surface_chauffee || null,
         consommation_chauffage: data.consommation_chauffage || null,
-        mode_chauffage: data.conf_mode_chauffage ? parseInt(data.conf_mode_chauffage, 10) : null,
+        mode_chauffage: data.conf_mode_chauffage?.trim() ? data.conf_mode_chauffage.trim() : null,
         annee_systeme_chauffage: data.annee_systeme_chauffage ? parseInt(data.annee_systeme_chauffage) : null,
         conf_commentaire_produit: data.conf_commentaire_produit || null
       };
@@ -1798,7 +1823,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         conf_type_contrat_madame: confFormData.conf_type_contrat_madame ? parseInt(confFormData.conf_type_contrat_madame) : null,
         conf_revenu: confFormData.conf_revenu || null,
         conf_credit: confFormData.conf_credit || null,
-        conf_mode_chauffage: confFormData.conf_mode_chauffage ? parseInt(confFormData.conf_mode_chauffage, 10) : null,
+        conf_mode_chauffage: confFormData.conf_mode_chauffage?.trim() ? confFormData.conf_mode_chauffage.trim() : null,
         conf_complement_chauffage: confFormData.conf_complement_chauffage?.trim() ? confFormData.conf_complement_chauffage.trim() : null,
         conf_consommation_electricite: confFormData.conf_consommation_electricite || null,
         conf_consommation_chauffage: confFormData.conf_consommation_chauffage || null,
@@ -1808,7 +1833,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
         conf_zones_ombres: confFormData.conf_zones_ombres || null,
         conf_site_classe: confFormData.conf_site_classe || null,
         nb_pans: confFormData.nb_pans ? parseInt(confFormData.nb_pans) : null,
-        mode_chauffage: confFormData.conf_mode_chauffage ? parseInt(confFormData.conf_mode_chauffage, 10) : null,
+        mode_chauffage: confFormData.conf_mode_chauffage?.trim() ? confFormData.conf_mode_chauffage.trim() : null,
         annee_systeme_chauffage: confFormData.annee_systeme_chauffage ? parseInt(confFormData.annee_systeme_chauffage) : null,
         surface_chauffee: confFormData.surface_chauffee ? parseFloat(confFormData.surface_chauffee) : null,
         consommation_chauffage: confFormData.consommation_chauffage || null,
@@ -2440,7 +2465,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     const professionMme = professions?.find(p => p.id == fiche.profession_madame)?.nom || fiche.profession_madame || '-';
     const typeContratMr = typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_mr))?.nom || fiche.type_contrat_mr || '-';
     const typeContratMme = typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_madame))?.nom || fiche.type_contrat_madame || '-';
-    const modeChauffageNom = modeChauffage?.find(m => m.id == fiche.mode_chauffage)?.nom || fiche.mode_chauffage || '-';
+    const modeChauffageNom = resolveModeChauffageLabel(fiche.conf_mode_chauffage ?? fiche.mode_chauffage, modeChauffage) || '-';
     const produitNom = fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : fiche.produit === 2 ? 'PV' : '-');
     const centreNom = centres?.find(c => c.id === fiche.id_centre)?.titre || fiche.centre_titre || '-';
     const agentNom = agents?.find(a => a.id === fiche.id_agent)?.pseudo || fiche.agent_pseudo || '-';
@@ -3021,12 +3046,8 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               ])}
               {renderField('Détail de l\'étude', 'etude_raison', fiche.etude_raison || '-', 'textarea')}
               {renderField('Mode de chauffage', 'mode_chauffage',
-                (() => {
-                  const id = fiche.conf_mode_chauffage ?? fiche.mode_chauffage;
-                  const m = modeChauffage?.find(x => x.id == id);
-                  return m?.nom || m?.titre || '-';
-                })(),
-                'select', modeChauffage)}
+                resolveModeChauffageLabel(fiche.conf_mode_chauffage ?? fiche.mode_chauffage, modeChauffage) || '-',
+                'select', modeChauffageSelectOptions)}
               {renderField('Complément de chauffage (qualification)', 'complement_chauffage', fiche.complement_chauffage || '-', 'text')}
               {renderField('Complément de chauffage (confirmation)', 'conf_complement_chauffage', fiche.conf_complement_chauffage || '-', 'text')}
               {renderField('Année de système de chauffage', 'annee_systeme_chauffage', fiche.annee_systeme_chauffage || '-', 'number')}
@@ -3667,9 +3688,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   }
                   if (etatData.conf_revenu || etatData.revenu_foyer) items.push({ label: 'Revenu', value: etatData.conf_revenu || etatData.revenu_foyer || '-' });
                   if (etatData.conf_credit || etatData.credit_foyer) items.push({ label: 'Crédit', value: etatData.conf_credit || etatData.credit_foyer || '-' });
-                  const modeChauffageId = etatData.conf_mode_chauffage ?? etatData.mode_chauffage;
-                  if (modeChauffageId != null && modeChauffageId !== '') {
-                    const modeChauffageText = modeChauffage?.find(m => m.id == modeChauffageId)?.nom || modeChauffage?.find(m => m.id == modeChauffageId)?.titre || String(modeChauffageId);
+                  const modeChauffageRaw = etatData.conf_mode_chauffage ?? etatData.mode_chauffage;
+                  const modeChauffageText = resolveModeChauffageLabel(modeChauffageRaw, modeChauffage);
+                  if (modeChauffageText) {
                     items.push({ label: 'Mode de chauffage', value: modeChauffageText });
                   }
                   if (etatData.conf_consommation_electricite) items.push({ label: 'Consommations électrique', value: etatData.conf_consommation_electricite });
@@ -5661,12 +5682,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         <select
                           id="conf_mode_chauffage_gen"
                           className="form-control"
-                          value={confFormData.conf_mode_chauffage}
+                          value={resolveModeChauffageLabel(confFormData.conf_mode_chauffage, modeChauffage) || confFormData.conf_mode_chauffage || ''}
                           onChange={(e) => setConfFormData({...confFormData, conf_mode_chauffage: e.target.value})}
                         >
                           <option value="">Sélectionner</option>
-                          {(modeChauffage || []).map(mode => (
-                            <option key={mode.id} value={mode.id}>{mode.nom || mode.titre || `Mode ${mode.id}`}</option>
+                          {(modeChauffageSelectOptions || []).map((mode) => (
+                            <option key={mode.id} value={mode.id}>{mode.nom}</option>
                           ))}
                         </select>
                       </td>
@@ -8396,6 +8417,15 @@ const CreateRdvModal = ({
     return res.data.data || [];
   });
 
+  const modeChauffageSelectOptionsRdv = React.useMemo(
+    () =>
+      (modeChauffage || []).map((m) => ({
+        id: m.nom || m.titre || String(m.id),
+        nom: m.nom || m.titre || `Mode ${m.id}`
+      })),
+    [modeChauffage]
+  );
+
   const { data: professionsRdv } = useQuery('professions', async () => {
     const res = await api.get('/management/professions');
     return res.data?.data || res.data || [];
@@ -8939,12 +8969,12 @@ const CreateRdvModal = ({
                   <td>
                     <select
                       className="form-control"
-                      value={rdvFormData.conf_mode_chauffage || ''}
+                      value={resolveModeChauffageLabel(rdvFormData.conf_mode_chauffage, modeChauffage) || rdvFormData.conf_mode_chauffage || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_mode_chauffage: e.target.value})}
                     >
                       <option value="">Sélectionner</option>
-                      {(modeChauffage || []).map(mode => (
-                        <option key={mode.id} value={mode.id}>{mode.nom || mode.titre || `Mode ${mode.id}`}</option>
+                      {(modeChauffageSelectOptionsRdv || []).map((mode) => (
+                        <option key={mode.id} value={mode.id}>{mode.nom}</option>
                       ))}
                     </select>
                   </td>

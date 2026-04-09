@@ -10,8 +10,8 @@ ALTER TABLE `fiches` ADD COLUMN `conf_deja_etude` VARCHAR(10) DEFAULT NULL COMME
 -- Revenu, Crédit
 ALTER TABLE `fiches` ADD COLUMN `conf_revenu` VARCHAR(255) DEFAULT NULL;
 ALTER TABLE `fiches` ADD COLUMN `conf_credit` VARCHAR(255) DEFAULT NULL;
--- Mode de chauffage (id, table mode_chauffage)
-ALTER TABLE `fiches` ADD COLUMN `conf_mode_chauffage` INT(11) DEFAULT NULL;
+-- Mode de chauffage (libellé texte, aligné sur fiches.mode_chauffage)
+ALTER TABLE `fiches` ADD COLUMN `conf_mode_chauffage` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
 -- Consommation chauffage (conf_consommation_electricite existe déjà)
 ALTER TABLE `fiches` ADD COLUMN `conf_consommation_chauffage` VARCHAR(255) DEFAULT NULL;
 -- RDV déjà annulé précédemment : OUI/NON

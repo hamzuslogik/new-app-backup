@@ -129,7 +129,7 @@ DELIMITER ;
 --   yj_fiche.date_insertion -> fiches.date_insert (bigint) et fiches.date_insert_time (datetime)
 --   yj_fiche.etat_final (varchar) -> fiches.id_etat_final (int) - conversion via table etats
 --   yj_fiche.conf_produit (varchar) -> fiches.produit (int) et conf_produit (int)
---   yj_fiche.conf_energie -> fiches.mode_chauffage (id via table mode_chauffage)
+--   yj_fiche.conf_energie -> fiches.mode_chauffage et conf_mode_chauffage (texte ; id résolu vers nom si besoin)
 --   yj_fiche.pac_* -> fiches.* (mapping des champs PAC)
 --   yj_fiche.surface_disponible -> fiches.surface_habitable (fallback si pac_surface_habitable vide)
 --   yj_fiche.chemines (varchar) -> fiches.nb_chemines (fallback si nb_chemines vide)
@@ -158,8 +158,7 @@ DELIMITER ;
 --   yj_fiche.nom_qualite uniquement -> fiches.id_qualite via utilisateurs.pseudo (yj_fiche.id_qualite ignore)
 --   yj_fiche.conf_consommations -> fiches.consommation_electricite (numérique -> texte)
 
--- Alimenter la table mode_chauffage avec les valeurs manquantes de yj_fiche.conf_energie
--- (utile pour que la resolution conf_energie -> id fonctionne toujours)
+-- Alimenter la table mode_chauffage avec les valeurs manquantes de yj_fiche.conf_energie (liste de référence / formulaires)
 INSERT INTO `mode_chauffage` (`nom`)
 SELECT DISTINCT TRIM(yj.`conf_energie`) AS `nom`
 FROM `yj_fiche` yj
@@ -252,19 +251,14 @@ SELECT
     END,
     NULLIF(`chemines`, '')
   ) as `nb_chemines`,
-  -- Mode chauffage: résoudre conf_energie vers id de mode_chauffage
+  -- Mode chauffage : libellé texte (si conf_energie = id connu, résoudre vers nom)
   CASE
     WHEN NULLIF(TRIM(`conf_energie`), '') IS NULL THEN NULL
-    WHEN TRIM(`conf_energie`) REGEXP '^[0-9]+$' THEN CAST(TRIM(`conf_energie`) AS UNSIGNED)
-    ELSE (
-      SELECT `id`
-      FROM `mode_chauffage` mc
-      WHERE
-        TRIM(UPPER(mc.`nom`)) = TRIM(UPPER(`yj_fiche`.`conf_energie`))
-        OR REPLACE(REPLACE(TRIM(UPPER(mc.`nom`)), 'É', 'E'), 'È', 'E')
-           = REPLACE(REPLACE(TRIM(UPPER(`yj_fiche`.`conf_energie`)), 'É', 'E'), 'È', 'E')
-      LIMIT 1
+    WHEN TRIM(`conf_energie`) REGEXP '^[0-9]+$' THEN (
+      SELECT mc2.`nom` FROM `mode_chauffage` mc2
+      WHERE mc2.`id` = CAST(TRIM(`conf_energie`) AS UNSIGNED) LIMIT 1
     )
+    ELSE NULLIF(TRIM(`conf_energie`), '')
   END as `mode_chauffage`,
   -- Consommation électricité: yj_fiche.conf_consommations (converti en texte pour varchar)
   CASE 
@@ -529,19 +523,14 @@ SELECT
   COALESCE(NULLIF(TRIM(`conf_deja_fait_etude`), ''), NULLIF(TRIM(`etude`), '')) as `conf_deja_etude`,
   COALESCE(NULLIF(TRIM(`conf_revenu`), ''), NULLIF(TRIM(`revenu`), '')) as `conf_revenu`,
   COALESCE(NULLIF(TRIM(`conf_credit`), ''), NULLIF(TRIM(`credit`), '')) as `conf_credit`,
-  -- conf_mode_chauffage: même résolution id depuis conf_energie
+  -- conf_mode_chauffage : même libellé texte que mode_chauffage
   CASE
     WHEN NULLIF(TRIM(`conf_energie`), '') IS NULL THEN NULL
-    WHEN TRIM(`conf_energie`) REGEXP '^[0-9]+$' THEN CAST(TRIM(`conf_energie`) AS UNSIGNED)
-    ELSE (
-      SELECT `id`
-      FROM `mode_chauffage` mc
-      WHERE
-        TRIM(UPPER(mc.`nom`)) = TRIM(UPPER(`yj_fiche`.`conf_energie`))
-        OR REPLACE(REPLACE(TRIM(UPPER(mc.`nom`)), 'É', 'E'), 'È', 'E')
-           = REPLACE(REPLACE(TRIM(UPPER(`yj_fiche`.`conf_energie`)), 'É', 'E'), 'È', 'E')
-      LIMIT 1
+    WHEN TRIM(`conf_energie`) REGEXP '^[0-9]+$' THEN (
+      SELECT mc2.`nom` FROM `mode_chauffage` mc2
+      WHERE mc2.`id` = CAST(TRIM(`conf_energie`) AS UNSIGNED) LIMIT 1
     )
+    ELSE NULLIF(TRIM(`conf_energie`), '')
   END as `conf_mode_chauffage`,
   NULLIF(TRIM(`conf_consommation_chauffage`), '') as `conf_consommation_chauffage`,
   NULLIF(TRIM(`conf_annulee_precedemment`), '') as `conf_rdv_annule_precedent`,

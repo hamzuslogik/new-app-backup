@@ -1342,13 +1342,21 @@ router.put('/mode-chauffage/:id', authenticate, checkPermission(1, 2, 7, 11), as
 router.delete('/mode-chauffage/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Vérifier si le mode de chauffage est utilisé dans des fiches
+
+    const mode = await queryOne('SELECT id, nom FROM mode_chauffage WHERE id = ?', [id]);
+    if (!mode) {
+      return res.status(404).json({ success: false, message: 'Mode de chauffage introuvable' });
+    }
+
+    // Fiches stockent le libellé (texte) ; rétrocompat : anciennes valeurs = id en chaîne
     const fichesCount = await queryOne(
-      'SELECT COUNT(*) as count FROM fiches WHERE mode_chauffage = ?',
-      [id]
+      `SELECT COUNT(*) as count FROM fiches
+       WHERE mode_chauffage <=> ? OR conf_mode_chauffage <=> ?
+       OR TRIM(CAST(mode_chauffage AS CHAR)) <=> CAST(? AS CHAR)
+       OR TRIM(CAST(conf_mode_chauffage AS CHAR)) <=> CAST(? AS CHAR)`,
+      [mode.nom, mode.nom, mode.id, mode.id]
     );
-    
+
     if (fichesCount && fichesCount.count > 0) {
       return res.status(400).json({
         success: false,

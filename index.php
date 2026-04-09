@@ -822,7 +822,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'proprietaire_maison' => !empty($_POST['proprietaire_maison']) ? sanitizeInput($_POST['proprietaire_maison']) : null,
             'revenu_foyer' => !empty($_POST['revenu_foyer']) ? sanitizeInput($_POST['revenu_foyer']) : null,
             'etude' => !empty($_POST['etude']) ? sanitizeInput($_POST['etude']) : null,
-            'mode_chauffage' => !empty($_POST['mode_chauffage']) ? intval($_POST['mode_chauffage']) : null,
+            'mode_chauffage' => !empty($_POST['mode_chauffage']) ? sanitizeInput($_POST['mode_chauffage']) : null,
             'complement_chauffage' => !empty(trim($_POST['complement_chauffage'] ?? '')) ? sanitizeInput($_POST['complement_chauffage']) : null,
             'annee_systeme_chauffage' => !empty($_POST['annee_systeme_chauffage']) ? sanitizeInput($_POST['annee_systeme_chauffage']) : null,
             'surface_habitable' => !empty($_POST['surface_habitable']) ? sanitizeInput($_POST['surface_habitable']) : null,
@@ -1251,8 +1251,8 @@ if (isset($_SESSION['error_message'])) {
                         <select name="mode_chauffage" required>
                             <option value="">-- Sélectionner --</option>
                             <?php foreach ($modeChauffages as $mode): ?>
-                                <option value="<?php echo htmlspecialchars($mode['id']); ?>">
-                                    <?php echo htmlspecialchars($mode['nom']); ?>
+                                <option value="<?php echo htmlspecialchars($mode['nom'] ?? ''); ?>">
+                                    <?php echo htmlspecialchars($mode['nom'] ?? ''); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

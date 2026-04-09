@@ -184,8 +184,8 @@
                         <select name="mode_chauffage" required>
                             <option value="">-- Sélectionner --</option>
                             <?php foreach ($modeChauffages as $mode): ?>
-                                <option value="<?php echo htmlspecialchars($mode['id']); ?>">
-                                    <?php echo htmlspecialchars($mode['nom']); ?>
+                                <option value="<?php echo htmlspecialchars($mode['nom'] ?? ''); ?>">
+                                    <?php echo htmlspecialchars($mode['nom'] ?? ''); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

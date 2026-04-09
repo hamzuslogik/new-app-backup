@@ -167,6 +167,7 @@ CREATE TABLE IF NOT EXISTS `fiches` (
   `conf_site_classe` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   `conf_consommation_electricite` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   `conf_rdv_avec` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
+  `conf_mode_chauffage` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   `cq_etat` int(11) DEFAULT NULL,
   `cq_dossier` int(11) DEFAULT NULL,
   `ph3_installateur` int(11) DEFAULT NULL,
