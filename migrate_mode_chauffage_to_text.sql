@@ -1,6 +1,6 @@
 -- =====================================================
 -- Mode de chauffage : stockage texte (libellé) dans fiches
--- - fiches.mode_chauffage : déjà souvent VARCHAR ; convertit les ids numériques en nom
+-- - fiches.mode_chauffage : passage en VARCHAR(255) si besoin ; puis ids -> nom via mode_chauffage
 -- - fiches.conf_mode_chauffage : INT -> VARCHAR(255) si besoin, puis id -> nom
 -- - fiches_histo.conf_mode_chauffage : idem si la colonne existe
 -- Base : crm
@@ -8,6 +8,12 @@
 -- =====================================================
 
 USE `crm`;
+
+-- ----------------------------------------------------------------
+-- fiches.mode_chauffage : type texte (VARCHAR) — obligatoire si la colonne était INT
+-- ----------------------------------------------------------------
+ALTER TABLE `fiches`
+  MODIFY COLUMN `mode_chauffage` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
 
 -- ----------------------------------------------------------------
 -- fiches.conf_mode_chauffage : garantir VARCHAR
