@@ -20,14 +20,58 @@ function modeChauffageAffiche(confProp, modeProp) {
   return String(v).trim();
 }
 
-/** État CONFIRMER (7) : classes pour mettre en évidence date RDV, commercial(s), confirmateur(s). */
-function confirmerDetailValueClassName(etatId, itemLabel) {
-  if (Number(etatId) !== 7) return '';
+/** Activer les logs : dev Vite, ou `localStorage.setItem('DEBUG_CONFIRMER_STYLE','1')` puis F5. */
+function isDebugConfirmerStyle() {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (window.localStorage?.getItem('DEBUG_CONFIRMER_STYLE') === '1') return true;
+  } catch {
+    /* ignore */
+  }
+  return typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+}
+
+/**
+ * État CONFIRMER (7) : classes pour mettre en évidence date RDV, commercial(s), confirmateur(s).
+ * @param {string} [context] - 'etat-actuel' | 'historique' (pour les logs)
+ */
+function confirmerDetailValueClassName(etatId, itemLabel, context = '') {
+  const n = Number(etatId);
   const L = String(itemLabel ?? '').replace(/\u00a0/g, ' ').trim();
-  if (L === 'Date RDV') return 'fiche-detail-etat-confirmer-val--rdv';
-  if (L === 'Commercial' || L === 'Commercial 2') return 'fiche-detail-etat-confirmer-val--commercial';
-  if (L === 'Confirmateur') return 'fiche-detail-etat-confirmer-val--confirmateur';
-  return '';
+  let cls = '';
+  if (n !== 7) {
+    if (
+      isDebugConfirmerStyle() &&
+      ['Date RDV', 'Commercial', 'Commercial 2', 'Confirmateur'].includes(L)
+    ) {
+      console.log('[FicheDetail confirmer-style]', {
+        message: 'libellé type CONFIRMER mais id_etat !== 7 — pas de classe couleur',
+        context,
+        etatId,
+        etatNum: n,
+        label: L,
+      });
+    }
+    return '';
+  }
+  if (L === 'Date RDV') cls = 'fiche-detail-etat-confirmer-val--rdv';
+  else if (L === 'Commercial' || L === 'Commercial 2') cls = 'fiche-detail-etat-confirmer-val--commercial';
+  else if (L === 'Confirmateur') cls = 'fiche-detail-etat-confirmer-val--confirmateur';
+
+  if (isDebugConfirmerStyle()) {
+    const codes = [...L].map((c) => c.charCodeAt(0));
+    console.log('[FicheDetail confirmer-style]', {
+      context: context || '(non précisé)',
+      etatId,
+      etatNum: n,
+      labelRaw: itemLabel,
+      labelNormalized: L,
+      labelLength: L.length,
+      charCodes: codes,
+      className: cls || '(aucune — libellé différent de Date RDV / Commercial / Commercial 2 / Confirmateur)',
+    });
+  }
+  return cls;
 }
 
 /** Date d'appel exploitable pour affichage (détails fiche, pas historique). */
@@ -3797,6 +3841,17 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               const crPseudoEtatActuel = isCurrentStateFromCR ? (lastHisto.cr_commercial_pseudo || '') : '';
               
               const detailItemsActuel = renderEtatDetails(etatActuel);
+              if (isDebugConfirmerStyle()) {
+                console.log('[FicheDetail confirmer-style] résumé état actuel', {
+                  fiche_id: fiche?.id,
+                  id_etat_final: fiche?.id_etat_final,
+                  id_etat_final_type: typeof fiche?.id_etat_final,
+                  etatActuel_id_etat: etatActuel?.id_etat,
+                  etatActuel_id_etat_type: typeof etatActuel?.id_etat,
+                  labels_detailItemsActuel: detailItemsActuel.map((i) => i.label),
+                  hint: 'Si id_etat !== 7, les couleurs CONFIRMER ne s\'appliquent pas. Activer DEBUG_CONFIRMER_STYLE pour le détail par ligne.',
+                });
+              }
               const normalizeEtatTitle = (v) =>
                 String(v || '')
                   .toLowerCase()
@@ -3980,7 +4035,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
                                 <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                   <strong>{item.label}:</strong>{' '}
-                                  <span className={confirmerDetailValueClassName(etatActuel.id_etat, item.label)}>
+                                  <span className={confirmerDetailValueClassName(etatActuel.id_etat, item.label, 'etat-actuel')}>
                                     {item.value || '-'}
                                   </span>
                                 </span>
@@ -4315,7 +4370,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                         <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
                                           <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                             <strong>{item.label}:</strong>{' '}
-                                            <span className={confirmerDetailValueClassName(histo.id_etat, item.label)}>
+                                            <span className={confirmerDetailValueClassName(histo.id_etat, item.label, 'historique')}>
                                               {item.value || '-'}
                                             </span>
                                           </span>
