@@ -20,6 +20,16 @@ function modeChauffageAffiche(confProp, modeProp) {
   return String(v).trim();
 }
 
+/** État CONFIRMER (7) : classes pour mettre en évidence date RDV, commercial(s), confirmateur(s). */
+function confirmerDetailValueClassName(etatId, itemLabel) {
+  if (Number(etatId) !== 7) return '';
+  const L = String(itemLabel || '');
+  if (L === 'Date RDV') return 'fiche-detail-etat-confirmer-val--rdv';
+  if (L === 'Commercial' || L === 'Commercial 2') return 'fiche-detail-etat-confirmer-val--commercial';
+  if (L === 'Confirmateur') return 'fiche-detail-etat-confirmer-val--confirmateur';
+  return '';
+}
+
 /** Date d'appel exploitable pour affichage (détails fiche, pas historique). */
 function parseFicheDateAppel(fiche) {
   if (!fiche) return null;
@@ -3970,7 +3980,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                               <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
                                 <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                   <strong>{item.label}:</strong>{' '}
-                                  {item.value || '-'}
+                                  <span className={confirmerDetailValueClassName(etatActuel.id_etat, item.label)}>
+                                    {item.value || '-'}
+                                  </span>
                                 </span>
                               </div>
                             ))}
@@ -4303,7 +4315,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                         <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
                                           <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                             <strong>{item.label}:</strong>{' '}
-                                            {item.value || '-'}
+                                            <span className={confirmerDetailValueClassName(histo.id_etat, item.label)}>
+                                              {item.value || '-'}
+                                            </span>
                                           </span>
                                         </div>
                                       ))}

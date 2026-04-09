@@ -1905,3 +1905,17 @@
   background: #e8f4f8;
 }
 
+/* État CONFIRMER (7) — détails : lisibilité date RDV / commercial / confirmateur */
+.fiche-detail-etat-confirmer-val--rdv {
+  color: #15803d;
+  font-weight: 700;
+}
+.fiche-detail-etat-confirmer-val--commercial {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+.fiche-detail-etat-confirmer-val--confirmateur {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
