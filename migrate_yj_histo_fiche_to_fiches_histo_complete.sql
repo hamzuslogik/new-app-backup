@@ -14,7 +14,7 @@
 -- - id_fiche, id_etat (depuis etat), date_creation (depuis date_heure_mod ou date_creation), date_rdv_time (depuis date_heure_playning)
 -- - id_confirmateur, ..., date_appel_time (depuis date_heure_mod ou date_appel_time), date_sign_time
 -- - id_sous_etat, id_commercial, ph3_*, credit_*, valeur_mensualite
--- - conf_mode_chauffage (fiches_histo) <- conf_energie (yj_histo_fiche), texte tel quel (VARCHAR)
+-- - conf_mode_chauffage (fiches_histo) <- conf_energie (table YJ : yj_histo_fiche ou yj_fiche_histo), texte tel quel (VARCHAR)
 -- Détection insensible à la casse. Colonne fiche : id_fiche, fiche_id ou id.
 --
 -- =====================================================
@@ -29,14 +29,23 @@ SET SQL_SAFE_UPDATES = 0;
 -- ÉTAPE 1 : Vérifier l'existence des tables
 -- =====================================================
 
+-- Table historique YJ : accepte yj_histo_fiche OU yj_fiche_histo (noms rencontrés en production).
+-- Si les deux existent, priorité à yj_fiche_histo (souvent celle qui contient conf_energie).
+SET @yj_source_table = (
+  SELECT t.TABLE_NAME
+  FROM INFORMATION_SCHEMA.TABLES t
+  WHERE t.TABLE_SCHEMA = DATABASE()
+    AND LOWER(t.TABLE_NAME) IN ('yj_histo_fiche', 'yj_fiche_histo')
+  ORDER BY CASE LOWER(t.TABLE_NAME) WHEN 'yj_fiche_histo' THEN 0 WHEN 'yj_histo_fiche' THEN 1 ELSE 2 END,
+           t.TABLE_NAME
+  LIMIT 1
+);
+
 SELECT 
     CASE 
-        WHEN COUNT(*) > 0 THEN '✓ Table yj_histo_fiche existe'
-        ELSE '✗ Table yj_histo_fiche n''existe pas'
-    END as verification_yj_histo_fiche
-FROM information_schema.tables 
-WHERE table_schema = DATABASE() 
-  AND table_name = 'yj_histo_fiche';
+        WHEN @yj_source_table IS NULL THEN '✗ Aucune table yj_histo_fiche ni yj_fiche_histo'
+        ELSE CONCAT('✓ Table source YJ pour la migration : ', @yj_source_table)
+    END AS verification_table_source_yj;
 
 SELECT 
     CASE 
@@ -51,9 +60,9 @@ WHERE table_schema = DATABASE()
 -- ÉTAPE 2 : Analyser la structure de yj_histo_fiche
 -- =====================================================
 
--- Afficher toutes les colonnes de yj_histo_fiche
+-- Afficher toutes les colonnes de la table YJ retenue
 SELECT 
-    '=== STRUCTURE DE yj_histo_fiche ===' as info;
+    CONCAT('=== STRUCTURE DE ', IFNULL(@yj_source_table, '(non défini)'), ' ===') AS info;
 
 SELECT 
     COLUMN_NAME as nom_colonne,
@@ -64,20 +73,31 @@ SELECT
     ORDINAL_POSITION as position
 FROM INFORMATION_SCHEMA.COLUMNS 
 WHERE TABLE_SCHEMA = DATABASE() 
-  AND TABLE_NAME = 'yj_histo_fiche'
+  AND TABLE_NAME = @yj_source_table
 ORDER BY ORDINAL_POSITION;
 
 -- Afficher quelques exemples de données
 SELECT 
     '=== EXEMPLES DE DONNÉES (5 premières lignes) ===' as info;
 
-SELECT * FROM `yj_histo_fiche` LIMIT 5;
+SET @yj_preview_sql = IF(
+  @yj_source_table IS NOT NULL,
+  CONCAT('SELECT * FROM `', REPLACE(@yj_source_table, '`', ''), '` LIMIT 5'),
+  'SELECT ''(aucune table YJ)'' AS message'
+);
+PREPARE stmt_yj_preview FROM @yj_preview_sql;
+EXECUTE stmt_yj_preview;
+DEALLOCATE PREPARE stmt_yj_preview;
 
 -- Compter le total
-SELECT 
-    '=== STATISTIQUES ===' as info,
-    COUNT(*) as total_lignes_yj_histo_fiche
-FROM `yj_histo_fiche`;
+SET @yj_count_sql = IF(
+  @yj_source_table IS NOT NULL,
+  CONCAT('SELECT ''=== STATISTIQUES ==='' AS info, COUNT(*) AS total_lignes_yj FROM `', REPLACE(@yj_source_table, '`', ''), '`'),
+  'SELECT ''=== STATISTIQUES ==='' AS info, NULL AS total_lignes_yj'
+);
+PREPARE stmt_yj_count FROM @yj_count_sql;
+EXECUTE stmt_yj_count;
+DEALLOCATE PREPARE stmt_yj_count;
 
 -- =====================================================
 -- ÉTAPE 3 : Identifier les colonnes clés
@@ -90,7 +110,7 @@ SELECT
     DATA_TYPE
 FROM INFORMATION_SCHEMA.COLUMNS 
 WHERE TABLE_SCHEMA = DATABASE() 
-  AND TABLE_NAME = 'yj_histo_fiche'
+  AND TABLE_NAME = @yj_source_table
   AND (COLUMN_NAME LIKE '%fiche%' OR COLUMN_NAME = 'id')
 ORDER BY 
     CASE 
@@ -107,7 +127,7 @@ SELECT
     DATA_TYPE
 FROM INFORMATION_SCHEMA.COLUMNS 
 WHERE TABLE_SCHEMA = DATABASE() 
-  AND TABLE_NAME = 'yj_histo_fiche'
+  AND TABLE_NAME = @yj_source_table
   AND (COLUMN_NAME LIKE '%etat%' OR COLUMN_NAME LIKE '%statut%')
 ORDER BY 
     CASE 
@@ -125,7 +145,7 @@ SELECT
     DATA_TYPE
 FROM INFORMATION_SCHEMA.COLUMNS 
 WHERE TABLE_SCHEMA = DATABASE() 
-  AND TABLE_NAME = 'yj_histo_fiche'
+  AND TABLE_NAME = @yj_source_table
   AND (COLUMN_NAME LIKE '%date%' OR COLUMN_NAME LIKE '%heure%' OR COLUMN_NAME LIKE '%time%')
 ORDER BY 
     CASE 
@@ -142,29 +162,34 @@ ORDER BY
 
 -- Compter combien de fiches de yj_histo_fiche existent dans fiches
 -- (en supposant que la colonne 'id' dans yj_histo_fiche correspond à fiches.id)
-SELECT 
-    '=== CORRESPONDANCES AVEC FICHES ===' as info,
-    COUNT(DISTINCT hf.`id`) as total_fiches_avec_historique,
-    COUNT(*) as total_lignes_historique
-FROM `yj_histo_fiche` hf
-WHERE EXISTS (
-    SELECT 1 
-    FROM `fiches` f 
-    WHERE f.`id` = hf.`id`
+SET @step4_corr_sql = IF(
+  @yj_source_table IS NOT NULL,
+  CONCAT(
+    'SELECT ''=== CORRESPONDANCES AVEC FICHES ==='' AS info, ',
+    'COUNT(DISTINCT hf.`id`) AS total_fiches_avec_historique, COUNT(*) AS total_lignes_historique ',
+    'FROM `', REPLACE(@yj_source_table, '`', ''), '` hf ',
+    'WHERE EXISTS (SELECT 1 FROM `fiches` f WHERE f.`id` = hf.`id`)'
+  ),
+  'SELECT ''=== CORRESPONDANCES AVEC FICHES ==='' AS info, NULL AS total_fiches_avec_historique, NULL AS total_lignes_historique'
 );
+PREPARE stmt_step4_corr FROM @step4_corr_sql;
+EXECUTE stmt_step4_corr;
+DEALLOCATE PREPARE stmt_step4_corr;
 
 -- Compter les fiches qui n'existent pas encore dans fiches (seront migrées quand même)
-SELECT 
-    '=== FICHES NON MIGRÉES (historique sera migré quand même) ===' as info,
-    COUNT(DISTINCT hf.`id`) as total_fiches_non_migrees,
-    COUNT(*) as total_lignes_historique_non_migrees
-FROM `yj_histo_fiche` hf
-WHERE NOT EXISTS (
-    SELECT 1 
-    FROM `fiches` f 
-    WHERE f.`id` = hf.`id`
-)
-AND hf.`id` IS NOT NULL;
+SET @step4_nonmig_sql = IF(
+  @yj_source_table IS NOT NULL,
+  CONCAT(
+    'SELECT ''=== FICHES NON MIGRÉES (historique sera migré quand même) ==='' AS info, ',
+    'COUNT(DISTINCT hf.`id`) AS total_fiches_non_migrees, COUNT(*) AS total_lignes_historique_non_migrees ',
+    'FROM `', REPLACE(@yj_source_table, '`', ''), '` hf ',
+    'WHERE NOT EXISTS (SELECT 1 FROM `fiches` f WHERE f.`id` = hf.`id`) AND hf.`id` IS NOT NULL'
+  ),
+  'SELECT ''=== FICHES NON MIGRÉES ==='' AS info, NULL AS total_fiches_non_migrees, NULL AS total_lignes_historique_non_migrees'
+);
+PREPARE stmt_step4_nonmig FROM @step4_nonmig_sql;
+EXECUTE stmt_step4_nonmig;
+DEALLOCATE PREPARE stmt_step4_nonmig;
 
 -- =====================================================
 -- ÉTAPE 4.5 : Diagnostic pour une fiche spécifique (exemple: 924782)
@@ -235,7 +260,7 @@ INSERT INTO temp_yj_columns
 SELECT COLUMN_NAME, DATA_TYPE
 FROM INFORMATION_SCHEMA.COLUMNS 
 WHERE TABLE_SCHEMA = DATABASE() 
-  AND TABLE_NAME = 'yj_histo_fiche';
+  AND TABLE_NAME = @yj_source_table;
 
 -- Vérifier quelles colonnes existent dans yj_histo_fiche (insensible à la casse pour détection)
 SET @has_id_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) = 'id');
@@ -520,9 +545,10 @@ SET @conf_rdv_avec_select = CASE
     ELSE ''
 END;
 
--- conf_mode_chauffage (fiches_histo) <- conf_energie (yj_histo_fiche), chaîne telle quelle
+-- conf_mode_chauffage (fiches_histo) <- conf_energie (table YJ), chaîne telle quelle (nom de colonne exact)
 SET @conf_mode_chauffage_select = CASE
-    WHEN @fh_has_conf_mode_chauffage > 0 AND @has_conf_energie_col > 0 THEN 'NULLIF(TRIM(CAST(hf.`conf_energie` AS CHAR)), '''')'
+    WHEN @fh_has_conf_mode_chauffage > 0 AND @has_conf_energie_col > 0 AND @conf_energie_col_name IS NOT NULL AND @conf_energie_col_name != '' THEN
+        CONCAT('NULLIF(TRIM(CAST(hf.`', REPLACE(@conf_energie_col_name, '`', ''), '` AS CHAR)), '''')')
     ELSE ''
 END;
 
@@ -705,7 +731,7 @@ SET @sql_query = CONCAT(
     'INSERT INTO `fiches_histo` (', @insert_columns, ') ',
     'SELECT ',
     @select_values, ' ',
-    'FROM `yj_histo_fiche` hf ',
+    'FROM `', REPLACE(@yj_source_table, '`', ''), '` hf ',
     'WHERE ',
     @id_fiche_select, ' IS NOT NULL AND ', @id_fiche_select, ' > 0 ',
     'AND NOT EXISTS (',
@@ -725,6 +751,7 @@ SELECT
 -- Afficher les valeurs des variables pour debug
 SELECT 
     '=== VARIABLES DE DÉTECTION ===' as info,
+    @yj_source_table AS yj_source_table,
     @has_id_col as has_id,
     @has_id_fiche_col as has_id_fiche,
     @has_etat_col as has_etat,
@@ -733,7 +760,9 @@ SELECT
     @has_date_creation_col as has_date_creation,
     @has_date_col as has_date,
     @has_date_rdv_col as has_date_rdv,
-    @has_date_rdv_time_col as has_date_rdv_time;
+    @has_date_rdv_time_col as has_date_rdv_time,
+    @has_conf_energie_col AS has_conf_energie,
+    @fh_has_conf_mode_chauffage AS fh_has_conf_mode_chauffage;
 
 -- Vérifier que la requête est valide avant de l'exécuter
 -- Si aucune colonne pour id_fiche n'est trouvée, ne pas exécuter (sinon id_fiche = 0 partout)
@@ -755,6 +784,28 @@ SELECT
 PREPARE stmt FROM @sql_query;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
+
+-- Remplir conf_mode_chauffage sur les lignes déjà présentes (ré-exécution : NOT EXISTS empêchait un nouvel INSERT).
+SET @conf_mode_src_yj = REPLACE(@conf_mode_chauffage_select, 'hf.', 'yj.');
+SET @date_creation_yj = REPLACE(@date_creation_select, 'hf.', 'yj.');
+SET @sql_update_conf_mc = IF(
+    @fh_has_conf_mode_chauffage > 0
+    AND @conf_mode_chauffage_select != ''
+    AND @yj_source_table IS NOT NULL
+    AND @id_fiche_col_name IS NOT NULL AND @id_fiche_col_name != '',
+    CONCAT(
+        'UPDATE `fiches_histo` fh ',
+        'INNER JOIN `', REPLACE(@yj_source_table, '`', ''), '` yj ON yj.`', REPLACE(@id_fiche_col_name, '`', ''), '` = fh.`id_fiche` ',
+        'AND ABS(TIMESTAMPDIFF(SECOND, fh.`date_creation`, ', @date_creation_yj, ')) <= 5 ',
+        'SET fh.`conf_mode_chauffage` = ', @conf_mode_src_yj, ' ',
+        'WHERE (fh.`conf_mode_chauffage` IS NULL OR TRIM(fh.`conf_mode_chauffage`) = '''') ',
+        'AND ', @conf_mode_src_yj, ' IS NOT NULL'
+    ),
+    'SELECT 1 AS skip_conf_mode_chauffage_backfill'
+);
+PREPARE stmt_conf_mc FROM @sql_update_conf_mc;
+EXECUTE stmt_conf_mc;
+DEALLOCATE PREPARE stmt_conf_mc;
 
 -- Nettoyer les tables temporaires
 DROP TEMPORARY TABLE IF EXISTS temp_yj_columns;
@@ -817,7 +868,9 @@ LIMIT 20;
 
 -- Vérifier que toutes les lignes ont été migrées
 -- Utiliser la détection dynamique pour compter les lignes de yj_histo_fiche
-SET @count_yj_query = CONCAT('SELECT COUNT(*) INTO @total_yj FROM `yj_histo_fiche` WHERE ', @id_fiche_col, ' IS NOT NULL AND ', @id_fiche_col, ' > 0');
+SET @count_yj_query = CONCAT(
+    'SELECT COUNT(*) INTO @total_yj FROM `', REPLACE(@yj_source_table, '`', ''), '` WHERE ', @id_fiche_col, ' IS NOT NULL AND ', @id_fiche_col, ' > 0'
+);
 PREPARE stmt_count FROM @count_yj_query;
 EXECUTE stmt_count;
 DEALLOCATE PREPARE stmt_count;
@@ -854,8 +907,9 @@ SET SQL_SAFE_UPDATES = 1;
 -- 7. Tolérance ±5 secondes sur date_creation (alignée sur la requête de diagnostic « non migrées »)
 -- 8. NOT EXISTS sur (id_fiche, id_etat, date_creation) : relancer le script ne recrée pas les mêmes lignes ;
 --    deux transitions distinctes même jour restent migrées si leurs date_creation diffèrent de plus de 5 s
+--    Un UPDATE complète conf_mode_chauffage depuis conf_energie sur les lignes déjà présentes (valeur encore vide).
 --
--- 9. Le script ramène tous les champs possibles de yj_histo_fiche vers fiches_histo.
+-- 9. Le script ramène tous les champs possibles de la table YJ (yj_histo_fiche ou yj_fiche_histo) vers fiches_histo.
 --    Détection insensible à la casse. Mapping explicite :
 --    - date_heure_playning, date_planning dans yj -> date_rdv_time (copie directe)
 --    - date_creation et date_appel_time (fiches_histo) : priorité à date_heure_mod (yj) si présente
