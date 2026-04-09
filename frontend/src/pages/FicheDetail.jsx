@@ -13,20 +13,11 @@ import { differenceInMinutes, differenceInHours, differenceInDays, differenceInM
 import { fr as frLocale } from 'date-fns/locale';
 import './FicheDetail.css';
 
-/** Libellé mode de chauffage (stocké en texte ; rétrocompat. id table mode_chauffage). */
-function resolveModeChauffageLabel(raw, liste) {
-  if (raw == null || raw === '') return '';
-  const s = String(raw).trim();
-  if (!s) return '';
-  const byNom = liste?.find(
-    (m) =>
-      (m.nom != null && String(m.nom).trim() === s) ||
-      (m.titre != null && String(m.titre).trim() === s)
-  );
-  if (byNom) return byNom.nom || byNom.titre || s;
-  const byId = liste?.find((m) => String(m.id) === s);
-  if (byId) return byId.nom || byId.titre || s;
-  return s;
+/** Mode de chauffage (VARCHAR en base) : affichage tel quel. */
+function modeChauffageAffiche(confProp, modeProp) {
+  const v = confProp ?? modeProp;
+  if (v == null || v === '') return '';
+  return String(v).trim();
 }
 
 /** Date d'appel exploitable pour affichage (détails fiche, pas historique). */
@@ -461,11 +452,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
   const { data: professions } = useQuery('professions', async () => {
     const res = await api.get('/management/professions');
-    return res.data.data || [];
-  });
-
-  const { data: modeChauffage } = useQuery('mode-chauffage', async () => {
-    const res = await api.get('/management/mode-chauffage');
     return res.data.data || [];
   });
 
@@ -2456,7 +2442,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     const professionMme = professions?.find(p => p.id == fiche.profession_madame)?.nom || fiche.profession_madame || '-';
     const typeContratMr = typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_mr))?.nom || fiche.type_contrat_mr || '-';
     const typeContratMme = typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_madame))?.nom || fiche.type_contrat_madame || '-';
-    const modeChauffageNom = resolveModeChauffageLabel(fiche.conf_mode_chauffage ?? fiche.mode_chauffage, modeChauffage) || '-';
+    const modeChauffageNom = modeChauffageAffiche(fiche.conf_mode_chauffage, fiche.mode_chauffage) || '-';
     const produitNom = fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : fiche.produit === 2 ? 'PV' : '-');
     const centreNom = centres?.find(c => c.id === fiche.id_centre)?.titre || fiche.centre_titre || '-';
     const agentNom = agents?.find(a => a.id === fiche.id_agent)?.pseudo || fiche.agent_pseudo || '-';
@@ -3039,7 +3025,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               {renderField(
                 'Mode de chauffage',
                 'mode_chauffage',
-                resolveModeChauffageLabel(fiche.conf_mode_chauffage ?? fiche.mode_chauffage, modeChauffage) || '',
+                modeChauffageAffiche(fiche.conf_mode_chauffage, fiche.mode_chauffage),
                 'text'
               )}
               {renderField('Complément de chauffage (qualification)', 'complement_chauffage', fiche.complement_chauffage || '-', 'text')}
@@ -3682,8 +3668,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   }
                   if (etatData.conf_revenu || etatData.revenu_foyer) items.push({ label: 'Revenu', value: etatData.conf_revenu || etatData.revenu_foyer || '-' });
                   if (etatData.conf_credit || etatData.credit_foyer) items.push({ label: 'Crédit', value: etatData.conf_credit || etatData.credit_foyer || '-' });
-                  const modeChauffageRaw = etatData.conf_mode_chauffage ?? etatData.mode_chauffage;
-                  const modeChauffageText = resolveModeChauffageLabel(modeChauffageRaw, modeChauffage);
+                  const modeChauffageText = modeChauffageAffiche(etatData.conf_mode_chauffage, etatData.mode_chauffage);
                   if (modeChauffageText) {
                     items.push({ label: 'Mode de chauffage', value: modeChauffageText });
                   }
