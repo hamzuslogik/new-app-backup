@@ -23,7 +23,7 @@ function modeChauffageAffiche(confProp, modeProp) {
 /** État CONFIRMER (7) : classes pour mettre en évidence date RDV, commercial(s), confirmateur(s). */
 function confirmerDetailValueClassName(etatId, itemLabel) {
   if (Number(etatId) !== 7) return '';
-  const L = String(itemLabel || '');
+  const L = String(itemLabel ?? '').replace(/\u00a0/g, ' ').trim();
   if (L === 'Date RDV') return 'fiche-detail-etat-confirmer-val--rdv';
   if (L === 'Commercial' || L === 'Commercial 2') return 'fiche-detail-etat-confirmer-val--commercial';
   if (L === 'Confirmateur') return 'fiche-detail-etat-confirmer-val--confirmateur';

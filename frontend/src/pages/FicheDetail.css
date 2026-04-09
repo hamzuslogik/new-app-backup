@@ -1906,16 +1906,40 @@
 }
 
 /* État CONFIRMER (7) — détails : lisibilité date RDV / commercial / confirmateur */
+/* !important : d'autres feuilles (ex. modal dashboard) imposent color sur span avec !important */
+.etat-current-history-section span.fiche-detail-etat-confirmer-val--rdv,
+.etat-actuel-card span.fiche-detail-etat-confirmer-val--rdv,
+.historique-list span.fiche-detail-etat-confirmer-val--rdv,
 .fiche-detail-etat-confirmer-val--rdv {
-  color: #15803d;
-  font-weight: 700;
+  color: #15803d !important;
+  font-weight: 700 !important;
 }
+.etat-current-history-section span.fiche-detail-etat-confirmer-val--commercial,
+.etat-actuel-card span.fiche-detail-etat-confirmer-val--commercial,
+.historique-list span.fiche-detail-etat-confirmer-val--commercial,
 .fiche-detail-etat-confirmer-val--commercial {
-  color: #1d4ed8;
-  font-weight: 700;
+  color: #1d4ed8 !important;
+  font-weight: 700 !important;
 }
+.etat-current-history-section span.fiche-detail-etat-confirmer-val--confirmateur,
+.etat-actuel-card span.fiche-detail-etat-confirmer-val--confirmateur,
+.historique-list span.fiche-detail-etat-confirmer-val--confirmateur,
 .fiche-detail-etat-confirmer-val--confirmateur {
-  color: #b91c1c;
-  font-weight: 700;
+  color: #b91c1c !important;
+  font-weight: 700 !important;
+}
+
+/* Modal fiche (Dashboard) : mêmes couleurs si section rendue dans .fiche-detail-modal-content */
+.fiche-detail-modal-content span.fiche-detail-etat-confirmer-val--rdv {
+  color: #15803d !important;
+  font-weight: 700 !important;
+}
+.fiche-detail-modal-content span.fiche-detail-etat-confirmer-val--commercial {
+  color: #1d4ed8 !important;
+  font-weight: 700 !important;
+}
+.fiche-detail-modal-content span.fiche-detail-etat-confirmer-val--confirmateur {
+  color: #b91c1c !important;
+  font-weight: 700 !important;
 }
 

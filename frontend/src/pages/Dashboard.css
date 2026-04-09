@@ -3355,3 +3355,17 @@ body.dashboard-page {
     gap: 2px !important;
   }
 }
+
+/* Fiche détail modal : état CONFIRMER — couleurs date RDV / commercial / confirmateur (écrase font-weight hérité du conteneur) */
+.fiche-detail-modal-content .fiche-detail span.fiche-detail-etat-confirmer-val--rdv {
+  color: #15803d !important;
+  font-weight: 700 !important;
+}
+.fiche-detail-modal-content .fiche-detail span.fiche-detail-etat-confirmer-val--commercial {
+  color: #1d4ed8 !important;
+  font-weight: 700 !important;
+}
+.fiche-detail-modal-content .fiche-detail span.fiche-detail-etat-confirmer-val--confirmateur {
+  color: #b91c1c !important;
+  font-weight: 700 !important;
+}
