@@ -17,7 +17,7 @@
 --
 -- AMÉLIORATIONS APPORTÉES:
 -- - Ajout du champ nb_pans (nombre de pans de toiture) si disponible dans yj_fiche
--- - Correction de la conversion de conf_consommations (decimal -> int)
+-- - conf_consommations (yj_fiche) -> fiches.consommation_electricite (varchar)
 -- - Amélioration de la clause ON DUPLICATE KEY UPDATE pour inclure plus de champs importants
 -- - Meilleure gestion des valeurs NULL et des conversions de types
 -- - id_agent représente l'agent créateur/assigné de la fiche (id_insert reste NULL)
@@ -156,6 +156,7 @@ DELIMITER ;
 --   yj_fiche.nom_confirmateur_3 (varchar) -> fiches.id_confirmateur_3 (int) - conversion via table utilisateurs
 --   yj_fiche.commentaire -> fiches.conf_commentaire_produit (commentaire confirmateur / compte rendu)
 --   yj_fiche.nom_qualite uniquement -> fiches.id_qualite via utilisateurs.pseudo (yj_fiche.id_qualite ignore)
+--   yj_fiche.conf_consommations -> fiches.consommation_electricite (numérique -> texte)
 
 INSERT INTO `fiches` (
   `id`, `civ`, `nom`, `prenom`, `tel`, `gsm1`, `gsm2`, `adresse`, `cp`, `ville`,
@@ -241,8 +242,12 @@ SELECT
   ) as `nb_chemines`,
   -- Mode chauffage: utiliser conf_energie
   NULLIF(`conf_energie`, '') as `mode_chauffage`,
-  -- Consommation électricité: à partir de conf_consommation_electricite ou autres champs
-  NULL as `consommation_electricite`, -- Pas de champ direct dans yj_fiche
+  -- Consommation électricité: yj_fiche.conf_consommations (converti en texte pour varchar)
+  CASE 
+    WHEN `conf_consommations` IS NOT NULL AND `conf_consommations` > 0 
+    THEN CAST(CAST(`conf_consommations` AS UNSIGNED) AS CHAR)
+    ELSE NULL
+  END as `consommation_electricite`,
   NULLIF(`age_mr`, '') as `age_mr`,
   NULLIF(`age_mme`, '') as `age_madame`, -- age_mme -> age_madame
   NULLIF(`revenu`, '') as `revenu_foyer`, -- revenu -> revenu_foyer
@@ -479,12 +484,8 @@ SELECT
   CAST(`valider` AS UNSIGNED) as `valider`,
   -- conf_commentaire_produit: rempli par le champ commentaire de yj_fiche
   NULLIF(TRIM(`commentaire`), '') as `conf_commentaire_produit`,
-  -- Conf consommations: convertir de decimal vers int (si c'est un decimal dans yj_fiche)
-  CASE 
-    WHEN `conf_consommations` IS NOT NULL AND `conf_consommations` > 0 
-    THEN CAST(`conf_consommations` AS UNSIGNED)
-    ELSE NULL
-  END as `conf_consommations`,
+  -- conf_consommations source -> consommation_electricite (colonne conf_consommations non remplie par cette migration)
+  NULL as `conf_consommations`,
   NULLIF(`conf_profession_monsieur`, '') as `conf_profession_monsieur`,
   NULLIF(`conf_profession_madame`, '') as `conf_profession_madame`,
   NULLIF(`conf_presence_couple`, '') as `conf_presence_couple`,
@@ -500,7 +501,7 @@ SELECT
   NULL as `conf_consommation_electricite`, -- Pas de champ direct dans yj_fiche
   NULLIF(`conf_rdv_avec`, '') as `conf_rdv_avec`,
   -- Nouveaux champs conf_ (yj_fiche a conf_deja_fait_etude, conf_revenu, conf_credit, conf_annulee_precedemment, conf_consommation_chauffage)
-  NULL as `conf_appel_tunisie_avec`, -- Pas dans yj_fiche
+  'entretient' as `conf_appel_tunisie_avec`,
   COALESCE(NULLIF(TRIM(`conf_deja_fait_etude`), ''), NULLIF(TRIM(`etude`), '')) as `conf_deja_etude`,
   COALESCE(NULLIF(TRIM(`conf_revenu`), ''), NULLIF(TRIM(`revenu`), '')) as `conf_revenu`,
   COALESCE(NULLIF(TRIM(`conf_credit`), ''), NULLIF(TRIM(`credit`), '')) as `conf_credit`,
@@ -580,6 +581,7 @@ ON DUPLICATE KEY UPDATE
   `cp` = VALUES(`cp`),
   `ville` = VALUES(`ville`),
   `etude` = VALUES(`etude`),
+  `mode_chauffage` = VALUES(`mode_chauffage`),
   `id_etat_final` = VALUES(`id_etat_final`),
   `id_sous_etat` = VALUES(`id_sous_etat`),
   `id_agent` = VALUES(`id_agent`),
@@ -591,6 +593,7 @@ ON DUPLICATE KEY UPDATE
   `id_qualite` = VALUES(`id_qualite`),
   `date_rdv_time` = VALUES(`date_rdv_time`),
   `date_modif_time` = VALUES(`date_modif_time`),
+  `consommation_electricite` = VALUES(`consommation_electricite`),
   `conf_commentaire_produit` = VALUES(`conf_commentaire_produit`),
   `conf_consommations` = VALUES(`conf_consommations`),
   `conf_profession_monsieur` = VALUES(`conf_profession_monsieur`),
