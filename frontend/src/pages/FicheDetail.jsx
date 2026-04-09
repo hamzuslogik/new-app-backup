@@ -469,15 +469,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     return res.data.data || [];
   });
 
-  const modeChauffageSelectOptions = useMemo(
-    () =>
-      (modeChauffage || []).map((m) => ({
-        id: m.nom || m.titre || String(m.id),
-        nom: m.nom || m.titre || `Mode ${m.id}`
-      })),
-    [modeChauffage]
-  );
-
   const { data: typeContrat } = useQuery('type-contrat', async () => {
     const res = await api.get('/management/type-contrat');
     return res.data.data || [];
@@ -3045,9 +3036,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 { value: 'NON', label: 'Non' }
               ])}
               {renderField('Détail de l\'étude', 'etude_raison', fiche.etude_raison || '-', 'textarea')}
-              {renderField('Mode de chauffage', 'mode_chauffage',
-                resolveModeChauffageLabel(fiche.conf_mode_chauffage ?? fiche.mode_chauffage, modeChauffage) || '-',
-                'select', modeChauffageSelectOptions)}
+              {renderField(
+                'Mode de chauffage',
+                'mode_chauffage',
+                resolveModeChauffageLabel(fiche.conf_mode_chauffage ?? fiche.mode_chauffage, modeChauffage) || '',
+                'text'
+              )}
               {renderField('Complément de chauffage (qualification)', 'complement_chauffage', fiche.complement_chauffage || '-', 'text')}
               {renderField('Complément de chauffage (confirmation)', 'conf_complement_chauffage', fiche.conf_complement_chauffage || '-', 'text')}
               {renderField('Année de système de chauffage', 'annee_systeme_chauffage', fiche.annee_systeme_chauffage || '-', 'number')}
@@ -5679,17 +5673,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     <tr>
                       <td><label htmlFor="conf_mode_chauffage_gen">Mode de chauffage :</label></td>
                       <td>
-                        <select
+                        <input
+                          type="text"
                           id="conf_mode_chauffage_gen"
                           className="form-control"
-                          value={resolveModeChauffageLabel(confFormData.conf_mode_chauffage, modeChauffage) || confFormData.conf_mode_chauffage || ''}
-                          onChange={(e) => setConfFormData({...confFormData, conf_mode_chauffage: e.target.value})}
-                        >
-                          <option value="">Sélectionner</option>
-                          {(modeChauffageSelectOptions || []).map((mode) => (
-                            <option key={mode.id} value={mode.id}>{mode.nom}</option>
-                          ))}
-                        </select>
+                          value={confFormData.conf_mode_chauffage || ''}
+                          onChange={(e) => setConfFormData({ ...confFormData, conf_mode_chauffage: e.target.value })}
+                          placeholder="Ex. Gaz, électricité, PAC…"
+                          autoComplete="off"
+                        />
                       </td>
                     </tr>
                     <tr>
@@ -8411,21 +8403,6 @@ const CreateRdvModal = ({
     });
   }, [ficheData, setRdvFormData]);
 
-  // Récupérer les modes de chauffage pour les champs PAC
-  const { data: modeChauffage } = useQuery('mode-chauffage', async () => {
-    const res = await api.get('/management/mode-chauffage');
-    return res.data.data || [];
-  });
-
-  const modeChauffageSelectOptionsRdv = React.useMemo(
-    () =>
-      (modeChauffage || []).map((m) => ({
-        id: m.nom || m.titre || String(m.id),
-        nom: m.nom || m.titre || `Mode ${m.id}`
-      })),
-    [modeChauffage]
-  );
-
   const { data: professionsRdv } = useQuery('professions', async () => {
     const res = await api.get('/management/professions');
     return res.data?.data || res.data || [];
@@ -8967,16 +8944,14 @@ const CreateRdvModal = ({
                 <tr>
                   <td><label>Mode de chauffage</label></td>
                   <td>
-                    <select
+                    <input
+                      type="text"
                       className="form-control"
-                      value={resolveModeChauffageLabel(rdvFormData.conf_mode_chauffage, modeChauffage) || rdvFormData.conf_mode_chauffage || ''}
-                      onChange={(e) => setRdvFormData({...rdvFormData, conf_mode_chauffage: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {(modeChauffageSelectOptionsRdv || []).map((mode) => (
-                        <option key={mode.id} value={mode.id}>{mode.nom}</option>
-                      ))}
-                    </select>
+                      value={rdvFormData.conf_mode_chauffage || ''}
+                      onChange={(e) => setRdvFormData({ ...rdvFormData, conf_mode_chauffage: e.target.value })}
+                      placeholder="Ex. Gaz, électricité, PAC…"
+                      autoComplete="off"
+                    />
                   </td>
                 </tr>
                 <tr>
