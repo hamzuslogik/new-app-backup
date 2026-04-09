@@ -14,6 +14,7 @@
 -- - id_fiche, id_etat (depuis etat), date_creation (depuis date_heure_mod ou date_creation), date_rdv_time (depuis date_heure_playning)
 -- - id_confirmateur, ..., date_appel_time (depuis date_heure_mod ou date_appel_time), date_sign_time
 -- - id_sous_etat, id_commercial, ph3_*, credit_*, valeur_mensualite
+-- - conf_mode_chauffage (fiches_histo) <- conf_energie (yj_histo_fiche), texte tel quel (VARCHAR)
 -- Détection insensible à la casse. Colonne fiche : id_fiche, fiche_id ou id.
 --
 -- =====================================================
@@ -270,6 +271,7 @@ SET @has_nom_confirmateur_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWE
 SET @has_conf_commentaire_produit_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) = 'conf_commentaire_produit');
 SET @has_commentaire_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) = 'commentaire');
 SET @has_conf_rdv_avec_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) = 'conf_rdv_avec');
+SET @has_conf_energie_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) = 'conf_energie');
 
 -- Dates
 SET @has_date_appel_time_col = (SELECT COUNT(*) FROM temp_yj_columns WHERE LOWER(TRIM(col_name)) IN ('date_appel_time', 'date_appel'));
@@ -359,6 +361,7 @@ SELECT
     @has_id_confirmateur_col as has_id_confirmateur,
     @has_conf_commentaire_produit_col as has_conf_commentaire_produit,
     @has_commentaire_col as has_commentaire,
+    @has_conf_energie_col as has_conf_energie,
     @has_date_appel_time_col as has_date_appel_time,
     @has_ph3_pac_col as has_ph3_pac;
 
@@ -369,6 +372,7 @@ SELECT
     @fh_has_id_confirmateur_2 as has_id_confirmateur_2,
     @fh_has_id_confirmateur_3 as has_id_confirmateur_3,
     @fh_has_conf_commentaire_produit as has_conf_commentaire_produit,
+    @fh_has_conf_mode_chauffage as has_conf_mode_chauffage,
     @fh_has_date_appel_time as has_date_appel_time,
     @fh_has_date_sign_time as has_date_sign_time,
     @fh_has_id_sous_etat as has_id_sous_etat,
@@ -516,6 +520,12 @@ SET @conf_rdv_avec_select = CASE
     ELSE ''
 END;
 
+-- conf_mode_chauffage (fiches_histo) <- conf_energie (yj_histo_fiche), chaîne telle quelle
+SET @conf_mode_chauffage_select = CASE
+    WHEN @fh_has_conf_mode_chauffage > 0 AND @has_conf_energie_col > 0 THEN 'NULLIF(TRIM(CAST(hf.`conf_energie` AS CHAR)), '''')'
+    ELSE ''
+END;
+
 -- Dates : date_appel_time (fiches_histo) prend date_heure_mod (yj) si présent, sinon date_appel_time, date_heure_appel
 SET @date_appel_time_select = CASE
     WHEN @fh_has_date_appel_time > 0 AND @date_heure_mod_ref IS NOT NULL AND @has_date_appel_time_col > 0 THEN CONCAT('COALESCE(', @date_heure_mod_ref, ', hf.`date_appel_time`)')
@@ -636,6 +646,7 @@ SET @insert_columns = CONCAT(@insert_columns,
     CASE WHEN @fh_has_id_confirmateur_3 > 0 AND @id_confirmateur_3_select != '' THEN ', `id_confirmateur_3`' ELSE '' END,
     CASE WHEN @fh_has_conf_commentaire_produit > 0 AND @conf_commentaire_produit_select != '' THEN ', `conf_commentaire_produit`' ELSE '' END,
     CASE WHEN @fh_has_conf_rdv_avec > 0 AND @conf_rdv_avec_select != '' THEN ', `conf_rdv_avec`' ELSE '' END,
+    CASE WHEN @fh_has_conf_mode_chauffage > 0 AND @conf_mode_chauffage_select != '' THEN ', `conf_mode_chauffage`' ELSE '' END,
     CASE WHEN @fh_has_date_appel_time > 0 AND @date_appel_time_select != '' THEN ', `date_appel_time`' ELSE '' END,
     CASE WHEN @fh_has_date_sign_time > 0 AND @date_sign_time_select != '' THEN ', `date_sign_time`' ELSE '' END,
     CASE WHEN @fh_has_id_sous_etat > 0 AND @id_sous_etat_select != '' THEN ', `id_sous_etat`' ELSE '' END,
@@ -664,6 +675,7 @@ SET @select_values = CONCAT(@select_values,
     CASE WHEN @fh_has_id_confirmateur_3 > 0 AND @id_confirmateur_3_select != '' THEN CONCAT(', ', @id_confirmateur_3_select) ELSE '' END,
     CASE WHEN @fh_has_conf_commentaire_produit > 0 AND @conf_commentaire_produit_select != '' THEN CONCAT(', ', @conf_commentaire_produit_select) ELSE '' END,
     CASE WHEN @fh_has_conf_rdv_avec > 0 AND @conf_rdv_avec_select != '' THEN CONCAT(', ', @conf_rdv_avec_select) ELSE '' END,
+    CASE WHEN @fh_has_conf_mode_chauffage > 0 AND @conf_mode_chauffage_select != '' THEN CONCAT(', ', @conf_mode_chauffage_select) ELSE '' END,
     CASE WHEN @fh_has_date_appel_time > 0 AND @date_appel_time_select != '' THEN CONCAT(', ', @date_appel_time_select) ELSE '' END,
     CASE WHEN @fh_has_date_sign_time > 0 AND @date_sign_time_select != '' THEN CONCAT(', ', @date_sign_time_select) ELSE '' END,
     CASE WHEN @fh_has_id_sous_etat > 0 AND @id_sous_etat_select != '' THEN CONCAT(', ', @id_sous_etat_select) ELSE '' END,
@@ -849,7 +861,8 @@ SET SQL_SAFE_UPDATES = 1;
 --    - date_creation et date_appel_time (fiches_histo) : priorité à date_heure_mod (yj) si présente
 --    - date_rdv_time, date_rdv dans yj -> date_rdv_time (COALESCE si plusieurs présents)
 --    - id_confirmateur, id_confirmateur_2, id_confirmateur_3 (ou nom_confirmateur) ; fallback fiches si NULL
---    - conf_commentaire_produit, conf_rdv_avec, date_appel_time, date_sign_time
+--    - conf_commentaire_produit, conf_rdv_avec, conf_mode_chauffage (source yj : conf_energie)
+--    - date_appel_time, date_sign_time
 --    - id_sous_etat, id_commercial, ph3_installateur, ph3_pac, ph3_type, ph3_prix, ph3_puissance
 --    - ph3_consommation, ph3_bonus_30, ph3_mensualite, ph3_nbr_annee_finance, ph3_ballon, ph3_alimentation
 --    - credit_immobilier, credit_autre, valeur_mensualite
