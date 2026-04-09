@@ -718,7 +718,6 @@ $startTime = microtime(true);
 
 $professions = getListFromAPIWithCache('professions');
 $typeContrats = getListFromAPIWithCache('type-contrat');
-$modeChauffages = getListFromAPIWithCache('mode-chauffage');
 $produits = getListFromAPIWithCache('produits');
 
 $apiTime = round((microtime(true) - $startTime) * 1000, 2);
@@ -727,10 +726,9 @@ writeLog("Temps total API/cache: " . $apiTime . "ms");
 // Vérifier si les données sont valides
 if (!is_array($professions)) $professions = [];
 if (!is_array($typeContrats)) $typeContrats = [];
-if (!is_array($modeChauffages)) $modeChauffages = [];
 if (!is_array($produits)) $produits = [];
 
-writeLog("Resultats: Professions=" . count($professions) . ", Contrats=" . count($typeContrats) . ", Chauffages=" . count($modeChauffages) . ", Produits=" . count($produits));
+writeLog("Resultats: Professions=" . count($professions) . ", Contrats=" . count($typeContrats) . ", Produits=" . count($produits));
 
 // Récupérer l'utilisateur par pseudo depuis l'API CRM
 if (!empty($agent)) {
@@ -822,7 +820,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'proprietaire_maison' => !empty($_POST['proprietaire_maison']) ? sanitizeInput($_POST['proprietaire_maison']) : null,
             'revenu_foyer' => !empty($_POST['revenu_foyer']) ? sanitizeInput($_POST['revenu_foyer']) : null,
             'etude' => !empty($_POST['etude']) ? sanitizeInput($_POST['etude']) : null,
-            'mode_chauffage' => !empty($_POST['mode_chauffage']) ? sanitizeInput($_POST['mode_chauffage']) : null,
+            'mode_chauffage' => !empty(trim($_POST['mode_chauffage'] ?? '')) ? sanitizeInput(trim($_POST['mode_chauffage'])) : null,
             'complement_chauffage' => !empty(trim($_POST['complement_chauffage'] ?? '')) ? sanitizeInput($_POST['complement_chauffage']) : null,
             'annee_systeme_chauffage' => !empty($_POST['annee_systeme_chauffage']) ? sanitizeInput($_POST['annee_systeme_chauffage']) : null,
             'surface_habitable' => !empty($_POST['surface_habitable']) ? sanitizeInput($_POST['surface_habitable']) : null,
@@ -1248,14 +1246,7 @@ if (isset($_SESSION['error_message'])) {
                     <!-- Champs spécifiques PAC -->
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Mode de Chauffage <span class="required">*</span></label>
-                        <select name="mode_chauffage" required>
-                            <option value="">-- Sélectionner --</option>
-                            <?php foreach ($modeChauffages as $mode): ?>
-                                <option value="<?php echo htmlspecialchars($mode['nom'] ?? ''); ?>">
-                                    <?php echo htmlspecialchars($mode['nom'] ?? ''); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <input type="text" name="mode_chauffage" maxlength="255" placeholder="Ex. : gaz, fioul, PAC air-eau, électrique…" required>
                     </div>
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Complément de chauffage (qualification)</label>
