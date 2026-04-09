@@ -3369,3 +3369,19 @@ body.dashboard-page {
   color: #b91c1c !important;
   font-weight: 700 !important;
 }
+
+.fiche-detail-modal-content .fiche-detail span[data-confirmer-hl='rdv'] {
+  color: #15803d !important;
+  font-weight: 700 !important;
+  -webkit-text-fill-color: #15803d !important;
+}
+.fiche-detail-modal-content .fiche-detail span[data-confirmer-hl='commercial'] {
+  color: #1d4ed8 !important;
+  font-weight: 700 !important;
+  -webkit-text-fill-color: #1d4ed8 !important;
+}
+.fiche-detail-modal-content .fiche-detail span[data-confirmer-hl='confirmateur'] {
+  color: #b91c1c !important;
+  font-weight: 700 !important;
+  -webkit-text-fill-color: #b91c1c !important;
+}

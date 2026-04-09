@@ -21,7 +21,10 @@ function modeChauffageAffiche(confProp, modeProp) {
 }
 
 function normalizeDetailItemLabel(s) {
-  return String(s ?? '').replace(/\u00a0/g, ' ').trim();
+  return String(s ?? '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** Détecte l’affichage « Confirmer » : id 7 ou libellé d’état (API peut envoyer autre chose). */
@@ -46,34 +49,24 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
     return {
       className: 'fiche-detail-etat-confirmer-val--rdv',
       style: { ...bold, color: '#15803d' },
+      dataHl: 'rdv',
     };
   }
   if (L === 'Commercial' || L === 'Commercial 2') {
     return {
       className: 'fiche-detail-etat-confirmer-val--commercial',
       style: { ...bold, color: '#1d4ed8' },
+      dataHl: 'commercial',
     };
   }
   if (L === 'Confirmateur') {
     return {
       className: 'fiche-detail-etat-confirmer-val--confirmateur',
       style: { ...bold, color: '#b91c1c' },
+      dataHl: 'confirmateur',
     };
   }
   return null;
-}
-
-/** Log une fois par fiche et onglet (sessionStorage) — toujours en console.warn (filtre « warn »). */
-function logConfirmerHighlightDebugOnce(ficheId, payload) {
-  if (ficheId == null || typeof window === 'undefined') return;
-  try {
-    const k = `ficheDetail_confirmerDbg_${ficheId}`;
-    if (sessionStorage.getItem(k)) return;
-    sessionStorage.setItem(k, '1');
-  } catch {
-    /* private mode */
-  }
-  console.log('[FicheDetail] CONFIRMER — détail styles / état', payload);
 }
 
 /** Date d'appel exploitable pour affichage (détails fiche, pas historique). */
@@ -3843,17 +3836,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               const crPseudoEtatActuel = isCurrentStateFromCR ? (lastHisto.cr_commercial_pseudo || '') : '';
               
               const detailItemsActuel = renderEtatDetails(etatActuel);
-              logConfirmerHighlightDebugOnce(fiche?.id, {
-                bloc: 'etat-actuel',
-                id_etat: etatActuel?.id_etat,
-                etat_titre: etatActuel?.etat_titre,
-                isConfirmerLike: isEtatConfirmerLike(etatActuel?.id_etat, etatActuel?.etat_titre),
-                labels: detailItemsActuel.map((i) => i.label),
-                highlights: detailItemsActuel.map((i) => ({
-                  label: normalizeDetailItemLabel(i.label),
-                  on: !!getConfirmerDetailHighlight(etatActuel?.id_etat, etatActuel?.etat_titre, i.label),
-                })),
-              });
               const normalizeEtatTitle = (v) =>
                 String(v || '')
                   .toLowerCase()
@@ -4043,7 +4025,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                 <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
                                   <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                     <strong>{item.label}:</strong>{' '}
-                                    <span className={hi?.className} style={hi?.style}>
+                                    <span
+                                      className={hi?.className}
+                                      style={hi?.style}
+                                      data-confirmer-hl={hi?.dataHl || undefined}
+                                    >
                                       {item.value || '-'}
                                     </span>
                                   </span>
@@ -4385,7 +4371,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                           <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
                                             <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                               <strong>{item.label}:</strong>{' '}
-                                              <span className={hi?.className} style={hi?.style}>
+                                              <span
+                                                className={hi?.className}
+                                                style={hi?.style}
+                                                data-confirmer-hl={hi?.dataHl || undefined}
+                                              >
                                                 {item.value || '-'}
                                               </span>
                                             </span>
