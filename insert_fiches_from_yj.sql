@@ -158,6 +158,18 @@ DELIMITER ;
 --   yj_fiche.nom_qualite uniquement -> fiches.id_qualite via utilisateurs.pseudo (yj_fiche.id_qualite ignore)
 --   yj_fiche.conf_consommations -> fiches.consommation_electricite (numérique -> texte)
 
+-- Alimenter la table mode_chauffage avec les valeurs manquantes de yj_fiche.conf_energie
+-- (utile pour que la resolution conf_energie -> id fonctionne toujours)
+INSERT INTO `mode_chauffage` (`nom`)
+SELECT DISTINCT TRIM(yj.`conf_energie`) AS `nom`
+FROM `yj_fiche` yj
+LEFT JOIN `mode_chauffage` mc
+  ON REPLACE(REPLACE(TRIM(UPPER(mc.`nom`)), 'É', 'E'), 'È', 'E')
+   = REPLACE(REPLACE(TRIM(UPPER(yj.`conf_energie`)), 'É', 'E'), 'È', 'E')
+WHERE NULLIF(TRIM(yj.`conf_energie`), '') IS NOT NULL
+  AND TRIM(yj.`conf_energie`) NOT REGEXP '^[0-9]+$'
+  AND mc.`id` IS NULL;
+
 INSERT INTO `fiches` (
   `id`, `civ`, `nom`, `prenom`, `tel`, `gsm1`, `gsm2`, `adresse`, `cp`, `ville`,
   `etude`, `consommation_chauffage`, `surface_habitable`, `annee_systeme_chauffage`,
