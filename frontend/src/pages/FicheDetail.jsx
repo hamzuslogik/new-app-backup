@@ -3538,7 +3538,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   items.push({ label: 'Commercial', value: affiche });
                 }
                 if (Number(etatId) === 7 && etatData.commercial_2_pseudo) {
-                  items.push({ label: 'Commercial 2', value: etatData.commercial_2_pseudo });
+                  items.push({ label: 'Commercial', value: etatData.commercial_2_pseudo });
                 }
 
                 // NRP (2)
@@ -8226,7 +8226,7 @@ const PlanningViewForModal = ({
                               {hasR2Placed && (
                                 <span
                                   className="availability-r2-star"
-                                  title="R2 placé (commercial secondaire)"
+                                  title="R2 placé"
                                   aria-label="R2 placé"
                                 >
                                   ★
