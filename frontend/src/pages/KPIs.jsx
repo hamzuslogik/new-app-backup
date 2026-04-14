@@ -602,6 +602,54 @@ const KPIs = () => {
             </div>
           </div>
 
+          <div className="kpi-section">
+            <h2 className="section-title">Détails des fiches porte ouverte</h2>
+            <div className="kpi-table-wrap" style={{ overflowX: 'auto' }}>
+              <table className="stats-table kpis-table" style={{ width: '100%', minWidth: '1200px' }}>
+                <thead>
+                  <tr>
+                    <th>ID Fiche</th>
+                    <th>Nom</th>
+                    <th>Prénom</th>
+                    <th>Téléphone</th>
+                    <th>Code postal</th>
+                    <th>Ville</th>
+                    <th>Centre</th>
+                    <th>État</th>
+                    <th>Commercial</th>
+                    <th>Approbateur</th>
+                    <th>Date approbation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(currentData.details || []).length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className="no-data">
+                        Aucun détail de fiche pour cette période
+                      </td>
+                    </tr>
+                  ) : (
+                    (currentData.details || []).map((row) => (
+                      <tr key={`${row.id}-${row.id_fiche}`}>
+                        <td>{row.id_fiche}</td>
+                        <td>{row.nom || '-'}</td>
+                        <td>{row.prenom || '-'}</td>
+                        <td>{row.tel || '-'}</td>
+                        <td>{row.cp || '-'}</td>
+                        <td>{row.ville || '-'}</td>
+                        <td>{row.centre_titre || '-'}</td>
+                        <td>{row.etat_titre || `État #${row.id_etat_final}`}</td>
+                        <td>{row.commercial_pseudo || '-'}</td>
+                        <td>{row.approbateur_pseudo || '-'}</td>
+                        <td>{row.date_approbation || row.date_creation || '-'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div className="period-info">
             <p>
               Période : <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>

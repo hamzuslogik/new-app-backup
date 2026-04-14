@@ -2542,6 +2542,37 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
       `;
       const byEtatRows = await query(byEtatSql, baseParams(startDate, endDate));
 
+      const detailsSql = `
+        SELECT
+          po.id,
+          po.id_fiche,
+          po.id_etat_final,
+          COALESCE(e.titre, CONCAT('État #', po.id_etat_final)) AS etat_titre,
+          f.nom,
+          f.prenom,
+          f.tel,
+          f.cp,
+          f.ville,
+          c.titre AS centre_titre,
+          uc.pseudo AS commercial_pseudo,
+          ua.pseudo AS approbateur_pseudo,
+          po.date_approbation,
+          po.date_creation
+        FROM porte_ouverte po
+        INNER JOIN fiches f ON f.id = po.id_fiche
+        LEFT JOIN centres c ON c.id = f.id_centre
+        LEFT JOIN etats e ON e.id = po.id_etat_final
+        LEFT JOIN utilisateurs uc ON uc.id = po.id_commercial
+        LEFT JOIN utilisateurs ua ON ua.id = po.id_approbateur
+        WHERE COALESCE(po.date_approbation, po.date_creation) >= ?
+          AND COALESCE(po.date_approbation, po.date_creation) <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
+          ${centreCondition}
+        ORDER BY COALESCE(po.date_approbation, po.date_creation) DESC, po.id DESC
+        LIMIT 500
+      `;
+      const detailRows = await query(detailsSql, baseParams(startDate, endDate));
+
       const prevTotalRow = await queryOne(totalSql, [
         `${previousStart} 00:00:00`,
         `${previousEnd} 23:59:59`,
@@ -2563,6 +2594,22 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
           id_etat: r.id_etat,
           etat_titre: r.etat_titre,
           count: Number(r.count) || 0,
+        })),
+        details: (detailRows || []).map((r) => ({
+          id: r.id,
+          id_fiche: r.id_fiche,
+          id_etat_final: r.id_etat_final,
+          etat_titre: r.etat_titre,
+          nom: r.nom,
+          prenom: r.prenom,
+          tel: r.tel,
+          cp: r.cp,
+          ville: r.ville,
+          centre_titre: r.centre_titre,
+          commercial_pseudo: r.commercial_pseudo,
+          approbateur_pseudo: r.approbateur_pseudo,
+          date_approbation: r.date_approbation,
+          date_creation: r.date_creation,
         })),
         evolution: {
           current: totalLignes,
@@ -2635,11 +2682,12 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
         total_fiches_distinct: 0,
         previous_total_lignes: 0,
         par_etat: [],
+        details: [],
         evolution: { current: 0, previous: 0, change: 0, trend: 'stable' },
       };
       return res.json({
         success: true,
-        data: { jour: { ...empty }, semaine: { ...empty }, mois: { ...empty } },
+        data: { jour: { ...empty }, semaine: { ...empty }, mois: { ...empty }, custom: { ...empty } },
         warning: 'Table porte_ouverte non disponible (migration SQL non appliquée).',
       });
     }
