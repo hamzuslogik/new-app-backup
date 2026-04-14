@@ -2439,7 +2439,7 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
 router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
   console.log('[STAT] /kpis-porte-ouverte - user:', req.user?.id, 'params:', req.query);
   try {
-    const { month, id_centre } = req.query;
+    const { month, id_centre, date_debut, date_fin } = req.query;
 
     const callJwsCentres = await query(`
       SELECT id FROM centres
@@ -2491,6 +2491,14 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
       { key: 'semaine', start: weekStart, end: weekEnd, label: 'Cette semaine' },
       { key: 'mois', start: monthStart, end: monthEnd, label: 'Ce mois' },
     ];
+    const hasCustomRange =
+      typeof date_debut === 'string' &&
+      typeof date_fin === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(date_debut) &&
+      /^\d{4}-\d{2}-\d{2}$/.test(date_fin);
+    const effectivePeriods = hasCustomRange
+      ? [{ key: 'custom', start: date_debut, end: date_fin, label: 'Période personnalisée' }]
+      : periods;
 
     const baseParams = (startDt, endDt) => {
       const p = [`${startDt} 00:00:00`, `${endDt} 23:59:59`];
@@ -2565,10 +2573,10 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
       };
     };
 
-    for (const period of periods) {
+    for (const period of effectivePeriods) {
       let previousStart;
       let previousEnd;
-      if (period.key === 'jour') {
+      if (period.key === 'jour' || period.key === 'custom') {
         const yesterday = new Date(period.start);
         yesterday.setDate(yesterday.getDate() - 1);
         previousStart = previousEnd = yesterday.toISOString().split('T')[0];

@@ -23,6 +23,13 @@ const KPIs = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois
   const [selectedMonth, setSelectedMonth] = useState(''); // Format: YYYY-MM
   const [selectedPorteOuverteCentre, setSelectedPorteOuverteCentre] = useState('');
+  const getTodayStr = () => new Date().toISOString().split('T')[0];
+  const getFirstOfMonthStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  };
+  const [porteOuverteDateDebut, setPorteOuverteDateDebut] = useState(getFirstOfMonthStr());
+  const [porteOuverteDateFin, setPorteOuverteDateFin] = useState(getTodayStr());
 
   // Générer la liste des mois (12 derniers mois)
   const getAvailableMonths = () => {
@@ -109,7 +116,7 @@ const KPIs = () => {
   );
 
   const { data: porteOuverteData, isLoading: isLoadingPorteOuverte, error: errorPorteOuverte } = useQuery(
-    ['kpis-porte-ouverte', selectedPeriod, selectedMonth, selectedPorteOuverteCentre],
+    ['kpis-porte-ouverte', selectedPeriod, selectedMonth, selectedPorteOuverteCentre, porteOuverteDateDebut, porteOuverteDateFin],
     async () => {
       const params = {};
       if (selectedPeriod === 'mois' && selectedMonth) {
@@ -117,6 +124,12 @@ const KPIs = () => {
       }
       if (selectedPorteOuverteCentre) {
         params.id_centre = selectedPorteOuverteCentre;
+      }
+      if (porteOuverteDateDebut) {
+        params.date_debut = porteOuverteDateDebut;
+      }
+      if (porteOuverteDateFin) {
+        params.date_fin = porteOuverteDateFin;
       }
       const res = await api.get('/statistiques/kpis-porte-ouverte', { params });
       return res.data.data;
@@ -146,7 +159,7 @@ const KPIs = () => {
     : activeTab === 'confirmation'
     ? confirmationData?.[selectedPeriod]
     : activeTab === 'porte-ouverte'
-    ? porteOuverteData?.[selectedPeriod]
+    ? (porteOuverteData?.custom || porteOuverteData?.[selectedPeriod])
     : confirmationJwsData?.[selectedPeriod];
 
   // Fonction pour formater le pourcentage
@@ -222,31 +235,33 @@ const KPIs = () => {
           </button>
         </div>
         <div className="header-controls">
-          <div className="period-selector">
-            {periods.map(period => {
-              const Icon = period.icon;
-              return (
-                <button
-                  key={period.key}
-                  className={`period-btn ${selectedPeriod === period.key ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedPeriod(period.key);
-                    if (period.key !== 'mois') {
-                      setSelectedMonth('');
-                    } else if (!selectedMonth) {
-                      const today = new Date();
-                      const year = today.getFullYear();
-                      const month = String(today.getMonth() + 1).padStart(2, '0');
-                      setSelectedMonth(`${year}-${month}`);
-                    }
-                  }}
-                >
-                  <Icon /> {period.label}
-                </button>
-              );
-            })}
-          </div>
-          {selectedPeriod === 'mois' && (
+          {activeTab !== 'porte-ouverte' && (
+            <div className="period-selector">
+              {periods.map(period => {
+                const Icon = period.icon;
+                return (
+                  <button
+                    key={period.key}
+                    className={`period-btn ${selectedPeriod === period.key ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedPeriod(period.key);
+                      if (period.key !== 'mois') {
+                        setSelectedMonth('');
+                      } else if (!selectedMonth) {
+                        const today = new Date();
+                        const year = today.getFullYear();
+                        const month = String(today.getMonth() + 1).padStart(2, '0');
+                        setSelectedMonth(`${year}-${month}`);
+                      }
+                    }}
+                  >
+                    <Icon /> {period.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {activeTab !== 'porte-ouverte' && selectedPeriod === 'mois' && (
             <div className="month-selector">
               <label htmlFor="month-select">Mois :</label>
               <select
@@ -265,6 +280,27 @@ const KPIs = () => {
             </div>
           )}
           {activeTab === 'porte-ouverte' && (
+            <>
+            <div className="month-selector">
+              <label htmlFor="porte-ouverte-date-debut">Date début :</label>
+              <input
+                id="porte-ouverte-date-debut"
+                type="date"
+                className="month-select"
+                value={porteOuverteDateDebut}
+                onChange={(e) => setPorteOuverteDateDebut(e.target.value)}
+              />
+            </div>
+            <div className="month-selector">
+              <label htmlFor="porte-ouverte-date-fin">Date fin :</label>
+              <input
+                id="porte-ouverte-date-fin"
+                type="date"
+                className="month-select"
+                value={porteOuverteDateFin}
+                onChange={(e) => setPorteOuverteDateFin(e.target.value)}
+              />
+            </div>
             <div className="month-selector">
               <label htmlFor="porte-ouverte-centre-select">Centre :</label>
               <select
@@ -281,6 +317,7 @@ const KPIs = () => {
                 ))}
               </select>
             </div>
+            </>
           )}
         </div>
       </div>
