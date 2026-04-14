@@ -2432,6 +2432,208 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
   }
 });
 
+// =====================================================
+// KPIs Porte ouverte — lignes table porte_ouverte (CR approuvés, états « qualification porte ouverte »)
+// Même périmètre centre CALL_JWS que /kpis lorsque le centre existe.
+// =====================================================
+router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
+  console.log('[STAT] /kpis-porte-ouverte - user:', req.user?.id, 'params:', req.query);
+  try {
+    const { month } = req.query;
+
+    const callJwsCentres = await query(`
+      SELECT id FROM centres
+      WHERE (titre = 'CALL_JWS' OR titre LIKE 'CALL_JWS%' OR titre LIKE 'Call_JWS%')
+      AND etat > 0
+    `);
+    const callJwsCentreIds = (callJwsCentres || []).map((c) => c.id);
+    const centreCondition =
+      callJwsCentreIds.length > 0
+        ? `AND f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})`
+        : '';
+    const useCentreFilter = callJwsCentreIds.length > 0;
+
+    const today = new Date();
+    const todayStr = getTodayLocal();
+
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(today.getFullYear(), today.getMonth(), diff);
+    const weekStart = monday.toISOString().split('T')[0];
+    const weekEnd = todayStr;
+
+    let monthStart;
+    let monthEnd;
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const [year, monthNum] = month.split('-').map(Number);
+      monthStart = new Date(year, monthNum - 1, 1).toISOString().split('T')[0];
+      const lastDay = new Date(year, monthNum, 0).getDate();
+      monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
+    } else {
+      monthStart = getFirstOfMonthLocal();
+      monthEnd = todayStr;
+    }
+
+    const kpiData = {
+      jour: {},
+      semaine: {},
+      mois: {},
+    };
+
+    const periods = [
+      { key: 'jour', start: todayStr, end: todayStr, label: "Aujourd'hui" },
+      { key: 'semaine', start: weekStart, end: weekEnd, label: 'Cette semaine' },
+      { key: 'mois', start: monthStart, end: monthEnd, label: 'Ce mois' },
+    ];
+
+    const baseParams = (startDt, endDt) => {
+      const p = [`${startDt} 00:00:00`, `${endDt} 23:59:59`];
+      if (useCentreFilter) p.push(...callJwsCentreIds);
+      return p;
+    };
+
+    const runPorteOuverteForPeriod = async (startDate, endDate, previousStart, previousEnd) => {
+      const startDatetime = `${startDate} 00:00:00`;
+      const endDatetime = `${endDate} 23:59:59`;
+      const prevStartDt = `${previousStart} 00:00:00`;
+      const prevEndDt = `${previousEnd} 23:59:59`;
+
+      const totalSql = `
+        SELECT
+          COUNT(*) AS total_lignes,
+          COUNT(DISTINCT po.id_fiche) AS total_fiches
+        FROM porte_ouverte po
+        INNER JOIN fiches f ON f.id = po.id_fiche
+        WHERE COALESCE(po.date_approbation, po.date_creation) >= ?
+          AND COALESCE(po.date_approbation, po.date_creation) <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
+          ${centreCondition}
+      `;
+      const totalRow = await queryOne(totalSql, baseParams(startDate, endDate));
+
+      const byEtatSql = `
+        SELECT
+          po.id_etat_final AS id_etat,
+          COALESCE(e.titre, CONCAT('État #', po.id_etat_final)) AS etat_titre,
+          COUNT(*) AS count
+        FROM porte_ouverte po
+        INNER JOIN fiches f ON f.id = po.id_fiche
+        LEFT JOIN etats e ON e.id = po.id_etat_final
+        WHERE COALESCE(po.date_approbation, po.date_creation) >= ?
+          AND COALESCE(po.date_approbation, po.date_creation) <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
+          ${centreCondition}
+        GROUP BY po.id_etat_final, e.titre
+        ORDER BY count DESC, etat_titre ASC
+      `;
+      const byEtatRows = await query(byEtatSql, baseParams(startDate, endDate));
+
+      const prevTotalRow = await queryOne(totalSql, [
+        `${previousStart} 00:00:00`,
+        `${previousEnd} 23:59:59`,
+        ...(useCentreFilter ? callJwsCentreIds : []),
+      ]);
+
+      const totalLignes = Number(totalRow?.total_lignes) || 0;
+      const prevLignes = Number(prevTotalRow?.total_lignes) || 0;
+      const evolutionChange =
+        prevLignes > 0 ? ((totalLignes - prevLignes) / prevLignes) * 100 : totalLignes > 0 ? 100 : 0;
+      const evolutionTrend =
+        evolutionChange > 0 ? 'up' : evolutionChange < 0 ? 'down' : 'stable';
+
+      return {
+        total_lignes: totalLignes,
+        total_fiches_distinct: Number(totalRow?.total_fiches) || 0,
+        previous_total_lignes: prevLignes,
+        par_etat: (byEtatRows || []).map((r) => ({
+          id_etat: r.id_etat,
+          etat_titre: r.etat_titre,
+          count: Number(r.count) || 0,
+        })),
+        evolution: {
+          current: totalLignes,
+          previous: prevLignes,
+          change: evolutionChange,
+          trend: evolutionTrend,
+        },
+      };
+    };
+
+    for (const period of periods) {
+      let previousStart;
+      let previousEnd;
+      if (period.key === 'jour') {
+        const yesterday = new Date(period.start);
+        yesterday.setDate(yesterday.getDate() - 1);
+        previousStart = previousEnd = yesterday.toISOString().split('T')[0];
+      } else if (period.key === 'semaine') {
+        const prevMonday = new Date(monday);
+        prevMonday.setDate(prevMonday.getDate() - 7);
+        const prevSunday = new Date(prevMonday);
+        prevSunday.setDate(prevSunday.getDate() + 6);
+        previousStart = prevMonday.toISOString().split('T')[0];
+        previousEnd = prevSunday.toISOString().split('T')[0];
+      } else {
+        const prevMonth = new Date(monthStart);
+        prevMonth.setMonth(prevMonth.getMonth() - 1);
+        previousStart = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), 1)
+          .toISOString()
+          .split('T')[0];
+        previousEnd = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0)
+          .toISOString()
+          .split('T')[0];
+      }
+
+      const payload = await runPorteOuverteForPeriod(
+        period.start,
+        period.end,
+        previousStart,
+        previousEnd
+      );
+      kpiData[period.key] = {
+        period: period.label,
+        date_start: period.start,
+        date_end: period.end,
+        ...payload,
+      };
+    }
+
+    res.json({
+      success: true,
+      data: kpiData,
+    });
+  } catch (error) {
+    const msg = error.message || '';
+    const noTable =
+      msg.includes('porte_ouverte') &&
+      (msg.includes("doesn't exist") || msg.includes("n'existe pas") || error.code === 'ER_NO_SUCH_TABLE');
+    if (noTable) {
+      console.warn('[STAT] /kpis-porte-ouverte - Table porte_ouverte absente, réponse vide');
+      const empty = {
+        period: '',
+        date_start: '',
+        date_end: '',
+        total_lignes: 0,
+        total_fiches_distinct: 0,
+        previous_total_lignes: 0,
+        par_etat: [],
+        evolution: { current: 0, previous: 0, change: 0, trend: 'stable' },
+      };
+      return res.json({
+        success: true,
+        data: { jour: { ...empty }, semaine: { ...empty }, mois: { ...empty } },
+        warning: 'Table porte_ouverte non disponible (migration SQL non appliquée).',
+      });
+    }
+    console.error('[STAT] /kpis-porte-ouverte - Erreur:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des KPIs Porte ouverte',
+      error: error.message,
+    });
+  }
+});
+
 // Statistiques des agents pour un superviseur
 router.get('/superviseur/:id', authenticate, async (req, res) => {
   console.log('[STAT] /superviseur/:id - Requête reçue - user:', req.user?.id, 'superviseur_id:', req.params.id, 'params:', req.query);

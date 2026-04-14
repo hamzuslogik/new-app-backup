@@ -12,13 +12,14 @@ import {
   FaArrowUp,
   FaArrowDown,
   FaMinus,
-  FaPercentage
+  FaPercentage,
+  FaDoorOpen
 } from 'react-icons/fa';
 import './KPIs.css';
 
 const KPIs = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('qualification'); // qualification, confirmation, confirmation-jws (tous filtrés par centre CALL_JWS)
+  const [activeTab, setActiveTab] = useState('qualification'); // qualification, confirmation, confirmation-jws, porte-ouverte
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois
   const [selectedMonth, setSelectedMonth] = useState(''); // Format: YYYY-MM
 
@@ -95,11 +96,28 @@ const KPIs = () => {
     }
   );
 
+  const { data: porteOuverteData, isLoading: isLoadingPorteOuverte, error: errorPorteOuverte } = useQuery(
+    ['kpis-porte-ouverte', selectedPeriod, selectedMonth],
+    async () => {
+      const params = {};
+      if (selectedPeriod === 'mois' && selectedMonth) {
+        params.month = selectedMonth;
+      }
+      const res = await api.get('/statistiques/kpis-porte-ouverte', { params });
+      return res.data.data;
+    },
+    {
+      enabled: (selectedPeriod !== 'mois' || !!selectedMonth) && activeTab === 'porte-ouverte'
+    }
+  );
+
   const isLoading = activeTab === 'qualification' ? isLoadingQualif : 
                    activeTab === 'confirmation' ? isLoadingConf : 
+                   activeTab === 'porte-ouverte' ? isLoadingPorteOuverte :
                    isLoadingConfJws;
   const error = activeTab === 'qualification' ? errorQualif : 
                 activeTab === 'confirmation' ? errorConf : 
+                activeTab === 'porte-ouverte' ? errorPorteOuverte :
                 errorConfJws;
 
   const periods = [
@@ -112,6 +130,8 @@ const KPIs = () => {
     ? kpiData?.[selectedPeriod] 
     : activeTab === 'confirmation'
     ? confirmationData?.[selectedPeriod]
+    : activeTab === 'porte-ouverte'
+    ? porteOuverteData?.[selectedPeriod]
     : confirmationJwsData?.[selectedPeriod];
 
   // Fonction pour formater le pourcentage
@@ -177,6 +197,13 @@ const KPIs = () => {
             onClick={() => setActiveTab('confirmation-jws')}
           >
             Confirmation JWS
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'porte-ouverte' ? 'active' : ''}`}
+            onClick={() => setActiveTab('porte-ouverte')}
+          >
+            <FaDoorOpen style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+            Porte ouverte
           </button>
         </div>
         <div className="header-controls">
@@ -426,9 +453,91 @@ const KPIs = () => {
               Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
             </p>
             <p className="info-text">
-              {activeTab === 'qualification' 
-                ? 'Taux de conversion = Fiches validées / Fiches produites. Validées = fiches hors groupe 0 et KO=0. Produites = fiches créées par agents qualification, hors poubelle et doublon.'
-                : 'Les confirmations correspondent aux fiches avec état CONFIRMER (7). Les signatures correspondent aux fiches avec états SIGNER (13, 16, 44, 45).'}
+              Taux de conversion = Fiches validées / Fiches produites. Validées = fiches hors groupe 0 et KO=0. Produites = fiches créées par agents qualification, hors poubelle et doublon.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Contenu pour l'onglet Porte ouverte */}
+      {activeTab === 'porte-ouverte' && currentData && (
+        <div className="kpis-content">
+          <div className="kpi-section">
+            <h2 className="section-title">Statistiques Porte ouverte</h2>
+            <p className="section-description" style={{ marginBottom: '1rem', color: '#555' }}>
+              Comptes rendus approuvés avec une qualification « porte ouverte » (Honoré à suivre, Refuser, Signer, Hors cible confirmateur, HHC technique, etc.), par date d&apos;approbation.
+            </p>
+            <div className="kpi-cards metrics">
+              <div className="kpi-card conversion-rate">
+                <div className="kpi-card-header">
+                  <FaDoorOpen className="kpi-icon" />
+                  <h3>Enregistrements</h3>
+                </div>
+                <div className="kpi-card-body">
+                  <div className="kpi-value-large">
+                    <span className="value">{currentData.total_lignes ?? 0}</span>
+                    <span className="label">lignes porte ouverte sur la période</span>
+                  </div>
+                  <div className="conversion-details">
+                    <span className="detail-item">
+                      <span className="detail-value">{currentData.total_fiches_distinct ?? 0}</span>
+                      <span className="detail-label">fiches distinctes</span>
+                    </span>
+                  </div>
+                  {currentData.evolution && (
+                    <div className="evolution-indicator" style={{ marginTop: '12px' }}>
+                      {getTrendIcon(currentData.evolution.trend)}
+                      <span
+                        className="evolution-value"
+                        style={{ color: getTrendColor(currentData.evolution.trend) }}
+                      >
+                        {currentData.evolution.change > 0 ? '+' : ''}
+                        {Number(currentData.evolution.change).toFixed(1)}%
+                      </span>
+                      <span className="evolution-label">vs période précédente (lignes)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="kpi-section">
+            <h2 className="section-title">Répartition par état</h2>
+            <div className="kpi-table-wrap" style={{ overflowX: 'auto' }}>
+              <table className="stats-table kpis-table" style={{ width: '100%', maxWidth: '720px' }}>
+                <thead>
+                  <tr>
+                    <th>État</th>
+                    <th style={{ textAlign: 'right' }}>Nombre</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(currentData.par_etat || []).length === 0 ? (
+                    <tr>
+                      <td colSpan={2} className="no-data">
+                        Aucun enregistrement pour cette période
+                      </td>
+                    </tr>
+                  ) : (
+                    (currentData.par_etat || []).map((row) => (
+                      <tr key={`${row.id_etat}-${row.etat_titre}`}>
+                        <td>{row.etat_titre || `État #${row.id_etat}`}</td>
+                        <td style={{ textAlign: 'right' }}>{row.count}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="period-info">
+            <p>
+              Période : <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
+            </p>
+            <p className="info-text">
+              Périmètre identique aux autres onglets KPIs : fiches du centre CALL_JWS lorsque ce centre est configuré ; sinon toutes les fiches. Archives exclues.
             </p>
           </div>
         </div>
