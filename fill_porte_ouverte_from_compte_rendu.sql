@@ -2,9 +2,9 @@
 -- Remplir / mettre à jour porte_ouverte depuis compte_rendu_pending
 -- =====================================================
 -- Aligné sur backend/routes/compte-rendu.routes.js (approbation CR) :
---   États « porte ouverte » : 9, 12, 13, 16, 23, 35, 38, 44, 45
+--   États « porte ouverte » : 9, 12, 13, 16, 23, 34, 35, 38, 44, 45
 --   (Honoré à suivre, Refuser, Signer, Signer rétracter, Hors cible confirmateur,
---    HHC technique, Signer rétracter 2×, Signer PM, Signer complet)
+--    HHC financement à vérifier, HHC technique, Signer rétracter 2×, Signer PM, Signer complet)
 --
 -- Résolution de l’état cible :
 --   compte_rendu_pending.id_etat_final (source unique)
@@ -32,7 +32,7 @@ SELECT
   COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation) AS date_ref
 FROM compte_rendu_pending cr
 WHERE cr.statut = 'approved'
-  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 35, 38, 44, 45)
+  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
   AND NOT EXISTS (
     SELECT 1
     FROM porte_ouverte po
@@ -47,13 +47,13 @@ SELECT
   COUNT(*) AS nb_candidates_total
 FROM compte_rendu_pending cr
 WHERE cr.statut = 'approved'
-  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 35, 38, 44, 45);
+  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45);
 
 SELECT
   COUNT(*) AS nb_deja_presentes
 FROM compte_rendu_pending cr
 WHERE cr.statut = 'approved'
-  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 35, 38, 44, 45)
+  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
   AND EXISTS (
     SELECT 1
     FROM porte_ouverte po
@@ -82,7 +82,7 @@ SELECT
   COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation)
 FROM compte_rendu_pending cr
 WHERE cr.statut = 'approved'
-  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 35, 38, 44, 45)
+  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
   AND NOT EXISTS (
     SELECT 1
     FROM porte_ouverte po
@@ -99,6 +99,6 @@ SELECT
   COUNT(*) AS nb_cr_approved_porte_etat
 FROM compte_rendu_pending cr
 WHERE cr.statut = 'approved'
-  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 35, 38, 44, 45);
+  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45);
 
 -- Fin.
