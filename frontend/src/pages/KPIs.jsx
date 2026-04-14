@@ -23,6 +23,7 @@ const KPIs = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois
   const [selectedMonth, setSelectedMonth] = useState(''); // Format: YYYY-MM
   const [selectedPorteOuverteCentre, setSelectedPorteOuverteCentre] = useState('');
+  const [selectedPorteOuverteEtat, setSelectedPorteOuverteEtat] = useState('');
   const getTodayStr = () => new Date().toISOString().split('T')[0];
   const getFirstOfMonthStr = () => {
     const d = new Date();
@@ -161,6 +162,12 @@ const KPIs = () => {
     : activeTab === 'porte-ouverte'
     ? (porteOuverteData?.custom || porteOuverteData?.[selectedPeriod])
     : confirmationJwsData?.[selectedPeriod];
+  const filteredPorteOuverteDetails = activeTab === 'porte-ouverte'
+    ? (currentData?.details || []).filter((row) => {
+        if (!selectedPorteOuverteEtat) return true;
+        return String(row?.id_etat_final) === String(selectedPorteOuverteEtat);
+      })
+    : [];
 
   // Fonction pour formater le pourcentage
   const formatPercentage = (value) => {
@@ -603,7 +610,25 @@ const KPIs = () => {
           </div>
 
           <div className="kpi-section">
-            <h2 className="section-title">Détails des fiches porte ouverte</h2>
+            <h2 className="section-title" style={{ color: '#ffffff' }}>Détails des fiches porte ouverte</h2>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+              <div className="month-selector">
+                <label htmlFor="porte-ouverte-etat-details-select">État :</label>
+                <select
+                  id="porte-ouverte-etat-details-select"
+                  value={selectedPorteOuverteEtat}
+                  onChange={(e) => setSelectedPorteOuverteEtat(e.target.value)}
+                  className="month-select"
+                >
+                  <option value="">Tous les états</option>
+                  {(currentData.par_etat || []).map((etat) => (
+                    <option key={`po-etat-${etat.id_etat}`} value={etat.id_etat}>
+                      {etat.etat_titre || `État #${etat.id_etat}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div className="kpi-table-wrap" style={{ overflowX: 'auto' }}>
               <table className="stats-table kpis-table" style={{ width: '100%', minWidth: '1200px' }}>
                 <thead>
@@ -622,14 +647,14 @@ const KPIs = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {(currentData.details || []).length === 0 ? (
+                  {filteredPorteOuverteDetails.length === 0 ? (
                     <tr>
                       <td colSpan={11} className="no-data">
                         Aucun détail de fiche pour cette période
                       </td>
                     </tr>
                   ) : (
-                    (currentData.details || []).map((row) => (
+                    filteredPorteOuverteDetails.map((row) => (
                       <tr key={`${row.id}-${row.id_fiche}`}>
                         <td>{row.id_fiche}</td>
                         <td>{row.nom || '-'}</td>
