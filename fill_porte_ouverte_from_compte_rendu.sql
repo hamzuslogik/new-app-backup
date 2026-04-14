@@ -24,25 +24,47 @@ USE `crm`;
 -- A) PRÉVISUALISATION — lignes candidates
 -- ---------------------------------------------------------------------------
 SELECT
-  cr.id AS id_compte_rendu_pending,
-  cr.id_fiche,
-  cr.id_etat_final AS id_etat_resolu,
-  ce.titre AS centre_titre,
-  cr.id_commercial,
-  cr.id_approbateur,
-  COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation) AS date_ref
-FROM compte_rendu_pending cr
-INNER JOIN fiches f ON f.id = cr.id_fiche
-INNER JOIN centres ce ON ce.id = f.id_centre
-WHERE cr.statut = 'approved'
-  AND UPPER(COALESCE(ce.titre, '')) LIKE '%JWS%'
-  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
-  AND NOT EXISTS (
+  src.id_compte_rendu_pending,
+  src.id_fiche,
+  src.id_etat_final AS id_etat_resolu,
+  src.centre_titre,
+  src.id_commercial,
+  src.id_approbateur,
+  src.date_ref
+FROM (
+  SELECT
+    MIN(cr.id) AS id_compte_rendu_pending,
+    cr.id_fiche,
+    cr.id_etat_final,
+    MIN(cr.id_commercial) AS id_commercial,
+    MIN(cr.id_approbateur) AS id_approbateur,
+    COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation) AS date_ref,
+    ce.titre AS centre_titre
+  FROM compte_rendu_pending cr
+  INNER JOIN fiches f ON f.id = cr.id_fiche
+  INNER JOIN centres ce ON ce.id = f.id_centre
+  WHERE cr.statut = 'approved'
+    AND UPPER(COALESCE(ce.titre, '')) LIKE '%JWS%'
+    AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
+  GROUP BY
+    cr.id_fiche,
+    cr.id_etat_final,
+    COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation),
+    ce.titre
+) src
+WHERE NOT EXISTS (
     SELECT 1
     FROM porte_ouverte po
-    WHERE po.id_compte_rendu_pending = cr.id
+    WHERE po.id_compte_rendu_pending = src.id_compte_rendu_pending
   )
-ORDER BY cr.id;
+  AND NOT EXISTS (
+    SELECT 1
+    FROM porte_ouverte po2
+    WHERE po2.id_fiche = src.id_fiche
+      AND po2.id_etat_final = src.id_etat_final
+      AND COALESCE(po2.date_approbation, po2.date_creation) = src.date_ref
+  )
+ORDER BY src.id_compte_rendu_pending;
 
 -- ---------------------------------------------------------------------------
 -- B) DIAGNOSTIC AVANT INSERT
@@ -70,6 +92,24 @@ WHERE cr.statut = 'approved'
     WHERE po.id_compte_rendu_pending = cr.id
   );
 
+SELECT
+  COUNT(*) AS nb_source_doublons_meme_fiche_etat_date
+FROM (
+  SELECT
+    cr.id_fiche,
+    cr.id_etat_final,
+    COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation) AS date_ref,
+    COUNT(*) AS nb
+  FROM compte_rendu_pending cr
+  INNER JOIN fiches f ON f.id = cr.id_fiche
+  INNER JOIN centres ce ON ce.id = f.id_centre
+  WHERE cr.statut = 'approved'
+    AND UPPER(COALESCE(ce.titre, '')) LIKE '%JWS%'
+    AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
+  GROUP BY cr.id_fiche, cr.id_etat_final, COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation)
+  HAVING COUNT(*) > 1
+) d;
+
 -- ---------------------------------------------------------------------------
 -- C) INSERT EFFECTIF
 -- ---------------------------------------------------------------------------
@@ -83,23 +123,44 @@ INSERT INTO porte_ouverte (
   date_creation
 )
 SELECT
-  cr.id_fiche,
-  cr.id,
-  cr.id_etat_final,
-  cr.id_commercial,
-  cr.id_approbateur,
-  COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation),
-  COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation)
-FROM compte_rendu_pending cr
-INNER JOIN fiches f ON f.id = cr.id_fiche
-INNER JOIN centres ce ON ce.id = f.id_centre
-WHERE cr.statut = 'approved'
-  AND UPPER(COALESCE(ce.titre, '')) LIKE '%JWS%'
-  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
+  src.id_fiche,
+  src.id_compte_rendu_pending,
+  src.id_etat_final,
+  src.id_commercial,
+  src.id_approbateur,
+  src.date_ref,
+  src.date_ref
+FROM (
+  SELECT
+    MIN(cr.id) AS id_compte_rendu_pending,
+    cr.id_fiche,
+    cr.id_etat_final,
+    MIN(cr.id_commercial) AS id_commercial,
+    MIN(cr.id_approbateur) AS id_approbateur,
+    COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation) AS date_ref
+  FROM compte_rendu_pending cr
+  INNER JOIN fiches f ON f.id = cr.id_fiche
+  INNER JOIN centres ce ON ce.id = f.id_centre
+  WHERE cr.statut = 'approved'
+    AND UPPER(COALESCE(ce.titre, '')) LIKE '%JWS%'
+    AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
+  GROUP BY
+    cr.id_fiche,
+    cr.id_etat_final,
+    COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation)
+) src
+WHERE 1=1
   AND NOT EXISTS (
     SELECT 1
     FROM porte_ouverte po
-    WHERE po.id_compte_rendu_pending = cr.id
+    WHERE po.id_compte_rendu_pending = src.id_compte_rendu_pending
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM porte_ouverte po2
+    WHERE po2.id_fiche = src.id_fiche
+      AND po2.id_etat_final = src.id_etat_final
+      AND COALESCE(po2.date_approbation, po2.date_creation) = src.date_ref
   );
 SELECT ROW_COUNT() AS nb_lignes_inserees;
 
