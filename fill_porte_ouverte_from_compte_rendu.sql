@@ -6,9 +6,8 @@
 --   (Honoré à suivre, Refuser, Signer, Signer rétracter, Hors cible confirmateur,
 --    HHC technique, Signer rétracter 2×, Signer PM, Signer complet)
 --
--- Résolution de l’état cible (compatible MySQL sans fonctions JSON) :
---   1) compte_rendu_pending.id_etat_final
---   2) sinon : id_etat_final actuel de la fiche (repli)
+-- Résolution de l’état cible :
+--   compte_rendu_pending.id_etat_final (source unique)
 --
 -- Prérequis :
 --   - Table porte_ouverte (create_porte_ouverte_table.sql)
@@ -27,14 +26,13 @@ USE `crm`;
 SELECT
   cr.id AS id_compte_rendu_pending,
   cr.id_fiche,
-  COALESCE(cr.id_etat_final, f.id_etat_final) AS id_etat_resolu,
+  cr.id_etat_final AS id_etat_resolu,
   cr.id_commercial,
   cr.id_approbateur,
   COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation) AS date_ref
 FROM compte_rendu_pending cr
-INNER JOIN fiches f ON f.id = cr.id_fiche
 WHERE cr.statut = 'approved'
-  AND COALESCE(cr.id_etat_final, f.id_etat_final) IN (9, 12, 13, 16, 23, 35, 38, 44, 45)
+  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 35, 38, 44, 45)
   AND NOT EXISTS (
     SELECT 1
     FROM porte_ouverte po
@@ -48,16 +46,14 @@ ORDER BY cr.id;
 SELECT
   COUNT(*) AS nb_candidates_total
 FROM compte_rendu_pending cr
-INNER JOIN fiches f ON f.id = cr.id_fiche
 WHERE cr.statut = 'approved'
-  AND COALESCE(cr.id_etat_final, f.id_etat_final) IN (9, 12, 13, 16, 23, 35, 38, 44, 45);
+  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 35, 38, 44, 45);
 
 SELECT
   COUNT(*) AS nb_deja_presentes
 FROM compte_rendu_pending cr
-INNER JOIN fiches f ON f.id = cr.id_fiche
 WHERE cr.statut = 'approved'
-  AND COALESCE(cr.id_etat_final, f.id_etat_final) IN (9, 12, 13, 16, 23, 35, 38, 44, 45)
+  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 35, 38, 44, 45)
   AND EXISTS (
     SELECT 1
     FROM porte_ouverte po
@@ -79,15 +75,14 @@ INSERT INTO porte_ouverte (
 SELECT
   cr.id_fiche,
   cr.id,
-  COALESCE(cr.id_etat_final, f.id_etat_final),
+  cr.id_etat_final,
   cr.id_commercial,
   cr.id_approbateur,
   COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation),
   COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation)
 FROM compte_rendu_pending cr
-INNER JOIN fiches f ON f.id = cr.id_fiche
 WHERE cr.statut = 'approved'
-  AND COALESCE(cr.id_etat_final, f.id_etat_final) IN (9, 12, 13, 16, 23, 35, 38, 44, 45)
+  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 35, 38, 44, 45)
   AND NOT EXISTS (
     SELECT 1
     FROM porte_ouverte po
@@ -103,9 +98,7 @@ SELECT COUNT(*) AS nb_porte_ouverte FROM porte_ouverte;
 SELECT
   COUNT(*) AS nb_cr_approved_porte_etat
 FROM compte_rendu_pending cr
-INNER JOIN fiches f ON f.id = cr.id_fiche
 WHERE cr.statut = 'approved'
-  AND COALESCE(cr.id_etat_final, f.id_etat_final)
-  IN (9, 12, 13, 16, 23, 35, 38, 44, 45);
+  AND cr.id_etat_final IN (9, 12, 13, 16, 23, 35, 38, 44, 45);
 
 -- Fin.
