@@ -27,11 +27,15 @@ SELECT
   cr.id AS id_compte_rendu_pending,
   cr.id_fiche,
   cr.id_etat_final AS id_etat_resolu,
+  ce.titre AS centre_titre,
   cr.id_commercial,
   cr.id_approbateur,
   COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation) AS date_ref
 FROM compte_rendu_pending cr
+INNER JOIN fiches f ON f.id = cr.id_fiche
+INNER JOIN centres ce ON ce.id = f.id_centre
 WHERE cr.statut = 'approved'
+  AND UPPER(COALESCE(ce.titre, '')) LIKE '%JWS%'
   AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
   AND NOT EXISTS (
     SELECT 1
@@ -46,13 +50,19 @@ ORDER BY cr.id;
 SELECT
   COUNT(*) AS nb_candidates_total
 FROM compte_rendu_pending cr
+INNER JOIN fiches f ON f.id = cr.id_fiche
+INNER JOIN centres ce ON ce.id = f.id_centre
 WHERE cr.statut = 'approved'
+  AND UPPER(COALESCE(ce.titre, '')) LIKE '%JWS%'
   AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45);
 
 SELECT
   COUNT(*) AS nb_deja_presentes
 FROM compte_rendu_pending cr
+INNER JOIN fiches f ON f.id = cr.id_fiche
+INNER JOIN centres ce ON ce.id = f.id_centre
 WHERE cr.statut = 'approved'
+  AND UPPER(COALESCE(ce.titre, '')) LIKE '%JWS%'
   AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
   AND EXISTS (
     SELECT 1
@@ -81,7 +91,10 @@ SELECT
   COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation),
   COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation)
 FROM compte_rendu_pending cr
+INNER JOIN fiches f ON f.id = cr.id_fiche
+INNER JOIN centres ce ON ce.id = f.id_centre
 WHERE cr.statut = 'approved'
+  AND UPPER(COALESCE(ce.titre, '')) LIKE '%JWS%'
   AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45)
   AND NOT EXISTS (
     SELECT 1
@@ -98,7 +111,10 @@ SELECT COUNT(*) AS nb_porte_ouverte FROM porte_ouverte;
 SELECT
   COUNT(*) AS nb_cr_approved_porte_etat
 FROM compte_rendu_pending cr
+INNER JOIN fiches f ON f.id = cr.id_fiche
+INNER JOIN centres ce ON ce.id = f.id_centre
 WHERE cr.statut = 'approved'
+  AND UPPER(COALESCE(ce.titre, '')) LIKE '%JWS%'
   AND cr.id_etat_final IN (9, 12, 13, 16, 23, 34, 35, 38, 44, 45);
 
 -- Fin.

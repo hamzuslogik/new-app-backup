@@ -1044,9 +1044,18 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       [user.id, commentaire_admin || null, now, id]
     );
 
-    // Porte ouverte : si le compte rendu contient REFUSER, SIGNER (et variantes), HONORÉ À SUIVRE, HORS CIBLE CONFIRMATEUR, HHC FINANCEMENT À VÉRIFIER ou HHC TECHNIQUE, enregistrer dans porte_ouverte
+    // Porte ouverte : si le compte rendu contient REFUSER, SIGNER (et variantes), HONORÉ À SUIVRE, HORS CIBLE CONFIRMATEUR, HHC FINANCEMENT À VÉRIFIER ou HHC TECHNIQUE, enregistrer dans porte_ouverte.
+    // Limite : uniquement fiches des centres JWS.
     const etatsPorteOuverte = [9, 12, 13, 16, 23, 34, 35, 38, 44, 45]; // CLIENT HONORE A SUIVRE, REFUSER, SIGNER, SIGNER RETRACTER, HORS CIBLE CONFIRMATEUR, HHC FINANCEMENT A VERIFIER, HHC TECHNIQUE, SIGNER RETRACTER 2 FOIS, SIGNER PM, SIGNER COMPLET
-    if (nouveauEtat && etatsPorteOuverte.includes(nouveauEtat)) {
+    const centreFiche = await queryOne(
+      `SELECT c.titre
+       FROM fiches f
+       LEFT JOIN centres c ON c.id = f.id_centre
+       WHERE f.id = ?`,
+      [compteRendu.id_fiche]
+    );
+    const isCentreJws = String(centreFiche?.titre || '').toUpperCase().includes('JWS');
+    if (nouveauEtat && etatsPorteOuverte.includes(nouveauEtat) && isCentreJws) {
       try {
         await query(
           `INSERT INTO porte_ouverte (id_fiche, id_compte_rendu_pending, id_etat_final, id_commercial, id_approbateur, date_approbation, date_creation)

@@ -2439,19 +2439,25 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
 router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
   console.log('[STAT] /kpis-porte-ouverte - user:', req.user?.id, 'params:', req.query);
   try {
-    const { month } = req.query;
+    const { month, id_centre } = req.query;
 
     const callJwsCentres = await query(`
       SELECT id FROM centres
       WHERE (titre = 'CALL_JWS' OR titre LIKE 'CALL_JWS%' OR titre LIKE 'Call_JWS%')
       AND etat > 0
     `);
-    const callJwsCentreIds = (callJwsCentres || []).map((c) => c.id);
+    const callJwsCentreIds = (callJwsCentres || []).map((c) => Number(c.id)).filter(Boolean);
+    const parsedCentreId = Number(id_centre);
+    const hasSelectedCentre = Number.isFinite(parsedCentreId) && parsedCentreId > 0;
+    const selectedCentreIsJws = hasSelectedCentre && callJwsCentreIds.includes(parsedCentreId);
+    const centreIdsToUse = hasSelectedCentre
+      ? (selectedCentreIsJws ? [parsedCentreId] : [])
+      : callJwsCentreIds;
     const centreCondition =
-      callJwsCentreIds.length > 0
-        ? `AND f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})`
-        : '';
-    const useCentreFilter = callJwsCentreIds.length > 0;
+      centreIdsToUse.length > 0
+        ? `AND f.id_centre IN (${centreIdsToUse.map(() => '?').join(',')})`
+        : 'AND 1 = 0';
+    const useCentreFilter = centreIdsToUse.length > 0;
 
     const today = new Date();
     const todayStr = getTodayLocal();
@@ -2488,7 +2494,7 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
 
     const baseParams = (startDt, endDt) => {
       const p = [`${startDt} 00:00:00`, `${endDt} 23:59:59`];
-      if (useCentreFilter) p.push(...callJwsCentreIds);
+      if (useCentreFilter) p.push(...centreIdsToUse);
       return p;
     };
 
@@ -2531,7 +2537,7 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
       const prevTotalRow = await queryOne(totalSql, [
         `${previousStart} 00:00:00`,
         `${previousEnd} 23:59:59`,
-        ...(useCentreFilter ? callJwsCentreIds : []),
+        ...(useCentreFilter ? centreIdsToUse : []),
       ]);
 
       const totalLignes = Number(totalRow?.total_lignes) || 0;
@@ -2594,6 +2600,10 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
         period: period.label,
         date_start: period.start,
         date_end: period.end,
+        id_centre: hasSelectedCentre && selectedCentreIsJws ? parsedCentreId : null,
+        centre_scope: hasSelectedCentre
+          ? (selectedCentreIsJws ? 'selected_jws' : 'selected_non_jws')
+          : 'all_jws',
         ...payload,
       };
     }

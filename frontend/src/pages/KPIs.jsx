@@ -22,6 +22,7 @@ const KPIs = () => {
   const [activeTab, setActiveTab] = useState('qualification'); // qualification, confirmation, confirmation-jws, porte-ouverte
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois
   const [selectedMonth, setSelectedMonth] = useState(''); // Format: YYYY-MM
+  const [selectedPorteOuverteCentre, setSelectedPorteOuverteCentre] = useState('');
 
   // Générer la liste des mois (12 derniers mois)
   const getAvailableMonths = () => {
@@ -96,12 +97,26 @@ const KPIs = () => {
     }
   );
 
+  const { data: centresData } = useQuery(
+    ['kpis-centres-jws'],
+    async () => {
+      const res = await api.get('/management/centres');
+      return (res.data?.data || []).filter((c) =>
+        String(c?.titre || '').toUpperCase().includes('JWS')
+      );
+    },
+    { enabled: activeTab === 'porte-ouverte' }
+  );
+
   const { data: porteOuverteData, isLoading: isLoadingPorteOuverte, error: errorPorteOuverte } = useQuery(
-    ['kpis-porte-ouverte', selectedPeriod, selectedMonth],
+    ['kpis-porte-ouverte', selectedPeriod, selectedMonth, selectedPorteOuverteCentre],
     async () => {
       const params = {};
       if (selectedPeriod === 'mois' && selectedMonth) {
         params.month = selectedMonth;
+      }
+      if (selectedPorteOuverteCentre) {
+        params.id_centre = selectedPorteOuverteCentre;
       }
       const res = await api.get('/statistiques/kpis-porte-ouverte', { params });
       return res.data.data;
@@ -244,6 +259,24 @@ const KPIs = () => {
                 {getAvailableMonths().map(month => (
                   <option key={month.value} value={month.value}>
                     {month.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {activeTab === 'porte-ouverte' && (
+            <div className="month-selector">
+              <label htmlFor="porte-ouverte-centre-select">Centre :</label>
+              <select
+                id="porte-ouverte-centre-select"
+                value={selectedPorteOuverteCentre}
+                onChange={(e) => setSelectedPorteOuverteCentre(e.target.value)}
+                className="month-select"
+              >
+                <option value="">Tous les centres JWS</option>
+                {(centresData || []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.titre}
                   </option>
                 ))}
               </select>
