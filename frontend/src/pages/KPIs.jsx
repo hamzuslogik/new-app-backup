@@ -105,13 +105,13 @@ const KPIs = () => {
     }
   );
 
+  const PORTE_OUVERTE_ALL_JWS = '__ALL_JWS__';
+
   const { data: centresData } = useQuery(
-    ['kpis-centres-jws'],
+    ['kpis-centres-actifs'],
     async () => {
       const res = await api.get('/management/centres');
-      return (res.data?.data || []).filter((c) =>
-        String(c?.titre || '').toUpperCase().includes('JWS')
-      );
+      return (res.data?.data || []).filter((c) => Number(c?.etat) > 0);
     },
     { enabled: activeTab === 'porte-ouverte' }
   );
@@ -124,7 +124,11 @@ const KPIs = () => {
         params.month = selectedMonth;
       }
       if (selectedPorteOuverteCentre) {
-        params.id_centre = selectedPorteOuverteCentre;
+        if (selectedPorteOuverteCentre === PORTE_OUVERTE_ALL_JWS) {
+          params.centre_scope = 'all_jws';
+        } else {
+          params.id_centre = selectedPorteOuverteCentre;
+        }
       }
       if (porteOuverteDateDebut) {
         params.date_debut = porteOuverteDateDebut;
@@ -316,7 +320,8 @@ const KPIs = () => {
                 onChange={(e) => setSelectedPorteOuverteCentre(e.target.value)}
                 className="month-select"
               >
-                <option value="">Tous les centres JWS</option>
+                <option value="">Tous les centres</option>
+                <option value={PORTE_OUVERTE_ALL_JWS}>Tous les centres JWS</option>
                 {(centresData || []).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.titre}

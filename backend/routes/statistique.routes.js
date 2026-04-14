@@ -2439,7 +2439,7 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
 router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
   console.log('[STAT] /kpis-porte-ouverte - user:', req.user?.id, 'params:', req.query);
   try {
-    const { month, id_centre, date_debut, date_fin } = req.query;
+    const { month, id_centre, date_debut, date_fin, centre_scope } = req.query;
 
     const callJwsCentres = await query(`
       SELECT id FROM centres
@@ -2449,14 +2449,15 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
     const callJwsCentreIds = (callJwsCentres || []).map((c) => Number(c.id)).filter(Boolean);
     const parsedCentreId = Number(id_centre);
     const hasSelectedCentre = Number.isFinite(parsedCentreId) && parsedCentreId > 0;
+    const isAllJwsScope = String(centre_scope || '').toLowerCase() === 'all_jws';
     const selectedCentreIsJws = hasSelectedCentre && callJwsCentreIds.includes(parsedCentreId);
     const centreIdsToUse = hasSelectedCentre
-      ? (selectedCentreIsJws ? [parsedCentreId] : [])
-      : callJwsCentreIds;
+      ? [parsedCentreId]
+      : (isAllJwsScope ? callJwsCentreIds : []);
     const centreCondition =
       centreIdsToUse.length > 0
         ? `AND f.id_centre IN (${centreIdsToUse.map(() => '?').join(',')})`
-        : 'AND 1 = 0';
+        : '';
     const useCentreFilter = centreIdsToUse.length > 0;
 
     const today = new Date();
@@ -2655,10 +2656,10 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
         period: period.label,
         date_start: period.start,
         date_end: period.end,
-        id_centre: hasSelectedCentre && selectedCentreIsJws ? parsedCentreId : null,
+        id_centre: hasSelectedCentre ? parsedCentreId : null,
         centre_scope: hasSelectedCentre
           ? (selectedCentreIsJws ? 'selected_jws' : 'selected_non_jws')
-          : 'all_jws',
+          : (isAllJwsScope ? 'all_jws' : 'all_active'),
         ...payload,
       };
     }
