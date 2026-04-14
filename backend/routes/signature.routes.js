@@ -130,11 +130,13 @@ router.get('/', authenticate, async (req, res) => {
         f.prenom as fiche_prenom,
         f.tel as fiche_tel,
         f.id_etat_final as fiche_id_etat_final,
+        c.titre as centre_titre,
         u.pseudo as confirmateur_pseudo,
         u.nom as confirmateur_nom,
         u.prenom as confirmateur_prenom
       FROM signature s
       INNER JOIN fiches f ON s.id_fiche = f.id
+      LEFT JOIN centres c ON f.id_centre = c.id
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
       ${whereClause}
       ORDER BY ${sortColumn} ${normalizedOrder}, s.date_heure DESC, s.id DESC
@@ -217,11 +219,13 @@ router.get('/rejetees', authenticate, async (req, res) => {
         f.date_rdv_time as date_planning,
         f.nom as fiche_nom,
         f.prenom as fiche_prenom,
-        f.tel as fiche_tel
+        f.tel as fiche_tel,
+        c.titre as centre_titre
       FROM signatures_rejetees sr
       LEFT JOIN utilisateurs u_conf ON sr.confirmateur = u_conf.id
       LEFT JOIN utilisateurs u_rej ON sr.id_rejete_par = u_rej.id
       LEFT JOIN fiches f ON sr.id_fiche = f.id
+      LEFT JOIN centres c ON f.id_centre = c.id
       ${whereClause}
       ORDER BY sr.date_rejet DESC, sr.id DESC
       LIMIT ? OFFSET ?`,

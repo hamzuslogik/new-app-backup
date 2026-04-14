@@ -493,6 +493,7 @@ const Signatures = () => {
                       <th className="sortable-header" onClick={() => handleSort('confirmateur')}>
                         Confirmateur <span>{sortIndicator('confirmateur')}</span>
                       </th>
+                      <th>Centre</th>
                       <th>Fiche</th>
                       <th className="sortable-header" onClick={() => handleSort('telephone')}>
                         Téléphone <span>{sortIndicator('telephone')}</span>
@@ -506,6 +507,7 @@ const Signatures = () => {
                     <tr>
                       <th>Date rejet</th>
                       <th>Confirmateur</th>
+                      <th>Centre</th>
                       <th>Fiche</th>
                       <th>Téléphone</th>
                       <th>Score</th>
@@ -525,6 +527,7 @@ const Signatures = () => {
                         </td>
                         <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                         <td>{sig.confirmateur_pseudo || 'Inconnu'}</td>
+                        <td>{sig.centre_titre || '-'}</td>
                         <td>
                           {sig.id_fiche ? (
                             <FicheDetailLink ficheId={sig.id_fiche}>
@@ -567,6 +570,7 @@ const Signatures = () => {
                       <tr key={`rejected-${sig.id}`}>
                         <td>{sig.date_rejet ? formatRdvDateTime(sig.date_rejet) : '-'}</td>
                         <td>{sig.confirmateur_pseudo || 'Inconnu'}</td>
+                        <td>{sig.centre_titre || '-'}</td>
                         <td>
                           {sig.id_fiche ? (
                             <FicheDetailLink ficheId={sig.id_fiche}>
