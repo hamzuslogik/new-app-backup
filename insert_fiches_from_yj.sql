@@ -141,6 +141,7 @@ DELIMITER ;
 --   yj_fiche.ph3_mensualite (varchar) -> fiches.ph3_mensualite (decimal)
 --   yj_fiche.cq_etat (varchar) -> fiches.cq_etat (int)
 --   yj_fiche.cq_dossier (varchar) -> fiches.cq_dossier (int)
+--   yj_fiche.cq_etat, cq_dossier, cq_observations -> fiches.observations_cq (texte agrégé, valeurs brutes YJ)
 --   yj_fiche.archive (tinyint) -> fiches.archive (int)
 --   yj_fiche.valider (tinyint) -> fiches.valider (int)
 --   yj_fiche.nom_centre (varchar) -> fiches.id_centre (int) - conversion via table centres (titre = nom_centre)
@@ -175,7 +176,7 @@ INSERT INTO `fiches` (
   `conf_rdv_avec`,
   `conf_appel_tunisie_avec`, `conf_deja_etude`, `conf_revenu`, `conf_credit`, `conf_mode_chauffage`,
   `conf_consommation_chauffage`, `conf_rdv_annule_precedent`, `conf_type_contrat_mr`, `conf_type_contrat_madame`,
-  `cq_etat`, `cq_dossier`, `ph3_installateur`, `ph3_pac`, `ph3_puissance`,
+  `cq_etat`, `cq_dossier`, `observations_cq`, `ph3_installateur`, `ph3_pac`, `ph3_puissance`,
   `ph3_puissance_pv`, `ph3_rr_model`, `ph3_ballon`, `ph3_marque_ballon`, `ph3_alimentation`,
   `ph3_type`, `ph3_prix`, `ph3_bonus_30`, `ph3_mensualite`, `ph3_attente`, `nbr_annee_finance`,
   `credit_immobilier`, `credit_autre`, `hash`
@@ -523,6 +524,15 @@ SELECT
     THEN CAST(`cq_dossier` AS UNSIGNED)
     ELSE NULL
   END as `cq_dossier`,
+  -- observations_cq : copie des infos CQ depuis YJ (texte brut, y compris si non numérique)
+  NULLIF(
+    TRIM(CONCAT_WS(CHAR(10),
+      IF(NULLIF(TRIM(`cq_etat`), '') IS NULL, NULL, CONCAT('CQ état: ', TRIM(`cq_etat`))),
+      IF(NULLIF(TRIM(`cq_dossier`), '') IS NULL, NULL, CONCAT('CQ dossier: ', TRIM(`cq_dossier`))),
+      NULLIF(TRIM(`cq_observations`), '')
+    )),
+    ''
+  ) as `observations_cq`,
   -- PH3 installateur: convertir ph3_installateur de varchar vers int (si c'est un nombre)
   CASE 
     WHEN `ph3_installateur` != '' AND `ph3_installateur` REGEXP '^[0-9]+$'
@@ -614,7 +624,10 @@ ON DUPLICATE KEY UPDATE
   `conf_consommation_chauffage` = VALUES(`conf_consommation_chauffage`),
   `conf_rdv_annule_precedent` = VALUES(`conf_rdv_annule_precedent`),
   `conf_type_contrat_mr` = VALUES(`conf_type_contrat_mr`),
-  `conf_type_contrat_madame` = VALUES(`conf_type_contrat_madame`);
+  `conf_type_contrat_madame` = VALUES(`conf_type_contrat_madame`),
+  `cq_etat` = VALUES(`cq_etat`),
+  `cq_dossier` = VALUES(`cq_dossier`),
+  `observations_cq` = VALUES(`observations_cq`);
 
 -- =====================================================
 -- FIN DU SCRIPT
