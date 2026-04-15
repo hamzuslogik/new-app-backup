@@ -431,14 +431,23 @@ router.get('/week', authenticate, async (req, res) => {
       if (hasAnnuler) etats.push('AN');
       
       // Vérifier la présence du couple (indépendamment de l'état)
+      // Compatibilité: anciennes valeurs (MME SEUL..., NON) + nouvelles valeurs métier.
       const presenceCouple = String(fiche.conf_presence_couple || '').toUpperCase().trim();
-      const isRdvSeul = presenceCouple === 'MME SEULE SANS MR' ||
-                        presenceCouple === 'MR SEUL SANS MME' ||
-                        fiche.conf_rdv_avec === 'SEUL';
+      const isRdvSeul = [
+        'MME SEULE SANS MR',
+        'MME SEUL SANS MR',
+        'MR SEUL SANS MME',
+        'NON',
+      ].includes(presenceCouple) || fiche.conf_rdv_avec === 'SEUL';
       
       // Vérifier si RDV validé sans présence du couple
       const isRdvValidSansCouple = (fiche.valider === 1 || fiche.valider === true) &&
-                                    (presenceCouple === 'MME SEULE SANS MR' || presenceCouple === 'MR SEUL SANS MME');
+                                    [
+                                      'MME SEULE SANS MR',
+                                      'MME SEUL SANS MR',
+                                      'MR SEUL SANS MME',
+                                      'NON',
+                                    ].includes(presenceCouple);
       
       if (isRdvSeul) {
         etats.push('RS');
