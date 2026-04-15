@@ -1510,8 +1510,8 @@ body.dashboard-page {
 }
 
 .indicator.rs {
-  background: transparent;
-  color: #1e40af;
+  background: #1e40af;
+  color: #ffffff;
   border: 1px solid #1e40af;
 }
 
