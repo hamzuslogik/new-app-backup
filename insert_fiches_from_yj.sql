@@ -139,8 +139,9 @@ DELIMITER ;
 --   yj_fiche.ph3_prix (int) -> fiches.ph3_prix (decimal)
 --   yj_fiche.ph3_bonus_30 (varchar) -> fiches.ph3_bonus_30 (decimal)
 --   yj_fiche.ph3_mensualite (varchar) -> fiches.ph3_mensualite (decimal)
---   yj_fiche.cq_etat (varchar) -> fiches.cq_etat (int)
---   yj_fiche.cq_dossier (varchar) -> fiches.cq_dossier (int)
+--   yj_fiche.cq_etat (texte) -> fiches.cq_etat (int) : si chiffres uniquement = id cq_etat,
+--     sinon résolution par cq_etat.titre (trim, insensible à la casse)
+--   yj_fiche.cq_dossier (texte) -> fiches.cq_dossier (int) : idem via table cq_dossier
 --   yj_fiche.cq_etat, cq_dossier, cq_observations -> fiches.observations_cq (texte agrégé, valeurs brutes YJ)
 --   yj_fiche.archive (tinyint) -> fiches.archive (int)
 --   yj_fiche.valider (tinyint) -> fiches.valider (int)
@@ -512,18 +513,38 @@ SELECT
   NULLIF(TRIM(`conf_annulee_precedemment`), '') as `conf_rdv_annule_precedent`,
   NULL as `conf_type_contrat_mr`, -- Pas dans yj_fiche
   NULL as `conf_type_contrat_madame`, -- Pas dans yj_fiche
-  -- CQ état: convertir cq_etat de varchar vers int (si c'est un nombre)
-  CASE 
-    WHEN `cq_etat` != '' AND `cq_etat` REGEXP '^[0-9]+$'
-    THEN CAST(`cq_etat` AS UNSIGNED)
-    ELSE NULL
-  END as `cq_etat`,
-  -- CQ dossier: convertir cq_dossier de varchar vers int (si c'est un nombre)
-  CASE 
-    WHEN `cq_dossier` != '' AND `cq_dossier` REGEXP '^[0-9]+$'
-    THEN CAST(`cq_dossier` AS UNSIGNED)
-    ELSE NULL
-  END as `cq_dossier`,
+  -- CQ état : id (nombre pur) ou libellé -> cq_etat.id
+  COALESCE(
+    CASE
+      WHEN NULLIF(TRIM(`cq_etat`), '') IS NULL THEN NULL
+      WHEN TRIM(`cq_etat`) REGEXP '^[0-9]+$' THEN CAST(TRIM(`cq_etat`) AS UNSIGNED)
+      ELSE NULL
+    END,
+    (
+      SELECT e.id
+      FROM cq_etat e
+      WHERE e.titre IS NOT NULL
+        AND NULLIF(TRIM(`cq_etat`), '') IS NOT NULL
+        AND TRIM(LOWER(e.titre)) = TRIM(LOWER(`cq_etat`))
+      LIMIT 1
+    )
+  ) as `cq_etat`,
+  -- CQ dossier : id (nombre pur) ou libellé -> cq_dossier.id
+  COALESCE(
+    CASE
+      WHEN NULLIF(TRIM(`cq_dossier`), '') IS NULL THEN NULL
+      WHEN TRIM(`cq_dossier`) REGEXP '^[0-9]+$' THEN CAST(TRIM(`cq_dossier`) AS UNSIGNED)
+      ELSE NULL
+    END,
+    (
+      SELECT d.id
+      FROM cq_dossier d
+      WHERE d.titre IS NOT NULL
+        AND NULLIF(TRIM(`cq_dossier`), '') IS NOT NULL
+        AND TRIM(LOWER(d.titre)) = TRIM(LOWER(`cq_dossier`))
+      LIMIT 1
+    )
+  ) as `cq_dossier`,
   -- observations_cq : copie des infos CQ depuis YJ (texte brut, y compris si non numérique)
   NULLIF(
     TRIM(CONCAT_WS(CHAR(10),
