@@ -620,8 +620,17 @@ const Dashboard = () => {
   };
 
   // Vérifier les indicateurs dans l'historique basés sur les titres des états
-  const checkIndicators = (histoString) => {
-    if (!histoString || !etatsData) return { r2: false, rf: false, an: false };
+  const checkIndicators = (histoString, fiche = {}) => {
+    if (!histoString || !etatsData) {
+      const presenceCouple = String(fiche?.conf_presence_couple || '').toUpperCase().trim();
+      const hasRdvSeul = [
+        'MME SEULE SANS MR',
+        'MME SEUL SANS MR',
+        'MR SEUL SANS MME',
+        'NON',
+      ].includes(presenceCouple) || String(fiche?.conf_rdv_avec || '').toUpperCase().trim() === 'SEUL';
+      return { r2: false, rf: false, an: false, rs: hasRdvSeul };
+    }
     
     const histoArray = histoString.split(',').map(Number);
     let hasAnnuler = false;
@@ -648,10 +657,19 @@ const Dashboard = () => {
       }
     });
     
+    const presenceCouple = String(fiche?.conf_presence_couple || '').toUpperCase().trim();
+    const hasRdvSeul = [
+      'MME SEULE SANS MR',
+      'MME SEUL SANS MR',
+      'MR SEUL SANS MME',
+      'NON',
+    ].includes(presenceCouple) || String(fiche?.conf_rdv_avec || '').toUpperCase().trim() === 'SEUL';
+
     return {
       r2: hasR2,
       rf: hasRefuser,
-      an: hasAnnuler
+      an: hasAnnuler,
+      rs: hasRdvSeul,
     };
   };
 
@@ -1564,7 +1582,7 @@ const Dashboard = () => {
                 </thead>
                 <tbody>
                   {fiches.map((fiche) => {
-                    const indicators = checkIndicators(fiche.id_etat_histo);
+                    const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                     const etatColor = getEtatColor(fiche.id_etat_final, fiche);
                     const produitColor = getProduitColor(fiche.produit);
                     
@@ -1629,6 +1647,7 @@ const Dashboard = () => {
                             {indicators.r2 && <span className="indicator r2" title="Rappel">R2</span>}
                             {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
                             {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
+                            {indicators.rs && <span className="indicator rs" title="RDV seul">RDV SEUL</span>}
                           </div>
                           <button
                             onClick={() => {
