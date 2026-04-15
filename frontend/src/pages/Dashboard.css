@@ -1511,7 +1511,7 @@ body.dashboard-page {
 
 .indicator.rs {
   background: #1e40af;
-  color: #ffffff;
+  color: #ffffff !important;
   border: 1px solid #1e40af;
 }
 
