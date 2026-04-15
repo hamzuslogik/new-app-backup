@@ -79,59 +79,43 @@ SET
 
 -- ---------------------------------------------------------------------------
 -- C2) États 8 et 9 : fenêtre temporelle serrée (évite <CR> sur action confirmateur le même jour)
---     Par ligne fiches_histo : CR approuvé le plus proche en temps dans la fenêtre ;
---     en cas d’ex-aequo sur l’écart, on prend le CR d’id le plus grand (déterministe).
+--     MySQL : une TEMP TABLE ne peut pas être ouverte 2× dans la même requête → étapes séparées.
 -- ---------------------------------------------------------------------------
+DROP TEMPORARY TABLE IF EXISTS tmp_89_min_delta;
+CREATE TEMPORARY TABLE tmp_89_min_delta AS
+SELECT
+  fh3.id AS fh_id,
+  MIN(ABS(TIMESTAMPDIFF(SECOND, fh3.date_creation, cr.date_ref))) AS min_delta
+FROM fiches_histo fh3
+INNER JOIN tmp_cr_src cr
+  ON cr.id_fiche = fh3.id_fiche
+ AND cr.id_etat_final = fh3.id_etat
+ AND fh3.id_etat IN (8, 9)
+ AND ABS(TIMESTAMPDIFF(SECOND, fh3.date_creation, cr.date_ref)) <= @fenetre_sec_8_9
+GROUP BY fh3.id;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_89_pick_cr;
+CREATE TEMPORARY TABLE tmp_89_pick_cr AS
+SELECT
+  fh2.id AS fh_id,
+  MAX(cr.cr_id) AS pick_cr_id
+FROM fiches_histo fh2
+INNER JOIN tmp_89_min_delta m ON m.fh_id = fh2.id
+INNER JOIN tmp_cr_src cr
+  ON cr.id_fiche = fh2.id_fiche
+ AND cr.id_etat_final = fh2.id_etat
+ AND fh2.id_etat IN (8, 9)
+ AND ABS(TIMESTAMPDIFF(SECOND, fh2.date_creation, cr.date_ref)) = m.min_delta
+GROUP BY fh2.id;
+
 DROP TEMPORARY TABLE IF EXISTS tmp_cr_match_8_9;
 CREATE TEMPORARY TABLE tmp_cr_match_8_9 AS
 SELECT
   fh2.id AS fh_id,
-  src.id_commercial
+  cr.id_commercial
 FROM fiches_histo fh2
-INNER JOIN tmp_cr_src src
-  ON src.id_fiche = fh2.id_fiche
- AND src.id_etat_final = fh2.id_etat
- AND src.id_etat_final IN (8, 9)
- AND ABS(TIMESTAMPDIFF(SECOND, fh2.date_creation, src.date_ref)) <= @fenetre_sec_8_9
-INNER JOIN (
-  SELECT
-    fh3.id AS fh_id,
-    MIN(ABS(TIMESTAMPDIFF(SECOND, fh3.date_creation, src2.date_ref))) AS min_delta
-  FROM fiches_histo fh3
-  INNER JOIN tmp_cr_src src2
-    ON src2.id_fiche = fh3.id_fiche
-   AND src2.id_etat_final = fh3.id_etat
-   AND src2.id_etat_final IN (8, 9)
-   AND ABS(TIMESTAMPDIFF(SECOND, fh3.date_creation, src2.date_ref)) <= @fenetre_sec_8_9
-  GROUP BY fh3.id
-) best
-  ON best.fh_id = fh2.id
- AND ABS(TIMESTAMPDIFF(SECOND, fh2.date_creation, src.date_ref)) = best.min_delta
-INNER JOIN (
-  SELECT
-    fh4.id AS fh_id,
-    MAX(src3.cr_id) AS pick_cr_id
-  FROM fiches_histo fh4
-  INNER JOIN tmp_cr_src src3
-    ON src3.id_fiche = fh4.id_fiche
-   AND src3.id_etat_final = fh4.id_etat
-   AND src3.id_etat_final IN (8, 9)
-   AND ABS(TIMESTAMPDIFF(SECOND, fh4.date_creation, src3.date_ref)) <= @fenetre_sec_8_9
-  INNER JOIN (
-    SELECT
-      fh5.id AS fh_id,
-      MIN(ABS(TIMESTAMPDIFF(SECOND, fh5.date_creation, src4.date_ref))) AS min_delta
-    FROM fiches_histo fh5
-    INNER JOIN tmp_cr_src src4
-      ON src4.id_fiche = fh5.id_fiche
-     AND src4.id_etat_final = fh5.id_etat
-     AND src4.id_etat_final IN (8, 9)
-     AND ABS(TIMESTAMPDIFF(SECOND, fh5.date_creation, src4.date_ref)) <= @fenetre_sec_8_9
-    GROUP BY fh5.id
-  ) b2 ON b2.fh_id = fh4.id
-    AND ABS(TIMESTAMPDIFF(SECOND, fh4.date_creation, src3.date_ref)) = b2.min_delta
-  GROUP BY fh4.id
-) pick ON pick.fh_id = fh2.id AND pick.pick_cr_id = src.cr_id;
+INNER JOIN tmp_89_pick_cr p ON p.fh_id = fh2.id
+INNER JOIN tmp_cr_src cr ON cr.cr_id = p.pick_cr_id;
 
 UPDATE fiches_histo fh
 INNER JOIN tmp_cr_match_8_9 m ON m.fh_id = fh.id
