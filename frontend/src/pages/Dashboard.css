@@ -1509,6 +1509,12 @@ body.dashboard-page {
   color: white;
 }
 
+.indicator.rs {
+  background: transparent;
+  color: #1e40af;
+  border: 1px solid #1e40af;
+}
+
 .indicator.valid {
   background: #4BB543;
   color: white;

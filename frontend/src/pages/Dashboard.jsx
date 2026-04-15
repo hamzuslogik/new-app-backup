@@ -1647,7 +1647,7 @@ const Dashboard = () => {
                             {indicators.r2 && <span className="indicator r2" title="Rappel">R2</span>}
                             {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
                             {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
-                            {indicators.rs && <span className="indicator rs" title="RDV seul">RDV SEUL</span>}
+                            {indicators.rs && <span className="indicator rs" title="SEUL">SEUL</span>}
                           </div>
                           <button
                             onClick={() => {
