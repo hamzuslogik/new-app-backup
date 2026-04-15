@@ -108,4 +108,45 @@ HAVING COUNT(*) > 1;
 SELECT 'Compte_rendu_pending par statut (info seulement)' AS info;
 SELECT statut, COUNT(*) AS nb FROM `compte_rendu_pending` GROUP BY statut;
 
+-- ---------------------------------------------------------------------------
+-- Diagnostic final : CR encore non migrés/non liés à fiches_histo
+-- (même logique de rapprochement utilisée dans ce script: fiche + état + même jour)
+-- ---------------------------------------------------------------------------
+SELECT 'Diagnostic final - compte_rendu_pending non liés à fiches_histo (from_compte_rendu=1)' AS info;
+SELECT
+  COUNT(*) AS nb_cr_non_migres
+FROM `compte_rendu_pending` cr
+WHERE cr.id_commercial IS NOT NULL
+  AND cr.id_etat_final IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM `fiches_histo` fh
+    WHERE fh.id_fiche = cr.id_fiche
+      AND fh.id_etat = cr.id_etat_final
+      AND DATE(fh.date_creation) = DATE(COALESCE(cr.date_modif, cr.date_creation))
+      AND fh.from_compte_rendu = 1
+  );
+
+SELECT
+  cr.id,
+  cr.id_fiche,
+  cr.statut,
+  cr.id_etat_final,
+  cr.id_commercial,
+  COALESCE(cr.date_modif, cr.date_creation) AS date_ref,
+  DATE(COALESCE(cr.date_modif, cr.date_creation)) AS date_jour
+FROM `compte_rendu_pending` cr
+WHERE cr.id_commercial IS NOT NULL
+  AND cr.id_etat_final IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM `fiches_histo` fh
+    WHERE fh.id_fiche = cr.id_fiche
+      AND fh.id_etat = cr.id_etat_final
+      AND DATE(fh.date_creation) = DATE(COALESCE(cr.date_modif, cr.date_creation))
+      AND fh.from_compte_rendu = 1
+  )
+ORDER BY COALESCE(cr.date_modif, cr.date_creation) DESC, cr.id DESC
+LIMIT 200;
+
 SELECT 'Script terminé.' AS message;
