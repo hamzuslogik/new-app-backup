@@ -516,32 +516,42 @@ SELECT
   -- CQ état : id (nombre pur) ou libellé -> cq_etat.id
   COALESCE(
     CASE
-      WHEN NULLIF(TRIM(`cq_etat`), '') IS NULL THEN NULL
-      WHEN TRIM(`cq_etat`) REGEXP '^[0-9]+$' THEN CAST(TRIM(`cq_etat`) AS UNSIGNED)
+      WHEN NULLIF(TRIM(REPLACE(REPLACE(REPLACE(`cq_etat`, CHAR(13), ''), CHAR(10), ''), CHAR(9), '')), '') IS NULL THEN NULL
+      WHEN TRIM(REPLACE(REPLACE(REPLACE(`cq_etat`, CHAR(13), ''), CHAR(10), ''), CHAR(9), '')) REGEXP '^[0-9]+$'
+        THEN CAST(TRIM(REPLACE(REPLACE(REPLACE(`cq_etat`, CHAR(13), ''), CHAR(10), ''), CHAR(9), '')) AS UNSIGNED)
       ELSE NULL
     END,
     (
       SELECT e.id
       FROM cq_etat e
       WHERE e.titre IS NOT NULL
-        AND NULLIF(TRIM(`cq_etat`), '') IS NOT NULL
-        AND TRIM(LOWER(e.titre)) = TRIM(LOWER(`cq_etat`))
+        AND NULLIF(TRIM(REPLACE(REPLACE(REPLACE(`cq_etat`, CHAR(13), ''), CHAR(10), ''), CHAR(9), '')), '') IS NOT NULL
+        AND TRIM(
+          REPLACE(REPLACE(REPLACE(LOWER(e.titre), CHAR(13), ''), CHAR(10), ''), CHAR(9), '')
+        ) = TRIM(
+          REPLACE(REPLACE(REPLACE(LOWER(`cq_etat`), CHAR(13), ''), CHAR(10), ''), CHAR(9), '')
+        )
       LIMIT 1
     )
   ) as `cq_etat`,
   -- CQ dossier : id (nombre pur) ou libellé -> cq_dossier.id
   COALESCE(
     CASE
-      WHEN NULLIF(TRIM(`cq_dossier`), '') IS NULL THEN NULL
-      WHEN TRIM(`cq_dossier`) REGEXP '^[0-9]+$' THEN CAST(TRIM(`cq_dossier`) AS UNSIGNED)
+      WHEN NULLIF(TRIM(REPLACE(REPLACE(REPLACE(`cq_dossier`, CHAR(13), ''), CHAR(10), ''), CHAR(9), '')), '') IS NULL THEN NULL
+      WHEN TRIM(REPLACE(REPLACE(REPLACE(`cq_dossier`, CHAR(13), ''), CHAR(10), ''), CHAR(9), '')) REGEXP '^[0-9]+$'
+        THEN CAST(TRIM(REPLACE(REPLACE(REPLACE(`cq_dossier`, CHAR(13), ''), CHAR(10), ''), CHAR(9), '')) AS UNSIGNED)
       ELSE NULL
     END,
     (
       SELECT d.id
       FROM cq_dossier d
       WHERE d.titre IS NOT NULL
-        AND NULLIF(TRIM(`cq_dossier`), '') IS NOT NULL
-        AND TRIM(LOWER(d.titre)) = TRIM(LOWER(`cq_dossier`))
+        AND NULLIF(TRIM(REPLACE(REPLACE(REPLACE(`cq_dossier`, CHAR(13), ''), CHAR(10), ''), CHAR(9), '')), '') IS NOT NULL
+        AND TRIM(
+          REPLACE(REPLACE(REPLACE(LOWER(d.titre), CHAR(13), ''), CHAR(10), ''), CHAR(9), '')
+        ) = TRIM(
+          REPLACE(REPLACE(REPLACE(LOWER(`cq_dossier`), CHAR(13), ''), CHAR(10), ''), CHAR(9), '')
+        )
       LIMIT 1
     )
   ) as `cq_dossier`,
