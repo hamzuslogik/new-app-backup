@@ -3650,8 +3650,11 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 else if ([13, 16, 45, 44].includes(etatId)) {
                   if (etatData.sous_etat_titre) items.push({ label: 'SOUS ETAT', value: etatData.sous_etat_titre });
                   if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurEtatListe });
-                  // Afficher le commentaire commercial s'il existe (après création d'un compte rendu approuvé)
-                  if (etatData.commentaire_commercial) {
+                  // Signer/historique: priorité au commentaire enregistré dans fiches_histo (conf_commentaire_produit)
+                  if (etatData.conf_commentaire_produit) {
+                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  } else if (etatData.commentaire_commercial) {
+                    // Fallback si aucun commentaire historisé n'existe pour la ligne
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
                   }
                   if (etatData.ph3_pac) {
@@ -3678,6 +3681,10 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   if (etatData.ph3_nbr_annee_finance) items.push({ label: 'Nombre de mois du crédit', value: etatData.ph3_nbr_annee_finance });
                   if (etatData.ph3_alimentation) items.push({ label: 'Alimentation', value: etatData.ph3_alimentation });
                   if (etatData.date_sign_time) items.push({ label: 'DATE SIGNATURE', value: new Date(etatData.date_sign_time).toLocaleString('fr-FR') });
+                  // Contrôle qualité : affichage uniquement pour les états signer (actuel + historique)
+                  if (etatData.cq_etat) items.push({ label: 'CQ ETAT', value: etatData.cq_etat });
+                  if (etatData.cq_dossier) items.push({ label: 'CQ DOSSIER', value: etatData.cq_dossier });
+                  if (etatData.observations_cq) items.push({ label: 'Observation', value: etatData.observations_cq, fullWidth: true });
                 }
                 // CONFIRMER (7) — afficher tous les champs conf_ remplis (non null) ; si entrée CR : commentaire commercial uniquement
                 else if (etatId === 7) {
@@ -3730,12 +3737,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     const produitText = produits?.find(p => p.id == etatData.produit)?.nom || (etatData.produit === 1 ? 'PAC' : etatData.produit === 2 ? 'PV' : etatData.produit);
                     items.push({ label: 'Produit', value: produitText });
                   }
-                }
-                // Contrôle qualité (observations_cq = champ dédié CQ signature)
-                else if (etatData.cq_etat || etatData.cq_dossier) {
-                  if (etatData.cq_etat) items.push({ label: 'CQ ETAT', value: etatData.cq_etat });
-                  if (etatData.cq_dossier) items.push({ label: 'CQ DOSSIER', value: etatData.cq_dossier });
-                  if (etatData.observations_cq) items.push({ label: 'Observation', value: etatData.observations_cq, fullWidth: true });
                 }
                 // Par défaut
                 else {
