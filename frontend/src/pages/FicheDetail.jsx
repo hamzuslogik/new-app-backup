@@ -3165,13 +3165,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   const raw = (fiche.conf_presence_couple !== undefined && fiche.conf_presence_couple !== null && String(fiche.conf_presence_couple).trim() !== '')
                     ? String(fiche.conf_presence_couple).toUpperCase()
                     : (fiche.conf_rdv_avec || fiche.rdv_avec)
-                      ? (fiche.conf_rdv_avec === 'SEUL' || fiche.rdv_avec === 'SEUL' ? 'NON' : 'OUI')
+                      ? (fiche.conf_rdv_avec === 'SEUL' || fiche.rdv_avec === 'SEUL' ? 'MR SEUL SANS MME' : 'RAS PRESENCE CLIENT(S)')
                       : null;
                   return raw || '-';
                 })(),
                 'select', [
-                  { value: 'OUI', label: 'Oui (couple présent)' },
-                  { value: 'NON', label: 'Non (RDV seul)' }
+                  { value: 'RAS PRESENCE CLIENT(S)', label: 'RAS PRESENCE CLIENT(S)' },
+                  { value: 'MME SEULE SANS MR', label: 'MME SEULE SANS MR' },
+                  { value: 'MR SEUL SANS MME', label: 'MR SEUL SANS MME' }
                 ])}
             </tbody>
           </table>
@@ -4134,8 +4135,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                                   style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
                                 >
                                   <option value="">Sélectionner...</option>
-                                  <option value="OUI">OUI</option>
-                                  <option value="NON">NON</option>
+                                  <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
+                                  <option value="MME SEULE SANS MR">MME SEULE SANS MR</option>
+                                  <option value="MR SEUL SANS MME">MR SEUL SANS MME</option>
                                 </select>
                               </div>
 
@@ -5538,8 +5540,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                           onChange={(e) => setConfFormData({...confFormData, conf_deja_etude: e.target.value})}
                         >
                           <option value="">Sélectionner</option>
-                          <option value="OUI">OUI</option>
-                          <option value="NON">NON</option>
+                          <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
+                          <option value="MME SEULE SANS MR">MME SEULE SANS MR</option>
+                          <option value="MR SEUL SANS MME">MR SEUL SANS MME</option>
                         </select>
                       </td>
                     </tr>
@@ -6809,8 +6812,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                     style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
                   >
                     <option value="">Sélectionner...</option>
-                    <option value="OUI">OUI</option>
-                    <option value="NON">NON</option>
+                    <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
+                    <option value="MME SEULE SANS MR">MME SEULE SANS MR</option>
+                    <option value="MR SEUL SANS MME">MR SEUL SANS MME</option>
                   </select>
                 </div>
                 <button
@@ -8843,8 +8847,9 @@ const CreateRdvModal = ({
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_deja_etude: e.target.value})}
                     >
                       <option value="">Sélectionner</option>
-                      <option value="OUI">OUI</option>
-                      <option value="NON">NON</option>
+                      <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
+                      <option value="MME SEULE SANS MR">MME SEULE SANS MR</option>
+                      <option value="MR SEUL SANS MME">MR SEUL SANS MME</option>
                     </select>
                   </td>
                 </tr>
