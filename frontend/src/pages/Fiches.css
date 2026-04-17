@@ -944,7 +944,7 @@ table.fiches-table thead,
 .modal-header h2 {
   margin: 0;
   font-size: 17px;
-  color: white !important;
+  color: #000 !important;
 }
 
 .modal-close {
