@@ -14,7 +14,7 @@ import './ProductionQualif.css';
 const ProductionQualif = () => {
   const { user } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
-  const [viewMode, setViewMode] = useState('stats'); // 'stats' ou 'fiches'
+  const [viewMode, setViewMode] = useState('stats'); // 'stats' (RP) ou 'fiches' (RP + superviseur)
   const [searchTerm, setSearchTerm] = useState('');
   const [isMultiSelectOpen, setIsMultiSelectOpen] = useState(false);
   const multiSelectRef = useRef(null);
@@ -40,6 +40,14 @@ const ProductionQualif = () => {
   // Vérifier si l'utilisateur peut modifier/créer des commentaires qualité
   // Seul Admin (fonction 1) peut modifier
   const canEditCommentaireQualite = isAdmin;
+
+  // Les superviseurs qualification (fonction 2) n'ont pas de stats via /production-qualif
+  // On les bascule automatiquement sur la vue "Fiches".
+  useEffect(() => {
+    if (isSuperviseurQualif && viewMode !== 'fiches') {
+      setViewMode('fiches');
+    }
+  }, [isSuperviseurQualif, viewMode]);
 
   // Récupérer les superviseurs assignés au RP Qualification
   const { data: superviseursData } = useQuery(
@@ -481,12 +489,14 @@ const ProductionQualif = () => {
         <div className="header-actions">
           {(isRPQualif || isSuperviseurQualif) && (
             <div className="view-mode-toggle noprint">
-              <button
-                className={`mode-btn ${viewMode === 'stats' ? 'active' : ''}`}
-                onClick={() => setViewMode('stats')}
-              >
-                <FaChartBar /> Statistiques
-              </button>
+              {isRPQualif && (
+                <button
+                  className={`mode-btn ${viewMode === 'stats' ? 'active' : ''}`}
+                  onClick={() => setViewMode('stats')}
+                >
+                  <FaChartBar /> Statistiques
+                </button>
+              )}
               <button
                 className={`mode-btn ${viewMode === 'fiches' ? 'active' : ''}`}
                 onClick={() => setViewMode('fiches')}
