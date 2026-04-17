@@ -4386,11 +4386,11 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
 
     // Liste des colonnes valides dans la table fiches (basée sur database_schema.sql)
     const validColumns = [
-      'civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville', 'etude',
+      'civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville', 'etude', 'etude_raison',
       'consommation_chauffage', 'surface_habitable', 'annee_systeme_chauffage', 'surface_chauffee',
           'proprietaire_maison', 'nb_pieces', 'nb_pans', 'age_maison', 'orientation_toiture', 'produit',
           'site_classe', 'zones_ombres',
-          'nb_chemines', 'mode_chauffage', 'complement_chauffage', 'consommation_electricite', 'age_mr', 'age_madame',
+          'nb_chemines', 'mode_chauffage', 'complement_chauffage', 'consommation_electricite', 'circuit_eau', 'age_mr', 'age_madame',
       'revenu_foyer', 'credit_foyer', 'situation_conjugale', 'nb_enfants', 'profession_mr',
       'profession_madame', 'type_contrat_mr', 'type_contrat_madame', 'commentaire', 'id_agent', 'id_centre', 'id_insert', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_qualite', 'id_qualif', 'id_commercial',

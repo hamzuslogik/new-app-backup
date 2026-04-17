@@ -1170,6 +1170,7 @@ const Fiches = () => {
           confirmateurs={confirmateurs}
           commerciaux={commerciaux}
           etats={etats}
+          produits={produitsData || []}
           professions={professionsData || []}
           modeChauffage={modeChauffageData || []}
           etudeRaison={etudeRaisonData || []}
@@ -1189,6 +1190,7 @@ const Fiches = () => {
           confirmateurs={confirmateurs}
           commerciaux={commerciaux}
           etats={etats}
+          produits={produitsData || []}
           professions={professionsData || []}
           modeChauffage={modeChauffageData || []}
           etudeRaison={etudeRaisonData || []}
@@ -1211,6 +1213,7 @@ const FicheFormModal = ({
   confirmateurs, 
   commerciaux, 
   etats,
+  produits = [],
   professions,
   modeChauffage,
   etudeRaison,
@@ -1221,6 +1224,23 @@ const FicheFormModal = ({
 }) => {
   const { user } = useAuth();
   const isEdit = !!fiche;
+  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } =
+    getEtatsGroupedByPhase(etats || []);
+
+  const formatDateAppelForInput = (f) => {
+    if (!f) return '';
+    const raw = f.date_appel_time != null ? f.date_appel_time : f.date_appel;
+    if (raw == null || raw === '') return '';
+    if (typeof raw === 'number') {
+      const sec = raw < 1e12 ? raw : Math.floor(raw / 1000);
+      const d = new Date(sec * 1000);
+      if (Number.isNaN(d.getTime())) return '';
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    const s = String(raw);
+    return s.length >= 16 ? s.slice(0, 16).replace(' ', 'T') : '';
+  };
   
   // Bloquer le scroll du body quand le modal est ouvert
   useModalScrollLock(true);
@@ -1236,8 +1256,8 @@ const FicheFormModal = ({
     adresse: fiche?.adresse || '',
     cp: fiche?.cp || '',
     ville: fiche?.ville || '',
-    situation_conjugale: fiche?.situation_conjugale || 'MARIE',
-    produit: fiche?.produit || 1,
+    situation_conjugale: fiche?.situation_conjugale || '',
+    produit: fiche?.produit != null && String(fiche.produit) !== '' ? fiche.produit : '',
     id_centre: fiche?.id_centre || user?.centre || '',
     id_agent: fiche?.id_agent || user?.id || '',
     id_etat_final: fiche?.id_etat_final || 1,
@@ -1267,6 +1287,9 @@ const FicheFormModal = ({
     nb_pieces: fiche?.nb_pieces || '',
     etude: fiche?.etude || 'NON',
     etude_raison: fiche?.etude_raison || '',
+    date_appel: formatDateAppelForInput(fiche),
+    conf_presence_couple: fiche?.conf_presence_couple || '',
+    nb_pans: fiche?.nb_pans ?? '',
     orientation_toiture: fiche?.orientation_toiture || '',
     site_classe: fiche?.site_classe || '',
     zones_ombres: fiche?.zones_ombres || '',
@@ -1283,11 +1306,44 @@ const FicheFormModal = ({
     }));
   };
 
+  const produitOptions =
+    produits && produits.length > 0
+      ? produits
+      : [
+          { id: 1, nom: 'PAC' },
+          { id: 2, nom: 'PV' }
+        ];
+  const produitNomUpper = (
+    produitOptions.find((p) => String(p.id) === String(formData.produit))?.nom || ''
+  )
+    .trim()
+    .toUpperCase();
+  // Même logique qu'index.php (toggleProductFields) : PV explicite, sinon PAC
+  const showPvFields = produitNomUpper === 'PV';
+  const showPacFields = produitNomUpper === 'PAC';
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
     // Préparer les données pour l'envoi
     const submitData = { ...formData };
+
+    // date_appel (bigint côté API) : datetime-local -> secondes UNIX
+    if (submitData.date_appel) {
+      const d = new Date(submitData.date_appel);
+      if (!Number.isNaN(d.getTime())) {
+        submitData.date_appel = Math.floor(d.getTime() / 1000);
+      } else {
+        delete submitData.date_appel;
+      }
+    } else {
+      delete submitData.date_appel;
+    }
+
+    if (submitData.nb_pans !== '' && submitData.nb_pans != null) {
+      const n = parseInt(String(submitData.nb_pans), 10);
+      submitData.nb_pans = Number.isFinite(n) ? n : null;
+    }
     
     // Combiner date et heure du RDV
     if (submitData.date_rdv_time && submitData.date_rdv_time_hour) {
@@ -1298,6 +1354,14 @@ const FicheFormModal = ({
     
     // Supprimer les champs temporaires
     delete submitData.date_rdv_time_hour;
+
+    // Champs non persistés en base (ignorés côté serveur si envoyés)
+    delete submitData.email;
+
+    if (submitData.produit !== '' && submitData.produit != null) {
+      const pi = parseInt(String(submitData.produit), 10);
+      submitData.produit = Number.isFinite(pi) ? pi : null;
+    }
     
     // Convertir les valeurs vides en null
     Object.keys(submitData).forEach(key => {
@@ -1367,15 +1431,45 @@ const FicheFormModal = ({
                   <label>Ville</label>
                   <input type="text" name="ville" value={formData.ville} onChange={handleChange} />
                 </div>
+              </div>
+            </div>
+
+            <div className="form-section">
+              <h3>Informations d&apos;appel</h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Date et heure d&apos;appel</label>
+                  <input
+                    type="datetime-local"
+                    name="date_appel"
+                    value={formData.date_appel || ''}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-section">
+              <h3>Critères client</h3>
+              <div className="form-grid">
                 <div className="form-group">
                   <label>Situation conjugale</label>
                   <select name="situation_conjugale" value={formData.situation_conjugale} onChange={handleChange}>
-                    <option value="MARIE">Marié</option>
-                    <option value="CELIBATAIRE">Célibataire</option>
-                    <option value="CONCUBINAGE">Concubinage</option>
-                    <option value="VEUF/VEUVE">Veuf/Veuve</option>
-                    <option value="DIVORCE">Divorcé</option>
-                    <option value="PAXE">Pacsé</option>
+                    <option value="">-- Sélectionner --</option>
+                    <option value="Célibataire">Célibataire</option>
+                    <option value="Marié(e)">Marié(e)</option>
+                    <option value="Concubinage">Concubinage</option>
+                    <option value="Divorcé(e)">Divorcé(e)</option>
+                    <option value="Veuf(ve)">Veuf(ve)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Entretien avec</label>
+                  <select name="conf_presence_couple" value={formData.conf_presence_couple || ''} onChange={handleChange}>
+                    <option value="">-- Sélectionner --</option>
+                    <option value="Monsieur">Monsieur</option>
+                    <option value="Madame">Madame</option>
+                    <option value="Couple">Couple</option>
                   </select>
                 </div>
               </div>
@@ -1444,7 +1538,7 @@ const FicheFormModal = ({
               </div>
             </div>
 
-            {/* Section Informations logement */}
+            {/* Section Informations logement (répartition PAC / PV comme index.php) */}
             <div className="form-section">
               <h3>Informations logement</h3>
               <div className="form-grid">
@@ -1457,57 +1551,144 @@ const FicheFormModal = ({
                     <option value="LES DEUX">LES DEUX</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Surface habitable</label>
-                  <input type="text" name="surface_habitable" value={formData.surface_habitable || ''} onChange={handleChange} />
-                </div>
-                <div className="form-group">
-                  <label>Surface chauffée</label>
-                  <input type="text" name="surface_chauffee" value={formData.surface_chauffee || ''} onChange={handleChange} />
-                </div>
-                <div className="form-group">
-                  <label>Année système chauffage</label>
-                  <input type="number" name="annee_systeme_chauffage" value={formData.annee_systeme_chauffage || ''} onChange={handleChange} min="1970" max={new Date().getFullYear()} />
-                </div>
-                <div className="form-group">
-                  <label>Mode de chauffage</label>
-                  <select name="mode_chauffage" value={formData.mode_chauffage || ''} onChange={handleChange}>
-                    <option value="">Sélectionner</option>
-                    {modeChauffage.map(mode => (
-                      <option key={mode.id} value={mode.nom || mode.titre || ''}>{mode.nom || mode.titre || mode.id}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Complément de chauffage (qualification)</label>
-                  <input
-                    type="text"
-                    name="complement_chauffage"
-                    value={formData.complement_chauffage || ''}
-                    onChange={handleChange}
-                    placeholder="Ex : appoint, poêle, précision sur le mode…"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Consommation chauffage</label>
-                  <input type="text" name="consommation_chauffage" value={formData.consommation_chauffage || ''} onChange={handleChange} />
-                </div>
-                <div className="form-group">
-                  <label>Consommation électricité</label>
-                  <input type="text" name="consommation_electricite" value={formData.consommation_electricite || ''} onChange={handleChange} />
-                </div>
-                <div className="form-group">
-                  <label>Circuit eau</label>
-                  <select name="circuit_eau" value={formData.circuit_eau || ''} onChange={handleChange}>
-                    <option value="">Sélectionner</option>
-                    <option value="OUI">OUI</option>
-                    <option value="NON">NON</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Nombre de pièces</label>
-                  <input type="number" name="nb_pieces" value={formData.nb_pieces || ''} onChange={handleChange} min="0" />
-                </div>
+                {showPvFields && (
+                  <>
+                    <div className="form-group">
+                      <label>Surface bâtie au sol (m²)</label>
+                      <input type="text" name="surface_habitable" value={formData.surface_habitable || ''} onChange={handleChange} placeholder="Ex: 120" />
+                    </div>
+                    <div className="form-group">
+                      <label>Nombre de pans</label>
+                      <input type="number" name="nb_pans" value={formData.nb_pans ?? ''} onChange={handleChange} min="1" />
+                    </div>
+                    <div className="form-group">
+                      <label>Consommation électricité</label>
+                      <input type="text" name="consommation_electricite" value={formData.consommation_electricite || ''} onChange={handleChange} placeholder="Ex: 800 €/an" />
+                    </div>
+                  </>
+                )}
+                {showPacFields && (
+                  <>
+                    <div className="form-group">
+                      <label>Surface habitable (m²)</label>
+                      <input type="text" name="surface_habitable" value={formData.surface_habitable || ''} onChange={handleChange} placeholder="Ex: 120" />
+                    </div>
+                    <div className="form-group">
+                      <label>Nombre de pièces</label>
+                      <input type="number" name="nb_pieces" value={formData.nb_pieces || ''} onChange={handleChange} min="0" />
+                    </div>
+                    <div className="form-group">
+                      <label>Mode de chauffage</label>
+                      <select name="mode_chauffage" value={formData.mode_chauffage || ''} onChange={handleChange}>
+                        <option value="">Sélectionner</option>
+                        {modeChauffage.map(mode => (
+                          <option key={mode.id} value={mode.nom || mode.titre || ''}>{mode.nom || mode.titre || mode.id}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Complément de chauffage (qualification)</label>
+                      <input
+                        type="text"
+                        name="complement_chauffage"
+                        value={formData.complement_chauffage || ''}
+                        onChange={handleChange}
+                        placeholder="Ex : appoint, poêle, précision sur le mode…"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Année système chauffage</label>
+                      <input
+                        type="text"
+                        name="annee_systeme_chauffage"
+                        value={formData.annee_systeme_chauffage || ''}
+                        onChange={handleChange}
+                        placeholder="Ex: 2015, récent, avant 2010, ne sait pas"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Surface chauffée</label>
+                      <input type="text" name="surface_chauffee" value={formData.surface_chauffee || ''} onChange={handleChange} placeholder="Ex: 100" />
+                    </div>
+                    <div className="form-group">
+                      <label>Consommation chauffage</label>
+                      <input type="text" name="consommation_chauffage" value={formData.consommation_chauffage || ''} onChange={handleChange} placeholder="Ex: 1500 €/an" />
+                    </div>
+                    <div className="form-group">
+                      <label>Circuit eau</label>
+                      <select name="circuit_eau" value={formData.circuit_eau || ''} onChange={handleChange}>
+                        <option value="">Sélectionner</option>
+                        <option value="OUI">OUI</option>
+                        <option value="NON">NON</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                {!showPacFields && !showPvFields && (
+                  <>
+                    <div className="form-group">
+                      <label>Surface habitable</label>
+                      <input type="text" name="surface_habitable" value={formData.surface_habitable || ''} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                      <label>Surface chauffée</label>
+                      <input type="text" name="surface_chauffee" value={formData.surface_chauffee || ''} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                      <label>Année système chauffage</label>
+                      <input
+                        type="text"
+                        name="annee_systeme_chauffage"
+                        value={formData.annee_systeme_chauffage || ''}
+                        onChange={handleChange}
+                        placeholder="Ex: 2015, récent, avant 2010, ne sait pas"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Mode de chauffage</label>
+                      <select name="mode_chauffage" value={formData.mode_chauffage || ''} onChange={handleChange}>
+                        <option value="">Sélectionner</option>
+                        {modeChauffage.map(mode => (
+                          <option key={mode.id} value={mode.nom || mode.titre || ''}>{mode.nom || mode.titre || mode.id}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Complément de chauffage (qualification)</label>
+                      <input
+                        type="text"
+                        name="complement_chauffage"
+                        value={formData.complement_chauffage || ''}
+                        onChange={handleChange}
+                        placeholder="Ex : appoint, poêle, précision sur le mode…"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Consommation chauffage</label>
+                      <input type="text" name="consommation_chauffage" value={formData.consommation_chauffage || ''} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                      <label>Consommation électricité</label>
+                      <input type="text" name="consommation_electricite" value={formData.consommation_electricite || ''} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                      <label>Circuit eau</label>
+                      <select name="circuit_eau" value={formData.circuit_eau || ''} onChange={handleChange}>
+                        <option value="">Sélectionner</option>
+                        <option value="OUI">OUI</option>
+                        <option value="NON">NON</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Nombre de pièces</label>
+                      <input type="number" name="nb_pieces" value={formData.nb_pieces || ''} onChange={handleChange} min="0" />
+                    </div>
+                    <div className="form-group">
+                      <label>Nombre de pans</label>
+                      <input type="number" name="nb_pans" value={formData.nb_pans ?? ''} onChange={handleChange} min="1" />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1518,8 +1699,10 @@ const FicheFormModal = ({
                 <div className="form-group">
                   <label>Produit *</label>
                   <select name="produit" value={formData.produit} onChange={handleChange} required>
-                    <option value="1">PAC</option>
-                    <option value="2">PV</option>
+                    <option value="">-- Sélectionner --</option>
+                    {produitOptions.map((p) => (
+                      <option key={p.id} value={p.id}>{p.nom || p.titre || `Produit ${p.id}`}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
@@ -1540,7 +1723,7 @@ const FicheFormModal = ({
                     </select>
                   </div>
                 )}
-                {formData.produit == 2 && (
+                {showPvFields && (
                   <>
                     <div className="form-group">
                       <label>Orientation toiture</label>
@@ -1555,8 +1738,8 @@ const FicheFormModal = ({
                       </select>
                     </div>
                     <div className="form-group">
-                      <label>Zones d'ombres</label>
-                      <input type="text" name="zones_ombres" value={formData.zones_ombres || ''} onChange={handleChange} />
+                      <label>Zones d&apos;ombres</label>
+                      <input type="text" name="zones_ombres" value={formData.zones_ombres || ''} onChange={handleChange} placeholder="Décrire les zones d&apos;ombres" />
                     </div>
                   </>
                 )}
