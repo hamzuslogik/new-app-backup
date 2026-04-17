@@ -19,8 +19,10 @@ const Fiches = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isAgentQualif = user?.fonction === 3;
-  /** Superviseur qualification (RE qualif) : même besoin que l’agent d’un chargement auto des fiches du jour */
+  /** Superviseur qualification (RE qualif) : chargement auto des fiches du jour (périmètre agents) */
   const isSuperviseurQualif = user?.fonction === 2;
+  /** Backoffice : toutes les fiches créées le jour courant (pas de filtre id_agent par défaut) */
+  const isBackoffice = user?.fonction === 11;
   const [showFilters, setShowFilters] = useState(!isAgentQualif); // Masquer pour agent qualif
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingFiche, setEditingFiche] = useState(null);
@@ -191,7 +193,9 @@ const Fiches = () => {
       return searchParams;
     }
     
-    // Sinon, par défaut : afficher les fiches créées aujourd'hui
+    // Sinon, par défaut : fiches créées aujourd'hui (date_insert_time)
+    // - Agent qualification : uniquement ses fiches (id_agent = lui)
+    // - Backoffice : toutes les fiches du jour (pas d'id_agent sauf si choisi dans les filtres)
     const { dateStr, timeStart, timeEnd } = getTodayDateRange();
     const defaultParams = {
       page: pageParam,
@@ -212,7 +216,6 @@ const Fiches = () => {
     if (src.id_agent && !isAgentQualif) {
       defaultParams.id_agent = src.id_agent;
     }
-    // Pour l'agent qualification, filtrer uniquement ses fiches créées aujourd'hui
     if (isAgentQualif && user?.id) {
       defaultParams.id_agent = user.id;
     }
@@ -230,7 +233,7 @@ const Fiches = () => {
     { enabled: isAgentQualif }
   );
 
-  // Récupérer les fiches (pour agent qualif: chargement auto des fiches créées aujourd'hui; sinon: au clic Recherche)
+  // Récupérer les fiches : chargement auto agent qualif / superviseur qualif / backoffice (jour courant) ; sinon au clic Recherche
   const { data, isLoading, error, refetch } = useQuery(
     ['fiches', appliedFilters, debouncedQuickSearch],
     async () => {
@@ -240,7 +243,11 @@ const Fiches = () => {
     },
     {
       keepPreviousData: true,
-      enabled: appliedFilters.fiche_search === true || isAgentQualif || isSuperviseurQualif
+      enabled:
+        appliedFilters.fiche_search === true ||
+        isAgentQualif ||
+        isSuperviseurQualif ||
+        isBackoffice
     }
   );
 
