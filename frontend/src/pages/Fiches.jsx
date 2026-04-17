@@ -19,6 +19,8 @@ const Fiches = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isAgentQualif = user?.fonction === 3;
+  /** Superviseur qualification (RE qualif) : même besoin que l’agent d’un chargement auto des fiches du jour */
+  const isSuperviseurQualif = user?.fonction === 2;
   const [showFilters, setShowFilters] = useState(!isAgentQualif); // Masquer pour agent qualif
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingFiche, setEditingFiche] = useState(null);
@@ -236,7 +238,10 @@ const Fiches = () => {
       const response = await api.get('/fiches', { params });
       return response.data;
     },
-    { keepPreviousData: true, enabled: appliedFilters.fiche_search === true || isAgentQualif }
+    {
+      keepPreviousData: true,
+      enabled: appliedFilters.fiche_search === true || isAgentQualif || isSuperviseurQualif
+    }
   );
 
   // Mutation pour créer une fiche

@@ -1141,7 +1141,28 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push('fiche.id_centre = ?');
       params.push(id_centre);
     }
-    if (id_agent) {
+    // Superviseur qualification (fonction 2) : uniquement les fiches des agents (fonction 3) rattachés en chef_equipe
+    if (req.user.fonction === 2) {
+      const superviseurAgents = await query(
+        `SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
+        [req.user.id]
+      );
+      const allowedAgentIds = (superviseurAgents || []).map((a) => a.id);
+      if (id_agent !== undefined && id_agent !== null && String(id_agent).trim() !== '') {
+        const want = parseInt(String(id_agent), 10);
+        if (!Number.isFinite(want) || !allowedAgentIds.includes(want)) {
+          whereConditions.push('1 = 0');
+        } else {
+          whereConditions.push('fiche.id_agent = ?');
+          params.push(want);
+        }
+      } else if (allowedAgentIds.length > 0) {
+        whereConditions.push(`fiche.id_agent IN (${allowedAgentIds.map(() => '?').join(',')})`);
+        params.push(...allowedAgentIds);
+      } else {
+        whereConditions.push('1 = 0');
+      }
+    } else if (id_agent) {
       whereConditions.push('fiche.id_agent = ?');
       params.push(id_agent);
     }
