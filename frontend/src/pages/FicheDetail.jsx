@@ -3070,24 +3070,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   { id: 1, nom: 'PAC' },
                   { id: 2, nom: 'PV' }
                 ])}
-              {/* Commentaire agent qualification : visible uniquement pour Backoffice (fonction 11) */}
-              {Number(user?.fonction) === 11 &&
-                renderField('Commentaire (Agent Qualification)', 'commentaire', fiche.commentaire || '-', 'textarea')}
-              
-              {/* Session confirmateur: si commentaire_qualite est vide -> conf_commentaire_produit, sinon -> commentaire.
-                  Autres sessions: logique historique (état 7 => conf_commentaire_produit, sinon commentaire_qualite). */}
-              {Number(user?.fonction) === 6 ? (
-                renderField(
-                  'Commentaire',
-                  'commentaire',
-                  (!(fiche.commentaire_qualite || '').trim() ? fiche.conf_commentaire_produit : fiche.commentaire) || '-',
-                  'textarea'
-                )
-              ) : fiche.id_etat_final === 7 ? (
-                renderField('Commentaire', 'conf_commentaire_produit', fiche.conf_commentaire_produit || '-', 'textarea')
-              ) : (
-                renderField('Commentaire', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')
-              )}
+              {hasConfValue(fiche.conf_commentaire_produit)
+                ? renderField('Commentaire', 'conf_commentaire_produit', fiche.conf_commentaire_produit || '-', 'textarea')
+                : renderField('Commentaire', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')}
               {hasConfValue(fiche.conf_deja_etude)
                 ? renderField('A déjà fait une étude', 'conf_deja_etude', fiche.conf_deja_etude || 'NON', 'select', [
                     { value: 'OUI', label: 'Oui' },
