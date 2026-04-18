@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS `fiches` (
   `revenu_foyer` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   `credit_foyer` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   `situation_conjugale` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
+  `entretien` varchar(200) CHARACTER SET utf8 DEFAULT NULL COMMENT 'Entretien avec (Vicidial entretien_avec / yj_fiche.entretient)',
   `nb_enfants` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   `profession_mr` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   `profession_madame` varchar(255) CHARACTER SET utf8 DEFAULT NULL,

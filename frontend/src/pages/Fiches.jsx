@@ -1288,7 +1288,7 @@ const FicheFormModal = ({
     etude: fiche?.etude || 'NON',
     etude_raison: fiche?.etude_raison || '',
     date_appel: formatDateAppelForInput(fiche),
-    conf_presence_couple: fiche?.conf_presence_couple || '',
+    entretien: fiche?.entretien || '',
     nb_pans: fiche?.nb_pans ?? '',
     orientation_toiture: fiche?.orientation_toiture || '',
     site_classe: fiche?.site_classe || '',
@@ -1465,7 +1465,7 @@ const FicheFormModal = ({
                 </div>
                 <div className="form-group">
                   <label>Entretien avec</label>
-                  <select name="conf_presence_couple" value={formData.conf_presence_couple || ''} onChange={handleChange}>
+                  <select name="entretien" value={formData.entretien || ''} onChange={handleChange}>
                     <option value="">-- Sélectionner --</option>
                     <option value="Monsieur">Monsieur</option>
                     <option value="Madame">Madame</option>

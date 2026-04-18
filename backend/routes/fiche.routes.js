@@ -3172,7 +3172,7 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
           'proprietaire_maison', 'nb_pieces', 'nb_pans', 'age_maison', 'orientation_toiture', 'produit',
           'site_classe', 'zones_ombres',
           'nb_chemines', 'mode_chauffage', 'complement_chauffage', 'consommation_electricite', 'age_mr', 'age_madame',
-          'revenu_foyer', 'credit_foyer', 'situation_conjugale', 'nb_enfants', 'profession_mr',
+          'revenu_foyer', 'credit_foyer', 'situation_conjugale', 'entretien', 'nb_enfants', 'profession_mr',
           'profession_madame', 'type_contrat_mr', 'type_contrat_madame', 'commentaire', 'id_agent', 'id_centre', 'id_insert', 'id_confirmateur',
           'id_confirmateur_2', 'id_confirmateur_3', 'id_qualite', 'id_qualif', 'id_commercial',
           'id_commercial_2', 'id_etat_final', 'id_sous_etat', 'date_appel', 'date_insert', 'date_insert_time',
@@ -4035,7 +4035,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     // Liste des champs autorisés pour éviter les injections SQL
     const allowedFields = [
       'nom', 'prenom', 'civ', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville',
-      'situation_conjugale', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
+      'situation_conjugale', 'entretien', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
       'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage', 'complement_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
@@ -4191,7 +4191,15 @@ router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req
 router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWorkflowOnFicheCreated, async (req, res) => {
   try {
     const ficheData = req.body;
-    
+
+    // index.php / Vicidial : entretien_avec → colonne fiches.entretien
+    if (Object.prototype.hasOwnProperty.call(ficheData, 'entretien_avec')) {
+      if (ficheData.entretien == null || ficheData.entretien === '') {
+        ficheData.entretien = ficheData.entretien_avec;
+      }
+      delete ficheData.entretien_avec;
+    }
+
     // Normaliser le téléphone AVANT de vérifier les doublons
     // Fonction pour normaliser un numéro de téléphone
     const normalizePhone = (phone) => {
@@ -4391,7 +4399,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
           'proprietaire_maison', 'nb_pieces', 'nb_pans', 'age_maison', 'orientation_toiture', 'produit',
           'site_classe', 'zones_ombres',
           'nb_chemines', 'mode_chauffage', 'complement_chauffage', 'consommation_electricite', 'circuit_eau', 'age_mr', 'age_madame',
-      'revenu_foyer', 'credit_foyer', 'situation_conjugale', 'nb_enfants', 'profession_mr',
+      'revenu_foyer', 'credit_foyer', 'situation_conjugale', 'entretien', 'nb_enfants', 'profession_mr',
       'profession_madame', 'type_contrat_mr', 'type_contrat_madame', 'commentaire', 'id_agent', 'id_centre', 'id_insert', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_qualite', 'id_qualif', 'id_commercial',
       'id_commercial_2', 'id_etat_final', 'id_sous_etat', 'date_appel', 'date_insert', 'date_insert_time',
@@ -5249,6 +5257,13 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     const { id } = req.params;
     const ficheData = req.body;
 
+    if (Object.prototype.hasOwnProperty.call(ficheData, 'entretien_avec')) {
+      if (ficheData.entretien == null || ficheData.entretien === '') {
+        ficheData.entretien = ficheData.entretien_avec;
+      }
+      delete ficheData.entretien_avec;
+    }
+
     // Vérifier que la fiche existe
     const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
     if (!fiche) {
@@ -5292,10 +5307,10 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
 
       // Préparer les modifications
       const modifications = {};
-      const allowedFields = [
-        'nom', 'prenom', 'civ', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville',
-        'situation_conjugale', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
-        'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
+    const allowedFields = [
+      'nom', 'prenom', 'civ', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville',
+      'situation_conjugale', 'entretien', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
+      'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
         'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage', 'complement_chauffage',
         'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
         'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
@@ -5656,7 +5671,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     // Liste des champs autorisés pour éviter les injections SQL
     const allowedFields = [
       'nom', 'prenom', 'civ', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville',
-      'situation_conjugale', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
+      'situation_conjugale', 'entretien', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
       'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage', 'complement_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',

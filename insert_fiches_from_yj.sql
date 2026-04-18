@@ -121,6 +121,7 @@ DELIMITER ;
 --   yj_fiche.age_mme -> fiches.age_madame
 --   yj_fiche.enfant_encharge -> fiches.nb_enfants (conversion int vers varchar)
 --   yj_fiche.situation_conju -> fiches.situation_conjugale
+--   yj_fiche.entretient -> fiches.entretien (libellé « Entretien avec » ; ne pas confondre avec conf_appel_tunisie_avec)
 --   yj_fiche.revenu -> fiches.revenu_foyer
 --   yj_fiche.credit -> fiches.credit_foyer
 --   yj_fiche.date_heure_appel -> fiches.date_appel (datetime vers bigint) et fiches.date_appel_time (datetime)
@@ -165,7 +166,7 @@ INSERT INTO `fiches` (
   `etude`, `consommation_chauffage`, `surface_habitable`, `annee_systeme_chauffage`,
   `surface_chauffee`, `proprietaire_maison`, `nb_pieces`, `nb_pans`, `age_maison`, `orientation_toiture`,
   `produit`, `nb_chemines`, `mode_chauffage`, `consommation_electricite`, `age_mr`,
-  `age_madame`, `revenu_foyer`, `credit_foyer`, `situation_conjugale`, `nb_enfants`,
+  `age_madame`, `revenu_foyer`, `credit_foyer`, `situation_conjugale`, `entretien`, `nb_enfants`,
   `profession_mr`, `profession_madame`, `commentaire`, `id_agent`, `id_centre`, `id_insert`,
   `id_confirmateur`, `id_confirmateur_2`, `id_confirmateur_3`, `id_qualite`, `id_qualif`,
   `id_commercial`, `id_commercial_2`, `id_etat_final`, `id_sous_etat`, `date_appel`, `date_appel_time`, `date_insert`,
@@ -255,6 +256,7 @@ SELECT
   NULLIF(`revenu`, '') as `revenu_foyer`, -- revenu -> revenu_foyer
   NULLIF(`credit`, '') as `credit_foyer`, -- credit -> credit_foyer
   NULLIF(`situation_conju`, '') as `situation_conjugale`, -- situation_conju -> situation_conjugale
+  NULLIF(TRIM(`entretient`), '') as `entretien`, -- entretient (YJ) -> entretien (CRM)
   -- Nombre d'enfants: convertir enfant_encharge de int vers varchar
   CASE 
     WHEN `enfant_encharge` > 0 THEN CAST(`enfant_encharge` AS CHAR)
@@ -502,8 +504,8 @@ SELECT
   NULLIF(`site_classe`, '') as `conf_site_classe`, -- site_classe -> conf_site_classe
   NULL as `conf_consommation_electricite`, -- Pas de champ direct dans yj_fiche
   NULLIF(`conf_rdv_avec`, '') as `conf_rdv_avec`,
-  -- Nouveaux champs conf_ (yj_fiche a conf_deja_fait_etude, conf_revenu, conf_credit, conf_annulee_precedemment, conf_consommation_chauffage)
-  'entretient' as `conf_appel_tunisie_avec`,
+  -- Appel Tunisie (MR/MME) : pas de source directe dans yj_fiche ; ne pas utiliser entretient ici
+  NULL as `conf_appel_tunisie_avec`,
   COALESCE(NULLIF(TRIM(`conf_deja_fait_etude`), ''), NULLIF(TRIM(`etude`), '')) as `conf_deja_etude`,
   COALESCE(NULLIF(TRIM(`conf_revenu`), ''), NULLIF(TRIM(`revenu`), '')) as `conf_revenu`,
   COALESCE(NULLIF(TRIM(`conf_credit`), ''), NULLIF(TRIM(`credit`), '')) as `conf_credit`,
@@ -622,6 +624,7 @@ ON DUPLICATE KEY UPDATE
   `adresse` = VALUES(`adresse`),
   `cp` = VALUES(`cp`),
   `ville` = VALUES(`ville`),
+  `entretien` = VALUES(`entretien`),
   `etude` = VALUES(`etude`),
   `mode_chauffage` = VALUES(`mode_chauffage`),
   `id_etat_final` = VALUES(`id_etat_final`),

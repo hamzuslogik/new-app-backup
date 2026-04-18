@@ -1252,6 +1252,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
       id_confirmateur_3: baseConf3,
       produit: ficheData?.produit ? String(ficheData.produit) : '',
       conf_rdv_avec: ficheData?.conf_rdv_avec || '',
+      conf_appel_tunisie_avec: (() => {
+        const c = ficheData?.conf_appel_tunisie_avec;
+        if (c != null && String(c).trim() !== '') return String(c).trim();
+        const e = String(ficheData?.entretien || '').trim();
+        if (!e) return '';
+        const u = e.toUpperCase();
+        if (u === 'MONSIEUR' || e === 'MR') return 'MR';
+        if (u === 'MADAME' || e === 'MME') return 'MME';
+        return '';
+      })(),
       // Champs spécifiques PV
       surface_habitable: ficheData?.surface_habitable || '',
       conf_orientation_toiture: (ficheData?.conf_orientation_toiture || ficheData?.orientation_toiture || '').toString(),
@@ -2301,7 +2311,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     }
   };
 
-  const renderField = (label, field, value, type = 'text', options = null, readOnly = false) => {
+  const renderField = (label, field, value, type = 'text', options = null, readOnly = false, valueForEdit = undefined) => {
     const isEditing = editingField === field;
     
     
@@ -2438,6 +2448,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   }
 
   const fiche = ficheData;
+
+  /** Affichage « Appel / Entretien en Tunisie avec » : priorité à conf_appel_tunisie_avec (MR/MME), sinon fiches.entretien (Vicidial). */
+  const displayAppelTunisieAvec = (f) => {
+    const c = f?.conf_appel_tunisie_avec;
+    if (c != null && String(c).trim() !== '') return String(c).trim();
+    const e = f?.entretien;
+    if (e != null && String(e).trim() !== '') return String(e).trim();
+    return '-';
+  };
 
   const isChangementEtatBloque = fiche.id_etat_final != null && ETATS_SANS_NOUVEL_ETAT.includes(Number(fiche.id_etat_final));
 
@@ -3153,10 +3172,18 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   return `${absolute} — ${formatDateAppelRelativeDescription(dAppel)}`;
                 })(),
                 null, null, true)}
-              {renderField('Entretien en tunisie avec', 'conf_rdv_avec', fiche.conf_rdv_avec || fiche.rdv_avec || '-', 'select', [
-                { value: 'MR', label: 'Mr' },
-                { value: 'MME', label: 'Mme' }
-              ])}
+              {renderField(
+                'Entretien en tunisie avec',
+                'conf_appel_tunisie_avec',
+                displayAppelTunisieAvec(fiche),
+                'select',
+                [
+                  { value: 'MR', label: 'Mr' },
+                  { value: 'MME', label: 'Mme' }
+                ],
+                false,
+                fiche.conf_appel_tunisie_avec || ''
+              )}
               {renderField('Centre', 'id_centre',
                 centres?.find(c => c.id === fiche.id_centre)?.titre || fiche.centre_titre || '-',
                 'select', centres)}
@@ -3699,7 +3726,16 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                   // Champs conf_ (affichés uniquement si non vides)
                   if (etatData.conf_rdv_avec) items.push({ label: 'RDV pris avec', value: etatData.conf_rdv_avec });
-                  if (etatData.conf_appel_tunisie_avec) items.push({ label: 'Appel en Tunisie avec', value: etatData.conf_appel_tunisie_avec });
+                  {
+                    const tunisieAvec = (() => {
+                      const c = etatData.conf_appel_tunisie_avec;
+                      if (c != null && String(c).trim() !== '') return String(c).trim();
+                      const e = etatData.entretien ?? fiche?.entretien;
+                      if (e != null && String(e).trim() !== '') return String(e).trim();
+                      return null;
+                    })();
+                    if (tunisieAvec) items.push({ label: 'Appel en Tunisie avec', value: tunisieAvec });
+                  }
                   if (etatData.conf_deja_etude) items.push({ label: 'A déjà fait une étude', value: etatData.conf_deja_etude });
                   if (etatData.conf_rdv_annule_precedent) items.push({ label: 'RDV déjà annulé précédemment', value: etatData.conf_rdv_annule_precedent });
                   if (etatData.conf_presence_couple) items.push({ label: 'Présence du couple ou célibataire', value: etatData.conf_presence_couple });

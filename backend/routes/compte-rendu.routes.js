@@ -105,7 +105,7 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
     // Liste des champs autorisés pour éviter les injections SQL
     const allowedFields = [
       'nom', 'prenom', 'civ', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville',
-      'situation_conjugale', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
+      'situation_conjugale', 'entretien', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
       'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
@@ -510,7 +510,7 @@ router.put('/:id', authenticate, async (req, res) => {
     // Liste des champs autorisés (modifications)
     const allowedFields = [
       'nom', 'prenom', 'civ', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville',
-      'situation_conjugale', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
+      'situation_conjugale', 'entretien', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
       'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
@@ -745,7 +745,7 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     // Colonnes réellement modifiables sur la table fiches
     const updatableFicheFields = new Set([
       'nom', 'prenom', 'civ', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville',
-      'situation_conjugale', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
+      'situation_conjugale', 'entretien', 'profession_mr', 'profession_madame', 'age_mr', 'age_madame',
       'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
