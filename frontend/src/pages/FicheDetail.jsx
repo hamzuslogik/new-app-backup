@@ -3104,8 +3104,9 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                 modeChauffageAffiche(fiche.conf_mode_chauffage, fiche.mode_chauffage),
                 'text'
               )}
-              {renderField('Complément de chauffage (qualification)', 'complement_chauffage', fiche.complement_chauffage || '-', 'text')}
-              {renderField('Complément de chauffage (confirmation)', 'conf_complement_chauffage', fiche.conf_complement_chauffage || '-', 'text')}
+              {hasConfValue(fiche.conf_complement_chauffage)
+                ? renderField('Complément de chauffage', 'conf_complement_chauffage', fiche.conf_complement_chauffage || '-', 'text')
+                : renderField('Complément de chauffage', 'complement_chauffage', fiche.complement_chauffage || '-', 'text')}
               {renderField('Année de système de chauffage', 'annee_systeme_chauffage', fiche.annee_systeme_chauffage || '-', 'number')}
               {renderField('Surface habitable', 'surface_habitable', fiche.surface_habitable || '-', 'number')}
               {renderField('Consommation chauffage', 'consommation_chauffage',
