@@ -4043,6 +4043,8 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'isolation', 'conf_commentaire_produit', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
       'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
       'conf_presence_couple', 'conf_profession_monsieur', 'conf_profession_madame',
+      'conf_produit', 'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
+      'conf_consommation_electricite', 'conf_consommations',
       'date_rdv_time', 'date_appel_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final',
       'rdv_urgent', 'rdv_seul', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',

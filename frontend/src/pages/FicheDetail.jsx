@@ -20,6 +20,10 @@ function modeChauffageAffiche(confProp, modeProp) {
   return String(v).trim();
 }
 
+function hasConfValue(v) {
+  return v != null && String(v).trim() !== '';
+}
+
 function normalizeDetailItemLabel(s) {
   return String(s ?? '')
     .replace(/\u00a0/g, ' ')
@@ -2449,7 +2453,6 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
   const fiche = ficheData;
 
-  /** Affichage « Appel / Entretien en Tunisie avec » : priorité à conf_appel_tunisie_avec (MR/MME), sinon fiches.entretien (Vicidial). */
   const displayAppelTunisieAvec = (f) => {
     const c = f?.conf_appel_tunisie_avec;
     if (c != null && String(c).trim() !== '') return String(c).trim();
@@ -3085,10 +3088,15 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               ) : (
                 renderField('Commentaire', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')
               )}
-              {renderField('A déjà fait une étude', 'etude', fiche.etude || 'NON', 'select', [
-                { value: 'OUI', label: 'Oui' },
-                { value: 'NON', label: 'Non' }
-              ])}
+              {hasConfValue(fiche.conf_deja_etude)
+                ? renderField('A déjà fait une étude', 'conf_deja_etude', fiche.conf_deja_etude || 'NON', 'select', [
+                    { value: 'OUI', label: 'Oui' },
+                    { value: 'NON', label: 'Non' }
+                  ])
+                : renderField('A déjà fait une étude', 'etude', fiche.etude || 'NON', 'select', [
+                    { value: 'OUI', label: 'Oui' },
+                    { value: 'NON', label: 'Non' }
+                  ])}
               {renderField('Détail de l\'étude', 'etude_raison', fiche.etude_raison || '-', 'textarea')}
               {renderField(
                 'Mode de chauffage',
@@ -3123,14 +3131,20 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
               {renderField('Zones d\'ombres', 'zones_ombres',
                 (fiche.conf_zones_ombres != null && String(fiche.conf_zones_ombres).trim() !== '') ? fiche.conf_zones_ombres : (fiche.zones_ombres || '-')
               )}
-              {renderField('Proche d\'un site classé', 'site_classe', fiche.site_classe || fiche.conf_site_classe || '-', 'text')}
+              {hasConfValue(fiche.conf_site_classe)
+                ? renderField('Proche d\'un site classé', 'conf_site_classe', fiche.conf_site_classe || '-', 'text')
+                : renderField('Proche d\'un site classé', 'site_classe', fiche.site_classe || '-', 'text')}
               {renderField('Âge du MR', 'age_mr', fiche.age_mr || '-', 'number')}
               {renderField('Âge du Madame', 'age_madame', fiche.age_madame || '-', 'number')}
               {renderField('Consommation électricité', 'consommation_electricite',
                 (fiche.conf_consommation_electricite != null && String(fiche.conf_consommation_electricite).trim() !== '') ? fiche.conf_consommation_electricite : (fiche.consommation_electricite || '-')
               )}
-              {renderField('Revenu du foyer', 'revenu_foyer', fiche.revenu_foyer || '-', 'number')}
-              {renderField('Crédit du foyer', 'credit_foyer', fiche.credit_foyer || '-', 'number')}
+              {hasConfValue(fiche.conf_revenu)
+                ? renderField('Revenu du foyer', 'conf_revenu', fiche.conf_revenu || '-', 'number')
+                : renderField('Revenu du foyer', 'revenu_foyer', fiche.revenu_foyer || '-', 'number')}
+              {hasConfValue(fiche.conf_credit)
+                ? renderField('Crédit du foyer', 'conf_credit', fiche.conf_credit || '-', 'number')
+                : renderField('Crédit du foyer', 'credit_foyer', fiche.credit_foyer || '-', 'number')}
               {renderField('Situation Conjugale', 'situation_conjugale', fiche.situation_conjugale || '-', 'select', [
                 { value: 'MARIE', label: 'Marié' },
                 { value: 'CELIBATAIRE', label: 'Célibataire' },
