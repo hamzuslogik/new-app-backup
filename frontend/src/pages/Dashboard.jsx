@@ -256,6 +256,11 @@ const Dashboard = () => {
   const [etatModalNewId, setEtatModalNewId] = useState('');
   const [etatModalMotif, setEtatModalMotif] = useState('');
   const [etatModalSousEtat, setEtatModalSousEtat] = useState('');
+  const [affectModalFiche, setAffectModalFiche] = useState(null);
+  const [affectModalCommercialId, setAffectModalCommercialId] = useState('');
+  const [validationModalFiche, setValidationModalFiche] = useState(null);
+  const [validationConfRdvAvec, setValidationConfRdvAvec] = useState('');
+  const [validationConfPresenceCouple, setValidationConfPresenceCouple] = useState('');
   const [lastViewedFicheHash, setLastViewedFicheHash] = useState(null);
 
   const [sortConfig, setSortConfig] = useState({
@@ -459,6 +464,71 @@ const Dashboard = () => {
       },
       onError: (err) => {
         alert(err.response?.data?.message || err.message || 'Erreur lors du changement d\'état');
+      },
+    }
+  );
+
+  const affectFromMenuMutation = useMutation(
+    async ({ fiches_ids, id_commercial }) => {
+      const res = await api.post('/affectations/affecter', {
+        fiches_ids,
+        id_commercial: parseInt(id_commercial, 10),
+      });
+      return res.data;
+    },
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(['fiches']);
+        setAffectModalFiche(null);
+        setAffectModalCommercialId('');
+        const errs = data?.data?.erreurs;
+        if (errs?.length) {
+          alert(errs.map((e) => `${e.fiche_id}: ${e.error}`).join('\n'));
+        }
+      },
+      onError: (err) => {
+        alert(err.response?.data?.message || err.message || 'Erreur lors de l\'affectation');
+      },
+    }
+  );
+
+  const desaffectFromMenuMutation = useMutation(
+    async ({ fiches_ids }) => {
+      const res = await api.post('/affectations/desaffecter', { fiches_ids });
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['fiches']);
+        setAffectModalFiche(null);
+        setAffectModalCommercialId('');
+      },
+      onError: (err) => {
+        alert(err.response?.data?.message || err.message || 'Erreur lors de la désaffectation');
+      },
+    }
+  );
+
+  const validateFromMenuMutation = useMutation(
+    async ({ hash, type_valid, conf_rdv_avec, conf_presence_couple }) => {
+      const payload = { type_valid };
+      if (String(type_valid) !== '0') {
+        payload.conf_rdv_avec = conf_rdv_avec ?? null;
+        payload.conf_presence_couple = conf_presence_couple ?? null;
+      }
+      const res = await api.post(`/fiches/${hash}/valider`, payload);
+      return res.data;
+    },
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(['fiches']);
+        setValidationModalFiche(null);
+        setValidationConfRdvAvec('');
+        setValidationConfPresenceCouple('');
+        alert(data?.message || 'Enregistré.');
+      },
+      onError: (err) => {
+        alert(err.response?.data?.message || err.message || 'Erreur lors de la validation');
       },
     }
   );
@@ -1076,6 +1146,90 @@ const Dashboard = () => {
     }
     updateEtatFromMenuMutation.mutate({ hash: etatModalFiche.hash, body });
   };
+
+  const openAffectModalFromMenu = () => {
+    if (!ficheContextMenu?.fiche) return;
+    const f = ficheContextMenu.fiche;
+    setAffectModalFiche(f);
+    const cid = f.id_commercial != null && Number(f.id_commercial) > 0 ? String(f.id_commercial) : '';
+    setAffectModalCommercialId(cid);
+    setFicheContextMenu(null);
+  };
+
+  const submitAffectModal = (ev) => {
+    ev.preventDefault();
+    if (!affectModalFiche?.id) return;
+    if (Number(affectModalFiche.id_etat_final) !== 7) {
+      alert('L\'affectation n\'est possible que pour les fiches à l\'état « Confirmer » (confirmées).');
+      return;
+    }
+    if (!affectModalCommercialId) {
+      alert('Veuillez sélectionner un commercial.');
+      return;
+    }
+    affectFromMenuMutation.mutate({
+      fiches_ids: [affectModalFiche.id],
+      id_commercial: affectModalCommercialId,
+    });
+  };
+
+  const handleDesaffectFromModal = () => {
+    if (!affectModalFiche?.id) return;
+    if (!window.confirm('Retirer l\'affectation commercial de cette fiche ?')) return;
+    desaffectFromMenuMutation.mutate({ fiches_ids: [affectModalFiche.id] });
+  };
+
+  const affectModalBusy =
+    affectFromMenuMutation.isLoading || desaffectFromMenuMutation.isLoading;
+
+  const openValidationModalFromMenu = () => {
+    if (!ficheContextMenu?.fiche) return;
+    const f = ficheContextMenu.fiche;
+    setValidationModalFiche(f);
+    setValidationConfRdvAvec(f.conf_rdv_avec != null && String(f.conf_rdv_avec).trim() !== '' ? String(f.conf_rdv_avec) : '');
+    setValidationConfPresenceCouple(
+      f.conf_presence_couple != null && String(f.conf_presence_couple).trim() !== ''
+        ? String(f.conf_presence_couple)
+        : ''
+    );
+    setFicheContextMenu(null);
+  };
+
+  const submitValidationModal = (ev) => {
+    ev.preventDefault();
+    if (!validationModalFiche?.hash) return;
+    if (Number(validationModalFiche.id_etat_final) !== 7) {
+      alert('Seules les fiches confirmées (état Confirmer) peuvent être validées.');
+      return;
+    }
+    if (!validationConfPresenceCouple) {
+      alert('Veuillez sélectionner la présence du couple.');
+      return;
+    }
+    validateFromMenuMutation.mutate({
+      hash: validationModalFiche.hash,
+      type_valid: `1${validationConfRdvAvec ? `-${validationConfRdvAvec}` : ''}`,
+      conf_rdv_avec: validationConfRdvAvec || null,
+      conf_presence_couple: validationConfPresenceCouple || null,
+    });
+  };
+
+  const handleCancelValidationFromModal = () => {
+    if (!validationModalFiche?.hash) return;
+    if (!window.confirm('Voulez-vous annuler la validation de cette fiche ?')) return;
+    validateFromMenuMutation.mutate({
+      hash: validationModalFiche.hash,
+      type_valid: '0',
+    });
+  };
+
+  const openFichePdfNewTab = (hash) => {
+    if (!hash) return;
+    window.open(`/fiches/${encodeURIComponent(hash)}?tab=pdf`, '_blank', 'noopener,noreferrer');
+    setFicheContextMenu(null);
+  };
+
+  const validationModalBusy = validateFromMenuMutation.isLoading;
 
   return (
     <div className="dashboard">
@@ -2269,7 +2423,7 @@ const Dashboard = () => {
           style={{
             position: 'fixed',
             left: Math.min(ficheContextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 224 : ficheContextMenu.x),
-            top: Math.min(ficheContextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 130 : ficheContextMenu.y),
+            top: Math.min(ficheContextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 300 : ficheContextMenu.y),
             zIndex: 10050,
           }}
           role="menu"
@@ -2283,6 +2437,21 @@ const Dashboard = () => {
           </button>
           <button type="button" className="dashboard-fiche-context-menu-item" onClick={openEtatModalFromMenu}>
             Changer l&apos;état…
+          </button>
+          <button type="button" className="dashboard-fiche-context-menu-item" onClick={openAffectModalFromMenu}>
+            Affectation…
+          </button>
+          {hasPermission('fiche_validate') && (
+            <button type="button" className="dashboard-fiche-context-menu-item" onClick={openValidationModalFromMenu}>
+              Validation…
+            </button>
+          )}
+          <button
+            type="button"
+            className="dashboard-fiche-context-menu-item"
+            onClick={() => openFichePdfNewTab(ficheContextMenu.fiche.hash)}
+          >
+            Impression PDF…
           </button>
           <button
             type="button"
@@ -2408,6 +2577,187 @@ const Dashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {affectModalFiche && (
+        <div
+          className="dashboard-etat-modal-overlay"
+          onClick={() => !affectModalBusy && setAffectModalFiche(null)}
+        >
+          <div
+            className="dashboard-etat-modal dashboard-affect-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dashboard-affect-modal-title"
+          >
+            <h3 id="dashboard-affect-modal-title">Affectation commercial</h3>
+            <p className="dashboard-etat-modal-fiche">
+              {affectModalFiche.nom} {affectModalFiche.prenom} — {affectModalFiche.tel || '—'}
+            </p>
+            <p className="dashboard-affect-modal-hint">
+              Commercial actuel :{' '}
+              {affectModalFiche.id_commercial && Number(affectModalFiche.id_commercial) > 0
+                ? affectModalFiche.commercial_pseudo || getUserName(affectModalFiche.id_commercial) || '—'
+                : 'aucun'}
+            </p>
+            {Number(affectModalFiche.id_etat_final) !== 7 && (
+              <p className="dashboard-affect-modal-warning">
+                L&apos;affectation (assigner un commercial) n&apos;est autorisée par le serveur que pour les fiches à
+                l&apos;état « Confirmer ». Vous pouvez toutefois désaffecter si un commercial est encore renseigné.
+              </p>
+            )}
+            <form onSubmit={submitAffectModal}>
+              <div className="dashboard-etat-modal-field">
+                <label htmlFor="dashboard-affect-commercial">Commercial</label>
+                <select
+                  id="dashboard-affect-commercial"
+                  value={affectModalCommercialId}
+                  onChange={(e) => setAffectModalCommercialId(e.target.value)}
+                  disabled={affectModalBusy || Number(affectModalFiche.id_etat_final) !== 7}
+                >
+                  <option value="">— Sélectionner —</option>
+                  {commerciaux.map((com) => (
+                    <option key={com.id} value={com.id}>
+                      {com.pseudo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="dashboard-etat-modal-actions dashboard-affect-modal-actions">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setAffectModalFiche(null)}
+                  disabled={affectModalBusy}
+                >
+                  Annuler
+                </button>
+                {affectModalFiche.id_commercial != null && Number(affectModalFiche.id_commercial) > 0 && (
+                  <button
+                    type="button"
+                    className="btn-reset"
+                    onClick={handleDesaffectFromModal}
+                    disabled={affectModalBusy}
+                  >
+                    {desaffectFromMenuMutation.isLoading ? '…' : 'Désaffecter'}
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="btn-search"
+                  disabled={
+                    affectModalBusy ||
+                    Number(affectModalFiche.id_etat_final) !== 7 ||
+                    !affectModalCommercialId
+                  }
+                >
+                  {affectFromMenuMutation.isLoading ? 'Enregistrement…' : 'Affecter'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {validationModalFiche && (
+        <div
+          className="dashboard-etat-modal-overlay"
+          onClick={() => !validationModalBusy && setValidationModalFiche(null)}
+        >
+          <div
+            className="dashboard-etat-modal dashboard-validation-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dashboard-validation-modal-title"
+          >
+            <h3 id="dashboard-validation-modal-title">Validation RDV</h3>
+            <p className="dashboard-etat-modal-fiche">
+              {validationModalFiche.nom} {validationModalFiche.prenom} — {validationModalFiche.tel || '—'}
+            </p>
+            {Number(validationModalFiche.id_etat_final) !== 7 && (
+              <p className="dashboard-affect-modal-warning">
+                La validation n&apos;est gérée par le serveur que pour les fiches à l&apos;état « Confirmer ».
+              </p>
+            )}
+            {Number(validationModalFiche.valider) > 0 ? (
+              <>
+                <p className="dashboard-affect-modal-hint">Cette fiche est déjà validée.</p>
+                <div className="dashboard-etat-modal-actions">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => setValidationModalFiche(null)}
+                    disabled={validationModalBusy}
+                  >
+                    Fermer
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-search"
+                    onClick={handleCancelValidationFromModal}
+                    disabled={validationModalBusy || Number(validationModalFiche.id_etat_final) !== 7}
+                  >
+                    {validationModalBusy ? '…' : 'Annuler la validation'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <form onSubmit={submitValidationModal}>
+                <div className="dashboard-etat-modal-field">
+                  <label htmlFor="dashboard-validation-avec">Avec qui le RDV a-t-il été validé ? (optionnel)</label>
+                  <select
+                    id="dashboard-validation-avec"
+                    value={validationConfRdvAvec}
+                    onChange={(e) => setValidationConfRdvAvec(e.target.value)}
+                    disabled={validationModalBusy || Number(validationModalFiche.id_etat_final) !== 7}
+                  >
+                    <option value="">Sélectionner…</option>
+                    <option value="MR">Mr</option>
+                    <option value="MME">Mme</option>
+                    <option value="MR et MME">Mr et Mme</option>
+                  </select>
+                </div>
+                <div className="dashboard-etat-modal-field">
+                  <label htmlFor="dashboard-validation-presence">Présence du couple *</label>
+                  <select
+                    id="dashboard-validation-presence"
+                    value={validationConfPresenceCouple}
+                    onChange={(e) => setValidationConfPresenceCouple(e.target.value)}
+                    disabled={validationModalBusy || Number(validationModalFiche.id_etat_final) !== 7}
+                  >
+                    <option value="">Sélectionner…</option>
+                    <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
+                    <option value="MME SEULE SANS MR">MME SEULE SANS MR</option>
+                    <option value="MR SEUL SANS MME">MR SEUL SANS MME</option>
+                  </select>
+                </div>
+                <div className="dashboard-etat-modal-actions">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => setValidationModalFiche(null)}
+                    disabled={validationModalBusy}
+                  >
+                    Fermer
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-search"
+                    disabled={
+                      validationModalBusy ||
+                      Number(validationModalFiche.id_etat_final) !== 7 ||
+                      !validationConfPresenceCouple
+                    }
+                  >
+                    {validationModalBusy ? '…' : 'Valider la fiche'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { FaEdit, FaCheck, FaTimes, FaCalendar, FaUser, FaUserPlus, FaPhone, FaMapMarkerAlt, FaHome, FaBriefcase, FaFileAlt, FaHistory, FaArrowLeft, FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaReplyAll, FaSms, FaListAlt, FaInfoCircle, FaFilePdf } from 'react-icons/fa';
 import jsPDF from 'jspdf';
@@ -282,6 +282,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const routeParams = useRouteParams();
   const routerParams = useParams();
   const routerNavigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const params = isModal && routeParams.params ? routeParams.params : routerParams;
   const navigate = isModal && routeParams.navigate ? routeParams.navigate : routerNavigate;
@@ -291,6 +292,12 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const { user, hasPermission, permissions } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('fiches'); // 'fiches', 'modifica', 'planning', 'sms', 'pdf'
+
+  useEffect(() => {
+    if (isModal) return;
+    const tab = searchParams.get('tab');
+    if (tab === 'pdf') setActiveTab('pdf');
+  }, [isModal, searchParams]);
   
   // Vérifier si l'utilisateur est qualité qualification (fonction 2, 8, 12)
   const userFonction = user?.fonction != null ? Number(user.fonction) : null;
