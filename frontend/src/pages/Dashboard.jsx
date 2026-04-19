@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
@@ -135,6 +135,8 @@ const Dashboard = () => {
   const isConfirmateur = user?.fonction === 6;
   const isREConfirmation = user?.fonction === 14;
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
+  /** Menu contextuel (clic droit) sur les lignes du tableau : admin (1), backoffice (11), RP (13), RE (14) */
+  const canFicheContextMenu = [1, 11, 13, 14].includes(Number(user?.fonction));
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -249,6 +251,11 @@ const Dashboard = () => {
   }, [showSearchModal, user?.fonction]);
 
   const [selectedFicheHash, setSelectedFicheHash] = useState(null);
+  const [ficheContextMenu, setFicheContextMenu] = useState(null);
+  const [etatModalFiche, setEtatModalFiche] = useState(null);
+  const [etatModalNewId, setEtatModalNewId] = useState('');
+  const [etatModalMotif, setEtatModalMotif] = useState('');
+  const [etatModalSousEtat, setEtatModalSousEtat] = useState('');
   const [lastViewedFicheHash, setLastViewedFicheHash] = useState(null);
 
   const [sortConfig, setSortConfig] = useState({
@@ -438,6 +445,24 @@ const Dashboard = () => {
     { keepPreviousData: true, enabled: !!appliedFilters.fiche_search }
   );
 
+  const updateEtatFromMenuMutation = useMutation(
+    async ({ hash, body }) => {
+      const res = await api.put(`/fiches/${hash}`, body);
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['fiches']);
+        setEtatModalFiche(null);
+        setEtatModalMotif('');
+        setEtatModalSousEtat('');
+      },
+      onError: (err) => {
+        alert(err.response?.data?.message || err.message || 'Erreur lors du changement d\'état');
+      },
+    }
+  );
+
   // Filtrer les utilisateurs par fonction
   const confirmateurs = usersData ? usersData.filter(u => u.fonction === 6 && u.etat > 0) : [];
   const commerciaux = usersData ? usersData.filter(u => u.fonction === 5 && u.etat > 0) : [];
@@ -514,6 +539,27 @@ const Dashboard = () => {
   if (etatsError) {
     console.error('Erreur lors du chargement des états:', etatsError);
   }
+
+  useEffect(() => {
+    if (!ficheContextMenu) return undefined;
+    const onMouseDown = (ev) => {
+      if (ev.target.closest?.('.dashboard-fiche-context-menu')) return;
+      setFicheContextMenu(null);
+    };
+    const onKey = (ev) => {
+      if (ev.key === 'Escape') setFicheContextMenu(null);
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [ficheContextMenu]);
+
+  const sousEtatsForEtatModal = (sousEtatsData || []).filter(
+    (s) => etatModalNewId && Number(s.id_etat) === Number(etatModalNewId)
+  );
 
   const handleFilterChange = (key, value) => {
     const nextValue =
@@ -982,6 +1028,54 @@ const Dashboard = () => {
   }
 
   const fiches = filteredFiches;
+
+  const openFicheContextMenu = (e, fiche) => {
+    if (!canFicheContextMenu) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setFicheContextMenu({ x: e.clientX, y: e.clientY, fiche });
+  };
+
+  const copyFicheTelFromMenu = (tel) => {
+    const t = (tel || '').trim();
+    if (!t) {
+      alert('Aucun numéro à copier');
+      return;
+    }
+    navigator.clipboard.writeText(t).then(() => setFicheContextMenu(null)).catch(() => alert('Copie impossible'));
+  };
+
+  const openFicheDetailNewTab = (hash) => {
+    if (!hash) return;
+    window.open(`/fiches/${hash}`, '_blank', 'noopener,noreferrer');
+    setFicheContextMenu(null);
+  };
+
+  const openEtatModalFromMenu = () => {
+    if (!ficheContextMenu?.fiche) return;
+    const f = ficheContextMenu.fiche;
+    setEtatModalFiche(f);
+    setEtatModalNewId(f.id_etat_final != null ? String(f.id_etat_final) : '');
+    setEtatModalMotif('');
+    setEtatModalSousEtat(f.id_sous_etat != null ? String(f.id_sous_etat) : '');
+    setFicheContextMenu(null);
+  };
+
+  const submitEtatModal = (ev) => {
+    ev.preventDefault();
+    if (!etatModalFiche || !etatModalNewId) return;
+    const body = { id_etat_final: parseInt(etatModalNewId, 10) };
+    if (etatModalMotif.trim()) body.motif_qualif = etatModalMotif.trim();
+    const sousList = (sousEtatsData || []).filter((s) => Number(s.id_etat) === Number(etatModalNewId));
+    if (sousList.length > 0) {
+      if (!etatModalSousEtat) {
+        alert('Veuillez sélectionner un sous-état.');
+        return;
+      }
+      body.id_sous_etat = parseInt(etatModalSousEtat, 10);
+    }
+    updateEtatFromMenuMutation.mutate({ hash: etatModalFiche.hash, body });
+  };
 
   return (
     <div className="dashboard">
@@ -1590,6 +1684,7 @@ const Dashboard = () => {
                       <tr 
                         key={fiche.hash}
                         className="fiche-row-by-etat"
+                        onContextMenu={(e) => openFicheContextMenu(e, fiche)}
                         style={{ 
                           backgroundColor: `${etatColor}40`,
                           borderLeft: `4px solid ${etatColor}`
@@ -2168,6 +2263,155 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+      {ficheContextMenu && (
+        <div
+          className="dashboard-fiche-context-menu"
+          style={{
+            position: 'fixed',
+            left: Math.min(ficheContextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 224 : ficheContextMenu.x),
+            top: Math.min(ficheContextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 130 : ficheContextMenu.y),
+            zIndex: 10050,
+          }}
+          role="menu"
+        >
+          <button
+            type="button"
+            className="dashboard-fiche-context-menu-item"
+            onClick={() => copyFicheTelFromMenu(ficheContextMenu.fiche.tel)}
+          >
+            Copier le téléphone
+          </button>
+          <button type="button" className="dashboard-fiche-context-menu-item" onClick={openEtatModalFromMenu}>
+            Changer l&apos;état…
+          </button>
+          <button
+            type="button"
+            className="dashboard-fiche-context-menu-item"
+            onClick={() => openFicheDetailNewTab(ficheContextMenu.fiche.hash)}
+          >
+            Ouvrir dans un nouvel onglet
+          </button>
+        </div>
+      )}
+
+      {etatModalFiche && (
+        <div
+          className="dashboard-etat-modal-overlay"
+          onClick={() => !updateEtatFromMenuMutation.isLoading && setEtatModalFiche(null)}
+        >
+          <div className="dashboard-etat-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="dashboard-etat-modal-title">
+            <h3 id="dashboard-etat-modal-title">Changer l&apos;état</h3>
+            <p className="dashboard-etat-modal-fiche">
+              {etatModalFiche.nom} {etatModalFiche.prenom} — {etatModalFiche.tel || '—'}
+            </p>
+            <form onSubmit={submitEtatModal}>
+              <div className="dashboard-etat-modal-field">
+                <label htmlFor="dashboard-etat-select">Nouvel état</label>
+                <select
+                  id="dashboard-etat-select"
+                  value={etatModalNewId}
+                  onChange={(e) => {
+                    setEtatModalNewId(e.target.value);
+                    setEtatModalSousEtat('');
+                  }}
+                  required
+                  disabled={isLoadingEtats || !!etatsError}
+                >
+                  <option value="">— Sélectionner —</option>
+                  {etatsPhase0.length > 0 && (
+                    <optgroup label="PHASE 0">
+                      {etatsPhase0.map((etat) => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase1.length > 0 && (
+                    <optgroup label="PHASE 1">
+                      {etatsPhase1.map((etat) => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase2.length > 0 && (
+                    <optgroup label="PHASE 2">
+                      {etatsPhase2.map((etat) => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase3.length > 0 && (
+                    <optgroup label="PHASE 3">
+                      {etatsPhase3.map((etat) => (
+                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase0.length === 0 &&
+                    etatsPhase1.length === 0 &&
+                    etatsPhase2.length === 0 &&
+                    etatsPhase3.length === 0 &&
+                    etats.length > 0 &&
+                    etats.map((etat) => (
+                      <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
+                        {etat.titre}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              {sousEtatsForEtatModal.length > 0 && (
+                <div className="dashboard-etat-modal-field">
+                  <label htmlFor="dashboard-sous-etat-select">Sous-état</label>
+                  <select
+                    id="dashboard-sous-etat-select"
+                    value={etatModalSousEtat}
+                    onChange={(e) => setEtatModalSousEtat(e.target.value)}
+                    required
+                  >
+                    <option value="">— Sélectionner —</option>
+                    {sousEtatsForEtatModal.map((se) => (
+                      <option key={se.id} value={se.id}>
+                        {se.titre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="dashboard-etat-modal-field">
+                <label htmlFor="dashboard-etat-motif">Commentaire (optionnel)</label>
+                <textarea
+                  id="dashboard-etat-motif"
+                  value={etatModalMotif}
+                  onChange={(e) => setEtatModalMotif(e.target.value)}
+                  rows={3}
+                  placeholder="Motif du changement d'état"
+                />
+              </div>
+              <div className="dashboard-etat-modal-actions">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setEtatModalFiche(null)}
+                  disabled={updateEtatFromMenuMutation.isLoading}
+                >
+                  Annuler
+                </button>
+                <button type="submit" className="btn-search" disabled={updateEtatFromMenuMutation.isLoading}>
+                  {updateEtatFromMenuMutation.isLoading ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <ScrollToTopButton />
     </div>
   );
