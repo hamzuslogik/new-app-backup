@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { FaEdit, FaCheck, FaTimes, FaCalendar, FaUser, FaUserPlus, FaPhone, FaMapMarkerAlt, FaHome, FaBriefcase, FaFileAlt, FaHistory, FaArrowLeft, FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaReplyAll, FaSms, FaListAlt, FaInfoCircle, FaFilePdf } from 'react-icons/fa';
@@ -277,7 +277,7 @@ function buildDashboardUrlForPlanningSlot({ dep, date, slotHour }) {
   return `/dashboard?${params.toString()}`;
 }
 
-const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
+const FicheDetail = ({ ficheHash, onClose, isModal = false, initialFocusHistoriqueEtats = false }) => {
   // En mode modal, utiliser le contexte personnalisé, sinon utiliser useParams
   const routeParams = useRouteParams();
   const routerParams = useParams();
@@ -483,6 +483,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
   const [validationRdvDate, setValidationRdvDate] = useState('');
   const [validationRdvTime, setValidationRdvTime] = useState('');
   const [showHistorique, setShowHistorique] = useState(false); // État pour contrôler l'affichage de l'historique
+  const historiqueEtatsAnchorRef = useRef(null);
 
   // Contrôle Qualité (états signer) : formulaire par fiche (clé = hash)
   const [cqFormByHash, setCqFormByHash] = useState({});
@@ -687,6 +688,22 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
     if (datePart) setValidationRdvDate(datePart);
     if (hhmm) setValidationRdvTime(hhmm);
   }, [ficheData?.date_rdv_time]);
+
+  // Modal (ex. menu contextuel dashboard) : onglet Fiches, historique des états déplié, scroll vers la section
+  useEffect(() => {
+    if (!initialFocusHistoriqueEtats || !isModal || !ficheData) return;
+    setActiveTab('fiches');
+    setShowHistorique(true);
+  }, [initialFocusHistoriqueEtats, isModal, ficheData?.id]);
+
+  useEffect(() => {
+    if (!initialFocusHistoriqueEtats || !isModal || !ficheData) return;
+    if (activeTab !== 'fiches') return;
+    const tid = window.setTimeout(() => {
+      historiqueEtatsAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 220);
+    return () => window.clearTimeout(tid);
+  }, [initialFocusHistoriqueEtats, isModal, ficheData?.id, activeTab, showHistorique]);
 
   // États : pour confirmateur (6), matrice de transitions selon l'état actuel de la fiche
   const { data: etats } = useQuery(
@@ -3534,7 +3551,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
 
         {/* État actuel et Historique */}
         {(fiche.id_etat_final || (fiche.historique && fiche.historique.length > 0)) && (
-          <div className="fiche-section etat-current-history-section">
+          <div
+            ref={
+              user?.fonction === 5 || !(fiche.historique && fiche.historique.length > 0)
+                ? historiqueEtatsAnchorRef
+                : undefined
+            }
+            className="fiche-section etat-current-history-section"
+          >
             {/* Fonction réutilisable pour afficher les détails selon l'état */}
             {(() => {
               const renderEtatDetails = (etatData) => {
@@ -4325,6 +4349,7 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false }) => {
                         </div>
                       )}
                       <div 
+                        ref={historiqueEtatsAnchorRef}
                         className="section-title historique-title-bar" 
                         style={{ 
                           cursor: 'pointer', 

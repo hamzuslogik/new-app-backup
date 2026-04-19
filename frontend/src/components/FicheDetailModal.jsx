@@ -170,7 +170,12 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
           <span className="fiche-detail-modal-banner-title">DETAILS FICHE</span>
         </div>
         <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
-          <FicheDetail ficheHash={ficheHash} onClose={onClose} isModal={true} />
+          <FicheDetail
+            ficheHash={ficheHash}
+            onClose={onClose}
+            isModal={true}
+            initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
+          />
         </RouteParamsProvider>
       </div>
     </div>

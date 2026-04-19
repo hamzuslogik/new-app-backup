@@ -250,7 +250,8 @@ const Dashboard = () => {
     }
   }, [showSearchModal, user?.fonction]);
 
-  const [selectedFicheHash, setSelectedFicheHash] = useState(null);
+  /** null | { hash: string, focusHistoriqueEtats?: boolean } */
+  const [ficheDetailModal, setFicheDetailModal] = useState(null);
   const [ficheContextMenu, setFicheContextMenu] = useState(null);
   const [etatModalFiche, setEtatModalFiche] = useState(null);
   const [etatModalNewId, setEtatModalNewId] = useState('');
@@ -1900,7 +1901,7 @@ const Dashboard = () => {
                           </div>
                           <button
                             onClick={() => {
-                              setSelectedFicheHash(fiche.hash);
+                              setFicheDetailModal({ hash: fiche.hash });
                               setLastViewedFicheHash(fiche.hash);
                             }}
                             className="btn-detail"
@@ -2057,10 +2058,11 @@ const Dashboard = () => {
       </div>
 
       {/* Modal de détail de fiche */}
-      {selectedFicheHash && (
+      {ficheDetailModal && (
         <FicheDetailModal
-          ficheHash={selectedFicheHash}
-          onClose={() => setSelectedFicheHash(null)}
+          ficheHash={ficheDetailModal.hash}
+          onClose={() => setFicheDetailModal(null)}
+          options={{ focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats }}
         />
       )}
 
@@ -2423,7 +2425,7 @@ const Dashboard = () => {
           style={{
             position: 'fixed',
             left: Math.min(ficheContextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 224 : ficheContextMenu.x),
-            top: Math.min(ficheContextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 300 : ficheContextMenu.y),
+            top: Math.min(ficheContextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 340 : ficheContextMenu.y),
             zIndex: 10050,
           }}
           role="menu"
@@ -2452,6 +2454,9 @@ const Dashboard = () => {
             onClick={() => openFichePdfNewTab(ficheContextMenu.fiche.hash)}
           >
             Impression PDF…
+          </button>
+          <button type="button" className="dashboard-fiche-context-menu-item" onClick={openFicheHistoriqueOverlay}>
+            Voir historique (modal)…
           </button>
           <button
             type="button"
