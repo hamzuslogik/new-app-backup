@@ -10,6 +10,7 @@ import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import './Dashboard.css';
 
 /** Aligné sur le garde-fou backend : fiche_search seul ne doit pas lancer une requête sur toute la table. */
@@ -530,6 +531,38 @@ const Dashboard = () => {
       },
       onError: (err) => {
         alert(err.response?.data?.message || err.message || 'Erreur lors de la validation');
+      },
+    }
+  );
+
+  const generatePdfFromMenuMutation = useMutation(
+    async (hash) => {
+      const [ficheRes, profRes, tcRes] = await Promise.all([
+        api.get(`/fiches/${encodeURIComponent(hash)}`),
+        api.get('/management/professions'),
+        api.get('/management/type-contrat'),
+      ]);
+      const fiche = ficheRes.data?.data;
+      if (!fiche) throw new Error('Fiche introuvable');
+      const users = usersData || [];
+      const agents = users.filter((u) => Number(u.fonction) === 3);
+      const commerciauxList = users.filter((u) => Number(u.fonction) === 5 && u.etat > 0);
+      const confirmateursList = users.filter(
+        (u) => Number(u.fonction) === 6 && (u.etat > 0 || u.etat == null)
+      );
+      const centresList = centresData ? centresData.filter((c) => c.etat > 0) : [];
+      generateFicheClientPdf(fiche, {
+        professions: profRes.data?.data || [],
+        typeContrat: tcRes.data?.data || [],
+        centres: centresList,
+        agents,
+        commerciaux: commerciauxList,
+        confirmateurs: confirmateursList,
+      });
+    },
+    {
+      onError: (err) => {
+        alert(err.response?.data?.message || err.message || 'Impossible de générer le PDF');
       },
     }
   );
@@ -1224,9 +1257,16 @@ const Dashboard = () => {
     });
   };
 
-  const openFichePdfNewTab = (hash) => {
+  const runGeneratePdfFromMenu = (hash) => {
     if (!hash) return;
-    window.open(`/fiches/${encodeURIComponent(hash)}?tab=pdf`, '_blank', 'noopener,noreferrer');
+    setFicheContextMenu(null);
+    generatePdfFromMenuMutation.mutate(hash);
+  };
+
+  const openFicheHistoriqueOverlay = () => {
+    if (!ficheContextMenu?.fiche?.hash) return;
+    setFicheDetailModal({ hash: ficheContextMenu.fiche.hash, focusHistoriqueEtats: true });
+    setLastViewedFicheHash(ficheContextMenu.fiche.hash);
     setFicheContextMenu(null);
   };
 
@@ -2451,9 +2491,10 @@ const Dashboard = () => {
           <button
             type="button"
             className="dashboard-fiche-context-menu-item"
-            onClick={() => openFichePdfNewTab(ficheContextMenu.fiche.hash)}
+            onClick={() => runGeneratePdfFromMenu(ficheContextMenu.fiche.hash)}
+            disabled={generatePdfFromMenuMutation.isLoading}
           >
-            Impression PDF…
+            {generatePdfFromMenuMutation.isLoading ? 'Génération PDF…' : 'Impression PDF…'}
           </button>
           <button type="button" className="dashboard-fiche-context-menu-item" onClick={openFicheHistoriqueOverlay}>
             Voir historique (modal)…
