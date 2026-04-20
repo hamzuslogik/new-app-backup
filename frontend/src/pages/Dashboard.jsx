@@ -1151,7 +1151,7 @@ const Dashboard = () => {
 
   const openFicheDetailNewTab = (hash) => {
     if (!hash) return;
-    window.open(`/fiches/${hash}`, '_blank', 'noopener,noreferrer');
+    window.open(`/fiches/${encodeURIComponent(hash)}?overlay=auto`, '_blank', 'noopener,noreferrer');
     setFicheContextMenu(null);
   };
 
