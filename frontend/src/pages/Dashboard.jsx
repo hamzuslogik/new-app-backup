@@ -1287,6 +1287,13 @@ const Dashboard = () => {
     setFicheContextMenu(null);
   };
 
+  const openFicheSmsFromMenu = () => {
+    if (!ficheContextMenu?.fiche?.hash) return;
+    setFicheDetailModal({ hash: ficheContextMenu.fiche.hash, initialTab: 'sms' });
+    setLastViewedFicheHash(ficheContextMenu.fiche.hash);
+    setFicheContextMenu(null);
+  };
+
   const validationModalBusy = validateFromMenuMutation.isLoading;
 
   return (
