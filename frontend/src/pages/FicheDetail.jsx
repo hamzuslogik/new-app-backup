@@ -277,7 +277,13 @@ function buildDashboardUrlForPlanningSlot({ dep, date, slotHour }) {
   return `/dashboard?${params.toString()}`;
 }
 
-const FicheDetail = ({ ficheHash, onClose, isModal = false, initialFocusHistoriqueEtats = false }) => {
+const FicheDetail = ({
+  ficheHash,
+  onClose,
+  isModal = false,
+  initialFocusHistoriqueEtats = false,
+  initialTab = null,
+}) => {
   // En mode modal, utiliser le contexte personnalisé, sinon utiliser useParams
   const routeParams = useRouteParams();
   const routerParams = useParams();
@@ -297,7 +303,14 @@ const FicheDetail = ({ ficheHash, onClose, isModal = false, initialFocusHistoriq
     if (isModal) return;
     const tab = searchParams.get('tab');
     if (tab === 'pdf') setActiveTab('pdf');
+    if (tab === 'sms') setActiveTab('sms');
   }, [isModal, searchParams]);
+
+  useEffect(() => {
+    if (!isModal || !initialTab) return;
+    const allowed = ['fiches', 'modifica', 'affectation', 'planning', 'sms', 'pdf'];
+    if (allowed.includes(initialTab)) setActiveTab(initialTab);
+  }, [isModal, initialTab]);
   
   // Vérifier si l'utilisateur est qualité qualification (fonction 2, 8, 12)
   const userFonction = user?.fonction != null ? Number(user.fonction) : null;

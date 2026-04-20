@@ -175,6 +175,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
             onClose={onClose}
             isModal={true}
             initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
+            initialTab={options?.initialTab || null}
           />
         </RouteParamsProvider>
       </div>

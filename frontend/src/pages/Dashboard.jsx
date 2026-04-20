@@ -11,7 +11,14 @@ import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
+import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import './Dashboard.css';
+
+function resolveDashboardFicheNumericId(fiche) {
+  if (!fiche) return null;
+  if (fiche.id != null && Number(fiche.id) > 0) return Number(fiche.id);
+  return decodeFicheIdFromHash(fiche.hash);
+}
 
 /** Aligné sur le garde-fou backend : fiche_search seul ne doit pas lancer une requête sur toute la table. */
 function dashboardUrlHasNarrowingCriteria(params) {
@@ -1192,7 +1199,12 @@ const Dashboard = () => {
 
   const submitAffectModal = (ev) => {
     ev.preventDefault();
-    if (!affectModalFiche?.id) return;
+    if (!affectModalFiche) return;
+    const ficheId = resolveDashboardFicheNumericId(affectModalFiche);
+    if (!ficheId) {
+      alert('Identifiant fiche indisponible. Rechargez la page ou rouvrez la fiche.');
+      return;
+    }
     if (Number(affectModalFiche.id_etat_final) !== 7) {
       alert('L\'affectation n\'est possible que pour les fiches à l\'état « Confirmer » (confirmées).');
       return;
@@ -1202,15 +1214,20 @@ const Dashboard = () => {
       return;
     }
     affectFromMenuMutation.mutate({
-      fiches_ids: [affectModalFiche.id],
+      fiches_ids: [ficheId],
       id_commercial: affectModalCommercialId,
     });
   };
 
   const handleDesaffectFromModal = () => {
-    if (!affectModalFiche?.id) return;
+    if (!affectModalFiche) return;
+    const ficheId = resolveDashboardFicheNumericId(affectModalFiche);
+    if (!ficheId) {
+      alert('Identifiant fiche indisponible. Rechargez la page ou rouvrez la fiche.');
+      return;
+    }
     if (!window.confirm('Retirer l\'affectation commercial de cette fiche ?')) return;
-    desaffectFromMenuMutation.mutate({ fiches_ids: [affectModalFiche.id] });
+    desaffectFromMenuMutation.mutate({ fiches_ids: [ficheId] });
   };
 
   const affectModalBusy =
@@ -2102,7 +2119,10 @@ const Dashboard = () => {
         <FicheDetailModal
           ficheHash={ficheDetailModal.hash}
           onClose={() => setFicheDetailModal(null)}
-          options={{ focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats }}
+          options={{
+            focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats,
+            initialTab: ficheDetailModal.initialTab || undefined,
+          }}
         />
       )}
 
@@ -2498,6 +2518,9 @@ const Dashboard = () => {
           </button>
           <button type="button" className="dashboard-fiche-context-menu-item" onClick={openFicheHistoriqueOverlay}>
             Voir historique (modal)…
+          </button>
+          <button type="button" className="dashboard-fiche-context-menu-item" onClick={openFicheSmsFromMenu}>
+            Envoyer un SMS…
           </button>
           <button
             type="button"
