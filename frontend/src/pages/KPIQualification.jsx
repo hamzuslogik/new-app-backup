@@ -5,7 +5,7 @@ import api from '../config/api';
 import { FaTrophy, FaUsers, FaChartLine, FaCalendarDay, FaCalendarWeek, FaCalendarAlt } from 'react-icons/fa';
 import './KPIQualification.css';
 
-/** taux côté API = fiches validées globales / fiches produites (tous agents F3) sur la période */
+/** taux côté API = fiches validées / fiches produites sur le périmètre autorisé (global ou équipe) */
 function getTauxConversionDisplay(tauxConversion) {
   if (!tauxConversion || typeof tauxConversion !== 'object') {
     return { kind: 'missing' };
@@ -27,8 +27,14 @@ function getTauxConversionDisplay(tauxConversion) {
 
 const KPIQualification = () => {
   const { user } = useAuth();
+  const canUseScopeFilters = user?.fonction === 11 || user?.fonction === 1;
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois
   const [selectedMonth, setSelectedMonth] = useState(''); // Format: YYYY-MM
+  const [scopeFilters, setScopeFilters] = useState({
+    id_rp: '',
+    id_superviseur: '',
+    id_agent: '',
+  });
 
   // Générer la liste des mois (12 derniers mois)
   const getAvailableMonths = () => {
@@ -56,12 +62,26 @@ const KPIQualification = () => {
   }, [selectedPeriod, selectedMonth]);
 
   // Récupérer les KPI
+  const { data: usersData } = useQuery(
+    ['kpi-qualification-users', canUseScopeFilters],
+    async () => {
+      const res = await api.get('/management/utilisateurs');
+      return res.data?.data || [];
+    },
+    { enabled: canUseScopeFilters }
+  );
+
   const { data: kpiData, isLoading, error } = useQuery(
-    ['kpi-qualification', selectedPeriod, selectedMonth],
+    ['kpi-qualification', selectedPeriod, selectedMonth, scopeFilters.id_rp, scopeFilters.id_superviseur, scopeFilters.id_agent],
     async () => {
       const params = {};
       if (selectedPeriod === 'mois' && selectedMonth) {
         params.month = selectedMonth;
+      }
+      if (canUseScopeFilters) {
+        if (scopeFilters.id_rp) params.id_rp = scopeFilters.id_rp;
+        if (scopeFilters.id_superviseur) params.id_superviseur = scopeFilters.id_superviseur;
+        if (scopeFilters.id_agent) params.id_agent = scopeFilters.id_agent;
       }
       const res = await api.get('/statistiques/kpi-qualification', { params });
       return res.data.data;
@@ -70,6 +90,16 @@ const KPIQualification = () => {
       enabled: selectedPeriod !== 'mois' || !!selectedMonth
     }
   );
+
+  const rps = (usersData || []).filter((u) => Number(u.fonction) === 12 && Number(u.etat) > 0);
+  const superviseursQualif = (usersData || []).filter((u) => Number(u.fonction) === 2 && Number(u.etat) > 0);
+  const agentsQualif = (usersData || []).filter((u) => Number(u.fonction) === 3 && Number(u.etat) > 0);
+  const visibleSuperviseurs = scopeFilters.id_rp
+    ? superviseursQualif.filter((s) => String(s.id_rp_qualif || '') === String(scopeFilters.id_rp))
+    : superviseursQualif;
+  const visibleAgents = scopeFilters.id_superviseur
+    ? agentsQualif.filter((a) => String(a.chef_equipe || '') === String(scopeFilters.id_superviseur))
+    : agentsQualif;
 
   const periods = [
     { key: 'jour', label: 'Aujourd\'hui', icon: FaCalendarDay },
@@ -143,6 +173,70 @@ const KPIQualification = () => {
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+          {canUseScopeFilters && (
+            <div className="scope-filters">
+              <div className="scope-filter-group">
+                <label htmlFor="kpi-rp-select">RP</label>
+                <select
+                  id="kpi-rp-select"
+                  value={scopeFilters.id_rp}
+                  onChange={(e) => {
+                    const nextRp = e.target.value;
+                    setScopeFilters((prev) => ({
+                      ...prev,
+                      id_rp: nextRp,
+                      id_superviseur: '',
+                      id_agent: '',
+                    }));
+                  }}
+                >
+                  <option value="">Tous les RP</option>
+                  {rps.map((rp) => (
+                    <option key={rp.id} value={rp.id}>
+                      {rp.pseudo || `${rp.nom || ''} ${rp.prenom || ''}`.trim() || `RP #${rp.id}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="scope-filter-group">
+                <label htmlFor="kpi-superviseur-select">RE</label>
+                <select
+                  id="kpi-superviseur-select"
+                  value={scopeFilters.id_superviseur}
+                  onChange={(e) => {
+                    const nextSuperviseur = e.target.value;
+                    setScopeFilters((prev) => ({
+                      ...prev,
+                      id_superviseur: nextSuperviseur,
+                      id_agent: '',
+                    }));
+                  }}
+                >
+                  <option value="">Tous les RE</option>
+                  {visibleSuperviseurs.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.pseudo || `${s.nom || ''} ${s.prenom || ''}`.trim() || `RE #${s.id}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="scope-filter-group">
+                <label htmlFor="kpi-agent-select">Agent</label>
+                <select
+                  id="kpi-agent-select"
+                  value={scopeFilters.id_agent}
+                  onChange={(e) => setScopeFilters((prev) => ({ ...prev, id_agent: e.target.value }))}
+                >
+                  <option value="">Tous les agents</option>
+                  {visibleAgents.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.pseudo || `${a.nom || ''} ${a.prenom || ''}`.trim() || `Agent #${a.id}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
         </div>
@@ -293,10 +387,20 @@ const KPIQualification = () => {
               Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
             </p>
             <p className="info-text">
-              <strong>Périmètre du taux (carte Taux de conversion) :</strong> les nombres « fiches validées » et
-              « fiches produites » sont des <strong>totaux sur tout le CRM</strong> (toutes fiches, tous centres /
-              toutes équipes), sur l’intervalle de dates de la période — <strong>pas</strong> uniquement les
-              fiches de l’équipe rattachée au RP qualification connecté.
+              <strong>Périmètre du taux (carte Taux de conversion) :</strong>{' '}
+              {user?.fonction === 12 || user?.fonction === 2 ? (
+                <>
+                  les nombres « fiches validées » et « fiches produites » sont calculés sur les
+                  <strong> agents qualification sous votre responsabilité</strong> (RP qualification : agents des
+                  superviseurs qui vous sont assignés ; superviseur qualification : vos agents directs).
+                </>
+              ) : (
+                <>
+                  les nombres « fiches validées » et « fiches produites » sont des{' '}
+                  <strong>totaux sur tout le CRM</strong> (toutes fiches / toutes équipes), avec filtres RP/RE/agent
+                  si vous les appliquez.
+                </>
+              )}
             </p>
             <p className="info-text">
               <strong>Définitions :</strong> fiches validées = fiches en date de création sur la période, hors
@@ -307,9 +411,8 @@ const KPIQualification = () => {
               <strong>N/C</strong> si aucune fiche produite sur la période).
             </p>
             <p className="info-text kpi-hint-compare">
-              <strong>À comparer :</strong> la carte <em>Meilleur agent</em> / <em>Meilleure équipe</em> classe les
-              performances (sur la même période) sans filtrer par le RP : ce sont des classements sur l’ensemble des
-              agents F3 / équipes concernés par les mêmes critères SQL.
+              <strong>À comparer :</strong> la carte <em>Meilleur agent</em> / <em>Meilleure équipe</em> utilise le
+              même périmètre que le taux sur la période sélectionnée.
             </p>
           </div>
         </div>

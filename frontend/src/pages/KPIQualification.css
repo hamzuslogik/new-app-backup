@@ -70,6 +70,35 @@
   gap: 10px;
 }
 
+.scope-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.scope-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scope-filter-group label {
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+}
+
+.scope-filter-group select {
+  padding: 8px 10px;
+  border: 2px solid #9cbfc8;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  font-size: 13px;
+  min-width: 170px;
+}
+
 .month-selector label {
   font-weight: 600;
   color: #333;

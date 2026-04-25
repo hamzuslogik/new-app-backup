@@ -1021,6 +1021,43 @@ router.get('/production-qualif', authenticate, async (req, res) => {
 
     const idsGroupe0 = etatsGroupe0.map(e => e.id);
 
+    // Périmètre qualification: RP (12) et superviseur qualif (2) voient uniquement leurs agents.
+    // Les autres profils gardent la vue globale.
+    let scopedAgentIds = null; // null => global
+    if (req.user?.fonction === 12) {
+      const superviseursAssignes = await query(
+        `SELECT id FROM utilisateurs
+         WHERE id_rp_qualif = ? AND etat > 0
+         AND EXISTS (
+           SELECT 1 FROM utilisateurs agents
+           WHERE agents.chef_equipe = utilisateurs.id
+           AND agents.fonction = 3
+           AND agents.etat > 0
+         )`,
+        [req.user.id]
+      );
+      const superviseurIds = (superviseursAssignes || []).map((s) => s.id);
+      if (superviseurIds.length === 0) {
+        scopedAgentIds = [];
+      } else {
+        const agentsSousResponsabilite = await query(
+          `SELECT id FROM utilisateurs
+           WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')})
+           AND fonction = 3
+           AND etat > 0`,
+          superviseurIds
+        );
+        scopedAgentIds = (agentsSousResponsabilite || []).map((a) => a.id);
+      }
+    } else if (req.user?.fonction === 2) {
+      const agentsSousResponsabilite = await query(
+        `SELECT id FROM utilisateurs
+         WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
+        [req.user.id]
+      );
+      scopedAgentIds = (agentsSousResponsabilite || []).map((a) => a.id);
+    }
+
     // Pour chaque superviseur, calculer les stats
     const superviseursStats = await Promise.all(
       superviseurs.map(async (superviseur) => {
@@ -1156,7 +1193,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
 router.get('/kpi-qualification', authenticate, async (req, res) => {
   console.log('[STAT] /kpi-qualification - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
-    const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
+    const { month, id_rp, id_superviseur, id_agent } = req.query; // filtres optionnels (backoffice/admin)
     
     // Récupérer les IDs des états groupe 0 pour exclure
     const etatsGroupe0 = await query(`
@@ -1164,6 +1201,77 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       WHERE (groupe = '0' OR groupe = 0)
     `);
     const idsGroupe0 = etatsGroupe0.map(e => e.id);
+
+    // Périmètre qualification:
+    // - RP (12): ses équipes uniquement
+    // - Superviseur qualif (2): ses agents uniquement
+    // - Backoffice/Admin: global + filtres optionnels RP/RE/agent
+    // - autres profils: global
+    let scopedAgentIds = null; // null => global
+    const asInt = (v) => {
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    const filterRpId = asInt(id_rp);
+    const filterSuperviseurId = asInt(id_superviseur);
+    const filterAgentId = asInt(id_agent);
+    const isBackofficeOrAdmin = req.user?.fonction === 11 || req.user?.fonction === 1;
+
+    if (req.user?.fonction === 12) {
+      const superviseursAssignes = await query(
+        `SELECT id FROM utilisateurs
+         WHERE id_rp_qualif = ? AND etat > 0`,
+        [req.user.id]
+      );
+      const superviseurIds = (superviseursAssignes || []).map((s) => s.id);
+      if (superviseurIds.length === 0) {
+        scopedAgentIds = [];
+      } else {
+        const agents = await query(
+          `SELECT id FROM utilisateurs
+           WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')})
+           AND fonction = 3 AND etat > 0`,
+          superviseurIds
+        );
+        scopedAgentIds = (agents || []).map((a) => a.id);
+      }
+    } else if (req.user?.fonction === 2) {
+      const agents = await query(
+        `SELECT id FROM utilisateurs
+         WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
+        [req.user.id]
+      );
+      scopedAgentIds = (agents || []).map((a) => a.id);
+    } else if (isBackofficeOrAdmin && (filterRpId || filterSuperviseurId || filterAgentId)) {
+      if (filterAgentId) {
+        scopedAgentIds = [filterAgentId];
+      } else if (filterSuperviseurId) {
+        const agents = await query(
+          `SELECT id FROM utilisateurs
+           WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
+          [filterSuperviseurId]
+        );
+        scopedAgentIds = (agents || []).map((a) => a.id);
+      } else if (filterRpId) {
+        const superviseursAssignes = await query(
+          `SELECT id FROM utilisateurs
+           WHERE id_rp_qualif = ? AND etat > 0`,
+          [filterRpId]
+        );
+        const superviseurIds = (superviseursAssignes || []).map((s) => s.id);
+        if (superviseurIds.length === 0) {
+          scopedAgentIds = [];
+        } else {
+          const agents = await query(
+            `SELECT id FROM utilisateurs
+             WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')})
+             AND fonction = 3 AND etat > 0`,
+            superviseurIds
+          );
+          scopedAgentIds = (agents || []).map((a) => a.id);
+        }
+      }
+    }
 
     // Dates pour jour, semaine, mois
     const today = new Date();
@@ -1207,6 +1315,17 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
     for (const period of periods) {
       const startDate = `${period.start} 00:00:00`;
       const endDate = `${period.end} 23:59:59`;
+      const hasScopedAgents = Array.isArray(scopedAgentIds);
+      const scopedAgentClauseF = hasScopedAgents
+        ? (scopedAgentIds.length > 0 ? `AND f.id_agent IN (${scopedAgentIds.map(() => '?').join(',')})` : 'AND 1=0')
+        : '';
+      const scopedAgentClauseU = hasScopedAgents
+        ? (scopedAgentIds.length > 0 ? `AND u.id IN (${scopedAgentIds.map(() => '?').join(',')})` : 'AND 1=0')
+        : '';
+      const scopedAgentClauseA = hasScopedAgents
+        ? (scopedAgentIds.length > 0 ? `AND a.id IN (${scopedAgentIds.map(() => '?').join(',')})` : 'AND 1=0')
+        : '';
+      const scopedAgentParams = hasScopedAgents && scopedAgentIds.length > 0 ? scopedAgentIds : [];
 
       // Meilleur agent (fiches validées uniquement - phase 1, 2, 3)
       const bestAgentQuery = `
@@ -1224,6 +1343,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         AND u.etat > 0
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
+        ${scopedAgentClauseU}
         AND (f.archive = 0 OR f.archive IS NULL)
         ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
         AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
@@ -1233,8 +1353,8 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       `;
       
       const bestAgentParams = idsGroupe0.length > 0 
-        ? [startDate, endDate, ...idsGroupe0]
-        : [startDate, endDate];
+        ? [startDate, endDate, ...scopedAgentParams, ...idsGroupe0]
+        : [startDate, endDate, ...scopedAgentParams];
       
       const bestAgent = await queryOne(bestAgentQuery, bestAgentParams);
 
@@ -1256,6 +1376,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         AND s.etat > 0
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
+        ${scopedAgentClauseA}
         AND (f.archive = 0 OR f.archive IS NULL)
         ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
         AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
@@ -1274,11 +1395,12 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE f.date_insert_time >= ?
         AND f.date_insert_time <= ?
+        ${scopedAgentClauseF}
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.ko = 0 OR f.ko IS NULL)
         AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
       `;
-      const fichesValidees = await queryOne(fichesValideesQuery, [startDate, endDate]);
+      const fichesValidees = await queryOne(fichesValideesQuery, [startDate, endDate, ...scopedAgentParams]);
 
       // Fiches produites : saisies par un agent qualif. (F3) avec id_agent renseigné — exclut import en masse (id_agent NULL/0)
       const fichesProduiteQuery = `
@@ -1286,6 +1408,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         FROM fiches f
         INNER JOIN utilisateurs u ON f.id_agent = u.id
         WHERE u.fonction = 3
+        ${scopedAgentClauseF}
         AND f.id_agent IS NOT NULL
         AND f.id_agent > 0
         AND f.date_insert_time >= ?
@@ -1293,7 +1416,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.id_etat_final != 61 OR f.id_etat_final IS NULL)
       `;
-      const fichesProduites = await queryOne(fichesProduiteQuery, [startDate, endDate]);
+      const fichesProduites = await queryOne(fichesProduiteQuery, [...scopedAgentParams, startDate, endDate]);
 
       const nbValidees = fichesValidees?.count || 0;
       const nbProduites = fichesProduites?.count || 0;
@@ -1306,9 +1429,10 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         INNER JOIN fiches f ON c.id_fiche = f.id
         WHERE c.date_creation >= ?
         AND c.date_creation <= ?
+        ${scopedAgentClauseF}
         AND (f.archive = 0 OR f.archive IS NULL)
       `;
-      const fichesConfirmees = await queryOne(fichesConfirmeesQuery, [startDate, endDate]);
+      const fichesConfirmees = await queryOne(fichesConfirmeesQuery, [startDate, endDate, ...scopedAgentParams]);
       const nbConfirmees = fichesConfirmees?.count || 0;
       const tauxTransformation = nbValidees > 0 ? ((nbConfirmees / nbValidees) * 100).toFixed(1) : 0;
       
