@@ -1242,20 +1242,28 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         [req.user.id]
       );
       scopedAgentIds = (agents || []).map((a) => a.id);
-    } else if (isBackofficeOrAdmin && (filterRpId || filterSuperviseurId || filterAgentId)) {
+    } else if (isBackofficeOrAdmin) {
+      // Backoffice/Admin : par défaut, "Tous les RP" => tous les agents qualification (fonction 3).
+      // Puis les filtres RP/RE/agent viennent restreindre ce périmètre.
+      const allQualifAgents = await query(
+        `SELECT id FROM utilisateurs
+         WHERE fonction = 3`
+      );
+      scopedAgentIds = (allQualifAgents || []).map((a) => a.id);
+
       if (filterAgentId) {
-        scopedAgentIds = [filterAgentId];
+        scopedAgentIds = scopedAgentIds.includes(filterAgentId) ? [filterAgentId] : [];
       } else if (filterSuperviseurId) {
         const agents = await query(
           `SELECT id FROM utilisateurs
-           WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
+           WHERE chef_equipe = ? AND fonction = 3`,
           [filterSuperviseurId]
         );
         scopedAgentIds = (agents || []).map((a) => a.id);
       } else if (filterRpId) {
         const superviseursAssignes = await query(
           `SELECT id FROM utilisateurs
-           WHERE id_rp_qualif = ? AND etat > 0`,
+           WHERE id_rp_qualif = ?`,
           [filterRpId]
         );
         const superviseurIds = (superviseursAssignes || []).map((s) => s.id);
@@ -1265,7 +1273,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
           const agents = await query(
             `SELECT id FROM utilisateurs
              WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')})
-             AND fonction = 3 AND etat > 0`,
+             AND fonction = 3`,
             superviseurIds
           );
           scopedAgentIds = (agents || []).map((a) => a.id);

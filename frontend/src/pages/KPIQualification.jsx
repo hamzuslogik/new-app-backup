@@ -413,9 +413,9 @@ const KPIQualification = () => {
                 </>
               ) : (
                 <>
-                  les nombres « fiches validées » et « fiches produites » sont des{' '}
-                  <strong>totaux sur tout le CRM</strong> (toutes fiches / toutes équipes), avec filtres RP/RE/agent
-                  si vous les appliquez.
+                  les nombres « fiches validées » et « fiches produites » sont calculés sur les{' '}
+                  <strong>agents qualification (fonction 3)</strong> de tout le CRM ; les filtres RP/RE/agent
+                  restreignent ensuite ce périmètre.
                 </>
               )}
             </p>
