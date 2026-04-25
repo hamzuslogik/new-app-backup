@@ -5,10 +5,7 @@ import api from '../config/api';
 import { FaTrophy, FaUsers, FaChartLine, FaCalendarDay, FaCalendarWeek, FaCalendarAlt } from 'react-icons/fa';
 import './KPIQualification.css';
 
-/**
- * taux = fiches validées (hors groupe 0, ko=0) / fiches produites (agents F3) × 100
- * (aligné sur GET /statistiques/kpi-qualification)
- */
+/** taux côté API = fiches validées globales / fiches produites (tous agents F3) sur la période */
 function getTauxConversionDisplay(tauxConversion) {
   if (!tauxConversion || typeof tauxConversion !== 'object') {
     return { kind: 'missing' };
@@ -243,7 +240,6 @@ const KPIQualification = () => {
                   if (tauxView.kind === 'ok') {
                     return (
                       <>
-                        <p className="kpi-taux-hint">Validées ÷ produites × 100 (sur la période choisie)</p>
                         <div className="kpi-value taux-value">
                           <span className="value">
                             {Number(tauxView.taux).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}&nbsp;%
@@ -297,11 +293,23 @@ const KPIQualification = () => {
               Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
             </p>
             <p className="info-text">
-              Fiches validées = fiches hors groupe 0 avec KO=0. Fiches produites = fiches créées par les agents qualification, hors poubelle et doublon.
+              <strong>Périmètre du taux (carte Taux de conversion) :</strong> les nombres « fiches validées » et
+              « fiches produites » sont des <strong>totaux sur tout le CRM</strong> (toutes fiches, tous centres /
+              toutes équipes), sur l’intervalle de dates de la période — <strong>pas</strong> uniquement les
+              fiches de l’équipe rattachée au RP qualification connecté.
             </p>
             <p className="info-text">
-              <strong>Taux de conversion</strong> affiché dans la 3e carte = fiches validées ÷ fiches produites × 100
-              (si aucune fiche produite sur la période, le taux est noté <strong>N/C</strong>).
+              <strong>Définitions :</strong> fiches validées = fiches en date de création sur la période, hors
+              archive, KO = 0, avec un état hors groupe 0. Fiches produites = fiches insérées sur la période avec un{' '}
+              <strong>id_agent renseigné</strong> (saisies par un agent qualification, fonction 3) — les fiches
+              d’<strong>importation en masse</strong> sans agent ne sont <strong>pas</strong> comptabilisées —, hors
+              archive et hors état doublon (61). Le pourcentage est validées ÷ produites × 100 (ou{' '}
+              <strong>N/C</strong> si aucune fiche produite sur la période).
+            </p>
+            <p className="info-text kpi-hint-compare">
+              <strong>À comparer :</strong> la carte <em>Meilleur agent</em> / <em>Meilleure équipe</em> classe les
+              performances (sur la même période) sans filtrer par le RP : ce sont des classements sur l’ensemble des
+              agents F3 / équipes concernés par les mêmes critères SQL.
             </p>
           </div>
         </div>

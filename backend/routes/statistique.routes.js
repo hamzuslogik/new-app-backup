@@ -1280,12 +1280,14 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       `;
       const fichesValidees = await queryOne(fichesValideesQuery, [startDate, endDate]);
 
-      // Fiches produites : créées par agents qualification (fonction=3), hors poubelle (archive) et hors doublon (état 61)
+      // Fiches produites : saisies par un agent qualif. (F3) avec id_agent renseigné — exclut import en masse (id_agent NULL/0)
       const fichesProduiteQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
         INNER JOIN utilisateurs u ON f.id_agent = u.id
         WHERE u.fonction = 3
+        AND f.id_agent IS NOT NULL
+        AND f.id_agent > 0
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
@@ -1550,12 +1552,14 @@ router.get('/kpis', authenticate, async (req, res) => {
       const totalCount = totalResult?.count || 0;
 
       // 4b. Total fiches générées par agents qualification (période actuelle)
-      // Exclure archive (poubelle) et état 61 (doublon) - SANS filtre par centre
+      // id_agent renseigné = exclut import en masse (NULL/0). Exclure archive et doublon (61) — SANS filtre par centre
       const totalQualifQuery = `
         SELECT COUNT(*) as count
         FROM fiches f
         INNER JOIN utilisateurs u ON f.id_agent = u.id
         WHERE u.fonction = 3
+        AND f.id_agent IS NOT NULL
+        AND f.id_agent > 0
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)

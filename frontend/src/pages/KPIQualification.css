@@ -361,6 +361,12 @@
   margin-top: 10px;
 }
 
+.info-text.kpi-hint-compare {
+  font-style: normal;
+  color: #5a5a5a;
+  line-height: 1.45;
+}
+
 .loading,
 .error {
   text-align: center;
