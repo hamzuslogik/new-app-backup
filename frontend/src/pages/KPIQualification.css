@@ -71,14 +71,17 @@
 }
 
 .scope-filters {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
   gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  width: 100%;
+  max-width: 760px;
+  justify-items: stretch;
 }
 
 .scope-filter-group {
-  display: flex;
+  display: grid;
+  grid-template-columns: 34px 1fr;
   align-items: center;
   gap: 8px;
 }
@@ -87,16 +90,18 @@
   font-weight: 600;
   color: #333;
   font-size: 13px;
+  text-align: right;
 }
 
 .scope-filter-group select {
+  width: 100%;
   padding: 8px 10px;
   border: 2px solid #9cbfc8;
   border-radius: 6px;
   background: white;
   color: #333;
   font-size: 13px;
-  min-width: 170px;
+  min-width: 0;
 }
 
 .month-selector label {
@@ -426,6 +431,19 @@
   .period-btn {
     flex: 1;
     justify-content: center;
+  }
+
+  .scope-filters {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+
+  .scope-filter-group {
+    grid-template-columns: 70px 1fr;
+  }
+
+  .scope-filter-group label {
+    text-align: left;
   }
 }
 
