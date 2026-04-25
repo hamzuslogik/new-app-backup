@@ -7,6 +7,7 @@ import api from '../config/api';
 import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
 import FicheDetailModal from '../components/FicheDetailModal';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import './DashboardAdmin.css';
 
 const DashboardAdmin = () => {
@@ -396,37 +397,30 @@ const DashboardAdmin = () => {
     return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#FFE441' : '#cccccc';
   };
 
-  // Vérifier les indicateurs dans l'historique basés sur les titres des états
-  const checkIndicators = (histoString) => {
-    if (!histoString || !etatsData) return { r2: false, rf: false, an: false };
+  // Vérifier les indicateurs : R2 = commercial secondaire (comme Planning) ; AN/RF via historique
+  const checkIndicators = (histoString, fiche = {}) => {
+    const r2Placed = ficheHasR2Placed(fiche);
+    if (!histoString || !etatsData) return { r2: r2Placed, rf: false, an: false };
     
     const histoArray = histoString.split(',').map(Number);
     let hasAnnuler = false;
     let hasRefuser = false;
-    let hasR2 = false;
     
-    // Vérifier chaque ID dans l'historique
     histoArray.forEach(etatId => {
       const etat = etatsData.find(e => e.id === etatId);
       if (etat && etat.titre) {
         const titre = etat.titre.toUpperCase();
-        // Vérifier si "RDV ANNULER" est présent dans le titre
         if (titre.includes('RDV ANNULER')) {
           hasAnnuler = true;
         }
-        // Vérifier si "REFUSER" est présent dans le titre
         if (titre.includes('REFUSER')) {
           hasRefuser = true;
-        }
-        // Vérifier pour R2 (CLIENT HONORE A SUIVRE = état 9)
-        if (etatId === 9 || titre.includes('CLIENT HONORE')) {
-          hasR2 = true;
         }
       }
     });
     
     return {
-      r2: hasR2,
+      r2: r2Placed,
       rf: hasRefuser,
       an: hasAnnuler
     };
@@ -1153,7 +1147,7 @@ const DashboardAdmin = () => {
                 </thead>
                 <tbody>
                   {fiches.map((fiche) => {
-                    const indicators = checkIndicators(fiche.id_etat_histo);
+                    const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                     const etatColor = getEtatColor(fiche.id_etat_final);
                     const produitColor = getProduitColor(fiche.produit);
                     
@@ -1209,7 +1203,11 @@ const DashboardAdmin = () => {
                         </td>
                         <td data-label="">
                           <div className="fiche-indicators">
-                            {indicators.r2 && <span className="indicator r2" title="Rappel">R2</span>}
+                            {indicators.r2 && (
+                            <span className="indicator r2" title="R2 placé (commercial secondaire)">
+                              R2
+                            </span>
+                          )}
                             {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
                             {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
                           </div>

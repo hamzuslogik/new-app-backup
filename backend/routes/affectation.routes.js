@@ -97,6 +97,7 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
         f.produit,
         f.id_centre,
         f.id_commercial,
+        f.id_commercial_2,
         f.id_confirmateur,
         f.date_rdv_time,
         f.date_modif_time,

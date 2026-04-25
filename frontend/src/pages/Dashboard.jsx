@@ -12,6 +12,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
+import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import './Dashboard.css';
 
 function resolveDashboardFicheNumericId(fiche) {
@@ -778,6 +779,7 @@ const Dashboard = () => {
 
   // Vérifier les indicateurs dans l'historique basés sur les titres des états
   const checkIndicators = (histoString, fiche = {}) => {
+    const r2Placed = ficheHasR2Placed(fiche);
     if (!histoString || !etatsData) {
       const presenceCouple = String(fiche?.conf_presence_couple || '').toUpperCase().trim();
       const hasRdvSeul = [
@@ -786,13 +788,12 @@ const Dashboard = () => {
         'MR SEUL SANS MME',
         'NON',
       ].includes(presenceCouple) || String(fiche?.conf_rdv_avec || '').toUpperCase().trim() === 'SEUL';
-      return { r2: false, rf: false, an: false, rs: hasRdvSeul };
+      return { r2: r2Placed, rf: false, an: false, rs: hasRdvSeul };
     }
     
     const histoArray = histoString.split(',').map(Number);
     let hasAnnuler = false;
     let hasRefuser = false;
-    let hasR2 = false;
     
     // Vérifier chaque ID dans l'historique
     histoArray.forEach(etatId => {
@@ -807,10 +808,6 @@ const Dashboard = () => {
         if (titre.includes('REFUSER')) {
           hasRefuser = true;
         }
-        // Vérifier pour R2 (CLIENT HONORE A SUIVRE = état 9)
-        if (etatId === 9 || titre.includes('CLIENT HONORE')) {
-          hasR2 = true;
-        }
       }
     });
     
@@ -823,7 +820,7 @@ const Dashboard = () => {
     ].includes(presenceCouple) || String(fiche?.conf_rdv_avec || '').toUpperCase().trim() === 'SEUL';
 
     return {
-      r2: hasR2,
+      r2: r2Placed,
       rf: hasRefuser,
       an: hasAnnuler,
       rs: hasRdvSeul,
@@ -1958,7 +1955,11 @@ const Dashboard = () => {
                         </td>
                         <td data-label="">
                           <div className="fiche-indicators">
-                            {indicators.r2 && <span className="indicator r2" title="Rappel">R2</span>}
+                            {indicators.r2 && (
+                              <span className="indicator r2" title="R2 placé (commercial secondaire)">
+                                R2
+                              </span>
+                            )}
                             {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
                             {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
                             {indicators.rs && <span className="indicator rs" title="SEUL">SEUL</span>}

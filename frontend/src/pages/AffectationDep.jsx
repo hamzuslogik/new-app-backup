@@ -7,6 +7,7 @@ import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaCheck, FaUser, FaRoute,
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import './AffectationDep.css';
 
 // Helper pour obtenir le numéro de semaine ISO
@@ -592,20 +593,15 @@ const AffectationDep = () => {
                                       (rdv.etats_list && rdv.etats_list.includes('AN'))) && (
                                       <span className="badge ann">ANN</span>
                                     )}
-                                    {userIsAdmin && ((rdv.etat_check && (rdv.etat_check.includes('R2') || rdv.etat_check === 'R2')) ||
-                                     (rdv.etats_list && rdv.etats_list.includes('R2'))) && (
-                                      <span className="badge r2">R2</span>
+                                    {userIsAdmin && ficheHasR2Placed(rdv) && (
+                                      <span className="badge r2" title="R2 placé (commercial secondaire)">
+                                        R2
+                                      </span>
                                     )}
                                     {userIsAdmin && ((rdv.etat_check && (rdv.etat_check.includes('RF') || rdv.etat_check === 'RF')) ||
                                      (rdv.etats_list && rdv.etats_list.includes('RF'))) && (
                                       <span className="badge rf">REF</span>
                                     )}
-                                    {userIsAdmin && (rdv.rdv_seul || 
-                                      (rdv.etat_check && (rdv.etat_check.includes('RS') || rdv.etat_check === 'RS')) ||
-                                      (rdv.etats_list && rdv.etats_list.includes('RS'))) && (
-                                      <span className="badge rs">RDV SEUL</span>
-                                    )}
-                                    {/* Badge SEUL toujours visible */}
                                     {(rdv.rdv_valid_sans_couple ||
                                       (rdv.etat_check && (rdv.etat_check.includes('SEUL') || rdv.etat_check === 'SEUL')) ||
                                       (rdv.etats_list && rdv.etats_list.includes('SEUL'))) && (

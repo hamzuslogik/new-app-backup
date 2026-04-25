@@ -306,6 +306,13 @@
   color: white;
 }
 
+/* R2 = commercial secondaire (aligné indicateur dashboard / étoile planning) */
+.badge-r2 {
+  background: #ffa500;
+  color: white;
+  margin-left: 6px;
+}
+
 .loading {
   text-align: center;
   padding: 32px;

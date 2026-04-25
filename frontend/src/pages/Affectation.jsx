@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaUserCheck } from 'react-icons/fa';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import './Affectation.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -405,6 +406,11 @@ const Affectation = () => {
                         <span className="badge badge-assigned">{fiche.commercial_nom}</span>
                       ) : (
                         <span className="badge badge-unassigned">Non affecté</span>
+                      )}
+                      {ficheHasR2Placed(fiche) && (
+                        <span className="badge badge-r2" title="R2 placé (commercial secondaire)">
+                          R2
+                        </span>
                       )}
                     </td>
                     <td>
