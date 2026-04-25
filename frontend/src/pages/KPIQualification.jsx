@@ -157,7 +157,7 @@ const KPIQualification = () => {
               );
             })}
           </div>
-          {selectedPeriod === 'mois' && (
+          {selectedPeriod === 'mois' && !canUseScopeFilters && (
             <div className="month-selector">
               <label htmlFor="month-select">Mois :</label>
               <select
@@ -176,7 +176,24 @@ const KPIQualification = () => {
             </div>
           )}
           {canUseScopeFilters && (
-            <div className="scope-filters">
+            <div className={`scope-filters ${selectedPeriod === 'mois' ? 'with-month' : ''}`}>
+              {selectedPeriod === 'mois' && (
+                <div className="scope-filter-group month-inline">
+                  <label htmlFor="month-select-inline">Mois</label>
+                  <select
+                    id="month-select-inline"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                  >
+                    <option value="">Sélectionner un mois</option>
+                    {getAvailableMonths().map(month => (
+                      <option key={month.value} value={month.value}>
+                        {month.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="scope-filter-group">
                 <label htmlFor="kpi-rp-select">RP</label>
                 <select

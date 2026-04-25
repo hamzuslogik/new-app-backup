@@ -79,6 +79,11 @@
   justify-items: stretch;
 }
 
+.scope-filters.with-month {
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  max-width: 980px;
+}
+
 .scope-filter-group {
   display: grid;
   grid-template-columns: 34px 1fr;
