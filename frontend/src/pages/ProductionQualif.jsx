@@ -13,6 +13,7 @@ import './ProductionQualif.css';
 
 const ProductionQualif = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState('stats'); // 'stats' (RP) ou 'fiches' (RP + superviseur)
   const [searchTerm, setSearchTerm] = useState('');
@@ -483,8 +484,10 @@ const ProductionQualif = () => {
 
   return (
     <div className="production-qualif">
-      <SystemMessageBanner />
-      <div className="production-header">
+      <div className="noprint">
+        <SystemMessageBanner />
+      </div>
+      <div className="production-header noprint">
         <h1><FaChartBar /> Production Qualification</h1>
         <div className="header-actions">
           {(isRPQualif || isSuperviseurQualif) && (
@@ -529,7 +532,7 @@ const ProductionQualif = () => {
       </div>
 
       {showFilters && (
-        <div className="production-filters">
+        <div className="production-filters noprint">
           <div className="filter-group">
             <label>Date début</label>
             <input
@@ -669,7 +672,7 @@ const ProductionQualif = () => {
 
       {/* Recherche rapide pour les fiches */}
       {(isRPQualif || isSuperviseurQualif) && viewMode === 'fiches' && (
-        <div className="quick-search-container">
+        <div className="quick-search-container noprint">
           <FaSearch />
           <input
             type="text"
@@ -685,7 +688,7 @@ const ProductionQualif = () => {
         {viewMode === 'fiches' && (isRPQualif || isSuperviseurQualif) ? (
           // Vue fiches pour RP Qualification
           loadingFiches ? (
-            <div className="loading">Chargement des fiches...</div>
+            <div className="loading noprint">Chargement des fiches...</div>
           ) : fichesError ? (
             <div className="no-data" style={{ color: 'red' }}>
               Erreur lors du chargement des fiches: {fichesError.message || 'Erreur inconnue'}
@@ -702,7 +705,10 @@ const ProductionQualif = () => {
             </div>
           ) : fiches && fiches.length > 0 ? (
             <div className="fiches-table-container">
-              <div className="results-info">
+              <div className="period-info print-period">
+                Période : {filters.date_debut} au {filters.date_fin}
+              </div>
+              <div className="results-info noprint">
                 {searchTerm || filters.id_superviseur || (filters.id_etat_final && filters.id_etat_final.length > 0) ? (
                   <p>{fiches.length} fiche{fiches.length > 1 ? 's' : ''} trouvée{fiches.length > 1 ? 's' : ''} (sur {fichesData?.data?.length || fichesData?.pagination?.total || 0})</p>
                 ) : (
@@ -722,7 +728,7 @@ const ProductionQualif = () => {
                     <th>CP</th>
                     <th>État</th>
                     {canSeeCommentaireQualite && <th>Commentaire Qualité</th>}
-                    <th>Actions</th>
+                    <th className="noprint">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -766,7 +772,7 @@ const ProductionQualif = () => {
                             <div className="comment-quick-edit-container">
                               {canEditCommentaireQualite ? (
                                 <>
-                                  <div className="comment-quick-actions">
+                                  <div className="comment-quick-actions noprint">
                                     {(() => {
                                       const currentValue = editingComment.hash === fiche.hash ? editingComment.value : (fiche.commentaire_qualite || '');
                                       const originalValue = fiche.commentaire_qualite || '';
@@ -826,7 +832,7 @@ const ProductionQualif = () => {
                             </div>
                           </td>
                         )}
-                        <td>
+                        <td className="noprint">
                           {isRPQualif ? (
                             <span 
                               className="btn-detail disabled" 
@@ -862,14 +868,17 @@ const ProductionQualif = () => {
             <div className="no-data">Aucune fiche trouvée pour cette période</div>
           )
         ) : loadingStats ? (
-          <div className="loading">Chargement des données...</div>
+          <div className="loading noprint">Chargement des données...</div>
         ) : stats.superviseurs && stats.superviseurs.length > 0 ? (
           <>
-            {stats.period && (
-              <div className="period-info">
-                Période : {stats.period.date_debut} au {stats.period.date_fin}
-              </div>
-            )}
+            <div className="period-info print-period">
+              Période :{' '}
+              {stats.period?.date_debut && stats.period?.date_fin
+                ? `${stats.period.date_debut} au ${stats.period.date_fin}`
+                : filters.date_debut && filters.date_fin
+                  ? `${filters.date_debut} au ${filters.date_fin}`
+                  : '—'}
+            </div>
             <div className="table-container">
               <table className="production-table">
                 <thead style={{ backgroundColor: '#9cbfc8', color: '#ffffff' }}>

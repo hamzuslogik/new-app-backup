@@ -5,6 +5,29 @@ import api from '../config/api';
 import { FaTrophy, FaUsers, FaChartLine, FaCalendarDay, FaCalendarWeek, FaCalendarAlt } from 'react-icons/fa';
 import './KPIQualification.css';
 
+/**
+ * taux = fiches validées (hors groupe 0, ko=0) / fiches produites (agents F3) × 100
+ * (aligné sur GET /statistiques/kpi-qualification)
+ */
+function getTauxConversionDisplay(tauxConversion) {
+  if (!tauxConversion || typeof tauxConversion !== 'object') {
+    return { kind: 'missing' };
+  }
+  const fichesValidees = Number(tauxConversion.fiches_validees);
+  const fichesProduites = Number(tauxConversion.fiches_produites);
+  let taux = typeof tauxConversion.taux === 'number' && !Number.isNaN(tauxConversion.taux) ? tauxConversion.taux : null;
+  if (taux == null && fichesProduites > 0) {
+    taux = (fichesValidees / fichesProduites) * 100;
+  }
+  if (fichesProduites <= 0) {
+    return { kind: 'nc', fichesValidees, fichesProduites };
+  }
+  if (taux == null || Number.isNaN(taux)) {
+    return { kind: 'missing' };
+  }
+  return { kind: 'ok', taux, fichesValidees, fichesProduites };
+}
+
 const KPIQualification = () => {
   const { user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois
@@ -215,26 +238,55 @@ const KPIQualification = () => {
                 <span className="period-label">{currentData.period}</span>
               </div>
               <div className="kpi-card-body">
-                {currentData.taux_conversion ? (
-                  <>
-                    <div className="kpi-value taux-value">
-                      <span className="value">{currentData.taux_conversion.taux}%</span>
-                    </div>
-                    <div className="conversion-details">
-                      <div className="detail-item">
-                        <span className="detail-value">{currentData.taux_conversion.fiches_validees}</span>
-                        <span className="detail-label">fiches validées</span>
-                      </div>
-                      <div className="detail-separator">/</div>
-                      <div className="detail-item">
-                        <span className="detail-value">{currentData.taux_conversion.fiches_produites}</span>
-                        <span className="detail-label">fiches produites</span>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="no-data">Données non disponibles</div>
-                )}
+                {(() => {
+                  const tauxView = getTauxConversionDisplay(currentData.taux_conversion);
+                  if (tauxView.kind === 'ok') {
+                    return (
+                      <>
+                        <p className="kpi-taux-hint">Validées ÷ produites × 100 (sur la période choisie)</p>
+                        <div className="kpi-value taux-value">
+                          <span className="value">
+                            {Number(tauxView.taux).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}&nbsp;%
+                          </span>
+                        </div>
+                        <div className="conversion-details">
+                          <div className="detail-item">
+                            <span className="detail-value">{tauxView.fichesValidees}</span>
+                            <span className="detail-label">fiches validées</span>
+                          </div>
+                          <div className="detail-separator">/</div>
+                          <div className="detail-item">
+                            <span className="detail-value">{tauxView.fichesProduites}</span>
+                            <span className="detail-label">fiches produites</span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  }
+                  if (tauxView.kind === 'nc') {
+                    return (
+                      <>
+                        <p className="kpi-taux-hint">Aucune fiche produite sur la période (dénominateur = 0)</p>
+                        <div className="kpi-value taux-value taux-na">
+                          <span className="value taux-na-text">N/C</span>
+                          <span className="label taux-na-sublabel">Taux non calculable</span>
+                        </div>
+                        <div className="conversion-details">
+                          <div className="detail-item">
+                            <span className="detail-value">{tauxView.fichesValidees}</span>
+                            <span className="detail-label">fiches validées</span>
+                          </div>
+                          <div className="detail-separator">/</div>
+                          <div className="detail-item">
+                            <span className="detail-value">{tauxView.fichesProduites}</span>
+                            <span className="detail-label">fiches produites</span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  }
+                  return <div className="no-data">Données non disponibles (API taux de conversion)</div>;
+                })()}
               </div>
             </div>
           </div>
@@ -246,6 +298,10 @@ const KPIQualification = () => {
             </p>
             <p className="info-text">
               Fiches validées = fiches hors groupe 0 avec KO=0. Fiches produites = fiches créées par les agents qualification, hors poubelle et doublon.
+            </p>
+            <p className="info-text">
+              <strong>Taux de conversion</strong> affiché dans la 3e carte = fiches validées ÷ fiches produites × 100
+              (si aucune fiche produite sur la période, le taux est noté <strong>N/C</strong>).
             </p>
           </div>
         </div>

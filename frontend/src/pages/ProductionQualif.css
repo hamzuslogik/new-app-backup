@@ -455,6 +455,25 @@
 }
 
 @media print {
+  /* Page Production Qualif uniquement : masquer toute l’enveloppe app (sidebar, barre du haut) */
+  body.print-production-qualif-page .sidebar,
+  body.print-production-qualif-page .header,
+  body.print-production-qualif-page .sidebar-overlay {
+    display: none !important;
+  }
+
+  body.print-production-qualif-page .main-content,
+  body.print-production-qualif-page .content-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body.print-production-qualif-page .app {
+    display: block;
+  }
+
   .noprint {
     display: none !important;
   }
@@ -465,20 +484,42 @@
 
   .production-content {
     box-shadow: none;
-    padding: 0;
+    border-radius: 0;
+    padding: 8px 0;
   }
 
+  .print-period,
+  .period-info {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .comment-textarea-quick {
+    min-height: auto;
+    max-height: none;
+    border: 1px solid #ccc !important;
+    background: #fff !important;
+  }
+
+  .fiches-table,
   .production-table {
     font-size: 8.5px;
   }
 
+  .fiches-table th,
+  .fiches-table td,
   .production-table th,
   .production-table td {
     padding: 4.8px;
   }
 
+  .fiches-table thead th,
   .production-table th {
     color: #ffffff !important;
+  }
+
+  .fiches-table thead th {
+    background: #9cbfc8 !important;
   }
 }
 
