@@ -205,11 +205,12 @@
 }
 
 /* Colonne Actions : garder les boutons dans la largeur de colonne */
-.fiches-table th:last-child,
-.fiches-table td:last-child {
-  width: 320px;
-  min-width: 320px;
-  max-width: 320px;
+/* Colonne Actions dédiée (prioritaire, évite les overrides responsive génériques) */
+.fiches-table th.actions-col,
+.fiches-table td.actions-col {
+  width: 380px !important;
+  min-width: 380px !important;
+  max-width: 380px !important;
   box-sizing: border-box;
 }
 

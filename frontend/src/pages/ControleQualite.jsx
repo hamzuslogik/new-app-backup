@@ -678,7 +678,7 @@ const ControleQualite = () => {
                   <th>Commentaire agent</th>
                   <th>Commentaire Qualité</th>
                   <th>Utilisateur Qualité</th>
-                  <th>Actions</th>
+                  <th className="actions-col">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -804,7 +804,7 @@ const ControleQualite = () => {
                         <span className="qualite-user-name no-user">-</span>
                       )}
                     </td>
-                    <td>
+                    <td className="actions-col">
                       <div className="action-buttons">
                         <button
                           className="btn-validate-icon"
