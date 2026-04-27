@@ -687,7 +687,10 @@
   background: #f8f9fa;
   border: 1px solid #dee2e6;
   border-radius: 4px;
-  min-height: 60px;
+  height: 74px;
+  min-height: 74px;
+  max-height: 74px;
+  overflow-y: auto;
 }
 
 .comment-readonly-text {
@@ -708,8 +711,10 @@
   display: flex;
   flex-direction: column;
   gap: 4.8px;
+  width: 100%;
   min-width: 250px;
   max-width: 350px;
+  max-height: 92px;
 }
 
 .comment-quick-actions {
@@ -731,11 +736,20 @@
   border-radius: 4px;
   font-size: 11px;
   font-family: inherit;
-  resize: vertical;
-  min-height: 50px;
-  max-height: 120px;
+  resize: none;
+  height: 74px;
+  min-height: 74px;
+  max-height: 74px;
   width: 100%;
+  overflow-y: auto;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.comment-qualite-cell {
+  width: 360px;
+  min-width: 360px;
+  max-width: 360px;
+  vertical-align: top;
 }
 
 .comment-textarea-quick:focus {

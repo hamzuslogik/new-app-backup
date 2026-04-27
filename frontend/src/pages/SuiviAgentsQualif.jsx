@@ -717,7 +717,7 @@ const SuiviAgentsQualif = () => {
                         </span>
                       </td>
                       {canSeeCommentaireQualite && (
-                        <td style={{ maxWidth: '300px' }}>
+                        <td className="comment-qualite-cell">
                           <div className="comment-quick-edit-container">
                             {canEditCommentaireQualite ? (
                               <>
