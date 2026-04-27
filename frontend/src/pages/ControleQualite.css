@@ -207,9 +207,9 @@
 /* Colonne Actions : garder les boutons dans la largeur de colonne */
 .fiches-table th:last-child,
 .fiches-table td:last-child {
-  width: 230px;
-  min-width: 230px;
-  max-width: 230px;
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
   box-sizing: border-box;
 }
 
