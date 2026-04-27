@@ -371,6 +371,7 @@
 .section-title.historique-title-bar * {
   color: #ffffff !important;
   fill: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 /* Renfort modal détail fiche (priorité visuelle) */
@@ -379,6 +380,8 @@
 .fiche-detail-page .section-title.historique-title-bar,
 .fiche-detail-page .section-title.historique-title-bar * {
   color: #ffffff !important;
+  fill: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 .fiche-details-table {

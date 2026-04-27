@@ -4010,15 +4010,18 @@ const FicheDetail = ({
                           color: '#ffffff',
                           borderRadius: '6px',
                           marginBottom: '15px',
-                          border: '1px solid #000000'
+                          border: '1px solid #000000',
+                          WebkitTextFillColor: '#ffffff'
                         }}
                         onClick={() => setShowHistorique(!showHistorique)}
                       >
-                        <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#ffffff' }}>
-                          <FaHistory style={{ marginRight: '8px', color: '#ffffff' }} />
+                        <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#ffffff', WebkitTextFillColor: '#ffffff' }}>
+                          <FaHistory style={{ marginRight: '8px', color: '#ffffff', fill: '#ffffff' }} />
                           Historique des états ({fiche.historique.length} entrée{fiche.historique.length > 1 ? 's' : ''})
                         </span>
-                        {showHistorique ? <FaChevronUp style={{ color: '#ffffff' }} /> : <FaChevronDown style={{ color: '#ffffff' }} />}
+                        {showHistorique
+                          ? <FaChevronUp style={{ color: '#ffffff', fill: '#ffffff' }} />
+                          : <FaChevronDown style={{ color: '#ffffff', fill: '#ffffff' }} />}
                       </div>
                       
                       {showHistorique && (
