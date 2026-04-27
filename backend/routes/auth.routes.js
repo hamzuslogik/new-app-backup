@@ -328,9 +328,13 @@ router.post('/generate-permanent-token', authenticate, checkPermission(1, 2, 7),
       });
     }
 
-    // Générer un token permanent (sans expiration)
+    // Générer un token permanent (sans expiration JWT et sans coupure par inactivité)
     const token = jwt.sign(
-      { userId: targetUserId },
+      {
+        userId: targetUserId,
+        token_kind: 'permanent',
+        bypass_idle_timeout: true
+      },
       process.env.JWT_SECRET
       // Pas d'option expiresIn = token permanent
     );

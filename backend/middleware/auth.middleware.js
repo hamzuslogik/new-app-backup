@@ -85,29 +85,32 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Inactivité : même durée que session_lifetime (paramètres globaux) vs user_activity.last_activity
-    await ensureUserActivityTable();
-    const sec = await getSecuritySettings();
-    const idleMs = sessionLifetimeToIdleMs(sec.sessionLifetime);
-    const activityRow = await queryOne(
-      `SELECT DATE_FORMAT(last_activity, '%Y-%m-%d %H:%i:%s') AS last_activity
-       FROM user_activity WHERE user_id = ?`,
-      [user.id]
-    );
-    if (activityRow && activityRow.last_activity) {
-      const last = lastActivityToUtcMs(activityRow.last_activity);
-      if (Number.isFinite(last) && Date.now() - last > idleMs) {
-        console.warn(
-          `[auth/middleware] refus HTTP 401 — session inactive userId=${user.id} idle_ms=${idleMs} dernière_activité=${activityRow.last_activity}`
-        );
-        return res.status(401).json({
-          success: false,
-          code: 'SESSION_IDLE_EXPIRED',
-          message: 'Session expirée pour inactivité. Veuillez vous reconnecter.'
-        });
+    // Inactivité : même durée que session_lifetime, sauf tokens permanents (API)
+    const isPermanentToken = decoded?.token_kind === 'permanent' || decoded?.bypass_idle_timeout === true;
+    if (!isPermanentToken) {
+      await ensureUserActivityTable();
+      const sec = await getSecuritySettings();
+      const idleMs = sessionLifetimeToIdleMs(sec.sessionLifetime);
+      const activityRow = await queryOne(
+        `SELECT DATE_FORMAT(last_activity, '%Y-%m-%d %H:%i:%s') AS last_activity
+         FROM user_activity WHERE user_id = ?`,
+        [user.id]
+      );
+      if (activityRow && activityRow.last_activity) {
+        const last = lastActivityToUtcMs(activityRow.last_activity);
+        if (Number.isFinite(last) && Date.now() - last > idleMs) {
+          console.warn(
+            `[auth/middleware] refus HTTP 401 — session inactive userId=${user.id} idle_ms=${idleMs} dernière_activité=${activityRow.last_activity}`
+          );
+          return res.status(401).json({
+            success: false,
+            code: 'SESSION_IDLE_EXPIRED',
+            message: 'Session expirée pour inactivité. Veuillez vous reconnecter.'
+          });
+        }
       }
+      await touchUserActivity(user.id);
     }
-    await touchUserActivity(user.id);
 
     // Ajouter l'utilisateur à la requête
     req.user = {
