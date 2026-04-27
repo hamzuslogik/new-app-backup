@@ -204,6 +204,15 @@
   vertical-align: middle;
 }
 
+/* Colonne Actions : garder les boutons dans la largeur de colonne */
+.fiches-table th:last-child,
+.fiches-table td:last-child {
+  width: 230px;
+  min-width: 230px;
+  max-width: 230px;
+  box-sizing: border-box;
+}
+
 .produit-indicator {
   display: inline-block;
   padding: 4px 6.4px;
@@ -244,6 +253,9 @@
   display: flex;
   gap: 6.4px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  max-width: 100%;
 }
 
 .btn-validate {

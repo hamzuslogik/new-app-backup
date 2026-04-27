@@ -1250,7 +1250,7 @@ if (isset($_SESSION['error_message'])) {
                     </div>
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Complément de chauffage (qualification)</label>
-                        <input type="text" name="complement_chauffage" placeholder="Ex. : appoint, poêle, précision sur le mode…" maxlength="512">
+                        <input type="text" name="complement_chauffage" data-force-optional="1" placeholder="Ex. : appoint, poêle, précision sur le mode…" maxlength="512">
                     </div>
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Année Système Chauffage</label>
@@ -1313,6 +1313,10 @@ if (isset($_SESSION['error_message'])) {
         function setRequiredInContainer(container, required) {
             const inputs = container.querySelectorAll('input, select, textarea');
             inputs.forEach(function(el) {
+                if (required && el.getAttribute('data-force-optional') === '1') {
+                    el.removeAttribute('required');
+                    return;
+                }
                 if (required) {
                     el.setAttribute('required', 'required');
                 } else {
