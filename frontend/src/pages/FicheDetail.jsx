@@ -4476,30 +4476,6 @@ const FicheDetail = ({
                     </select>
                   </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="compte_rendu_etat_date_sign_date">Signé le :</label>
-                      <input
-                        type="date"
-                        id="compte_rendu_etat_date_sign_date"
-                        className="form-control"
-                        value={etatFormData.date_sign_date}
-                        onChange={(e) => setEtatFormData({...etatFormData, date_sign_date: e.target.value})}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="compte_rendu_etat_date_sign_time">Heure :</label>
-                      <input
-                        type="time"
-                        id="compte_rendu_etat_date_sign_time"
-                        className="form-control"
-                        value={etatFormData.date_sign_time}
-                        onChange={(e) => setEtatFormData({...etatFormData, date_sign_time: e.target.value})}
-                      />
-                    </div>
-                  </div>
-
                   {sousEtats.length > 0 && (
                     <div className="form-group">
                       <label htmlFor="compte_rendu_etat_id_sous_etat_signer">Sous État :</label>
@@ -4574,6 +4550,21 @@ const FicheDetail = ({
                     >
                       <option value="reau">R/EAU</option>
                       <option value="rr">R/R</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_ph3_attente_signer">Financement :</label>
+                    <select
+                      id="compte_rendu_etat_ph3_attente_signer"
+                      className="form-control"
+                      value={etatFormData.ph3_attente}
+                      onChange={(e) => setEtatFormData({...etatFormData, ph3_attente: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {typesFinancement.filter(t => t.etat !== 0).map(t => (
+                        <option key={t.id} value={t.nom}>{t.nom}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -4669,97 +4660,6 @@ const FicheDetail = ({
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_installateur_signer">Installateur :</label>
-                    <select
-                      id="compte_rendu_etat_ph3_installateur_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_installateur}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_installateur: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {installateurs?.map(inst => (
-                        <option key={inst.id} value={inst.id}>
-                          {inst.nom}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_conf_consommations_signer">Conso actuelle du client (par mois) :</label>
-                    <input
-                      type="number"
-                      id="compte_rendu_etat_conf_consommations_signer"
-                      className="form-control"
-                      value={etatFormData.conf_consommations}
-                      onChange={(e) => setEtatFormData({...etatFormData, conf_consommations: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_bonus_30_signer">Bonus :</label>
-                    <select
-                      id="compte_rendu_etat_ph3_bonus_30_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_bonus_30}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_bonus_30: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="15">15</option>
-                      <option value="30">30</option>
-                      <option value="SANS">SANS</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_valeur_mensualite_signer">Reste à charge après bonus (par mois) :</label>
-                    <input
-                      type="number"
-                      id="compte_rendu_etat_valeur_mensualite_signer"
-                      className="form-control"
-                      value={etatFormData.valeur_mensualite}
-                      onChange={(e) => setEtatFormData({...etatFormData, valeur_mensualite: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_mensualite_signer">Mensualité du Crédit :</label>
-                    <input
-                      type="number"
-                      id="compte_rendu_etat_ph3_mensualite_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_mensualite}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_mensualite: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_attente_signer">Financement :</label>
-                    <select
-                      id="compte_rendu_etat_ph3_attente_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_attente}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_attente: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {typesFinancement.filter(t => t.etat !== 0).map(t => (
-                        <option key={t.id} value={t.nom}>{t.nom}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_nbr_annee_finance_signer">Nombre de mois du crédit :</label>
-                    <input
-                      type="number"
-                      id="compte_rendu_etat_nbr_annee_finance_signer"
-                      className="form-control"
-                      value={etatFormData.nbr_annee_finance}
-                      onChange={(e) => setEtatFormData({...etatFormData, nbr_annee_finance: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
                     <label htmlFor="compte_rendu_etat_credit_immobilier_signer">Crédit immobilier :</label>
                     <input
                       type="number"
@@ -4779,6 +4679,106 @@ const FicheDetail = ({
                       value={etatFormData.credit_autre}
                       onChange={(e) => setEtatFormData({...etatFormData, credit_autre: e.target.value})}
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_ph3_installateur_signer">Installateur :</label>
+                    <select
+                      id="compte_rendu_etat_ph3_installateur_signer"
+                      className="form-control"
+                      value={etatFormData.ph3_installateur}
+                      onChange={(e) => setEtatFormData({...etatFormData, ph3_installateur: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {installateurs?.map(inst => (
+                        <option key={inst.id} value={inst.id}>
+                          {inst.nom}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_conf_consommations_signer">Consommation annuelle ancien système :</label>
+                    <input
+                      type="number"
+                      id="compte_rendu_etat_conf_consommations_signer"
+                      className="form-control"
+                      value={etatFormData.conf_consommations}
+                      onChange={(e) => setEtatFormData({...etatFormData, conf_consommations: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_valeur_mensualite_signer">Partie à financer du client :</label>
+                    <input
+                      type="number"
+                      id="compte_rendu_etat_valeur_mensualite_signer"
+                      className="form-control"
+                      value={etatFormData.valeur_mensualite}
+                      onChange={(e) => setEtatFormData({...etatFormData, valeur_mensualite: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_ph3_bonus_30_signer">Bonus annoncé :</label>
+                    <select
+                      id="compte_rendu_etat_ph3_bonus_30_signer"
+                      className="form-control"
+                      value={etatFormData.ph3_bonus_30}
+                      onChange={(e) => setEtatFormData({...etatFormData, ph3_bonus_30: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="15">15</option>
+                      <option value="30">30</option>
+                      <option value="SANS">SANS</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_ph3_mensualite_signer">Mensualité du Crédit :</label>
+                    <input
+                      type="number"
+                      id="compte_rendu_etat_ph3_mensualite_signer"
+                      className="form-control"
+                      value={etatFormData.ph3_mensualite}
+                      onChange={(e) => setEtatFormData({...etatFormData, ph3_mensualite: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_nbr_annee_finance_signer">Nombre de mois du crédit :</label>
+                    <input
+                      type="number"
+                      id="compte_rendu_etat_nbr_annee_finance_signer"
+                      className="form-control"
+                      value={etatFormData.nbr_annee_finance}
+                      onChange={(e) => setEtatFormData({...etatFormData, nbr_annee_finance: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="compte_rendu_etat_date_sign_date">Date signature :</label>
+                      <input
+                        type="date"
+                        id="compte_rendu_etat_date_sign_date"
+                        className="form-control"
+                        value={etatFormData.date_sign_date}
+                        onChange={(e) => setEtatFormData({...etatFormData, date_sign_date: e.target.value})}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="compte_rendu_etat_date_sign_time">Heure :</label>
+                      <input
+                        type="time"
+                        id="compte_rendu_etat_date_sign_time"
+                        className="form-control"
+                        value={etatFormData.date_sign_time}
+                        onChange={(e) => setEtatFormData({...etatFormData, date_sign_time: e.target.value})}
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group">
@@ -5902,30 +5902,6 @@ const FicheDetail = ({
                   </select>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="etat_date_sign_date">Signé le :</label>
-                    <input
-                      type="date"
-                      id="etat_date_sign_date"
-                      className="form-control"
-                      value={etatFormData.date_sign_date}
-                      onChange={(e) => setEtatFormData({...etatFormData, date_sign_date: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="etat_date_sign_time">Heure :</label>
-                    <input
-                      type="time"
-                      id="etat_date_sign_time"
-                      className="form-control"
-                      value={etatFormData.date_sign_time}
-                      onChange={(e) => setEtatFormData({...etatFormData, date_sign_time: e.target.value})}
-                    />
-                  </div>
-                </div>
-
                 {sousEtats.length > 0 && (
                   <div className="form-group">
                     <label htmlFor="etat_id_sous_etat_signer">Sous État :</label>
@@ -6000,6 +5976,21 @@ const FicheDetail = ({
                   >
                     <option value="reau">R/EAU</option>
                     <option value="rr">R/R</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="etat_ph3_attente_signer">Financement :</label>
+                  <select
+                    id="etat_ph3_attente_signer"
+                    className="form-control"
+                    value={etatFormData.ph3_attente}
+                    onChange={(e) => setEtatFormData({...etatFormData, ph3_attente: e.target.value})}
+                  >
+                    <option value="">Sélectionner</option>
+                    {typesFinancement.filter(t => t.etat !== 0).map(t => (
+                      <option key={t.id} value={t.nom}>{t.nom}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -6095,97 +6086,6 @@ const FicheDetail = ({
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="etat_ph3_installateur_signer">Installateur :</label>
-                  <select
-                    id="etat_ph3_installateur_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_installateur}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_installateur: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    {installateurs?.map(inst => (
-                      <option key={inst.id} value={inst.id}>
-                        {inst.nom}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_conf_consommations_signer">Conso actuelle du client (par mois) :</label>
-                  <input
-                    type="number"
-                    id="etat_conf_consommations_signer"
-                    className="form-control"
-                    value={etatFormData.conf_consommations}
-                    onChange={(e) => setEtatFormData({...etatFormData, conf_consommations: e.target.value})}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_bonus_30_signer">Bonus :</label>
-                  <select
-                    id="etat_ph3_bonus_30_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_bonus_30}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_bonus_30: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="15">15</option>
-                    <option value="30">30</option>
-                    <option value="SANS">SANS</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_valeur_mensualite_signer">Reste à charge après bonus (par mois) :</label>
-                  <input
-                    type="number"
-                    id="etat_valeur_mensualite_signer"
-                    className="form-control"
-                    value={etatFormData.valeur_mensualite}
-                    onChange={(e) => setEtatFormData({...etatFormData, valeur_mensualite: e.target.value})}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_mensualite_signer">Mensualité du Crédit :</label>
-                  <input
-                    type="number"
-                    id="etat_ph3_mensualite_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_mensualite}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_mensualite: e.target.value})}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_attente_signer">Financement :</label>
-                  <select
-                    id="etat_ph3_attente_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_attente}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_attente: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    {typesFinancement.filter(t => t.etat !== 0).map(t => (
-                      <option key={t.id} value={t.nom}>{t.nom}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_nbr_annee_finance_signer">Nombre de mois du crédit :</label>
-                  <input
-                    type="number"
-                    id="etat_nbr_annee_finance_signer"
-                    className="form-control"
-                    value={etatFormData.nbr_annee_finance}
-                    onChange={(e) => setEtatFormData({...etatFormData, nbr_annee_finance: e.target.value})}
-                  />
-                </div>
-
-                <div className="form-group">
                   <label htmlFor="etat_credit_immobilier_signer">Crédit immobilier :</label>
                   <input
                     type="number"
@@ -6205,6 +6105,106 @@ const FicheDetail = ({
                     value={etatFormData.credit_autre}
                     onChange={(e) => setEtatFormData({...etatFormData, credit_autre: e.target.value})}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="etat_ph3_installateur_signer">Installateur :</label>
+                  <select
+                    id="etat_ph3_installateur_signer"
+                    className="form-control"
+                    value={etatFormData.ph3_installateur}
+                    onChange={(e) => setEtatFormData({...etatFormData, ph3_installateur: e.target.value})}
+                  >
+                    <option value="">Sélectionner</option>
+                    {installateurs?.map(inst => (
+                      <option key={inst.id} value={inst.id}>
+                        {inst.nom}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="etat_conf_consommations_signer">Consommation annuelle ancien système :</label>
+                  <input
+                    type="number"
+                    id="etat_conf_consommations_signer"
+                    className="form-control"
+                    value={etatFormData.conf_consommations}
+                    onChange={(e) => setEtatFormData({...etatFormData, conf_consommations: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="etat_valeur_mensualite_signer">Partie à financer du client :</label>
+                  <input
+                    type="number"
+                    id="etat_valeur_mensualite_signer"
+                    className="form-control"
+                    value={etatFormData.valeur_mensualite}
+                    onChange={(e) => setEtatFormData({...etatFormData, valeur_mensualite: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="etat_ph3_bonus_30_signer">Bonus annoncé :</label>
+                  <select
+                    id="etat_ph3_bonus_30_signer"
+                    className="form-control"
+                    value={etatFormData.ph3_bonus_30}
+                    onChange={(e) => setEtatFormData({...etatFormData, ph3_bonus_30: e.target.value})}
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="15">15</option>
+                    <option value="30">30</option>
+                    <option value="SANS">SANS</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="etat_ph3_mensualite_signer">Mensualité du Crédit :</label>
+                  <input
+                    type="number"
+                    id="etat_ph3_mensualite_signer"
+                    className="form-control"
+                    value={etatFormData.ph3_mensualite}
+                    onChange={(e) => setEtatFormData({...etatFormData, ph3_mensualite: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="etat_nbr_annee_finance_signer">Nombre de mois du crédit :</label>
+                  <input
+                    type="number"
+                    id="etat_nbr_annee_finance_signer"
+                    className="form-control"
+                    value={etatFormData.nbr_annee_finance}
+                    onChange={(e) => setEtatFormData({...etatFormData, nbr_annee_finance: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="etat_date_sign_date">Date signature :</label>
+                    <input
+                      type="date"
+                      id="etat_date_sign_date"
+                      className="form-control"
+                      value={etatFormData.date_sign_date}
+                      onChange={(e) => setEtatFormData({...etatFormData, date_sign_date: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="etat_date_sign_time">Heure :</label>
+                    <input
+                      type="time"
+                      id="etat_date_sign_time"
+                      className="form-control"
+                      value={etatFormData.date_sign_time}
+                      onChange={(e) => setEtatFormData({...etatFormData, date_sign_time: e.target.value})}
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
