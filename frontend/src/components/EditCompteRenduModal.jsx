@@ -188,7 +188,14 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
       ph3_attente: isEtatSigner ? (formData.ph3_attente || null) : null,
       nbr_annee_finance: isEtatSigner && formData.nbr_annee_finance ? parseInt(formData.nbr_annee_finance, 10) : null,
       credit_immobilier: isEtatSigner ? (formData.credit_immobilier || null) : null,
-      credit_autre: isEtatSigner ? (formData.credit_autre || null) : null
+      credit_autre: isEtatSigner ? (formData.credit_autre || null) : null,
+      pseudo: isEtatSigner ? (otherModifications.pseudo || null) : null,
+      valeur_mensualite: isEtatSigner && otherModifications.valeur_mensualite !== undefined && otherModifications.valeur_mensualite !== ''
+        ? parseFloat(otherModifications.valeur_mensualite)
+        : null,
+      conf_consommations: isEtatSigner && otherModifications.conf_consommations !== undefined && otherModifications.conf_consommations !== ''
+        ? parseFloat(otherModifications.conf_consommations)
+        : null
     };
     onSave(data);
   };

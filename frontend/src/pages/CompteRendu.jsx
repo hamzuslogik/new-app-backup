@@ -239,7 +239,13 @@ const CompteRendu = () => {
       { label: 'Ballon', key: 'ph3_ballon', value: picked('ph3_ballon') },
       { label: 'Installateur', key: 'ph3_installateur', value: picked('ph3_installateur') },
       { label: 'Consommation annuelle ancien système', key: 'conf_consommations', value: picked('conf_consommations') },
-      { label: 'Partie à financer du client', key: 'valeur_mensualite', value: picked('valeur_mensualite') },
+      {
+        label: 'Partie à financer du client',
+        key: 'valeur_mensualite',
+        value:
+          picked('valeur_mensualite') ??
+          (mods.valeur_mensualite != null && String(mods.valeur_mensualite) !== '' ? mods.valeur_mensualite : null)
+      },
       { label: 'Bonus annoncé', key: 'ph3_bonus_30', value: picked('ph3_bonus_30') },
       { label: 'Mensualité du crédit', key: 'ph3_mensualite', value: picked('ph3_mensualite') },
       { label: 'Nombre de mois du crédit', key: 'nbr_annee_finance', value: picked('nbr_annee_finance') },

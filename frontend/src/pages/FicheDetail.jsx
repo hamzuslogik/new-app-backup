@@ -2139,12 +2139,15 @@ const FicheDetail = ({
           }
           if (etatFormData.pseudo) {
             modifications.pseudo = etatFormData.pseudo;
+            updateData.pseudo = etatFormData.pseudo;
           }
           if (etatFormData.conf_consommations) {
             modifications.conf_consommations = etatFormData.conf_consommations;
+            updateData.conf_consommations = etatFormData.conf_consommations;
           }
           if (etatFormData.valeur_mensualite) {
             modifications.valeur_mensualite = etatFormData.valeur_mensualite;
+            updateData.valeur_mensualite = etatFormData.valeur_mensualite;
           }
           
           updateData.ph3_pac = etatFormData.ph3_pac || null;

@@ -62,7 +62,10 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
       ph3_attente,
       nbr_annee_finance,
       credit_immobilier,
-      credit_autre
+      credit_autre,
+      pseudo,
+      valeur_mensualite,
+      conf_consommations
     } = req.body;
 
     // Validation
@@ -132,7 +135,7 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
     // Vérifier qu'il y a au moins une modification, un état, ou des informations de vente
     const hasModifications = Object.keys(filteredModifications).length > 0;
     const hasEtat = id_etat_final !== undefined && id_etat_final !== null;
-    const hasPh3Data = ph3_installateur || ph3_pac || ph3_puissance || ph3_prix || ph3_mensualite;
+    const hasPh3Data = ph3_installateur || ph3_pac || ph3_puissance || ph3_prix || ph3_mensualite || pseudo || valeur_mensualite || conf_consommations;
     
     if (!hasModifications && !hasEtat && !hasPh3Data) {
       return res.status(400).json({
@@ -148,8 +151,8 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
        (id_fiche, id_commercial, statut, id_etat_final, id_sous_etat, modifications, commentaire, 
         ph3_installateur, ph3_pac, ph3_puissance, ph3_puissance_pv, ph3_rr_model, ph3_ballon, 
         ph3_marque_ballon, ph3_alimentation, ph3_type, ph3_prix, ph3_bonus_30, ph3_mensualite, 
-        ph3_attente, nbr_annee_finance, credit_immobilier, credit_autre, date_creation) 
-       VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ph3_attente, nbr_annee_finance, credit_immobilier, credit_autre, pseudo, valeur_mensualite, conf_consommations, date_creation) 
+       VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id_fiche, 
         user.id, 
@@ -173,6 +176,9 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
         nbr_annee_finance || null,
         credit_immobilier || null,
         credit_autre || null,
+        pseudo || null,
+        valeur_mensualite || null,
+        conf_consommations || null,
         now
       ]
     );
@@ -280,6 +286,9 @@ router.get('/', authenticate, async (req, res) => {
         cr.nbr_annee_finance,
         cr.credit_immobilier,
         cr.credit_autre,
+        cr.pseudo,
+        cr.valeur_mensualite,
+        cr.conf_consommations,
         f.nom as fiche_nom,
         f.prenom as fiche_prenom,
         f.tel as fiche_tel,
@@ -474,7 +483,10 @@ router.put('/:id', authenticate, async (req, res) => {
       ph3_attente,
       nbr_annee_finance,
       credit_immobilier,
-      credit_autre
+      credit_autre,
+      pseudo,
+      valeur_mensualite,
+      conf_consommations
     } = req.body;
 
     // Récupérer le compte rendu
@@ -570,7 +582,7 @@ router.put('/:id', authenticate, async (req, res) => {
       'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
       'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
       'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
-      'credit_immobilier', 'credit_autre'
+      'credit_immobilier', 'credit_autre', 'pseudo', 'valeur_mensualite', 'conf_consommations'
     ];
 
     for (const field of ph3Fields) {
