@@ -851,6 +851,7 @@ const PlanningCommercial = () => {
                         <td data-label="">
                           <FicheDetailLink 
                             ficheHash={fiche.hash}
+                            ficheId={fiche.id}
                             className="btn-detail"
                           >
                             Détails
