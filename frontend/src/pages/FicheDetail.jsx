@@ -4745,7 +4745,7 @@ const FicheDetail = ({
                     </div>
                   )}
 
-                  {user?.fonction !== 5 && (
+                  {([1, 2, 7].includes(user?.fonction)) && (
                     <div className="form-group">
                       <label htmlFor="compte_rendu_etat_id_commercial_signer">Commercial :</label>
                       <select
@@ -4764,7 +4764,7 @@ const FicheDetail = ({
                     </div>
                   )}
 
-                  {user?.fonction !== 5 && (
+                  {([1, 2, 7].includes(user?.fonction)) && (
                     <div className="form-group">
                       <label htmlFor="compte_rendu_etat_id_commercial_2_signer">Commercial 2 (optionnel) :</label>
                       <select
@@ -6175,7 +6175,7 @@ const FicheDetail = ({
                   </div>
                 )}
 
-                {user?.fonction !== 5 && (
+                {([1, 2, 7].includes(user?.fonction)) && (
                   <div className="form-group">
                     <label htmlFor="etat_id_commercial_signer">Commercial :</label>
                     <select
@@ -6194,7 +6194,7 @@ const FicheDetail = ({
                   </div>
                 )}
 
-                {user?.fonction !== 5 && (
+                {([1, 2, 7].includes(user?.fonction)) && (
                   <div className="form-group">
                     <label htmlFor="etat_id_commercial_2_signer">Commercial 2 (optionnel) :</label>
                     <select
@@ -6511,7 +6511,7 @@ const FicheDetail = ({
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Informations Signer Retracter</h3>
                 
-                {user?.fonction !== 5 && (
+                {([1, 2, 7].includes(user?.fonction)) && (
                   <div className="form-group">
                     <label htmlFor="etat_id_commercial_retracter">Commercial :</label>
                     <select
@@ -6530,7 +6530,7 @@ const FicheDetail = ({
                   </div>
                 )}
 
-                {user?.fonction !== 5 && (
+                {([1, 2, 7].includes(user?.fonction)) && (
                   <div className="form-group">
                     <label htmlFor="etat_id_commercial_2_retracter">Commercial 2 (optionnel) :</label>
                     <select
