@@ -4277,8 +4277,10 @@ const FicheDetail = ({
                       setSelectedEtat(13); // SIGNER
                       // Réinitialiser le formulaire pour SIGNER
                       const currentDate = new Date();
-                      const dateStr = currentDate.toISOString().split('T')[0];
-                      const timeStr = currentDate.toTimeString().split(' ')[0].substring(0, 5);
+                      const rdvRaw = String(ficheData?.date_rdv_time || '').trim();
+                      const rdvMatch = rdvRaw.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+                      const dateStr = rdvMatch ? rdvMatch[1] : currentDate.toISOString().split('T')[0];
+                      const timeStr = rdvMatch ? rdvMatch[2] : currentDate.toTimeString().split(' ')[0].substring(0, 5);
                       setEtatFormData({
                         ...etatFormData,
                         date_sign_date: dateStr,
@@ -4363,8 +4365,10 @@ const FicheDetail = ({
                             setSelectedEtat(13); // SIGNER
                             // Réinitialiser le formulaire pour SIGNER
                             const currentDate = new Date();
-                            const dateStr = currentDate.toISOString().split('T')[0];
-                            const timeStr = currentDate.toTimeString().split(' ')[0].substring(0, 5);
+                            const rdvRaw = String(ficheData?.date_rdv_time || '').trim();
+                            const rdvMatch = rdvRaw.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+                            const dateStr = rdvMatch ? rdvMatch[1] : currentDate.toISOString().split('T')[0];
+                            const timeStr = rdvMatch ? rdvMatch[2] : currentDate.toTimeString().split(' ')[0].substring(0, 5);
                             setEtatFormData({
                               ...etatFormData,
                               date_sign_date: dateStr,
@@ -4647,9 +4651,9 @@ const FicheDetail = ({
                       onChange={(e) => setEtatFormData({...etatFormData, ph3_type: e.target.value})}
                     >
                       <option value="">Sélectionner</option>
-                      <option value="Radiateur">Radiateur</option>
-                      <option value="Plancher chauffant">Plancher chauffant</option>
-                      <option value="Bizone">Bizone</option>
+                      <option value="Bizonne">Bizonne</option>
+                      <option value="Basse">Basse</option>
+                      <option value="Haute">Haute</option>
                     </select>
                   </div>
 
@@ -4701,10 +4705,9 @@ const FicheDetail = ({
                       onChange={(e) => setEtatFormData({...etatFormData, ph3_bonus_30: e.target.value})}
                     >
                       <option value="">Sélectionner</option>
-                      <option value="100€ (conso inf 1500€)">100€ (conso inf 1500€)</option>
-                      <option value="20% (conso sup ou égale 1500€)">20% (conso sup ou égale 1500€)</option>
-                      <option value="30% (conso sup ou égale 3000€)">30% (conso sup ou égale 3000€)</option>
-                      <option value="12k reste à charge (74 ans et +)">12k reste à charge (74 ans et +)</option>
+                      <option value="15">15</option>
+                      <option value="30">30</option>
+                      <option value="SANS">SANS</option>
                     </select>
                   </div>
 
@@ -6074,9 +6077,9 @@ const FicheDetail = ({
                     onChange={(e) => setEtatFormData({...etatFormData, ph3_type: e.target.value})}
                   >
                     <option value="">Sélectionner</option>
-                    <option value="Radiateur">Radiateur</option>
-                    <option value="Plancher chauffant">Plancher chauffant</option>
-                    <option value="Bizone">Bizone</option>
+                    <option value="Bizonne">Bizonne</option>
+                    <option value="Basse">Basse</option>
+                    <option value="Haute">Haute</option>
                   </select>
                 </div>
 
@@ -6128,10 +6131,9 @@ const FicheDetail = ({
                     onChange={(e) => setEtatFormData({...etatFormData, ph3_bonus_30: e.target.value})}
                   >
                     <option value="">Sélectionner</option>
-                    <option value="100€ (conso inf 1500€)">100€ (conso inf 1500€)</option>
-                    <option value="20% (conso sup ou égale 1500€)">20% (conso sup ou égale 1500€)</option>
-                    <option value="30% (conso sup ou égale 3000€)">30% (conso sup ou égale 3000€)</option>
-                    <option value="12k reste à charge (74 ans et +)">12k reste à charge (74 ans et +)</option>
+                    <option value="15">15</option>
+                    <option value="30">30</option>
+                    <option value="SANS">SANS</option>
                   </select>
                 </div>
 
