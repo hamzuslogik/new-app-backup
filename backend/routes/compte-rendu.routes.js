@@ -304,6 +304,7 @@ router.get('/', authenticate, async (req, res) => {
         f.nom as fiche_nom,
         f.prenom as fiche_prenom,
         f.tel as fiche_tel,
+        f.hash as fiche_hash,
         u_commercial.pseudo as commercial_pseudo,
         u_approbateur.pseudo as approbateur_pseudo,
         e.titre as etat_titre,

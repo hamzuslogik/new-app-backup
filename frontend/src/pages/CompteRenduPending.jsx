@@ -171,7 +171,7 @@ const CompteRenduPending = () => {
                   </div>
                 </div>
                 <div className="cr-actions">
-                  <FicheDetailLink ficheId={cr.id_fiche} className="btn-icon" title="Voir fiche">
+                  <FicheDetailLink ficheHash={cr.fiche_hash} ficheId={cr.id_fiche} className="btn-icon" title="Voir fiche">
                     <FaEye />
                   </FicheDetailLink>
                   {canApprove && cr.statut === 'pending' && (
