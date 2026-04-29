@@ -84,6 +84,15 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
 
   const [otherModifications, setOtherModifications] = useState(() => {
     const mods = parseModifications(compteRendu.modifications);
+    if ((mods.pseudo == null || String(mods.pseudo) === '') && compteRendu.pseudo != null && String(compteRendu.pseudo) !== '') {
+      mods.pseudo = compteRendu.pseudo;
+    }
+    if ((mods.valeur_mensualite == null || String(mods.valeur_mensualite) === '') && compteRendu.valeur_mensualite != null && String(compteRendu.valeur_mensualite) !== '') {
+      mods.valeur_mensualite = compteRendu.valeur_mensualite;
+    }
+    if ((mods.conf_consommations == null || String(mods.conf_consommations) === '') && compteRendu.conf_consommations != null && String(compteRendu.conf_consommations) !== '') {
+      mods.conf_consommations = compteRendu.conf_consommations;
+    }
     const structuredKeys = ['conf_rdv_date', 'conf_rdv_time', 'conf_rdv_avec', 'produit', 'date_sign_time', 'id_commercial', 'id_commercial_2', 'date_rdv_time'];
     const other = {};
     Object.entries(mods).forEach(([k, v]) => {
