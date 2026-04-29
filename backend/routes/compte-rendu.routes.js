@@ -863,7 +863,7 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
       'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
       'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
-      'credit_immobilier', 'credit_autre', 'pseudo', 'valeur_mensualite', 'conf_consommations'
+      'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'conf_consommations'
     ];
 
     for (const field of ph3Fields) {
