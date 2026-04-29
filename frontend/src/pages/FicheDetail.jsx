@@ -2131,10 +2131,10 @@ const FicheDetail = ({
           if (etatFormData.produit) {
             modifications.produit = parseInt(etatFormData.produit);
           }
-          if (etatFormData.id_commercial) {
+          if (user?.fonction !== 5 && etatFormData.id_commercial) {
             modifications.id_commercial = parseInt(etatFormData.id_commercial);
           }
-          if (etatFormData.id_commercial_2) {
+          if (user?.fonction !== 5 && etatFormData.id_commercial_2) {
             modifications.id_commercial_2 = parseInt(etatFormData.id_commercial_2);
           }
           if (etatFormData.pseudo) {
@@ -2274,10 +2274,10 @@ const FicheDetail = ({
         if (etatFormData.id_sous_etat) {
           updateData.id_sous_etat = parseInt(etatFormData.id_sous_etat);
         }
-        if (etatFormData.id_commercial) {
+        if (user?.fonction !== 5 && etatFormData.id_commercial) {
           updateData.id_commercial = parseInt(etatFormData.id_commercial);
         }
-        if (etatFormData.id_commercial_2) {
+        if (user?.fonction !== 5 && etatFormData.id_commercial_2) {
           updateData.id_commercial_2 = parseInt(etatFormData.id_commercial_2);
         }
         if (etatFormData.pseudo) {
@@ -2342,10 +2342,10 @@ const FicheDetail = ({
         }
       } else if ([16, 38].includes(selectedEtat)) {
         // SIGNER RETRACTER
-        if (etatFormData.id_commercial) {
+        if (user?.fonction !== 5 && etatFormData.id_commercial) {
           updateData.id_commercial = parseInt(etatFormData.id_commercial);
         }
-        if (etatFormData.id_commercial_2) {
+        if (user?.fonction !== 5 && etatFormData.id_commercial_2) {
           updateData.id_commercial_2 = parseInt(etatFormData.id_commercial_2);
         }
         if (etatFormData.conf_commentaire_produit) {
@@ -4430,7 +4430,9 @@ const FicheDetail = ({
                                   date_sign_time: dateSignTime,
                                   produit: cr.modifications?.produit ? String(cr.modifications.produit) : (ficheData?.produit ? String(ficheData.produit) : ''),
                                   id_sous_etat: cr.id_sous_etat ? String(cr.id_sous_etat) : '',
-                                  id_commercial: cr.modifications?.id_commercial ? String(cr.modifications.id_commercial) : String(user?.id || ''),
+                                  id_commercial: cr.modifications?.id_commercial
+                                    ? String(cr.modifications.id_commercial)
+                                    : (ficheData?.id_commercial ? String(ficheData.id_commercial) : ''),
                                   id_commercial_2: cr.modifications?.id_commercial_2 ? String(cr.modifications.id_commercial_2) : '',
                                   pseudo: cr.modifications?.pseudo || '',
                                   ph3_pac: cr.ph3_pac || 'reau',
@@ -4534,7 +4536,7 @@ const FicheDetail = ({
                         date_sign_date: dateStr,
                         date_sign_time: timeStr,
                         produit: ficheData?.produit ? String(ficheData.produit) : '',
-                        id_commercial: String(user?.id || ''),
+                        id_commercial: ficheData?.id_commercial ? String(ficheData.id_commercial) : '',
                         id_sous_etat: ''
                       });
                     } else if (e.target.value === 'deballé_réfléchir') {
@@ -4622,7 +4624,7 @@ const FicheDetail = ({
                               date_sign_date: dateStr,
                               date_sign_time: timeStr,
                               produit: ficheData?.produit ? String(ficheData.produit) : '',
-                              id_commercial: String(user?.id || ''),
+                              id_commercial: ficheData?.id_commercial ? String(ficheData.id_commercial) : '',
                               id_sous_etat: ''
                             });
                           } else if (e.target.value === 'deballé_réfléchir') {
@@ -4743,39 +4745,43 @@ const FicheDetail = ({
                     </div>
                   )}
 
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_id_commercial_signer">Commercial :</label>
-                    <select
-                      id="compte_rendu_etat_id_commercial_signer"
-                      className="form-control"
-                      value={etatFormData.id_commercial}
-                      onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {commerciaux?.map(com => (
-                        <option key={com.id} value={com.id}>
-                          {com.pseudo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {user?.fonction !== 5 && (
+                    <div className="form-group">
+                      <label htmlFor="compte_rendu_etat_id_commercial_signer">Commercial :</label>
+                      <select
+                        id="compte_rendu_etat_id_commercial_signer"
+                        className="form-control"
+                        value={etatFormData.id_commercial}
+                        onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
+                      >
+                        <option value="">Sélectionner</option>
+                        {commerciaux?.map(com => (
+                          <option key={com.id} value={com.id}>
+                            {com.pseudo}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_id_commercial_2_signer">Commercial 2 (optionnel) :</label>
-                    <select
-                      id="compte_rendu_etat_id_commercial_2_signer"
-                      className="form-control"
-                      value={etatFormData.id_commercial_2}
-                      onChange={(e) => setEtatFormData({...etatFormData, id_commercial_2: e.target.value})}
-                    >
-                      <option value="">Aucun</option>
-                      {commerciaux?.map(com => (
-                        <option key={com.id} value={com.id}>
-                          {com.pseudo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {user?.fonction !== 5 && (
+                    <div className="form-group">
+                      <label htmlFor="compte_rendu_etat_id_commercial_2_signer">Commercial 2 (optionnel) :</label>
+                      <select
+                        id="compte_rendu_etat_id_commercial_2_signer"
+                        className="form-control"
+                        value={etatFormData.id_commercial_2}
+                        onChange={(e) => setEtatFormData({...etatFormData, id_commercial_2: e.target.value})}
+                      >
+                        <option value="">Aucun</option>
+                        {commerciaux?.map(com => (
+                          <option key={com.id} value={com.id}>
+                            {com.pseudo}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_pseudo_signer">Pseudo :</label>
@@ -6169,39 +6175,43 @@ const FicheDetail = ({
                   </div>
                 )}
 
-                <div className="form-group">
-                  <label htmlFor="etat_id_commercial_signer">Commercial :</label>
-                  <select
-                    id="etat_id_commercial_signer"
-                    className="form-control"
-                    value={etatFormData.id_commercial}
-                    onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    {commerciaux?.map(com => (
-                      <option key={com.id} value={com.id}>
-                        {com.pseudo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {user?.fonction !== 5 && (
+                  <div className="form-group">
+                    <label htmlFor="etat_id_commercial_signer">Commercial :</label>
+                    <select
+                      id="etat_id_commercial_signer"
+                      className="form-control"
+                      value={etatFormData.id_commercial}
+                      onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {commerciaux?.map(com => (
+                        <option key={com.id} value={com.id}>
+                          {com.pseudo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-                <div className="form-group">
-                  <label htmlFor="etat_id_commercial_2_signer">Commercial 2 (optionnel) :</label>
-                  <select
-                    id="etat_id_commercial_2_signer"
-                    className="form-control"
-                    value={etatFormData.id_commercial_2}
-                    onChange={(e) => setEtatFormData({...etatFormData, id_commercial_2: e.target.value})}
-                  >
-                    <option value="">Aucun</option>
-                    {commerciaux?.map(com => (
-                      <option key={com.id} value={com.id}>
-                        {com.pseudo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {user?.fonction !== 5 && (
+                  <div className="form-group">
+                    <label htmlFor="etat_id_commercial_2_signer">Commercial 2 (optionnel) :</label>
+                    <select
+                      id="etat_id_commercial_2_signer"
+                      className="form-control"
+                      value={etatFormData.id_commercial_2}
+                      onChange={(e) => setEtatFormData({...etatFormData, id_commercial_2: e.target.value})}
+                    >
+                      <option value="">Aucun</option>
+                      {commerciaux?.map(com => (
+                        <option key={com.id} value={com.id}>
+                          {com.pseudo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label htmlFor="etat_pseudo_signer">Pseudo :</label>
@@ -6501,39 +6511,43 @@ const FicheDetail = ({
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Informations Signer Retracter</h3>
                 
-                <div className="form-group">
-                  <label htmlFor="etat_id_commercial_retracter">Commercial :</label>
-                  <select
-                    id="etat_id_commercial_retracter"
-                    className="form-control"
-                    value={etatFormData.id_commercial}
-                    onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    {commerciaux?.map(com => (
-                      <option key={com.id} value={com.id}>
-                        {com.pseudo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {user?.fonction !== 5 && (
+                  <div className="form-group">
+                    <label htmlFor="etat_id_commercial_retracter">Commercial :</label>
+                    <select
+                      id="etat_id_commercial_retracter"
+                      className="form-control"
+                      value={etatFormData.id_commercial}
+                      onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
+                      {commerciaux?.map(com => (
+                        <option key={com.id} value={com.id}>
+                          {com.pseudo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-                <div className="form-group">
-                  <label htmlFor="etat_id_commercial_2_retracter">Commercial 2 (optionnel) :</label>
-                  <select
-                    id="etat_id_commercial_2_retracter"
-                    className="form-control"
-                    value={etatFormData.id_commercial_2}
-                    onChange={(e) => setEtatFormData({...etatFormData, id_commercial_2: e.target.value})}
-                  >
-                    <option value="">Aucun</option>
-                    {commerciaux?.map(com => (
-                      <option key={com.id} value={com.id}>
-                        {com.pseudo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {user?.fonction !== 5 && (
+                  <div className="form-group">
+                    <label htmlFor="etat_id_commercial_2_retracter">Commercial 2 (optionnel) :</label>
+                    <select
+                      id="etat_id_commercial_2_retracter"
+                      className="form-control"
+                      value={etatFormData.id_commercial_2}
+                      onChange={(e) => setEtatFormData({...etatFormData, id_commercial_2: e.target.value})}
+                    >
+                      <option value="">Aucun</option>
+                      {commerciaux?.map(com => (
+                        <option key={com.id} value={com.id}>
+                          {com.pseudo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label htmlFor="etat_conf_commentaire_retracter">Commentaire :</label>
