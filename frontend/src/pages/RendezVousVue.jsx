@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import api from '../config/api';
-import { FaCalendarDay, FaUserCheck, FaUserSlash, FaChartLine } from 'react-icons/fa';
+import { FaCalendarDay, FaUserCheck, FaUserSlash, FaChartLine, FaSearch, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './RendezVousVue.css';
@@ -20,6 +20,7 @@ const RendezVousVue = () => {
   const [activeTab, setActiveTab] = useState('jour');
   const [dateJour, setDateJour] = useState(today);
   const [sortConfig, setSortConfig] = useState({ key: 'date_rdv_time', direction: 'asc' });
+  const [quickSearch, setQuickSearch] = useState('');
 
   const { data: dataJour, isLoading: loadingJour } = useQuery(
     ['rdv-vue', 'jour', dateJour],
@@ -46,6 +47,10 @@ const RendezVousVue = () => {
   const countAffilie = (dataAffilie || []).length;
   const countNonAffilie = (dataNonAffilie || []).length;
   const countProductionRdv = (dataProductionRdv || []).length;
+  const { data: etatsData } = useQuery('etats-rdv-vue', async () => {
+    const res = await api.get('/management/etats');
+    return res.data.data || [];
+  });
 
   const list =
     activeTab === 'jour'
@@ -90,6 +95,21 @@ const RendezVousVue = () => {
     return copied;
   }, [list, sortConfig]);
 
+  const filteredList = useMemo(() => {
+    const term = quickSearch.trim().toLowerCase();
+    if (!term) return sortedList;
+    return sortedList.filter((f) =>
+      (f.nom || '').toLowerCase().includes(term) ||
+      (f.prenom || '').toLowerCase().includes(term) ||
+      (f.tel || '').toLowerCase().includes(term) ||
+      (f.cp || '').toLowerCase().includes(term) ||
+      (f.ville || '').toLowerCase().includes(term) ||
+      (f.commercial_pseudo || '').toLowerCase().includes(term) ||
+      (f.commercial2_pseudo || '').toLowerCase().includes(term) ||
+      (f.etat_titre || '').toLowerCase().includes(term)
+    );
+  }, [sortedList, quickSearch]);
+
   const handleSort = (key) => {
     setSortConfig((prev) => {
       if (prev.key === key) {
@@ -100,8 +120,13 @@ const RendezVousVue = () => {
   };
 
   const getSortIndicator = (key) => {
-    if (sortConfig.key !== key) return ' <> ';
-    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+    if (sortConfig.key !== key) return <FaSort />;
+    return sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />;
+  };
+
+  const getEtatColor = (fiche) => {
+    const etat = (etatsData || []).find((e) => Number(e.id) === Number(fiche.id_etat_final));
+    return etat?.color || '#9cbfc8';
   };
 
   return (
@@ -154,45 +179,51 @@ const RendezVousVue = () => {
       </div>
 
       <div className="rdv-vue-content">
+        <div className="quick-search-container">
+          <FaSearch />
+          <input
+            type="text"
+            placeholder="Recherche rapide (nom, prénom, téléphone, CP, ville, commercial, état)..."
+            value={quickSearch}
+            onChange={(e) => setQuickSearch(e.target.value)}
+            className="quick-search-input"
+          />
+        </div>
         {isLoading ? (
           <div className="loading">Chargement...</div>
-        ) : list.length > 0 ? (
-          <div className="table-container">
-            <table className="rdv-vue-table">
+        ) : filteredList.length > 0 ? (
+          <div className="fiches-table-container">
+            <table className="fiches-table">
               <thead>
                 <tr>
-                  <th className="sortable" onClick={() => handleSort('fiche')}>Fiche{getSortIndicator('fiche')}</th>
-                  <th className="sortable" onClick={() => handleSort('adresse')}>Adresse{getSortIndicator('adresse')}</th>
-                  <th className="sortable" onClick={() => handleSort('date_rdv_time')}>Date / heure RDV{getSortIndicator('date_rdv_time')}</th>
-                  <th className="sortable" onClick={() => handleSort('commerciaux')}>Commercial(s){getSortIndicator('commerciaux')}</th>
-                  <th className="sortable" onClick={() => handleSort('etat')}>État{getSortIndicator('etat')}</th>
+                  <th className="sortable-header" onClick={() => handleSort('fiche')}>Nom {getSortIndicator('fiche')}</th>
+                  <th>Prénom</th>
+                  <th>Téléphone</th>
+                  <th className="sortable-header" onClick={() => handleSort('adresse')}>CP / Ville {getSortIndicator('adresse')}</th>
+                  <th className="sortable-header" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
+                  <th className="sortable-header" onClick={() => handleSort('etat')}>État actuel {getSortIndicator('etat')}</th>
+                  <th className="sortable-header" onClick={() => handleSort('commerciaux')}>Commercial {getSortIndicator('commerciaux')}</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {sortedList.map((f) => (
-                  <tr key={f.id}>
-                    <td>
-                      <strong>{f.nom}</strong> {f.prenom}
-                      {f.tel && <div className="tel">{f.tel}</div>}
-                    </td>
-                    <td>
-                      {f.adresse && <div>{f.adresse}</div>}
-                      {(f.cp || f.ville) && (
-                        <div className="cp-ville">
-                          {[f.cp, f.ville].filter(Boolean).join(' ')}
-                        </div>
-                      )}
-                      {!f.adresse && !f.cp && !f.ville && <span className="text-muted">—</span>}
-                    </td>
+                {filteredList.map((f) => (
+                  <tr key={f.id} className="fiche-row-by-etat" style={{ backgroundColor: `${getEtatColor(f)}40`, borderLeft: `4px solid ${getEtatColor(f)}` }}>
+                    <td>{f.nom || ''}</td>
+                    <td>{f.prenom || ''}</td>
+                    <td>{f.tel || ''}</td>
+                    <td>{[f.cp, f.ville].filter(Boolean).join(' ') || '—'}</td>
                     <td>{formatRdvDateTime(f.date_rdv_time)}</td>
                     <td>
-                      {f.commercial_pseudo || f.commercial2_pseudo
-                        ? [f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ')
-                        : <span className="text-muted">—</span>}
+                      <span className="etat-badge" style={{ backgroundColor: getEtatColor(f) }}>
+                        {f.etat_titre || f.id_etat_final || '—'}
+                      </span>
                     </td>
-                    <td>{f.etat_titre || f.id_etat_final || '—'}</td>
+                    <td>{[f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ') || '—'}</td>
                     <td>
+                      <div className="fiche-indicators">
+                        {f.id_commercial_2 && Number(f.id_commercial_2) > 0 && <span className="indicator r2" title="R2 placé">R2</span>}
+                      </div>
                       <FicheDetailLink ficheId={f.id} className="btn-detail" title="Voir la fiche" />
                     </td>
                   </tr>

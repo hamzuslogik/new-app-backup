@@ -95,6 +95,22 @@
   overflow: hidden;
 }
 
+.rdv-vue-content .quick-search-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.rdv-vue-content .quick-search-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
 .rdv-vue-content .loading,
 .rdv-vue-content .no-data {
   padding: 32px;
@@ -104,6 +120,65 @@
 
 .rdv-vue-content .table-container {
   overflow-x: auto;
+}
+
+.fiches-table-container {
+  overflow-x: auto;
+}
+
+.fiches-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1100px;
+}
+
+.fiches-table thead th {
+  background: #fafafa;
+  border-bottom: 1px solid #eee;
+  padding: 10px 12px;
+  font-size: 12px;
+  text-align: left;
+}
+
+.fiches-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  font-size: 12px;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.etat-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fiche-indicators {
+  display: inline-flex;
+  margin-right: 8px;
+}
+
+.indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.indicator.r2 {
+  background: #ffa500;
 }
 
 .rdv-vue-table {
