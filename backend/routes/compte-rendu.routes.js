@@ -113,7 +113,7 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
       'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
-      'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
+      'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
       'date_rdv_time', 'date_appel_time', 'id_centre', 'id_commercial',
       'id_commercial_2', 'id_etat_final',
       'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
@@ -799,7 +799,13 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     for (const [key, value] of Object.entries(modifications)) {
       // Les champs conf_rdv_date/conf_rdv_time n'existent pas en DB.
       // Ils sont traités plus bas pour alimenter date_rdv_time.
-      if (key === 'conf_rdv_date' || key === 'conf_rdv_time') {
+      if (
+        key === 'conf_rdv_date' ||
+        key === 'conf_rdv_time' ||
+        key === 'pseudo' ||
+        key === 'valeur_mensualite' ||
+        key === 'produit'
+      ) {
         continue;
       }
 
@@ -863,7 +869,7 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
       'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
       'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
-      'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'conf_consommations'
+      'credit_immobilier', 'credit_autre', 'conf_consommations'
     ];
 
     for (const field of ph3Fields) {
