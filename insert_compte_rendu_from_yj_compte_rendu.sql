@@ -75,9 +75,15 @@ INSERT INTO `compte_rendu_pending` (
   `ph3_alimentation`,
   `ph3_type`,
   `ph3_prix`,
+  `ph3_bonus_30`,
   `ph3_mensualite`,
   `ph3_attente`,
   `nbr_annee_finance`,
+  `credit_immobilier`,
+  `credit_autre`,
+  `pseudo`,
+  `valeur_mensualite`,
+  `conf_consommations`,
   `date_creation`,
   `date_modif`
 )
@@ -96,9 +102,15 @@ SELECT
   base.ph3_alimentation,
   base.ph3_type,
   base.ph3_prix,
+  base.ph3_bonus_30,
   base.ph3_mensualite,
   base.ph3_attente,
   base.nbr_annee_finance,
+  base.credit_immobilier,
+  base.credit_autre,
+  base.pseudo,
+  base.valeur_mensualite,
+  base.conf_consommations,
   base.date_creation,
   base.date_modif
 FROM (
@@ -124,11 +136,17 @@ FROM (
     NULLIF(TRIM(yj.`ph3_alimentation`), '') AS ph3_alimentation,
     NULLIF(TRIM(yj.`ph3_type`), '') AS ph3_type,
     CASE WHEN yj.`ph3_prix` REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN CAST(yj.`ph3_prix` AS DECIMAL(10,2)) ELSE NULL END AS ph3_prix,
+    CASE WHEN yj.`ph3_bonus_30` REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN CAST(yj.`ph3_bonus_30` AS DECIMAL(10,2)) ELSE NULL END AS ph3_bonus_30,
     CASE WHEN yj.`ph3_mensualite` REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN CAST(yj.`ph3_mensualite` AS DECIMAL(10,2))
          WHEN yj.`valeur_mensualite` REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN CAST(yj.`valeur_mensualite` AS DECIMAL(10,2))
          ELSE NULL END AS ph3_mensualite,
     NULLIF(TRIM(yj.`ph3_attente`), '') AS ph3_attente,
     CASE WHEN yj.`nbr_annee_finance` REGEXP '^[0-9]+$' THEN CAST(yj.`nbr_annee_finance` AS UNSIGNED) ELSE NULL END AS nbr_annee_finance,
+    CASE WHEN yj.`credit_immobilier` REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN CAST(yj.`credit_immobilier` AS DECIMAL(10,2)) ELSE NULL END AS credit_immobilier,
+    CASE WHEN yj.`credit` REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN CAST(yj.`credit` AS DECIMAL(10,2)) ELSE NULL END AS credit_autre,
+    NULLIF(TRIM(yj.`pseudo`), '') AS pseudo,
+    CASE WHEN yj.`valeur_mensualite` REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN CAST(yj.`valeur_mensualite` AS DECIMAL(10,2)) ELSE NULL END AS valeur_mensualite,
+    CASE WHEN yj.`ph3_consommations` REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN CAST(yj.`ph3_consommations` AS DECIMAL(10,2)) ELSE NULL END AS conf_consommations,
     COALESCE(yj.`date_visite`, yj.`date_modif`) AS date_creation,
     yj.`date_modif` AS date_modif
   FROM `yj_compte_rendu` yj
