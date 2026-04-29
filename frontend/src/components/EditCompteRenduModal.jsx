@@ -21,7 +21,8 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
   const dateSignStr = initialMods.date_sign_time || compteRendu.date_sign_time || compteRendu.date_creation || '';
   const [dateSignDate, dateSignTime] = (() => {
     if (!dateSignStr) return ['', ''];
-    const m = String(dateSignStr).match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::\d{2})?/);
+    const normalized = String(dateSignStr).replace('T', ' ').trim();
+    const m = normalized.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::\d{2})?/);
     return m ? [m[1], m[2].substring(0, 5)] : ['', ''];
   })();
   const confRdvTime = initialMods.conf_rdv_time || '';
@@ -207,6 +208,9 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
         ? parseFloat(otherModifications.conf_consommations)
         : null
     };
+    if (isEtatSigner && formData.date_sign_date && formData.date_sign_time) {
+      data.date_creation = `${formData.date_sign_date} ${formData.date_sign_time}:00`;
+    }
     onSave(data);
   };
 

@@ -480,6 +480,7 @@ router.put('/:id', authenticate, async (req, res) => {
       commentaire,
       id_etat_final,
       id_sous_etat,
+      date_creation,
       produit,
       ph3_installateur,
       ph3_pac,
@@ -588,6 +589,11 @@ router.put('/:id', authenticate, async (req, res) => {
     if (commentaire !== undefined) {
       updateFields.push('commentaire = ?');
       updateValues.push(commentaire);
+    }
+
+    if (date_creation !== undefined) {
+      updateFields.push('date_creation = ?');
+      updateValues.push(date_creation || null);
     }
 
     if (produit !== undefined) {
