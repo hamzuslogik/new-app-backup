@@ -2130,6 +2130,7 @@ const FicheDetail = ({
           }
           if (etatFormData.produit) {
             modifications.produit = parseInt(etatFormData.produit);
+            updateData.produit = parseInt(etatFormData.produit, 10);
           }
           if (user?.fonction !== 5 && etatFormData.id_commercial) {
             modifications.id_commercial = parseInt(etatFormData.id_commercial);

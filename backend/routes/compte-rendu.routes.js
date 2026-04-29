@@ -46,6 +46,7 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
       commentaire,
       id_etat_final,
       id_sous_etat,
+      produit,
       // Informations de vente
       ph3_installateur,
       ph3_pac,
@@ -135,7 +136,7 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
     // Vérifier qu'il y a au moins une modification, un état, ou des informations de vente
     const hasModifications = Object.keys(filteredModifications).length > 0;
     const hasEtat = id_etat_final !== undefined && id_etat_final !== null;
-    const hasPh3Data = ph3_installateur || ph3_pac || ph3_puissance || ph3_prix || ph3_mensualite || pseudo || valeur_mensualite || conf_consommations;
+    const hasPh3Data = produit || ph3_installateur || ph3_pac || ph3_puissance || ph3_prix || ph3_mensualite || pseudo || valeur_mensualite || conf_consommations;
     
     if (!hasModifications && !hasEtat && !hasPh3Data) {
       return res.status(400).json({
@@ -148,11 +149,11 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const result = await query(
       `INSERT INTO compte_rendu_pending 
-       (id_fiche, id_commercial, statut, id_etat_final, id_sous_etat, modifications, commentaire, 
+       (id_fiche, id_commercial, statut, id_etat_final, id_sous_etat, modifications, commentaire, produit,
         ph3_installateur, ph3_pac, ph3_puissance, ph3_puissance_pv, ph3_rr_model, ph3_ballon, 
         ph3_marque_ballon, ph3_alimentation, ph3_type, ph3_prix, ph3_bonus_30, ph3_mensualite, 
        ph3_attente, nbr_annee_finance, credit_immobilier, credit_autre, pseudo, valeur_mensualite, conf_consommations, date_creation) 
-       VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id_fiche, 
         user.id, 
@@ -160,6 +161,7 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
         id_sous_etat || null,
         JSON.stringify(filteredModifications), 
         commentaire || null,
+        produit || null,
         ph3_installateur || null,
         ph3_pac || null,
         ph3_puissance || null,
@@ -270,6 +272,7 @@ router.get('/', authenticate, async (req, res) => {
         cr.date_creation,
         cr.date_modif,
         cr.date_approbation,
+        cr.produit,
         cr.ph3_installateur,
         cr.ph3_pac,
         cr.ph3_puissance,
@@ -468,6 +471,7 @@ router.put('/:id', authenticate, async (req, res) => {
       commentaire,
       id_etat_final,
       id_sous_etat,
+      produit,
       ph3_installateur,
       ph3_pac,
       ph3_puissance,
@@ -575,6 +579,11 @@ router.put('/:id', authenticate, async (req, res) => {
     if (commentaire !== undefined) {
       updateFields.push('commentaire = ?');
       updateValues.push(commentaire);
+    }
+
+    if (produit !== undefined) {
+      updateFields.push('produit = ?');
+      updateValues.push(produit || null);
     }
 
     // Champs Phase 3

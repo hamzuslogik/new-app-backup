@@ -177,6 +177,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
     const data = {
       id_etat_final: formData.id_etat_final || null,
       id_sous_etat: formData.id_sous_etat || null,
+      produit: isEtatSigner && formData.produit ? parseInt(formData.produit, 10) : null,
       commentaire:
         isEtat11ou12 && !(formData.id_sous_etat && String(formData.id_sous_etat).trim() !== '')
           ? null
