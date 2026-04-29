@@ -146,6 +146,10 @@
   font-size: 12px;
 }
 
+.fiches-table td:last-child {
+  min-width: 110px;
+}
+
 .sortable-header {
   cursor: pointer;
   user-select: none;
@@ -156,6 +160,14 @@
   padding: 4px 8px;
   border-radius: 4px;
   color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.produit-indicator {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
 }
@@ -179,6 +191,31 @@
 
 .indicator.r2 {
   background: #ffa500;
+}
+
+/* Réutilise le style du menu contextuel dashboard */
+.dashboard-fiche-context-menu {
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+}
+
+.dashboard-fiche-context-menu-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dashboard-fiche-context-menu-item:hover {
+  background: #f3f6fb;
 }
 
 .rdv-vue-table {

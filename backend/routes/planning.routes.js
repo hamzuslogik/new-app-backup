@@ -1956,6 +1956,7 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
       rows = await query(
         `SELECT 
           f.id,
+          f.date_insert_time,
           f.nom,
           f.prenom,
           f.tel,
@@ -1963,9 +1964,15 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
           f.cp,
           f.ville,
           f.date_rdv_time,
+          f.id_confirmateur,
+          f.id_confirmateur_2,
+          f.id_confirmateur_3,
+          f.id_centre,
+          f.produit,
           f.id_commercial,
           f.id_commercial_2,
           f.id_etat_final,
+          f.valider,
           com.pseudo AS commercial_pseudo,
           com2.pseudo AS commercial2_pseudo,
           e.titre AS etat_titre
@@ -1992,6 +1999,7 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
         rows = await query(
           `SELECT 
             f.id,
+            f.date_insert_time,
             f.nom,
             f.prenom,
             f.tel,
@@ -1999,9 +2007,15 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
             f.cp,
             f.ville,
             f.date_rdv_time,
+            f.id_confirmateur,
+            f.id_confirmateur_2,
+            f.id_confirmateur_3,
+            f.id_centre,
+            f.produit,
             f.id_commercial,
             f.id_commercial_2,
             f.id_etat_final,
+            f.valider,
             com.pseudo AS commercial_pseudo,
             com2.pseudo AS commercial2_pseudo,
             e.titre AS etat_titre
@@ -2048,6 +2062,7 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
       rows = await query(
         `SELECT 
           f.id,
+          f.date_insert_time,
           f.nom,
           f.prenom,
           f.tel,
@@ -2055,9 +2070,15 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
           f.cp,
           f.ville,
           f.date_rdv_time,
+          f.id_confirmateur,
+          f.id_confirmateur_2,
+          f.id_confirmateur_3,
+          f.id_centre,
+          f.produit,
           f.id_commercial,
           f.id_commercial_2,
           f.id_etat_final,
+          f.valider,
           com.pseudo as commercial_pseudo,
           com2.pseudo as commercial2_pseudo,
           e.titre as etat_titre
@@ -2071,7 +2092,10 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
       );
     }
 
-    let result = rows || [];
+    let result = (rows || []).map((r) => ({
+      ...r,
+      hash: encodeFicheId(r.id)
+    }));
     if (!isPastDate) {
       const beforeCount = result.length;
       result = result.filter(r => Number(r.id_etat_final) === 7);

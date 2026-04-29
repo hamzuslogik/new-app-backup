@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import api from '../config/api';
 import { FaCalendarDay, FaUserCheck, FaUserSlash, FaChartLine, FaSearch, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
+import FicheDetailModal from '../components/FicheDetailModal';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './RendezVousVue.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -21,6 +22,8 @@ const RendezVousVue = () => {
   const [dateJour, setDateJour] = useState(today);
   const [sortConfig, setSortConfig] = useState({ key: 'date_rdv_time', direction: 'asc' });
   const [quickSearch, setQuickSearch] = useState('');
+  const [ficheContextMenu, setFicheContextMenu] = useState(null);
+  const [ficheDetailModal, setFicheDetailModal] = useState(null);
 
   const { data: dataJour, isLoading: loadingJour } = useQuery(
     ['rdv-vue', 'jour', dateJour],
@@ -47,6 +50,14 @@ const RendezVousVue = () => {
   const countAffilie = (dataAffilie || []).length;
   const countNonAffilie = (dataNonAffilie || []).length;
   const countProductionRdv = (dataProductionRdv || []).length;
+  const { data: usersData } = useQuery('users-rdv-vue', async () => {
+    const res = await api.get('/management/utilisateurs');
+    return res.data.data || [];
+  });
+  const { data: centresData } = useQuery('centres-rdv-vue', async () => {
+    const res = await api.get('/management/centres');
+    return res.data.data || [];
+  });
   const { data: etatsData } = useQuery('etats-rdv-vue', async () => {
     const res = await api.get('/management/etats');
     return res.data.data || [];
@@ -78,6 +89,8 @@ const RendezVousVue = () => {
         return `${fiche.commercial_pseudo || ''} ${fiche.commercial2_pseudo || ''}`.trim().toLowerCase();
       case 'etat':
         return `${fiche.etat_titre || fiche.id_etat_final || ''}`.toString().toLowerCase();
+      case 'date_insert_time':
+        return fiche.date_insert_time ? new Date(fiche.date_insert_time).getTime() : 0;
       default:
         return '';
     }
@@ -122,6 +135,67 @@ const RendezVousVue = () => {
   const getSortIndicator = (key) => {
     if (sortConfig.key !== key) return <FaSort />;
     return sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />;
+  };
+
+  useEffect(() => {
+    if (!ficheContextMenu) return undefined;
+    const close = () => setFicheContextMenu(null);
+    window.addEventListener('click', close);
+    window.addEventListener('contextmenu', close);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('contextmenu', close);
+    };
+  }, [ficheContextMenu]);
+
+  const getUserName = (id) => {
+    if (!id || !usersData) return '';
+    const found = usersData.find((u) => Number(u.id) === Number(id));
+    return found?.pseudo || '';
+  };
+
+  const getConfirmateursFormatted = (fiche) => {
+    const c = [getUserName(fiche.id_confirmateur), getUserName(fiche.id_confirmateur_2), getUserName(fiche.id_confirmateur_3)].filter(Boolean);
+    return c.join(' | ');
+  };
+
+  const getCentreName = (id) => {
+    if (!id || !centresData) return '';
+    const found = centresData.find((c) => Number(c.id) === Number(id));
+    return found?.titre || '';
+  };
+
+  const getProduitName = (produit) => (Number(produit) === 1 ? 'PAC' : Number(produit) === 2 ? 'PV' : '');
+  const getProduitColor = (produit) => (Number(produit) === 1 ? '#66D5D4' : Number(produit) === 2 ? '#FFE441' : '#cccccc');
+
+  const openFicheContextMenu = (e, fiche) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFicheContextMenu({ x: e.clientX, y: e.clientY, fiche });
+  };
+
+  const copyFicheTelFromMenu = (tel) => {
+    const t = (tel || '').trim();
+    if (!t) return;
+    navigator.clipboard.writeText(t).finally(() => setFicheContextMenu(null));
+  };
+
+  const openFicheHistoriqueOverlay = () => {
+    if (!ficheContextMenu?.fiche?.hash) return;
+    setFicheDetailModal({ hash: ficheContextMenu.fiche.hash, focusHistoriqueEtats: true });
+    setFicheContextMenu(null);
+  };
+
+  const openFicheSmsFromMenu = () => {
+    if (!ficheContextMenu?.fiche?.hash) return;
+    setFicheDetailModal({ hash: ficheContextMenu.fiche.hash, initialTab: 'sms' });
+    setFicheContextMenu(null);
+  };
+
+  const openFicheDetailNewTab = (hash) => {
+    if (!hash) return;
+    window.open(`/fiches/${encodeURIComponent(hash)}?overlay=auto`, '_blank', 'noopener,noreferrer');
+    setFicheContextMenu(null);
   };
 
   const getEtatColor = (fiche) => {
@@ -200,26 +274,40 @@ const RendezVousVue = () => {
                   <th>Prénom</th>
                   <th>Téléphone</th>
                   <th className="sortable-header" onClick={() => handleSort('adresse')}>CP / Ville {getSortIndicator('adresse')}</th>
+                  <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date Insertion {getSortIndicator('date_insert_time')}</th>
                   <th className="sortable-header" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
                   <th className="sortable-header" onClick={() => handleSort('etat')}>État actuel {getSortIndicator('etat')}</th>
+                  <th>Confirmateur</th>
                   <th className="sortable-header" onClick={() => handleSort('commerciaux')}>Commercial {getSortIndicator('commerciaux')}</th>
+                  <th>Centre</th>
+                  <th>Produit</th>
+                  <th>Validé</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredList.map((f) => (
-                  <tr key={f.id} className="fiche-row-by-etat" style={{ backgroundColor: `${getEtatColor(f)}40`, borderLeft: `4px solid ${getEtatColor(f)}` }}>
+                  <tr key={f.id} className="fiche-row-by-etat" onContextMenu={(e) => openFicheContextMenu(e, f)} style={{ backgroundColor: `${getEtatColor(f)}40`, borderLeft: `4px solid ${getEtatColor(f)}` }}>
                     <td>{f.nom || ''}</td>
                     <td>{f.prenom || ''}</td>
                     <td>{f.tel || ''}</td>
                     <td>{[f.cp, f.ville].filter(Boolean).join(' ') || '—'}</td>
+                    <td>{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : '—'}</td>
                     <td>{formatRdvDateTime(f.date_rdv_time)}</td>
                     <td>
                       <span className="etat-badge" style={{ backgroundColor: getEtatColor(f) }}>
                         {f.etat_titre || f.id_etat_final || '—'}
                       </span>
                     </td>
+                    <td>{getConfirmateursFormatted(f) || '—'}</td>
                     <td>{[f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ') || '—'}</td>
+                    <td>{getCentreName(f.id_centre) || '—'}</td>
+                    <td>
+                      <span className="produit-indicator" style={{ backgroundColor: getProduitColor(f.produit), color: '#fff' }}>
+                        {getProduitName(f.produit) || '—'}
+                      </span>
+                    </td>
+                    <td>{Number(f.valider) > 0 ? '✓' : '—'}</td>
                     <td>
                       <div className="fiche-indicators">
                         {f.id_commercial_2 && Number(f.id_commercial_2) > 0 && <span className="indicator r2" title="R2 placé">R2</span>}
@@ -235,6 +323,43 @@ const RendezVousVue = () => {
           <div className="no-data">Aucun rendez-vous pour ces critères.</div>
         )}
       </div>
+
+      {ficheContextMenu && (
+        <div
+          className="dashboard-fiche-context-menu"
+          style={{
+            position: 'fixed',
+            left: Math.min(ficheContextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 224 : ficheContextMenu.x),
+            top: Math.min(ficheContextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 340 : ficheContextMenu.y),
+            zIndex: 10050,
+          }}
+          role="menu"
+        >
+          <button type="button" className="dashboard-fiche-context-menu-item" onClick={() => copyFicheTelFromMenu(ficheContextMenu.fiche.tel)}>
+            Copier le téléphone
+          </button>
+          <button type="button" className="dashboard-fiche-context-menu-item" onClick={openFicheHistoriqueOverlay}>
+            Voir historique (modal)…
+          </button>
+          <button type="button" className="dashboard-fiche-context-menu-item" onClick={openFicheSmsFromMenu}>
+            Envoyer un SMS…
+          </button>
+          <button type="button" className="dashboard-fiche-context-menu-item" onClick={() => openFicheDetailNewTab(ficheContextMenu.fiche.hash)}>
+            Ouvrir dans un nouvel onglet
+          </button>
+        </div>
+      )}
+
+      {ficheDetailModal && (
+        <FicheDetailModal
+          ficheHash={ficheDetailModal.hash}
+          onClose={() => setFicheDetailModal(null)}
+          options={{
+            focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats,
+            initialTab: ficheDetailModal.initialTab || undefined,
+          }}
+        />
+      )}
     </div>
   );
 };
