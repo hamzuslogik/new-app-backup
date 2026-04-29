@@ -2040,6 +2040,9 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
       const ficheIdsAvecCompteRendu = new Set(fichesAvecCompteRendu.map(cr => cr.id_fiche));
       fiches.forEach(fiche => {
         fiche.has_compte_rendu = ficheIdsAvecCompteRendu.has(fiche.id);
+        if (!fiche.hash && fiche.id) {
+          fiche.hash = encodeFicheId(fiche.id);
+        }
       });
     }
 
