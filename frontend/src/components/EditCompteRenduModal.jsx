@@ -18,7 +18,7 @@ const parseModifications = (mods) => {
 const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, readOnly = false }) => {
   useModalScrollLock(true);
   const initialMods = useMemo(() => parseModifications(compteRendu.modifications), [compteRendu.modifications]);
-  const dateSignStr = initialMods.date_sign_time || compteRendu.date_sign_time || '';
+  const dateSignStr = initialMods.date_sign_time || compteRendu.date_sign_time || compteRendu.date_creation || '';
   const [dateSignDate, dateSignTime] = (() => {
     if (!dateSignStr) return ['', ''];
     const m = String(dateSignStr).match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::\d{2})?/);

@@ -147,6 +147,15 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
 
     // Créer le compte rendu
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const dateSignTimeFromMods = filteredModifications?.date_sign_time;
+    const useDateSignAsCreation =
+      typeof dateSignTimeFromMods === 'string' &&
+      /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(:\d{2})?$/.test(dateSignTimeFromMods.trim());
+    const creationDateForPending = useDateSignAsCreation
+      ? (dateSignTimeFromMods.trim().length === 16
+          ? `${dateSignTimeFromMods.trim()}:00`
+          : dateSignTimeFromMods.trim())
+      : now;
     const result = await query(
       `INSERT INTO compte_rendu_pending 
        (id_fiche, id_commercial, statut, id_etat_final, id_sous_etat, modifications, commentaire, produit,
@@ -181,7 +190,7 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
         pseudo || null,
         valeur_mensualite || null,
         conf_consommations || null,
-        now
+        creationDateForPending
       ]
     );
 
