@@ -2885,7 +2885,8 @@ const FicheDetail = ({
             - Pas si commercial (5) avec compte rendu existant
             - Doit avoir la permission decalage_create
             - Doit avoir une date de RDV */}
-        {false && hasPermission('decalage_create') && 
+        {hasPermission('decalage_create') && 
+         user.fonction === 5 &&
          user.fonction !== 6 && 
          user.fonction !== 3 && 
          ficheData && !([13, 16, 38, 45, 44].includes(ficheData.id_etat_final)) &&
@@ -6559,6 +6560,7 @@ const FicheDetail = ({
 
         {/* Formulaire de décalage de RDV — déplacé tout en bas de la page détails fiche */}
         {hasPermission('decalage_create') && 
+         user.fonction !== 5 &&
          user.fonction !== 6 && 
          user.fonction !== 3 && 
          ficheData && !([13, 16, 38, 45, 44].includes(ficheData.id_etat_final)) &&
