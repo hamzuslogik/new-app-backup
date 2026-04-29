@@ -6,10 +6,12 @@ import { RouteParamsProvider } from '../contexts/RouteParamsContext';
 import FicheDetail from '../pages/FicheDetail';
 import { FaTimes } from 'react-icons/fa';
 import api from '../config/api';
+import { useAuth } from '../contexts/AuthContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import '../pages/Dashboard.css';
 
 const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const previousPath = React.useRef(`${location.pathname}${location.search}`);
@@ -22,6 +24,8 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const isOverlayLocked =
     lockedFromOption ||
     (searchParams.get('overlay') === '1' && searchParams.get('close') === '0');
+  // Session commercial : éviter la fermeture accidentelle au clic extérieur
+  const isBackdropCloseLocked = isOverlayLocked || Number(user?.fonction) === 5;
 
   // Ne plus bloquer le scroll du body - le modal utilise le scroll de la page
   // useModalScrollLock(!!ficheHash);
@@ -146,7 +150,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const modalContent = (
     <div
       className="fiche-detail-modal-overlay"
-      onClick={isOverlayLocked ? undefined : onClose}
+      onClick={isBackdropCloseLocked ? undefined : onClose}
     >
       <div 
         ref={modalContentRef}
