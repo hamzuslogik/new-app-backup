@@ -454,7 +454,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Consommation annuelle ancien système :</label>
+                  <label>Consommation annuelle ancien système:</label>
                   <input
                     type="number"
                     step="0.01"
@@ -571,32 +571,6 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                 </div>
               </div>
             </>
-          )}
-
-          {/* Autres modifications (champs non structurés) */}
-          {Object.keys(otherModifications).length > 0 && (
-            <div className="form-section">
-              <h3>Autres modifications</h3>
-              <div className="modifications-list">
-                {Object.entries(otherModifications).map(([key, value]) => (
-                  <div key={key} className="modification-item">
-                    <span className="modification-key">{key}:</span>
-                    <input
-                      type="text"
-                      value={typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                      onChange={(e) => handleOtherModificationChange(key, e.target.value)}
-                      className="modification-input"
-                      disabled={readOnly}
-                    />
-                    {!readOnly && (
-                      <button type="button" onClick={() => handleRemoveOtherModification(key)} className="btn-remove">
-                        <FaTimes />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
           )}
 
           <div className="form-actions">
