@@ -41,6 +41,10 @@ const CompteRendu = () => {
     const res = await api.get('/management/centres');
     return res.data.data || [];
   });
+  const { data: installateursData } = useQuery('installateurs', async () => {
+    const res = await api.get('/management/installateurs');
+    return res.data.data || [];
+  });
 
   const { data: etatsData } = useQuery('etats', async () => {
     const res = await api.get('/management/etats');
@@ -155,6 +159,7 @@ const CompteRendu = () => {
   const confirmateurs = confirmateursData || [];
   const commerciaux = commerciauxData || [];
   const centres = centresData || [];
+  const installateurs = installateursData || [];
   const etats = etatsData || [];
 
   const compteRendusPending = comptesRendusPendingData || [];
@@ -191,6 +196,60 @@ const CompteRendu = () => {
     const g = parseInt(normalized.slice(2, 4), 16);
     const b = parseInt(normalized.slice(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const parseMods = (mods) => {
+    if (!mods) return {};
+    if (typeof mods === 'string') {
+      try { return JSON.parse(mods) || {}; } catch { return {}; }
+    }
+    return typeof mods === 'object' ? mods : {};
+  };
+
+  const getInstallateurName = (value) => {
+    if (value == null || value === '') return '';
+    const found = installateurs.find((i) => String(i.id) === String(value));
+    return found?.nom || String(value);
+  };
+
+  const formatDisplayValue = (key, value) => {
+    if (value == null || value === '') return '';
+    if (key === 'ph3_installateur') return getInstallateurName(value);
+    if (['ph3_prix', 'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'ph3_mensualite'].includes(key)) {
+      return `${value} €`;
+    }
+    return String(value);
+  };
+
+  const buildCompteRenduDetails = (cr) => {
+    const mods = parseMods(cr.modifications);
+    const picked = (topKey, modKey = topKey) => {
+      const topVal = cr[topKey];
+      if (topVal != null && String(topVal) !== '') return topVal;
+      return mods[modKey];
+    };
+    const details = [
+      { label: 'Pseudo', key: 'pseudo', value: picked('pseudo') },
+      { label: 'PAC', key: 'ph3_pac', value: picked('ph3_pac') },
+      { label: 'Financement', key: 'ph3_attente', value: picked('ph3_attente') },
+      { label: 'Prix', key: 'ph3_prix', value: picked('ph3_prix') },
+      { label: 'Crédit immobilier', key: 'credit_immobilier', value: picked('credit_immobilier') },
+      { label: 'Autre crédit', key: 'credit_autre', value: picked('credit_autre') },
+      { label: 'Puissance', key: 'ph3_puissance', value: picked('ph3_puissance') },
+      { label: 'Ballon', key: 'ph3_ballon', value: picked('ph3_ballon') },
+      { label: 'Installateur', key: 'ph3_installateur', value: picked('ph3_installateur') },
+      { label: 'Consommation annuelle ancien système', key: 'conf_consommations', value: picked('conf_consommations') },
+      { label: 'Partie à financer du client', key: 'valeur_mensualite', value: picked('valeur_mensualite') },
+      { label: 'Bonus annoncé', key: 'ph3_bonus_30', value: picked('ph3_bonus_30') },
+      { label: 'Mensualité du crédit', key: 'ph3_mensualite', value: picked('ph3_mensualite') },
+      { label: 'Nombre de mois du crédit', key: 'nbr_annee_finance', value: picked('nbr_annee_finance') },
+      { label: 'Alimentation', key: 'ph3_alimentation', value: picked('ph3_alimentation') },
+      { label: 'Type', key: 'ph3_type', value: picked('ph3_type') },
+      { label: 'Date signature', key: 'date_sign_time', value: picked('date_sign_time') }
+    ];
+    return details
+      .filter((d) => d.value != null && String(d.value) !== '')
+      .map((d) => ({ ...d, display: formatDisplayValue(d.key, d.value) }));
   };
 
   return (
@@ -378,15 +437,16 @@ const CompteRendu = () => {
                       </div>
                     )}
 
-                    {(cr.ph3_installateur || cr.ph3_pac || cr.ph3_puissance || cr.ph3_prix || cr.ph3_mensualite) && (
+                    {buildCompteRenduDetails(cr).length > 0 && (
                       <div className="cr-field">
-                        <strong>Informations de vente (Phase 3):</strong>
+                        <strong>Détails compte rendu:</strong>
                         <div className="modifications-list">
-                          {cr.ph3_installateur && <div className="modification-item"><span className="modification-key">Installateur:</span><span className="modification-value">{cr.ph3_installateur}</span></div>}
-                          {cr.ph3_pac && <div className="modification-item"><span className="modification-key">PAC:</span><span className="modification-value">{cr.ph3_pac}</span></div>}
-                          {cr.ph3_puissance && <div className="modification-item"><span className="modification-key">Puissance:</span><span className="modification-value">{cr.ph3_puissance}</span></div>}
-                          {cr.ph3_prix && <div className="modification-item"><span className="modification-key">Prix:</span><span className="modification-value">{cr.ph3_prix} €</span></div>}
-                          {cr.ph3_mensualite && <div className="modification-item"><span className="modification-key">Mensualité:</span><span className="modification-value">{cr.ph3_mensualite} €</span></div>}
+                          {buildCompteRenduDetails(cr).map((item) => (
+                            <div key={item.key} className="modification-item">
+                              <span className="modification-key">{item.label}:</span>
+                              <span className="modification-value">{item.display}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -397,19 +457,6 @@ const CompteRendu = () => {
                         <div className="cr-text">{cr.commentaire}</div>
                       </div>
                     )}
-
-                    <div className="cr-field">
-                      <div className="modifications-list">
-                        {Object.entries(cr.modifications || {})
-                          .filter(([key]) => key !== 'conf_commentaire_produit')
-                          .map(([key, value]) => (
-                            <div key={key} className="modification-item">
-                              <span className="modification-key">{key}:</span>
-                              <span className="modification-value">{String(value)}</span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
 
                     {cr.commentaire_admin && (
                       <div className="cr-field">

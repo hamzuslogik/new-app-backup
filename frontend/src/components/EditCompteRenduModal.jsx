@@ -280,7 +280,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
             </div>
           )}
 
-          {(!isEtat11ou12 || (formData.id_sous_etat && String(formData.id_sous_etat).trim() !== '')) && (
+          {(!isEtatSigner && (!isEtat11ou12 || (formData.id_sous_etat && String(formData.id_sous_etat).trim() !== ''))) && (
             <div className="form-group">
               <label>Commentaire{isEtat11ou12 ? ' (facultatif) :' : ' :'}</label>
               <textarea
@@ -359,13 +359,176 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
             </div>
           )}
 
-          {/* État 13, 44, 45 - Signer : produit, date/heure signature, commerciaux + Phase 3 */}
+          {/* État 13, 44, 45 - Signer */}
           {isEtatSigner && (
             <>
               <div className="form-section">
-                <h3>Informations Signature</h3>
+                <h3>Détails compte rendu</h3>
                 <div className="form-group">
-                  <label>Signature pour:</label>
+                  <label>Pseudo :</label>
+                  <input
+                    type="text"
+                    value={otherModifications.pseudo || ''}
+                    onChange={(e) => handleOtherModificationChange('pseudo', e.target.value)}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>PAC :</label>
+                  <select
+                    value={formData.ph3_pac}
+                    onChange={(e) => setFormData({ ...formData, ph3_pac: e.target.value })}
+                    disabled={readOnly}
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="reau">R/EAU</option>
+                    <option value="rr">R/R</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Financement :</label>
+                  <input
+                    type="text"
+                    value={formData.ph3_attente}
+                    onChange={(e) => setFormData({ ...formData, ph3_attente: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Prix :</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.ph3_prix}
+                    onChange={(e) => setFormData({ ...formData, ph3_prix: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Crédit immobilier :</label>
+                  <input
+                    type="text"
+                    value={formData.credit_immobilier}
+                    onChange={(e) => setFormData({ ...formData, credit_immobilier: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Autre crédit :</label>
+                  <input
+                    type="text"
+                    value={formData.credit_autre}
+                    onChange={(e) => setFormData({ ...formData, credit_autre: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Puissance :</label>
+                  <input
+                    type="text"
+                    value={formData.ph3_puissance}
+                    onChange={(e) => setFormData({ ...formData, ph3_puissance: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Ballon :</label>
+                  <input
+                    type="text"
+                    value={formData.ph3_ballon}
+                    onChange={(e) => setFormData({ ...formData, ph3_ballon: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Installateur :</label>
+                  <select
+                    value={formData.ph3_installateur}
+                    onChange={(e) => setFormData({ ...formData, ph3_installateur: e.target.value })}
+                    disabled={readOnly}
+                  >
+                    <option value="">Sélectionner</option>
+                    {installateursData.map(inst => (
+                      <option key={inst.id} value={inst.id}>{inst.nom}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Consommation annuelle ancien système :</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={otherModifications.conf_consommations || ''}
+                    onChange={(e) => handleOtherModificationChange('conf_consommations', e.target.value)}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Partie à financer du client :</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={otherModifications.valeur_mensualite || ''}
+                    onChange={(e) => handleOtherModificationChange('valeur_mensualite', e.target.value)}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Bonus annoncé :</label>
+                  <select
+                    value={formData.ph3_bonus_30}
+                    onChange={(e) => setFormData({ ...formData, ph3_bonus_30: e.target.value })}
+                    disabled={readOnly}
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="15">15</option>
+                    <option value="30">30</option>
+                    <option value="SANS">SANS</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Mensualité du crédit :</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.ph3_mensualite}
+                    onChange={(e) => setFormData({ ...formData, ph3_mensualite: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Nombre de mois du crédit :</label>
+                  <input
+                    type="number"
+                    value={formData.nbr_annee_finance}
+                    onChange={(e) => setFormData({ ...formData, nbr_annee_finance: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Alimentation :</label>
+                  <input
+                    type="text"
+                    value={formData.ph3_alimentation}
+                    onChange={(e) => setFormData({ ...formData, ph3_alimentation: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Type :</label>
+                  <select
+                    value={formData.ph3_type}
+                    onChange={(e) => setFormData({ ...formData, ph3_type: e.target.value })}
+                    disabled={readOnly}
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="Bizonne">Bizonne</option>
+                    <option value="Basse">Basse</option>
+                    <option value="Haute">Haute</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Signature pour :</label>
                   <select
                     value={formData.produit}
                     onChange={(e) => setFormData({ ...formData, produit: e.target.value })}
@@ -379,7 +542,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Signé le:</label>
+                    <label>Date signature :</label>
                     <input
                       type="date"
                       value={formData.date_sign_date}
@@ -397,203 +560,14 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                     />
                   </div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Commercial:</label>
-                    <select
-                      value={formData.id_commercial}
-                      onChange={(e) => setFormData({ ...formData, id_commercial: e.target.value })}
-                      disabled={readOnly}
-                    >
-                      <option value="">Sélectionner</option>
-                      {(commerciauxData || []).map(u => (
-                        <option key={u.id} value={u.id}>{u.nom} {u.prenom}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Commercial 2 (optionnel):</label>
-                    <select
-                      value={formData.id_commercial_2}
-                      onChange={(e) => setFormData({ ...formData, id_commercial_2: e.target.value })}
-                      disabled={readOnly}
-                    >
-                      <option value="">Sélectionner</option>
-                      {(commerciauxData || []).map(u => (
-                        <option key={u.id} value={u.id}>{u.nom} {u.prenom}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div className="form-section">
-                <h3>Informations de vente (Phase 3)</h3>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Installateur:</label>
-                    <select
-                      value={formData.ph3_installateur}
-                      onChange={(e) => setFormData({ ...formData, ph3_installateur: e.target.value })}
-                      disabled={readOnly}
-                    >
-                      <option value="">Sélectionner</option>
-                      {installateursData.map(inst => (
-                        <option key={inst.id} value={inst.id}>{inst.nom}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>PAC:</label>
-                    <input
-                      type="text"
-                      value={formData.ph3_pac}
-                      onChange={(e) => setFormData({ ...formData, ph3_pac: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Puissance:</label>
-                    <input
-                      type="text"
-                      value={formData.ph3_puissance}
-                      onChange={(e) => setFormData({ ...formData, ph3_puissance: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Puissance PV:</label>
-                    <input
-                      type="text"
-                      value={formData.ph3_puissance_pv}
-                      onChange={(e) => setFormData({ ...formData, ph3_puissance_pv: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Modèle RR:</label>
-                    <input
-                      type="text"
-                      value={formData.ph3_rr_model}
-                      onChange={(e) => setFormData({ ...formData, ph3_rr_model: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Ballon:</label>
-                    <input
-                      type="text"
-                      value={formData.ph3_ballon}
-                      onChange={(e) => setFormData({ ...formData, ph3_ballon: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Marque ballon:</label>
-                    <input
-                      type="text"
-                      value={formData.ph3_marque_ballon}
-                      onChange={(e) => setFormData({ ...formData, ph3_marque_ballon: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Alimentation:</label>
-                    <input
-                      type="text"
-                      value={formData.ph3_alimentation}
-                      onChange={(e) => setFormData({ ...formData, ph3_alimentation: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Type:</label>
-                    <input
-                      type="text"
-                      value={formData.ph3_type}
-                      onChange={(e) => setFormData({ ...formData, ph3_type: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Prix (€):</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.ph3_prix}
-                      onChange={(e) => setFormData({ ...formData, ph3_prix: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Mensualité (€):</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.ph3_mensualite}
-                      onChange={(e) => setFormData({ ...formData, ph3_mensualite: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Bonus 30% (€):</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.ph3_bonus_30}
-                      onChange={(e) => setFormData({ ...formData, ph3_bonus_30: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Années financement:</label>
-                    <input
-                      type="number"
-                      value={formData.nbr_annee_finance}
-                      onChange={(e) => setFormData({ ...formData, nbr_annee_finance: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Attente:</label>
-                    <input
-                      type="text"
-                      value={formData.ph3_attente}
-                      onChange={(e) => setFormData({ ...formData, ph3_attente: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Crédit immobilier:</label>
-                    <input
-                      type="text"
-                      value={formData.credit_immobilier}
-                      onChange={(e) => setFormData({ ...formData, credit_immobilier: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Autre crédit:</label>
-                    <input
-                      type="text"
-                      value={formData.credit_autre}
-                      onChange={(e) => setFormData({ ...formData, credit_autre: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
+                <div className="form-group">
+                  <label>Compte rendu :</label>
+                  <textarea
+                    value={formData.commentaire}
+                    onChange={(e) => setFormData({ ...formData, commentaire: e.target.value })}
+                    rows={4}
+                    disabled={readOnly}
+                  />
                 </div>
               </div>
             </>
