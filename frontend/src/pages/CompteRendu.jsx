@@ -352,7 +352,7 @@ const CompteRendu = () => {
                       <div className="cr-meta">
                         <span>Tél: {cr.fiche_tel}</span>
                         <span>Pseudo: {cr.pseudo || '-'}</span>
-                        <span>Confirmateur: {cr.approbateur_pseudo || '-'}</span>
+                        <span>Confirmateur: {cr.confirmateur_pseudo || '-'}</span>
                         <span>Commercial: {cr.commercial_pseudo}</span>
                         <span>Créé le: {new Date(cr.date_creation).toLocaleString('fr-FR')}</span>
                         {cr.date_approbation && (

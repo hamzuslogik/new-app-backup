@@ -306,12 +306,14 @@ router.get('/', authenticate, async (req, res) => {
         f.tel as fiche_tel,
         f.hash as fiche_hash,
         u_commercial.pseudo as commercial_pseudo,
+        u_confirmateur.pseudo as confirmateur_pseudo,
         u_approbateur.pseudo as approbateur_pseudo,
         e.titre as etat_titre,
         se.titre as sous_etat_titre
       FROM compte_rendu_pending cr
       LEFT JOIN fiches f ON cr.id_fiche = f.id
       LEFT JOIN utilisateurs u_commercial ON cr.id_commercial = u_commercial.id
+      LEFT JOIN utilisateurs u_confirmateur ON f.id_confirmateur = u_confirmateur.id
       LEFT JOIN utilisateurs u_approbateur ON cr.id_approbateur = u_approbateur.id
       LEFT JOIN etats e ON cr.id_etat_final = e.id
       LEFT JOIN sous_etat se ON cr.id_sous_etat = se.id
