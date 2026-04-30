@@ -13,8 +13,8 @@
 --   yj.sous_etat (varchar) -> id_sous_etat via sous_etat.titre
 --   yj.compte_rendu (text) -> commentaire
 --   yj.ph3_* -> champs ph3_* correspondants
---   yj.date_visite -> date_creation
---   yj.date_modif -> date_modif
+--   yj.date_visite -> date_visite
+--   yj.date_modif -> date_creation, date_modif
 --   statut = 'approved' (CR historiques considérés validés)
 --
 -- POURQUOI compte_rendu_pending peut avoir moins de lignes que yj_compte_rendu (sans étape créations) :
@@ -84,6 +84,7 @@ INSERT INTO `compte_rendu_pending` (
   `pseudo`,
   `valeur_mensualite`,
   `conf_consommations`,
+  `date_visite`,
   `date_creation`,
   `date_modif`
 )
@@ -111,6 +112,7 @@ SELECT
   base.pseudo,
   base.valeur_mensualite,
   base.conf_consommations,
+  base.date_visite,
   base.date_creation,
   base.date_modif
 FROM (
@@ -147,7 +149,8 @@ FROM (
     NULLIF(TRIM(yj.`pseudo`), '') AS pseudo,
     CASE WHEN yj.`valeur_mensualite` REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN CAST(yj.`valeur_mensualite` AS DECIMAL(10,2)) ELSE NULL END AS valeur_mensualite,
     CASE WHEN yj.`ph3_consommations` REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN CAST(yj.`ph3_consommations` AS DECIMAL(10,2)) ELSE NULL END AS conf_consommations,
-    COALESCE(yj.`date_visite`, yj.`date_modif`) AS date_creation,
+    yj.`date_visite` AS date_visite,
+    yj.`date_modif` AS date_creation,
     yj.`date_modif` AS date_modif
   FROM `yj_compte_rendu` yj
   INNER JOIN `fiches` f ON f.`id` = yj.`fiche_id`
