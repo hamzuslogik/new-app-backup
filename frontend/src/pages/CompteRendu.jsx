@@ -164,8 +164,9 @@ const CompteRendu = () => {
 
   const compteRendusPending = comptesRendusPendingData || [];
   const isAdmin = [1, 2, 7].includes(Number(user.fonction));
+  const isBackoffice = Number(user.fonction) === 11; // Backoffice = fonction 11
   const isRPConfirmation = Number(user.fonction) === 13; // RP Confirmation = fonction 13
-  const canApprove = isAdmin || isRPConfirmation; // Admins et RP Confirmation peuvent approuver / modifier
+  const canApprove = isAdmin || isBackoffice || isRPConfirmation; // Admins, backoffice et RP Confirmation peuvent approuver / modifier
 
   const getCardColorByEtat = (cr) => {
     const etat = etats.find((e) => Number(e.id) === Number(cr.id_etat_final));
