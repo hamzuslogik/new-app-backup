@@ -183,7 +183,7 @@ const AffectationDep = () => {
       return res.data;
     },
     { 
-      keepPreviousData: true, 
+      keepPreviousData: false,
       enabled: !!week && !!year && !!dep
     }
   );
@@ -310,6 +310,14 @@ const AffectationDep = () => {
     setFilterCommercialId((prev) => (prev === commercialId ? null : commercialId));
   };
 
+  /** Aligné sur le backend planning/week : fiche.cp LIKE dep% — refuse tout RDV hors département sélectionné */
+  const rdvCpMatchesSelectedDepartement = (rdv) => {
+    if (!dep || String(dep).trim() === '') return true;
+    const cp = String(rdv.cp ?? '').trim();
+    if (!cp || cp === '0') return false;
+    return cp.startsWith(String(dep).trim());
+  };
+
   const rdvMatchesCommercialFilter = (rdv) => {
     if (filterCommercialId == null) return true;
     const cid = rdv.id_commercial != null ? Number(rdv.id_commercial) : null;
@@ -334,6 +342,7 @@ const AffectationDep = () => {
         Object.keys(planning[date].time || {}).forEach(timeKey => {
           const slotRdvs = planning[date].time[timeKey].planning || [];
           slotRdvs.forEach(rdv => {
+            if (!rdvCpMatchesSelectedDepartement(rdv)) return;
             if (selectedRdvsArray.includes(rdv.id) && rdv.cp) {
               rdvsWithCp.push({
                 id: rdv.id,
@@ -495,6 +504,7 @@ const AffectationDep = () => {
             <span>
               Filtre : RDV de{' '}
               <strong>{getUserName(filterCommercialId) || `commercial #${filterCommercialId}`}</strong>
+              {' '}· département <strong>{dep}</strong>
             </span>
             <button
               type="button"
@@ -554,9 +564,11 @@ const AffectationDep = () => {
                       const slotData = dateData?.time?.[timeKey];
                       const rdvs = slotData?.planning || [];
                       const availability = slotData?.av || 0;
-                      const rdvsFiltered = filterCommercialId == null
-                        ? rdvs
-                        : rdvs.filter(rdvMatchesCommercialFilter);
+                      const rdvsInDep = rdvs.filter(rdvCpMatchesSelectedDepartement);
+                      const rdvsFiltered =
+                        filterCommercialId == null
+                          ? rdvsInDep
+                          : rdvsInDep.filter(rdvMatchesCommercialFilter);
 
                       return (
                         <td key={`${day.date}-${timeKey}`} className="planning-cell">
@@ -647,8 +659,10 @@ const AffectationDep = () => {
                                 </div>
                               );
                             })}
-                            {rdvsFiltered.length === 0 && rdvs.length > 0 && filterCommercialId != null && (
-                              <div className="filter-slot-empty" title="Aucun RDV de ce commercial sur ce créneau">
+                            {rdvsFiltered.length === 0 &&
+                              rdvsInDep.length > 0 &&
+                              filterCommercialId != null && (
+                              <div className="filter-slot-empty" title="Aucun RDV de ce commercial sur ce créneau (dans ce département)">
                                 —
                               </div>
                             )}
