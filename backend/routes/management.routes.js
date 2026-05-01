@@ -573,7 +573,6 @@ router.get('/utilisateurs', authenticate, async (req, res) => {
     
     // Construire la requête avec ou sans filtre par pseudo
     let sql = `SELECT u.*, 
-       u.etat AS utilisateur_etat,
        f.titre as fonction_titre, 
        c.titre as centre_titre,
        supervisor.pseudo as supervisor_pseudo,
@@ -601,18 +600,6 @@ router.get('/utilisateurs', authenticate, async (req, res) => {
     sql += ` ORDER BY u.pseudo ASC`;
     
     const utilisateurs = await query(sql, params);
-
-    // Réinjecter l'état compte depuis l'alias (évite les collisions de colonnes `etat` avec jointures)
-    for (const user of utilisateurs) {
-      const src =
-        user.utilisateur_etat !== undefined && user.utilisateur_etat !== null && user.utilisateur_etat !== ''
-          ? user.utilisateur_etat
-          : user.etat;
-      const n = src === undefined || src === null || src === '' ? NaN : Number(src);
-      if (Number.isFinite(n)) {
-        user.etat = n;
-      }
-    }
 
     // Pour les utilisateurs de fonction 9, récupérer les centres multiples
     for (let user of utilisateurs) {
