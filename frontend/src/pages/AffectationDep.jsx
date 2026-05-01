@@ -127,6 +127,8 @@ const AffectationDep = () => {
   const [year, setYear] = useState(parseInt(searchParams.get('y')) || currentYear);
   const [dep, setDep] = useState(searchParams.get('dp') || '');
   const [selectedRdvs, setSelectedRdvs] = useState(new Set());
+  /** Filtre liste RDV : n'afficher que ceux affectés à ce commercial (clic sans sélection). null = tous */
+  const [filterCommercialId, setFilterCommercialId] = useState(null);
   const [distanceResults, setDistanceResults] = useState(null);
   const [showDistanceModal, setShowDistanceModal] = useState(false);
   
@@ -299,6 +301,21 @@ const AffectationDep = () => {
     affectMutation.mutate({ fichesIds, idCommercial });
   };
 
+  /** Clic commercial : avec RDV cochés → affecter ; sinon → filtrer / désactiver le filtre */
+  const handleCommercialSidebarClick = (commercialId) => {
+    if (selectedRdvs.size > 0) {
+      handleAffecter(commercialId);
+      return;
+    }
+    setFilterCommercialId((prev) => (prev === commercialId ? null : commercialId));
+  };
+
+  const rdvMatchesCommercialFilter = (rdv) => {
+    if (filterCommercialId == null) return true;
+    const cid = rdv.id_commercial != null ? Number(rdv.id_commercial) : null;
+    return cid === Number(filterCommercialId);
+  };
+
   // Calculer les distances entre les codes postaux des RDV sélectionnés
   const handleCalculateDistance = async () => {
     if (selectedRdvs.size < 2) {
@@ -432,9 +449,10 @@ const AffectationDep = () => {
     }
   }, [departementsData, dep]);
 
-  // Réinitialiser la sélection quand on change de semaine/département
+  // Réinitialiser la sélection et le filtre commercial quand on change de semaine/département
   useEffect(() => {
     setSelectedRdvs(new Set());
+    setFilterCommercialId(null);
   }, [week, year, dep]);
 
   if (isLoadingPlanning || isLoadingDepartements) {
@@ -472,6 +490,21 @@ const AffectationDep = () => {
             ))}
           </select>
         </div>
+        {filterCommercialId != null && (
+          <div className="filter-commercial-banner">
+            <span>
+              Filtre : RDV de{' '}
+              <strong>{getUserName(filterCommercialId) || `commercial #${filterCommercialId}`}</strong>
+            </span>
+            <button
+              type="button"
+              className="btn-clear-commercial-filter"
+              onClick={() => setFilterCommercialId(null)}
+            >
+              Tout afficher
+            </button>
+          </div>
+        )}
         {selectedRdvs.size > 0 && (
           <>
             <div className="selected-count">
@@ -521,11 +554,14 @@ const AffectationDep = () => {
                       const slotData = dateData?.time?.[timeKey];
                       const rdvs = slotData?.planning || [];
                       const availability = slotData?.av || 0;
+                      const rdvsFiltered = filterCommercialId == null
+                        ? rdvs
+                        : rdvs.filter(rdvMatchesCommercialFilter);
 
                       return (
                         <td key={`${day.date}-${timeKey}`} className="planning-cell">
                           <div className="rdv-list">
-                            {rdvs.map((rdv, index) => {
+                            {rdvsFiltered.map((rdv, index) => {
                               const commercialName = getUserName(rdv.id_commercial);
                               const commercialColor = getUserColor(rdv.id_commercial);
                               const isSelected = selectedRdvs.has(rdv.id);
@@ -611,6 +647,11 @@ const AffectationDep = () => {
                                 </div>
                               );
                             })}
+                            {rdvsFiltered.length === 0 && rdvs.length > 0 && filterCommercialId != null && (
+                              <div className="filter-slot-empty" title="Aucun RDV de ce commercial sur ce créneau">
+                                —
+                              </div>
+                            )}
                             {rdvs.length === 0 && availability > 0 && (
                               <div className="availability-indicator">Disponible: {availability}</div>
                             )}
@@ -629,6 +670,9 @@ const AffectationDep = () => {
         <div className="commerciaux-sidebar">
           <div className="sidebar-header">
             <h3>Commerciaux</h3>
+            <p className="sidebar-hint">
+              Sans sélection : clic pour filtrer les RDV du commercial. Avec RDV cochés : clic pour affecter.
+            </p>
             {selectedRdvs.size > 0 && (
               <div className="selected-info">
                 {selectedRdvs.size} RDV sélectionné(s)
@@ -639,14 +683,21 @@ const AffectationDep = () => {
             {commerciauxData && commerciauxData.map(commercial => (
               <button
                 key={commercial.id}
-                className="commercial-button"
-                onClick={() => handleAffecter(commercial.id)}
-                disabled={selectedRdvs.size === 0 || affectMutation.isLoading}
+                type="button"
+                className={`commercial-button ${filterCommercialId === commercial.id ? 'commercial-button--filter-active' : ''}`}
+                onClick={() => handleCommercialSidebarClick(commercial.id)}
+                disabled={affectMutation.isLoading}
                 style={{ 
                   backgroundColor: commercial.color || '#9cbfc8',
                   borderColor: commercial.color || '#9cbfc8'
                 }}
-                title={`Affecter ${selectedRdvs.size} RDV(s) à ${commercial.pseudo}`}
+                title={
+                  selectedRdvs.size > 0
+                    ? `Affecter ${selectedRdvs.size} RDV(s) à ${commercial.pseudo}`
+                    : filterCommercialId === commercial.id
+                      ? `Afficher tous les RDV (retirer le filtre)`
+                      : `Voir uniquement les RDV affectés à ${commercial.pseudo}`
+                }
               >
                 <FaUser /> {commercial.pseudo}
               </button>
