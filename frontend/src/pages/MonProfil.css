@@ -60,6 +60,50 @@
   color: #333;
 }
 
+.mon-profil-help {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0 0 16px 0;
+  line-height: 1.45;
+}
+
+.mon-profil-readonly-block {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.mon-profil-info-form .mon-profil-field {
+  margin-bottom: 0;
+}
+
+.mon-profil-info-form input,
+.mon-profil-info-form select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.mon-profil-info-form input:focus,
+.mon-profil-info-form select:focus {
+  outline: none;
+  border-color: #0066cc;
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+}
+
+.mon-profil-info-form input:disabled,
+.mon-profil-info-form select:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.mon-profil-info-form .mon-profil-btn-submit {
+  margin-top: 8px;
+}
+
 .mon-profil-password-form .mon-profil-field {
   margin-bottom: 16px;
   max-width: 320px;

@@ -101,6 +101,21 @@ export const AuthProvider = ({ children }) => {
     setPermissions({});
   };
 
+  /** Recharge l’utilisateur depuis le serveur (ex. après mise à jour du profil) */
+  const refreshUser = async () => {
+    try {
+      const response = await api.get('/auth/verify');
+      if (response.data.success && response.data.user) {
+        setUser(response.data.user);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return response.data.user;
+      }
+    } catch (e) {
+      console.error('refreshUser:', e);
+    }
+    return null;
+  };
+
   // Helper pour vérifier une permission
   const hasPermission = (code) => {
     // Si les permissions ne sont pas chargées, autoriser par défaut (rétrocompatibilité)
@@ -116,6 +131,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
+    refreshUser,
     hasPermission,
     isAuthenticated: !!user,
   };

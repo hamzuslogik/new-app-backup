@@ -1,13 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import api from '../config/api';
+import { useAuth } from '../contexts/AuthContext';
 import './MonProfil.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
+const emptyProfileForm = () => ({
+  pseudo: '',
+  nom: '',
+  prenom: '',
+  mail: '',
+  tel: '',
+  genre: ''
+});
+
 const MonProfil = () => {
   useForceDesktopViewport('mon-profil-page');
+  const { refreshUser } = useAuth();
   const [profile, setProfile] = useState(null);
+  const [profileForm, setProfileForm] = useState(emptyProfileForm);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [profileMessage, setProfileMessage] = useState({ type: '', text: '' });
+  const [profileSubmitting, setProfileSubmitting] = useState(false);
+
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -33,6 +48,63 @@ const MonProfil = () => {
     };
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    setProfileForm({
+      pseudo: profile.pseudo ?? '',
+      nom: profile.nom ?? '',
+      prenom: profile.prenom ?? '',
+      mail: profile.mail ?? '',
+      tel: profile.tel ?? '',
+      genre:
+        profile.genre != null && profile.genre !== ''
+          ? String(profile.genre)
+          : ''
+    });
+  }, [profile]);
+
+  const handleProfileFieldChange = (e) => {
+    const { name, value } = e.target;
+    setProfileForm((prev) => ({ ...prev, [name]: value }));
+    setProfileMessage({ type: '', text: '' });
+  };
+
+  const handleSubmitProfile = async (e) => {
+    e.preventDefault();
+    setProfileMessage({ type: '', text: '' });
+    const pseudo = profileForm.pseudo.trim();
+    if (!pseudo) {
+      setProfileMessage({ type: 'error', text: 'Le pseudo est obligatoire.' });
+      return;
+    }
+    setProfileSubmitting(true);
+    try {
+      const payload = {
+        pseudo,
+        nom: profileForm.nom.trim() || null,
+        prenom: profileForm.prenom.trim() || null,
+        mail: profileForm.mail.trim() || null,
+        tel: profileForm.tel.trim() || null,
+        genre: profileForm.genre === '' ? null : parseInt(profileForm.genre, 10)
+      };
+      const res = await api.put('/auth/me', payload);
+      if (res.data.success && res.data.data) {
+        setProfile(res.data.data);
+        setProfileMessage({ type: 'success', text: res.data.message || 'Informations enregistrées.' });
+        await refreshUser();
+      } else {
+        setProfileMessage({ type: 'error', text: res.data.message || 'Erreur lors de l’enregistrement.' });
+      }
+    } catch (err) {
+      setProfileMessage({
+        type: 'error',
+        text: err.response?.data?.message || 'Erreur lors de la mise à jour du profil.'
+      });
+    } finally {
+      setProfileSubmitting(false);
+    }
+  };
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
@@ -101,40 +173,110 @@ const MonProfil = () => {
 
       <section className="mon-profil-section mon-profil-info">
         <h2>Informations personnelles</h2>
-        <div className="mon-profil-grid">
-          <div className="mon-profil-field">
-            <label>Login</label>
-            <span>{displayValue(profile?.login)}</span>
-          </div>
-          <div className="mon-profil-field">
-            <label>Pseudo</label>
-            <span>{displayValue(profile?.pseudo)}</span>
-          </div>
-          <div className="mon-profil-field">
-            <label>Nom</label>
-            <span>{displayValue(profile?.nom)}</span>
-          </div>
-          <div className="mon-profil-field">
-            <label>Prénom</label>
-            <span>{displayValue(profile?.prenom)}</span>
-          </div>
-          <div className="mon-profil-field">
-            <label>Fonction</label>
-            <span>{displayValue(profile?.fonction_titre)}</span>
-          </div>
-          <div className="mon-profil-field">
-            <label>Centre</label>
-            <span>{displayValue(profile?.centre_titre)}</span>
-          </div>
-          <div className="mon-profil-field">
-            <label>E-mail</label>
-            <span>{displayValue(profile?.mail)}</span>
-          </div>
-          <div className="mon-profil-field">
-            <label>Téléphone</label>
-            <span>{displayValue(profile?.tel)}</span>
+        <p className="mon-profil-help">
+          Modifiez vos coordonnées ci-dessous. Le login, la fonction et le centre sont gérés par l’administration.
+        </p>
+
+        <div className="mon-profil-readonly-block">
+          <div className="mon-profil-grid">
+            <div className="mon-profil-field">
+              <label>Login</label>
+              <span>{displayValue(profile?.login)}</span>
+            </div>
+            <div className="mon-profil-field">
+              <label>Fonction</label>
+              <span>{displayValue(profile?.fonction_titre)}</span>
+            </div>
+            <div className="mon-profil-field">
+              <label>Centre</label>
+              <span>{displayValue(profile?.centre_titre)}</span>
+            </div>
           </div>
         </div>
+
+        <form onSubmit={handleSubmitProfile} className="mon-profil-info-form">
+          <div className="mon-profil-grid">
+            <div className="mon-profil-field">
+              <label htmlFor="pseudo">Pseudo *</label>
+              <input
+                id="pseudo"
+                name="pseudo"
+                value={profileForm.pseudo}
+                onChange={handleProfileFieldChange}
+                disabled={profileSubmitting}
+                autoComplete="nickname"
+              />
+            </div>
+            <div className="mon-profil-field">
+              <label htmlFor="nom">Nom</label>
+              <input
+                id="nom"
+                name="nom"
+                value={profileForm.nom}
+                onChange={handleProfileFieldChange}
+                disabled={profileSubmitting}
+                autoComplete="family-name"
+              />
+            </div>
+            <div className="mon-profil-field">
+              <label htmlFor="prenom">Prénom</label>
+              <input
+                id="prenom"
+                name="prenom"
+                value={profileForm.prenom}
+                onChange={handleProfileFieldChange}
+                disabled={profileSubmitting}
+                autoComplete="given-name"
+              />
+            </div>
+            <div className="mon-profil-field">
+              <label htmlFor="mail">E-mail</label>
+              <input
+                id="mail"
+                name="mail"
+                type="email"
+                value={profileForm.mail}
+                onChange={handleProfileFieldChange}
+                disabled={profileSubmitting}
+                autoComplete="email"
+              />
+            </div>
+            <div className="mon-profil-field">
+              <label htmlFor="tel">Téléphone</label>
+              <input
+                id="tel"
+                name="tel"
+                type="tel"
+                value={profileForm.tel}
+                onChange={handleProfileFieldChange}
+                disabled={profileSubmitting}
+                autoComplete="tel"
+              />
+            </div>
+            <div className="mon-profil-field">
+              <label htmlFor="genre">Genre</label>
+              <select
+                id="genre"
+                name="genre"
+                value={profileForm.genre}
+                onChange={handleProfileFieldChange}
+                disabled={profileSubmitting}
+              >
+                <option value="">—</option>
+                <option value="1">Femme</option>
+                <option value="2">Homme</option>
+              </select>
+            </div>
+          </div>
+          {profileMessage.text && (
+            <div className={`mon-profil-message mon-profil-message--${profileMessage.type}`}>
+              {profileMessage.text}
+            </div>
+          )}
+          <button type="submit" className="mon-profil-btn-submit" disabled={profileSubmitting}>
+            {profileSubmitting ? 'Enregistrement…' : 'Enregistrer les informations'}
+          </button>
+        </form>
       </section>
 
       <section className="mon-profil-section mon-profil-password">

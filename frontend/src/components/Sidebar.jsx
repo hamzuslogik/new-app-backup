@@ -406,8 +406,8 @@ const Sidebar = ({ collapsed }) => {
       icon: FaUser,
       permission: null,
       visible: true,
-      // RE qualification, RP qualification, qualité qualification, qualité confirmation, confirmateur, RE confirmation, RP confirmation, backoffice, ADMINISTRATEUR, partenaire
-      customCheck: (item, user) => [1, 2, 6, 7, 8, 9, 11, 12, 13, 14].includes(Number(user?.fonction)),
+      // Commercial (5), RE qualification, RP qualification, qualité qualification, qualité confirmation, confirmateur, RE confirmation, RP confirmation, backoffice, ADMINISTRATEUR, partenaire
+      customCheck: (item, user) => [1, 2, 5, 6, 7, 8, 9, 11, 12, 13, 14].includes(Number(user?.fonction)),
     },
   ];
 

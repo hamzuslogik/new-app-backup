@@ -114,7 +114,7 @@ function App() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="signatures" element={<ProtectedRoute permission="signatures_view"><Signatures /></ProtectedRoute>} />
           <Route path="system-messages" element={<ProtectedRoute permission="management_view"><SystemMessages /></ProtectedRoute>} />
-          <Route path="mon-profil" element={<ProtectedRoute permission={null} allowFunctions={[1, 2, 6, 7, 8, 9, 11, 12, 13, 14]}><MonProfil /></ProtectedRoute>} />
+          <Route path="mon-profil" element={<ProtectedRoute permission={null} allowFunctions={[1, 2, 5, 6, 7, 8, 9, 11, 12, 13, 14]}><MonProfil /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<HomeRedirect />} />
       </Routes>

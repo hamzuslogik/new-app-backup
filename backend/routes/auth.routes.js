@@ -253,6 +253,112 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
+// Mettre à jour les informations personnelles (utilisateur connecté uniquement — pas fonction/centre/login)
+router.put('/me', authenticate, async (req, res) => {
+  try {
+    const { nom, prenom, pseudo, mail, tel, genre } = req.body;
+
+    const updates = [];
+    const values = [];
+
+    if (pseudo !== undefined) {
+      const p = String(pseudo).trim();
+      if (!p) {
+        return res.status(400).json({ success: false, message: 'Le pseudo ne peut pas être vide' });
+      }
+      const taken = await queryOne(
+        `SELECT id FROM utilisateurs WHERE TRIM(pseudo) = ? AND id != ?`,
+        [p, req.user.id]
+      );
+      if (taken) {
+        return res.status(400).json({ success: false, message: 'Ce pseudo est déjà utilisé' });
+      }
+      updates.push('pseudo = ?');
+      values.push(p);
+    }
+
+    if (nom !== undefined) {
+      const v = nom === null || nom === '' ? null : String(nom).trim();
+      updates.push('nom = ?');
+      values.push(v);
+    }
+    if (prenom !== undefined) {
+      const v = prenom === null || prenom === '' ? null : String(prenom).trim();
+      updates.push('prenom = ?');
+      values.push(v);
+    }
+    if (mail !== undefined) {
+      const v = mail === null || mail === '' ? null : String(mail).trim();
+      updates.push('mail = ?');
+      values.push(v);
+    }
+    if (tel !== undefined) {
+      const v = tel === null || tel === '' ? null : String(tel).trim();
+      updates.push('tel = ?');
+      values.push(v);
+    }
+    if (genre !== undefined) {
+      if (genre === null || genre === '') {
+        updates.push('genre = ?');
+        values.push(null);
+      } else {
+        const g = parseInt(genre, 10);
+        if (![1, 2].includes(g)) {
+          return res.status(400).json({ success: false, message: 'Genre invalide' });
+        }
+        updates.push('genre = ?');
+        values.push(g);
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'Aucune information à mettre à jour' });
+    }
+
+    values.push(req.user.id);
+    await query(`UPDATE utilisateurs SET ${updates.join(', ')} WHERE id = ?`, values);
+
+    const user = await queryOne(
+      `SELECT u.id, u.login, u.pseudo, u.nom, u.prenom, u.mail, u.tel, u.fonction, u.centre, u.genre, u.photo, u.color,
+       f.titre as fonction_titre, f.etat as fonction_etat,
+       c.titre as centre_titre, c.etat as centre_etat
+       FROM utilisateurs u
+       LEFT JOIN fonctions f ON u.fonction = f.id
+       LEFT JOIN centres c ON u.centre = c.id
+       WHERE u.id = ? AND u.etat > 0`,
+      [req.user.id]
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Profil mis à jour',
+      data: {
+        id: user.id,
+        login: user.login,
+        pseudo: user.pseudo,
+        nom: user.nom,
+        prenom: user.prenom,
+        mail: user.mail,
+        tel: user.tel,
+        fonction: user.fonction,
+        fonction_titre: user.fonction_titre,
+        centre: user.centre,
+        centre_titre: user.centre_titre,
+        genre: user.genre,
+        photo: user.photo,
+        color: user.color
+      }
+    });
+  } catch (error) {
+    console.error('Erreur PUT /auth/me:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la mise à jour du profil' });
+  }
+});
+
 // Changer le mot de passe (utilisateur connecté)
 router.post('/change-password', authenticate, async (req, res) => {
   try {
