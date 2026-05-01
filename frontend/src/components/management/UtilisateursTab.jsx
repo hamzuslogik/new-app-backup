@@ -10,12 +10,24 @@ import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import './ManagementTab.css';
 
-/** État du compte (utilisateurs.etat) — alias utilisateur_etat évite les collisions mysql2 avec d'autres colonnes `etat` en jointure */
+/** État compte : 1 = actif, 0 = inactif (priorité utilisateur_etat si présent, puis etat) */
 const resolveUtilisateurEtat = (u) => {
-  const raw = u?.utilisateur_etat ?? u?.etat;
+  const raw = u?.utilisateur_etat !== undefined && u?.utilisateur_etat !== null && u?.utilisateur_etat !== ''
+    ? u.utilisateur_etat
+    : u?.etat;
   if (raw === null || raw === undefined || raw === '') return null;
+  if (typeof raw === 'bigint') {
+    const b = Number(raw);
+    return Number.isFinite(b) ? b : null;
+  }
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
+};
+
+const libelleEtatCompte = (etatVal) => {
+  if (etatVal === 1) return 'Actif';
+  if (etatVal === 0) return 'Inactif';
+  return '—';
 };
 
 const UtilisateursTab = () => {
@@ -932,7 +944,7 @@ const UtilisateursTab = () => {
                   </td>
                   <td data-label="État:">
                     <span
-                      className={`badge ${
+                      className={`badge utilisateur-etat-badge ${
                         etatVal === 1
                           ? 'badge-success'
                           : etatVal === null
@@ -940,7 +952,7 @@ const UtilisateursTab = () => {
                             : 'badge-danger'
                       }`}
                     >
-                      {etatVal === 1 ? 'Actif' : etatVal === null ? '—' : 'Inactif'}
+                      {libelleEtatCompte(etatVal)}
                     </span>
                   </td>
                   <td data-label="">

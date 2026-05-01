@@ -398,6 +398,14 @@
   color: white;
 }
 
+/* Colonne État (utilisateurs) : garantir texte lisible même si des règles globales sur tableaux forcent la couleur du texte */
+.management-tab .data-table td .utilisateur-etat-badge {
+  display: inline-block;
+  min-width: 56px;
+  text-align: center;
+  color: #ffffff !important;
+}
+
 .action-buttons {
   display: flex;
   gap: 8px;
