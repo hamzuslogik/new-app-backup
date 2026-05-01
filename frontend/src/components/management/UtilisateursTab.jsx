@@ -10,6 +10,14 @@ import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import './ManagementTab.css';
 
+/** État du compte (utilisateurs.etat) — alias utilisateur_etat évite les collisions mysql2 avec d'autres colonnes `etat` en jointure */
+const resolveUtilisateurEtat = (u) => {
+  const raw = u?.utilisateur_etat ?? u?.etat;
+  if (raw === null || raw === undefined || raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+};
+
 const UtilisateursTab = () => {
   const { user: currentUser } = useAuth();
   const [showForm, setShowForm] = useState(false);
@@ -187,7 +195,8 @@ const UtilisateursTab = () => {
       toast.error('Vous ne pouvez pas désactiver votre propre compte');
       return;
     }
-    const newEtat = user.etat === 1 ? 0 : 1;
+    const cur = resolveUtilisateurEtat(user);
+    const newEtat = cur === 1 ? 0 : 1;
     updateMutation.mutate({ id: user.id, data: { etat: newEtat } });
   };
 
@@ -205,7 +214,7 @@ const UtilisateursTab = () => {
       centre: user.centre || '',
       centres: (user.fonction === 9 && user.centres_ids) ? user.centres_ids : [], // Pour fonction 9 : charger les centres multiples
       genre: user.genre || 2,
-      etat: user.etat || 1,
+      etat: resolveUtilisateurEtat(user) ?? 1,
       color: user.color || '#9cbfc8',
       chef_equipe: user.chef_equipe || '',
       id_rp_qualif: user.id_rp_qualif || ''
@@ -731,7 +740,7 @@ const UtilisateursTab = () => {
                   >
                     <option value="">Aucun superviseur</option>
                     {utilisateurs && utilisateurs
-                      .filter(u => u.fonction === 2 && u.etat > 0) // Filtrer uniquement les utilisateurs avec fonction Superviseur (2) et actifs
+                      .filter(u => u.fonction === 2 && resolveUtilisateurEtat(u) > 0) // Filtrer uniquement les utilisateurs avec fonction Superviseur (2) et actifs
                       .map(superviseur => (
                         <option key={superviseur.id} value={superviseur.id}>
                           {superviseur.pseudo} ({superviseur.fonction_titre || '-'})
@@ -756,7 +765,7 @@ const UtilisateursTab = () => {
                   >
                     <option value="">Aucun RE Confirmation</option>
                     {utilisateurs && utilisateurs
-                      .filter(u => u.fonction === 14 && u.etat > 0 && u.id !== editingId) // Filtrer uniquement les utilisateurs avec fonction RE Confirmation (14) et actifs, exclure l'utilisateur en cours d'édition
+                      .filter(u => u.fonction === 14 && resolveUtilisateurEtat(u) > 0 && u.id !== editingId) // Filtrer uniquement les utilisateurs avec fonction RE Confirmation (14) et actifs, exclure l'utilisateur en cours d'édition
                       .map(reConfirmation => (
                         <option key={reConfirmation.id} value={reConfirmation.id}>
                           {reConfirmation.pseudo} ({reConfirmation.fonction_titre || 'RE Confirmation'})
@@ -774,7 +783,7 @@ const UtilisateursTab = () => {
               {(() => {
                 // Vérifier si l'utilisateur a déjà des agents sous sa responsabilité (superviseur existant)
                 const hasAgents = editingId && utilisateurs && utilisateurs.some(u => 
-                  u.chef_equipe === editingId && u.fonction === 3 && u.etat > 0
+                  u.chef_equipe === editingId && u.fonction === 3 && resolveUtilisateurEtat(u) > 0
                 );
                 
                 // Afficher le champ si :
@@ -798,7 +807,7 @@ const UtilisateursTab = () => {
                     >
                       <option value="">Aucun RP Qualification</option>
                       {utilisateurs && utilisateurs
-                        .filter(u => u.fonction === 12 && u.etat > 0 && u.id !== editingId) // Filtrer uniquement les utilisateurs avec fonction RP Qualification (12) et actifs, exclure l'utilisateur en cours d'édition
+                        .filter(u => u.fonction === 12 && resolveUtilisateurEtat(u) > 0 && u.id !== editingId) // Filtrer uniquement les utilisateurs avec fonction RP Qualification (12) et actifs, exclure l'utilisateur en cours d'édition
                         .map(rp => (
                           <option key={rp.id} value={rp.id}>
                             {rp.pseudo} ({rp.fonction_titre || 'RP Qualification'})
@@ -881,7 +890,9 @@ const UtilisateursTab = () => {
           </thead>
           <tbody>
             {filteredData && filteredData.length > 0 ? (
-              filteredData.map((user) => (
+              filteredData.map((user) => {
+                const etatVal = resolveUtilisateurEtat(user);
+                return (
                 <tr key={user.id}>
                   <td data-label="">{user.id}</td>
                   <td data-label="Pseudo:">{user.pseudo}</td>
@@ -920,19 +931,27 @@ const UtilisateursTab = () => {
                     ) : '-'}
                   </td>
                   <td data-label="État:">
-                    <span className={`badge ${user.etat === 1 ? 'badge-success' : 'badge-danger'}`}>
-                      {user.etat === 1 ? 'Actif' : 'Inactif'}
+                    <span
+                      className={`badge ${
+                        etatVal === 1
+                          ? 'badge-success'
+                          : etatVal === null
+                            ? 'badge-secondary'
+                            : 'badge-danger'
+                      }`}
+                    >
+                      {etatVal === 1 ? 'Actif' : etatVal === null ? '—' : 'Inactif'}
                     </span>
                   </td>
                   <td data-label="">
                     <div className="action-buttons">
                       <button
-                        className={`btn-icon ${user.etat === 1 ? '' : 'btn-success'}`}
+                        className={`btn-icon ${etatVal === 1 ? '' : 'btn-success'}`}
                         onClick={() => handleToggleEtat(user)}
-                        title={user.etat === 1 ? 'Désactiver' : 'Activer'}
+                        title={etatVal === 1 ? 'Désactiver' : 'Activer'}
                         disabled={user.id === currentUser?.id}
                       >
-                        {user.etat === 1 ? <FaPowerOff /> : <FaCheckCircle />}
+                        {etatVal === 1 ? <FaPowerOff /> : <FaCheckCircle />}
                       </button>
                       <button className="btn-icon" onClick={() => handleEdit(user)} title="Modifier">
                         <FaEdit />
@@ -943,7 +962,8 @@ const UtilisateursTab = () => {
                     </div>
                   </td>
                 </tr>
-              ))
+              );
+              })
             ) : (
               <tr>
                 <td colSpan="10" className="text-center">

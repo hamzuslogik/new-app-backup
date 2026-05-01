@@ -573,6 +573,7 @@ router.get('/utilisateurs', authenticate, async (req, res) => {
     
     // Construire la requête avec ou sans filtre par pseudo
     let sql = `SELECT u.*, 
+       u.etat AS utilisateur_etat,
        f.titre as fonction_titre, 
        c.titre as centre_titre,
        supervisor.pseudo as supervisor_pseudo,
