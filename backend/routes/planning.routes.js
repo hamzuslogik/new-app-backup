@@ -124,10 +124,17 @@ function getWeekNumber(date = new Date()) {
 // Récupérer le planning d'une semaine avec rendez-vous
 router.get('/week', authenticate, async (req, res) => {
   try {
-    const { w, y, dp } = req.query;
+    const { w, y, dp, ic, id_commercial } = req.query;
     const week = parseInt(w) || getWeekNumber();
     const year = parseInt(y) || new Date().getFullYear();
     const dep = dp || '01';
+    const icRaw = ic ?? id_commercial;
+    const idCommercialFilter =
+      icRaw !== undefined && icRaw !== null && icRaw !== ''
+        ? parseInt(icRaw, 10)
+        : NaN;
+    const useCommercialWeek =
+      Number.isFinite(idCommercialFilter) && idCommercialFilter > 0;
 
     // Obtenir les jours de la semaine
     const days = getWeekDays(year, week);
@@ -196,10 +203,20 @@ router.get('/week', authenticate, async (req, res) => {
       ? 'LEFT JOIN qualif ON fiche.id_qualif = qualif.id'
       : '';
 
-    // Construire la condition WHERE pour inclure uniquement CONFIRMER (état 7)
-    const whereCondition = `WHERE fiche.date_rdv_time >= ? AND fiche.date_rdv_time <= ? 
+    // CONFIRMER (état 7) sur la semaine :
+    // - par défaut : CP dans le département (cp LIKE dep%)
+    // - si ic / id_commercial : tous les RDV du commercial (id_commercial ou id_commercial_2), tous départements
+    const whereCondition = useCommercialWeek
+      ? `WHERE fiche.date_rdv_time >= ? AND fiche.date_rdv_time <= ?
+       AND fiche.id_etat_final = 7
+       AND (fiche.id_commercial = ? OR fiche.id_commercial_2 = ?)`
+      : `WHERE fiche.date_rdv_time >= ? AND fiche.date_rdv_time <= ?
        AND fiche.cp LIKE ?
        AND fiche.id_etat_final = 7`;
+
+    const fichesParams = useCommercialWeek
+      ? [`${weekStart} 00:00:00`, `${weekEnd} 23:59:59`, idCommercialFilter, idCommercialFilter]
+      : [`${weekStart} 00:00:00`, `${weekEnd} 23:59:59`, `${dep}%`];
 
     const fiches = await query(
       `SELECT fiche.*, 
@@ -221,7 +238,7 @@ router.get('/week', authenticate, async (req, res) => {
        ${whereCondition}
        GROUP BY fiche.id
        ORDER BY fiche.date_rdv_time ASC`,
-      [`${weekStart} 00:00:00`, `${weekEnd} 23:59:59`, `${dep}%`]
+      fichesParams
     );
 
     // Organiser les rendez-vous par date et créneau

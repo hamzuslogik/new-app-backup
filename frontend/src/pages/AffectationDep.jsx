@@ -177,9 +177,13 @@ const AffectationDep = () => {
 
   // Récupérer le planning
   const { data: planningData, isLoading: isLoadingPlanning, refetch: refetchPlanning } = useQuery(
-    ['planning-week', week, year, dep],
+    ['planning-week', week, year, dep, filterCommercialId],
     async () => {
-      const res = await api.get('/planning/week', { params: { w: week, y: year, dp: dep || '01' } });
+      const params = { w: week, y: year, dp: dep || '01' };
+      if (filterCommercialId != null) {
+        params.ic = filterCommercialId;
+      }
+      const res = await api.get('/planning/week', { params });
       return res.data;
     },
     { 
@@ -241,7 +245,7 @@ const AffectationDep = () => {
         toast.success(`${data.success_count || selectedRdvs.size} RDV(s) affecté(s) avec succès`);
         setSelectedRdvs(new Set());
         refetchPlanning();
-        queryClient.invalidateQueries(['planning-week', week, year, dep]);
+        queryClient.invalidateQueries(['planning-week']);
       },
       onError: (error) => {
         toast.error('Erreur lors de l\'affectation: ' + (error.response?.data?.message || error.message));
@@ -261,7 +265,7 @@ const AffectationDep = () => {
       onSuccess: () => {
         toast.success('Affectation annulée avec succès');
         refetchPlanning();
-        queryClient.invalidateQueries(['planning-week', week, year, dep]);
+        queryClient.invalidateQueries(['planning-week']);
       },
       onError: (error) => {
         toast.error('Erreur lors de l\'annulation de l\'affectation: ' + (error.response?.data?.message || error.message));
@@ -310,18 +314,13 @@ const AffectationDep = () => {
     setFilterCommercialId((prev) => (prev === commercialId ? null : commercialId));
   };
 
-  /** Aligné sur le backend planning/week : fiche.cp LIKE dep% — refuse tout RDV hors département sélectionné */
-  const rdvCpMatchesSelectedDepartement = (rdv) => {
-    if (!dep || String(dep).trim() === '') return true;
-    const cp = String(rdv.cp ?? '').trim();
-    if (!cp || cp === '0') return false;
-    return cp.startsWith(String(dep).trim());
-  };
-
+  /** Filtre affichage (sécurité) : commercial principal ou R2 — le mode ic côté API charge déjà tous les RDV du commercial */
   const rdvMatchesCommercialFilter = (rdv) => {
     if (filterCommercialId == null) return true;
-    const cid = rdv.id_commercial != null ? Number(rdv.id_commercial) : null;
-    return cid === Number(filterCommercialId);
+    const fid = Number(filterCommercialId);
+    const c1 = rdv.id_commercial != null ? Number(rdv.id_commercial) : null;
+    const c2 = rdv.id_commercial_2 != null ? Number(rdv.id_commercial_2) : null;
+    return c1 === fid || c2 === fid;
   };
 
   // Calculer les distances entre les codes postaux des RDV sélectionnés
@@ -342,7 +341,6 @@ const AffectationDep = () => {
         Object.keys(planning[date].time || {}).forEach(timeKey => {
           const slotRdvs = planning[date].time[timeKey].planning || [];
           slotRdvs.forEach(rdv => {
-            if (!rdvCpMatchesSelectedDepartement(rdv)) return;
             if (selectedRdvsArray.includes(rdv.id) && rdv.cp) {
               rdvsWithCp.push({
                 id: rdv.id,
@@ -502,9 +500,10 @@ const AffectationDep = () => {
         {filterCommercialId != null && (
           <div className="filter-commercial-banner">
             <span>
-              Filtre : RDV de{' '}
+              RDV de{' '}
               <strong>{getUserName(filterCommercialId) || `commercial #${filterCommercialId}`}</strong>
-              {' '}· département <strong>{dep}</strong>
+              {' '}
+              — tous départements (semaine affichée). Disponibilités restent pour le département sélectionné.
             </span>
             <button
               type="button"
@@ -564,11 +563,10 @@ const AffectationDep = () => {
                       const slotData = dateData?.time?.[timeKey];
                       const rdvs = slotData?.planning || [];
                       const availability = slotData?.av || 0;
-                      const rdvsInDep = rdvs.filter(rdvCpMatchesSelectedDepartement);
                       const rdvsFiltered =
                         filterCommercialId == null
-                          ? rdvsInDep
-                          : rdvsInDep.filter(rdvMatchesCommercialFilter);
+                          ? rdvs
+                          : rdvs.filter(rdvMatchesCommercialFilter);
 
                       return (
                         <td key={`${day.date}-${timeKey}`} className="planning-cell">
@@ -660,9 +658,9 @@ const AffectationDep = () => {
                               );
                             })}
                             {rdvsFiltered.length === 0 &&
-                              rdvsInDep.length > 0 &&
+                              rdvs.length > 0 &&
                               filterCommercialId != null && (
-                              <div className="filter-slot-empty" title="Aucun RDV de ce commercial sur ce créneau (dans ce département)">
+                              <div className="filter-slot-empty" title="Aucun RDV de ce commercial sur ce créneau">
                                 —
                               </div>
                             )}
@@ -685,7 +683,7 @@ const AffectationDep = () => {
           <div className="sidebar-header">
             <h3>Commerciaux</h3>
             <p className="sidebar-hint">
-              Sans sélection : clic pour filtrer les RDV du commercial. Avec RDV cochés : clic pour affecter.
+              Sans sélection : clic pour voir tous les RDV du commercial (France, cette semaine). Avec RDV cochés : clic pour affecter.
             </p>
             {selectedRdvs.size > 0 && (
               <div className="selected-info">
