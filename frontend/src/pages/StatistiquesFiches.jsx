@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -47,6 +48,8 @@ function dateToSortNumber(value) {
 }
 
 const StatistiquesFiches = () => {
+  useForceDesktopViewport('statistiques-fiches-desktop-page', 1400);
+
   const { user } = useAuth();
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
