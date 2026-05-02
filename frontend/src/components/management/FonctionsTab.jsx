@@ -8,6 +8,13 @@ import Tooltip from '../common/Tooltip';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import './ManagementTab.css';
+import { PAGE_ACCUEIL_OPTIONS, PAGE_ACCUEIL_KNOWN_PATHS } from '../../constants/pageAccueilOptions';
+
+function pageAccueilLabel(path) {
+  const p = (path || '').trim() || '/dashboard';
+  const hit = PAGE_ACCUEIL_OPTIONS.find((o) => o.value === p);
+  return hit ? hit.label : p;
+}
 
 const defaultFormData = () => ({
   titre: '',
@@ -292,24 +299,17 @@ const FonctionsTab = () => {
                   value={formData.page_accueil}
                   onChange={(e) => setFormData({ ...formData, page_accueil: e.target.value })}
                 >
-                  <option value="/dashboard">Tableau de bord</option>
-                  <option value="/fiches">Fiches</option>
-                  <option value="/planning">Planning</option>
-                  <option value="/planning-commercial">Planning Commercial</option>
-                  <option value="/planning-dep">Planning Dép</option>
-                  <option value="/statistiques">Statistiques</option>
-                  <option value="/statistiques-rdv">Statistiques RDV</option>
-                  <option value="/affectation">Affectation</option>
-                  <option value="/suivi-telepro">Suivi Télépro</option>
-                  <option value="/suivi-agents-qualif">Suivi Agents Qualif</option>
-                  <option value="/suivi-agents">Suivi des Agents</option>
-                  <option value="/production-qualif">Production Qualif</option>
-                  <option value="/controle-qualite">Contrôle Qualité</option>
-                  <option value="/compte-rendu">Compte Rendu</option>
-                  <option value="/phase3">Phase 3</option>
-                  <option value="/messages">Messages</option>
-                  <option value="/decalages">Décalages</option>
-                  <option value="/validation">Validation</option>
+                  {PAGE_ACCUEIL_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                  {formData.page_accueil &&
+                    !PAGE_ACCUEIL_KNOWN_PATHS.has(formData.page_accueil) && (
+                      <option value={formData.page_accueil}>
+                        {formData.page_accueil} (valeur en base, non listée)
+                      </option>
+                    )}
                 </select>
               </div>
               <div className="form-group">
@@ -418,8 +418,11 @@ const FonctionsTab = () => {
                     </span>
                   </td>
                   <td data-label="Page d'accueil:">
-                    <span className="page-accueil-badge">
-                      {fonction.page_accueil || '/dashboard'}
+                    <span
+                      className="page-accueil-badge"
+                      title={fonction.page_accueil || '/dashboard'}
+                    >
+                      {pageAccueilLabel(fonction.page_accueil)}
                     </span>
                   </td>
                   <td data-label="Accès IP:">

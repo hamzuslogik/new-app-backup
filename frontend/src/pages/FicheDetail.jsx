@@ -306,15 +306,23 @@ const FicheDetail = ({
     if (tab === 'sms') setActiveTab('sms');
   }, [isModal, searchParams]);
 
-  useEffect(() => {
-    if (!isModal || !initialTab) return;
-    const allowed = ['fiches', 'modifica', 'affectation', 'planning', 'sms', 'pdf'];
-    if (allowed.includes(initialTab)) setActiveTab(initialTab);
-  }, [isModal, initialTab]);
-  
   // Vérifier si l'utilisateur est qualité qualification (fonction 2, 8, 12)
   const userFonction = user?.fonction != null ? Number(user.fonction) : null;
   const isQualiteQualif = userFonction === 2 || userFonction === 8 || userFonction === 12;
+  /** Session partenaire : libellé fonction ou centre (ex. centre PARTENAIRE, titre « Partenaire »). */
+  const isPartenaireProfil =
+    (typeof user?.fonction_titre === 'string' && /partenaire/i.test(user.fonction_titre)) ||
+    (typeof user?.centre_titre === 'string' && /partenaire/i.test(user.centre_titre));
+  /** Modal détail fiche : uniquement onglets Fiches + Modifica pour les partenaires. */
+  const isPartenaireModalLimitedTabs = Boolean(isModal && isPartenaireProfil);
+
+  useEffect(() => {
+    if (!isModal || !initialTab) return;
+    const allowed = isPartenaireModalLimitedTabs
+      ? ['fiches', 'modifica']
+      : ['fiches', 'modifica', 'affectation', 'planning', 'sms', 'pdf'];
+    if (allowed.includes(initialTab)) setActiveTab(initialTab);
+  }, [isModal, initialTab, isPartenaireModalLimitedTabs]);
   const isConfirmateurSession = userFonction === 6;
   const getConfirmateurLabel = (id) => {
     if (!id) return '';
@@ -328,6 +336,14 @@ const FicheDetail = ({
       setActiveTab('fiches');
     }
   }, [isQualiteQualif, activeTab]);
+
+  // Modal partenaire : seuls Fiches et Modifica — éviter PDF / planning / SMS / affectation
+  useEffect(() => {
+    if (!isPartenaireModalLimitedTabs) return;
+    if (activeTab !== 'fiches' && activeTab !== 'modifica') {
+      setActiveTab('fiches');
+    }
+  }, [isPartenaireModalLimitedTabs, activeTab]);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [planningWeek, setPlanningWeek] = useState(null);
@@ -2657,7 +2673,7 @@ const FicheDetail = ({
           </button>
         )}
         {/* Onglet Affectation : visible par administrateur, backoffice, RE confirmation, RP confirmation */}
-        {showAffectationTab && (
+        {showAffectationTab && !isPartenaireModalLimitedTabs && (
           <button
             className={`fiche-tab ${activeTab === 'affectation' ? 'active' : ''}`}
             onClick={() => setActiveTab('affectation')}
@@ -2665,8 +2681,8 @@ const FicheDetail = ({
             <FaUserPlus /> {commercialAffecteNom ? `${commercialAffecteNom} | ` : ''}Affectation
           </button>
         )}
-        {/* Masquer les onglets Planning et SMS pour les utilisateurs qualité qualification (fonction 2, 8, 12) et commerciaux */}
-        {!isQualiteQualif && !isCommercial && (
+        {/* Masquer les onglets Planning et SMS pour les utilisateurs qualité qualification (fonction 2, 8, 12), commerciaux et modal partenaire */}
+        {!isQualiteQualif && !isCommercial && !isPartenaireModalLimitedTabs && (
           <>
             <button
               className={`fiche-tab ${activeTab === 'planning' ? 'active' : ''}`}
@@ -2682,12 +2698,14 @@ const FicheDetail = ({
             </button>
           </>
         )}
-        <button
-          className={`fiche-tab ${activeTab === 'pdf' ? 'active' : ''}`}
-          onClick={() => setActiveTab('pdf')}
-        >
-          <FaFilePdf /> PDF
-        </button>
+        {!isPartenaireModalLimitedTabs && (
+          <button
+            className={`fiche-tab ${activeTab === 'pdf' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pdf')}
+          >
+            <FaFilePdf /> PDF
+          </button>
+        )}
       </div>
 
 
@@ -7079,7 +7097,7 @@ const FicheDetail = ({
       )}
 
       {/* Onglet Affectation - Affecter la fiche à un ou deux commerciaux */}
-      {activeTab === 'affectation' && showAffectationTab && (
+      {activeTab === 'affectation' && showAffectationTab && !isPartenaireModalLimitedTabs && (
         <div className="fiche-section affectation-tab" style={{ padding: '20px' }}>
           <h2 className="section-title"><FaUserPlus /> Affectation commerciale</h2>
           <p style={{ color: '#333', marginBottom: '8px', fontWeight: 700 }}>
@@ -7127,7 +7145,7 @@ const FicheDetail = ({
       )}
 
       {/* Onglet Planning - Masqué pour qualité qualification */}
-      {activeTab === 'planning' && !isQualiteQualif && (
+      {activeTab === 'planning' && !isQualiteQualif && !isPartenaireModalLimitedTabs && (
         <PlanningTab
           ficheHash={hash}
           ficheData={ficheData}
@@ -7147,7 +7165,7 @@ const FicheDetail = ({
       )}
 
       {/* Onglet SMS - Masqué pour qualité qualification */}
-      {activeTab === 'sms' && !isQualiteQualif && (
+      {activeTab === 'sms' && !isQualiteQualif && !isPartenaireModalLimitedTabs && (
         <SMSTab
           ficheHash={hash}
           ficheData={ficheData}
@@ -7155,7 +7173,7 @@ const FicheDetail = ({
       )}
 
       {/* Onglet PDF */}
-      {activeTab === 'pdf' && (
+      {activeTab === 'pdf' && !isPartenaireModalLimitedTabs && (
         <div className="pdf-tab" style={{ padding: '20px' }}>
           <div style={{ 
             background: '#f5f5f5', 
