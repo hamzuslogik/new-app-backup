@@ -650,6 +650,10 @@
   background: #f8f9fa;
 }
 
+.fiches-detail-table tbody tr.fiche-row-by-etat:hover {
+  filter: brightness(0.96);
+}
+
 .fiches-detail-table tbody tr:last-child {
   border-bottom: none;
 }

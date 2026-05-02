@@ -132,6 +132,13 @@ const StatistiquesFiches = () => {
     });
   };
 
+  /** Couleur d’état (comme le dashboard) */
+  const getEtatColorForFiche = (fiche) => {
+    const c = fiche?.etat_color;
+    if (c != null && String(c).trim() !== '') return String(c).trim();
+    return '#cccccc';
+  };
+
   const stats = statsData?.data || [];
   const fiches = fichesData?.data || [];
   const totalGlobal = stats.reduce((sum, centre) => sum + (centre.total_fiches || 0), 0);
@@ -483,7 +490,7 @@ const StatistiquesFiches = () => {
                         <span 
                           className="etat-badge"
                           style={{ 
-                            backgroundColor: fiche.etat_color || '#cccccc',
+                            backgroundColor: etatColor,
                             color: '#ffffff',
                             padding: '4px 8px',
                             borderRadius: '4px',
@@ -507,7 +514,8 @@ const StatistiquesFiches = () => {
                       ) : '-'}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
