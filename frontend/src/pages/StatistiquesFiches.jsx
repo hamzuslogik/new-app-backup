@@ -303,6 +303,7 @@ const StatistiquesFiches = () => {
             )}
             <div className="filter-field filter-field-action">
               <span className="filters-action-label-spacer" aria-hidden="true">
+                <span className="filters-action-label-spacer-icon" />
                 Rechercher
               </span>
               <button
