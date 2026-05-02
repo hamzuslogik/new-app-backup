@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
+const {
+  normalizeMessageRules,
+  destinationMatchesRules,
+  buildOutboundWhereClause,
+  collectIncomingSourceFonctionIds
+} = require('../utils/messageGroupesRules');
 const { getSecuritySettings } = require('../utils/globalSettingsHelper');
 const { sessionLifetimeToIdleMs } = require('../utils/userActivitySession');
 const { lastActivityToUtcMs, nowUtcMysqlString } = require('../utils/userActivityDateTime');
@@ -274,28 +280,48 @@ router.get('/users', authenticate, async (req, res) => {
         whereCondition += ' AND 1 = 0';
       }
     } else {
-      // Pour les autres fonctions, utiliser la logique normale avec groupes_messages_autorises
+      // Pour les autres fonctions : règles sortantes + fonctions qui vous ciblent (réponses)
       const userFonction = await queryOne(
         `SELECT groupes_messages_autorises FROM fonctions WHERE id = ?`,
         [req.user.fonction]
       );
 
-      // Si groupes_messages_autorises est défini (pas NULL), filtrer les utilisateurs
-      if (userFonction && userFonction.groupes_messages_autorises) {
-        try {
-          const groupesAutorises = JSON.parse(userFonction.groupes_messages_autorises);
-          if (Array.isArray(groupesAutorises) && groupesAutorises.length > 0) {
-            // Créer une liste de placeholders pour les IDs de fonctions autorisées
-            const placeholders = groupesAutorises.map(() => '?').join(',');
-            whereCondition += ` AND u.fonction IN (${placeholders})`;
-            queryParams = queryParams.concat(groupesAutorises);
-          }
-        } catch (parseError) {
-          // Si le JSON est invalide, ignorer le filtre (autoriser tous)
-          console.error('Erreur lors du parsing des groupes autorisés:', parseError);
-        }
+      const outboundRules = normalizeMessageRules(userFonction?.groupes_messages_autorises);
+      const outboundClause = outboundRules.length > 0 ? buildOutboundWhereClause(outboundRules) : null;
+
+      let allRuleRows = [];
+      try {
+        allRuleRows = await query(
+          `SELECT id, groupes_messages_autorises FROM fonctions
+           WHERE groupes_messages_autorises IS NOT NULL
+             AND TRIM(groupes_messages_autorises) NOT IN ('', 'null', '[]')`
+        );
+      } catch (e) {
+        allRuleRows = [];
       }
-      // Si groupes_messages_autorises est NULL, tous les utilisateurs sont autorisés
+
+      const incomingIds = collectIncomingSourceFonctionIds(
+        allRuleRows,
+        req.user.fonction,
+        req.user.id
+      );
+
+      const parts = [];
+      const extraParams = [];
+      if (outboundClause) {
+        parts.push(outboundClause.sql);
+        extraParams.push(...outboundClause.params);
+      }
+      if (incomingIds.length > 0) {
+        const ph = incomingIds.map(() => '?').join(',');
+        parts.push(`u.fonction IN (${ph})`);
+        extraParams.push(...incomingIds);
+      }
+
+      if (parts.length > 0) {
+        whereCondition += ` AND (${parts.join(' OR ')})`;
+        queryParams = queryParams.concat(extraParams);
+      }
     }
 
     const users = await query(
@@ -417,31 +443,37 @@ router.post('/', authenticate, async (req, res) => {
         });
       }
     } else {
-      // Pour les autres fonctions, utiliser la logique normale avec groupes_messages_autorises
-      const userFonction = await queryOne(
+      const senderRow = await queryOne(
         `SELECT groupes_messages_autorises FROM fonctions WHERE id = ?`,
-        [req.user.fonction]
+        [currentUser.fonction]
       );
+      const senderRules = normalizeMessageRules(senderRow?.groupes_messages_autorises);
 
-      // Si groupes_messages_autorises est défini, vérifier que la destination est autorisée
-      if (userFonction && userFonction.groupes_messages_autorises) {
-        try {
-          const groupesAutorises = JSON.parse(userFonction.groupes_messages_autorises);
-          if (Array.isArray(groupesAutorises) && groupesAutorises.length > 0) {
-            // Vérifier que la fonction de destination est dans les groupes autorisés
-            if (!groupesAutorises.includes(destUser.fonction)) {
-              return res.status(403).json({
-                success: false,
-                message: 'Vous n\'êtes pas autorisé à envoyer des messages à cet utilisateur'
-              });
-            }
+      if (senderRules.length > 0) {
+        const destPayload = { id: parseInt(destination, 10), fonction: destUser.fonction };
+        let allowed = destinationMatchesRules(senderRules, destPayload);
+
+        if (!allowed) {
+          const destRow = await queryOne(
+            `SELECT groupes_messages_autorises FROM fonctions WHERE id = ?`,
+            [destUser.fonction]
+          );
+          const destRules = normalizeMessageRules(destRow?.groupes_messages_autorises);
+          if (destRules.length > 0) {
+            allowed = destinationMatchesRules(destRules, {
+              id: req.user.id,
+              fonction: currentUser.fonction
+            });
           }
-        } catch (parseError) {
-          // Si le JSON est invalide, autoriser l'envoi (comportement par défaut)
-          console.error('Erreur lors du parsing des groupes autorisés:', parseError);
+        }
+
+        if (!allowed) {
+          return res.status(403).json({
+            success: false,
+            message: 'Vous n\'êtes pas autorisé à envoyer des messages à cet utilisateur'
+          });
         }
       }
-      // Si groupes_messages_autorises est NULL, tous les utilisateurs sont autorisés
     }
 
     const now = nowUtcMysqlString();

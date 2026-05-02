@@ -16,11 +16,104 @@ function pageAccueilLabel(path) {
   return hit ? hit.label : p;
 }
 
+/** Lit la colonne JSON pour le formulaire : [{ fonction, all, userIds }] */
+function parseMessageRulesFromDb(raw) {
+  if (!raw) return [];
+  let p;
+  try {
+    p = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(p)) return [];
+  const out = [];
+  for (const item of p) {
+    if (typeof item === 'number' && Number.isFinite(item)) {
+      out.push({ fonction: item, all: true, userIds: [] });
+      continue;
+    }
+    if (typeof item === 'string' && /^\d+$/.test(String(item).trim())) {
+      out.push({ fonction: parseInt(item.trim(), 10), all: true, userIds: [] });
+      continue;
+    }
+    if (item && typeof item === 'object') {
+      const fid = Number(item.fonction ?? item.fonction_id);
+      if (!Number.isFinite(fid)) continue;
+      if (item.all === true || item.mode === 'all' || item.toute_fonction === true) {
+        out.push({ fonction: fid, all: true, userIds: [] });
+        continue;
+      }
+      const uidArr = item.users ?? item.userIds ?? item.ids;
+      if (Array.isArray(uidArr) && uidArr.length > 0) {
+        const userIds = [
+          ...new Set(uidArr.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0)),
+        ];
+        out.push({ fonction: fid, all: false, userIds });
+      } else {
+        out.push({ fonction: fid, all: true, userIds: [] });
+      }
+    }
+  }
+  return out;
+}
+
+function serializeMessageRulesForApi(rules) {
+  const filtered = (rules || []).filter((r) => Number(r.fonction) > 0);
+  if (filtered.length === 0) return null;
+  const payload = [];
+  for (const r of filtered) {
+    const fid = Number(r.fonction);
+    if (r.all) {
+      payload.push({ fonction: fid, all: true });
+    } else {
+      const ids = [...new Set((r.userIds || []).map(Number).filter((n) => n > 0))];
+      if (ids.length === 0) continue;
+      payload.push({ fonction: fid, all: false, userIds: ids });
+    }
+  }
+  return payload.length > 0 ? payload : null;
+}
+
+function formatMessageRulesSummary(raw, fonctionsList) {
+  if (!raw) return { short: 'Tous', title: '' };
+  let arr;
+  try {
+    arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch {
+    return { short: '—', title: '' };
+  }
+  if (!Array.isArray(arr) || arr.length === 0) return { short: 'Tous', title: '' };
+  const parts = [];
+  for (const item of arr) {
+    if (typeof item === 'number') {
+      const f = fonctionsList?.find((x) => Number(x.id) === Number(item));
+      parts.push(f ? `${f.titre} (toute la fonction)` : `Fonction #${item} (toute)`);
+    } else if (item && typeof item === 'object') {
+      const fid = Number(item.fonction);
+      const f = fonctionsList?.find((x) => Number(x.id) === fid);
+      const fn = f ? f.titre : `Fonction #${fid}`;
+      if (item.all === true || item.mode === 'all') {
+        parts.push(`${fn} (toute la fonction)`);
+      } else {
+        const uidList = item.userIds || item.users || [];
+        if (!uidList.length) {
+          parts.push(`${fn} (toute la fonction)`);
+        } else {
+          const n = uidList.length;
+          parts.push(`${fn} (${n} utilisateur${n > 1 ? 's' : ''})`);
+        }
+      }
+    }
+  }
+  const short = parts.length <= 2 ? parts.join(' · ') : `${parts.length} règle(s)`;
+  return { short, title: parts.join('\n') };
+}
+
 const defaultFormData = () => ({
   titre: '',
   etat: 1,
   page_accueil: '/dashboard',
-  groupes_messages_autorises: [],
+  messageRules: [],
   ip_acces_tous: true,
   ips_text: ''
 });
@@ -57,6 +150,15 @@ const FonctionsTab = () => {
     return response.data.data;
   });
 
+  const { data: allUsersForMessages = [] } = useQuery(
+    ['management-utilisateurs-message-rules'],
+    async () => {
+      const response = await api.get('/management/utilisateurs');
+      return response.data.data || [];
+    },
+    { enabled: showForm }
+  );
+
   // Filtrer les données selon le terme de recherche
   const filteredData = useMemo(() => {
     if (!fonctions) return [];
@@ -72,20 +174,51 @@ const FonctionsTab = () => {
     });
   }, [fonctions, searchTerm]);
 
-  // Gérer la sélection/désélection des fonctions pour groupes_messages_autorises
-  const handleToggleFonctionMessage = (fonctionId) => {
-    const current = formData.groupes_messages_autorises || [];
-    if (current.includes(fonctionId)) {
-      setFormData({
-        ...formData,
-        groupes_messages_autorises: current.filter(id => id !== fonctionId)
-      });
-    } else {
-      setFormData({
-        ...formData,
-        groupes_messages_autorises: [...current, fonctionId]
-      });
-    }
+  const usersForFonctionId = (fid) => {
+    if (!fid || !allUsersForMessages.length) return [];
+    return allUsersForMessages.filter(
+      (u) => Number(u.fonction) === Number(fid) && Number(u.etat) > 0
+    );
+  };
+
+  const addMessageRule = () => {
+    setFormData((prev) => ({
+      ...prev,
+      messageRules: [...(prev.messageRules || []), { fonction: '', all: true, userIds: [] }]
+    }));
+  };
+
+  const removeMessageRule = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      messageRules: (prev.messageRules || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateMessageRule = (index, patch) => {
+    setFormData((prev) => {
+      const next = [...(prev.messageRules || [])];
+      const cur = { ...next[index], ...patch };
+      if (patch.fonction !== undefined && Number(patch.fonction) !== Number(next[index]?.fonction)) {
+        cur.userIds = [];
+      }
+      next[index] = cur;
+      return { ...prev, messageRules: next };
+    });
+  };
+
+  const toggleUserInRule = (ruleIndex, userId, checked) => {
+    setFormData((prev) => {
+      const next = [...(prev.messageRules || [])];
+      const cur = next[ruleIndex];
+      if (!cur) return prev;
+      const id = Number(userId);
+      const set = new Set(cur.userIds || []);
+      if (checked) set.add(id);
+      else set.delete(id);
+      next[ruleIndex] = { ...cur, userIds: [...set] };
+      return { ...prev, messageRules: next };
+    });
   };
 
   const createMutation = useMutation(
@@ -116,9 +249,12 @@ const FonctionsTab = () => {
       // Convertir groupes_messages_autorises en tableau si nécessaire
       const payload = {
         ...data,
-        groupes_messages_autorises: data.groupes_messages_autorises && data.groupes_messages_autorises.length > 0
-          ? data.groupes_messages_autorises
-          : null
+        groupes_messages_autorises:
+          data.groupes_messages_autorises != null &&
+          Array.isArray(data.groupes_messages_autorises) &&
+          data.groupes_messages_autorises.length > 0
+            ? data.groupes_messages_autorises
+            : null
       };
       const response = await api.put(`/management/fonctions/${id}`, payload);
       return response.data;
@@ -165,43 +301,33 @@ const FonctionsTab = () => {
 
   const handleEdit = (fonction) => {
     setEditingId(fonction.id);
-    // Parser groupes_messages_autorises depuis JSON si présent
-    let groupesMessages = [];
-    if (fonction.groupes_messages_autorises) {
-      try {
-        groupesMessages = JSON.parse(fonction.groupes_messages_autorises);
-        if (!Array.isArray(groupesMessages)) {
-          groupesMessages = [];
-        }
-      } catch (e) {
-        groupesMessages = [];
-      }
-    }
+    const messageRules = parseMessageRulesFromDb(fonction.groupes_messages_autorises);
     const ipAll = fonction.ip_acces_tous !== 0 && fonction.ip_acces_tous !== false && fonction.ip_acces_tous !== '0';
     const ipsList = Array.isArray(fonction.ips_autorisees) ? fonction.ips_autorisees : [];
     setFormData({
       titre: fonction.titre,
       etat: fonction.etat,
       page_accueil: fonction.page_accueil || '/dashboard',
-      groupes_messages_autorises: groupesMessages,
+      messageRules,
       ip_acces_tous: ipAll,
       ips_text: ipsList.join('\n')
     });
     setShowForm(true);
   };
 
-  const buildSubmitPayload = () => {
+  const buildSubmitPayload = (messageRulesForSave) => {
     const ips_autorisees = formData.ip_acces_tous
       ? []
       : String(formData.ips_text || '')
           .split(/[\n,;]+/)
           .map((s) => s.trim())
           .filter(Boolean);
+    const rules = messageRulesForSave ?? formData.messageRules;
     return {
       titre: formData.titre,
       etat: formData.etat,
       page_accueil: formData.page_accueil,
-      groupes_messages_autorises: formData.groupes_messages_autorises,
+      groupes_messages_autorises: serializeMessageRulesForApi(rules),
       ip_acces_tous: formData.ip_acces_tous ? 1 : 0,
       ips_autorisees
     };
@@ -209,7 +335,16 @@ const FonctionsTab = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const payload = buildSubmitPayload();
+    const candidates = (formData.messageRules || []).filter((r) => Number(r.fonction) > 0);
+    for (const r of candidates) {
+      if (!r.all && (!r.userIds || r.userIds.length === 0)) {
+        toast.error(
+          'Pour chaque cible en « Utilisateurs précis », sélectionnez au moins un utilisateur.'
+        );
+        return;
+      }
+    }
+    const payload = buildSubmitPayload(candidates);
     if (editingId) {
       updateMutation.mutate({ id: editingId, data: payload });
     } else {
@@ -314,35 +449,101 @@ const FonctionsTab = () => {
               </div>
               <div className="form-group">
                 <label>
-                  Groupes autorisés pour les messages
-                  <Tooltip text="Sélectionnez les fonctions auxquelles les utilisateurs de cette fonction peuvent envoyer des messages. Si aucune fonction n'est sélectionnée, tous les utilisateurs sont autorisés.">
+                  Messages : fonctions cibles
+                  <Tooltip text="Pour chaque fonction cible, choisissez soit toute la fonction, soit des utilisateurs précis. Les personnes concernées pourront s&apos;écrire avec les utilisateurs de la fonction en cours (liste des destinataires et réponses). Si aucune règle : tous les utilisateurs restent autorisés (comportement inchangé).">
                     <FaInfoCircle className="info-icon" />
                   </Tooltip>
                 </label>
                 <div className="groupes-messages-container">
-                  {fonctions && fonctions.length > 0 ? (
-                    <div className="groupes-messages-checkboxes">
-                      {fonctions
-                        .filter(f => f.id !== editingId) // Exclure la fonction en cours d'édition
-                        .map(fonction => (
-                          <label key={fonction.id} className="checkbox-label">
-                            <input
-                              type="checkbox"
-                              checked={(formData.groupes_messages_autorises || []).includes(fonction.id)}
-                              onChange={() => handleToggleFonctionMessage(fonction.id)}
-                            />
-                            <span>{fonction.titre} (ID: {fonction.id})</span>
-                          </label>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="no-fonctions">Aucune fonction disponible</div>
-                  )}
-                  {(formData.groupes_messages_autorises || []).length === 0 && (
-                    <div className="info-message">
-                      <small>Aucune fonction sélectionnée = tous les utilisateurs sont autorisés</small>
+                  {(formData.messageRules || []).length === 0 && (
+                    <div className="info-message" style={{ marginBottom: '10px' }}>
+                      <small>Aucune règle = tous les utilisateurs peuvent être contactés</small>
                     </div>
                   )}
+                  {(formData.messageRules || []).map((rule, idx) => (
+                    <div key={idx} className="message-rule-card">
+                      <div className="message-rule-card-header">
+                        <select
+                          className="message-rule-fonction-select"
+                          value={rule.fonction === '' || rule.fonction == null ? '' : String(rule.fonction)}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            updateMessageRule(idx, {
+                              fonction: v === '' ? '' : parseInt(v, 10)
+                            });
+                          }}
+                        >
+                          <option value="">— Choisir une fonction cible —</option>
+                          {(fonctions || [])
+                            .filter((f) => f.id !== editingId)
+                            .map((f) => (
+                              <option key={f.id} value={f.id}>
+                                {f.titre} (ID {f.id})
+                              </option>
+                            ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-small message-rule-remove"
+                          onClick={() => removeMessageRule(idx)}
+                        >
+                          Retirer
+                        </button>
+                      </div>
+                      {rule.fonction !== '' && rule.fonction != null && Number(rule.fonction) > 0 && (
+                        <>
+                          <div className="message-rule-scope">
+                            <label className="checkbox-label">
+                              <input
+                                type="radio"
+                                name={`msg-scope-${idx}`}
+                                checked={rule.all === true}
+                                onChange={() => updateMessageRule(idx, { all: true, userIds: [] })}
+                              />
+                              <span>Toute la fonction</span>
+                            </label>
+                            <label className="checkbox-label">
+                              <input
+                                type="radio"
+                                name={`msg-scope-${idx}`}
+                                checked={rule.all === false}
+                                onChange={() => updateMessageRule(idx, { all: false })}
+                              />
+                              <span>Utilisateurs précis</span>
+                            </label>
+                          </div>
+                          {rule.all === false && (
+                            <div className="message-rule-users">
+                              {usersForFonctionId(rule.fonction).length === 0 ? (
+                                <span className="text-muted-small">
+                                  Aucun utilisateur actif pour cette fonction.
+                                </span>
+                              ) : (
+                                usersForFonctionId(rule.fonction).map((u) => (
+                                  <label key={u.id} className="checkbox-label">
+                                    <input
+                                      type="checkbox"
+                                      checked={(rule.userIds || []).includes(Number(u.id))}
+                                      onChange={(ev) =>
+                                        toggleUserInRule(idx, u.id, ev.target.checked)
+                                      }
+                                    />
+                                    <span>
+                                      {u.pseudo}
+                                      {u.fonction_titre ? ` · ${u.fonction_titre}` : ''}
+                                    </span>
+                                  </label>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" className="btn-secondary btn-add-message-rule" onClick={addMessageRule}>
+                    <FaPlus /> Ajouter une fonction cible
+                  </button>
                 </div>
               </div>
               <div className="form-group">
@@ -447,30 +648,17 @@ const FonctionsTab = () => {
                     )}
                   </td>
                   <td data-label="Groupes messages:">
-                    {fonction.groupes_messages_autorises ? (
-                      (() => {
-                        try {
-                          const groupes = JSON.parse(fonction.groupes_messages_autorises);
-                          if (Array.isArray(groupes) && groupes.length > 0) {
-                            // Récupérer les titres des fonctions
-                            const groupesTitres = groupes.map(id => {
-                              const f = fonctions?.find(f => f.id === id);
-                              return f ? f.titre : `ID ${id}`;
-                            });
-                            return (
-                              <span className="groupes-messages-badge" title={groupesTitres.join(', ')}>
-                                {groupes.length} fonction{groupes.length > 1 ? 's' : ''}
-                              </span>
-                            );
-                          }
-                        } catch (e) {
-                          // Ignorer les erreurs de parsing
-                        }
-                        return <span className="groupes-messages-badge">Tous</span>;
-                      })()
-                    ) : (
-                      <span className="groupes-messages-badge all">Tous</span>
-                    )}
+                    {(() => {
+                      const { short, title } = formatMessageRulesSummary(
+                        fonction.groupes_messages_autorises,
+                        fonctions
+                      );
+                      return (
+                        <span className="groupes-messages-badge" title={title || short}>
+                          {short}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td data-label="">
                     <div className="action-buttons">
