@@ -4,6 +4,89 @@
   margin: 0 auto;
 }
 
+/* Desktop forcé sur mobile : même classe html/body + viewport que Dashboard.jsx (voir Dashboard.css) */
+.dashboard-page .statistiques-fiches-page {
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow-x: visible;
+  margin: 0 !important;
+}
+
+.dashboard-page .statistiques-fiches-page .stats-table-container,
+.dashboard-page .statistiques-fiches-page .fiches-table-wrapper {
+  min-width: 1400px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+}
+
+.dashboard-page .statistiques-fiches-page .fiches-detail-table {
+  min-width: 1200px !important;
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page .statistiques-fiches-page {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow-x: visible;
+  }
+
+  .dashboard-page .statistiques-fiches-page .stats-table-container,
+  .dashboard-page .statistiques-fiches-page .fiches-table-wrapper {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow-x: auto !important;
+  }
+
+  .dashboard-page .statistiques-fiches-page .fiches-detail-table {
+    min-width: 1200px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  .dashboard-page .statistiques-fiches-page .page-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+  }
+
+  .dashboard-page .statistiques-fiches-page .centre-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+  }
+
+  .dashboard-page .statistiques-fiches-page .summary-cards {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .dashboard-page .statistiques-fiches-page .stat-card {
+    flex-direction: row;
+    text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-page .statistiques-fiches-page {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  .dashboard-page .statistiques-fiches-page .stats-table-container,
+  .dashboard-page .statistiques-fiches-page .fiches-table-wrapper {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow-x: auto !important;
+  }
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
