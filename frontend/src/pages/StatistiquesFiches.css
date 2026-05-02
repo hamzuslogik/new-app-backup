@@ -59,6 +59,112 @@
   gap: 16px;
 }
 
+/* Barre de filtres : champs sur une ligne (avec retour à la ligne si besoin) */
+.filters-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px 20px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filter-field-date {
+  flex: 0 0 auto;
+  min-width: 160px;
+}
+
+.filter-field-champ {
+  flex: 0 1 200px;
+  min-width: 180px;
+}
+
+.filter-field-centre {
+  flex: 0 1 220px;
+  min-width: 200px;
+}
+
+.filter-field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--label-color, #065F46) !important;
+  font-size: 11.9px;
+}
+
+.filter-field input,
+.filter-field select {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9.6px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 8px;
+  font-size: 11.9px;
+  background: #fff;
+  color: var(--input-text, #064E3B);
+}
+
+.filter-field input:focus,
+.filter-field select:focus {
+  outline: none;
+  border-color: var(--input-focus, #22C55E);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.filters-toolbar-actions {
+  display: flex;
+  align-items: flex-end;
+  margin-left: auto;
+}
+
+.btn-rechercher-stat-fiches {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.35);
+  white-space: nowrap;
+}
+
+.btn-rechercher-stat-fiches:hover:not(:disabled) {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.btn-rechercher-stat-fiches:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.statistiques-fiches-loading {
+  padding: 32px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.summary-cards--refreshing,
+.tabs-container--refreshing,
+.stats-table-container--refreshing {
+  opacity: 0.72;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
 .filter-group label {
   display: block;
   margin-bottom: 6.4px;

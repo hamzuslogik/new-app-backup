@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useQuery } from 'react-query';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaChartBar, FaFilter, FaCalendarAlt, FaSearch } from 'react-icons/fa';
@@ -10,15 +9,18 @@ import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getLastDayOfMonthLocal } from '../utils/dateUtils';
 import './StatistiquesFiches.css';
 
+const initialFilters = () => ({
+  date_debut: getFirstOfMonthLocal(),
+  date_fin: getLastDayOfMonthLocal(),
+  date_champ: 'date_modif_time',
+  id_centre: ''
+});
+
 const StatistiquesFiches = () => {
   const { user } = useAuth();
-  const [filters, setFilters] = useState({
-    date_debut: getFirstOfMonthLocal(),
-    date_fin: getLastDayOfMonthLocal(),
-    date_champ: 'date_modif_time',
-    id_centre: ''
-  });
-  const [showFilters, setShowFilters] = useState(false);
+  const [draftFilters, setDraftFilters] = useState(initialFilters);
+  const [appliedFilters, setAppliedFilters] = useState(initialFilters);
+  const [showFilters, setShowFilters] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
 
   // Récupérer les centres (filtrés selon le rôle)
@@ -33,23 +35,35 @@ const StatistiquesFiches = () => {
   // Vérifier si l'utilisateur a accès à cette page
   const hasAccess = !!user?.id && ([1, 2, 7].includes(user.fonction) || user.fonction === 9);
 
-  // Récupérer les statistiques (pour les onglets)
-  const { data: statsData, isLoading: isLoadingStats, error: errorStats } = useQuery(
-    ['statistiques-fiches', filters, user?.id],
+  const buildQueryParams = (f) => {
+    const params = {
+      date_debut: f.date_debut,
+      date_fin: f.date_fin,
+      date_champ: f.date_champ
+    };
+    if (f.id_centre) {
+      params.id_centre = f.id_centre;
+    }
+    return params;
+  };
+
+  // Récupérer les statistiques (pour les onglets) — uniquement selon appliedFilters
+  const {
+    data: statsData,
+    isLoading: isLoadingStats,
+    isFetching: isFetchingStats,
+    error: errorStats
+  } = useQuery(
+    ['statistiques-fiches', appliedFilters, user?.id],
     async () => {
-      const params = {
-        date_debut: filters.date_debut,
-        date_fin: filters.date_fin,
-        date_champ: filters.date_champ
-      };
-      if (filters.id_centre) {
-        params.id_centre = filters.id_centre;
-      }
-      const res = await api.get('/statistiques/fiches-par-centre', { params });
+      const res = await api.get('/statistiques/fiches-par-centre', {
+        params: buildQueryParams(appliedFilters)
+      });
       return res.data;
     },
     {
       enabled: hasAccess,
+      keepPreviousData: true,
       onError: (error) => {
         console.error('Erreur lors du chargement des statistiques:', error);
       }
@@ -57,27 +71,40 @@ const StatistiquesFiches = () => {
   );
 
   // Récupérer les fiches détaillées
-  const { data: fichesData, isLoading: isLoadingFiches, error: errorFiches } = useQuery(
-    ['fiches-detaillees', filters, user?.id],
+  const {
+    data: fichesData,
+    isLoading: isLoadingFiches,
+    isFetching: isFetchingFiches,
+    error: errorFiches
+  } = useQuery(
+    ['fiches-detaillees', appliedFilters, user?.id],
     async () => {
-      const params = {
-        date_debut: filters.date_debut,
-        date_fin: filters.date_fin,
-        date_champ: filters.date_champ
-      };
-      if (filters.id_centre) {
-        params.id_centre = filters.id_centre;
-      }
-      const res = await api.get('/statistiques/fiches-detaillees', { params });
+      const res = await api.get('/statistiques/fiches-detaillees', {
+        params: buildQueryParams(appliedFilters)
+      });
       return res.data;
     },
     {
       enabled: hasAccess,
+      keepPreviousData: true,
       onError: (error) => {
         console.error('Erreur lors du chargement des fiches détaillées:', error);
       }
     }
   );
+
+  const handleApplySearch = () => {
+    setAppliedFilters({ ...draftFilters });
+    setActiveTab(0);
+  };
+
+  const isFetchingResults = isFetchingStats || isFetchingFiches;
+  const isBootstrapping =
+    hasAccess &&
+    !errorStats &&
+    !errorFiches &&
+    (statsData === undefined || fichesData === undefined) &&
+    (isFetchingStats || isFetchingFiches);
 
   const formatNumber = (num) => {
     if (num === null || num === undefined || num === '-') return '0';
@@ -117,34 +144,6 @@ const StatistiquesFiches = () => {
     );
   }
 
-  if (isLoadingStats || isLoadingFiches) {
-    return (
-      <div className="statistiques-fiches-page">
-        <LoadingSpinner text="Chargement des statistiques..." />
-      </div>
-    );
-  }
-
-  if (errorStats || errorFiches) {
-    return (
-      <div className="statistiques-fiches-page">
-        <div className="error-message">
-          Erreur lors du chargement des statistiques: {errorStats?.message || errorFiches?.message || 'Erreur inconnue'}
-        </div>
-      </div>
-    );
-  }
-
-  if (statsData?.success === false || fichesData?.success === false) {
-    return (
-      <div className="statistiques-fiches-page">
-        <div className="error-message">
-          Erreur lors du chargement des statistiques: {statsData?.message || fichesData?.message || 'Erreur inconnue'}
-        </div>
-      </div>
-    );
-  }
-
   const stats = statsData?.data || [];
   const fiches = fichesData?.data || [];
   const totalGlobal = stats.reduce((sum, centre) => sum + (centre.total_fiches || 0), 0);
@@ -162,17 +161,17 @@ const StatistiquesFiches = () => {
 
   // Si un seul centre ou filtre par centre, afficher directement
   // Sinon, utiliser des onglets
-  const showTabs = stats.length > 1 && !filters.id_centre;
-  const displayStats = filters.id_centre 
-    ? stats.filter(c => c.centre_id === parseInt(filters.id_centre))
-    : showTabs 
+  const showTabs = stats.length > 1 && !appliedFilters.id_centre;
+  const displayStats = appliedFilters.id_centre
+    ? stats.filter(c => c.centre_id === parseInt(appliedFilters.id_centre, 10))
+    : showTabs
       ? [stats[activeTab]]
       : stats;
 
   // Obtenir les fiches pour le centre actif
   const getFichesForActiveCentre = () => {
-    if (filters.id_centre) {
-      return fichesByCentre[parseInt(filters.id_centre)] || [];
+    if (appliedFilters.id_centre) {
+      return fichesByCentre[parseInt(appliedFilters.id_centre, 10)] || [];
     }
     if (showTabs && stats[activeTab]) {
       const centreId = stats[activeTab].centre_id;
@@ -186,6 +185,14 @@ const StatistiquesFiches = () => {
 
   const activeFiches = getFichesForActiveCentre();
 
+  const queryError =
+    errorStats?.response?.data?.message ||
+    errorStats?.message ||
+    errorFiches?.response?.data?.message ||
+    errorFiches?.message ||
+    (statsData?.success === false ? statsData?.message : null) ||
+    (fichesData?.success === false ? fichesData?.message : null);
+
   return (
     <div className="statistiques-fiches-page">
       <div className="page-header">
@@ -193,6 +200,7 @@ const StatistiquesFiches = () => {
           <FaChartBar /> Statistiques Fiches
         </h1>
         <button
+          type="button"
           className="filter-toggle-btn"
           onClick={() => setShowFilters(!showFilters)}
         >
@@ -202,60 +210,94 @@ const StatistiquesFiches = () => {
 
       {showFilters && (
         <div className="filters-section">
-          <div className="filters-grid">
-            <div className="filter-group">
-              <label>
+          <div className="filters-toolbar">
+            <div className="filter-field filter-field-date">
+              <label htmlFor="sf-date-debut">
                 <FaCalendarAlt /> Date de début
               </label>
               <input
+                id="sf-date-debut"
                 type="date"
-                value={filters.date_debut}
-                onChange={(e) => setFilters({ ...filters, date_debut: e.target.value })}
+                value={draftFilters.date_debut}
+                onChange={(e) =>
+                  setDraftFilters({ ...draftFilters, date_debut: e.target.value })
+                }
               />
             </div>
-            <div className="filter-group">
-              <label>
+            <div className="filter-field filter-field-date">
+              <label htmlFor="sf-date-fin">
                 <FaCalendarAlt /> Date de fin
               </label>
               <input
+                id="sf-date-fin"
                 type="date"
-                value={filters.date_fin}
-                onChange={(e) => setFilters({ ...filters, date_fin: e.target.value })}
+                value={draftFilters.date_fin}
+                onChange={(e) =>
+                  setDraftFilters({ ...draftFilters, date_fin: e.target.value })
+                }
               />
             </div>
-            <div className="filter-group">
-              <label>Champ de date</label>
+            <div className="filter-field filter-field-champ">
+              <label htmlFor="sf-date-champ">Champ de date</label>
               <select
-                value={filters.date_champ}
-                onChange={(e) => setFilters({ ...filters, date_champ: e.target.value })}
+                id="sf-date-champ"
+                value={draftFilters.date_champ}
+                onChange={(e) =>
+                  setDraftFilters({ ...draftFilters, date_champ: e.target.value })
+                }
               >
                 <option value="date_modif_time">Date de modification</option>
-                <option value="date_insert_time">Date d'insertion</option>
+                <option value="date_insert_time">Date d&apos;insertion</option>
               </select>
             </div>
             {([1, 2, 7].includes(user?.fonction)) && (
-              <div className="filter-group">
-                <label>Centre (optionnel)</label>
+              <div className="filter-field filter-field-centre">
+                <label htmlFor="sf-centre">Centre (optionnel)</label>
                 <select
-                  value={filters.id_centre}
-                  onChange={(e) => {
-                    setFilters({ ...filters, id_centre: e.target.value });
-                    setActiveTab(0);
-                  }}
+                  id="sf-centre"
+                  value={draftFilters.id_centre}
+                  onChange={(e) =>
+                    setDraftFilters({ ...draftFilters, id_centre: e.target.value })
+                  }
                 >
                   <option value="">Tous les centres</option>
-                  {centresData && centresData.map(c => (
-                    <option key={c.id} value={c.id}>{c.titre}</option>
-                  ))}
+                  {centresData &&
+                    centresData.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.titre}
+                      </option>
+                    ))}
                 </select>
               </div>
             )}
+            <div className="filters-toolbar-actions">
+              <button
+                type="button"
+                className="btn-rechercher-stat-fiches"
+                onClick={handleApplySearch}
+                disabled={isFetchingResults}
+              >
+                <FaSearch /> Rechercher
+              </button>
+            </div>
           </div>
         </div>
       )}
 
+      {isBootstrapping && (
+        <div className="statistiques-fiches-loading">
+          <LoadingSpinner text="Chargement des statistiques..." />
+        </div>
+      )}
+
+      {queryError && !isBootstrapping && (
+        <div className="error-message">
+          Erreur lors du chargement des statistiques : {queryError || 'Erreur inconnue'}
+        </div>
+      )}
+
       {/* Message si aucune donnée */}
-      {!isLoadingStats && !isLoadingFiches && stats.length === 0 && (
+      {!isBootstrapping && !queryError && !isFetchingResults && stats.length === 0 && (
         <div className="no-data-message">
           <p>Aucune statistique disponible pour la période sélectionnée.</p>
           <p>Veuillez ajuster les filtres de date ou sélectionner un autre centre.</p>
@@ -263,8 +305,8 @@ const StatistiquesFiches = () => {
       )}
 
       {/* Résumé global */}
-      {stats.length > 0 && (
-        <div className="summary-cards">
+      {!isBootstrapping && !queryError && stats.length > 0 && (
+        <div className={`summary-cards${isFetchingResults ? ' summary-cards--refreshing' : ''}`}>
           <div className="summary-card card-primary">
             <div className="summary-icon">
               <FaChartBar />
@@ -287,8 +329,8 @@ const StatistiquesFiches = () => {
       )}
 
       {/* Onglets si plusieurs centres */}
-      {showTabs && (
-        <div className="tabs-container">
+      {!isBootstrapping && !queryError && showTabs && (
+        <div className={`tabs-container${isFetchingResults ? ' tabs-container--refreshing' : ''}`}>
           {stats.map((centre, index) => (
             <button
               key={centre.centre_id}
@@ -303,7 +345,8 @@ const StatistiquesFiches = () => {
       )}
 
       {/* Tableau des fiches */}
-      <div className="stats-table-container">
+      {!isBootstrapping && !queryError && (
+      <div className={`stats-table-container${isFetchingResults ? ' stats-table-container--refreshing' : ''}`}>
         {activeFiches.length === 0 ? (
           <div className="no-data">
             Aucune fiche disponible pour la période sélectionnée
@@ -377,6 +420,7 @@ const StatistiquesFiches = () => {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };
