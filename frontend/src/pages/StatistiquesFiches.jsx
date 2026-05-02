@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaChartBar, FaFilter, FaCalendarAlt, FaSearch } from 'react-icons/fa';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  LabelList
+} from 'recharts';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
@@ -111,18 +122,6 @@ const StatistiquesFiches = () => {
     return Number(num).toLocaleString('fr-FR');
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const formatDateOnly = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
@@ -132,17 +131,6 @@ const StatistiquesFiches = () => {
       day: '2-digit'
     });
   };
-
-  // Vérifier l'accès
-  if (!hasAccess) {
-    return (
-      <div className="statistiques-fiches-page">
-        <div className="error-message">
-          Vous n'avez pas accès à cette page. Cette page est réservée aux administrateurs et aux utilisateurs avec la fonction 9.
-        </div>
-      </div>
-    );
-  }
 
   const stats = statsData?.data || [];
   const fiches = fichesData?.data || [];
@@ -185,6 +173,39 @@ const StatistiquesFiches = () => {
 
   const activeFiches = getFichesForActiveCentre();
 
+  const etatsChartRows = useMemo(() => {
+    const total = activeFiches.length;
+    if (!total) return [];
+    const byKey = new Map();
+    for (const f of activeFiches) {
+      const id = f.id_etat_final != null && f.id_etat_final !== '' ? String(f.id_etat_final) : '_none';
+      const titre = (f.etat_titre || 'Sans état').trim() || 'Sans état';
+      const color =
+        f.etat_color != null && String(f.etat_color).trim() !== ''
+          ? String(f.etat_color).trim()
+          : '#94a3b8';
+      if (!byKey.has(id)) {
+        byKey.set(id, { id, titre, color, count: 0 });
+      }
+      byKey.get(id).count += 1;
+    }
+    return [...byKey.values()]
+      .map((row) => {
+        const pct = (row.count / total) * 100;
+        const labelCourt =
+          row.titre.length > 36 ? `${row.titre.slice(0, 33)}…` : row.titre;
+        return {
+          ...row,
+          labelCourt,
+          pct,
+          labelValue: `${Number(row.count).toLocaleString('fr-FR')} (${pct.toFixed(1)} %)`
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+  }, [activeFiches]);
+
+  const etatsChartHeight = Math.min(520, Math.max(200, etatsChartRows.length * 36 + 72));
+
   const queryError =
     errorStats?.response?.data?.message ||
     errorStats?.message ||
@@ -192,6 +213,16 @@ const StatistiquesFiches = () => {
     errorFiches?.message ||
     (statsData?.success === false ? statsData?.message : null) ||
     (fichesData?.success === false ? fichesData?.message : null);
+
+  if (!hasAccess) {
+    return (
+      <div className="statistiques-fiches-page">
+        <div className="error-message">
+          Vous n'avez pas accès à cette page. Cette page est réservée aux administrateurs et aux utilisateurs avec la fonction 9.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="statistiques-fiches-page">
@@ -270,7 +301,10 @@ const StatistiquesFiches = () => {
                 </select>
               </div>
             )}
-            <div className="filters-toolbar-actions">
+            <div className="filter-field filter-field-action">
+              <span className="filters-action-label-spacer" aria-hidden="true">
+                Rechercher
+              </span>
               <button
                 type="button"
                 className="btn-rechercher-stat-fiches"
@@ -359,6 +393,64 @@ const StatistiquesFiches = () => {
                 <span className="fiches-count">({formatNumber(activeFiches.length)} fiches)</span>
               </h3>
             </div>
+
+            {etatsChartRows.length > 0 && (
+              <div className="stat-fiches-etats-chart">
+                <h4 className="stat-fiches-etats-chart-title">Répartition par état</h4>
+                <p className="stat-fiches-etats-chart-sub">
+                  Nombre et pourcentage du total des fiches affichées ({formatNumber(activeFiches.length)}).
+                </p>
+                <div className="stat-fiches-etats-chart-inner">
+                  <ResponsiveContainer width="100%" height={etatsChartHeight}>
+                    <BarChart
+                      layout="vertical"
+                      data={etatsChartRows}
+                      margin={{ top: 6, right: 132, left: 8, bottom: 6 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                      <YAxis
+                        type="category"
+                        dataKey="labelCourt"
+                        width={168}
+                        tick={{ fontSize: 11 }}
+                        interval={0}
+                      />
+                      <Tooltip
+                        formatter={(value, _name, item) => {
+                          const pct = item?.payload?.pct;
+                          const pctStr =
+                            pct != null && Number.isFinite(pct)
+                              ? ` (${pct.toFixed(2)} % du total)`
+                              : '';
+                          return [`${formatNumber(value)} fiche(s)${pctStr}`, 'Effectif'];
+                        }}
+                        labelFormatter={(_, payload) =>
+                          payload?.[0]?.payload?.titre || ''
+                        }
+                        contentStyle={{ fontSize: 12 }}
+                      />
+                      <Bar
+                        dataKey="count"
+                        radius={[0, 6, 6, 0]}
+                        isAnimationActive={!isFetchingResults}
+                        maxBarSize={28}
+                      >
+                        {etatsChartRows.map((entry, index) => (
+                          <Cell key={`etat-bar-${entry.id}-${index}`} fill={entry.color} />
+                        ))}
+                        <LabelList
+                          dataKey="labelValue"
+                          position="right"
+                          style={{ fontSize: 11, fill: '#374151', fontWeight: 600 }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
             <table className="fiches-detail-table">
               <thead>
                 <tr>
