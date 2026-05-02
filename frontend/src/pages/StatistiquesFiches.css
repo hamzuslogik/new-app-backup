@@ -51,6 +51,19 @@
   border-radius: 12px;
   margin-bottom: 19.2px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.filters-toolbar-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+  border-top: 1px solid rgba(6, 95, 70, 0.12);
 }
 
 .filters-grid {
@@ -65,40 +78,6 @@
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 16px 20px;
-}
-
-/* Alignement avec les champs date : même empilement label + contrôle */
-.filter-field-action {
-  flex: 0 0 auto;
-  margin-left: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-self: flex-end;
-}
-
-/* Même ligne label que les champs (icône + texte), invisible — aligne le bouton sur les inputs */
-.filters-action-label-spacer {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  visibility: hidden;
-  white-space: nowrap;
-  font-size: 11.9px;
-  font-weight: 600;
-  line-height: 1.25;
-  margin: 0;
-  padding: 0;
-  min-height: 22px;
-  box-sizing: border-box;
-  user-select: none;
-}
-
-.filters-action-label-spacer-icon {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
 }
 
 .filter-field {

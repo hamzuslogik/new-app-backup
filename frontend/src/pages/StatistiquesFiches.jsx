@@ -308,20 +308,16 @@ const StatistiquesFiches = () => {
                 </select>
               </div>
             )}
-            <div className="filter-field filter-field-action">
-              <span className="filters-action-label-spacer" aria-hidden="true">
-                <span className="filters-action-label-spacer-icon" />
-                Rechercher
-              </span>
-              <button
-                type="button"
-                className="btn-rechercher-stat-fiches"
-                onClick={handleApplySearch}
-                disabled={isFetchingResults}
-              >
-                <FaSearch /> Rechercher
-              </button>
-            </div>
+          </div>
+          <div className="filters-toolbar-footer">
+            <button
+              type="button"
+              className="btn-rechercher-stat-fiches"
+              onClick={handleApplySearch}
+              disabled={isFetchingResults}
+            >
+              <FaSearch /> Rechercher
+            </button>
           </div>
         </div>
       )}
@@ -475,45 +471,58 @@ const StatistiquesFiches = () => {
                 </tr>
               </thead>
               <tbody>
-                {activeFiches.map((fiche) => (
-                  <tr key={fiche.id || fiche.hash}>
-                    <td>{fiche.nom || '-'}</td>
-                    <td>{fiche.prenom || '-'}</td>
-                    <td>{fiche.tel || fiche.gsm1 || '-'}</td>
-                    <td>{fiche.cp || '-'}</td>
-                    <td>{formatDateOnly(fiche.date_insert_time)}</td>
-                    <td>{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                    <td>{fiche.confirmateur_nom || '-'}</td>
-                    <td>{fiche.commercial_nom || '-'}</td>
-                    <td>
-                      {fiche.etat_titre ? (
-                        <span 
-                          className="etat-badge"
-                          style={{ 
-                            backgroundColor: etatColor,
-                            color: '#ffffff',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '10.2px',
-                            fontWeight: '600'
-                          }}
-                        >
-                          {fiche.etat_titre}
-                        </span>
-                      ) : '-'}
-                    </td>
-                    <td>
-                      {fiche.hash ? (
-                        <FicheDetailLink 
-                          ficheHash={fiche.hash}
-                          className="btn-detail-link"
-                          title="Voir les détails"
-                        >
-                          <FaSearch />
-                        </FicheDetailLink>
-                      ) : '-'}
-                    </td>
-                  </tr>
+                {activeFiches.map((fiche) => {
+                  const etatColor = getEtatColorForFiche(fiche);
+                  return (
+                    <tr
+                      key={fiche.id || fiche.hash}
+                      className="fiche-row-by-etat"
+                      style={{
+                        backgroundColor: `${etatColor}40`,
+                        borderLeft: `4px solid ${etatColor}`
+                      }}
+                    >
+                      <td>{fiche.nom || '-'}</td>
+                      <td>{fiche.prenom || '-'}</td>
+                      <td>{fiche.tel || fiche.gsm1 || '-'}</td>
+                      <td>{fiche.cp || '-'}</td>
+                      <td>{formatDateOnly(fiche.date_insert_time)}</td>
+                      <td>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                      <td>{fiche.confirmateur_nom || '-'}</td>
+                      <td>{fiche.commercial_nom || '-'}</td>
+                      <td>
+                        {fiche.etat_titre ? (
+                          <span
+                            className="etat-badge"
+                            style={{
+                              backgroundColor: etatColor,
+                              color: '#ffffff',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '10.2px',
+                              fontWeight: '600'
+                            }}
+                          >
+                            {fiche.etat_titre}
+                          </span>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td>
+                        {fiche.hash ? (
+                          <FicheDetailLink
+                            ficheHash={fiche.hash}
+                            className="btn-detail-link"
+                            title="Voir les détails"
+                          >
+                            <FaSearch />
+                          </FicheDetailLink>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
