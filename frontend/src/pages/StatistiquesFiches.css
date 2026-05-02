@@ -616,6 +616,40 @@
   border-right: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.fiches-detail-table th.fiches-detail-th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.fiches-detail-table th.fiches-detail-th-sortable:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.fiches-detail-table th.fiches-detail-th-static {
+  cursor: default;
+}
+
+.fiches-detail-th-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fiches-sort-icon {
+  flex-shrink: 0;
+  font-size: 11px;
+  opacity: 1;
+}
+
+.fiches-sort-icon--muted {
+  opacity: 0.45;
+}
+
+.fiches-sort-icon--active {
+  opacity: 1;
+}
+
 .fiches-detail-table th:last-child {
   border-right: none;
 }

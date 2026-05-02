@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaChartBar, FaFilter, FaCalendarAlt, FaSearch } from 'react-icons/fa';
+import { FaChartBar, FaFilter, FaCalendarAlt, FaSearch, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import {
   BarChart,
   Bar,
@@ -27,12 +27,33 @@ const initialFilters = () => ({
   id_centre: ''
 });
 
+/** Colonnes triables du tableau fiches (Statistiques fiches) */
+const FICHES_SORT_KEYS = {
+  nom: 'nom',
+  prenom: 'prenom',
+  tel: 'tel',
+  cp: 'cp',
+  date_insert: 'date_insert',
+  date_rdv: 'date_rdv',
+  confirmateur: 'confirmateur',
+  commercial: 'commercial',
+  etat: 'etat'
+};
+
+function dateToSortNumber(value) {
+  if (value == null || value === '') return null;
+  const t = new Date(value).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+
 const StatistiquesFiches = () => {
   const { user } = useAuth();
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
   const [showFilters, setShowFilters] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
 
   // Récupérer les centres (filtrés selon le rôle)
   const { data: centresData } = useQuery(
@@ -179,6 +200,106 @@ const StatistiquesFiches = () => {
   };
 
   const activeFiches = getFichesForActiveCentre();
+
+  const sortedFiches = useMemo(() => {
+    if (!sortKey || activeFiches.length === 0) return activeFiches;
+    const mult = sortDir === 'asc' ? 1 : -1;
+    const list = [...activeFiches];
+    list.sort((a, b) => {
+      if (sortKey === FICHES_SORT_KEYS.etat) {
+        const ida =
+          a.id_etat_final != null && a.id_etat_final !== ''
+            ? Number(a.id_etat_final)
+            : NaN;
+        const idb =
+          b.id_etat_final != null && b.id_etat_final !== ''
+            ? Number(b.id_etat_final)
+            : NaN;
+        const aNum = Number.isFinite(ida);
+        const bNum = Number.isFinite(idb);
+        if (aNum && bNum && ida !== idb) return (ida - idb) * mult;
+        if (aNum && !bNum) return -1 * mult;
+        if (!aNum && bNum) return 1 * mult;
+        const ta = (a.etat_titre || '').toLowerCase();
+        const tb = (b.etat_titre || '').toLowerCase();
+        return ta.localeCompare(tb, 'fr', { sensitivity: 'base' }) * mult;
+      }
+
+      let va;
+      let vb;
+      switch (sortKey) {
+        case FICHES_SORT_KEYS.nom:
+          va = (a.nom || '').toLowerCase();
+          vb = (b.nom || '').toLowerCase();
+          break;
+        case FICHES_SORT_KEYS.prenom:
+          va = (a.prenom || '').toLowerCase();
+          vb = (b.prenom || '').toLowerCase();
+          break;
+        case FICHES_SORT_KEYS.tel:
+          va = (a.tel || a.gsm1 || '').toLowerCase();
+          vb = (b.tel || b.gsm1 || '').toLowerCase();
+          break;
+        case FICHES_SORT_KEYS.cp:
+          va = (a.cp || '').toLowerCase();
+          vb = (b.cp || '').toLowerCase();
+          break;
+        case FICHES_SORT_KEYS.date_insert:
+          va = dateToSortNumber(a.date_insert_time);
+          vb = dateToSortNumber(b.date_insert_time);
+          break;
+        case FICHES_SORT_KEYS.date_rdv:
+          va = dateToSortNumber(a.date_rdv_time);
+          vb = dateToSortNumber(b.date_rdv_time);
+          break;
+        case FICHES_SORT_KEYS.confirmateur:
+          va = (a.confirmateur_nom || '').toLowerCase();
+          vb = (b.confirmateur_nom || '').toLowerCase();
+          break;
+        case FICHES_SORT_KEYS.commercial:
+          va = (a.commercial_nom || '').toLowerCase();
+          vb = (b.commercial_nom || '').toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (
+        sortKey === FICHES_SORT_KEYS.date_insert ||
+        sortKey === FICHES_SORT_KEYS.date_rdv
+      ) {
+        const na = va == null ? -Infinity : va;
+        const nb = vb == null ? -Infinity : vb;
+        if (na !== nb) return (na - nb) * mult;
+        return 0;
+      }
+
+      return (
+        String(va).localeCompare(String(vb), 'fr', { sensitivity: 'base' }) * mult
+      );
+    });
+    return list;
+  }, [activeFiches, sortKey, sortDir]);
+
+  const handleSortColumn = (key) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const renderSortIcon = (key) => {
+    if (sortKey !== key) {
+      return <FaSort className="fiches-sort-icon fiches-sort-icon--muted" aria-hidden />;
+    }
+    return sortDir === 'asc' ? (
+      <FaSortUp className="fiches-sort-icon fiches-sort-icon--active" aria-hidden />
+    ) : (
+      <FaSortDown className="fiches-sort-icon fiches-sort-icon--active" aria-hidden />
+    );
+  };
 
   const etatsChartRows = useMemo(() => {
     const total = activeFiches.length;
@@ -458,20 +579,157 @@ const StatistiquesFiches = () => {
             <table className="fiches-detail-table">
               <thead>
                 <tr>
-                  <th>Nom</th>
-                  <th>Prénom</th>
-                  <th>Téléphone</th>
-                  <th>CP</th>
-                  <th>Date insertion</th>
-                  <th>Date / Heure RDV</th>
-                  <th>Confirmateur</th>
-                  <th>Commercial</th>
-                  <th>État</th>
-                  <th>Détails</th>
+                  <th
+                    scope="col"
+                    className="fiches-detail-th-sortable"
+                    aria-sort={
+                      sortKey === FICHES_SORT_KEYS.nom
+                        ? sortDir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    onClick={() => handleSortColumn(FICHES_SORT_KEYS.nom)}
+                  >
+                    <span className="fiches-detail-th-inner">
+                      Nom {renderSortIcon(FICHES_SORT_KEYS.nom)}
+                    </span>
+                  </th>
+                  <th
+                    scope="col"
+                    className="fiches-detail-th-sortable"
+                    aria-sort={
+                      sortKey === FICHES_SORT_KEYS.prenom
+                        ? sortDir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    onClick={() => handleSortColumn(FICHES_SORT_KEYS.prenom)}
+                  >
+                    <span className="fiches-detail-th-inner">
+                      Prénom {renderSortIcon(FICHES_SORT_KEYS.prenom)}
+                    </span>
+                  </th>
+                  <th
+                    scope="col"
+                    className="fiches-detail-th-sortable"
+                    aria-sort={
+                      sortKey === FICHES_SORT_KEYS.tel
+                        ? sortDir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    onClick={() => handleSortColumn(FICHES_SORT_KEYS.tel)}
+                  >
+                    <span className="fiches-detail-th-inner">
+                      Téléphone {renderSortIcon(FICHES_SORT_KEYS.tel)}
+                    </span>
+                  </th>
+                  <th
+                    scope="col"
+                    className="fiches-detail-th-sortable"
+                    aria-sort={
+                      sortKey === FICHES_SORT_KEYS.cp
+                        ? sortDir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    onClick={() => handleSortColumn(FICHES_SORT_KEYS.cp)}
+                  >
+                    <span className="fiches-detail-th-inner">
+                      CP {renderSortIcon(FICHES_SORT_KEYS.cp)}
+                    </span>
+                  </th>
+                  <th
+                    scope="col"
+                    className="fiches-detail-th-sortable"
+                    aria-sort={
+                      sortKey === FICHES_SORT_KEYS.date_insert
+                        ? sortDir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    onClick={() => handleSortColumn(FICHES_SORT_KEYS.date_insert)}
+                  >
+                    <span className="fiches-detail-th-inner">
+                      Date insertion {renderSortIcon(FICHES_SORT_KEYS.date_insert)}
+                    </span>
+                  </th>
+                  <th
+                    scope="col"
+                    className="fiches-detail-th-sortable"
+                    aria-sort={
+                      sortKey === FICHES_SORT_KEYS.date_rdv
+                        ? sortDir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    onClick={() => handleSortColumn(FICHES_SORT_KEYS.date_rdv)}
+                  >
+                    <span className="fiches-detail-th-inner">
+                      Date / Heure RDV {renderSortIcon(FICHES_SORT_KEYS.date_rdv)}
+                    </span>
+                  </th>
+                  <th
+                    scope="col"
+                    className="fiches-detail-th-sortable"
+                    aria-sort={
+                      sortKey === FICHES_SORT_KEYS.confirmateur
+                        ? sortDir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    onClick={() => handleSortColumn(FICHES_SORT_KEYS.confirmateur)}
+                  >
+                    <span className="fiches-detail-th-inner">
+                      Confirmateur {renderSortIcon(FICHES_SORT_KEYS.confirmateur)}
+                    </span>
+                  </th>
+                  <th
+                    scope="col"
+                    className="fiches-detail-th-sortable"
+                    aria-sort={
+                      sortKey === FICHES_SORT_KEYS.commercial
+                        ? sortDir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    onClick={() => handleSortColumn(FICHES_SORT_KEYS.commercial)}
+                  >
+                    <span className="fiches-detail-th-inner">
+                      Commercial {renderSortIcon(FICHES_SORT_KEYS.commercial)}
+                    </span>
+                  </th>
+                  <th
+                    scope="col"
+                    className="fiches-detail-th-sortable"
+                    aria-sort={
+                      sortKey === FICHES_SORT_KEYS.etat
+                        ? sortDir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    onClick={() => handleSortColumn(FICHES_SORT_KEYS.etat)}
+                  >
+                    <span className="fiches-detail-th-inner">
+                      État {renderSortIcon(FICHES_SORT_KEYS.etat)}
+                    </span>
+                  </th>
+                  <th scope="col" className="fiches-detail-th-static">
+                    Détails
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {activeFiches.map((fiche) => {
+                {sortedFiches.map((fiche) => {
                   const etatColor = getEtatColorForFiche(fiche);
                   return (
                     <tr
