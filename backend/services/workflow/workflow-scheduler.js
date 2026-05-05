@@ -1,5 +1,5 @@
 const { query } = require('../../config/database');
-const { executeWorkflow } = require('./workflow-executor');
+const { executeWorkflow, executeWorkflowActions } = require('./workflow-executor');
 
 /**
  * Service de planification des workflows (cron)
@@ -173,13 +173,12 @@ async function checkAndExecuteScheduledWorkflows() {
 
             if (!checkTriggers || checkTriggers.length === 0) {
               // Exécution standard (cron seul)
-              await executeWorkflow('scheduled', {
-                __workflow_id: workflow.id,
+              await executeWorkflowActions(workflow.id, {
                 workflow_id: workflow.id,
                 workflow_nom: workflow.nom,
                 cron_expression: cronExpression,
                 scheduled_at: new Date().toISOString()
-              });
+              }, 'scheduled');
               continue;
             }
 
@@ -226,15 +225,14 @@ async function checkAndExecuteScheduledWorkflows() {
 
             console.log(`[WORKFLOW SCHEDULER] Workflow ${workflow.id}: ${matchedFiches.length} fiche(s) matchée(s)`);
             for (const fiche of matchedFiches) {
-              await executeWorkflow('scheduled', {
-                __workflow_id: workflow.id,
+              await executeWorkflowActions(workflow.id, {
                 workflow_id: workflow.id,
                 workflow_nom: workflow.nom,
                 cron_expression: cronExpression,
                 scheduled_at: new Date().toISOString(),
                 fiche_id: fiche.id,
                 fiche
-              });
+              }, 'scheduled');
             }
           }
         }
