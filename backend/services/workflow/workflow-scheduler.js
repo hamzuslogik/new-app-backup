@@ -10,6 +10,20 @@ let schedulerInterval = null;
 let isRunning = false;
 const lastExecutionTimes = new Map(); // Pour éviter les exécutions multiples
 
+function formatDateLocal(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function computeTargetDate(offsetDays = 0) {
+  const n = new Date();
+  n.setHours(0, 0, 0, 0);
+  n.setDate(n.getDate() + (parseInt(offsetDays, 10) || 0));
+  return formatDateLocal(n);
+}
+
 /**
  * Parse une expression cron simple et vérifie si elle correspond à maintenant
  * Format supporté: minute hour day month weekday
@@ -151,13 +165,68 @@ async function checkAndExecuteScheduledWorkflows() {
               });
             }
             
-            // Exécuter le workflow avec des données d'événement minimales pour scheduled
-            await executeWorkflow('scheduled', {
-              workflow_id: workflow.id,
-              workflow_nom: workflow.nom,
-              cron_expression: cronExpression,
-              scheduled_at: new Date().toISOString()
-            });
+            // Vérifier s'il existe un déclencheur complémentaire basé sur date RDV + état fiche
+            const checkTriggers = await query(
+              'SELECT * FROM workflow_triggers WHERE id_workflow = ? AND type = ?',
+              [workflow.id, 'fiche_rdv_etat_check']
+            );
+
+            if (!checkTriggers || checkTriggers.length === 0) {
+              // Exécution standard (cron seul)
+              await executeWorkflow('scheduled', {
+                __workflow_id: workflow.id,
+                workflow_id: workflow.id,
+                workflow_nom: workflow.nom,
+                cron_expression: cronExpression,
+                scheduled_at: new Date().toISOString()
+              });
+              continue;
+            }
+
+            // Exécution cron + filtre fiche (date RDV + état)
+            const matchedFichesById = new Map();
+            for (const checkTrigger of checkTriggers) {
+              const cfg = checkTrigger.config ? JSON.parse(checkTrigger.config) : {};
+              const rdvOffsetDays = parseInt(cfg.rdv_offset_days, 10) || 0;
+              const targetDate = computeTargetDate(rdvOffsetDays);
+              const etatIds = Array.isArray(cfg.etat_ids)
+                ? cfg.etat_ids.map((v) => parseInt(v, 10)).filter((v) => !isNaN(v))
+                : [];
+
+              let sql = `
+                SELECT id, nom, prenom, tel, date_rdv_time, id_etat_final, id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_agent, id_insert, id_commercial, id_commercial_2, id_qualite
+                FROM fiches
+                WHERE date_rdv_time IS NOT NULL
+                  AND DATE(date_rdv_time) = ?
+              `;
+              const params = [targetDate];
+              if (etatIds.length > 0) {
+                const placeholders = etatIds.map(() => '?').join(',');
+                sql += ` AND id_etat_final IN (${placeholders})`;
+                params.push(...etatIds);
+              }
+              const rows = await query(sql, params);
+              rows.forEach((f) => matchedFichesById.set(f.id, f));
+            }
+
+            const matchedFiches = Array.from(matchedFichesById.values());
+            if (matchedFiches.length === 0) {
+              console.log(`[WORKFLOW SCHEDULER] Workflow ${workflow.id}: aucun match pour fiche_rdv_etat_check`);
+              continue;
+            }
+
+            console.log(`[WORKFLOW SCHEDULER] Workflow ${workflow.id}: ${matchedFiches.length} fiche(s) matchée(s)`);
+            for (const fiche of matchedFiches) {
+              await executeWorkflow('scheduled', {
+                __workflow_id: workflow.id,
+                workflow_id: workflow.id,
+                workflow_nom: workflow.nom,
+                cron_expression: cronExpression,
+                scheduled_at: new Date().toISOString(),
+                fiche_id: fiche.id,
+                fiche
+              });
+            }
           }
         }
       } catch (error) {

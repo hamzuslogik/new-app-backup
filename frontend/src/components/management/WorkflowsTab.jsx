@@ -78,7 +78,24 @@ const TRIGGER_VARIABLES = {
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   scheduled: ['{workflow_id}', '{workflow_nom}', '{cron_expression}', '{scheduled_at}']
+  ,
+  fiche_rdv_etat_check: [
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
+    '{fiche.date_rdv_time}', '{fiche.id_etat_final}',
+    '{workflow_id}', '{workflow_nom}', '{cron_expression}', '{scheduled_at}'
+  ]
 };
+
+const DYNAMIC_RECIPIENT_OPTIONS = [
+  { value: '{fiche.id_insert}', label: 'Agent qui a cree la fiche ({fiche.id_insert})' },
+  { value: '{fiche.id_agent}', label: 'Agent assigne ({fiche.id_agent})' },
+  { value: '{fiche.id_confirmateur}', label: 'Confirmateur principal ({fiche.id_confirmateur})' },
+  { value: '{fiche.id_confirmateur_2}', label: 'Confirmateur secondaire ({fiche.id_confirmateur_2})' },
+  { value: '{fiche.id_confirmateur_3}', label: 'Confirmateur tertiaire ({fiche.id_confirmateur_3})' },
+  { value: '{fiche.id_qualite}', label: 'Agent qualite ({fiche.id_qualite})' },
+  { value: '{fiche.id_commercial}', label: 'Commercial principal ({fiche.id_commercial})' },
+  { value: '{fiche.id_commercial_2}', label: 'Commercial secondaire ({fiche.id_commercial_2})' }
+];
 
 const WorkflowsTab = () => {
   const [showForm, setShowForm] = useState(false);
@@ -346,6 +363,12 @@ const WorkflowsTab = () => {
       }
     } else if (trigger.type === 'scheduled' && trigger.config?.cron) {
       parts.push(`cron: ${trigger.config.cron}`);
+    } else if (trigger.type === 'fiche_rdv_etat_check') {
+      const config = trigger.config || {};
+      const offset = parseInt(config.rdv_offset_days || 0, 10);
+      const etatIds = Array.isArray(config.etat_ids) ? config.etat_ids : [];
+      parts.push(`rdv: J${offset >= 0 ? '+' : ''}${offset}`);
+      parts.push(`etats: ${etatIds.length > 0 ? etatIds.join(', ') : 'Tous'}`);
     }
     
     return parts.join(' | ');
@@ -603,6 +626,7 @@ const WorkflowsTab = () => {
                         <option value="decalage_created">Décalage créé</option>
                         <option value="decalage_accepted">Décalage accepté</option>
                         <option value="scheduled">Programmé (cron)</option>
+                        <option value="fiche_rdv_etat_check">Filtre fiche (date RDV + état)</option>
                       </select>
                     </div>
                     <div style={{ padding: '10px', background: '#fff3cd', borderRadius: '6px', fontSize: '12px', marginBottom: '10px' }}>
@@ -783,6 +807,39 @@ const WorkflowsTab = () => {
                         />
                       </div>
                     )}
+                    {trigger.type === 'fiche_rdv_etat_check' && (
+                      <>
+                        <div className="form-group">
+                          <label>Décalage date RDV (jours)</label>
+                          <input
+                            type="number"
+                            value={trigger.config?.rdv_offset_days ?? 0}
+                            onChange={(e) => updateTrigger(index, 'config', { ...trigger.config, rdv_offset_days: parseInt(e.target.value, 10) || 0 })}
+                          />
+                          <small>0 = aujourd&apos;hui, 1 = demain, -1 = hier.</small>
+                        </div>
+                        <div className="form-group">
+                          <label>États fiche ciblés (optionnel)</label>
+                          <select
+                            multiple
+                            value={Array.isArray(trigger.config?.etat_ids) ? trigger.config.etat_ids.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value, 10));
+                              updateTrigger(index, 'config', { ...trigger.config, etat_ids: selected.length > 0 ? selected : [] });
+                            }}
+                            size={6}
+                          >
+                            {etatsData?.map(etat => (
+                              <option key={etat.id} value={etat.id}>{etat.id} - {etat.titre}</option>
+                            ))}
+                          </select>
+                          <small>Si vide: tous les états.</small>
+                        </div>
+                        <div style={{ padding: '8px', background: '#e8f5e9', borderRadius: '4px', fontSize: '12px' }}>
+                          A utiliser avec un déclencheur <strong>Programmé (cron)</strong> dans le même workflow.
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
                 <button type="button" className="btn-secondary" onClick={addTrigger}>
@@ -863,16 +920,27 @@ const WorkflowsTab = () => {
                             multiple
                             value={Array.isArray(action.config?.destination_utilisateurs) ? action.config.destination_utilisateurs.map(String) : []}
                             onChange={(e) => {
-                              const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
+                              const selected = Array.from(e.target.selectedOptions, (opt) => {
+                                const value = opt.value;
+                                if (value.startsWith('{') && value.endsWith('}')) return value;
+                                return parseInt(value, 10);
+                              });
                               updateAction(index, 'config', { ...action.config, destination_utilisateurs: selected.length > 0 ? selected : null });
                             }}
-                            size={6}
+                            size={9}
                           >
-                            {utilisateursData?.map(u => (
-                              <option key={u.id} value={u.id}>{u.pseudo || u.login} — {u.nom} {u.prenom}</option>
-                            ))}
+                            <optgroup label="Destinataires dynamiques (basés sur la fiche)">
+                              {DYNAMIC_RECIPIENT_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Utilisateurs spécifiques">
+                              {utilisateursData?.map(u => (
+                                <option key={u.id} value={u.id}>{u.pseudo || u.login} — {u.nom} {u.prenom}</option>
+                              ))}
+                            </optgroup>
                           </select>
-                          <small>Un utilisateur = sélectionner une ligne. Plusieurs = Ctrl/Cmd + clic. Peut être combiné avec les fonctions.</small>
+                          <small>Un ou plusieurs utilisateurs fixes et/ou destinataires dynamiques. Ctrl/Cmd pour multi-sélection.</small>
                         </div>
                         <div className="form-group">
                           <label>Une ou plusieurs fonctions</label>
@@ -945,6 +1013,123 @@ const WorkflowsTab = () => {
                             <option value="tel">tel</option>
                             <option value="gsm1">gsm1</option>
                             <option value="gsm2">gsm2</option>
+                          </select>
+                        </div>
+                        <div className="form-group" style={{ marginTop: '16px', padding: '10px', background: '#f5f5f5', borderRadius: '6px' }}>
+                          <strong>Destinataires dynamiques (comme message système)</strong>
+                          <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#555' }}>
+                            Préparation UI pour ciblage avancé. Aujourd&apos;hui, l&apos;envoi SMS workflow utilise principalement le téléphone de la fiche via "Champ téléphone".
+                          </p>
+                        </div>
+                        <div className="form-group">
+                          <label>Utilisateurs ciblés (optionnel)</label>
+                          <select
+                            multiple
+                            value={Array.isArray(action.config?.cibles_utilisateurs) ? action.config.cibles_utilisateurs.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, (opt) => {
+                                const value = opt.value;
+                                if (value.startsWith('{') && value.endsWith('}')) return value;
+                                return parseInt(value, 10);
+                              });
+                              updateAction(index, 'config', { ...action.config, cibles_utilisateurs: selected.length > 0 ? selected : null });
+                            }}
+                            size={8}
+                          >
+                            <optgroup label="Destinataires dynamiques (basés sur la fiche)">
+                              {DYNAMIC_RECIPIENT_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Utilisateurs spécifiques">
+                              {utilisateursData?.map(u => (
+                                <option key={u.id} value={u.id}>{u.pseudo || u.login} — {u.nom} {u.prenom}</option>
+                              ))}
+                            </optgroup>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Fonctions ciblées (optionnel)</label>
+                          <select
+                            multiple
+                            value={Array.isArray(action.config?.cibles_fonctions) ? action.config.cibles_fonctions.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value, 10));
+                              updateAction(index, 'config', { ...action.config, cibles_fonctions: selected.length > 0 ? selected : null });
+                            }}
+                            size={5}
+                          >
+                            {fonctionsData?.map(f => (
+                              <option key={f.id} value={f.id}>{f.id} — {f.titre}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
+                    )}
+
+                    {action.type === 'email' && (
+                      <>
+                        <div className="form-group">
+                          <label>Sujet *</label>
+                          <input
+                            type="text"
+                            value={action.config?.subject || ''}
+                            onChange={(e) => updateAction(index, 'config', { ...action.config, subject: e.target.value })}
+                            placeholder="Sujet email"
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Message *</label>
+                          <textarea
+                            value={action.config?.message || ''}
+                            onChange={(e) => updateAction(index, 'config', { ...action.config, message: e.target.value })}
+                            rows="3"
+                            placeholder="Corps du message email"
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Utilisateurs ciblés</label>
+                          <select
+                            multiple
+                            value={Array.isArray(action.config?.cibles_utilisateurs) ? action.config.cibles_utilisateurs.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, (opt) => {
+                                const value = opt.value;
+                                if (value.startsWith('{') && value.endsWith('}')) return value;
+                                return parseInt(value, 10);
+                              });
+                              updateAction(index, 'config', { ...action.config, cibles_utilisateurs: selected.length > 0 ? selected : null });
+                            }}
+                            size={8}
+                          >
+                            <optgroup label="Destinataires dynamiques (basés sur la fiche)">
+                              {DYNAMIC_RECIPIENT_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Utilisateurs spécifiques">
+                              {utilisateursData?.map(u => (
+                                <option key={u.id} value={u.id}>{u.pseudo || u.login} — {u.nom} {u.prenom}</option>
+                              ))}
+                            </optgroup>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Fonctions ciblées</label>
+                          <select
+                            multiple
+                            value={Array.isArray(action.config?.cibles_fonctions) ? action.config.cibles_fonctions.map(String) : []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value, 10));
+                              updateAction(index, 'config', { ...action.config, cibles_fonctions: selected.length > 0 ? selected : null });
+                            }}
+                            size={5}
+                          >
+                            {fonctionsData?.map(f => (
+                              <option key={f.id} value={f.id}>{f.id} — {f.titre}</option>
+                            ))}
                           </select>
                         </div>
                       </>

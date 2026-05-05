@@ -23,14 +23,16 @@ async function executeWorkflow(triggerType, eventData) {
   try {
     // Récupérer tous les workflows actifs qui ont ce type de trigger
     console.log('[WORKFLOW] Recherche des workflows actifs pour trigger:', triggerType);
+    const targetWorkflowId = Number(eventData?.__workflow_id);
     const workflows = await query(`
       SELECT DISTINCT w.*
       FROM workflows w
       INNER JOIN workflow_triggers wt ON w.id = wt.id_workflow
       WHERE w.actif = 1
       AND wt.type = ?
+      ${Number.isFinite(targetWorkflowId) && targetWorkflowId > 0 ? 'AND w.id = ?' : ''}
       ORDER BY w.priorite ASC
-    `, [triggerType]);
+    `, Number.isFinite(targetWorkflowId) && targetWorkflowId > 0 ? [triggerType, targetWorkflowId] : [triggerType]);
 
     console.log('[WORKFLOW] Nombre de workflows trouvés:', workflows.length);
     if (workflows.length === 0) {
@@ -473,7 +475,18 @@ async function executeNotificationAction(config, eventData) {
       rows.forEach(r => { if (r && r.id) userIds.add(parseInt(r.id, 10)); });
     }
     if (hasUtilisateurs) {
-      const ids = destination_utilisateurs.map(id => parseInt(id, 10)).filter(id => !isNaN(id) && id > 0);
+      const ids = destination_utilisateurs
+        .map((id) => {
+          if (typeof id === 'string' && id.startsWith('{') && id.endsWith('}')) {
+            const fieldPath = id.slice(1, -1);
+            const resolvedValue = getFieldValue(fieldPath, eventData);
+            const parsed = parseInt(resolvedValue, 10);
+            return !isNaN(parsed) && parsed > 0 ? parsed : null;
+          }
+          const parsed = parseInt(id, 10);
+          return !isNaN(parsed) && parsed > 0 ? parsed : null;
+        })
+        .filter((id) => id !== null);
       if (ids.length > 0) {
         const placeholders = ids.map(() => '?').join(',');
         const rows = await query(`SELECT id FROM utilisateurs WHERE id IN (${placeholders}) AND etat > 0`, ids);
