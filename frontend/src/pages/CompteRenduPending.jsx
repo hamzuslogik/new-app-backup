@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './CompteRenduPending.css';
+import { isCompteRenduSignerEtat, SIGNATURE_ONLY_MODIFICATION_KEYS } from '../utils/compteRenduSigner';
 
 const CompteRenduPending = () => {
   const { user } = useAuth();
@@ -213,7 +214,8 @@ const CompteRenduPending = () => {
                   </div>
                 )}
 
-                {(cr.ph3_installateur || cr.ph3_pac || cr.ph3_puissance || cr.ph3_prix || cr.ph3_mensualite) && (
+                {isCompteRenduSignerEtat(cr) &&
+                  (cr.ph3_installateur || cr.ph3_pac || cr.ph3_puissance || cr.ph3_prix || cr.ph3_mensualite) && (
                   <div className="cr-field">
                     <strong>Informations de vente (Phase 3):</strong>
                     <div className="modifications-list">
@@ -312,18 +314,25 @@ const CompteRenduPending = () => {
                   </div>
                 )}
 
-                <div className="cr-field">
-                  <div className="modifications-list">
-                    {Object.entries(cr.modifications || {})
-                      .filter(([key]) => key !== 'conf_commentaire_produit')
-                      .map(([key, value]) => (
-                        <div key={key} className="modification-item">
-                          <span className="modification-key">{key}:</span>
-                          <span className="modification-value">{String(value)}</span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
+                {(() => {
+                  const modEntries = Object.entries(cr.modifications || {}).filter(([key]) => {
+                    if (key === 'conf_commentaire_produit') return false;
+                    if (!isCompteRenduSignerEtat(cr) && SIGNATURE_ONLY_MODIFICATION_KEYS.has(key)) return false;
+                    return true;
+                  });
+                  return modEntries.length > 0 ? (
+                    <div className="cr-field">
+                      <div className="modifications-list">
+                        {modEntries.map(([key, value]) => (
+                          <div key={key} className="modification-item">
+                            <span className="modification-key">{key}:</span>
+                            <span className="modification-value">{String(value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
 
                 {cr.commentaire_admin && (
                   <div className="cr-field">

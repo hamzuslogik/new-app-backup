@@ -5,6 +5,7 @@ import api from '../config/api';
 import { FaTimes } from 'react-icons/fa';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
+import { isCompteRenduSignerEtat } from '../utils/compteRenduSigner';
 import './EditCompteRenduModal.css';
 
 const parseModifications = (mods) => {
@@ -149,7 +150,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
   });
 
   const idEtat = parseInt(formData.id_etat_final, 10);
-  const isEtatSigner = [13, 44, 45].includes(idEtat);
+  const isEtatSigner = isCompteRenduSignerEtat(idEtat || null);
   const isEtatAnnulerRepro = idEtat === 8;
   const isEtatHonoreSuivre = idEtat === 9;
   const isEtatCommentaireSeul = [9, 12, 23, 34, 35].includes(idEtat);

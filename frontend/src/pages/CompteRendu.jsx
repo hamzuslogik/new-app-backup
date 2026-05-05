@@ -9,6 +9,7 @@ import EditCompteRenduModal from '../components/EditCompteRenduModal';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './CompteRendu.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+import { isCompteRenduSignerEtat } from '../utils/compteRenduSigner';
 
 const getTodayISO = () => new Date().toISOString().split('T')[0];
 
@@ -223,6 +224,9 @@ const CompteRendu = () => {
   };
 
   const buildCompteRenduDetails = (cr) => {
+    if (!isCompteRenduSignerEtat(cr)) {
+      return [];
+    }
     const mods = parseMods(cr.modifications);
     const picked = (topKey, modKey = topKey) => {
       const topVal = cr[topKey];
@@ -351,7 +355,9 @@ const CompteRendu = () => {
                       </div>
                       <div className="cr-meta">
                         <span>Tél: {cr.fiche_tel}</span>
-                        <span>Pseudo: {cr.pseudo || '-'}</span>
+                        {isCompteRenduSignerEtat(cr) && (
+                          <span>Pseudo: {cr.pseudo || '-'}</span>
+                        )}
                         <span>Confirmateur: {cr.confirmateur_pseudo || '-'}</span>
                         <span>Commercial: {cr.commercial_pseudo}</span>
                         <span>Créé le: {new Date(cr.date_creation).toLocaleString('fr-FR')}</span>
