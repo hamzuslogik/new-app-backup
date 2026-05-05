@@ -5403,8 +5403,12 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           ph3Data.nbr_annee_finance !== undefined && ph3Data.nbr_annee_finance !== null && String(ph3Data.nbr_annee_finance) !== ''
             ? parseInt(ph3Data.nbr_annee_finance, 10)
             : null,
-          ph3Data.credit_immobilier || null,
-          ph3Data.credit_autre || null,
+          ph3Data.credit_immobilier !== undefined && ph3Data.credit_immobilier !== null && String(ph3Data.credit_immobilier) !== ''
+            ? parseFloat(ph3Data.credit_immobilier)
+            : null,
+          ph3Data.credit_autre !== undefined && ph3Data.credit_autre !== null && String(ph3Data.credit_autre) !== ''
+            ? parseFloat(ph3Data.credit_autre)
+            : null,
           ph3Data.valeur_mensualite !== undefined && ph3Data.valeur_mensualite !== null && String(ph3Data.valeur_mensualite) !== ''
             ? parseFloat(ph3Data.valeur_mensualite)
             : null,

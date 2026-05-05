@@ -185,8 +185,8 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
         ph3_mensualite || null,
         ph3_attente || null,
         nbr_annee_finance || null,
-        credit_immobilier || null,
-        credit_autre || null,
+        credit_immobilier !== undefined && credit_immobilier !== null && String(credit_immobilier) !== '' ? credit_immobilier : null,
+        credit_autre !== undefined && credit_autre !== null && String(credit_autre) !== '' ? credit_autre : null,
         pseudo || null,
         valeur_mensualite || null,
         conf_consommations || null,
@@ -615,7 +615,8 @@ router.put('/:id', authenticate, async (req, res) => {
     for (const field of ph3Fields) {
       if (req.body[field] !== undefined) {
         updateFields.push(`${field} = ?`);
-        updateValues.push(req.body[field] || null);
+        const fieldValue = req.body[field];
+        updateValues.push(fieldValue !== undefined && fieldValue !== null && String(fieldValue) !== '' ? fieldValue : null);
       }
     }
 
