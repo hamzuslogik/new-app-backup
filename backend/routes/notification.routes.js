@@ -131,18 +131,18 @@ router.get('/', authenticate, async (req, res) => {
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     } else if (userFonction === 6) {
+      // Confirmateurs : afficher toutes les notifications qui leur sont destinées
+      // (inclut les notifications workflow personnalisées)
       const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
          ${NOTIF_JOIN_EXP}
          WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-         AND (n.type = 'decalage_request' OR n.type LIKE 'demande_insertion_%')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
          WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-         AND (n.type = 'decalage_request' OR n.type LIKE 'demande_insertion_%')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     } else if (userFonction === 14) {
@@ -256,13 +256,12 @@ router.get('/count', authenticate, async (req, res) => {
       );
       count = result?.count || 0;
     } else if (userFonction === 6) {
-      // Confirmateurs : compter les notifications de décalage et demandes d'insertion
+      // Confirmateurs : compter toutes les notifications non lues qui leur sont destinées
       const result = await queryOne(
         `SELECT COUNT(*) as count
          FROM notifications
          WHERE destination = ?
-         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}
-         AND (type = 'decalage_request' OR type LIKE 'demande_insertion_%')`,
+         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}`,
         [req.user.id]
       );
       count = result?.count || 0;
