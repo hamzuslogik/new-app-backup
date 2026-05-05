@@ -5333,6 +5333,12 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       // Extraire id_etat_final et id_sous_etat séparément car ils ne vont pas dans modifications
       const id_etat_final = ficheData.id_etat_final;
       const id_sous_etat = ficheData.id_sous_etat;
+      // "Signature pour" doit être persisté dans compte_rendu_pending.produit
+      // sans modifier le produit de la fiche à l'approbation.
+      const produitCompteRendu =
+        ficheData.produit !== undefined && ficheData.produit !== null && String(ficheData.produit) !== ''
+          ? parseInt(ficheData.produit, 10)
+          : null;
 
       // Extraire les informations de vente (Phase 3) séparément
       const ph3Data = {};
@@ -5375,11 +5381,11 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       const dateVisite = ficheData?.date_rdv_time || fiche?.date_rdv_time || null;
       const compteRenduResult = await query(
         `INSERT INTO compte_rendu_pending 
-         (id_fiche, id_commercial, statut, id_etat_final, id_sous_etat, modifications, commentaire, 
+         (id_fiche, id_commercial, statut, id_etat_final, id_sous_etat, modifications, commentaire, produit,
           ph3_installateur, ph3_pac, ph3_puissance, ph3_puissance_pv, ph3_rr_model, ph3_ballon, 
           ph3_marque_ballon, ph3_alimentation, ph3_type, ph3_prix, ph3_bonus_30, ph3_mensualite, 
           ph3_attente, nbr_annee_finance, credit_immobilier, credit_autre, valeur_mensualite, pseudo, date_visite, date_creation) 
-         VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id, 
           req.user.id, 
@@ -5387,6 +5393,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           id_sous_etat || null,
           JSON.stringify(modifications), 
           commentaireCompteRendu,
+          produitCompteRendu,
           ph3Data.ph3_installateur || null,
           ph3Data.ph3_pac || null,
           ph3Data.ph3_puissance || null,
