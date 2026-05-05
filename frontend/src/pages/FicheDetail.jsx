@@ -2088,7 +2088,8 @@ const FicheDetail = ({
       }
 
       if (ETATS_MOTIF_QUALIF_REQUIS.includes(selectedEtat)) {
-        if (!(etatFormData.motif_qualif || '').trim()) {
+        const motifCommentaire = (etatFormData.motif_qualif || etatFormData.conf_commentaire_produit || '').trim();
+        if (!motifCommentaire) {
           alert('Veuillez saisir un commentaire.');
           return;
         }
@@ -2125,11 +2126,16 @@ const FicheDetail = ({
 
         // Construire les données de modification selon le type d'état
         const modifications = {};
+        const commentaireEtat =
+          ETATS_MOTIF_QUALIF_REQUIS.includes(selectedEtat)
+            ? (etatFormData.motif_qualif || etatFormData.conf_commentaire_produit || '')
+            : (selectedEtat === 2
+              ? (nrpFormData.conf_commentaire_produit || '')
+              : (etatFormData.conf_commentaire_produit || ''));
+
         const updateData = {
           id_etat_final: selectedEtat,
-          commentaire: selectedEtat === 2
-            ? (nrpFormData.conf_commentaire_produit || '')
-            : (etatFormData.conf_commentaire_produit || '')
+          commentaire: commentaireEtat
         };
         // Pour "Porte / Imprévu / NRP" (état 8), le commercial ne modifie que le commentaire.
         if (!isCommercialPorteImprevuNrp) {
@@ -2260,7 +2266,8 @@ const FicheDetail = ({
           if (etatFormData.id_sous_etat) {
             updateData.id_sous_etat = parseInt(etatFormData.id_sous_etat, 10);
           }
-          if (etatFormData.motif_qualif) updateData.motif_qualif = etatFormData.motif_qualif;
+          const motifCommentaire = (etatFormData.motif_qualif || etatFormData.conf_commentaire_produit || '').trim();
+          if (motifCommentaire) updateData.motif_qualif = motifCommentaire;
         } else if ([5, 6, 22, 24, 25, 26, 29].includes(selectedEtat) && etatFormData.motif_qualif) {
           updateData.motif_qualif = etatFormData.motif_qualif;
         } else if ([23, 34].includes(selectedEtat) && etatFormData.motif_qualif) {
