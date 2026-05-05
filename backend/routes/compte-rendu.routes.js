@@ -872,13 +872,18 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
       'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
       'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
-      'credit_immobilier', 'credit_autre', 'conf_consommations'
+      'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'conf_consommations'
     ];
 
     for (const field of ph3Fields) {
       if (compteRendu[field] !== null && compteRendu[field] !== undefined) {
         const oldValue = ancienneFiche[field];
-        const newValue = compteRendu[field];
+        let newValue = compteRendu[field];
+        if (field === 'nbr_annee_finance') {
+          newValue = String(newValue).trim() === '' ? null : parseInt(newValue, 10);
+        } else if (['ph3_prix', 'ph3_bonus_30', 'ph3_mensualite', 'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'conf_consommations'].includes(field)) {
+          newValue = String(newValue).trim() === '' ? null : parseFloat(newValue);
+        }
         
         // Enregistrer la modification dans modifica si la valeur a changé
         if (oldValue !== newValue) {

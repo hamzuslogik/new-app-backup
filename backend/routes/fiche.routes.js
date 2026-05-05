@@ -5340,7 +5340,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
         'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
         'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
-        'credit_immobilier', 'credit_autre', 'pseudo'
+        'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'pseudo'
       ];
 
       for (const field of ph3Fields) {
@@ -5378,8 +5378,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
          (id_fiche, id_commercial, statut, id_etat_final, id_sous_etat, modifications, commentaire, 
           ph3_installateur, ph3_pac, ph3_puissance, ph3_puissance_pv, ph3_rr_model, ph3_ballon, 
           ph3_marque_ballon, ph3_alimentation, ph3_type, ph3_prix, ph3_bonus_30, ph3_mensualite, 
-          ph3_attente, nbr_annee_finance, credit_immobilier, credit_autre, pseudo, date_visite, date_creation) 
-         VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ph3_attente, nbr_annee_finance, credit_immobilier, credit_autre, valeur_mensualite, pseudo, date_visite, date_creation) 
+         VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id, 
           req.user.id, 
@@ -5400,9 +5400,14 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           ph3Data.ph3_bonus_30 || null,
           ph3Data.ph3_mensualite || null,
           ph3Data.ph3_attente || null,
-          ph3Data.nbr_annee_finance || null,
+          ph3Data.nbr_annee_finance !== undefined && ph3Data.nbr_annee_finance !== null && String(ph3Data.nbr_annee_finance) !== ''
+            ? parseInt(ph3Data.nbr_annee_finance, 10)
+            : null,
           ph3Data.credit_immobilier || null,
           ph3Data.credit_autre || null,
+          ph3Data.valeur_mensualite !== undefined && ph3Data.valeur_mensualite !== null && String(ph3Data.valeur_mensualite) !== ''
+            ? parseFloat(ph3Data.valeur_mensualite)
+            : null,
           ph3Data.pseudo || null,
           dateVisite,
           now
