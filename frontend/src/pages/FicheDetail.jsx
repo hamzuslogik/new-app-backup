@@ -4446,41 +4446,48 @@ const FicheDetail = ({
                               if ([13, 44, 45].includes(cr.id_etat_final)) {
                                 setCompteRenduOption('signer');
                                 setSelectedEtat(cr.id_etat_final);
+                                const crMods = cr.modifications || {};
+                                const pickCrValue = (modKey, topKey = modKey, fallback = '') => {
+                                  const modVal = crMods?.[modKey];
+                                  if (modVal !== undefined && modVal !== null && String(modVal) !== '') return modVal;
+                                  const topVal = cr?.[topKey];
+                                  if (topVal !== undefined && topVal !== null && String(topVal) !== '') return topVal;
+                                  return fallback;
+                                };
                                 // Extraire date et heure de date_sign_time si disponible
                                 let dateSignDate = '';
                                 let dateSignTime = '';
-                                if (cr.modifications?.date_sign_time) {
-                                  const dateSign = new Date(cr.modifications.date_sign_time);
+                                const rawDateSign = pickCrValue('date_sign_time', 'date_creation', '');
+                                if (rawDateSign) {
+                                  const dateSign = new Date(rawDateSign);
                                   dateSignDate = dateSign.toISOString().split('T')[0];
                                   dateSignTime = dateSign.toTimeString().split(' ')[0].substring(0, 5);
                                 }
                                 setEtatFormData({
                                   date_sign_date: dateSignDate,
                                   date_sign_time: dateSignTime,
-                                  produit: cr.modifications?.produit ? String(cr.modifications.produit) : (ficheData?.produit ? String(ficheData.produit) : ''),
+                                  produit: String(pickCrValue('produit', 'produit', ficheData?.produit ? String(ficheData.produit) : '')),
                                   id_sous_etat: cr.id_sous_etat ? String(cr.id_sous_etat) : '',
-                                  id_commercial: cr.modifications?.id_commercial
-                                    ? String(cr.modifications.id_commercial)
-                                    : (ficheData?.id_commercial ? String(ficheData.id_commercial) : ''),
-                                  id_commercial_2: cr.modifications?.id_commercial_2 ? String(cr.modifications.id_commercial_2) : '',
-                                  pseudo: cr.modifications?.pseudo || '',
-                                  ph3_pac: cr.ph3_pac || 'reau',
-                                  ph3_rr_model: cr.ph3_rr_model || '',
-                                  ph3_puissance: cr.ph3_puissance || '',
-                                  ph3_ballon: cr.ph3_ballon || '',
-                                  ph3_marque_ballon: cr.ph3_marque_ballon || '',
-                                  ph3_alimentation: cr.ph3_alimentation || '',
-                                  ph3_type: cr.ph3_type || '',
-                                  ph3_prix: cr.ph3_prix || '',
+                                  id_commercial: String(pickCrValue('id_commercial', 'id_commercial', ficheData?.id_commercial ? String(ficheData.id_commercial) : '')),
+                                  id_commercial_2: String(pickCrValue('id_commercial_2', 'id_commercial_2', '')),
+                                  pseudo: String(pickCrValue('pseudo', 'pseudo', '')),
+                                  ph3_pac: pickCrValue('ph3_pac', 'ph3_pac', 'reau'),
+                                  ph3_rr_model: pickCrValue('ph3_rr_model', 'ph3_rr_model', ''),
+                                  ph3_puissance: pickCrValue('ph3_puissance', 'ph3_puissance', ''),
+                                  ph3_ballon: pickCrValue('ph3_ballon', 'ph3_ballon', ''),
+                                  ph3_marque_ballon: pickCrValue('ph3_marque_ballon', 'ph3_marque_ballon', ''),
+                                  ph3_alimentation: pickCrValue('ph3_alimentation', 'ph3_alimentation', ''),
+                                  ph3_type: pickCrValue('ph3_type', 'ph3_type', ''),
+                                  ph3_prix: pickCrValue('ph3_prix', 'ph3_prix', ''),
                                   ph3_installateur: cr.ph3_installateur ? String(cr.ph3_installateur) : '',
-                                  conf_consommations: cr.modifications?.conf_consommations || '',
-                                  ph3_bonus_30: cr.ph3_bonus_30 || '',
-                                  valeur_mensualite: cr.modifications?.valeur_mensualite || '',
-                                  ph3_mensualite: cr.ph3_mensualite || '',
-                                  ph3_attente: cr.ph3_attente || '',
-                                  nbr_annee_finance: cr.nbr_annee_finance || '',
-                                  credit_immobilier: cr.credit_immobilier || '',
-                                  credit_autre: cr.credit_autre || '',
+                                  conf_consommations: pickCrValue('conf_consommations', 'conf_consommations', ''),
+                                  ph3_bonus_30: pickCrValue('ph3_bonus_30', 'ph3_bonus_30', ''),
+                                  valeur_mensualite: pickCrValue('valeur_mensualite', 'valeur_mensualite', ''),
+                                  ph3_mensualite: pickCrValue('ph3_mensualite', 'ph3_mensualite', ''),
+                                  ph3_attente: pickCrValue('ph3_attente', 'ph3_attente', ''),
+                                  nbr_annee_finance: pickCrValue('nbr_annee_finance', 'nbr_annee_finance', ''),
+                                  credit_immobilier: pickCrValue('credit_immobilier', 'credit_immobilier', ''),
+                                  credit_autre: pickCrValue('credit_autre', 'credit_autre', ''),
                                   conf_commentaire_produit: cr.commentaire || ''
                                 });
                               } else if (cr.id_etat_final === 9) {
