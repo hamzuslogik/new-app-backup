@@ -5340,7 +5340,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
         'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
         'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
-        'credit_immobilier', 'credit_autre'
+        'credit_immobilier', 'credit_autre', 'pseudo'
       ];
 
       for (const field of ph3Fields) {
@@ -5372,13 +5372,14 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       // Créer un compte rendu au lieu de modifier directement
       
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const dateVisite = ficheData?.date_rdv_time || fiche?.date_rdv_time || null;
       const compteRenduResult = await query(
         `INSERT INTO compte_rendu_pending 
          (id_fiche, id_commercial, statut, id_etat_final, id_sous_etat, modifications, commentaire, 
           ph3_installateur, ph3_pac, ph3_puissance, ph3_puissance_pv, ph3_rr_model, ph3_ballon, 
           ph3_marque_ballon, ph3_alimentation, ph3_type, ph3_prix, ph3_bonus_30, ph3_mensualite, 
-          ph3_attente, nbr_annee_finance, credit_immobilier, credit_autre, date_creation) 
-         VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ph3_attente, nbr_annee_finance, credit_immobilier, credit_autre, pseudo, date_visite, date_creation) 
+         VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id, 
           req.user.id, 
@@ -5402,6 +5403,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           ph3Data.nbr_annee_finance || null,
           ph3Data.credit_immobilier || null,
           ph3Data.credit_autre || null,
+          ph3Data.pseudo || null,
+          dateVisite,
           now
         ]
       );
