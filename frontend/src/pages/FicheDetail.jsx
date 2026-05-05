@@ -609,7 +609,7 @@ const FicheDetail = ({
   // Sous-états chargés depuis l'API pour ces états (11 RDV ANNULER, 12 REFUSER : liste affichée, sélection facultative)
   const etatsAvecListeSousEtats = [2, 8, 11, 12, 13, 16, 19, 44, 45];
   // Sous-état obligatoire seulement pour ces états lorsque la liste existe (pas 11 ni 12)
-  const etatsSousEtatObligatoire = [2, 8, 13, 16, 19, 44, 45];
+  const etatsSousEtatObligatoire = [2, 8, 16, 19];
   const { data: sousEtats = [] } = useQuery(
     ['sous-etat', selectedEtat],
     async () => {
@@ -4754,25 +4754,6 @@ const FicheDetail = ({
                       ))}
                     </select>
                   </div>
-
-                  {sousEtats.length > 0 && (
-                    <div className="form-group">
-                      <label htmlFor="compte_rendu_etat_id_sous_etat_signer">Sous État :</label>
-                      <select
-                        id="compte_rendu_etat_id_sous_etat_signer"
-                        className="form-control"
-                        value={etatFormData.id_sous_etat}
-                        onChange={(e) => setEtatFormData({...etatFormData, id_sous_etat: e.target.value})}
-                      >
-                        <option value="">Sélectionner</option>
-                        {sousEtats.map(setat => (
-                          <option key={setat.id} value={setat.id}>
-                            {setat.titre}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
 
                   {([1, 2, 7].includes(user?.fonction)) && (
                     <div className="form-group">
