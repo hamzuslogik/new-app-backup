@@ -378,6 +378,23 @@ async function executeAction(actionType, config, eventData) {
  * si la table n'a pas ces colonnes (migration non exécutée), réessaie sans.
  */
 async function insertNotification(query, type, id_fiche, message, destination, date_creation, idExpediteur, showExpediteur) {
+  // Anti-duplication journalière demandée:
+  // ne pas recréer une notification pour le même destinataire et la même fiche le même jour.
+  if (id_fiche !== null && id_fiche !== undefined && destination) {
+    const alreadyExists = await query(
+      `SELECT id
+       FROM notifications
+       WHERE destination = ?
+         AND id_fiche = ?
+         AND DATE(date_creation) = DATE(?)
+       LIMIT 1`,
+      [destination, id_fiche, date_creation]
+    );
+    if (Array.isArray(alreadyExists) && alreadyExists.length > 0) {
+      return { skipped: true, reason: 'duplicate_same_fiche_same_day', id: alreadyExists[0].id };
+    }
+  }
+
   const withExpediteur = async () => {
     await query(
       `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
@@ -500,10 +517,19 @@ async function executeNotificationAction(config, eventData) {
     }
     console.log(`[WORKFLOW] ${recipientIds.length} destinataire(s) (fonctions/utilisateurs)`);
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    let createdCount = 0;
+    let skippedCount = 0;
     for (const uid of recipientIds) {
-      await insertNotification(query, finalType, finalFicheId, finalMessage, uid, now, idExpediteur, showExpediteur);
+      const insertResult = await insertNotification(query, finalType, finalFicheId, finalMessage, uid, now, idExpediteur, showExpediteur);
+      if (insertResult && insertResult.skipped) skippedCount += 1;
+      else createdCount += 1;
     }
-    return { success: true, message: `${recipientIds.length} notification(s) créée(s)`, count: recipientIds.length };
+    return {
+      success: true,
+      message: `${createdCount} notification(s) créée(s), ${skippedCount} ignorée(s) (doublons)`,
+      count: createdCount,
+      skipped: skippedCount
+    };
   }
   
   // Déterminer le destinataire (mode admins ou rôle sur la fiche)
@@ -699,9 +725,22 @@ async function executeNotificationAction(config, eventData) {
     date_creation: now
   });
 
-  await insertNotification(query, finalType, finalFicheId, finalMessage, finalDestId, now, idExpediteur, showExpediteur);
-  const insertResult = await queryOne('SELECT LAST_INSERT_ID() as id');
-  const notificationId = insertResult?.id || insertResult?.LAST_INSERT_ID?.();
+  const singleInsertResult = await insertNotification(query, finalType, finalFicheId, finalMessage, finalDestId, now, idExpediteur, showExpediteur);
+  let notificationId = null;
+  if (singleInsertResult && singleInsertResult.skipped) {
+    notificationId = singleInsertResult.id || null;
+    console.log(`[WORKFLOW] ⏭️ Notification ignorée (doublon même fiche/jour), ID existant=${notificationId}`);
+    console.log(`[WORKFLOW] ========== executeNotificationAction FIN ==========`);
+    return {
+      success: true,
+      message: 'Notification ignorée (doublon même fiche/jour)',
+      notification_id: notificationId,
+      skipped: true
+    };
+  } else {
+    const insertResult = await queryOne('SELECT LAST_INSERT_ID() as id');
+    notificationId = insertResult?.id || insertResult?.LAST_INSERT_ID?.();
+  }
 
   console.log(`[WORKFLOW] ✅ Notification créée avec succès - ID=${notificationId}`);
   console.log(`[WORKFLOW] ========== executeNotificationAction FIN ==========`);
