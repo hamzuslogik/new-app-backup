@@ -197,9 +197,18 @@ async function checkAndExecuteScheduledWorkflows() {
                 SELECT id, nom, prenom, tel, date_rdv_time, id_etat_final, id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_agent, id_insert, id_commercial, id_commercial_2, id_qualite
                 FROM fiches
                 WHERE date_rdv_time IS NOT NULL
-                  AND DATE(date_rdv_time) = ?
               `;
-              const params = [targetDate];
+              const params = [];
+              // Règle métier :
+              // - offset < 0 : inclure J-offset et toutes les dates antérieures (<=)
+              // - offset >= 0 : garder un matching exact (=)
+              if (rdvOffsetDays < 0) {
+                sql += ' AND DATE(date_rdv_time) <= ?';
+                params.push(targetDate);
+              } else {
+                sql += ' AND DATE(date_rdv_time) = ?';
+                params.push(targetDate);
+              }
               if (etatIds.length > 0) {
                 const placeholders = etatIds.map(() => '?').join(',');
                 sql += ` AND id_etat_final IN (${placeholders})`;

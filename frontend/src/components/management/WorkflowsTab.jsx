@@ -816,7 +816,7 @@ const WorkflowsTab = () => {
                             value={trigger.config?.rdv_offset_days ?? 0}
                             onChange={(e) => updateTrigger(index, 'config', { ...trigger.config, rdv_offset_days: parseInt(e.target.value, 10) || 0 })}
                           />
-                          <small>0 = aujourd&apos;hui, 1 = demain, -1 = hier.</small>
+                          <small>0 = aujourd&apos;hui, 1 = demain, -1 = hier. Si négatif (ex: -2), inclut J-2 et avant.</small>
                         </div>
                         <div className="form-group">
                           <label>États fiche ciblés (optionnel)</label>
