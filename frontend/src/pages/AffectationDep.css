@@ -287,8 +287,8 @@
   top: 2px;
   left: 2px;
   cursor: pointer;
-  width: 10px !important;
-  height: 10px !important;
+  width: 20px !important;
+  height: 20px !important;
   margin: 0 !important;
   padding: 0 !important;
   z-index: 5;
@@ -296,10 +296,10 @@
   transform-origin: top left;
   -webkit-appearance: checkbox !important;
   appearance: checkbox !important;
-  min-width: 10px !important;
-  min-height: 10px !important;
-  max-width: 10px !important;
-  max-height: 10px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
   flex-shrink: 0;
 }
 
