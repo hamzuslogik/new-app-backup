@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { useQuery } from 'react-query';
 import api from '../config/api';
 import { FaTimes } from 'react-icons/fa';
-import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { isCompteRenduSignerEtat } from '../utils/compteRenduSigner';
 import './EditCompteRenduModal.css';
@@ -29,7 +28,6 @@ const parseModifications = (mods) => {
 };
 
 const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, readOnly = false }) => {
-  useModalScrollLock(true);
   const initialMods = useMemo(() => parseModifications(compteRendu.modifications), [compteRendu.modifications]);
   const dateSignStr = initialMods.date_sign_time || compteRendu.date_sign_time || compteRendu.date_creation || '';
   const [dateSignDate, dateSignTime] = (() => {
