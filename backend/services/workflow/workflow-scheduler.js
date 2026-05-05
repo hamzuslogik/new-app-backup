@@ -225,6 +225,16 @@ async function checkAndExecuteScheduledWorkflows() {
 
             console.log(`[WORKFLOW SCHEDULER] Workflow ${workflow.id}: ${matchedFiches.length} fiche(s) matchée(s)`);
             for (const fiche of matchedFiches) {
+              // Si le workflow est désactivé pendant un lot massif, stopper immédiatement.
+              const stillActive = await queryOne(
+                'SELECT id FROM workflows WHERE id = ? AND actif = 1 LIMIT 1',
+                [workflow.id]
+              );
+              if (!stillActive) {
+                console.log(`[WORKFLOW SCHEDULER] Workflow ${workflow.id} désactivé en cours de traitement, arrêt du lot`);
+                break;
+              }
+
               await executeWorkflowActions(workflow.id, {
                 workflow_id: workflow.id,
                 workflow_nom: workflow.nom,
