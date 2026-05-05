@@ -8,6 +8,7 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './CompteRenduPending.css';
 import { isCompteRenduSignerEtat, SIGNATURE_ONLY_MODIFICATION_KEYS } from '../utils/compteRenduSigner';
+import { getDateRappelAffichage } from '../utils/compteRenduDateRappel';
 
 const CompteRenduPending = () => {
   const { user } = useAuth();
@@ -214,6 +215,17 @@ const CompteRenduPending = () => {
                   </div>
                 )}
 
+                {(() => {
+                  const dr = getDateRappelAffichage(cr);
+                  if (!dr) return null;
+                  return (
+                    <div className="cr-field">
+                      <strong>{dr.label}:</strong>
+                      <div className="cr-text">{dr.text}</div>
+                    </div>
+                  );
+                })()}
+
                 {isCompteRenduSignerEtat(cr) &&
                   (cr.ph3_installateur || cr.ph3_pac || cr.ph3_puissance || cr.ph3_prix || cr.ph3_mensualite) && (
                   <div className="cr-field">
@@ -318,6 +330,9 @@ const CompteRenduPending = () => {
                   const modEntries = Object.entries(cr.modifications || {}).filter(([key]) => {
                     if (key === 'conf_commentaire_produit') return false;
                     if (!isCompteRenduSignerEtat(cr) && SIGNATURE_ONLY_MODIFICATION_KEYS.has(key)) return false;
+                    const idEt = Number(cr.id_etat_final);
+                    if (idEt === 8 && ['conf_rdv_date', 'conf_rdv_time', 'conf_rdv_avec'].includes(key)) return false;
+                    if (idEt === 9 && key === 'date_rdv_time') return false;
                     return true;
                   });
                   return modEntries.length > 0 ? (

@@ -8,6 +8,18 @@ import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { isCompteRenduSignerEtat } from '../utils/compteRenduSigner';
 import './EditCompteRenduModal.css';
 
+const getLocalTodayDate = () => {
+  const n = new Date();
+  const p = (x) => String(x).padStart(2, '0');
+  return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;
+};
+
+const getLocalNowTimeShort = () => {
+  const n = new Date();
+  const p = (x) => String(x).padStart(2, '0');
+  return `${p(n.getHours())}:${p(n.getMinutes())}`;
+};
+
 const parseModifications = (mods) => {
   if (!mods) return {};
   if (typeof mods === 'string') {
@@ -49,14 +61,14 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
     return [d.toISOString().split('T')[0], '09:00'];
   })();
 
+  const idEtatInitial = Number(compteRendu.id_etat_final);
   const [formData, setFormData] = useState({
     id_etat_final: compteRendu.id_etat_final || '',
     id_sous_etat: compteRendu.id_sous_etat || '',
     commentaire: compteRendu.commentaire || '',
-    // État 8 - Annuler à reprogrammer
-    conf_rdv_date: initialMods.conf_rdv_date || '',
-    conf_rdv_time: confRdvTimeShort || '',
-    conf_rdv_avec: initialMods.conf_rdv_avec || '',
+    // État 8 - Annuler à reprogrammer (défaut : date et heure du jour)
+    conf_rdv_date: initialMods.conf_rdv_date || (idEtatInitial === 8 ? getLocalTodayDate() : ''),
+    conf_rdv_time: confRdvTimeShort || (idEtatInitial === 8 ? getLocalNowTimeShort() : ''),
     // État 13, 44, 45 - Signer
     produit: initialMods.produit || compteRendu.produit || '',
     date_sign_date: dateSignDate,
@@ -162,7 +174,6 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
     if (isEtatAnnulerRepro) {
       if (formData.conf_rdv_date) mods.conf_rdv_date = formData.conf_rdv_date;
       if (formData.conf_rdv_time) mods.conf_rdv_time = formData.conf_rdv_time;
-      if (formData.conf_rdv_avec) mods.conf_rdv_avec = formData.conf_rdv_avec;
     } else if (isEtatHonoreSuivre) {
       if (formData.date_rappel_date) {
         mods.date_rdv_time = `${formData.date_rappel_date} ${formData.date_rappel_time || '09:00'}:00`;
@@ -250,6 +261,10 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                   updates.date_rappel_date = '';
                   updates.date_rappel_time = '09:00';
                 }
+                if (val === '8') {
+                  updates.conf_rdv_date = formData.conf_rdv_date || getLocalTodayDate();
+                  updates.conf_rdv_time = formData.conf_rdv_time || getLocalNowTimeShort();
+                }
                 setFormData(updates);
               }}
               disabled={readOnly}
@@ -314,13 +329,13 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
             </div>
           )}
 
-          {/* État 9 - Honoré à suivre : Date rappel (J+2 par défaut, modifiable) */}
+          {/* État 9 - Honoré à suivre : date de rappel (J+2 ouvrés par défaut si vide, modifiable) */}
           {isEtatHonoreSuivre && (
             <div className="form-section">
               <h3>Honoré à suivre</h3>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Date rappel (modifiable) :</label>
+                  <label>Date de rappel :</label>
                   <input
                     type="date"
                     value={formData.date_rappel_date}
@@ -341,26 +356,13 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
             </div>
           )}
 
-          {/* État 8 - Annuler à reprogrammer : sous-état, appel avec, date/heure rappel */}
+          {/* État 8 - Annuler à reprogrammer : date/heure rappel (défaut à l’ouverture : aujourd’hui) */}
           {isEtatAnnulerRepro && (
             <div className="form-section">
               <h3>Reprogrammer</h3>
-              <div className="form-group">
-                <label>Appel Avec:</label>
-                <select
-                  value={formData.conf_rdv_avec}
-                  onChange={(e) => setFormData({ ...formData, conf_rdv_avec: e.target.value })}
-                  disabled={readOnly}
-                >
-                  <option value="">Sélectionner</option>
-                  <option value="MR">MR</option>
-                  <option value="MME">MME</option>
-                  <option value="AUTRE">AUTRE</option>
-                </select>
-              </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>A rappeler le:</label>
+                  <label>Date de rappel :</label>
                   <input
                     type="date"
                     value={formData.conf_rdv_date}

@@ -10,6 +10,7 @@ import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './CompteRendu.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { isCompteRenduSignerEtat } from '../utils/compteRenduSigner';
+import { getDateRappelAffichage } from '../utils/compteRenduDateRappel';
 
 const getTodayISO = () => new Date().toISOString().split('T')[0];
 
@@ -451,6 +452,17 @@ const CompteRendu = () => {
                         </div>
                       </div>
                     )}
+
+                    {(() => {
+                      const dr = getDateRappelAffichage(cr);
+                      if (!dr) return null;
+                      return (
+                        <div className="cr-field">
+                          <strong>{dr.label}:</strong>
+                          <div className="cr-text">{dr.text}</div>
+                        </div>
+                      );
+                    })()}
 
                     {buildCompteRenduDetails(cr).length > 0 && (
                       <div className="cr-field">
