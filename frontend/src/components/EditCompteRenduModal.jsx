@@ -84,7 +84,10 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
     ph3_alimentation: compteRendu.ph3_alimentation || '',
     ph3_type: compteRendu.ph3_type || '',
     ph3_prix: compteRendu.ph3_prix || '',
-    ph3_bonus_30: compteRendu.ph3_bonus_30 || '',
+    ph3_bonus_30:
+      initialMods.ph3_bonus_30 != null && String(initialMods.ph3_bonus_30) !== ''
+        ? initialMods.ph3_bonus_30
+        : (compteRendu.ph3_bonus_30 ?? ''),
     ph3_mensualite: compteRendu.ph3_mensualite || '',
     ph3_attente: compteRendu.ph3_attente || '',
     nbr_annee_finance: compteRendu.nbr_annee_finance || '',
