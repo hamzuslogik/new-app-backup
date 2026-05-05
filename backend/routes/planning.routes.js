@@ -596,7 +596,7 @@ router.get('/availability', authenticate, async (req, res) => {
 });
 
 // Créer un planning
-router.post('/create', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/create', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { week, year, dep, nbr_com, type } = req.body;
 
@@ -832,7 +832,7 @@ router.put('/availability/toggle-closed', authenticate, checkPermission(1), asyn
 });
 
 // Modifier la disponibilité (par créneau ou par jour)
-router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.put('/availability', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { week, year, dep, date, hour, value, type } = req.body;
 
@@ -989,7 +989,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7), async (req, 
 });
 
 // Dupliquer un planning
-router.post('/duplicate', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/duplicate', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { sourceWeek, sourceYear, targetWeek, targetYear, dep } = req.body;
 
@@ -1261,7 +1261,7 @@ router.get('/hebdomadaire', authenticate, async (req, res) => {
 });
 
 // Créer une disponibilité hebdomadaire
-router.post('/hebdomadaire', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/hebdomadaire', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { year, week, jour, id_departement, nombre_commercial, forcer } = req.body;
 
@@ -1368,7 +1368,7 @@ router.post('/hebdomadaire', authenticate, checkPermission(1, 2, 7), async (req,
 });
 
 // Supprimer toutes les disponibilités d'un département pour une semaine
-router.delete('/hebdomadaire/:departementId', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.delete('/hebdomadaire/:departementId', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { departementId } = req.params;
     const { year, week } = req.query;
@@ -1405,7 +1405,7 @@ router.delete('/hebdomadaire/:departementId', authenticate, checkPermission(1, 2
 });
 
 // Dupliquer le planning d'une semaine vers plusieurs autres semaines
-router.post('/hebdomadaire/duplicate', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/hebdomadaire/duplicate', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { source_week, source_year, target_weeks, target_year } = req.body;
 
@@ -1494,7 +1494,7 @@ router.post('/hebdomadaire/duplicate', authenticate, checkPermission(1, 2, 7), a
 });
 
 // Réinitialiser toutes les disponibilités d'une semaine (mettre tout à 0)
-router.post('/hebdomadaire/reset', authenticate, checkPermission(1, 2, 7), async (req, res) => {
+router.post('/hebdomadaire/reset', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { year, week } = req.query;
 
