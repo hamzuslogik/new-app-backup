@@ -112,6 +112,16 @@ const CompteRenduPending = () => {
   const canApprove = isAdmin || isBackoffice || isRPConfirmation; // Admins, backoffice et RP Confirmation peuvent approuver
   const isCommercial = user.fonction === 5;
 
+  const getProduitLabel = (cr) => {
+    const mods = cr?.modifications && typeof cr.modifications === 'object' ? cr.modifications : {};
+    const raw = cr?.produit ?? mods?.produit;
+    if (raw == null || String(raw) === '') return '-';
+    const n = Number(raw);
+    if (n === 1) return 'PAC';
+    if (n === 2) return 'PV';
+    return String(raw);
+  };
+
   return (
     <div className="compte-rendu-pending-page">
       <div className="page-header">
@@ -163,6 +173,7 @@ const CompteRenduPending = () => {
                   </div>
                   <div className="cr-meta">
                     <span>Tél: {cr.fiche_tel}</span>
+                    <span>Produit: {getProduitLabel(cr)}</span>
                     <span>Commercial: {cr.commercial_pseudo}</span>
                     <span>Créé le: {new Date(cr.date_creation).toLocaleString('fr-FR')}</span>
                     {cr.date_approbation && (

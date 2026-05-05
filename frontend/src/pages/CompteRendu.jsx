@@ -224,6 +224,16 @@ const CompteRendu = () => {
     return String(value);
   };
 
+  const getProduitLabel = (cr) => {
+    const mods = parseMods(cr?.modifications);
+    const raw = cr?.produit ?? mods?.produit;
+    if (raw == null || String(raw) === '') return '-';
+    const n = Number(raw);
+    if (n === 1) return 'PAC';
+    if (n === 2) return 'PV';
+    return String(raw);
+  };
+
   const buildCompteRenduDetails = (cr) => {
     if (!isCompteRenduSignerEtat(cr)) {
       return [];
@@ -356,6 +366,7 @@ const CompteRendu = () => {
                       </div>
                       <div className="cr-meta">
                         <span>Tél: {cr.fiche_tel}</span>
+                        <span>Produit: {getProduitLabel(cr)}</span>
                         {isCompteRenduSignerEtat(cr) && (
                           <span>Pseudo: {cr.pseudo || '-'}</span>
                         )}
