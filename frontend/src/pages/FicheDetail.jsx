@@ -3337,7 +3337,7 @@ const FicheDetail = ({
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
+                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateTime(etatData.date_rdv_time) });
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RAPPEL POUR BUREAU (19)
