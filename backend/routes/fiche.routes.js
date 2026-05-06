@@ -5714,6 +5714,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     // Construire la requête de mise à jour
     const fields = [];
     const values = [];
+    const effectiveNewEtatId = parseEtatId(ficheData?.id_etat_final);
 
     // Liste des champs autorisés pour éviter les injections SQL
     const allowedFields = [
@@ -5740,7 +5741,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     for (const [key, value] of Object.entries(ficheData)) {
       if (value !== undefined && key !== 'id' && allowedFields.includes(key)) {
         // Autoriser date_appel_time uniquement pour NRP (2) ; sinon conserver l'ancien comportement.
-        if (key === 'date_appel_time' && newEtatId !== 2) {
+        if (key === 'date_appel_time' && effectiveNewEtatId !== 2) {
           console.log(`date_appel_time ignorée pour la fiche ${id} : remplie automatiquement lors du changement d'état`);
           continue; // Ne pas inclure ce champ dans la mise à jour
         }
@@ -5767,7 +5768,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       for (const [key, value] of Object.entries(ficheData)) {
         if (value !== undefined && key !== 'id' && allowedFields.includes(key)) {
           // Autoriser date_appel_time uniquement pour NRP (2) ; sinon conserver l'ancien comportement.
-          if (key === 'date_appel_time' && newEtatId !== 2) {
+          if (key === 'date_appel_time' && effectiveNewEtatId !== 2) {
             continue; // Ne pas logger cette modification
           }
           const oldValue = fiche[key];
