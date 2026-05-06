@@ -1803,6 +1803,20 @@ const FicheDetail = ({
         }));
       }
     }
+    // NRP (2) : date/heure d'appel par défaut = maintenant
+    if (newEtatId === 2) {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      setNrpFormData((prev) => ({
+        ...prev,
+        date_appel_date: prev.date_appel_date || `${yyyy}-${mm}-${dd}`,
+        date_appel_time: prev.date_appel_time || `${hh}:${min}`
+      }));
+    }
     // Si l'état est 7 (confirmer), initialiser les valeurs du formulaire
     if (newEtatId === 7) {
       const currentDate = new Date();
@@ -2250,7 +2264,10 @@ const FicheDetail = ({
 
       // Ajouter les champs spécifiques selon l'état sélectionné
       if (selectedEtat === 2) {
-        // NRP - date_appel_time sera rempli automatiquement par le backend lors du changement d'état
+        // NRP - date d'appel saisie: utilisée aussi pour "A rappeler le" dans fiches_histo
+        if (nrpFormData.date_appel_date) {
+          updateData.date_appel_time = `${nrpFormData.date_appel_date} ${nrpFormData.date_appel_time || '00:00'}:00`;
+        }
         if (nrpFormData.id_sous_etat) {
           updateData.id_sous_etat = parseInt(nrpFormData.id_sous_etat);
         }
@@ -3541,6 +3558,13 @@ const FicheDetail = ({
               const dateCreationEtatActuel = (lastHisto && lastHisto.id_etat === fiche.id_etat_final) ? lastHisto.date_creation : (fiche.date_modif_time || fiche.date_insert_time || null);
               
               // Construire l'objet état actuel à partir des données de la fiche
+              const currentDateAppelTime = (lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.date_appel_time)
+                ? lastHisto.date_appel_time
+                : fiche.date_appel_time;
+              const currentDateRappelTime = (lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.date_rdv_time)
+                ? lastHisto.date_rdv_time
+                : fiche.date_rdv_time;
+
               const etatActuel = {
                 id_etat: fiche.id_etat_final,
                 etat_titre: fiche.etat_final_titre || etats?.find((e) => Number(e.id) === Number(fiche.id_etat_final))?.titre || 'État inconnu',
@@ -3572,8 +3596,8 @@ const FicheDetail = ({
                 conf_orientation_toiture: fiche.conf_orientation_toiture ?? fiche.orientation_toiture ?? null,
                 conf_zones_ombres: fiche.conf_zones_ombres ?? fiche.zones_ombres ?? null,
                 conf_site_classe: fiche.conf_site_classe ?? fiche.site_classe ?? null,
-                date_rdv_time: fiche.date_rdv_time || null,
-                date_appel_time: fiche.date_appel_time || null,
+                date_rdv_time: currentDateRappelTime || null,
+                date_appel_time: currentDateAppelTime || null,
                 date_sign_time: fiche.date_sign_time || null,
                 commercial_pseudo: commerciaux?.find(c => c.id === fiche.id_commercial)?.pseudo || null,
                 commercial_2_pseudo: commerciaux?.find(c => c.id === fiche.id_commercial_2)?.pseudo || null,
@@ -5955,6 +5979,28 @@ const FicheDetail = ({
             {selectedEtat === 2 && (
               <div className="nrp-form" style={{ marginTop: '20px' }}>
                 <h3>Informations NRP</h3>
+
+                <div className="form-group">
+                  <label htmlFor="nrp_date_appel_date">Date d&apos;appel :</label>
+                  <input
+                    id="nrp_date_appel_date"
+                    type="date"
+                    className="form-control"
+                    value={nrpFormData.date_appel_date}
+                    onChange={(e) => setNrpFormData({ ...nrpFormData, date_appel_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="nrp_date_appel_time">Heure d&apos;appel :</label>
+                  <input
+                    id="nrp_date_appel_time"
+                    type="time"
+                    className="form-control"
+                    value={nrpFormData.date_appel_time}
+                    onChange={(e) => setNrpFormData({ ...nrpFormData, date_appel_time: e.target.value })}
+                  />
+                </div>
 
                 <div className="form-group">
                   <label htmlFor="nrp_id_sous_etat">Sous État :</label>

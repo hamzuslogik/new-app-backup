@@ -3681,8 +3681,9 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           conf_consommation_chauffage: fiche.conf_consommation_chauffage || null,
           conf_rdv_annule_precedent: fiche.conf_rdv_annule_precedent || null,
           conf_presence_couple: fiche.conf_presence_couple || null,
-          date_rdv_time: fiche.date_rdv_time || null,
-          date_appel_time: fiche.date_appel_time || null,
+          // Pour l'historique, priorité aux valeurs historisées de la ligne (sinon repli fiche courante)
+          date_rdv_time: (histo.date_rdv_time ?? fiche.date_rdv_time) || null,
+          date_appel_time: (histo.date_appel_time ?? fiche.date_appel_time) || null,
           profession_mr: fiche.profession_mr || null,
           profession_madame: fiche.profession_madame || null,
           type_contrat_mr: fiche.type_contrat_mr || null,
@@ -5616,8 +5617,16 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       const oldEtatId = parseEtatId(fiche.id_etat_final);
       const newEtatId = parseEtatId(ficheData.id_etat_final);
 
-      // Mettre à jour automatiquement date_appel_time lors d'un enregistrement lié à l'état
-      ficheData.date_appel_time = now;
+      // Date d'appel: valeur saisie pour NRP (2) sinon horodatage courant
+      const normalizeDateTime = (v) => {
+        if (v == null || v === '') return null;
+        const s = String(v).trim();
+        if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(s)) return `${s}:00`;
+        return s;
+      };
+      const providedDateAppel = normalizeDateTime(ficheData.date_appel_time);
+      const effectiveDateAppelTime = (newEtatId === 2 && providedDateAppel) ? providedDateAppel : now;
+      ficheData.date_appel_time = effectiveDateAppelTime;
 
       // Si on passe de l'état CONFIRMER (7) à un état du groupe 2, supprimer la date du RDV
       if (oldEtatId === 7 && newEtatId !== 7) {
@@ -5637,9 +5646,13 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       const histoSousEtat = Object.prototype.hasOwnProperty.call(ficheData, 'id_sous_etat')
         ? ficheData.id_sous_etat
         : (fiche && fiche.id_sous_etat != null ? fiche.id_sous_etat : null);
-      const dateRdvHisto = Object.prototype.hasOwnProperty.call(ficheData, 'date_rdv_time')
+      let dateRdvHisto = Object.prototype.hasOwnProperty.call(ficheData, 'date_rdv_time')
         ? (ficheData.date_rdv_time === '' ? null : ficheData.date_rdv_time)
         : (fiche.date_rdv_time || null);
+      if (newEtatId === 2) {
+        // Pour NRP, "A rappeler le" suit la date d'appel saisie.
+        dateRdvHisto = effectiveDateAppelTime;
+      }
       const isEtat7 = newEtatId === 7;
       const { cols: confCols, vals: confVals } = isEtat7 ? getConfFieldsForHisto(ficheData, fiche) : { cols: [], vals: [] };
       const histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
@@ -5666,6 +5679,9 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
       if (Object.prototype.hasOwnProperty.call(ficheData, 'date_sign_time')) {
         pushHistoCol('date_sign_time', ficheData.date_sign_time === '' ? null : ficheData.date_sign_time);
+      }
+      if (newEtatId === 2 || Object.prototype.hasOwnProperty.call(ficheData, 'date_appel_time')) {
+        pushHistoCol('date_appel_time', effectiveDateAppelTime);
       }
       if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial')) {
         const ic = ficheData.id_commercial;
@@ -5723,8 +5739,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
 
     for (const [key, value] of Object.entries(ficheData)) {
       if (value !== undefined && key !== 'id' && allowedFields.includes(key)) {
-        // Ignorer date_appel_time si envoyé manuellement - elle sera remplie automatiquement lors du changement d'état
-        if (key === 'date_appel_time') {
+        // Autoriser date_appel_time uniquement pour NRP (2) ; sinon conserver l'ancien comportement.
+        if (key === 'date_appel_time' && newEtatId !== 2) {
           console.log(`date_appel_time ignorée pour la fiche ${id} : remplie automatiquement lors du changement d'état`);
           continue; // Ne pas inclure ce champ dans la mise à jour
         }
@@ -5750,8 +5766,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       const userPseudo = req.user.pseudo || 'Utilisateur';
       for (const [key, value] of Object.entries(ficheData)) {
         if (value !== undefined && key !== 'id' && allowedFields.includes(key)) {
-          // Ignorer date_appel_time - remplie automatiquement lors du changement d'état
-          if (key === 'date_appel_time') {
+          // Autoriser date_appel_time uniquement pour NRP (2) ; sinon conserver l'ancien comportement.
+          if (key === 'date_appel_time' && newEtatId !== 2) {
             continue; // Ne pas logger cette modification
           }
           const oldValue = fiche[key];
