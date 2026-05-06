@@ -970,6 +970,7 @@ const CONFIRMATEUR_TRANSITIONS = {
 const CONFIRMATEUR_ETAT_TITRES_NORMALISES = [
   'confirmer',
   'annuler a reprogrammer',
+  'annuler et a reprogrammer',
   'client honore a suivre',
   'honore hors cible confirmateurs',
   'rdv annule',
@@ -1003,6 +1004,7 @@ router.get('/etats', authenticate, async (req, res) => {
         etats = etats.filter(e => allowedIds.includes(Number(e.id)));
       } else {
         etats = etats.filter(e => {
+          if (Number(e.id) === 8) return true; // Toujours exposer "Annuler à reprogrammer" aux confirmateurs
           const g = String(e.groupe);
           if (g !== '2' && g !== '3') return false;
           const titreNorm = normalizeTitre(e.titre);
