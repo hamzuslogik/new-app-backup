@@ -8517,13 +8517,27 @@ const CreateRdvModal = ({
   // Afficher le nom de la profession dans l'autocomplete quand ficheData ou rdvFormData a un id (après déclaration de professionsRdv / state)
   useEffect(() => {
     if (!professionsRdv?.length) return;
+    const normalize = (v) => String(v || '').trim().toLowerCase();
+    const resolveProfessionName = (value) => {
+      if (value == null || String(value).trim() === '') return '';
+      const byId = professionsRdv.find((pr) => String(pr.id) === String(value));
+      if (byId?.nom) return byId.nom;
+      const byName = professionsRdv.find((pr) => normalize(pr.nom) === normalize(value));
+      if (byName?.nom) return byName.nom;
+      // Fallback: afficher la valeur brute si déjà une chaîne métier stockée en base.
+      return typeof value === 'string' ? value : '';
+    };
     if (rdvFormData.conf_profession_monsieur) {
-      const p = professionsRdv.find(pr => String(pr.id) === String(rdvFormData.conf_profession_monsieur));
-      if (p?.nom && (rdvProfMrDisplay === '' || rdvProfMrDisplay === p.nom)) setRdvProfMrDisplay(p.nom);
+      const name = resolveProfessionName(rdvFormData.conf_profession_monsieur);
+      if (name && (rdvProfMrDisplay === '' || normalize(rdvProfMrDisplay) !== normalize(name))) {
+        setRdvProfMrDisplay(name);
+      }
     }
     if (rdvFormData.conf_profession_madame) {
-      const p = professionsRdv.find(pr => String(pr.id) === String(rdvFormData.conf_profession_madame));
-      if (p?.nom && (rdvProfMmeDisplay === '' || rdvProfMmeDisplay === p.nom)) setRdvProfMmeDisplay(p.nom);
+      const name = resolveProfessionName(rdvFormData.conf_profession_madame);
+      if (name && (rdvProfMmeDisplay === '' || normalize(rdvProfMmeDisplay) !== normalize(name))) {
+        setRdvProfMmeDisplay(name);
+      }
     }
   }, [professionsRdv, rdvFormData.conf_profession_monsieur, rdvFormData.conf_profession_madame]);
 
