@@ -342,23 +342,10 @@ const Fiches = () => {
   const showSousEtatFilter = filters.id_etat_final && sousEtatsForSelectedEtat.length > 0;
 
   const handleFilterChange = (key, value) => {
-    const normalizeCritereTel = (rawValue, critereChamp) => {
-      const normalized = normalizeText(rawValue);
-      if ((critereChamp || 'tel') === 'tel' && /^\d{9}$/.test(String(normalized || '').trim())) {
-        return `0${String(normalized).trim()}`;
-      }
-      return normalized;
-    };
-    const nextValue =
-      key === 'critere'
-        ? normalizeCritereTel(value, filters.critere_champ)
-        : value;
+    const nextValue = key === 'critere' ? normalizeText(value) : value;
     setFilters(prev => ({
       ...prev,
       [key]: nextValue,
-      ...(key === 'critere_champ' && value === 'tel'
-        ? { critere: normalizeCritereTel(prev.critere || '', 'tel') }
-        : {}),
       page: 1,
       ...(key === 'id_etat_final' ? { id_sous_etat: '', annuler_repro_type: '' } : {})
     }));

@@ -718,6 +718,11 @@ router.get('/', authenticate, async (req, res) => {
       include_ko
     } = req.query;
 
+    const normalizePhoneSearchValue = (raw) => {
+      const value = String(raw ?? '').trim();
+      return /^\d{9}$/.test(value) ? `0${value}` : value;
+    };
+
     const includeArchive =
       include_archive === '1' ||
       include_archive === 1 ||
@@ -969,8 +974,9 @@ router.get('/', authenticate, async (req, res) => {
       const champRecherche = critere_champ || 'tel';
       
       if (champRecherche === 'tel') {
+        const critereTel = normalizePhoneSearchValue(critere);
         whereConditions.push('(fiche.tel = ? OR fiche.gsm1 = ? OR fiche.gsm2 = ?)');
-        params.push(critere, critere, critere);
+        params.push(critereTel, critereTel, critereTel);
       } else if (champRecherche === 'cp') {
         whereConditions.push('fiche.cp LIKE ?');
         params.push(`${critere}%`);
@@ -984,8 +990,9 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
     if (tel) {
+      const telSearch = normalizePhoneSearchValue(tel);
       whereConditions.push('(fiche.tel = ? OR fiche.gsm1 = ? OR fiche.gsm2 = ?)');
-      params.push(tel, tel, tel);
+      params.push(telSearch, telSearch, telSearch);
     }
     if (cp) {
       // Support de plusieurs départements séparés par des virgules
