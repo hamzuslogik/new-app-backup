@@ -637,6 +637,26 @@ const Dashboard = () => {
     }
   }
 
+  // Debug ciblé : visibilité "Annuler à reprogrammer" dans le filtre Dashboard confirmateur
+  useEffect(() => {
+    if (Number(user?.fonction) !== 6) return;
+    const allEtatIds = (etatsData || []).map((e) => Number(e.id));
+    const phase2Ids = (etatsPhase2 || []).map((e) => Number(e.id));
+    const etat8Raw = (etatsData || []).find((e) => Number(e.id) === 8);
+    const etat8InPhase2 = (etatsPhase2 || []).find((e) => Number(e.id) === 8);
+    console.log('[DASHBOARD DEBUG][CONFIRMATEUR][ETAT-8]', {
+      userFonction: user?.fonction,
+      totalEtatsLoaded: (etatsData || []).length,
+      hasEtat8InRawEtats: !!etat8Raw,
+      etat8Raw,
+      phase2Count: (etatsPhase2 || []).length,
+      hasEtat8InPhase2: !!etat8InPhase2,
+      etat8InPhase2,
+      phase2Ids,
+      allEtatIdsSample: allEtatIds.slice(0, 50)
+    });
+  }, [user?.fonction, etatsData, etatsPhase2]);
+
   const sousEtatsForSelectedEtat = (sousEtatsData || []).filter(
     s => Number(s.id_etat) === Number(filters.id_etat_final)
   );
