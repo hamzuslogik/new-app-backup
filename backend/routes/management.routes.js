@@ -954,13 +954,13 @@ const CONFIRMATEUR_TRANSITIONS = {
   1: [5, 7, 6, 29, 24, 2, 19],    // EN-ATTENTE
   2: [5, 7, 6, 29, 24, 2, 19],    // NRP
   19: [5, 7, 6, 29, 24, 2, 19],   // RAPPEL POUR BUREAU
-  5: [22, 7, 6, 29, 24, 19],      // ANNULER
+  5: [5, 22, 7, 6, 29, 24, 19],   // ANNULER (auto-transition autorisée)
   29: [], 6: [], 24: [], 22: [],  // HC et ANNULER 2 FOIS : aucun
   7: [8, 9, 11, 12],              // CONFIRMER
   8: [8, 7, 11],                  // ANNULER ET A REPROGRAMMER
   9: [9, 7, 29, 12],              // CLIENT HONORE A SUIVRE
-  11: [26, 8, 7, 29],             // RDV ANNULER
-  26: [], 12: [25, 8, 7, 2, 19, 6],  // RDV ANN 2 FOIS, REFUSER
+  11: [11, 26, 8, 7, 29],         // RDV ANNULER (auto-transition autorisée)
+  26: [], 12: [12, 25, 8, 7, 2, 19, 6],  // RDV ANN 2 FOIS, REFUSER (auto-transition autorisée)
   34: [], 25: [], 35: [], 13: [], 16: []  // HHC FIN A VERIFIER, REF 2 FOIS, HHC TEC, SIGNER, SIGNER RETRACTER
 };
 

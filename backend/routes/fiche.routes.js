@@ -5625,7 +5625,9 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         return s;
       };
       const providedDateAppel = normalizeDateTime(ficheData.date_appel_time);
-      const effectiveDateAppelTime = (newEtatId === 2 && providedDateAppel) ? providedDateAppel : now;
+      const effectiveDateAppelTime = newEtatId === 2
+        ? now
+        : (providedDateAppel || now);
       ficheData.date_appel_time = effectiveDateAppelTime;
 
       // Si on passe de l'état CONFIRMER (7) à un état du groupe 2, supprimer la date du RDV
