@@ -650,6 +650,25 @@ const FicheDetail = ({
     }
   }, [selectedEtat]);
 
+  // Pré-remplir "A rappeler le" avec la date/heure actuelles pour l'état 8 (Annuler à reprogrammer)
+  useEffect(() => {
+    if (selectedEtat !== 8) return;
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const today = `${yyyy}-${mm}-${dd}`;
+    const currentTime = `${hh}:${min}`;
+
+    setEtatFormData((prev) => ({
+      ...prev,
+      conf_rdv_date: prev.conf_rdv_date || today,
+      conf_rdv_time: prev.conf_rdv_time || currentTime
+    }));
+  }, [selectedEtat]);
+
   // Pré-remplir les sous-états selon l'option de compte rendu sélectionnée
   useEffect(() => {
     if (compteRenduOption && sousEtats.length > 0 && selectedEtat) {
@@ -1358,6 +1377,19 @@ const FicheDetail = ({
         if (u === 'MADAME' || e === 'MME') return 'MME';
         return '';
       })(),
+      conf_deja_etude: ficheData?.conf_deja_etude || '',
+      conf_profession_monsieur:
+        ficheData?.conf_profession_monsieur != null ? String(ficheData.conf_profession_monsieur) : '',
+      conf_type_contrat_mr:
+        ficheData?.conf_type_contrat_mr != null ? String(ficheData.conf_type_contrat_mr) : '',
+      conf_profession_madame:
+        ficheData?.conf_profession_madame != null ? String(ficheData.conf_profession_madame) : '',
+      conf_type_contrat_madame:
+        ficheData?.conf_type_contrat_madame != null ? String(ficheData.conf_type_contrat_madame) : '',
+      conf_revenu: ficheData?.conf_revenu || '',
+      conf_credit: ficheData?.conf_credit || '',
+      conf_rdv_annule_precedent: ficheData?.conf_rdv_annule_precedent || '',
+      conf_presence_couple: ficheData?.conf_presence_couple || '',
       // Champs spécifiques PV
       surface_habitable: ficheData?.surface_habitable || '',
       conf_orientation_toiture: (ficheData?.conf_orientation_toiture || ficheData?.orientation_toiture || '').toString(),
@@ -1376,7 +1408,7 @@ const FicheDetail = ({
             : '',
       conf_complement_chauffage: ficheData?.conf_complement_chauffage || '',
       annee_systeme_chauffage: ficheData?.annee_systeme_chauffage || '',
-      conf_commentaire_produit: '', // Vide par défaut pour le modal de création RDV
+      conf_commentaire_produit: ficheData?.conf_commentaire_produit || ficheData?.commentaire || '',
       id_commercial_2:
         ficheHonoreASuivreViaCompteRendu(ficheData) &&
         ficheData?.id_commercial_2 != null &&
@@ -8861,20 +8893,6 @@ const CreateRdvModal = ({
                       className="form-control"
                       value={rdvFormData.conf_rdv_annule_precedent || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_rdv_annule_precedent: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="OUI">OUI</option>
-                      <option value="NON">NON</option>
-                    </select>
-                  </td>
-                </tr>
-                <tr>
-                  <td><label>Présence du couple ou célibataire</label></td>
-                  <td>
-                    <select
-                      className="form-control"
-                      value={rdvFormData.conf_presence_couple || ''}
-                      onChange={(e) => setRdvFormData({...rdvFormData, conf_presence_couple: e.target.value})}
                     >
                       <option value="">Sélectionner</option>
                       <option value="OUI">OUI</option>

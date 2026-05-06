@@ -313,9 +313,19 @@ const DashboardAdmin = () => {
   }
 
   const handleFilterChange = (key, value) => {
+    const normalizeCritereTel = (rawValue, critereChamp) => {
+      const raw = String(rawValue || '').trim();
+      if ((critereChamp || 'tel') === 'tel' && /^\d{9}$/.test(raw)) {
+        return `0${raw}`;
+      }
+      return rawValue;
+    };
     setFilters(prev => ({
       ...prev,
-      [key]: value,
+      [key]: key === 'critere' ? normalizeCritereTel(value, prev.critere_champ) : value,
+      ...(key === 'critere_champ' && value === 'tel'
+        ? { critere: normalizeCritereTel(prev.critere || '', 'tel') }
+        : {}),
       // Reset à la page 1 seulement si ce n'est pas un changement de page
       page: key === 'page' ? value : 1
     }));

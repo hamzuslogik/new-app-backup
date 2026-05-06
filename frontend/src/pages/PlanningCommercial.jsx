@@ -242,6 +242,13 @@ const PlanningCommercial = () => {
   );
 
   const handleFilterChange = (key, value) => {
+    const normalizeCritereTel = (rawValue, critereChamp) => {
+      const raw = String(rawValue || '').trim();
+      if ((critereChamp || 'tel') === 'tel' && /^\d{9}$/.test(raw)) {
+        return `0${raw}`;
+      }
+      return rawValue;
+    };
     // Si l'utilisateur modifie manuellement les dates, désactiver l'onglet actif
     if (key === 'date_debut' || key === 'date_fin') {
       setActiveTab(null);
@@ -249,7 +256,10 @@ const PlanningCommercial = () => {
     
     setFilters(prev => ({
       ...prev,
-      [key]: value,
+      [key]: key === 'critere' ? normalizeCritereTel(value, prev.critere_champ) : value,
+      ...(key === 'critere_champ' && value === 'tel'
+        ? { critere: normalizeCritereTel(prev.critere || '', 'tel') }
+        : {}),
       page: 1, // Reset à la page 1 lors d'un changement de filtre
       fiche_search: false // Réinitialiser le flag de recherche si on change un filtre
     }));
