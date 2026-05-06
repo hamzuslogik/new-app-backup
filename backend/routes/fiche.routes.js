@@ -5523,8 +5523,12 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       ficheData.motif_qualif = ficheData.conf_commentaire_produit;
     }
 
-    // Mettre à jour la date de modification
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    // Mettre à jour la date de modification avec l'heure système locale (pas UTC).
+    const toMysqlLocalDateTime = (d = new Date()) => {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    };
+    const now = toMysqlLocalDateTime();
     ficheData.date_modif_time = now;
 
     // Vérifier si un RDV est créé/modifié et si le créneau est fermé
