@@ -619,7 +619,7 @@ const Dashboard = () => {
   let etatsPhase3 = etats.filter(e => String(e.groupe) === '3' || e.groupe === 3);
 
   // Session confirmateur (fonction 6) : uniquement certains états en phase 2 et phase 3 (phase 3 = uniquement "Signer")
-  if (user?.fonction === 6) {
+  if (Number(user?.fonction) === 6) {
     etatsPhase0 = [];
     etatsPhase1 = [];
     etatsPhase2 = etatsPhase2.filter(e => isEtatAllowedForConfirmateur(e, CONFIRMATEUR_ETATS_PHASE2));
