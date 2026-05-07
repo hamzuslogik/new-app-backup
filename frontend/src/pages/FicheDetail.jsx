@@ -7404,14 +7404,21 @@ const PlanningTab = ({
     }
   );
   const { data: planningAlertsResponse } = useQuery(
-    ['planning-alerts-modal', planningDep, Number(user?.fonction)],
+    ['planning-alerts-modal', planningDep, Number(user?.fonction), planningWeek, planningYear],
     async () => {
-      if (!planningDep) return { data: [] };
-      const res = await api.get('/planning-alerts', { params: { dep: planningDep, viewer_fonction: Number(user?.fonction) || undefined } });
+      if (!planningDep || !planningWeek || !planningYear) return { data: [] };
+      const res = await api.get('/planning-alerts', {
+        params: {
+          dep: planningDep,
+          viewer_fonction: Number(user?.fonction) || undefined,
+          viewer_week: planningWeek,
+          viewer_year: planningYear,
+        },
+      });
       return res.data;
     },
     {
-      enabled: !!planningDep,
+      enabled: !!(planningDep && planningWeek && planningYear),
       staleTime: 60000,
       refetchInterval: 60000,
       refetchOnWindowFocus: false
