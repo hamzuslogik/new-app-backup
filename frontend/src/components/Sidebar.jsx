@@ -304,6 +304,14 @@ const Sidebar = ({ collapsed }) => {
       visible: true,
     },
     {
+      path: '/alerte-planning',
+      label: 'Alerte Planning',
+      icon: FaBell,
+      permission: null,
+      visible: true,
+      customCheck: (item, user) => [1, 2, 7, 11, 13, 14].includes(Number(user?.fonction)),
+    },
+    {
       path: '/validation',
       label: 'Validation',
       icon: FaCheck,

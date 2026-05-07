@@ -7395,9 +7395,24 @@ const PlanningTab = ({
       refetchOnReconnect: true
     }
   );
+  const { data: planningAlertsResponse } = useQuery(
+    ['planning-alerts-modal', planningDep],
+    async () => {
+      if (!planningDep) return { data: [] };
+      const res = await api.get('/planning-alerts', { params: { dep: planningDep } });
+      return res.data;
+    },
+    {
+      enabled: !!planningDep,
+      staleTime: 60000,
+      refetchInterval: 60000,
+      refetchOnWindowFocus: false
+    }
+  );
 
   const planningData = planningResponse?.data || {};
   const availabilityData = availabilityResponse?.data || {};
+  const planningAlertsData = planningAlertsResponse?.data || [];
   
   // Rafraîchir automatiquement les données à l'ouverture de l'onglet Planning
   useEffect(() => {
@@ -7568,6 +7583,7 @@ const PlanningTab = ({
           <PlanningViewForModal
             planning={planningData}
             availability={availabilityData}
+            planningAlerts={planningAlertsData}
             days={days}
             timeSlots={TIME_SLOTS}
             getUserColor={getUserColor}
@@ -7942,6 +7958,7 @@ const SMSTab = ({ ficheHash, ficheData }) => {
 const PlanningViewForModal = ({ 
   planning, 
   availability, 
+  planningAlerts,
   days, 
   timeSlots, 
   getUserColor, 
@@ -7962,6 +7979,14 @@ const PlanningViewForModal = ({
   const [dayTotalValue, setDayTotalValue] = useState('');
   const [cellAvailabilityValues, setCellAvailabilityValues] = useState({});
   const [pendingAvailabilityEdits, setPendingAvailabilityEdits] = useState({});
+  const alertBySlot = useMemo(() => {
+    const map = {};
+    (planningAlerts || []).forEach((a) => {
+      const key = String(a.slot_hour || '').slice(0, 8);
+      if (key && a.message) map[key] = a.message;
+    });
+    return map;
+  }, [planningAlerts]);
   
   // Synchroniser le state local avec les données reçues
   useEffect(() => {
@@ -8180,6 +8205,7 @@ const PlanningViewForModal = ({
                       sessionCanOpenSlotDashboard && dep
                         ? buildDashboardUrlForPlanningSlot({ dep, date: day.date, slotHour: slot.hour })
                         : null;
+                    const slotAlertMessage = alertBySlot[String(slot.hour || '').slice(0, 8)] || null;
 
                     return (
                       <td
@@ -8222,6 +8248,27 @@ const PlanningViewForModal = ({
                           >
                             <FaInfoCircle />
                           </a>
+                        )}
+                        {slotAlertMessage && (
+                          <div
+                            className="planning-slot-alert"
+                            style={{
+                              position: 'absolute',
+                              right: '4px',
+                              top: '4px',
+                              background: '#ffeb3b',
+                              color: '#333',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              zIndex: 7
+                            }}
+                            title="Alerte planning"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {slotAlertMessage}
+                          </div>
                         )}
                         {/* Badge de disponibilité avec format "X / Y" - TOUJOURS affiché si on a des données */}
                         {isEditing ? (
