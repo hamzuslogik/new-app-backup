@@ -135,13 +135,22 @@ router.get('/', authenticate, async (req, res) => {
         f.prenom as fiche_prenom,
         f.tel as fiche_tel,
         f.id_etat_final as fiche_id_etat_final,
+        f.cq_etat as fiche_cq_etat_id,
+        f.cq_dossier as fiche_cq_dossier_id,
+        f.ph3_installateur as fiche_installateur_id,
         c.titre as centre_titre,
+        cqe.titre as cq_etat_titre,
+        cqd.titre as cq_dossier_titre,
+        i.nom as installateur_nom,
         u.pseudo as confirmateur_pseudo,
         u.nom as confirmateur_nom,
         u.prenom as confirmateur_prenom
       FROM signature s
       INNER JOIN fiches f ON s.id_fiche = f.id
       LEFT JOIN centres c ON f.id_centre = c.id
+      LEFT JOIN cq_etat cqe ON f.cq_etat = cqe.id
+      LEFT JOIN cq_dossier cqd ON f.cq_dossier = cqd.id
+      LEFT JOIN installateurs i ON f.ph3_installateur = i.id
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
       ${whereClause}
       ORDER BY ${sortColumn} ${normalizedOrder}, s.date_heure DESC, s.id DESC

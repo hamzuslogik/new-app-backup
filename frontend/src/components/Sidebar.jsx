@@ -186,6 +186,13 @@ const Sidebar = ({ collapsed }) => {
       visible: true,
     },
     {
+      path: '/cq-signatures',
+      label: 'CQ Signatures',
+      icon: FaSignature,
+      permission: 'signatures_view',
+      visible: true,
+    },
+    {
       path: '/affectation',
       label: 'Affectation',
       icon: FaUserCheck,

@@ -30,7 +30,6 @@ const Signatures = () => {
   });
   const [motifRejet, setMotifRejet] = useState('');
   const [selectedConfirmateurModal, setSelectedConfirmateurModal] = useState('');
-  const [contextMenu, setContextMenu] = useState({ open: false, x: 0, y: 0, signature: null });
 
   // Récupérer les KPI
   const { data: kpiData, isLoading: isLoadingKpi } = useQuery(
@@ -106,10 +105,6 @@ const Signatures = () => {
   const { data: commerciauxData } = useQuery('commerciaux', async () => {
     const res = await api.get('/management/utilisateurs');
     return res.data.data?.filter(u => u.fonction === 5) || [];
-  });
-  const { data: etatsData } = useQuery('signatures-etats', async () => {
-    const res = await api.get('/management/etats');
-    return res.data.data || [];
   });
 
   const signatures = signaturesData?.data || [];
@@ -244,26 +239,6 @@ const Signatures = () => {
     return '#6c757d';
   };
 
-  const getEtatColor = (etatId) => {
-    const etat = (etatsData || []).find((e) => Number(e.id) === Number(etatId));
-    return etat?.color || '#9cbfc8';
-  };
-
-  const getEtatLabel = (etatId) => {
-    const etat = (etatsData || []).find((e) => Number(e.id) === Number(etatId));
-    return etat?.titre || '-';
-  };
-
-  const openContextMenu = (event, signature) => {
-    if (!isAdminSession) return;
-    event.preventDefault();
-    setContextMenu({ open: true, x: event.clientX, y: event.clientY, signature });
-  };
-
-  const closeContextMenu = () => {
-    if (!contextMenu.open) return;
-    setContextMenu({ open: false, x: 0, y: 0, signature: null });
-  };
 
   const applyCurrentWeek = () => {
     const now = new Date();
@@ -291,7 +266,7 @@ const Signatures = () => {
   };
 
   return (
-    <div className="signatures-page" onClick={closeContextMenu}>
+    <div className="signatures-page">
       <div className="page-header">
         <h1><FaSignature /> Signatures et Statistiques</h1>
       </div>
@@ -559,8 +534,8 @@ const Signatures = () => {
           <div className="loading">Chargement des signatures...</div>
         ) : (activeTab === 'actives' ? signatures.length > 0 : rejectedSignatures.length > 0) ? (
           <>
-            <div className="fiches-table-container table-container">
-              <table className="fiches-table signatures-table">
+            <div className="table-container">
+              <table className="signatures-table">
                 <thead>
                   {activeTab === 'actives' ? (
                     <tr>
@@ -574,7 +549,6 @@ const Signatures = () => {
                         Confirmateur <span>{sortIndicator('confirmateur')}</span>
                       </th>
                       <th>Centre</th>
-                      <th>État</th>
                       <th>Fiche</th>
                       <th className="sortable-header" onClick={() => handleSort('telephone')}>
                         Téléphone <span>{sortIndicator('telephone')}</span>
@@ -589,7 +563,6 @@ const Signatures = () => {
                       <th>Date rejet</th>
                       <th>Confirmateur</th>
                       <th>Centre</th>
-                      <th>État</th>
                       <th>Fiche</th>
                       <th>Téléphone</th>
                       <th>Score</th>
@@ -601,15 +574,7 @@ const Signatures = () => {
                 </thead>
                 <tbody>
                   {activeTab === 'actives' ? signatures.map(sig => (
-                      <tr
-                        key={sig.id}
-                        className="fiche-row-by-etat"
-                        onContextMenu={(e) => openContextMenu(e, sig)}
-                        style={{
-                          backgroundColor: `${getEtatColor(sig.fiche_id_etat_final)}40`,
-                          borderLeft: `4px solid ${getEtatColor(sig.fiche_id_etat_final)}`
-                        }}
-                      >
+                      <tr key={sig.id}>
                         <td>
                           {sig.date_planning
                             ? formatRdvDateTime(sig.date_planning)
@@ -618,11 +583,6 @@ const Signatures = () => {
                         <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                         <td>{sig.confirmateur_pseudo || 'Inconnu'}</td>
                         <td>{sig.centre_titre || '-'}</td>
-                        <td>
-                          <span className="etat-badge" style={{ backgroundColor: getEtatColor(sig.fiche_id_etat_final) }}>
-                            {getEtatLabel(sig.fiche_id_etat_final)}
-                          </span>
-                        </td>
                         <td>
                           {sig.id_fiche ? (
                             <FicheDetailLink ficheId={sig.id_fiche}>
@@ -635,28 +595,37 @@ const Signatures = () => {
                         <td>{sig.tel || sig.fiche_tel || '-'}</td>
                         <td>{formatNumber(sig.ajoute)}</td>
                         {isAdminSession && (
-                          <td className="signature-actions-cell">Clic droit</td>
+                          <td className="signature-actions-cell">
+                            <button
+                              type="button"
+                              className="btn-action-signature btn-action-edit"
+                              onClick={() => openModal('editOwner', sig)}
+                            >
+                              Modifier propriétaire
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-action-signature btn-action-add"
+                              onClick={() => openModal('addConfirmateur', sig)}
+                            >
+                              Ajouter confirmateur
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-action-signature btn-action-reject"
+                              onClick={() => openModal('reject', sig)}
+                            >
+                              Ne pas comptabiliser
+                            </button>
+                          </td>
                         )}
                       </tr>
                     ))
                     : rejectedSignatures.map(sig => (
-                      <tr
-                        key={`rejected-${sig.id}`}
-                        className="fiche-row-by-etat"
-                        onContextMenu={(e) => openContextMenu(e, sig)}
-                        style={{
-                          backgroundColor: `${getEtatColor(sig.fiche_id_etat_final)}40`,
-                          borderLeft: `4px solid ${getEtatColor(sig.fiche_id_etat_final)}`
-                        }}
-                      >
+                      <tr key={`rejected-${sig.id}`}>
                         <td>{sig.date_rejet ? formatRdvDateTime(sig.date_rejet) : '-'}</td>
                         <td>{sig.confirmateur_pseudo || 'Inconnu'}</td>
                         <td>{sig.centre_titre || '-'}</td>
-                        <td>
-                          <span className="etat-badge" style={{ backgroundColor: getEtatColor(sig.fiche_id_etat_final) }}>
-                            {getEtatLabel(sig.fiche_id_etat_final)}
-                          </span>
-                        </td>
                         <td>
                           {sig.id_fiche ? (
                             <FicheDetailLink ficheId={sig.id_fiche}>
@@ -670,7 +639,16 @@ const Signatures = () => {
                         <td>{formatNumber(sig.ajoute)}</td>
                         <td>{sig.motif || '-'}</td>
                         <td>{sig.rejete_par_pseudo || '-'}</td>
-                        <td>{isAdminSession ? 'Clic droit' : '-'}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-action-signature btn-action-restore"
+                            onClick={() => restoreRejectedMutation.mutate({ rejectedId: sig.id })}
+                            disabled={restoreRejectedMutation.isLoading}
+                          >
+                            Rendre
+                          </button>
+                        </td>
                       </tr>
                     ))}
                 </tbody>
@@ -760,61 +738,6 @@ const Signatures = () => {
               </button>
             </div>
           </div>
-        </div>
-      )}
-      {contextMenu.open && isAdminSession && (
-        <div
-          className="signature-context-menu"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {activeTab === 'actives' ? (
-            <>
-              <button
-                type="button"
-                className="signature-context-menu-item"
-                onClick={() => {
-                  openModal('editOwner', contextMenu.signature);
-                  closeContextMenu();
-                }}
-              >
-                Modifier propriétaire
-              </button>
-              <button
-                type="button"
-                className="signature-context-menu-item"
-                onClick={() => {
-                  openModal('addConfirmateur', contextMenu.signature);
-                  closeContextMenu();
-                }}
-              >
-                Ajouter confirmateur
-              </button>
-              <button
-                type="button"
-                className="signature-context-menu-item"
-                onClick={() => {
-                  openModal('reject', contextMenu.signature);
-                  closeContextMenu();
-                }}
-              >
-                Ne pas comptabiliser
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className="signature-context-menu-item"
-              onClick={() => {
-                if (contextMenu.signature?.id) {
-                  restoreRejectedMutation.mutate({ rejectedId: contextMenu.signature.id });
-                }
-                closeContextMenu();
-              }}
-            >
-              Rendre
-            </button>
-          )}
         </div>
       )}
     </div>

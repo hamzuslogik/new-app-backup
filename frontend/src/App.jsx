@@ -45,6 +45,7 @@ import Validation from './pages/Validation';
 import DemandesInsertion from './pages/DemandesInsertion';
 import Notifications from './pages/Notifications';
 import Signatures from './pages/Signatures';
+import CQSignatures from './pages/CQSignatures';
 import RendezVousVue from './pages/RendezVousVue';
 import AssistanceIA from './pages/AssistanceIA';
 import MesRappels from './pages/MesRappels';
@@ -115,6 +116,7 @@ function App() {
           <Route path="demandes-insertion" element={<ProtectedRoute permission="demandes_insertion_view"><DemandesInsertion /></ProtectedRoute>} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="signatures" element={<ProtectedRoute permission="signatures_view"><Signatures /></ProtectedRoute>} />
+          <Route path="cq-signatures" element={<ProtectedRoute permission="signatures_view"><CQSignatures /></ProtectedRoute>} />
           <Route path="system-messages" element={<ProtectedRoute permission="management_view"><SystemMessages /></ProtectedRoute>} />
           <Route path="mon-profil" element={<ProtectedRoute permission={null} allowFunctions={[1, 2, 5, 6, 7, 8, 9, 11, 12, 13, 14]}><MonProfil /></ProtectedRoute>} />
         </Route>
