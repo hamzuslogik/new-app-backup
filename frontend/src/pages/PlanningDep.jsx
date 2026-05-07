@@ -156,6 +156,18 @@ const PlanningDep = () => {
   );
 
   const planning = planningData?.data || {};
+  const { data: availabilityData } = useQuery(
+    ['planning-availability-dep', week, year, dep],
+    async () => {
+      const res = await api.get('/planning/availability', { params: { w: week, y: year, dp: dep || '01' } });
+      return res.data;
+    },
+    {
+      keepPreviousData: true,
+      enabled: !!week && !!year && !!dep
+    }
+  );
+  const availability = availabilityData?.data || {};
   
   // Debug: afficher la structure du planning et compter les RDV
   useEffect(() => {
@@ -256,17 +268,20 @@ const PlanningDep = () => {
     }
   }, [departementsData, dep]);
 
-  const computeBesoinForPlanning = (planningByDate, targetDate) => {
+  const computeBesoinForPlanning = (planningByDate, availabilityByDate, targetDate) => {
     const dayPlanning = planningByDate?.[targetDate]?.time || {};
+    const dayAvailability = availabilityByDate?.[targetDate] || {};
     let disponibilite = 0;
     let rdvPris = 0;
 
     Object.values(dayPlanning).forEach((slot) => {
-      const av = slot?.av;
+      rdvPris += Array.isArray(slot?.planning) ? slot.planning.length : 0;
+    });
+    Object.values(dayAvailability).forEach((slot) => {
+      const av = slot?.nbr_com;
       if (av !== null && av !== undefined && !Number.isNaN(Number(av))) {
         disponibilite += Number(av);
       }
-      rdvPris += Array.isArray(slot?.planning) ? slot.planning.length : 0;
     });
 
     return {
@@ -296,11 +311,13 @@ const PlanningDep = () => {
 
       const rows = await Promise.all(
         depItems.map(async (d) => {
-          const res = await api.get('/planning/week', {
-            params: { w: targetWeek, y: targetYear, dp: d.code },
-          });
-          const planningByDate = res?.data?.data || {};
-          const metrics = computeBesoinForPlanning(planningByDate, besoinDate);
+          const [planningRes, availabilityRes] = await Promise.all([
+            api.get('/planning/week', { params: { w: targetWeek, y: targetYear, dp: d.code } }),
+            api.get('/planning/availability', { params: { w: targetWeek, y: targetYear, dp: d.code } })
+          ]);
+          const planningByDate = planningRes?.data?.data || {};
+          const availabilityByDate = availabilityRes?.data?.data || {};
+          const metrics = computeBesoinForPlanning(planningByDate, availabilityByDate, besoinDate);
           return { departement: d.code, nom: d.nom, ...metrics };
         })
       );
@@ -425,6 +442,7 @@ const PlanningDep = () => {
       ) : (
         <PlanningView
           planning={planning}
+          availability={availability}
           days={days}
           timeSlots={TIME_SLOTS}
           getAvailabilityColor={getAvailabilityColor}
@@ -435,7 +453,7 @@ const PlanningDep = () => {
 };
 
 // Composant pour la vue Planning (avec rendez-vous) - Lecture seule
-const PlanningView = ({ planning, days, timeSlots, getAvailabilityColor }) => {
+const PlanningView = ({ planning, availability, days, timeSlots, getAvailabilityColor }) => {
   return (
     <div className="planning-view">
       <div className="planning-table-container">
@@ -479,7 +497,11 @@ const PlanningView = ({ planning, days, timeSlots, getAvailabilityColor }) => {
                     }
                     
                     const rdvs = dayPlanning?.planning || [];
-                    const availability = dayPlanning?.av;
+                    const availabilityFromPlanning = dayPlanning?.av;
+                    const availabilityFromEndpoint = availability?.[day.date]?.[slot.hour]?.nbr_com;
+                    const availabilityValue = (availabilityFromPlanning !== null && availabilityFromPlanning !== undefined)
+                      ? availabilityFromPlanning
+                      : ((availabilityFromEndpoint !== null && availabilityFromEndpoint !== undefined) ? availabilityFromEndpoint : null);
                     
                     // Debug: afficher les informations de débogage pour chaque cellule
                     if (rdvs.length > 0) {
@@ -521,10 +543,10 @@ const PlanningView = ({ planning, days, timeSlots, getAvailabilityColor }) => {
                       const availableKeys = Object.keys(planning[day.date].time || {});
                       console.log(`[PlanningDep] Pas de dayPlanning pour TimeKey ${timeKey} (type: ${typeof timeKey}) - Date: ${day.date}, Clés disponibles:`, availableKeys.map(k => ({ key: k, type: typeof k, parsed: parseInt(k) })));
                     }
-                    const hasPlanning = availability !== null && availability !== undefined;
-                    const isBlocked = availability === 0;
-                    const displayAvailability = hasPlanning ? availability : '-';
-                    const bgColor = hasPlanning && availability > 0 ? getAvailabilityColor(rdvs.length, availability) : '#cccccc';
+                    const hasPlanning = availabilityValue !== null && availabilityValue !== undefined;
+                    const isBlocked = availabilityValue === 0;
+                    const displayAvailability = hasPlanning ? availabilityValue : '-';
+                    const bgColor = hasPlanning && availabilityValue > 0 ? getAvailabilityColor(rdvs.length, availabilityValue) : '#cccccc';
                     
                     return (
                       <td
@@ -540,7 +562,7 @@ const PlanningView = ({ planning, days, timeSlots, getAvailabilityColor }) => {
                           <div
                             className="availability-link"
                             title={hasPlanning
-                              ? `${rdvs.length} rendez-vous sur ${availability} disponibles`
+                              ? `${rdvs.length} rendez-vous sur ${availabilityValue} disponibles`
                               : `${rdvs.length} rendez-vous (disponibilité non définie)`}
                           >
                             <span className="availability-count">{rdvs.length}</span>
