@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS `planning_alerts` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `dep` VARCHAR(10) NOT NULL,
+  `day_name` VARCHAR(16) NOT NULL,
   `slot_hour` VARCHAR(8) NOT NULL,
   `message` TEXT NOT NULL,
   `is_active` TINYINT(1) NOT NULL DEFAULT 1,
@@ -12,8 +13,9 @@ CREATE TABLE IF NOT EXISTS `planning_alerts` (
   `created_at` DATETIME NOT NULL,
   `updated_at` DATETIME NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uniq_dep_slot` (`dep`, `slot_hour`),
+  UNIQUE KEY `uniq_dep_day_slot` (`dep`, `day_name`, `slot_hour`),
   KEY `idx_planning_alerts_dep` (`dep`),
+  KEY `idx_planning_alerts_day_name` (`day_name`),
   KEY `idx_planning_alerts_slot_hour` (`slot_hour`),
   KEY `idx_planning_alerts_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

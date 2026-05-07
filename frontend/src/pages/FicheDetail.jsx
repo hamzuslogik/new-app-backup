@@ -31,6 +31,14 @@ function normalizeDetailItemLabel(s) {
     .trim();
 }
 
+function normalizePlanningDayName(dayName) {
+  return String(dayName || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 function addMinutesToDateTimeString(dateTimeValue, minutesToAdd) {
   const s = String(dateTimeValue ?? '').trim();
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/);
@@ -7979,11 +7987,13 @@ const PlanningViewForModal = ({
   const [dayTotalValue, setDayTotalValue] = useState('');
   const [cellAvailabilityValues, setCellAvailabilityValues] = useState({});
   const [pendingAvailabilityEdits, setPendingAvailabilityEdits] = useState({});
-  const alertBySlot = useMemo(() => {
+  const alertBySlotAndDay = useMemo(() => {
     const map = {};
     (planningAlerts || []).forEach((a) => {
-      const key = String(a.slot_hour || '').slice(0, 8);
-      if (key && a.message) map[key] = a.message;
+      const slot = String(a.slot_hour || '').slice(0, 8);
+      const day = normalizePlanningDayName(a.day_name);
+      const key = `${day}|${slot}`;
+      if (slot && day && a.message) map[key] = a.message;
     });
     return map;
   }, [planningAlerts]);
@@ -8205,7 +8215,8 @@ const PlanningViewForModal = ({
                       sessionCanOpenSlotDashboard && dep
                         ? buildDashboardUrlForPlanningSlot({ dep, date: day.date, slotHour: slot.hour })
                         : null;
-                    const slotAlertMessage = alertBySlot[String(slot.hour || '').slice(0, 8)] || null;
+                    const slotAlertKey = `${normalizePlanningDayName(day.dayName)}|${String(slot.hour || '').slice(0, 8)}`;
+                    const slotAlertMessage = alertBySlotAndDay[slotAlertKey] || null;
 
                     return (
                       <td
@@ -8254,8 +8265,8 @@ const PlanningViewForModal = ({
                             className="planning-slot-alert"
                             style={{
                               position: 'absolute',
-                              right: '4px',
-                              top: '4px',
+                              left: '4px',
+                              bottom: '4px',
                               background: '#ffeb3b',
                               color: '#333',
                               fontSize: '11px',

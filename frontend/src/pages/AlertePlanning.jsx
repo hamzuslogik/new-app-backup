@@ -12,11 +12,19 @@ const SLOT_OPTIONS = [
   { value: '18:00:00', label: '18H' },
   { value: '19:30:00', label: '20H' },
 ];
+const DAY_OPTIONS = [
+  { value: 'lundi', label: 'Lundi' },
+  { value: 'mardi', label: 'Mardi' },
+  { value: 'mercredi', label: 'Mercredi' },
+  { value: 'jeudi', label: 'Jeudi' },
+  { value: 'vendredi', label: 'Vendredi' },
+];
 
 const AlertePlanning = () => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     dep: '',
+    day_name: 'lundi',
     slot_hour: '09:00:00',
     message: '',
   });
@@ -66,12 +74,13 @@ const AlertePlanning = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.dep || !formData.slot_hour || !formData.message.trim()) {
-      toast.warning('Département, créneau et message sont obligatoires');
+    if (!formData.dep || !formData.day_name || !formData.slot_hour || !formData.message.trim()) {
+      toast.warning('Département, jour, créneau et message sont obligatoires');
       return;
     }
     saveMutation.mutate({
       dep: formData.dep,
+      day_name: formData.day_name,
       slot_hour: formData.slot_hour,
       message: formData.message.trim(),
     });
@@ -96,6 +105,17 @@ const AlertePlanning = () => {
               const nom = d.nom || d.departement_nom_uppercase || d.departement_nom || '';
               return <option key={code} value={code}>{code} - {nom}</option>;
             })}
+          </select>
+        </div>
+        <div className="departement-selector">
+          <label>Jour</label>
+          <select
+            value={formData.day_name}
+            onChange={(e) => setFormData((prev) => ({ ...prev, day_name: e.target.value }))}
+          >
+            {DAY_OPTIONS.map((day) => (
+              <option key={day.value} value={day.value}>{day.label}</option>
+            ))}
           </select>
         </div>
         <div className="departement-selector">
@@ -128,6 +148,7 @@ const AlertePlanning = () => {
           <thead>
             <tr>
               <th>Département</th>
+              <th>Jour</th>
               <th>Créneau</th>
               <th>Message</th>
               <th>Actions</th>
@@ -135,13 +156,14 @@ const AlertePlanning = () => {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan="4">Chargement...</td></tr>
+              <tr><td colSpan="5">Chargement...</td></tr>
             ) : (alertsData || []).length === 0 ? (
-              <tr><td colSpan="4">Aucune alerte configurée</td></tr>
+              <tr><td colSpan="5">Aucune alerte configurée</td></tr>
             ) : (
               (alertsData || []).map((a) => (
                 <tr key={a.id}>
                   <td>{a.dep}</td>
+                  <td>{DAY_OPTIONS.find((d) => d.value === a.day_name)?.label || a.day_name || '-'}</td>
                   <td>{a.slot_hour?.substring(0, 5)}</td>
                   <td>{a.message}</td>
                   <td>
