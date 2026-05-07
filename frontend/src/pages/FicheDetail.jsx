@@ -7958,6 +7958,8 @@ const PlanningViewForModal = ({
 }) => {
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [editingDayTotal, setEditingDayTotal] = useState(null);
+  const [dayTotalValue, setDayTotalValue] = useState('');
   const [cellAvailabilityValues, setCellAvailabilityValues] = useState({});
   const [pendingAvailabilityEdits, setPendingAvailabilityEdits] = useState({});
   
@@ -8054,6 +8056,24 @@ const PlanningViewForModal = ({
     });
   };
 
+  const handleEditDayTotal = (date) => {
+    if (!canEdit) return;
+    setEditingDayTotal(date);
+    setDayTotalValue('');
+  };
+
+  const handleSaveDayTotal = (date) => {
+    const value = parseInt(dayTotalValue, 10);
+    if (!canEdit || Number.isNaN(value) || value < 0) return;
+    if (onUpdateAvailability) {
+      timeSlots.forEach((slot) => {
+        onUpdateAvailability(date, slot.hour, value, 'day');
+      });
+    }
+    setEditingDayTotal(null);
+    setDayTotalValue('');
+  };
+
   return (
     <div className="planning-view">
       <div className="planning-table-container">
@@ -8065,6 +8085,42 @@ const PlanningViewForModal = ({
                 <th key={day.date}>
                   <div className="day-header-planning">
                     <span>{day.dayName} {day.date.split('-')[2]}</span>
+                    {canEdit && (
+                      <div className="day-total-controls">
+                        {editingDayTotal === day.date ? (
+                          <>
+                            <input
+                              type="number"
+                              value={dayTotalValue}
+                              onChange={(e) => setDayTotalValue(e.target.value)}
+                              className="total-input"
+                              min="0"
+                              autoFocus
+                            />
+                            <button
+                              className="save-btn"
+                              onClick={() => handleSaveDayTotal(day.date)}
+                            >
+                              <FaCheck />
+                            </button>
+                            <button
+                              className="cancel-btn"
+                              onClick={() => setEditingDayTotal(null)}
+                            >
+                              <FaTimes />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className="total-btn"
+                            onClick={() => handleEditDayTotal(day.date)}
+                            title="Définir la disponibilité de toute la journée"
+                          >
+                            Total
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </th>
               ))}
