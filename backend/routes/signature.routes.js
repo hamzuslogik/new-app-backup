@@ -130,15 +130,26 @@ router.get('/', authenticate, async (req, res) => {
         s.date_heure,
         s.tel,
         f.hash as fiche_hash,
+        f.nom,
+        f.prenom,
+        f.cp,
+        f.date_insert_time,
         f.date_rdv_time as date_planning,
         f.nom as fiche_nom,
         f.prenom as fiche_prenom,
         f.tel as fiche_tel,
         f.id_etat_final as fiche_id_etat_final,
+        f.id_commercial,
+        f.id_commercial_2,
+        f.produit,
+        f.valider,
         f.cq_etat as fiche_cq_etat_id,
         f.cq_dossier as fiche_cq_dossier_id,
         f.ph3_installateur as fiche_installateur_id,
         c.titre as centre_titre,
+        e.titre as etat_titre,
+        uc.pseudo as commercial_pseudo,
+        uc2.pseudo as commercial_2_pseudo,
         cqe.titre as cq_etat_titre,
         cqd.titre as cq_dossier_titre,
         i.nom as installateur_nom,
@@ -148,6 +159,9 @@ router.get('/', authenticate, async (req, res) => {
       FROM signature s
       INNER JOIN fiches f ON s.id_fiche = f.id
       LEFT JOIN centres c ON f.id_centre = c.id
+      LEFT JOIN etats e ON f.id_etat_final = e.id
+      LEFT JOIN utilisateurs uc ON f.id_commercial = uc.id
+      LEFT JOIN utilisateurs uc2 ON f.id_commercial_2 = uc2.id
       LEFT JOIN cq_etat cqe ON f.cq_etat = cqe.id
       LEFT JOIN cq_dossier cqd ON f.cq_dossier = cqd.id
       LEFT JOIN installateurs i ON f.ph3_installateur = i.id

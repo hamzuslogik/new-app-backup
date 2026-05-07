@@ -30,3 +30,14 @@
   overflow-wrap: anywhere;
   max-width: 220px;
 }
+
+.cq-signatures-page .sortable-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.cq-signatures-page .sortable-header span {
+  margin-left: 6px;
+  font-size: 12px;
+  opacity: 0.9;
+}

@@ -189,8 +189,9 @@ const Sidebar = ({ collapsed }) => {
       path: '/cq-signatures',
       label: 'CQ Signatures',
       icon: FaSignature,
-      permission: 'signatures_view',
+      permission: null,
       visible: true,
+      customCheck: (item, user) => [1, 11].includes(Number(user?.fonction)),
     },
     {
       path: '/affectation',

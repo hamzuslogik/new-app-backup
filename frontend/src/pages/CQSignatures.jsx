@@ -52,6 +52,8 @@ const CQSignatures = () => {
   useForceDesktopViewport('cq-signatures-page');
   const [activeTab, setActiveTab] = useState('today');
   const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState('date_planning');
+  const [sortDir, setSortDir] = useState('desc');
   const limit = 100;
 
   const activeRange = useMemo(() => {
@@ -77,9 +79,92 @@ const CQSignatures = () => {
     },
     { keepPreviousData: true }
   );
+  const { data: etatsData } = useQuery('cq-signatures-etats', async () => {
+    const res = await api.get('/management/etats');
+    return res.data?.data || [];
+  });
 
   const rows = data?.data || [];
   const pagination = data?.pagination || {};
+  const getEtatColor = (etatId) => {
+    const etat = (etatsData || []).find((e) => Number(e.id) === Number(etatId));
+    return etat?.color || '#9cbfc8';
+  };
+  const getSortValue = (row, key) => {
+    switch (key) {
+      case 'nom':
+        return String(row.nom || '').toLowerCase();
+      case 'prenom':
+        return String(row.prenom || '').toLowerCase();
+      case 'cp':
+        return String(row.cp || '').toLowerCase();
+      case 'date_insert_time':
+        return row.date_insert_time ? new Date(row.date_insert_time).getTime() : 0;
+      case 'date_planning':
+        return row.date_planning ? new Date(row.date_planning).getTime() : 0;
+      case 'etat':
+        return String(row.etat_titre || '').toLowerCase();
+      case 'date_heure':
+        return row.date_heure ? new Date(row.date_heure).getTime() : 0;
+      case 'confirmateur':
+        return String(row.confirmateur_pseudo || '').toLowerCase();
+      case 'commercial':
+        return String(`${row.commercial_pseudo || ''} ${row.commercial_2_pseudo || ''}`).toLowerCase();
+      case 'produit':
+        return Number(row.produit || 0);
+      case 'valide':
+        return Number(row.valider || 0);
+      case 'centre':
+        return String(row.centre_titre || '').toLowerCase();
+      case 'installateur':
+        return String(row.installateur_nom || '').toLowerCase();
+      case 'cq_etat':
+        return String(row.cq_etat_titre || '').toLowerCase();
+      case 'cq_dossier':
+        return String(row.cq_dossier_titre || '').toLowerCase();
+      case 'fiche':
+        return Number(row.id_fiche || 0);
+      case 'telephone':
+        return String(row.tel || row.fiche_tel || '').toLowerCase();
+      case 'score':
+        return Number(row.ajoute || 0);
+      default:
+        return '';
+    }
+  };
+  const sortedRows = useMemo(() => {
+    const copied = [...rows];
+    copied.sort((a, b) => {
+      const va = getSortValue(a, sortKey);
+      const vb = getSortValue(b, sortKey);
+      if (typeof va === 'number' && typeof vb === 'number') {
+        return sortDir === 'asc' ? va - vb : vb - va;
+      }
+      const cmp = String(va).localeCompare(String(vb), 'fr', { sensitivity: 'base' });
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return copied;
+  }, [rows, sortKey, sortDir]);
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'date_planning' || key === 'date_heure' ? 'desc' : 'asc');
+    }
+  };
+  const sortIndicator = (key) => (sortKey === key ? (sortDir === 'asc' ? '▲' : '▼') : '↕');
+  const getProduitLabel = (value) => {
+    if (value === 1 || value === '1') return 'PAC';
+    if (value === 2 || value === '2') return 'PV';
+    return '-';
+  };
+  const getCommercialsFormatted = (sig) => {
+    const c1 = sig.commercial_pseudo || '';
+    const c2 = sig.commercial_2_pseudo || '';
+    if (c1 && c2) return `${c1} | ${c2}`;
+    return c1 || c2 || '-';
+  };
 
   return (
     <div className="cq-signatures-page">
@@ -113,26 +198,54 @@ const CQSignatures = () => {
             <table className="fiches-table">
               <thead>
                 <tr>
-                  <th>Date planning</th>
-                  <th>Date signature</th>
-                  <th>Confirmateur</th>
-                  <th>Centre</th>
-                  <th>Installateur</th>
-                  <th>CQ État</th>
-                  <th>CQ Dossier</th>
-                  <th>Fiche</th>
-                  <th>Téléphone</th>
-                  <th>Score</th>
+                  <th className="sortable-header" onClick={() => handleSort('nom')}>Nom <span>{sortIndicator('nom')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('prenom')}>Prénom <span>{sortIndicator('prenom')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('telephone')}>Téléphone <span>{sortIndicator('telephone')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('cp')}>CP <span>{sortIndicator('cp')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date insertion <span>{sortIndicator('date_insert_time')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('date_planning')}>Date RDV <span>{sortIndicator('date_planning')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('etat')}>État <span>{sortIndicator('etat')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('confirmateur')}>Confirmateur <span>{sortIndicator('confirmateur')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('commercial')}>Commercial <span>{sortIndicator('commercial')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('centre')}>Centre <span>{sortIndicator('centre')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('produit')}>Produit <span>{sortIndicator('produit')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('valide')}>Validé <span>{sortIndicator('valide')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('date_heure')}>Date signature <span>{sortIndicator('date_heure')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('installateur')}>Installateur <span>{sortIndicator('installateur')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('cq_etat')}>CQ État <span>{sortIndicator('cq_etat')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('cq_dossier')}>CQ Dossier <span>{sortIndicator('cq_dossier')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('fiche')}>ID fiche <span>{sortIndicator('fiche')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('score')}>Score <span>{sortIndicator('score')}</span></th>
                   <th>Détails</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((sig) => (
-                  <tr key={sig.id}>
+                {sortedRows.map((sig) => (
+                  <tr
+                    key={sig.id}
+                    className="fiche-row-by-etat"
+                    style={{
+                      backgroundColor: `${getEtatColor(sig.fiche_id_etat_final)}40`,
+                      borderLeft: `4px solid ${getEtatColor(sig.fiche_id_etat_final)}`
+                    }}
+                  >
+                    <td>{sig.nom || '-'}</td>
+                    <td>{sig.prenom || '-'}</td>
+                    <td>{sig.tel || sig.fiche_tel || '-'}</td>
+                    <td>{sig.cp || '-'}</td>
+                    <td>{sig.date_insert_time ? formatRdvDateTime(sig.date_insert_time) : '-'}</td>
                     <td>{sig.date_planning ? formatRdvDateTime(sig.date_planning) : '-'}</td>
-                    <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
+                    <td>
+                      <span className="etat-badge" style={{ backgroundColor: getEtatColor(sig.fiche_id_etat_final) }}>
+                        {sig.etat_titre || '-'}
+                      </span>
+                    </td>
                     <td>{sig.confirmateur_pseudo || '-'}</td>
+                    <td className="wrap-cell">{getCommercialsFormatted(sig)}</td>
                     <td>{sig.centre_titre || '-'}</td>
+                    <td>{getProduitLabel(sig.produit)}</td>
+                    <td style={{ textAlign: 'center' }}>{Number(sig.valider) === 1 ? 'Oui' : 'Non'}</td>
+                    <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                     <td className="wrap-cell">{sig.installateur_nom || '-'}</td>
                     <td className="wrap-cell">{sig.cq_etat_titre || '-'}</td>
                     <td className="wrap-cell">{sig.cq_dossier_titre || '-'}</td>
