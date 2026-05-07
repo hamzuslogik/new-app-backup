@@ -1218,6 +1218,7 @@ body.dashboard-page {
 
 .fiches-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 11px;
 }
@@ -1274,7 +1275,34 @@ body.dashboard-page {
 .fiches-table td {
   padding: 5px 6.4px;
   border-bottom: 1px solid #eee;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+/* Une seule ligne : téléphone, CP, dates, validé, actions */
+.fiches-table th:nth-child(3),
+.fiches-table td:nth-child(3),
+.fiches-table th:nth-child(4),
+.fiches-table td:nth-child(4),
+.fiches-table th:nth-child(5),
+.fiches-table td:nth-child(5),
+.fiches-table th:nth-child(6),
+.fiches-table td:nth-child(6),
+.fiches-table th:nth-child(12),
+.fiches-table td:nth-child(12),
+.fiches-table th:nth-child(13),
+.fiches-table td:nth-child(13) {
   white-space: nowrap;
+}
+
+.fiches-table td:nth-child(1),
+.fiches-table td:nth-child(2),
+.fiches-table td:nth-child(8),
+.fiches-table td:nth-child(9),
+.fiches-table td:nth-child(10) {
+  min-width: 0;
 }
 
 /* Colonnes Date Insertion et Date RDV - largeur augmentée */
@@ -1305,6 +1333,8 @@ body.dashboard-page {
   max-width: 220px;
   white-space: normal;
   word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   line-height: 1.2;
 }
 
@@ -1313,6 +1343,10 @@ body.dashboard-page {
 .fiches-table td:nth-child(11) {
   min-width: 48px;
   width: 48px;
+  max-width: 100px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* Validé - colonne réduite */
@@ -1407,6 +1441,18 @@ body.dashboard-page {
     padding: 5px 6.4px;
     position: relative;
     text-align: left;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+
+  .fiches-table td:nth-child(3),
+  .fiches-table td:nth-child(4),
+  .fiches-table td:nth-child(5),
+  .fiches-table td:nth-child(6),
+  .fiches-table td:nth-child(12),
+  .fiches-table td:nth-child(13) {
     white-space: nowrap;
   }
 
@@ -1447,6 +1493,8 @@ body.dashboard-page {
   .fiches-table th:nth-child(7),
   .fiches-table td:nth-child(7) {
     white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -1466,6 +1514,13 @@ body.dashboard-page {
   white-space: nowrap;
 }
 
+.fiches-table td:nth-child(7) .etat-badge {
+  white-space: normal;
+  word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* Indicateurs */
 .fiche-indicators {
   display: flex;
@@ -1483,6 +1538,13 @@ body.dashboard-page {
   font-size: 8.5px;
   min-width: 30px;
   text-align: center;
+}
+
+.fiches-table td:nth-child(11) .produit-indicator {
+  white-space: normal;
+  word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .indicator {

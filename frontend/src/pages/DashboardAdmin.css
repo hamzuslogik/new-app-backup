@@ -1152,6 +1152,7 @@ body.dashboard-admin-page {
 
 .fiches-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 11px;
 }
@@ -1195,7 +1196,34 @@ body.dashboard-admin-page {
 .fiches-table td {
   padding: 5px 6.4px;
   border-bottom: 1px solid #eee;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+/* Une seule ligne : téléphone, CP, dates, validé, actions */
+.fiches-table th:nth-child(3),
+.fiches-table td:nth-child(3),
+.fiches-table th:nth-child(4),
+.fiches-table td:nth-child(4),
+.fiches-table th:nth-child(5),
+.fiches-table td:nth-child(5),
+.fiches-table th:nth-child(6),
+.fiches-table td:nth-child(6),
+.fiches-table th:nth-child(12),
+.fiches-table td:nth-child(12),
+.fiches-table th:nth-child(13),
+.fiches-table td:nth-child(13) {
   white-space: nowrap;
+}
+
+.fiches-table td:nth-child(1),
+.fiches-table td:nth-child(2),
+.fiches-table td:nth-child(8),
+.fiches-table td:nth-child(9),
+.fiches-table td:nth-child(10) {
+  min-width: 0;
 }
 
 /* Colonnes Date Insertion et Date RDV - largeur augmentée */
@@ -1211,6 +1239,52 @@ body.dashboard-admin-page {
   width: 140px;
 }
 
+/* CP - colonne réduite */
+.fiches-table th:nth-child(4),
+.fiches-table td:nth-child(4) {
+  min-width: 52px;
+  width: 52px;
+}
+
+/* État Final */
+.fiches-table th:nth-child(7),
+.fiches-table td:nth-child(7) {
+  min-width: 220px;
+  width: 220px;
+  max-width: 220px;
+  white-space: normal;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+/* Produit */
+.fiches-table th:nth-child(11),
+.fiches-table td:nth-child(11) {
+  min-width: 48px;
+  width: 48px;
+  max-width: 100px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Validé */
+.fiches-table th:nth-child(12),
+.fiches-table td:nth-child(12) {
+  min-width: 44px;
+  width: 44px;
+}
+
+/* Actions */
+.fiches-table th:nth-child(13),
+.fiches-table td:nth-child(13) {
+  min-width: 52px;
+  width: 52px;
+  text-align: center;
+}
+
 .fiches-table tbody tr:hover {
   background-color: #f5f5f5;
 }
@@ -1222,7 +1296,7 @@ body.dashboard-admin-page {
   background-color: #fafafa;
 }
 
-/* Badge Ã©tat */
+/* Badge état */
 .etat-badge {
   display: inline-block;
   padding: 4px 6.4px;
@@ -1231,6 +1305,13 @@ body.dashboard-admin-page {
   font-weight: 800;
   font-size: 9.4px;
   white-space: nowrap;
+}
+
+.fiches-table td:nth-child(7) .etat-badge {
+  white-space: normal;
+  word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Indicateurs */
@@ -1250,6 +1331,13 @@ body.dashboard-admin-page {
   font-size: 8.5px;
   min-width: 30px;
   text-align: center;
+}
+
+.fiches-table td:nth-child(11) .produit-indicator {
+  white-space: normal;
+  word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .indicator {
