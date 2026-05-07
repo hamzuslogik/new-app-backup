@@ -1226,6 +1226,14 @@ body.dashboard-admin-page {
   min-width: 0;
 }
 
+/* Téléphone - colonne un peu plus étroite */
+.fiches-table th:nth-child(3),
+.fiches-table td:nth-child(3) {
+  width: 108px;
+  min-width: 100px;
+  max-width: 116px;
+}
+
 /* Colonnes Date Insertion et Date RDV - largeur augmentée */
 .fiches-table th:nth-child(5),
 .fiches-table td:nth-child(5) {
@@ -1259,12 +1267,12 @@ body.dashboard-admin-page {
   line-height: 1.2;
 }
 
-/* Produit */
+/* Produit - colonne un peu plus large */
 .fiches-table th:nth-child(11),
 .fiches-table td:nth-child(11) {
-  min-width: 48px;
-  width: 48px;
-  max-width: 100px;
+  min-width: 72px;
+  width: 132px;
+  max-width: 160px;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;

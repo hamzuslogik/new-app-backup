@@ -515,7 +515,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 11px;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 /* Forcer l'affichage du thead - règle très spécifique */
@@ -557,12 +557,12 @@ table.fiches-table thead,
 }
 
 .fiches-table th {
-  padding: 12px 8px !important;
+  padding: 6px 6.4px !important;
   text-align: left;
   font-weight: 800;
   font-size: 10.2px;
   white-space: nowrap;
-  color: #ffffff !important;
+  color: #333333 !important;
   height: auto !important;
   min-height: 40px !important;
   max-height: none !important;
@@ -575,15 +575,58 @@ table.fiches-table thead,
 .fiches-table th *,
 .fiches-table th span,
 .fiches-table th div {
-  color: #ffffff !important;
+  color: #333333 !important;
 }
 
 .fiches-table td {
-  padding: 8px 6.4px;
+  padding: 5px 6.4px;
   border-bottom: 1px solid #eee;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
 }
 
-/* Colonnes Date Insertion et Date RDV - largeur augmentée */
+/* Une seule ligne : téléphone, CP, dates, validé — actions plusieurs boutons (nowrap) */
+.fiches-table th:nth-child(3),
+.fiches-table td:nth-child(3),
+.fiches-table th:nth-child(4),
+.fiches-table td:nth-child(4),
+.fiches-table th:nth-child(5),
+.fiches-table td:nth-child(5),
+.fiches-table th:nth-child(6),
+.fiches-table td:nth-child(6),
+.fiches-table th:nth-child(12),
+.fiches-table td:nth-child(12),
+.fiches-table th:nth-child(13),
+.fiches-table td:nth-child(13) {
+  white-space: nowrap;
+}
+
+.fiches-table td:nth-child(1),
+.fiches-table td:nth-child(2),
+.fiches-table td:nth-child(8),
+.fiches-table td:nth-child(9),
+.fiches-table td:nth-child(10) {
+  min-width: 0;
+}
+
+/* Téléphone */
+.fiches-table th:nth-child(3),
+.fiches-table td:nth-child(3) {
+  width: 108px;
+  min-width: 100px;
+  max-width: 116px;
+}
+
+/* CP */
+.fiches-table th:nth-child(4),
+.fiches-table td:nth-child(4) {
+  min-width: 52px;
+  width: 52px;
+}
+
+/* Date Insertion / Date RDV */
 .fiches-table th:nth-child(5),
 .fiches-table td:nth-child(5) {
   min-width: 140px;
@@ -596,8 +639,46 @@ table.fiches-table thead,
   width: 140px;
 }
 
-.fiches-table td:last-child {
+/* État Final */
+.fiches-table th:nth-child(7),
+.fiches-table td:nth-child(7) {
+  min-width: 220px;
+  width: 220px;
+  max-width: 220px;
   white-space: normal;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+/* Produit */
+.fiches-table th:nth-child(11),
+.fiches-table td:nth-child(11) {
+  min-width: 72px;
+  width: 132px;
+  max-width: 160px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Validé */
+.fiches-table th:nth-child(12),
+.fiches-table td:nth-child(12) {
+  min-width: 44px;
+  width: 44px;
+}
+
+/* Actions (Plusieurs boutons — plus large que le dashboard) */
+.fiches-table th:nth-child(13),
+.fiches-table td:nth-child(13) {
+  min-width: 180px;
+  width: 180px;
+  max-width: 200px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
 .fiches-table tbody tr:hover {
@@ -640,6 +721,29 @@ table.fiches-table thead,
     display: table-cell !important;
     padding: 6.4px 4.8px;
     font-size: 9.4px;
+  }
+
+  .fiches-table td {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+
+  .fiches-table td:nth-child(3),
+  .fiches-table td:nth-child(4),
+  .fiches-table td:nth-child(5),
+  .fiches-table td:nth-child(6),
+  .fiches-table td:nth-child(12),
+  .fiches-table td:nth-child(13) {
+    white-space: nowrap;
+  }
+
+  .fiches-table th:nth-child(7),
+  .fiches-table td:nth-child(7) {
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   /* Cacher les ::before */
@@ -702,6 +806,14 @@ table.fiches-table thead,
   color: white;
   font-weight: 800;
   font-size: 9.4px;
+  white-space: nowrap;
+}
+
+.fiches-table td:nth-child(7) .etat-badge {
+  white-space: normal;
+  word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .fiche-actions {
@@ -712,14 +824,6 @@ table.fiches-table thead,
   gap: 6.4px;
   min-width: 180px;
   width: 100%;
-}
-
-/* Augmenter la largeur de la colonne Actions */
-.fiches-table th:last-child,
-.fiches-table td:last-child {
-  min-width: 180px !important;
-  width: 180px !important;
-  white-space: normal !important;
 }
 
 .fiche-indicators {
@@ -744,6 +848,13 @@ table.fiches-table thead,
   font-size: 8.5px;
   min-width: 30px;
   text-align: center;
+}
+
+.fiches-table td:nth-child(11) .produit-indicator {
+  white-space: normal;
+  word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .indicator.archive {
@@ -1220,6 +1331,22 @@ table.fiches-table thead,
     font-size: 10.2px;
   }
 
+  .fiches-table td {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+
+  .fiches-table td:nth-child(3),
+  .fiches-table td:nth-child(4),
+  .fiches-table td:nth-child(5),
+  .fiches-table td:nth-child(6),
+  .fiches-table td:nth-child(12),
+  .fiches-table td:nth-child(13) {
+    white-space: nowrap;
+  }
+
   /* Colonnes Date Insertion et Date RDV - largeur augmentée sur mobile */
   .fiches-table th:nth-child(5),
   .fiches-table td:nth-child(5) {
@@ -1231,6 +1358,14 @@ table.fiches-table thead,
   .fiches-table td:nth-child(6) {
     min-width: 160px !important;
     width: 160px !important;
+  }
+
+  /* État Final — retour à la ligne */
+  .fiches-table th:nth-child(7),
+  .fiches-table td:nth-child(7) {
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   /* Cacher les ::before sur mobile car on garde le format tableau */
