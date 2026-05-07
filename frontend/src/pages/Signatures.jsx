@@ -17,6 +17,7 @@ const Signatures = () => {
   const [dateDebut, setDateDebut] = useState(() => getFirstOfMonthLocal());
   const [dateFin, setDateFin] = useState(() => getTodayLocal());
   const [selectedConfirmateur, setSelectedConfirmateur] = useState('');
+  const [selectedCommercial, setSelectedCommercial] = useState('');
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('date_planning');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -56,7 +57,7 @@ const Signatures = () => {
 
   // Récupérer la liste des signatures
   const { data: signaturesData, isLoading: isLoadingSignatures } = useQuery(
-    ['signatures', dateDebut, dateFin, selectedConfirmateur, page, sortBy, sortOrder],
+    ['signatures', dateDebut, dateFin, selectedConfirmateur, selectedCommercial, page, sortBy, sortOrder],
     async () => {
       const params = {
         date_debut: dateDebut,
@@ -69,6 +70,9 @@ const Signatures = () => {
       if (selectedConfirmateur) {
         params.id_confirmateur = selectedConfirmateur;
       }
+      if (selectedCommercial) {
+        params.id_commercial = selectedCommercial;
+      }
       const res = await api.get('/signature', { params });
       return res.data;
     },
@@ -77,7 +81,7 @@ const Signatures = () => {
 
   // Récupérer la liste des signatures rejetées
   const { data: rejectedData, isLoading: isLoadingRejected } = useQuery(
-    ['signatures-rejetees', dateDebut, dateFin, selectedConfirmateur, page, isAdminSession],
+    ['signatures-rejetees', dateDebut, dateFin, selectedConfirmateur, selectedCommercial, page, isAdminSession],
     async () => {
       const params = {
         date_debut: dateDebut,
@@ -86,6 +90,7 @@ const Signatures = () => {
         limit
       };
       if (selectedConfirmateur) params.id_confirmateur = selectedConfirmateur;
+      if (selectedCommercial) params.id_commercial = selectedCommercial;
       const res = await api.get('/signature/rejetees', { params });
       return res.data;
     },
@@ -96,6 +101,10 @@ const Signatures = () => {
   const { data: confirmateursData } = useQuery('confirmateurs', async () => {
     const res = await api.get('/management/utilisateurs');
     return res.data.data?.filter(u => u.fonction === 6) || [];
+  });
+  const { data: commerciauxData } = useQuery('commerciaux', async () => {
+    const res = await api.get('/management/utilisateurs');
+    return res.data.data?.filter(u => u.fonction === 5) || [];
   });
 
   const signatures = signaturesData?.data || [];
@@ -230,6 +239,31 @@ const Signatures = () => {
     return '#6c757d';
   };
 
+  const applyCurrentWeek = () => {
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    const friday = new Date(monday);
+    friday.setDate(monday.getDate() + 4);
+    const toLocal = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    };
+    setDateDebut(toLocal(monday));
+    setDateFin(toLocal(friday));
+    setPage(1);
+  };
+
+  const applyCurrentMonth = () => {
+    setDateDebut(getFirstOfMonthLocal());
+    setDateFin(getTodayLocal());
+    setPage(1);
+  };
+
   return (
     <div className="signatures-page">
       <div className="page-header">
@@ -238,6 +272,10 @@ const Signatures = () => {
 
       {/* Filtres */}
       <div className="filters-section">
+        <div className="quick-access-row">
+          <button type="button" className="btn-quick-access" onClick={applyCurrentWeek}>Signatures de la semaine</button>
+          <button type="button" className="btn-quick-access" onClick={applyCurrentMonth}>Signatures du mois</button>
+        </div>
         <div className="filter-group">
           <label>Date début :</label>
           <input
@@ -275,6 +313,22 @@ const Signatures = () => {
             <option value="">Tous</option>
             {confirmateursData?.map(conf => (
               <option key={conf.id} value={conf.id}>{conf.pseudo}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
+          <label>Commercial :</label>
+          <select
+            value={selectedCommercial}
+            onChange={(e) => {
+              setSelectedCommercial(e.target.value);
+              setPage(1);
+            }}
+            className="form-control"
+          >
+            <option value="">Tous</option>
+            {commerciauxData?.map(com => (
+              <option key={com.id} value={com.id}>{com.pseudo}</option>
             ))}
           </select>
         </div>

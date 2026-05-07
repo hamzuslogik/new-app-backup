@@ -49,6 +49,7 @@ router.get('/', authenticate, async (req, res) => {
       date_debut, 
       date_fin, 
       id_confirmateur, 
+      id_commercial,
       id_fiche,
       id_etat_final,
       sort_by = 'date_planning',
@@ -82,6 +83,10 @@ router.get('/', authenticate, async (req, res) => {
     if (id_confirmateur) {
       whereConditions.push('s.confirmateur = ?');
       params.push(id_confirmateur);
+    }
+    if (id_commercial) {
+      whereConditions.push('f.id_commercial = ?');
+      params.push(id_commercial);
     }
 
     // Filtrer par fiche
@@ -175,7 +180,7 @@ router.get('/rejetees', authenticate, async (req, res) => {
     }
 
     await ensureSignaturesRejeteesTable();
-    const { date_debut, date_fin, id_confirmateur, page = 1, limit = 50 } = req.query;
+    const { date_debut, date_fin, id_confirmateur, id_commercial, page = 1, limit = 50 } = req.query;
     const whereConditions = ['1=1'];
     const params = [];
 
@@ -190,6 +195,10 @@ router.get('/rejetees', authenticate, async (req, res) => {
     if (id_confirmateur) {
       whereConditions.push('sr.confirmateur = ?');
       params.push(id_confirmateur);
+    }
+    if (id_commercial) {
+      whereConditions.push('f.id_commercial = ?');
+      params.push(id_commercial);
     }
 
     const whereClause = `WHERE ${whereConditions.join(' AND ')}`;

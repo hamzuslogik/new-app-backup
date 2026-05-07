@@ -27,13 +27,15 @@
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   flex-wrap: wrap;
+  align-items: end;
 }
 
 .filter-group {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 8px;
-  min-width: 200px;
+  min-width: 260px;
 }
 
 .filter-group label {
@@ -47,6 +49,27 @@
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+}
+
+.quick-access-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.btn-quick-access {
+  border: 1px solid #9cbfc8;
+  background: #fff;
+  color: #1a2529;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-quick-access:hover {
+  background: #9cbfc8;
+  color: #fff;
 }
 
 /* KPI Section */
@@ -521,6 +544,8 @@
 
   .filter-group {
     min-width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .kpi-grid {
