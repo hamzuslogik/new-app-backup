@@ -7404,10 +7404,10 @@ const PlanningTab = ({
     }
   );
   const { data: planningAlertsResponse } = useQuery(
-    ['planning-alerts-modal', planningDep],
+    ['planning-alerts-modal', planningDep, Number(user?.fonction)],
     async () => {
       if (!planningDep) return { data: [] };
-      const res = await api.get('/planning-alerts', { params: { dep: planningDep } });
+      const res = await api.get('/planning-alerts', { params: { dep: planningDep, viewer_fonction: Number(user?.fonction) || undefined } });
       return res.data;
     },
     {

@@ -15,6 +15,17 @@ function normalizeDayName(value) {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+function normalizeVisibilityFunctions(rawValue) {
+  const list = Array.isArray(rawValue)
+    ? rawValue
+    : String(rawValue || '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+  const cleaned = [...new Set(list.map((v) => parseInt(v, 10)).filter((n) => Number.isFinite(n) && n > 0))];
+  return cleaned.sort((a, b) => a - b);
+}
+
 async function ensurePlanningAlertsTable() {
   await query(`
     CREATE TABLE IF NOT EXISTS planning_alerts (
@@ -23,6 +34,7 @@ async function ensurePlanningAlertsTable() {
       day_name VARCHAR(16) NOT NULL DEFAULT 'lundi',
       slot_hour VARCHAR(8) NOT NULL,
       message TEXT NOT NULL,
+      visible_functions VARCHAR(255) NOT NULL DEFAULT '',
       is_active TINYINT(1) NOT NULL DEFAULT 1,
       created_by INT NULL,
       updated_by INT NULL,
@@ -41,6 +53,17 @@ async function ensurePlanningAlertsTable() {
   `);
   if (!dayNameCol?.ok) {
     await query("ALTER TABLE planning_alerts ADD COLUMN day_name VARCHAR(16) NOT NULL DEFAULT 'lundi' AFTER dep");
+  }
+  const visibleFunctionsCol = await queryOne(`
+    SELECT 1 AS ok
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'planning_alerts'
+      AND COLUMN_NAME = 'visible_functions'
+    LIMIT 1
+  `);
+  if (!visibleFunctionsCol?.ok) {
+    await query("ALTER TABLE planning_alerts ADD COLUMN visible_functions VARCHAR(255) NOT NULL DEFAULT '' AFTER message");
   }
   const oldUnique = await queryOne(`
     SELECT 1 AS ok
@@ -72,6 +95,7 @@ router.get('/', authenticate, async (req, res) => {
     const dep = String(req.query.dep || '').trim();
     const dayName = normalizeDayName(req.query.day_name);
     const activeOnly = String(req.query.active_only || '1') !== '0';
+    const viewerFonction = parseInt(req.query.viewer_fonction, 10);
     const where = [];
     const params = [];
 
@@ -86,9 +110,13 @@ router.get('/', authenticate, async (req, res) => {
     if (activeOnly) {
       where.push('is_active = 1');
     }
+    if (Number.isFinite(viewerFonction) && viewerFonction > 0) {
+      where.push("(visible_functions = '' OR FIND_IN_SET(?, visible_functions) > 0)");
+      params.push(String(viewerFonction));
+    }
 
     const sql = `
-      SELECT id, dep, day_name, slot_hour, message, is_active, created_by, updated_by, created_at, updated_at
+      SELECT id, dep, day_name, slot_hour, message, visible_functions, is_active, created_by, updated_by, created_at, updated_at
       FROM planning_alerts
       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
       ORDER BY dep ASC, day_name ASC, slot_hour ASC
@@ -114,9 +142,10 @@ router.post('/', authenticate, async (req, res) => {
     const slotHourRaw = String(req.body.slot_hour || '').trim();
     const slotHour = slotHourRaw.length === 5 ? `${slotHourRaw}:00` : slotHourRaw;
     const message = String(req.body.message || '').trim();
+    const visibleFunctions = normalizeVisibilityFunctions(req.body.visible_functions);
 
-    if (!dep || !dayName || !slotHour || !message) {
-      return res.status(400).json({ success: false, message: 'dep, day_name, slot_hour et message sont requis' });
+    if (!dep || !dayName || !slotHour || !message || visibleFunctions.length === 0) {
+      return res.status(400).json({ success: false, message: 'dep, day_name, slot_hour, message et visible_functions sont requis' });
     }
     if (!SLOT_HOURS.has(slotHour)) {
       return res.status(400).json({ success: false, message: 'Créneau invalide' });
@@ -127,18 +156,19 @@ router.post('/', authenticate, async (req, res) => {
 
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     await query(
-      `INSERT INTO planning_alerts (dep, day_name, slot_hour, message, is_active, created_by, updated_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)
+      `INSERT INTO planning_alerts (dep, day_name, slot_hour, message, visible_functions, is_active, created_by, updated_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          message = VALUES(message),
+         visible_functions = VALUES(visible_functions),
          is_active = 1,
          updated_by = VALUES(updated_by),
          updated_at = VALUES(updated_at)`,
-      [dep, dayName, slotHour, message, req.user.id || null, req.user.id || null, now, now]
+      [dep, dayName, slotHour, message, visibleFunctions.join(','), req.user.id || null, req.user.id || null, now, now]
     );
 
     const saved = await queryOne(
-      'SELECT id, dep, day_name, slot_hour, message, is_active, created_by, updated_by, created_at, updated_at FROM planning_alerts WHERE dep = ? AND day_name = ? AND slot_hour = ?',
+      'SELECT id, dep, day_name, slot_hour, message, visible_functions, is_active, created_by, updated_by, created_at, updated_at FROM planning_alerts WHERE dep = ? AND day_name = ? AND slot_hour = ?',
       [dep, dayName, slotHour]
     );
     res.json({ success: true, data: saved });

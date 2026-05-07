@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS `planning_alerts` (
   `day_name` VARCHAR(16) NOT NULL,
   `slot_hour` VARCHAR(8) NOT NULL,
   `message` TEXT NOT NULL,
+  `visible_functions` VARCHAR(255) NOT NULL,
   `is_active` TINYINT(1) NOT NULL DEFAULT 1,
   `created_by` INT NULL,
   `updated_by` INT NULL,

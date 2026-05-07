@@ -19,6 +19,19 @@ const DAY_OPTIONS = [
   { value: 'jeudi', label: 'Jeudi' },
   { value: 'vendredi', label: 'Vendredi' },
 ];
+const FUNCTION_OPTIONS = [
+  { value: 1, label: 'Administrateur' },
+  { value: 2, label: 'RE Qualification' },
+  { value: 3, label: 'Agent Qualification' },
+  { value: 5, label: 'Commercial' },
+  { value: 6, label: 'Confirmateur' },
+  { value: 7, label: 'Resp. ADV' },
+  { value: 8, label: 'Qualité Qualification' },
+  { value: 11, label: 'Backoffice' },
+  { value: 12, label: 'RP Qualification' },
+  { value: 13, label: 'RP Confirmation' },
+  { value: 14, label: 'RE Confirmation' },
+];
 
 const AlertePlanning = () => {
   const queryClient = useQueryClient();
@@ -27,6 +40,7 @@ const AlertePlanning = () => {
     day_name: 'lundi',
     slot_hour: '09:00:00',
     message: '',
+    visible_functions: [],
   });
 
   const { data: departementsData } = useQuery('planning-alerts-departements', async () => {
@@ -74,8 +88,8 @@ const AlertePlanning = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.dep || !formData.day_name || !formData.slot_hour || !formData.message.trim()) {
-      toast.warning('Département, jour, créneau et message sont obligatoires');
+    if (!formData.dep || !formData.day_name || !formData.slot_hour || !formData.message.trim() || formData.visible_functions.length === 0) {
+      toast.warning('Département, jour, créneau, message et visibilité sont obligatoires');
       return;
     }
     saveMutation.mutate({
@@ -83,7 +97,31 @@ const AlertePlanning = () => {
       day_name: formData.day_name,
       slot_hour: formData.slot_hour,
       message: formData.message.trim(),
+      visible_functions: formData.visible_functions,
     });
+  };
+
+  const toggleVisibilityFunction = (fonctionId) => {
+    setFormData((prev) => {
+      const exists = prev.visible_functions.includes(fonctionId);
+      return {
+        ...prev,
+        visible_functions: exists
+          ? prev.visible_functions.filter((id) => id !== fonctionId)
+          : [...prev.visible_functions, fonctionId],
+      };
+    });
+  };
+
+  const formatVisibilityLabel = (raw) => {
+    const ids = String(raw || '')
+      .split(',')
+      .map((v) => parseInt(v, 10))
+      .filter((n) => Number.isFinite(n));
+    if (ids.length === 0) return '-';
+    return ids
+      .map((id) => FUNCTION_OPTIONS.find((f) => f.value === id)?.label || `Fonction ${id}`)
+      .join(', ');
   };
 
   return (
@@ -138,6 +176,21 @@ const AlertePlanning = () => {
             placeholder="Ex: !!9H:30"
           />
         </div>
+        <div className="departement-selector" style={{ minWidth: 380 }}>
+          <label>Visibilité (fonctions)</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxWidth: 420 }}>
+            {FUNCTION_OPTIONS.map((opt) => (
+              <label key={opt.value} style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <input
+                  type="checkbox"
+                  checked={formData.visible_functions.includes(opt.value)}
+                  onChange={() => toggleVisibilityFunction(opt.value)}
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        </div>
         <button type="submit" className="nav-btn" disabled={saveMutation.isLoading}>
           {saveMutation.isLoading ? 'Enregistrement...' : 'Enregistrer'}
         </button>
@@ -151,14 +204,15 @@ const AlertePlanning = () => {
               <th>Jour</th>
               <th>Créneau</th>
               <th>Message</th>
+              <th>Visibilité</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan="5">Chargement...</td></tr>
+              <tr><td colSpan="6">Chargement...</td></tr>
             ) : (alertsData || []).length === 0 ? (
-              <tr><td colSpan="5">Aucune alerte configurée</td></tr>
+              <tr><td colSpan="6">Aucune alerte configurée</td></tr>
             ) : (
               (alertsData || []).map((a) => (
                 <tr key={a.id}>
@@ -166,6 +220,7 @@ const AlertePlanning = () => {
                   <td>{DAY_OPTIONS.find((d) => d.value === a.day_name)?.label || a.day_name || '-'}</td>
                   <td>{a.slot_hour?.substring(0, 5)}</td>
                   <td>{a.message}</td>
+                  <td>{formatVisibilityLabel(a.visible_functions)}</td>
                   <td>
                     <button
                       type="button"
