@@ -516,6 +516,7 @@ const PlanningView = ({ planning, days, timeSlots, getAvailabilityColor }) => {
                     }
                     const hasPlanning = availability !== null && availability !== undefined;
                     const isBlocked = availability === 0;
+                    const displayAvailability = hasPlanning ? availability : '-';
                     const bgColor = hasPlanning && availability > 0 ? getAvailabilityColor(rdvs.length, availability) : '#cccccc';
                     
                     return (
@@ -527,19 +528,19 @@ const PlanningView = ({ planning, days, timeSlots, getAvailabilityColor }) => {
                           position: 'relative'
                         }}
                       >
-                        {/* Badge de disponibilité */}
-                        {hasPlanning && (
-                          <div className="availability-badge" style={{ backgroundColor: bgColor }}>
-                            <div
-                              className="availability-link"
-                              title={`${rdvs.length} rendez-vous sur ${availability} disponibles`}
-                            >
-                              <span className="availability-count">{rdvs.length}</span>
-                              <span className="availability-separator">/</span>
-                              <span className="availability-total">{availability}</span>
-                            </div>
+                        {/* Badge de disponibilité - toujours affiché (aligné onglet Disponibilité) */}
+                        <div className="availability-badge" style={{ backgroundColor: bgColor }}>
+                          <div
+                            className="availability-link"
+                            title={hasPlanning
+                              ? `${rdvs.length} rendez-vous sur ${availability} disponibles`
+                              : `${rdvs.length} rendez-vous (disponibilité non définie)`}
+                          >
+                            <span className="availability-count">{rdvs.length}</span>
+                            <span className="availability-separator">/</span>
+                            <span className="availability-total">{displayAvailability}</span>
                           </div>
-                        )}
+                        </div>
                       </td>
                     );
                   })}
