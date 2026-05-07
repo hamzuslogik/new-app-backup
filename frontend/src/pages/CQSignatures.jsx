@@ -214,7 +214,6 @@ const CQSignatures = () => {
                   <th className="sortable-header" onClick={() => handleSort('installateur')}>Installateur <span>{sortIndicator('installateur')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cq_etat')}>CQ État <span>{sortIndicator('cq_etat')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cq_dossier')}>CQ Dossier <span>{sortIndicator('cq_dossier')}</span></th>
-                  <th className="sortable-header" onClick={() => handleSort('fiche')}>ID fiche <span>{sortIndicator('fiche')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('score')}>Score <span>{sortIndicator('score')}</span></th>
                   <th>Détails</th>
                 </tr>
@@ -249,8 +248,6 @@ const CQSignatures = () => {
                     <td className="wrap-cell">{sig.installateur_nom || '-'}</td>
                     <td className="wrap-cell">{sig.cq_etat_titre || '-'}</td>
                     <td className="wrap-cell">{sig.cq_dossier_titre || '-'}</td>
-                    <td>{sig.id_fiche || '-'}</td>
-                    <td>{sig.tel || sig.fiche_tel || '-'}</td>
                     <td>{sig.ajoute ?? '-'}</td>
                     <td>
                       {sig.id_fiche ? (
