@@ -31,13 +31,64 @@
   max-width: 220px;
 }
 
-.cq-signatures-page .sortable-header {
+.cq-table-container {
+  overflow-x: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cq-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.cq-table th,
+.cq-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: top;
+  font-size: 13px;
+}
+
+.cq-table th {
+  background: #9cbfc8;
+  color: #fff;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.cq-table tbody tr:hover {
+  filter: brightness(0.98);
+}
+
+.cq-table .sortable-header {
   cursor: pointer;
   user-select: none;
 }
 
-.cq-signatures-page .sortable-header span {
+.cq-table .sortable-header span {
   margin-left: 6px;
   font-size: 12px;
   opacity: 0.9;
+}
+
+.cq-details-cell {
+  text-align: center;
+  vertical-align: middle !important;
+}
+
+.cq-search-icon {
+  color: #2f7d32;
+  font-size: 16px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.cq-search-icon:hover {
+  color: #1f5a24;
 }

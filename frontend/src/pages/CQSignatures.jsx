@@ -112,12 +112,8 @@ const CQSignatures = () => {
         return String(`${row.commercial_pseudo || ''} ${row.commercial_2_pseudo || ''}`).toLowerCase();
       case 'produit':
         return Number(row.produit || 0);
-      case 'valide':
-        return Number(row.valider || 0);
       case 'centre':
         return String(row.centre_titre || '').toLowerCase();
-      case 'installateur':
-        return String(row.installateur_nom || '').toLowerCase();
       case 'cq_etat':
         return String(row.cq_etat_titre || '').toLowerCase();
       case 'cq_dossier':
@@ -153,7 +149,10 @@ const CQSignatures = () => {
       setSortDir(key === 'date_planning' || key === 'date_heure' ? 'desc' : 'asc');
     }
   };
-  const sortIndicator = (key) => (sortKey === key ? (sortDir === 'asc' ? '▲' : '▼') : '↕');
+  const sortIndicator = (key) => {
+    if (sortKey !== key) return '';
+    return sortDir === 'asc' ? 'ASC' : 'DESC';
+  };
   const getProduitLabel = (value) => {
     if (value === 1 || value === '1') return 'PAC';
     if (value === 2 || value === '2') return 'PV';
@@ -194,8 +193,8 @@ const CQSignatures = () => {
         <div className="no-data">Aucune signature trouvée.</div>
       ) : (
         <>
-          <div className="fiches-table-container">
-            <table className="fiches-table">
+          <div className="cq-table-container">
+            <table className="cq-table">
               <thead>
                 <tr>
                   <th className="sortable-header" onClick={() => handleSort('nom')}>Nom <span>{sortIndicator('nom')}</span></th>
@@ -209,9 +208,7 @@ const CQSignatures = () => {
                   <th className="sortable-header" onClick={() => handleSort('commercial')}>Commercial <span>{sortIndicator('commercial')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('centre')}>Centre <span>{sortIndicator('centre')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('produit')}>Produit <span>{sortIndicator('produit')}</span></th>
-                  <th className="sortable-header" onClick={() => handleSort('valide')}>Validé <span>{sortIndicator('valide')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('date_heure')}>Date signature <span>{sortIndicator('date_heure')}</span></th>
-                  <th className="sortable-header" onClick={() => handleSort('installateur')}>Installateur <span>{sortIndicator('installateur')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cq_etat')}>CQ État <span>{sortIndicator('cq_etat')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cq_dossier')}>CQ Dossier <span>{sortIndicator('cq_dossier')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('score')}>Score <span>{sortIndicator('score')}</span></th>
@@ -222,7 +219,7 @@ const CQSignatures = () => {
                 {sortedRows.map((sig) => (
                   <tr
                     key={sig.id}
-                    className="fiche-row-by-etat"
+                    className="cq-table-row-by-etat"
                     style={{
                       backgroundColor: `${getEtatColor(sig.fiche_id_etat_final)}40`,
                       borderLeft: `4px solid ${getEtatColor(sig.fiche_id_etat_final)}`
@@ -243,16 +240,14 @@ const CQSignatures = () => {
                     <td className="wrap-cell">{getCommercialsFormatted(sig)}</td>
                     <td>{sig.centre_titre || '-'}</td>
                     <td>{getProduitLabel(sig.produit)}</td>
-                    <td style={{ textAlign: 'center' }}>{Number(sig.valider) === 1 ? 'Oui' : 'Non'}</td>
                     <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
-                    <td className="wrap-cell">{sig.installateur_nom || '-'}</td>
                     <td className="wrap-cell">{sig.cq_etat_titre || '-'}</td>
                     <td className="wrap-cell">{sig.cq_dossier_titre || '-'}</td>
                     <td>{sig.ajoute ?? '-'}</td>
-                    <td>
+                    <td className="cq-details-cell">
                       {sig.id_fiche ? (
                         <FicheDetailLink ficheId={sig.id_fiche}>
-                          <FaSearch className="search-icon" />
+                          <FaSearch className="cq-search-icon" />
                         </FicheDetailLink>
                       ) : '-'}
                     </td>
