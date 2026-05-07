@@ -31,7 +31,17 @@ async function ensurePlanningAlertsTable() {
       UNIQUE KEY uniq_dep_day_slot (dep, day_name, slot_hour)
     )
   `);
-  await query('ALTER TABLE planning_alerts ADD COLUMN IF NOT EXISTS day_name VARCHAR(16) NOT NULL DEFAULT \'lundi\' AFTER dep');
+  const dayNameCol = await queryOne(`
+    SELECT 1 AS ok
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'planning_alerts'
+      AND COLUMN_NAME = 'day_name'
+    LIMIT 1
+  `);
+  if (!dayNameCol?.ok) {
+    await query("ALTER TABLE planning_alerts ADD COLUMN day_name VARCHAR(16) NOT NULL DEFAULT 'lundi' AFTER dep");
+  }
   const oldUnique = await queryOne(`
     SELECT 1 AS ok
     FROM information_schema.STATISTICS
