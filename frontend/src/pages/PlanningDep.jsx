@@ -3,6 +3,7 @@ import { useQuery } from 'react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
+import jsPDF from 'jspdf';
 import { FaChevronLeft, FaChevronRight, FaCalendarAlt } from 'react-icons/fa';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -83,7 +84,6 @@ const PlanningDep = () => {
   const [besoinDate, setBesoinDate] = useState(formatDateLocal(new Date()));
   const [besoinDep, setBesoinDep] = useState('all');
   const [isGeneratingBesoin, setIsGeneratingBesoin] = useState(false);
-  const [besoinRows, setBesoinRows] = useState([]);
 
   // Récupérer les départements
   const { data: departementsData, isLoading: isLoadingDepartements } = useQuery(
@@ -309,11 +309,45 @@ const PlanningDep = () => {
         if (b.besoin !== a.besoin) return b.besoin - a.besoin;
         return a.departement.localeCompare(b.departement);
       });
+      const doc = new jsPDF();
+      const marginX = 10;
+      let y = 14;
+      doc.setFontSize(14);
+      doc.text('Besoins Planning Departement', marginX, y);
+      y += 8;
+      doc.setFontSize(10);
+      doc.text(`Date: ${besoinDate}`, marginX, y);
+      y += 7;
+      doc.text(`Departement: ${besoinDep === 'all' ? 'Tous' : besoinDep}`, marginX, y);
+      y += 10;
 
-      setBesoinRows(rows);
+      doc.setFontSize(10);
+      doc.text('Departement', 10, y);
+      doc.text('Disponibilite', 85, y);
+      doc.text('RDV pris', 125, y);
+      doc.text('Besoin', 160, y);
+      y += 4;
+      doc.line(10, y, 200, y);
+      y += 6;
+
+      rows.forEach((row) => {
+        if (y > 280) {
+          doc.addPage();
+          y = 14;
+        }
+        const depLabel = row.nom ? `${row.departement} - ${row.nom}` : row.departement;
+        doc.text(depLabel, 10, y);
+        doc.text(String(row.disponibilite), 95, y, { align: 'right' });
+        doc.text(String(row.rdvPris), 135, y, { align: 'right' });
+        doc.text(String(row.besoin), 170, y, { align: 'right' });
+        y += 7;
+      });
+
+      const safeDate = String(besoinDate || '').replace(/[^0-9-]/g, '');
+      const safeDep = besoinDep === 'all' ? 'tous' : String(besoinDep).replace(/[^a-zA-Z0-9_-]/g, '');
+      doc.save(`besoins-${safeDate}-${safeDep}.pdf`);
     } catch (error) {
       console.error('Erreur lors de la génération des besoins:', error);
-      setBesoinRows([]);
     } finally {
       setIsGeneratingBesoin(false);
     }
@@ -385,33 +419,6 @@ const PlanningDep = () => {
           </div>
         </div>
       </div>
-
-      {besoinRows.length > 0 && (
-        <div className="planning-table-container" style={{ marginBottom: '16px' }}>
-          <table className="planning-table">
-            <thead>
-              <tr>
-                <th>Département</th>
-                <th>Date</th>
-                <th>Disponibilité</th>
-                <th>RDV pris</th>
-                <th>Besoin</th>
-              </tr>
-            </thead>
-            <tbody>
-              {besoinRows.map((row) => (
-                <tr key={`row-besoin-${row.departement}`}>
-                  <td>{row.departement}{row.nom ? ` - ${row.nom}` : ''}</td>
-                  <td>{besoinDate}</td>
-                  <td>{row.disponibilite}</td>
-                  <td>{row.rdvPris}</td>
-                  <td>{row.besoin}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
 
       {isLoadingPlanning ? (
         <div className="loading">Chargement du planning...</div>
