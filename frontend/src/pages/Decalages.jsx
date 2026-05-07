@@ -6,6 +6,7 @@ import api from '../config/api';
 import { FaClock, FaUser, FaFileAlt, FaCheck, FaTimes, FaSearch, FaFilter, FaSync } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Decalages.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -361,14 +362,14 @@ const Decalages = () => {
                   </td>
                   <td data-label="RDV original:">
                     {decalage.date_prevu
-                      ? new Date(decalage.date_prevu).toLocaleString('fr-FR')
+                      ? formatRdvDateTime(decalage.date_prevu)
                       : '-'}
                   </td>
                   <td data-label="Nouveau RDV:">
                     {decalage.date_nouvelle
-                      ? new Date(decalage.date_nouvelle).toLocaleString('fr-FR')
+                      ? formatRdvDateTime(decalage.date_nouvelle)
                       : decalage.date_prevu
-                      ? new Date(decalage.date_prevu).toLocaleString('fr-FR')
+                      ? formatRdvDateTime(decalage.date_prevu)
                       : '-'}
                   </td>
                   <td data-label="Message:" className="message-cell">

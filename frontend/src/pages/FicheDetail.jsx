@@ -31,6 +31,25 @@ function normalizeDetailItemLabel(s) {
     .trim();
 }
 
+function addMinutesToDateTimeString(dateTimeValue, minutesToAdd) {
+  const s = String(dateTimeValue ?? '').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return null;
+  const [, y, mo, d, h, mi, se = '00'] = m;
+  const base = new Date(
+    Number(y),
+    Number(mo) - 1,
+    Number(d),
+    Number(h),
+    Number(mi),
+    Number(se)
+  );
+  if (Number.isNaN(base.getTime())) return null;
+  base.setMinutes(base.getMinutes() + Number(minutesToAdd || 0));
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())} ${pad(base.getHours())}:${pad(base.getMinutes())}:${pad(base.getSeconds())}`;
+}
+
 /** Détecte l’affichage « Confirmer » : id 7 ou libellé d’état (API peut envoyer autre chose). */
 function isEtatConfirmerLike(etatId, etatTitre) {
   if (Number(etatId) === 7) return true;
@@ -3056,35 +3075,13 @@ const FicheDetail = ({
                     
                     if (minutes > 0 && dateRdvOriginale) {
                       try {
-                        // Créer une nouvelle date à partir de la date RDV originale
-                        const originalDate = new Date(dateRdvOriginale);
-                        
-                        // Vérifier que la date est valide
-                        if (isNaN(originalDate.getTime())) {
+                        const formattedNewDate = addMinutesToDateTimeString(dateRdvOriginale, minutes);
+                        if (!formattedNewDate) {
                           console.error('Date RDV originale invalide:', dateRdvOriginale);
                           alert('Erreur : la date de rendez-vous originale est invalide.');
                           return;
                         }
-                        
-                        // Calculer la nouvelle date en ajoutant les minutes
-                        const newDate = new Date(originalDate);
-                        newDate.setMinutes(newDate.getMinutes() + minutes);
-                        
-                        console.log('Calcul de la nouvelle date:', {
-                          originale: originalDate.toISOString(),
-                          minutesAjoutees: minutes,
-                          nouvelle: newDate.toISOString()
-                        });
-                        
-                        // Formater la nouvelle date au format YYYY-MM-DD HH:MM:SS pour le backend
-                        const year = newDate.getFullYear();
-                        const month = String(newDate.getMonth() + 1).padStart(2, '0');
-                        const day = String(newDate.getDate()).padStart(2, '0');
-                        const hours = String(newDate.getHours()).padStart(2, '0');
-                        const mins = String(newDate.getMinutes()).padStart(2, '0');
-                        const secs = String(newDate.getSeconds()).padStart(2, '0');
-                        const formattedNewDate = `${year}-${month}-${day} ${hours}:${mins}:${secs}`;
-                        
+
                         console.log('Nouvelle date formatée:', formattedNewDate);
                         
                         // Utiliser la forme fonctionnelle de setState pour garantir la cohérence
@@ -3144,24 +3141,7 @@ const FicheDetail = ({
                     fontWeight: 'bold',
                     color: '#2e7d32'
                   }}>
-                    {(() => {
-                      try {
-                        const date = new Date(decalageFormData.nouvelle_date);
-                        if (isNaN(date.getTime())) {
-                          return decalageFormData.nouvelle_date;
-                        }
-                        return date.toLocaleString('fr-FR', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        });
-                      } catch (error) {
-                        return decalageFormData.nouvelle_date;
-                      }
-                    })()}
+                    {formatRdvDateTime(decalageFormData.nouvelle_date)}
                   </span>
                   {ficheData?.date_rdv_time && (
                     <div style={{ 
@@ -4289,20 +4269,11 @@ const FicheDetail = ({
                     const dateRdvOriginale = ficheData?.date_rdv_time || decalageFormData.date_prevu || '';
                     if (minutes > 0 && dateRdvOriginale) {
                       try {
-                        const originalDate = new Date(dateRdvOriginale);
-                        if (isNaN(originalDate.getTime())) {
+                        const formattedNewDate = addMinutesToDateTimeString(dateRdvOriginale, minutes);
+                        if (!formattedNewDate) {
                           alert('Erreur : la date de rendez-vous originale est invalide.');
                           return;
                         }
-                        const newDate = new Date(originalDate);
-                        newDate.setMinutes(newDate.getMinutes() + minutes);
-                        const year = newDate.getFullYear();
-                        const month = String(newDate.getMonth() + 1).padStart(2, '0');
-                        const day = String(newDate.getDate()).padStart(2, '0');
-                        const hours = String(newDate.getHours()).padStart(2, '0');
-                        const mins = String(newDate.getMinutes()).padStart(2, '0');
-                        const secs = String(newDate.getSeconds()).padStart(2, '0');
-                        const formattedNewDate = `${year}-${month}-${day} ${hours}:${mins}:${secs}`;
                         setDecalageFormData(prev => ({
                           ...prev,
                           select_minutes: e.target.value,
@@ -4351,22 +4322,7 @@ const FicheDetail = ({
                 }}>
                   <strong>📅 Nouvelle date/heure :</strong> 
                   <span style={{ display: 'block', marginTop: '5px', fontSize: '13.6px', fontWeight: 'bold', color: '#2e7d32' }}>
-                    {(() => {
-                      try {
-                        const date = new Date(decalageFormData.nouvelle_date);
-                        if (isNaN(date.getTime())) return decalageFormData.nouvelle_date;
-                        return date.toLocaleString('fr-FR', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        });
-                      } catch (error) {
-                        return decalageFormData.nouvelle_date;
-                      }
-                    })()}
+                    {formatRdvDateTime(decalageFormData.nouvelle_date)}
                   </span>
                   {ficheData?.date_rdv_time && (
                     <div style={{ marginTop: '8px', fontSize: '10.2px', color: '#666', fontStyle: 'italic' }}>
@@ -6997,20 +6953,11 @@ const FicheDetail = ({
                     const dateRdvOriginale = ficheData?.date_rdv_time || decalageFormData.date_prevu || '';
                     if (minutes > 0 && dateRdvOriginale) {
                       try {
-                        const originalDate = new Date(dateRdvOriginale);
-                        if (isNaN(originalDate.getTime())) {
+                        const formattedNewDate = addMinutesToDateTimeString(dateRdvOriginale, minutes);
+                        if (!formattedNewDate) {
                           alert('Erreur : la date de rendez-vous originale est invalide.');
                           return;
                         }
-                        const newDate = new Date(originalDate);
-                        newDate.setMinutes(newDate.getMinutes() + minutes);
-                        const year = newDate.getFullYear();
-                        const month = String(newDate.getMonth() + 1).padStart(2, '0');
-                        const day = String(newDate.getDate()).padStart(2, '0');
-                        const hours = String(newDate.getHours()).padStart(2, '0');
-                        const mins = String(newDate.getMinutes()).padStart(2, '0');
-                        const secs = String(newDate.getSeconds()).padStart(2, '0');
-                        const formattedNewDate = `${year}-${month}-${day} ${hours}:${mins}:${secs}`;
                         setDecalageFormData(prev => ({
                           ...prev,
                           select_minutes: e.target.value,
@@ -7059,22 +7006,7 @@ const FicheDetail = ({
                 }}>
                   <strong>📅 Nouvelle date/heure :</strong> 
                   <span style={{ display: 'block', marginTop: '5px', fontSize: '13.6px', fontWeight: 'bold', color: '#2e7d32' }}>
-                    {(() => {
-                      try {
-                        const date = new Date(decalageFormData.nouvelle_date);
-                        if (isNaN(date.getTime())) return decalageFormData.nouvelle_date;
-                        return date.toLocaleString('fr-FR', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        });
-                      } catch (error) {
-                        return decalageFormData.nouvelle_date;
-                      }
-                    })()}
+                    {formatRdvDateTime(decalageFormData.nouvelle_date)}
                   </span>
                   {ficheData?.date_rdv_time && (
                     <div style={{ marginTop: '8px', fontSize: '10.2px', color: '#666', fontStyle: 'italic' }}>

@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaChevronLeft, FaChevronRight, FaCalendarAlt } from 'react-icons/fa';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import FicheDetailLink from '../components/FicheDetailLink';
 import './Planning.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -196,37 +194,6 @@ const PlanningDep = () => {
     }
   }, [planning]);
 
-  // Récupérer les utilisateurs pour les couleurs
-  const { data: usersData } = useQuery('users', async () => {
-    const res = await api.get('/management/utilisateurs');
-    return res.data.data || [];
-  });
-
-  // Récupérer les états pour obtenir la couleur CONFIRMER
-  const { data: etatsData } = useQuery('etats', async () => {
-    const res = await api.get('/management/etats');
-    return res.data.data || [];
-  });
-
-  const getUserColor = (userId) => {
-    if (!userId || !usersData) return '#cccccc';
-    const user = usersData.find(u => u.id === userId);
-    return user?.color || '#cccccc';
-  };
-
-  const getUserName = (userId) => {
-    if (!userId || !usersData) return '';
-    const user = usersData.find(u => u.id === userId);
-    return user?.pseudo || '';
-  };
-
-  // Obtenir la couleur de l'état CONFIRMER (état 7)
-  const getConfirmerColor = () => {
-    if (!etatsData) return '#4caf50'; // Vert par défaut
-    const confirmerEtat = etatsData.find(e => e.id === 7);
-    return confirmerEtat?.color || '#4caf50';
-  };
-
   const getAvailabilityColor = (rdvCount, availability) => {
     if (availability === 0) return 'rgba(34, 45, 50, 0.8)';
     const ratio = rdvCount / availability;
@@ -326,14 +293,7 @@ const PlanningDep = () => {
           planning={planning}
           days={days}
           timeSlots={TIME_SLOTS}
-          getUserColor={getUserColor}
-          getUserName={getUserName}
           getAvailabilityColor={getAvailabilityColor}
-          getConfirmerColor={getConfirmerColor}
-          dep={dep}
-          weekStart={weekStart}
-          weekEnd={weekEnd}
-          isAdmin={isAdmin}
         />
       )}
     </div>
@@ -341,7 +301,7 @@ const PlanningDep = () => {
 };
 
 // Composant pour la vue Planning (avec rendez-vous) - Lecture seule
-const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, getAvailabilityColor, getConfirmerColor, dep, weekStart, weekEnd, isAdmin }) => {
+const PlanningView = ({ planning, days, timeSlots, getAvailabilityColor }) => {
   return (
     <div className="planning-view">
       <div className="planning-table-container">
@@ -362,8 +322,6 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
             {timeSlots.map(slot => {
               // Calculer le timeKey directement à partir de l'heure pour éviter les problèmes de fuseau horaire
               const timeKey = hourToTimeKey(slot.hour);
-              // Capturer isAdmin dans la portée de cette fonction map
-              const userIsAdmin = isAdmin;
               return (
                 <tr key={slot.hour}>
                   <td className="time-slot-header">{slot.name}</td>
@@ -445,63 +403,16 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                         {/* Badge de disponibilité */}
                         {hasPlanning && (
                           <div className="availability-badge" style={{ backgroundColor: bgColor }}>
-                            <Link
-                              to={`/fiches?cp=${dep}&id_etat_final=7&date_champ=date_rdv_time&date_debut=${day.date} ${slot.start}&date_fin=${day.date} ${slot.end}&fiche_search=true`}
-                              target="_blank"
+                            <div
                               className="availability-link"
                               title={`${rdvs.length} rendez-vous sur ${availability} disponibles`}
                             >
                               <span className="availability-count">{rdvs.length}</span>
                               <span className="availability-separator">/</span>
                               <span className="availability-total">{availability}</span>
-                            </Link>
+                            </div>
                           </div>
                         )}
-                        
-                        
-                        {/* Liste des rendez-vous */}
-                        <div className="rdvs-list">
-                          {rdvs.map((rdv, idx) => {
-                            const isUrgent = rdv.qualification === 'RDV_URGENT';
-                            const isConfirme = rdv.id_etat_final === 7;
-                            const confirmerColor = getConfirmerColor();
-                            return (
-                            <div
-                              key={`${rdv.id}-${idx}`}
-                              className={`rdv-item ${isUrgent ? 'rdv-urgent-item' : ''} ${isConfirme ? 'rdv-confirme' : ''}`}
-                              style={{ 
-                                borderLeftColor: getUserColor(rdv.id_commercial),
-                                backgroundColor: isConfirme ? `${confirmerColor}20` : 'white'
-                              }}
-                            >
-                              <div className="rdv-header">
-                                <span className="rdv-time">{rdv.rdv?.substring(0, 5)}</span>
-                                {rdv.etat_check && userIsAdmin && (
-                                  <span className={`etat-badge ${rdv.etat_check.toLowerCase()}`}>
-                                    {rdv.etat_check}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="rdv-content">
-                                <FicheDetailLink 
-                                  ficheId={rdv.id}
-                                  className={`rdv-link ${rdv.qualification === 'RDV_URGENT' ? 'rdv-urgent' : ''}`}
-                                >
-                                  {rdv.operation} - {rdv.cp}
-                                </FicheDetailLink>
-                                {rdv.id_commercial > 0 && (
-                                  <div className="rdv-commercial" style={{ color: getUserColor(rdv.id_commercial) }}>
-                                    {getUserName(rdv.id_commercial)}
-                                  </div>
-                                )}
-                              </div>
-                              {rdv.dec_statut && (
-                                <div className="rdv-decalage">{rdv.dec_statut}</div>
-                              )}
-                            </div>
-                          );
-                          })}
-                        </div>
                       </td>
                     );
                   })}
