@@ -80,6 +80,10 @@ const PlanningDep = () => {
   const [week, setWeek] = useState(parseInt(searchParams.get('w')) || currentWeek);
   const [year, setYear] = useState(parseInt(searchParams.get('y')) || currentYear);
   const [dep, setDep] = useState(searchParams.get('dp') || '');
+  const [besoinDate, setBesoinDate] = useState(formatDateLocal(new Date()));
+  const [besoinDep, setBesoinDep] = useState('all');
+  const [isGeneratingBesoin, setIsGeneratingBesoin] = useState(false);
+  const [besoinRows, setBesoinRows] = useState([]);
 
   // Récupérer les départements
   const { data: departementsData, isLoading: isLoadingDepartements } = useQuery(
@@ -252,10 +256,106 @@ const PlanningDep = () => {
     }
   }, [departementsData, dep]);
 
+  const computeBesoinForPlanning = (planningByDate, targetDate) => {
+    const dayPlanning = planningByDate?.[targetDate]?.time || {};
+    let disponibilite = 0;
+    let rdvPris = 0;
+
+    Object.values(dayPlanning).forEach((slot) => {
+      const av = slot?.av;
+      if (av !== null && av !== undefined && !Number.isNaN(Number(av))) {
+        disponibilite += Number(av);
+      }
+      rdvPris += Array.isArray(slot?.planning) ? slot.planning.length : 0;
+    });
+
+    return {
+      disponibilite,
+      rdvPris,
+      besoin: Math.max(disponibilite - rdvPris, 0),
+    };
+  };
+
+  const handleGenerateBesoin = async () => {
+    if (!besoinDate) return;
+    if (!departementsData || departementsData.length === 0) return;
+
+    try {
+      setIsGeneratingBesoin(true);
+      const selectedDate = new Date(`${besoinDate}T12:00:00`);
+      const targetWeek = getWeekNumber(selectedDate);
+      const targetYear = selectedDate.getFullYear();
+
+      const depItems = (besoinDep === 'all'
+        ? departementsData
+        : departementsData.filter((d) => (d.code || d.departement_code) === besoinDep)
+      ).map((d) => ({
+        code: d.code || d.departement_code || '',
+        nom: d.nom || d.departement_nom_uppercase || d.departement_nom || '',
+      })).filter((d) => d.code);
+
+      const rows = await Promise.all(
+        depItems.map(async (d) => {
+          const res = await api.get('/planning/week', {
+            params: { w: targetWeek, y: targetYear, dp: d.code },
+          });
+          const planningByDate = res?.data?.data || {};
+          const metrics = computeBesoinForPlanning(planningByDate, besoinDate);
+          return { departement: d.code, nom: d.nom, ...metrics };
+        })
+      );
+
+      rows.sort((a, b) => {
+        if (b.besoin !== a.besoin) return b.besoin - a.besoin;
+        return a.departement.localeCompare(b.departement);
+      });
+
+      setBesoinRows(rows);
+    } catch (error) {
+      console.error('Erreur lors de la génération des besoins:', error);
+      setBesoinRows([]);
+    } finally {
+      setIsGeneratingBesoin(false);
+    }
+  };
+
   return (
     <div className="planning">
       <div className="planning-header">
         <h1><FaCalendarAlt /> Planning Département (Lecture seule)</h1>
+        <div className="planning-controls" style={{ marginBottom: '12px' }}>
+          <div className="departement-selector">
+            <label>Date:</label>
+            <input
+              type="date"
+              value={besoinDate}
+              onChange={(e) => setBesoinDate(e.target.value)}
+            />
+          </div>
+          <div className="departement-selector">
+            <label>Département:</label>
+            <select value={besoinDep} onChange={(e) => setBesoinDep(e.target.value)} disabled={isLoadingDepartements}>
+              <option value="all">Tous les départements</option>
+              {(departementsData || []).map((d) => {
+                const code = d.code || d.departement_code || '';
+                const nom = d.nom || d.departement_nom_uppercase || d.departement_nom || '';
+                return (
+                  <option key={`besoin-${code}`} value={code}>
+                    {code} - {nom}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <button
+            type="button"
+            className="nav-btn"
+            onClick={handleGenerateBesoin}
+            disabled={isGeneratingBesoin || !besoinDate}
+          >
+            {isGeneratingBesoin ? 'Génération...' : 'Générer besoin'}
+          </button>
+        </div>
         <div className="planning-controls">
           <div className="departement-selector">
             <label>Département:</label>
@@ -285,6 +385,33 @@ const PlanningDep = () => {
           </div>
         </div>
       </div>
+
+      {besoinRows.length > 0 && (
+        <div className="planning-table-container" style={{ marginBottom: '16px' }}>
+          <table className="planning-table">
+            <thead>
+              <tr>
+                <th>Département</th>
+                <th>Date</th>
+                <th>Disponibilité</th>
+                <th>RDV pris</th>
+                <th>Besoin</th>
+              </tr>
+            </thead>
+            <tbody>
+              {besoinRows.map((row) => (
+                <tr key={`row-besoin-${row.departement}`}>
+                  <td>{row.departement}{row.nom ? ` - ${row.nom}` : ''}</td>
+                  <td>{besoinDate}</td>
+                  <td>{row.disponibilite}</td>
+                  <td>{row.rdvPris}</td>
+                  <td>{row.besoin}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {isLoadingPlanning ? (
         <div className="loading">Chargement du planning...</div>
