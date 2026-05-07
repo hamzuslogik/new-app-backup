@@ -589,6 +589,8 @@ const Planning = () => {
           weekEnd={weekEnd}
           availability={availability}
           isAdmin={isAdmin}
+          canEditAvailability={user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7}
+          onUpdateAvailability={handleUpdateAvailability}
         />
       ) : (
         <AvailabilityView
@@ -637,7 +639,25 @@ const Planning = () => {
 };
 
 // Composant pour la vue Planning (avec rendez-vous)
-const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, getAvailabilityColor, getConfirmerColor, dep, weekStart, weekEnd, availability, isAdmin }) => {
+const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, getAvailabilityColor, getConfirmerColor, dep, weekStart, weekEnd, availability, isAdmin, canEditAvailability, onUpdateAvailability }) => {
+  const [editingDayTotal, setEditingDayTotal] = useState(null);
+  const [dayTotalValue, setDayTotalValue] = useState('');
+
+  const handleEditDayTotal = (date) => {
+    if (!canEditAvailability) return;
+    setEditingDayTotal(date);
+    setDayTotalValue('');
+  };
+
+  const handleSaveDayTotal = (date) => {
+    const value = parseInt(dayTotalValue, 10);
+    if (!canEditAvailability || Number.isNaN(value) || value < 0) return;
+    timeSlots.forEach((slot) => {
+      onUpdateAvailability(date, slot.hour, value, 'day');
+    });
+    setEditingDayTotal(null);
+    setDayTotalValue('');
+  };
 
   return (
     <div className="planning-view">
@@ -650,6 +670,42 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                 <th key={day.date}>
                   <div className="day-header-planning">
                     <span>{day.dayName} {day.date.split('-')[2]}</span>
+                    {canEditAvailability && (
+                      <div className="day-total-controls">
+                        {editingDayTotal === day.date ? (
+                          <>
+                            <input
+                              type="number"
+                              value={dayTotalValue}
+                              onChange={(e) => setDayTotalValue(e.target.value)}
+                              className="total-input"
+                              min="0"
+                              autoFocus
+                            />
+                            <button
+                              className="save-btn"
+                              onClick={() => handleSaveDayTotal(day.date)}
+                            >
+                              <FaCheck />
+                            </button>
+                            <button
+                              className="cancel-btn"
+                              onClick={() => setEditingDayTotal(null)}
+                            >
+                              <FaTimes />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className="total-btn"
+                            onClick={() => handleEditDayTotal(day.date)}
+                            title="Définir la disponibilité de toute la journée"
+                          >
+                            Total
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </th>
               ))}
