@@ -441,7 +441,15 @@
 }
 
 .edit-controls select.form-control {
-  min-width: 200px;
+  min-width: 160px;
+}
+
+/* Détails fiche: réduire uniquement la largeur des listes (décalage, changement état, confirmateur...) */
+.fiche-detail select.form-control,
+.etat-change-form select.form-control,
+.decalage-form select.form-control,
+.rdv-form select.form-control {
+  max-width: 220px !important;
 }
 
 .btn-edit,

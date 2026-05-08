@@ -972,15 +972,12 @@ body.dashboard-page {
   box-sizing: border-box;
 }
 
-/* Dashboard: champs de filtre plus compacts (texte, date, listes) */
+/* Dashboard: réduire la largeur des champs de filtre (sans réduire la taille) */
 .dashboard-page .search-panel .form-group input,
 .dashboard-page .search-panel .form-group select,
 .dashboard-page .search-panel .date-time-inputs input[type="date"],
 .dashboard-page .search-panel .date-time-inputs input[type="time"] {
-  padding: 5px 7px;
-  min-height: 30px;
-  font-size: 10.8px;
-  line-height: 1.2;
+  max-width: 220px;
 }
 
 .form-group input::placeholder,
@@ -3709,4 +3706,12 @@ body.dashboard-page {
   height: 27px !important;
   padding: 0 !important;
   font-size: 10px !important;
+}
+
+/* Fiche détail dans modal Dashboard: réduire uniquement la largeur des listes */
+.fiche-detail-modal-content .fiche-detail select.form-control,
+.fiche-detail-modal-content .etat-change-form select.form-control,
+.fiche-detail-modal-content .decalage-form select.form-control,
+.fiche-detail-modal-content .rdv-form select.form-control {
+  max-width: 220px !important;
 }
