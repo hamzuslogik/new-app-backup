@@ -52,6 +52,7 @@ router.get('/', authenticate, async (req, res) => {
       id_commercial,
       id_fiche,
       id_etat_final,
+      date_filter_field = 'planning',
       sort_by = 'date_planning',
       sort_order = 'desc',
       page = 1,
@@ -64,6 +65,7 @@ router.get('/', authenticate, async (req, res) => {
       id_commercial,
       id_fiche,
       id_etat_final,
+      date_filter_field,
       sort_by,
       sort_order,
       page,
@@ -83,13 +85,18 @@ router.get('/', authenticate, async (req, res) => {
       params.push(id_etat_final);
     }
 
-    // Filtrer par date de planning (date RDV de la fiche)
+    const normalizedDateFilterField = String(date_filter_field).toLowerCase() === 'signature'
+      ? 'signature'
+      : 'planning';
+    const dateFilterColumn = normalizedDateFilterField === 'signature' ? 's.date_heure' : 'f.date_rdv_time';
+
+    // Filtrer par date de planning (date RDV) ou date de signature selon le contexte
     if (date_debut) {
-      whereConditions.push('f.date_rdv_time >= ?');
+      whereConditions.push(`${dateFilterColumn} >= ?`);
       params.push(`${date_debut} 00:00:00`);
     }
     if (date_fin) {
-      whereConditions.push('f.date_rdv_time <= ?');
+      whereConditions.push(`${dateFilterColumn} <= ?`);
       params.push(`${date_fin} 23:59:59`);
     }
 
@@ -111,6 +118,8 @@ router.get('/', authenticate, async (req, res) => {
 
     const whereClause = 'WHERE ' + whereConditions.join(' AND ');
     console.log('[signature][list] filters built:', {
+      normalizedDateFilterField,
+      dateFilterColumn,
       whereClause,
       params
     });

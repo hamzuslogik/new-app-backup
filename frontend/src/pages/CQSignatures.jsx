@@ -89,9 +89,10 @@ const CQSignatures = () => {
         params: {
           date_debut: activeRange.dateDebut,
           date_fin: activeRange.dateFin,
+          date_filter_field: 'signature',
           page,
           limit,
-          sort_by: 'date_planning',
+          sort_by: 'date_heure',
           sort_order: 'desc',
           ...(activeEtatFinal !== null ? { id_etat_final: activeEtatFinal } : {}),
         },
