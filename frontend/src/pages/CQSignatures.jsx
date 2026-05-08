@@ -309,12 +309,12 @@ const CQSignatures = () => {
                   <th className="sortable-header" onClick={() => handleSort('cp')}>CP <span>{sortIndicator('cp')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date insertion <span>{sortIndicator('date_insert_time')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('date_planning')}>Date RDV <span>{sortIndicator('date_planning')}</span></th>
-                  <th className="sortable-header" onClick={() => handleSort('etat')}>État <span>{sortIndicator('etat')}</span></th>
+                  <th className="sortable-header etat-col" onClick={() => handleSort('etat')}>État <span>{sortIndicator('etat')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('confirmateur')}>Confirmateur <span>{sortIndicator('confirmateur')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('commercial')}>Commercial <span>{sortIndicator('commercial')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('centre')}>Centre <span>{sortIndicator('centre')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('installateur')}>Installateur <span>{sortIndicator('installateur')}</span></th>
-                  <th className="sortable-header" onClick={() => handleSort('produit')}>Produit <span>{sortIndicator('produit')}</span></th>
+                  <th className="sortable-header produit-col" onClick={() => handleSort('produit')}>Produit <span>{sortIndicator('produit')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('date_heure')}>Date signature <span>{sortIndicator('date_heure')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cq_etat')}>CQ État <span>{sortIndicator('cq_etat')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cq_dossier')}>CQ Dossier <span>{sortIndicator('cq_dossier')}</span></th>
@@ -337,7 +337,7 @@ const CQSignatures = () => {
                     <td>{sig.cp || '-'}</td>
                     <td>{sig.date_insert_time ? formatRdvDateTime(sig.date_insert_time) : '-'}</td>
                     <td>{sig.date_planning ? formatRdvDateTime(sig.date_planning) : '-'}</td>
-                    <td>
+                    <td className="etat-col">
                       <span className="etat-badge" style={{ backgroundColor: getEtatColor(sig.fiche_id_etat_final) }}>
                         {sig.etat_titre || '-'}
                       </span>
@@ -346,7 +346,7 @@ const CQSignatures = () => {
                     <td className="wrap-cell">{getCommercialsFormatted(sig)}</td>
                     <td className="wrap-cell">{sig.centre_titre || '-'}</td>
                     <td className="wrap-cell">{sig.installateur_nom || '-'}</td>
-                    <td>
+                    <td className="produit-col">
                       <span
                         className="cq-produit-indicator"
                         style={{

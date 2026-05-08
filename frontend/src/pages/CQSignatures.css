@@ -118,6 +118,19 @@
   opacity: 0.9;
 }
 
+/* Ajustement des largeurs colonnes */
+.cq-table th.etat-col,
+.cq-table td.etat-col {
+  width: 220px;
+  min-width: 220px;
+}
+
+.cq-table th.produit-col,
+.cq-table td.produit-col {
+  width: 90px;
+  min-width: 90px;
+}
+
 .cq-details-cell {
   text-align: center;
   vertical-align: middle !important;
@@ -142,4 +155,13 @@
   font-size: 11px;
   min-width: 34px;
   text-align: center;
+}
+
+/* Si l'état est long, retour à la ligne dans la colonne */
+.cq-signatures-page .etat-badge {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  line-height: 1.2;
 }
