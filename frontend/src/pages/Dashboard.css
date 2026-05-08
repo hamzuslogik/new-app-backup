@@ -1553,6 +1553,16 @@ body.dashboard-page {
     width: 160px !important;
   }
 
+  /* Mobile (desktop forcé): élargir Nom / Prénom */
+  .fiches-table th:nth-child(1),
+  .fiches-table td:nth-child(1),
+  .fiches-table th:nth-child(2),
+  .fiches-table td:nth-child(2) {
+    min-width: 140px !important;
+    width: 140px !important;
+    max-width: 180px !important;
+  }
+
   .fiches-table th:nth-child(6),
   .fiches-table td:nth-child(6) {
     min-width: 160px !important;
