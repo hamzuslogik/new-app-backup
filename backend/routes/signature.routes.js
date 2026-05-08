@@ -93,9 +93,12 @@ router.get('/', authenticate, async (req, res) => {
       params.push(`${date_fin} 23:59:59`);
     }
 
-    // Filtrer par confirmateur
+    // Filtrer par confirmateur (au moins une signature de la fiche avec ce confirmateur)
     if (id_confirmateur) {
-      whereConditions.push('s.confirmateur = ?');
+      whereConditions.push(`EXISTS (
+        SELECT 1 FROM signature sx
+        WHERE sx.id_fiche = f.id AND sx.confirmateur = ?
+      )`);
       params.push(id_confirmateur);
     }
     if (id_commercial) {
@@ -115,19 +118,10 @@ router.get('/', authenticate, async (req, res) => {
       params
     });
 
-    // Compter le total (JOIN fiches pour filtrer par date_rdv_time)
+    // Compter le total des fiches filtrées
     const countResult = await queryOne(
       `SELECT COUNT(*) as total
        FROM fiches f
-       LEFT JOIN (
-         SELECT s1.*
-         FROM signature s1
-         INNER JOIN (
-           SELECT id_fiche, MAX(id) AS max_signature_id
-           FROM signature
-           GROUP BY id_fiche
-         ) latest_sig ON latest_sig.max_signature_id = s1.id
-       ) s ON s.id_fiche = f.id
        ${whereClause}`,
       params
     );
@@ -151,7 +145,7 @@ router.get('/', authenticate, async (req, res) => {
     };
     const sortColumn = sortMap[sort_by] || 'f.date_rdv_time';
 
-    // Récupérer les signatures (date de planning = f.date_rdv_time)
+    // Récupérer les fiches + dernière signature associée (si existante)
     const signatures = await query(
       `SELECT 
         s.id,
@@ -188,15 +182,13 @@ router.get('/', authenticate, async (req, res) => {
         u.nom as confirmateur_nom,
         u.prenom as confirmateur_prenom
       FROM fiches f
-      LEFT JOIN (
-        SELECT s1.*
-        FROM signature s1
-        INNER JOIN (
-          SELECT id_fiche, MAX(id) AS max_signature_id
-          FROM signature
-          GROUP BY id_fiche
-        ) latest_sig ON latest_sig.max_signature_id = s1.id
-      ) s ON s.id_fiche = f.id
+      LEFT JOIN signature s ON s.id = (
+        SELECT s2.id
+        FROM signature s2
+        WHERE s2.id_fiche = f.id
+        ORDER BY s2.id DESC
+        LIMIT 1
+      )
       LEFT JOIN centres c ON f.id_centre = c.id
       LEFT JOIN etats e ON f.id_etat_final = e.id
       LEFT JOIN utilisateurs uc ON f.id_commercial = uc.id
@@ -205,6 +197,7 @@ router.get('/', authenticate, async (req, res) => {
       LEFT JOIN cq_dossier cqd ON f.cq_dossier = cqd.id
       LEFT JOIN installateurs i ON f.ph3_installateur = i.id
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
+      ${whereClause}
       ORDER BY ${sortColumn} ${normalizedOrder}, s.date_heure DESC, s.id DESC
       LIMIT ? OFFSET ?`,
       [...params, limitValue, offset]
