@@ -792,6 +792,12 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
   };
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [localAvailabilityOverrides, setLocalAvailabilityOverrides] = useState({});
+
+  // Réinitialiser les overrides locaux après refresh serveur.
+  useEffect(() => {
+    setLocalAvailabilityOverrides({});
+  }, [availability]);
   
   // Debug: afficher la structure des disponibilités reçues
   console.log('AvailabilityView - availability reçu:', availability);
@@ -824,6 +830,8 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
     if (isNaN(value) || value < 0) {
       return;
     }
+    const key = `${date}-${hour}`;
+    setLocalAvailabilityOverrides((prev) => ({ ...prev, [key]: value }));
     onUpdate(date, hour, value, type);
     setEditingCell(null);
     setEditValue('');
@@ -838,8 +846,17 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
 
   const handleSaveDayTotal = (date) => {
     if (editValue === '') return;
+    const value = parseInt(editValue, 10);
+    if (Number.isNaN(value) || value < 0) return;
+    setLocalAvailabilityOverrides((prev) => {
+      const next = { ...prev };
+      timeSlots.forEach((slot) => {
+        next[`${date}-${slot.hour}`] = value;
+      });
+      return next;
+    });
     timeSlots.forEach(slot => {
-      onUpdate(date, slot.hour, editValue, 'day');
+      onUpdate(date, slot.hour, value, 'day');
     });
     setEditingCell(null);
     setEditValue('');
@@ -926,7 +943,10 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                   const isEditing = editingCell === cellKey;
                   // availability peut être null (pas de planning), 0 (bloqué), ou > 0 (disponible)
                   const availData = availability[day.date]?.[slot.hour];
-                  const currentValue = availData?.nbr_com ?? null; // null si pas de planning créé
+                  const hasLocalOverride = Object.prototype.hasOwnProperty.call(localAvailabilityOverrides, cellKey);
+                  const currentValue = hasLocalOverride
+                    ? localAvailabilityOverrides[cellKey]
+                    : (availData?.nbr_com ?? null); // null si pas de planning créé
                   const isClosed = availData?.is_closed === 1; // Vérifier si le créneau est fermé
                   
                   // Récupérer le nombre de RDV pris pour ce créneau
