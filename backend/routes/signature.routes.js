@@ -117,7 +117,7 @@ router.get('/', authenticate, async (req, res) => {
 
     // Compter le total (JOIN fiches pour filtrer par date_rdv_time)
     const countResult = await queryOne(
-      `SELECT COUNT(*) as total 
+      `SELECT COUNT(DISTINCT s.id_fiche) as total 
        FROM signature s 
        INNER JOIN fiches f ON s.id_fiche = f.id 
        ${whereClause}`,
@@ -179,7 +179,14 @@ router.get('/', authenticate, async (req, res) => {
         u.pseudo as confirmateur_pseudo,
         u.nom as confirmateur_nom,
         u.prenom as confirmateur_prenom
-      FROM signature s
+      FROM (
+        SELECT MAX(s.id) AS signature_id, s.id_fiche
+        FROM signature s
+        INNER JOIN fiches f ON s.id_fiche = f.id
+        ${whereClause}
+        GROUP BY s.id_fiche
+      ) latest
+      INNER JOIN signature s ON s.id = latest.signature_id
       INNER JOIN fiches f ON s.id_fiche = f.id
       LEFT JOIN centres c ON f.id_centre = c.id
       LEFT JOIN etats e ON f.id_etat_final = e.id
@@ -189,7 +196,6 @@ router.get('/', authenticate, async (req, res) => {
       LEFT JOIN cq_dossier cqd ON f.cq_dossier = cqd.id
       LEFT JOIN installateurs i ON f.ph3_installateur = i.id
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
-      ${whereClause}
       ORDER BY ${sortColumn} ${normalizedOrder}, s.date_heure DESC, s.id DESC
       LIMIT ? OFFSET ?`,
       [...params, limitValue, offset]
