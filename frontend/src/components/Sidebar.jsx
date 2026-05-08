@@ -445,6 +445,10 @@ const Sidebar = ({ collapsed }) => {
         <ul className="sidebar-menu">
           {menuItems
             .filter((item) => {
+              // Respecter en priorité le flag visible
+              if (item.visible === false) {
+                return false;
+              }
               // Si l'item a une fonction de vérification personnalisée, l'utiliser
               if (item.customCheck) {
                 return item.customCheck(item, user, hasPermission, isREQualif);

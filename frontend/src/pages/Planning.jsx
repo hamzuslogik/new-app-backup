@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaChevronLeft, FaChevronRight, FaPlus, FaCheck, FaTimes, FaCalendarAlt, FaLock } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaPlus, FaCheck, FaTimes, FaLock } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -498,7 +498,6 @@ const Planning = () => {
   return (
     <div className="planning-page">
       <div className="planning-header">
-        <h1><FaCalendarAlt /> Planning</h1>
         <div className="planning-controls">
           <select 
             value={dep} 
@@ -542,16 +541,6 @@ const Planning = () => {
               <FaChevronRight />
             </button>
           </div>
-          {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (
-            <>
-              <button className="btn-create" onClick={() => setShowCreateModal(true)}>
-                <FaPlus /> Créer
-              </button>
-              <button className="btn-duplicate" onClick={() => setShowDuplicateModal(true)}>
-                Dupliquer
-              </button>
-            </>
-          )}
         </div>
       </div>
 
