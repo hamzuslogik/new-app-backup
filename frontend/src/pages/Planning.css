@@ -1046,6 +1046,19 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   background: #45a049;
 }
 
+/* Day total: style icone verte (sans pastille pleine) */
+.day-total-controls .save-btn {
+  background: transparent !important;
+  color: #16a34a !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.day-total-controls .save-btn:hover {
+  background: transparent !important;
+  color: #15803d !important;
+}
+
 .cancel-btn {
   background: #f44336;
   color: white;

@@ -677,10 +677,9 @@ const Dashboard = () => {
   );
 
   const handleFilterChange = (key, value) => {
-    const nextValue =
-      key === 'critere' || key === 'nom' || key === 'prenom' || key === 'cp'
-        ? normalizeText(value)
-        : value;
+    // Ne pas trim à la frappe: sinon l'espace de séparation des mots est supprimé
+    // (ex: "BEN AHMED" devient difficile à saisir). Le trim est fait avant envoi API.
+    const nextValue = value;
     setFilters(prev => ({
       ...prev,
       [key]: nextValue,
