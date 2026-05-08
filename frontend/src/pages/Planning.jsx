@@ -660,16 +660,6 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                         >
                           <FaCheck />
                         </button>
-                        <button
-                          className="cancel-btn"
-                          onClick={() => {
-                            setEditingDayTotal(null);
-                            setDayTotalValue('');
-                          }}
-                          title="Annuler"
-                        >
-                          <FaTimes />
-                        </button>
                       </div>
                     )}
                   </div>
@@ -911,16 +901,6 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                         >
                           <FaCheck />
                         </button>
-                        <button
-                          className="cancel-btn"
-                          onClick={() => {
-                            setEditingCell(null);
-                            setEditValue('');
-                          }}
-                          title="Annuler"
-                        >
-                          <FaTimes />
-                        </button>
                         {isAdmin && (
                           <button
                             className="day-toggle-closed-btn"
@@ -1079,15 +1059,6 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                                     }}
                                   >
                                     <FaCheck />
-                                  </button>
-                                  <button
-                                    className="cancel-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditingCell(null);
-                                    }}
-                                  >
-                                    <FaTimes />
                                   </button>
                                 </>
                               )}
