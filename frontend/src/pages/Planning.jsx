@@ -652,7 +652,6 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                             setDayTotalValue(String(e.target.value || '').replace(/\D/g, ''));
                           }}
                           className="total-input"
-                          placeholder="-"
                         />
                         <button
                           className="save-btn"
@@ -904,7 +903,6 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                             setEditValue(String(e.target.value || '').replace(/\D/g, ''));
                           }}
                           className="total-input"
-                          placeholder="-"
                         />
                         <button
                           className="save-btn"

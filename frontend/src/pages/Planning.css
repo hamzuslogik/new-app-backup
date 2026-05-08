@@ -799,6 +799,8 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   justify-content: center;
   gap: 4px;
   margin-top: 4px;
+  background: #ffffff;
+  border-radius: 4px;
 }
 
 .total-btn {
@@ -846,8 +848,8 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
 }
 
 .total-input {
-  width: 60px;
-  padding: 4px;
+  width: 30px;
+  padding: 2px;
   border: 1px solid var(--filter-border, #86EFAC);
   border-radius: 4px;
   text-align: center;
