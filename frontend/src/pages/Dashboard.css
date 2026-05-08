@@ -855,6 +855,56 @@ body.dashboard-page {
   gap: 7px;
 }
 
+/* Colonne centrale : raccourcis « Actuellement » alignés avec Date début / fin (entre gauche et droite) */
+.search-form-datetime-now-col {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 0;
+  align-self: flex-start;
+}
+
+.search-form .datetime-now-group {
+  margin: 0;
+}
+
+.datetime-now-label-spacer {
+  display: block;
+  margin-bottom: 1px;
+  min-height: 1em;
+  visibility: hidden;
+  user-select: none;
+}
+
+.btn-datetime-now {
+  padding: 6px 10px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--input-text, #064E3B);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.btn-datetime-now:hover {
+  background: var(--filter-bg, #DCFCE7);
+}
+
+.search-modal-fields .date-time-inputs-with-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-modal-fields .date-time-inputs-with-now .btn-datetime-now {
+  flex: 0 0 auto;
+}
+
 .search-form-actions-left {
   display: flex;
   gap: 8px;
@@ -3736,9 +3786,15 @@ body.dashboard-page {
 }
 
 .dashboard-page .search-panel .search-form-left,
-.dashboard-page .search-panel .search-form-right {
+.dashboard-page .search-panel .search-form-right,
+.dashboard-page .search-panel .search-form-datetime-now-col {
   flex: 0 0 auto !important;
   gap: 6px !important;
+}
+
+.dashboard-page .search-panel .search-form-datetime-now-col .btn-datetime-now {
+  min-height: 34px;
+  box-sizing: border-box;
 }
 
 .dashboard-page .search-panel .form-group {
