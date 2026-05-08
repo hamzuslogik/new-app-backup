@@ -1015,7 +1015,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                         {isClosed ? (
                           <div className="closed-slot-indicator">
                             <span className="closed-label">FERMÉ</span>
-                            {isAdmin && (
+                            {isAdmin && !isEditing && (
                               <button
                                 className="toggle-closed-btn"
                                 onClick={(e) => {
