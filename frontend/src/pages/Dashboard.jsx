@@ -699,16 +699,6 @@ const Dashboard = () => {
     handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', timeWithSeconds);
   };
 
-  const handleSetCurrentDateTime = (bound) => {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
-    handleDateTimeRangeChange(bound, `${yyyy}-${mm}-${dd}T${hh}:${min}`);
-  };
-
   const handlePageChange = (newPage) => {
     handleFilterChange('page', newPage);
   };
@@ -1604,9 +1594,6 @@ const Dashboard = () => {
                           value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
                           onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
                         />
-                        <button type="button" className="btn-now-datetime" onClick={() => handleSetCurrentDateTime('debut')}>
-                          Actuellement
-                        </button>
                       </div>
                     </div>
 
@@ -1618,9 +1605,6 @@ const Dashboard = () => {
                           value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
                           onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
                         />
-                        <button type="button" className="btn-now-datetime" onClick={() => handleSetCurrentDateTime('fin')}>
-                          Actuellement
-                        </button>
                       </div>
                     </div>
                   </>
@@ -2430,9 +2414,6 @@ const Dashboard = () => {
                         value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
                         onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
                       />
-                      <button type="button" className="btn-now-datetime" onClick={() => handleSetCurrentDateTime('debut')}>
-                        Actuellement
-                      </button>
                     </div>
                   </div>
                 )}
@@ -2464,9 +2445,6 @@ const Dashboard = () => {
                         value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
                         onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
                       />
-                      <button type="button" className="btn-now-datetime" onClick={() => handleSetCurrentDateTime('fin')}>
-                        Actuellement
-                      </button>
                     </div>
                   </div>
                 )}

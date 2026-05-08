@@ -1048,20 +1048,6 @@ body.dashboard-page {
   flex: 1;
 }
 
-.date-time-inputs .btn-now-datetime {
-  padding: 4px 8px;
-  border: 1px solid var(--filter-border, #86EFAC);
-  border-radius: 4px;
-  background: #ffffff;
-  color: var(--input-text, #064E3B);
-  font-size: 10.8px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.date-time-inputs .btn-now-datetime:hover {
-  background: #f0fdf4;
-}
 
 /* Actions du formulaire */
 .search-form-actions {
