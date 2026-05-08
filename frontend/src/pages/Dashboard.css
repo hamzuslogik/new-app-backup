@@ -3650,3 +3650,24 @@ body.dashboard-page {
 .dashboard-affect-modal-actions {
   flex-wrap: wrap;
 }
+
+/* Force sizing for FicheDetail Planning tab inside Dashboard modal */
+.fiche-detail-modal-content .planning-tab .planning-table .time-slot-header,
+.fiche-detail-modal-content .planning-tab .planning-table td.time-slot-header,
+.fiche-detail-modal-content .planning-tab .planning-table .time-slot-header *,
+.fiche-detail-modal-content .planning-tab .planning-table td.time-slot-header * {
+  font-size: 36px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+}
+
+.fiche-detail-modal-content .planning-tab .availability-input {
+  width: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+  height: 18px !important;
+  padding: 0 2px !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+}
