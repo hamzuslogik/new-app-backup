@@ -1313,6 +1313,15 @@ body.dashboard-page {
   overflow-wrap: normal;
 }
 
+/* Priorité forte Dashboard: ne jamais couper un mot dans Nom/Prénom */
+.dashboard-page .fiches-table td:nth-child(1),
+.dashboard-page .fiches-table td:nth-child(2) {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+}
+
 /* Téléphone - colonne un peu plus étroite */
 .fiches-table th:nth-child(3),
 .fiches-table td:nth-child(3) {
@@ -1491,6 +1500,14 @@ body.dashboard-page {
     white-space: normal;
     word-break: keep-all;
     overflow-wrap: normal;
+  }
+
+  .dashboard-page .fiches-table td:nth-child(1),
+  .dashboard-page .fiches-table td:nth-child(2) {
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
   }
 
   .fiches-table td::before {
