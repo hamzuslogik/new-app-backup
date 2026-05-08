@@ -889,6 +889,8 @@
 .planning-tab .availability-input {
   width: 38px !important;
   min-width: 38px !important;
+  max-width: 38px !important;
+  height: 20px !important;
   padding: 1px 3px !important;
   font-size: 10px !important;
   line-height: 1.1 !important;
@@ -899,8 +901,16 @@
 .planning-tab .planning-table td.time-slot-header,
 .planning-tab .planning-table .time-slot-header *,
 .planning-tab .planning-table td.time-slot-header * {
-  font-size: 12px !important;
-  line-height: 1.1 !important;
+  font-size: 16px !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+}
+
+.planning-tab .planning-table .time-slot-header,
+.planning-tab .planning-table td.time-slot-header {
+  display: table-cell !important;
+  vertical-align: middle !important;
+  text-align: center !important;
 }
 
 .rdv-count-only {
