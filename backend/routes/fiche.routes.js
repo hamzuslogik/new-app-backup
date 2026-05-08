@@ -981,7 +981,7 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.cp LIKE ?');
         params.push(`${critere}%`);
       } else if (champRecherche === 'commentaire') {
-        whereConditions.push('LOWER(fiche.commentaire) LIKE ? OR LOWER(fiche.conf_commentaire_produit) LIKE ?');
+        whereConditions.push('(LOWER(fiche.commentaire) LIKE ? OR LOWER(fiche.conf_commentaire_produit) LIKE ?)');
         params.push(`%${critere.toLowerCase()}%`, `%${critere.toLowerCase()}%`);
       } else {
         // Pour les autres champs, recherche LIKE
