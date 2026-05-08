@@ -3780,12 +3780,23 @@ body.dashboard-page {
 }
 
 .dashboard-page .search-panel .search-form-two-columns {
-  gap: 4px !important;
+  /* Même écart entre gauche ↔ boutons « Actuellement » et boutons ↔ droite (pas de flex gap asymétrique) */
+  gap: 2px !important;
   margin-bottom: 6px !important;
   align-items: flex-start !important;
 }
 
-.dashboard-page .search-panel .search-form-left,
+/* Largeur alignée sur les champs (220px) : évite le vide à droite des inputs dans la colonne gauche,
+   qui grossissait visuellement l’espace avant la colonne centrale. */
+.dashboard-page .search-panel .search-form-left {
+  flex: 0 0 220px !important;
+  width: 220px !important;
+  max-width: 220px !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  gap: 6px !important;
+}
+
 .dashboard-page .search-panel .search-form-right,
 .dashboard-page .search-panel .search-form-datetime-now-col {
   flex: 0 0 auto !important;
