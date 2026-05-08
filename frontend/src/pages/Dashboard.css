@@ -788,10 +788,10 @@ body.dashboard-page {
   background: var(--filter-bg, #DCFCE7);
   border: 1px solid var(--filter-border, #86EFAC);
   border-radius: 7px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  width: 50%;
-  max-width: 50%;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .search-panel-header {
@@ -821,7 +821,7 @@ body.dashboard-page {
 
 /* Formulaire de recherche */
 .search-form {
-  padding: 16px;
+  padding: 10px 12px;
   background-color: var(--filter-bg, #DCFCE7) !important;
   border: 1px solid var(--filter-border, #86EFAC);
 }
@@ -837,29 +837,29 @@ body.dashboard-page {
 /* Structure en deux colonnes pour les filtres */
 .search-form-two-columns {
   display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .search-form-left {
-  flex: 0 0 48%;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 7px;
 }
 
 .search-form-right {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 7px;
 }
 
 .search-form-actions-left {
   display: flex;
-  gap: 12px;
-  margin-top: 8px;
-  padding-top: 16px;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 8px;
   border-top: 1px solid #e0e0e0;
 }
 
@@ -938,7 +938,7 @@ body.dashboard-page {
   color: var(--label-color, #065F46) !important;
   font-size: 11.9px;
   font-weight: 800;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .checkbox-inline {
