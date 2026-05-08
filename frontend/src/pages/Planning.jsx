@@ -196,7 +196,7 @@ const Planning = () => {
   );
 
   // Récupérer aussi le planning pour l'onglet disponibilité (pour compter les RDV) avec rafraîchissement automatique
-  const { data: planningDataForAvailability } = useQuery(
+  const { data: planningDataForAvailability, refetch: refetchPlanningForAvailability } = useQuery(
     ['planning-week-for-availability', week, year, dep],
     async () => {
       const res = await api.get('/planning/week', { params: { w: week, y: year, dp: dep || '01' } });
@@ -244,10 +244,12 @@ const Planning = () => {
       onSuccess: () => {
         // Invalider toutes les queries de planning (toutes les variantes)
         queryClient.invalidateQueries(['planning-week']);
+        queryClient.invalidateQueries(['planning-week-for-availability']);
         queryClient.invalidateQueries(['planning-availability']);
         queryClient.invalidateQueries(['planning-modal']);
         queryClient.invalidateQueries(['availability-modal']);
         refetch();
+        refetchPlanningForAvailability();
         refetchAvailability();
         toast.success('Disponibilité mise à jour avec succès');
       },
@@ -268,10 +270,12 @@ const Planning = () => {
       onSuccess: (data) => {
         // Invalider toutes les queries de planning
         queryClient.invalidateQueries(['planning-week']);
+        queryClient.invalidateQueries(['planning-week-for-availability']);
         queryClient.invalidateQueries(['planning-availability']);
         queryClient.invalidateQueries(['planning-modal']);
         queryClient.invalidateQueries(['availability-modal']);
         refetch();
+        refetchPlanningForAvailability();
         refetchAvailability();
         toast.success(data.data?.message || 'Créneau mis à jour avec succès');
       },
@@ -313,6 +317,7 @@ const Planning = () => {
       onSuccess: (data) => {
         // Invalider toutes les queries de planning (toutes les variantes)
         queryClient.invalidateQueries(['planning-week']);
+        queryClient.invalidateQueries(['planning-week-for-availability']);
         queryClient.invalidateQueries(['planning-availability']);
         queryClient.invalidateQueries(['planning-modal']);
         queryClient.invalidateQueries(['availability-modal']);
@@ -351,6 +356,7 @@ const Planning = () => {
     if (dep && week && year) {
       // Invalider toutes les queries de planning pour forcer le rechargement
       queryClient.invalidateQueries(['planning-week']);
+      queryClient.invalidateQueries(['planning-week-for-availability']);
       queryClient.invalidateQueries(['planning-availability']);
       queryClient.invalidateQueries(['planning-modal']);
       queryClient.invalidateQueries(['availability-modal']);
