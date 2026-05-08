@@ -970,51 +970,27 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                   // Badge rdv-count / availability-total (affiché en permanence sauf si fermé)
                   const renderRdvBadge = () => {
                     if (isClosed) return null;
-                    if (currentValue === null) {
-                      return rdvCount > 0 ? (
-                        <span 
-                          className="availability-rdv-info"
-                          style={{ 
-                            backgroundColor: getAvailabilityBadgeColor(rdvCount, currentValue), 
-                            color: '#ffffff',
-                            fontWeight: '700',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            display: 'inline-block',
-                            position: 'absolute',
-                            left: '2px',
-                            top: '2px',
-                            zIndex: 5
-                          }}
-                        >
-                          <span className="rdv-count">{rdvCount}</span>
-                          <span className="separator">/</span>
-                          <span className="availability-total">-</span>
+                    return (
+                      <span
+                        className="availability-rdv-info"
+                        style={{
+                          backgroundColor: 'transparent',
+                          color: '#1f2937',
+                          fontWeight: '700',
+                          padding: '0',
+                          borderRadius: '0',
+                          display: 'inline-block',
+                          position: 'absolute',
+                          left: '4px',
+                          top: '2px',
+                          zIndex: 5
+                        }}
+                      >
+                        <span className="rdv-count">
+                          {`DEP ${dep || '-'} ${rdvCount}/${currentValue ?? '-'}`}
                         </span>
-                      ) : null;
-                    } else {
-                      return (
-                        <span 
-                          className="availability-rdv-info"
-                          style={{ 
-                            backgroundColor: getAvailabilityBadgeColor(rdvCount, currentValue), 
-                            color: '#ffffff',
-                            fontWeight: '700',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            display: 'inline-block',
-                            position: 'absolute',
-                            left: '2px',
-                            top: '2px',
-                            zIndex: 5
-                          }}
-                        >
-                          <span className="rdv-count">{rdvCount}</span>
-                          <span className="separator">/</span>
-                          <span className="availability-total">{currentValue}</span>
-                        </span>
-                      );
-                    }
+                      </span>
+                    );
                   };
                   
                   return (
