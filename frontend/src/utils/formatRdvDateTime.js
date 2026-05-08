@@ -8,8 +8,8 @@ export function formatRdvDateTime(datetimeStr) {
   const s = String(datetimeStr).trim();
   const match = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if (!match) return s;
-  const [, y, m, d, h, min, sec] = match;
-  return `${d}/${m}/${y} ${h.padStart(2, '0')}:${min}${sec !== undefined ? ':' + sec : ''}`;
+  const [, y, m, d, h, min] = match;
+  return `${d}/${m}/${y} ${h.padStart(2, '0')}:${min}`;
 }
 
 /** Date only (no time), timezone-independent. */
