@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../config/api';
 import { FaChevronLeft, FaChevronRight, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -61,15 +61,6 @@ const JOURS = [
   { value: '5', label: 'Vendredi' }
 ];
 
-const TIME_SLOTS = [
-  { hour: '09:00:00', name: '09h-11h' },
-  { hour: '11:00:00', name: '11h-13h' },
-  { hour: '13:00:00', name: '13h-16h' },
-  { hour: '16:00:00', name: '16h-18h' },
-  { hour: '18:00:00', name: '18h-19h30' },
-  { hour: '19:30:00', name: '19h30-21h' }
-];
-
 const getDepartmentSortNumber = (value) => {
   const digits = String(value || '').replace(/\D/g, '');
   if (!digits) return Number.MAX_SAFE_INTEGER;
@@ -88,7 +79,6 @@ const PlanningHebdomadaire = () => {
 
   const [week, setWeek] = useState(parseInt(searchParams.get('w'), 10) || currentWeek);
   const [year, setYear] = useState(parseInt(searchParams.get('y'), 10) || currentYear);
-  const selectedAvailabilityDep = searchParams.get('avdp') || '';
   
   // Formulaire d'ajout
   const [formData, setFormData] = useState({
@@ -216,32 +206,6 @@ const PlanningHebdomadaire = () => {
       enabled: !!year && !!week,
       staleTime: 30000, // Cache 30 secondes
       retry: false, // Ne pas réessayer en cas d'erreur 404
-    }
-  );
-
-  const { data: inlineAvailabilityResponse, isLoading: isLoadingInlineAvailability } = useQuery(
-    ['planning-availability-inline', week, year, selectedAvailabilityDep],
-    async () => {
-      const res = await api.get('/planning/availability', {
-        params: { w: week, y: year, dp: selectedAvailabilityDep }
-      });
-      return res.data;
-    },
-    {
-      enabled: !!selectedAvailabilityDep && !!week && !!year
-    }
-  );
-
-  const { data: inlinePlanningResponse, isLoading: isLoadingInlinePlanning } = useQuery(
-    ['planning-week-inline', week, year, selectedAvailabilityDep],
-    async () => {
-      const res = await api.get('/planning/week', {
-        params: { w: week, y: year, dp: selectedAvailabilityDep }
-      });
-      return res.data;
-    },
-    {
-      enabled: !!selectedAvailabilityDep && !!week && !!year
     }
   );
 
@@ -468,33 +432,6 @@ const PlanningHebdomadaire = () => {
     }
   };
 
-  const inlineDays = React.useMemo(() => {
-    const monday = getMondayOfWeek(year, week);
-    const daysFr = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
-    const days = [];
-    for (let i = 0; i < 5; i += 1) {
-      const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
-      const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      days.push({ dayName: daysFr[i], date });
-    }
-    return days;
-  }, [year, week]);
-
-  const inlineAvailability = inlineAvailabilityResponse?.data || {};
-  const inlinePlanning = inlinePlanningResponse?.data || {};
-
-  const handleOpenAvailabilityInline = (depCode) => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('avdp', String(depCode || '').padStart(2, '0'));
-    setSearchParams(nextParams);
-  };
-
-  const handleCloseAvailabilityInline = () => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete('avdp');
-    setSearchParams(nextParams);
-  };
-
   // Garder l'URL synchronisée avec la semaine/année affichée pour
   // permettre un retour navigateur sur la même semaine après ouverture du planning.
   useEffect(() => {
@@ -682,13 +619,12 @@ const PlanningHebdomadaire = () => {
                 .map((item) => (
                 <tr key={item.departement_id}>
                   <td>
-                    <button
-                      type="button"
-                      className="departement-link departement-link-btn"
-                      onClick={() => handleOpenAvailabilityInline(item.departement_code || item.departement_id)}
+                    <Link 
+                      to={`/planning?dp=${item.departement_code || item.departement_id}&w=${week}&y=${year}&mode=availability`}
+                      className="departement-link"
                     >
                       {item.departement_nom}
-                    </button>
+                    </Link>
                   </td>
                   <td>{item.lundi}</td>
                   <td>{item.mardi}</td>
@@ -710,52 +646,6 @@ const PlanningHebdomadaire = () => {
           </tbody>
         </table>
       </div>
-
-      {selectedAvailabilityDep && (
-        <div className="planning-hebdo-inline-availability">
-          <div className="inline-availability-header">
-            <h3>Availability - DEP {String(selectedAvailabilityDep).padStart(2, '0')} - Semaine {week}</h3>
-            <button type="button" className="btn-reset" onClick={handleCloseAvailabilityInline}>
-              Fermer
-            </button>
-          </div>
-          {(isLoadingInlineAvailability || isLoadingInlinePlanning) ? (
-            <div className="inline-availability-loading">Chargement des disponibilités...</div>
-          ) : (
-            <div className="inline-availability-table-container">
-              <table className="inline-availability-table">
-                <thead>
-                  <tr>
-                    <th>Heure</th>
-                    {inlineDays.map((day) => (
-                      <th key={day.date}>{day.dayName}<br />{day.date}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {TIME_SLOTS.map((slot) => (
-                    <tr key={slot.hour}>
-                      <td>{slot.name}</td>
-                      {inlineDays.map((day) => {
-                        const availData = inlineAvailability?.[day.date]?.[slot.hour];
-                        const total = availData?.nbr_com ?? availData?.av ?? 0;
-                        const rdvCount = Array.isArray(inlinePlanning?.[day.date]?.[slot.hour])
-                          ? inlinePlanning[day.date][slot.hour].length
-                          : 0;
-                        return (
-                          <td key={`${day.date}-${slot.hour}`}>
-                            <span className="inline-availability-badge">{rdvCount} / {total}</span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };
