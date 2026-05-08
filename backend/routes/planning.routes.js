@@ -1274,8 +1274,31 @@ router.post('/hebdomadaire', authenticate, checkPermission(1, 2, 7, 11), async (
 
     const weekNum = parseInt(week);
     const yearNum = parseInt(year);
-    const dep = String(id_departement).padStart(2, '0');
+    const dep = String(id_departement).trim().toUpperCase().padStart(2, '0');
     const nbrCom = parseInt(nombre_commercial);
+
+    // Accepter tout département saisi depuis le planning hebdo :
+    // - s'il existe et est inactif => activer
+    // - s'il n'existe pas => créer actif
+    const existingDep = await queryOne(
+      `SELECT id, etat FROM departements WHERE departement_code = ? LIMIT 1`,
+      [dep]
+    );
+
+    if (existingDep) {
+      if (Number(existingDep.etat) <= 0) {
+        await query(
+          `UPDATE departements SET etat = 1 WHERE id = ?`,
+          [existingDep.id]
+        );
+      }
+    } else {
+      await query(
+        `INSERT INTO departements (departement_code, departement_nom, departement_nom_uppercase, etat)
+         VALUES (?, ?, ?, 1)`,
+        [dep, `DEP ${dep}`, `DEP ${dep}`]
+      );
+    }
 
     // Obtenir les jours de la semaine
     const days = getWeekDays(yearNum, weekNum);

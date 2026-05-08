@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../config/api';
 import { FaChevronLeft, FaChevronRight, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -71,13 +71,14 @@ const PlanningHebdomadaire = () => {
   useForceDesktopViewport('planning-hebdomadaire-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const currentDate = new Date();
   const currentWeek = getWeekNumber(currentDate);
   const currentYear = currentDate.getFullYear();
 
-  const [week, setWeek] = useState(currentWeek);
-  const [year, setYear] = useState(currentYear);
+  const [week, setWeek] = useState(parseInt(searchParams.get('w'), 10) || currentWeek);
+  const [year, setYear] = useState(parseInt(searchParams.get('y'), 10) || currentYear);
   
   // Formulaire d'ajout
   const [formData, setFormData] = useState({
@@ -376,14 +377,11 @@ const PlanningHebdomadaire = () => {
         return code.startsWith(typed) || nom.includes(typed);
       });
 
-    if (!matchedDepartment) {
-      toast.error('Département introuvable. Saisissez le code (ex: 75) ou le nom.');
-      return;
-    }
+    const fallbackDepartmentCode = String(formData.departement_input || '').trim().toUpperCase();
 
     createMutation.mutate({
       jour: formData.jour,
-      id_departement: matchedDepartment.id || matchedDepartment.code,
+      id_departement: matchedDepartment?.id || matchedDepartment?.code || fallbackDepartmentCode,
       nombre_commercial: formData.nombre_commercial,
       forcer: 'CRENAUX'
     });
@@ -433,6 +431,15 @@ const PlanningHebdomadaire = () => {
       resetMutation.mutate();
     }
   };
+
+  // Garder l'URL synchronisée avec la semaine/année affichée pour
+  // permettre un retour navigateur sur la même semaine après ouverture du planning.
+  useEffect(() => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('w', String(week));
+    nextParams.set('y', String(year));
+    setSearchParams(nextParams, { replace: true });
+  }, [week, year, searchParams, setSearchParams]);
 
   // Générer la liste des semaines pour la copie (année courante et année suivante)
   const availableWeeks = [];
