@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
@@ -678,25 +680,29 @@ const Dashboard = () => {
     }
   };
 
-  const buildDateTimeLocalValue = (dateValue, timeValue, defaultTime = '00:00:00') => {
+  const parseFilterDateTimeToDate = (dateValue, timeValue, defaultTime = '00:00:00') => {
     const d = String(dateValue || '').trim();
-    if (!d) return '';
+    if (!d) return null;
     const tRaw = String(timeValue || defaultTime || '').trim();
-    const t = (tRaw.length >= 5 ? tRaw.slice(0, 5) : '00:00');
-    return `${d}T${t}`;
+    const hhmm = (tRaw.length >= 5 ? tRaw.slice(0, 5) : '00:00');
+    const [h, m] = hhmm.split(':');
+    const dt = new Date(`${d}T${h}:${m}:00`);
+    return Number.isNaN(dt.getTime()) ? null : dt;
   };
 
-  const handleDateTimeRangeChange = (bound, value) => {
-    if (!value) {
+  const handleDatePickerChange = (bound, dateObj) => {
+    if (!dateObj) {
       handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', '');
       handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', '');
       return;
     }
-    const [datePart, timePartRaw] = String(value).split('T');
-    const hhmm = (timePartRaw || '').slice(0, 5);
-    const timeWithSeconds = hhmm ? `${hhmm}:00` : (bound === 'debut' ? '00:00:00' : '23:59:59');
-    handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', datePart || '');
-    handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', timeWithSeconds);
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    const hh = String(dateObj.getHours()).padStart(2, '0');
+    const min = String(dateObj.getMinutes()).padStart(2, '0');
+    handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', `${yyyy}-${mm}-${dd}`);
+    handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', `${hh}:${min}:00`);
   };
 
   const handlePageChange = (newPage) => {
@@ -1589,10 +1595,17 @@ const Dashboard = () => {
                     <div className="form-group date-group">
                       <label>Date début</label>
                       <div className="date-time-inputs">
-                        <input
-                          type="datetime-local"
-                          value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
-                          onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
+                        <DatePicker
+                          selected={parseFilterDateTimeToDate(filters.date_debut, filters.time_debut, '00:00:00')}
+                          onChange={(d) => handleDatePickerChange('debut', d)}
+                          showTimeSelect
+                          timeIntervals={1}
+                          dateFormat="dd/MM/yyyy HH:mm"
+                          timeFormat="HH:mm"
+                          todayButton="Actuellement"
+                          isClearable
+                          placeholderText="Date début"
+                          className="form-control"
                         />
                       </div>
                     </div>
@@ -1600,10 +1613,17 @@ const Dashboard = () => {
                     <div className="form-group date-group">
                       <label>Date fin</label>
                       <div className="date-time-inputs">
-                        <input
-                          type="datetime-local"
-                          value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
-                          onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
+                        <DatePicker
+                          selected={parseFilterDateTimeToDate(filters.date_fin, filters.time_fin, '23:59:59')}
+                          onChange={(d) => handleDatePickerChange('fin', d)}
+                          showTimeSelect
+                          timeIntervals={1}
+                          dateFormat="dd/MM/yyyy HH:mm"
+                          timeFormat="HH:mm"
+                          todayButton="Actuellement"
+                          isClearable
+                          placeholderText="Date fin"
+                          className="form-control"
                         />
                       </div>
                     </div>
@@ -2409,10 +2429,17 @@ const Dashboard = () => {
                   <div className="form-group">
                     <label>Date début</label>
                     <div className="date-time-inputs">
-                      <input
-                        type="datetime-local"
-                        value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
-                        onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
+                      <DatePicker
+                        selected={parseFilterDateTimeToDate(filters.date_debut, filters.time_debut, '00:00:00')}
+                        onChange={(d) => handleDatePickerChange('debut', d)}
+                        showTimeSelect
+                        timeIntervals={1}
+                        dateFormat="dd/MM/yyyy HH:mm"
+                        timeFormat="HH:mm"
+                        todayButton="Actuellement"
+                        isClearable
+                        placeholderText="Date début"
+                        className="form-control"
                       />
                     </div>
                   </div>
@@ -2440,10 +2467,17 @@ const Dashboard = () => {
                   <div className="form-group">
                     <label>Date fin</label>
                     <div className="date-time-inputs">
-                      <input
-                        type="datetime-local"
-                        value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
-                        onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
+                      <DatePicker
+                        selected={parseFilterDateTimeToDate(filters.date_fin, filters.time_fin, '23:59:59')}
+                        onChange={(d) => handleDatePickerChange('fin', d)}
+                        showTimeSelect
+                        timeIntervals={1}
+                        dateFormat="dd/MM/yyyy HH:mm"
+                        timeFormat="HH:mm"
+                        todayButton="Actuellement"
+                        isClearable
+                        placeholderText="Date fin"
+                        className="form-control"
                       />
                     </div>
                   </div>
