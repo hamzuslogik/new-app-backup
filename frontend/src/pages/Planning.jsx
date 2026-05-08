@@ -644,11 +644,12 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                         {editingDayTotal === day.date ? (
                           <>
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={dayTotalValue}
-                              onChange={(e) => setDayTotalValue(e.target.value)}
+                              onChange={(e) => setDayTotalValue(String(e.target.value || '').replace(/\D/g, ''))}
                               className="total-input"
-                              min="0"
                               autoFocus
                             />
                             <button
@@ -898,9 +899,11 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                         {editingCell === `total-${day.date}` ? (
                           <>
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
+                              onChange={(e) => setEditValue(String(e.target.value || '').replace(/\D/g, ''))}
                               className="total-input"
                               autoFocus
                             />
