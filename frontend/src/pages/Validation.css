@@ -177,6 +177,26 @@
   padding: 16px;
 }
 
+.validation-quick-search {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.validation-quick-search label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+}
+
+.validation-quick-search input {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
 .fiches-table-container {
   overflow-x: auto;
 }

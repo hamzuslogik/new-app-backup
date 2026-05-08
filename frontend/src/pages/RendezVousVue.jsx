@@ -21,7 +21,7 @@ const RendezVousVue = () => {
   const [activeTab, setActiveTab] = useState('jour');
   const [dateJour, setDateJour] = useState(today);
   const [sortConfig, setSortConfig] = useState({ key: 'date_rdv_time', direction: 'asc' });
-  const [quickSearch, setQuickSearch] = useState('');
+  const [quickSearchDep, setQuickSearchDep] = useState('');
   const [ficheContextMenu, setFicheContextMenu] = useState(null);
   const [ficheDetailModal, setFicheDetailModal] = useState(null);
 
@@ -109,19 +109,17 @@ const RendezVousVue = () => {
   }, [list, sortConfig]);
 
   const filteredList = useMemo(() => {
-    const term = quickSearch.trim().toLowerCase();
-    if (!term) return sortedList;
-    return sortedList.filter((f) =>
-      (f.nom || '').toLowerCase().includes(term) ||
-      (f.prenom || '').toLowerCase().includes(term) ||
-      (f.tel || '').toLowerCase().includes(term) ||
-      (f.cp || '').toLowerCase().includes(term) ||
-      (f.ville || '').toLowerCase().includes(term) ||
-      (f.commercial_pseudo || '').toLowerCase().includes(term) ||
-      (f.commercial2_pseudo || '').toLowerCase().includes(term) ||
-      (f.etat_titre || '').toLowerCase().includes(term)
-    );
-  }, [sortedList, quickSearch]);
+    const terms = quickSearchDep
+      .split(',')
+      .map((t) => t.trim().toUpperCase())
+      .filter(Boolean);
+    if (terms.length === 0) return sortedList;
+    return sortedList.filter((f) => {
+      const cp = String(f.cp || '').trim().toUpperCase();
+      if (!cp) return false;
+      return terms.some((term) => cp.startsWith(term));
+    });
+  }, [sortedList, quickSearchDep]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => {
@@ -257,9 +255,9 @@ const RendezVousVue = () => {
           <FaSearch />
           <input
             type="text"
-            placeholder="Recherche rapide (nom, prénom, téléphone, CP, ville, commercial, état)..."
-            value={quickSearch}
-            onChange={(e) => setQuickSearch(e.target.value)}
+            placeholder="Recherche rapide département (ex: 77 ou 77,45)"
+            value={quickSearchDep}
+            onChange={(e) => setQuickSearchDep(e.target.value)}
             className="quick-search-input"
           />
         </div>

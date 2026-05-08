@@ -14,6 +14,7 @@ const Validation = () => {
   const { user } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
   const [showDetails, setShowDetails] = useState(true);
+  const [quickSearchDep, setQuickSearchDep] = useState('');
   
   // Calculer les dates par défaut : lendemain, et si c'est vendredi, afficher les RDV de lundi
   const getDefaultDates = () => {
@@ -100,6 +101,19 @@ const Validation = () => {
   const statsByDepartement = validationData?.statsByDepartement || [];
   const totals = validationData?.totals || { valides: 0, nonValides: 0, total: 0 };
 
+  const filteredFiches = (() => {
+    const terms = quickSearchDep
+      .split(',')
+      .map((t) => t.trim().toUpperCase())
+      .filter(Boolean);
+    if (terms.length === 0) return fiches;
+    return fiches.filter((fiche) => {
+      const cp = String(fiche.cp || '').trim().toUpperCase();
+      if (!cp) return false;
+      return terms.some((term) => cp.startsWith(term));
+    });
+  })();
+
   return (
     <div className="validation-page">
       <div className="validation-header">
@@ -184,6 +198,16 @@ const Validation = () => {
       )}
 
       <div className="validation-content">
+        <div className="validation-quick-search">
+          <label htmlFor="validation-quick-search-dep">Recherche rapide département</label>
+          <input
+            id="validation-quick-search-dep"
+            type="text"
+            placeholder="Ex: 77 ou 77,45"
+            value={quickSearchDep}
+            onChange={(e) => setQuickSearchDep(e.target.value)}
+          />
+        </div>
         {isLoading ? (
           <div className="loading">Chargement des RDV...</div>
         ) : error ? (
@@ -193,7 +217,7 @@ const Validation = () => {
               {error.response?.data?.message || error.message || 'Erreur inconnue'}
             </p>
           </div>
-        ) : fiches.length === 0 ? (
+        ) : filteredFiches.length === 0 ? (
           <div className="no-results">Aucun RDV trouvé</div>
         ) : showDetails ? (
           <div className={`fiches-table-container ${!showDetails ? 'compact' : ''}`}>
@@ -215,7 +239,7 @@ const Validation = () => {
                 </tr>
               </thead>
               <tbody>
-                {fiches.map(fiche => {
+                {filteredFiches.map(fiche => {
                   const confirmateurs = [];
                   if (fiche.confirmateur1_pseudo) confirmateurs.push(fiche.confirmateur1_pseudo);
                   if (fiche.confirmateur2_pseudo) confirmateurs.push(fiche.confirmateur2_pseudo);
