@@ -983,7 +983,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                               color: '#000000',
                               WebkitTextFillColor: '#000000',
                               fontWeight: 900,
-                              fontSize: '16px'
+                              fontSize: '14px'
                             }}
                           >
                             {`DEP ${dep || '-'} : ${rdvCount}/${currentValue ?? '-'}`}
