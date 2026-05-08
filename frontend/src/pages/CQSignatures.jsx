@@ -50,19 +50,19 @@ const TAB_DEFS = [
 ];
 
 const ETAT_FILTER_DEFS = [
-  { id: null, label: 'TOUS' },
-  { id: 13, label: 'SIGNER' },
-  { id: 45, label: 'COMPLET' },
-  { id: 44, label: 'PM' },
-  { id: 16, label: 'RETRACTER' },
-  { id: 38, label: 'RECTRACTER X2' },
+  { key: 'all', label: 'TOUS', fallbackId: null },
+  { key: 'signer', label: 'SIGNER', fallbackId: 13, matchers: ['signer'] },
+  { key: 'complet', label: 'COMPLET', fallbackId: 45, matchers: ['signer complet', 'complet'] },
+  { key: 'pm', label: 'PM', fallbackId: 44, matchers: ['signer pm', 'pm'] },
+  { key: 'retracter', label: 'RETRACTER', fallbackId: 16, matchers: ['signer retracter', 'retracter'] },
+  { key: 'retracter_x2', label: 'RECTRACTER X2', fallbackId: 38, matchers: ['signer retracter 2 fois', 'retracter 2 fois', 'retracter x2'] },
 ];
 
 const CQSignatures = () => {
   useForceDesktopViewport('cq-signatures-page');
   const todayLocal = getTodayLocal();
   const [activeTab, setActiveTab] = useState('today');
-  const [activeEtatFinal, setActiveEtatFinal] = useState(null);
+  const [activeEtatKey, setActiveEtatKey] = useState('all');
   const [customDateDebut, setCustomDateDebut] = useState(todayLocal);
   const [customDateFin, setCustomDateFin] = useState(todayLocal);
   const [appliedCustomRange, setAppliedCustomRange] = useState({
@@ -83,7 +83,7 @@ const CQSignatures = () => {
   }, [activeTab, appliedCustomRange]);
 
   const { data, isLoading } = useQuery(
-    ['cq-signatures', activeTab, activeRange.dateDebut, activeRange.dateFin, activeEtatFinal, page],
+    ['cq-signatures', activeTab, activeRange.dateDebut, activeRange.dateFin, activeEtatKey, activeEtatFinal, page],
     async () => {
       const res = await api.get('/signature', {
         params: {
@@ -104,6 +104,30 @@ const CQSignatures = () => {
     const res = await api.get('/management/etats');
     return res.data?.data || [];
   });
+
+  const normalizeEtatLabel = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  const etatFiltersResolved = useMemo(() => {
+    const etats = Array.isArray(etatsData) ? etatsData : [];
+    return ETAT_FILTER_DEFS.map((def) => {
+      if (def.key === 'all') return { ...def, id: null };
+      const matched = etats.find((e) => {
+        const titre = normalizeEtatLabel(e?.titre);
+        return (def.matchers || []).some((matcher) => titre.includes(normalizeEtatLabel(matcher)));
+      });
+      return { ...def, id: matched?.id ?? def.fallbackId };
+    });
+  }, [etatsData]);
+
+  const activeEtatFinal = useMemo(() => {
+    const found = etatFiltersResolved.find((f) => f.key === activeEtatKey);
+    return found?.id ?? null;
+  }, [etatFiltersResolved, activeEtatKey]);
 
   const rows = data?.data || [];
   const pagination = data?.pagination || {};
@@ -220,13 +244,13 @@ const CQSignatures = () => {
           ))}
         </div>
         <div className="cq-status-tabs">
-          {ETAT_FILTER_DEFS.map((etat) => (
+          {etatFiltersResolved.map((etat) => (
             <button
-              key={etat.id}
+              key={etat.key}
               type="button"
-              className={`cq-tab ${activeEtatFinal === etat.id ? 'active' : ''}`}
+              className={`cq-tab ${activeEtatKey === etat.key ? 'active' : ''}`}
               onClick={() => {
-                setActiveEtatFinal(etat.id);
+                setActiveEtatKey(etat.key);
                 setPage(1);
               }}
             >
