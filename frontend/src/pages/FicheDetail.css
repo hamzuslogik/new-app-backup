@@ -875,6 +875,16 @@
   white-space: nowrap;
 }
 
+/* Onglet Planning (détail fiche): forcer la même taille que page Planning */
+.planning-tab .availability-badge {
+  padding: 2px 6px !important;
+}
+
+.planning-tab .availability-badge .availability-text-compact {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+}
+
 .rdv-count-only {
   position: absolute;
   top: 5px;
