@@ -8301,12 +8301,13 @@ const PlanningViewForModal = ({
                         {isEditing ? (
                           <div className="edit-controls" onClick={(e) => e.stopPropagation()}>
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
+                              onChange={(e) => setEditValue(String(e.target.value || '').replace(/\D/g, ''))}
                               className="availability-input"
                               autoFocus
-                              min="0"
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                   handleSave(day.date, slot.hour);
@@ -8315,12 +8316,12 @@ const PlanningViewForModal = ({
                                 }
                               }}
                               style={{
-                                width: '30px',
-                                minWidth: '30px',
-                                maxWidth: '30px',
-                                height: '18px',
-                                padding: '0 2px',
-                                fontSize: '9px',
+                                width: '45px',
+                                minWidth: '45px',
+                                maxWidth: '45px',
+                                height: '27px',
+                                padding: '0 3px',
+                                fontSize: '13.5px',
                                 lineHeight: 1,
                                 border: '1px solid #ccc',
                                 borderRadius: '3px'
@@ -8407,18 +8408,19 @@ const PlanningViewForModal = ({
                                 }}
                               >
                                 <input
-                                  type="number"
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
                                   className="availability-input"
                                   value={pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined
                                     ? pendingAvailabilityEdits[`${day.date}-${slot.hour}`]
                                     : (cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined
                                       ? cellAvailabilityValues[`${day.date}-${slot.hour}`]
                                       : (availabilityCount !== null ? availabilityCount : ''))}
-                                  onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
-                                  min="0"
+                                  onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, String(e.target.value || '').replace(/\D/g, ''))}
                                   placeholder="-"
                                   title="Saisir la valeur puis cliquer sur Valider"
-                                  style={{ width: '30px', minWidth: '30px', maxWidth: '30px', height: '18px', padding: '0 2px', fontSize: '9px', lineHeight: 1 }}
+                                  style={{ width: '45px', minWidth: '45px', maxWidth: '45px', height: '27px', padding: '0 3px', fontSize: '13.5px', lineHeight: 1 }}
                                 />
                                 {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
                                   <>
@@ -8474,18 +8476,19 @@ const PlanningViewForModal = ({
                                 }}
                               >
                                 <input
-                                  type="number"
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
                                   className="availability-input"
                                   value={pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined
                                     ? pendingAvailabilityEdits[`${day.date}-${slot.hour}`]
                                     : (cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined
                                       ? cellAvailabilityValues[`${day.date}-${slot.hour}`]
                                       : '')}
-                                  onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, e.target.value)}
-                                  min="0"
+                                  onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, String(e.target.value || '').replace(/\D/g, ''))}
                                   placeholder="-"
                                   title="Saisir la valeur puis cliquer sur Valider"
-                                  style={{ width: '30px', minWidth: '30px', maxWidth: '30px', height: '18px', padding: '0 2px', fontSize: '9px', lineHeight: 1 }}
+                                  style={{ width: '45px', minWidth: '45px', maxWidth: '45px', height: '27px', padding: '0 3px', fontSize: '13.5px', lineHeight: 1 }}
                                 />
                                 {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
                                   <>
