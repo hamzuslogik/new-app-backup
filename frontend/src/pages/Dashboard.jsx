@@ -699,6 +699,18 @@ const Dashboard = () => {
     handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', timeWithSeconds);
   };
 
+  const handleSetTodayFullDayRange = () => {
+    const { dateStr } = getTodayDateRange();
+    setFilters((prev) => ({
+      ...prev,
+      date_debut: dateStr,
+      date_fin: dateStr,
+      time_debut: '00:00:00',
+      time_fin: '23:59:59',
+      page: 1,
+    }));
+  };
+
   const handlePageChange = (newPage) => {
     handleFilterChange('page', newPage);
   };
@@ -1533,6 +1545,25 @@ const Dashboard = () => {
                   )}
                 </div>
 
+                {/* Champ de date (placé sous État final) */}
+                <div className="form-group">
+                  <label>Champ de date</label>
+                  <select
+                    value={filters.date_champ || ''}
+                    onChange={(e) => handleFilterChange('date_champ', e.target.value)}
+                  >
+                    <option value="">Sélectionnez date</option>
+                    <option value="date_modif_time">Date Modification</option>
+                    <option value="date_insert_time">Date Insertion</option>
+                    <option value="date_appel_time">Date d'appel</option>
+                    {user?.fonction !== 3 && (
+                      <option value="date_rdv_time">Date Planning</option>
+                    )}
+                    <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
+                    <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
+                  </select>
+                </div>
+
                 {/* Sous-état (affiché uniquement si l'état sélectionné a des sous-états) */}
                 {showSousEtatFilter && (
                   <div className="form-group">
@@ -1564,29 +1595,32 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Date début */}
-                <div className="form-group date-group">
-                  <label>Date début</label>
-                  <div className="date-time-inputs">
-                    <input
-                      type="datetime-local"
-                      value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
-                      onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
-                    />
-                  </div>
-                </div>
+                {/* Date début / fin: affichées uniquement si un champ de date est sélectionné */}
+                {filters.date_champ && (
+                  <>
+                    <div className="form-group date-group">
+                      <label>Date début</label>
+                      <div className="date-time-inputs">
+                        <input
+                          type="datetime-local"
+                          value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
+                          onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
+                        />
+                      </div>
+                    </div>
 
-                {/* Date fin */}
-                <div className="form-group date-group">
-                  <label>Date fin</label>
-                  <div className="date-time-inputs">
-                    <input
-                      type="datetime-local"
-                      value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
-                      onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
-                    />
-                  </div>
-                </div>
+                    <div className="form-group date-group">
+                      <label>Date fin</label>
+                      <div className="date-time-inputs">
+                        <input
+                          type="datetime-local"
+                          value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
+                          onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Inclure archives */}
                 <div className="form-group">
@@ -1597,12 +1631,14 @@ const Dashboard = () => {
                       checked={!!filters.include_archive}
                       onChange={(e) => handleFilterChange('include_archive', e.target.checked)}
                     />
-                    Inclure les fiches archivées
                   </label>
                 </div>
 
                 {/* Boutons d'action */}
                 <div className="search-form-actions-left">
+                  <button type="button" onClick={handleSetTodayFullDayRange} className="btn-reset">
+                    Aujourd'hui 00:00-23:59
+                  </button>
                   <button type="submit" className="btn-search">
                     <FaSearch /> RECHERCHE
                   </button>
@@ -1725,25 +1761,6 @@ const Dashboard = () => {
                     </select>
                   </div>
                 )}
-
-                {/* Champ de date */}
-                <div className="form-group">
-                  <label>Champ de date</label>
-                  <select
-                    value={filters.date_champ || ''}
-                    onChange={(e) => handleFilterChange('date_champ', e.target.value)}
-                  >
-                    <option value="">Sélectionnez date</option>
-                    <option value="date_modif_time">Date Modification</option>
-                    <option value="date_insert_time">Date Insertion</option>
-                    <option value="date_appel_time">Date d'appel</option>
-                    {user?.fonction !== 3 && (
-                      <option value="date_rdv_time">Date Planning</option>
-                    )}
-                    <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
-                    <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
-                  </select>
-                </div>
 
                 {/* Confirmateur : inclure fiches en 2e / 3e slot — uniquement après recherche (param envoyé si coché) */}
                 {user?.fonction === 6 && (
@@ -2340,6 +2357,25 @@ const Dashboard = () => {
                   )}
                 </div>
 
+                {/* Champ de date (placé sous État final) */}
+                <div className="form-group">
+                  <label>Champ de date</label>
+                  <select
+                    value={filters.date_champ || ''}
+                    onChange={(e) => handleFilterChange('date_champ', e.target.value)}
+                  >
+                    <option value="">Sélectionnez date</option>
+                    <option value="date_modif_time">Date Modification</option>
+                    <option value="date_insert_time">Date Insertion</option>
+                    <option value="date_appel_time">Date d'appel</option>
+                    {user?.fonction !== 3 && (
+                      <option value="date_rdv_time">Date Planning</option>
+                    )}
+                    <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
+                    <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
+                  </select>
+                </div>
+
                 {showSousEtatFilter && (
                   <div className="form-group">
                     <label>Sous-état</label>
@@ -2369,25 +2405,6 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Champ de date */}
-                <div className="form-group">
-                  <label>Champ de date</label>
-                  <select
-                    value={filters.date_champ || ''}
-                    onChange={(e) => handleFilterChange('date_champ', e.target.value)}
-                  >
-                    <option value="">Sélectionnez date</option>
-                    <option value="date_modif_time">Date Modification</option>
-                    <option value="date_insert_time">Date Insertion</option>
-                    <option value="date_appel_time">Date d'appel</option>
-                    {user?.fonction !== 3 && (
-                      <option value="date_rdv_time">Date Planning</option>
-                    )}
-                    <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
-                    <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
-                  </select>
-                </div>
-
                 {user?.fonction === 6 && (
                   <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <input
@@ -2402,17 +2419,19 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Date début */}
-                <div className="form-group">
-                  <label>Date début</label>
-                  <div className="date-time-inputs">
-                    <input
-                      type="datetime-local"
-                      value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
-                      onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
-                    />
+                {/* Date début / fin: affichées uniquement si un champ de date est sélectionné */}
+                {filters.date_champ && (
+                  <div className="form-group">
+                    <label>Date début</label>
+                    <div className="date-time-inputs">
+                      <input
+                        type="datetime-local"
+                        value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
+                        onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Commercial (aligné avec Date fin) */}
                 {user?.fonction !== 5 && (
@@ -2432,20 +2451,24 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Date fin */}
-                <div className="form-group">
-                  <label>Date fin</label>
-                  <div className="date-time-inputs">
-                    <input
-                      type="datetime-local"
-                      value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
-                      onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
-                    />
+                {filters.date_champ && (
+                  <div className="form-group">
+                    <label>Date fin</label>
+                    <div className="date-time-inputs">
+                      <input
+                        type="datetime-local"
+                        value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
+                        onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="search-modal-actions">
+                <button type="button" onClick={handleSetTodayFullDayRange} className="btn-reset">
+                  Aujourd'hui 00:00-23:59
+                </button>
                 <button type="submit" className="btn-search">
                   <FaSearch /> RECHERCHE
                 </button>

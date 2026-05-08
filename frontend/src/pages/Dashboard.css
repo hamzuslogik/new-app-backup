@@ -3729,7 +3729,7 @@ body.dashboard-page {
 }
 
 .dashboard-page .search-panel .search-form-two-columns {
-  gap: 8px !important;
+  gap: 4px !important;
   margin-bottom: 6px !important;
   align-items: flex-start !important;
 }
