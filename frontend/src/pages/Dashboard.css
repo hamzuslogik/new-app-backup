@@ -1627,6 +1627,16 @@ body.dashboard-page {
   box-sizing: border-box;
 }
 
+/* Priorité forte globale : élargir Nom / Prénom (desktop forcé inclus) */
+.dashboard-page .fiches-table th:nth-child(1),
+.dashboard-page .fiches-table td:nth-child(1),
+.dashboard-page .fiches-table th:nth-child(2),
+.dashboard-page .fiches-table td:nth-child(2) {
+  min-width: 170px !important;
+  width: 170px !important;
+  max-width: 220px !important;
+}
+
 .indicator {
   display: inline-block;
   padding: 3px 4.8px;
