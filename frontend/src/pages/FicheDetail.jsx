@@ -8175,7 +8175,7 @@ const PlanningViewForModal = ({
               const timeKey = hourToTimeKey(slot.hour);
               return (
                 <tr key={slot.hour}>
-                  <td className="time-slot-header" style={{ fontSize: '18px', fontWeight: 800, textAlign: 'center' }}>{slot.name}</td>
+                  <td className="time-slot-header" style={{ fontSize: '36px', fontWeight: 900, textAlign: 'center', lineHeight: 1 }}>{slot.name}</td>
                   {days.map(day => {
                     // Le planning est structuré comme planning[date].time[timeKey]
                     const dayPlanning = planning?.[day.date]?.time?.[timeKey];
