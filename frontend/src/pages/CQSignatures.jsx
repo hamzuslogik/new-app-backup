@@ -42,15 +42,24 @@ function getMonthRange() {
 }
 
 const TAB_DEFS = [
-  { id: 'yesterday', label: "Signatures d'hier", getRange: getYesterdayRange },
-  { id: 'today', label: 'Signatures de la journée', getRange: getTodayRange },
-  { id: 'week', label: 'Signatures de la semaine', getRange: getCurrentWeekRange },
-  { id: 'month', label: 'Signatures du mois', getRange: getMonthRange },
+  { id: 'yesterday', label: 'Hier', getRange: getYesterdayRange },
+  { id: 'today', label: "Aujourd'hui", getRange: getTodayRange },
+  { id: 'week', label: 'Cette semaine', getRange: getCurrentWeekRange },
+  { id: 'month', label: 'Ce mois', getRange: getMonthRange },
+];
+
+const ETAT_FILTER_DEFS = [
+  { id: 13, label: 'SIGNER' },
+  { id: 45, label: 'COMPLET' },
+  { id: 44, label: 'PM' },
+  { id: 16, label: 'RETRACTER' },
+  { id: 38, label: 'RECTRACTER X2' },
 ];
 
 const CQSignatures = () => {
   useForceDesktopViewport('cq-signatures-page');
   const [activeTab, setActiveTab] = useState('today');
+  const [activeEtatFinal, setActiveEtatFinal] = useState(13);
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState('date_planning');
   const [sortDir, setSortDir] = useState('desc');
@@ -62,13 +71,13 @@ const CQSignatures = () => {
   }, [activeTab]);
 
   const { data, isLoading } = useQuery(
-    ['cq-signatures', activeTab, activeRange.dateDebut, activeRange.dateFin, page],
+    ['cq-signatures', activeTab, activeRange.dateDebut, activeRange.dateFin, activeEtatFinal, page],
     async () => {
       const res = await api.get('/signature', {
         params: {
           date_debut: activeRange.dateDebut,
           date_fin: activeRange.dateFin,
-          id_etat_final: 13,
+          id_etat_final: activeEtatFinal,
           page,
           limit,
           sort_by: 'date_planning',
@@ -182,20 +191,37 @@ const CQSignatures = () => {
         <h1><FaCheckCircle /> CQ Signatures</h1>
       </div>
 
-      <div className="cq-tabs">
-        {TAB_DEFS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`cq-tab ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab(tab.id);
-              setPage(1);
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="cq-filters-row">
+        <div className="cq-tabs">
+          {TAB_DEFS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={`cq-tab ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setPage(1);
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="cq-status-tabs">
+          {ETAT_FILTER_DEFS.map((etat) => (
+            <button
+              key={etat.id}
+              type="button"
+              className={`cq-tab ${activeEtatFinal === etat.id ? 'active' : ''}`}
+              onClick={() => {
+                setActiveEtatFinal(etat.id);
+                setPage(1);
+              }}
+            >
+              {etat.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (
