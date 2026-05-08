@@ -92,3 +92,13 @@
 .cq-search-icon:hover {
   color: #1f5a24;
 }
+
+.cq-produit-indicator {
+  display: inline-block;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  min-width: 34px;
+  text-align: center;
+}

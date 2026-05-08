@@ -137,6 +137,8 @@ DELIMITER ;
 --   yj_fiche.zones_ombres -> fiches.conf_zones_ombres
 --   yj_fiche.site_classe -> fiches.conf_site_classe
 --   yj_fiche.ph3_installateur (varchar) -> fiches.ph3_installateur (int)
+--     après TRIM : si nombre pur → CAST ; sinon résolution installateurs.id par nom (insensible à la casse)
+--   yj_fiche.ph3_marque_pac -> fiches.ph3_rr_model (libellé marque PAC) si ph3_rr_model numérique = 0
 --   yj_fiche.ph3_prix (int) -> fiches.ph3_prix (decimal)
 --   yj_fiche.ph3_bonus_30 (varchar) -> fiches.ph3_bonus_30 (decimal)
 --   yj_fiche.ph3_mensualite (varchar) -> fiches.ph3_mensualite (decimal)
@@ -486,9 +488,9 @@ SELECT
   0 as `hc`, -- Pas de champ direct dans yj_fiche
   1 as `active`, -- Par défaut actif
   CAST(`valider` AS UNSIGNED) as `valider`,
-  -- conf_commentaire_produit: rempli par le champ commentaire de yj_fiche
+  -- conf_commentaire_produit: rempli par le champ commentaire de yj_fiche (conf_commentaire_produit YJ laissé de côté pour l’instant)
   NULLIF(TRIM(`commentaire`), '') as `conf_commentaire_produit`,
-  -- conf_consommations source -> consommation_electricite (colonne conf_consommations non remplie par cette migration)
+  -- conf_consommations : non migré depuis YJ pour l’instant (voir consommation_electricite depuis conf_consommations)
   NULL as `conf_consommations`,
   NULLIF(`conf_profession_monsieur`, '') as `conf_profession_monsieur`,
   NULLIF(`conf_profession_madame`, '') as `conf_profession_madame`,
@@ -566,19 +568,32 @@ SELECT
     )),
     ''
   ) as `observations_cq`,
-  -- PH3 installateur: convertir ph3_installateur de varchar vers int (si c'est un nombre)
-  CASE 
-    WHEN `ph3_installateur` != '' AND `ph3_installateur` REGEXP '^[0-9]+$'
-    THEN CAST(`ph3_installateur` AS UNSIGNED)
-    ELSE NULL
-  END as `ph3_installateur`,
+  -- PH3 installateur : id si chaîne numérique (après trim) ; sinon id installateur par nom
+  COALESCE(
+    CASE
+      WHEN NULLIF(TRIM(`ph3_installateur`), '') IS NOT NULL
+        AND TRIM(`ph3_installateur`) REGEXP '^[0-9]+$'
+      THEN CAST(TRIM(`ph3_installateur`) AS UNSIGNED)
+      ELSE NULL
+    END,
+    (
+      SELECT i.`id` FROM `installateurs` i
+      WHERE NULLIF(TRIM(`yj_fiche`.`ph3_installateur`), '') IS NOT NULL
+        AND TRIM(LOWER(i.`nom`)) = TRIM(LOWER(`yj_fiche`.`ph3_installateur`))
+      LIMIT 1
+    )
+  ) as `ph3_installateur`,
   NULLIF(`ph3_pac`, '') as `ph3_pac`,
   NULLIF(`ph3_puissance`, '') as `ph3_puissance`,
   NULL as `ph3_puissance_pv`, -- Pas de champ direct dans yj_fiche
-  CASE 
-    WHEN `ph3_rr_model` > 0 THEN CAST(`ph3_rr_model` AS CHAR)
-    ELSE NULL
-  END as `ph3_rr_model`,
+  -- Marque / modèle PAC : libellé YJ souvent dans ph3_marque_pac ; ph3_rr_model souvent un id numérique
+  COALESCE(
+    NULLIF(TRIM(`ph3_marque_pac`), ''),
+    CASE 
+      WHEN `ph3_rr_model` > 0 THEN CAST(`ph3_rr_model` AS CHAR)
+      ELSE NULL
+    END
+  ) as `ph3_rr_model`,
   CASE 
     WHEN `ph3_ballon` = 1 THEN 'OUI'
     WHEN `ph3_ballon` = 0 THEN 'NON'
@@ -661,7 +676,22 @@ ON DUPLICATE KEY UPDATE
   `conf_type_contrat_madame` = VALUES(`conf_type_contrat_madame`),
   `cq_etat` = VALUES(`cq_etat`),
   `cq_dossier` = VALUES(`cq_dossier`),
-  `observations_cq` = VALUES(`observations_cq`);
+  `observations_cq` = VALUES(`observations_cq`),
+  `ph3_installateur` = VALUES(`ph3_installateur`),
+  `ph3_rr_model` = VALUES(`ph3_rr_model`),
+  `ph3_pac` = VALUES(`ph3_pac`),
+  `ph3_puissance` = VALUES(`ph3_puissance`),
+  `ph3_ballon` = VALUES(`ph3_ballon`),
+  `ph3_marque_ballon` = VALUES(`ph3_marque_ballon`),
+  `ph3_alimentation` = VALUES(`ph3_alimentation`),
+  `ph3_type` = VALUES(`ph3_type`),
+  `ph3_prix` = VALUES(`ph3_prix`),
+  `ph3_bonus_30` = VALUES(`ph3_bonus_30`),
+  `ph3_mensualite` = VALUES(`ph3_mensualite`),
+  `ph3_attente` = VALUES(`ph3_attente`),
+  `nbr_annee_finance` = VALUES(`nbr_annee_finance`),
+  `credit_immobilier` = VALUES(`credit_immobilier`),
+  `credit_autre` = VALUES(`credit_autre`);
 
 -- =====================================================
 -- FIN DU SCRIPT

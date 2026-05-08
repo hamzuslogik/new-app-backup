@@ -158,6 +158,15 @@ const CQSignatures = () => {
     if (value === 2 || value === '2') return 'PV';
     return '-';
   };
+  const getProduitColor = (value) => {
+    if (value === 1 || value === '1') return '#66D5D4';
+    if (value === 2 || value === '2') return '#FFE441';
+    return '#cccccc';
+  };
+  const getProduitTextColor = (value) => {
+    if (value === 2 || value === '2') return '#111111';
+    return '#ffffff';
+  };
   const getCommercialsFormatted = (sig) => {
     const c1 = sig.commercial_pseudo || '';
     const c2 = sig.commercial_2_pseudo || '';
@@ -239,7 +248,17 @@ const CQSignatures = () => {
                     <td>{sig.confirmateur_pseudo || '-'}</td>
                     <td className="wrap-cell">{getCommercialsFormatted(sig)}</td>
                     <td className="wrap-cell">{sig.centre_titre || '-'}</td>
-                    <td>{getProduitLabel(sig.produit)}</td>
+                    <td>
+                      <span
+                        className="cq-produit-indicator"
+                        style={{
+                          backgroundColor: getProduitColor(sig.produit),
+                          color: getProduitTextColor(sig.produit),
+                        }}
+                      >
+                        {getProduitLabel(sig.produit)}
+                      </span>
+                    </td>
                     <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                     <td className="wrap-cell">{sig.cq_etat_titre || '-'}</td>
                     <td className="wrap-cell">{sig.cq_dossier_titre || '-'}</td>
