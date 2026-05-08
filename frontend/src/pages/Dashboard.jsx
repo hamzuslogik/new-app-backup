@@ -699,16 +699,14 @@ const Dashboard = () => {
     handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', timeWithSeconds);
   };
 
-  const handleSetTodayFullDayRange = () => {
-    const { dateStr } = getTodayDateRange();
-    setFilters((prev) => ({
-      ...prev,
-      date_debut: dateStr,
-      date_fin: dateStr,
-      time_debut: '00:00:00',
-      time_fin: '23:59:59',
-      page: 1,
-    }));
+  const handleSetCurrentDateTime = (bound) => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    handleDateTimeRangeChange(bound, `${yyyy}-${mm}-${dd}T${hh}:${min}`);
   };
 
   const handlePageChange = (newPage) => {
@@ -1606,6 +1604,9 @@ const Dashboard = () => {
                           value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
                           onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
                         />
+                        <button type="button" className="btn-now-datetime" onClick={() => handleSetCurrentDateTime('debut')}>
+                          Actuellement
+                        </button>
                       </div>
                     </div>
 
@@ -1617,6 +1618,9 @@ const Dashboard = () => {
                           value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
                           onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
                         />
+                        <button type="button" className="btn-now-datetime" onClick={() => handleSetCurrentDateTime('fin')}>
+                          Actuellement
+                        </button>
                       </div>
                     </div>
                   </>
@@ -1636,9 +1640,6 @@ const Dashboard = () => {
 
                 {/* Boutons d'action */}
                 <div className="search-form-actions-left">
-                  <button type="button" onClick={handleSetTodayFullDayRange} className="btn-reset">
-                    Aujourd'hui 00:00-23:59
-                  </button>
                   <button type="submit" className="btn-search">
                     <FaSearch /> RECHERCHE
                   </button>
@@ -2429,6 +2430,9 @@ const Dashboard = () => {
                         value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
                         onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
                       />
+                      <button type="button" className="btn-now-datetime" onClick={() => handleSetCurrentDateTime('debut')}>
+                        Actuellement
+                      </button>
                     </div>
                   </div>
                 )}
@@ -2460,15 +2464,15 @@ const Dashboard = () => {
                         value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
                         onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
                       />
+                      <button type="button" className="btn-now-datetime" onClick={() => handleSetCurrentDateTime('fin')}>
+                        Actuellement
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
 
               <div className="search-modal-actions">
-                <button type="button" onClick={handleSetTodayFullDayRange} className="btn-reset">
-                  Aujourd'hui 00:00-23:59
-                </button>
                 <button type="submit" className="btn-search">
                   <FaSearch /> RECHERCHE
                 </button>
