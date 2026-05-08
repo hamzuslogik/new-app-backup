@@ -997,10 +997,7 @@ const Fiches = () => {
                     <th>Téléphone</th>
                     <th>CP</th>
                     <th>Date Insertion</th>
-                    <th>Date RDV</th>
                     <th>État Final</th>
-                    <th>Confirmateur</th>
-                    <th>Commercial</th>
                     <th>Centre</th>
                     <th>Produit</th>
                     <th>Validé</th>
@@ -1023,7 +1020,6 @@ const Fiches = () => {
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
-                        <td data-label="Date RDV:">{formatRdvDateTime(fiche.date_rdv_time)}</td>
                         <td data-label="État:">
                           <span 
                             className="etat-badge"
@@ -1041,8 +1037,6 @@ const Fiches = () => {
                             )}
                           </span>
                         </td>
-                        <td data-label="Confirmateur:">{getConfirmateursFormatted(fiche)}</td>
-                        <td data-label="Commercial:">{getUserName(fiche.id_commercial)}</td>
                         <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
                         <td data-label="Produit:">
                           <span 

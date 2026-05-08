@@ -594,20 +594,16 @@ table.fiches-table thead,
 .fiches-table td:nth-child(4),
 .fiches-table th:nth-child(5),
 .fiches-table td:nth-child(5),
-.fiches-table th:nth-child(6),
-.fiches-table td:nth-child(6),
-.fiches-table th:nth-child(12),
-.fiches-table td:nth-child(12),
-.fiches-table th:nth-child(13),
-.fiches-table td:nth-child(13) {
+.fiches-table th:nth-child(9),
+.fiches-table td:nth-child(9),
+.fiches-table th:nth-child(10),
+.fiches-table td:nth-child(10) {
   white-space: nowrap;
 }
 
 .fiches-table td:nth-child(1),
 .fiches-table td:nth-child(2),
-.fiches-table td:nth-child(8),
-.fiches-table td:nth-child(9),
-.fiches-table td:nth-child(10) {
+.fiches-table td:nth-child(7) {
   min-width: 0;
 }
 
@@ -626,22 +622,16 @@ table.fiches-table thead,
   width: 52px;
 }
 
-/* Date Insertion / Date RDV */
+/* Date Insertion */
 .fiches-table th:nth-child(5),
 .fiches-table td:nth-child(5) {
   min-width: 140px;
   width: 140px;
 }
 
+/* État Final */
 .fiches-table th:nth-child(6),
 .fiches-table td:nth-child(6) {
-  min-width: 140px;
-  width: 140px;
-}
-
-/* État Final */
-.fiches-table th:nth-child(7),
-.fiches-table td:nth-child(7) {
   min-width: 220px;
   width: 220px;
   max-width: 220px;
@@ -653,8 +643,8 @@ table.fiches-table thead,
 }
 
 /* Produit */
-.fiches-table th:nth-child(11),
-.fiches-table td:nth-child(11) {
+.fiches-table th:nth-child(8),
+.fiches-table td:nth-child(8) {
   min-width: 72px;
   width: 132px;
   max-width: 160px;
@@ -664,18 +654,18 @@ table.fiches-table thead,
 }
 
 /* Validé */
-.fiches-table th:nth-child(12),
-.fiches-table td:nth-child(12) {
+.fiches-table th:nth-child(9),
+.fiches-table td:nth-child(9) {
   min-width: 44px;
   width: 44px;
 }
 
 /* Actions (Plusieurs boutons — plus large que le dashboard) */
-.fiches-table th:nth-child(13),
-.fiches-table td:nth-child(13) {
-  min-width: 180px;
-  width: 180px;
-  max-width: 200px;
+.fiches-table th:nth-child(10),
+.fiches-table td:nth-child(10) {
+  min-width: 220px;
+  width: 220px;
+  max-width: 240px;
   text-align: center;
   vertical-align: middle;
   white-space: nowrap;
@@ -733,14 +723,13 @@ table.fiches-table thead,
   .fiches-table td:nth-child(3),
   .fiches-table td:nth-child(4),
   .fiches-table td:nth-child(5),
-  .fiches-table td:nth-child(6),
-  .fiches-table td:nth-child(12),
-  .fiches-table td:nth-child(13) {
+  .fiches-table td:nth-child(9),
+  .fiches-table td:nth-child(10) {
     white-space: nowrap;
   }
 
-  .fiches-table th:nth-child(7),
-  .fiches-table td:nth-child(7) {
+  .fiches-table th:nth-child(6),
+  .fiches-table td:nth-child(6) {
     white-space: normal !important;
     word-break: break-word;
     overflow-wrap: anywhere;
@@ -809,7 +798,7 @@ table.fiches-table thead,
   white-space: nowrap;
 }
 
-.fiches-table td:nth-child(7) .etat-badge {
+.fiches-table td:nth-child(6) .etat-badge {
   white-space: normal;
   word-break: break-word;
   max-width: 100%;
@@ -850,7 +839,7 @@ table.fiches-table thead,
   text-align: center;
 }
 
-.fiches-table td:nth-child(11) .produit-indicator {
+.fiches-table td:nth-child(8) .produit-indicator {
   white-space: normal;
   word-break: break-word;
   max-width: 100%;
@@ -1341,28 +1330,21 @@ table.fiches-table thead,
   .fiches-table td:nth-child(3),
   .fiches-table td:nth-child(4),
   .fiches-table td:nth-child(5),
-  .fiches-table td:nth-child(6),
-  .fiches-table td:nth-child(12),
-  .fiches-table td:nth-child(13) {
+  .fiches-table td:nth-child(9),
+  .fiches-table td:nth-child(10) {
     white-space: nowrap;
   }
 
-  /* Colonnes Date Insertion et Date RDV - largeur augmentée sur mobile */
+  /* Colonne Date Insertion - largeur augmentée sur mobile */
   .fiches-table th:nth-child(5),
   .fiches-table td:nth-child(5) {
     min-width: 160px !important;
     width: 160px !important;
   }
 
+  /* État Final — retour à la ligne */
   .fiches-table th:nth-child(6),
   .fiches-table td:nth-child(6) {
-    min-width: 160px !important;
-    width: 160px !important;
-  }
-
-  /* État Final — retour à la ligne */
-  .fiches-table th:nth-child(7),
-  .fiches-table td:nth-child(7) {
     white-space: normal !important;
     word-break: break-word;
     overflow-wrap: anywhere;
