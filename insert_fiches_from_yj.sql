@@ -110,6 +110,20 @@ END$$
 DELIMITER ;
 
 -- =====================================================
+-- INSTALLATEURS MANQUANTS
+-- =====================================================
+-- Crée les installateurs absents trouvés dans yj_fiche.ph3_installateur (texte non numérique)
+-- en statut inactif (etat = 0), pour permettre la résolution id lors de la migration.
+INSERT INTO `installateurs` (`nom`, `etat`)
+SELECT DISTINCT TRIM(yf.`ph3_installateur`) AS `nom`, 0 AS `etat`
+FROM `yj_fiche` yf
+LEFT JOIN `installateurs` i
+  ON TRIM(LOWER(i.`nom`)) = TRIM(LOWER(yf.`ph3_installateur`))
+WHERE NULLIF(TRIM(yf.`ph3_installateur`), '') IS NOT NULL
+  AND TRIM(yf.`ph3_installateur`) NOT REGEXP '^[0-9]+$'
+  AND i.`id` IS NULL;
+
+-- =====================================================
 -- FICHES
 -- =====================================================
 -- Migration depuis yj_fiche vers fiches
@@ -138,6 +152,7 @@ DELIMITER ;
 --   yj_fiche.site_classe -> fiches.conf_site_classe
 --   yj_fiche.ph3_installateur (varchar) -> fiches.ph3_installateur (int)
 --     après TRIM : si nombre pur → CAST ; sinon résolution installateurs.id par nom (insensible à la casse)
+--     si introuvable: création auto dans installateurs avec etat=0 (inactif)
 --   yj_fiche.ph3_marque_pac -> fiches.ph3_rr_model (libellé marque PAC) si ph3_rr_model numérique = 0
 --   yj_fiche.ph3_prix (int) -> fiches.ph3_prix (decimal)
 --   yj_fiche.ph3_bonus_30 (varchar) -> fiches.ph3_bonus_30 (decimal)
