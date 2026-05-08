@@ -7450,6 +7450,8 @@ const PlanningTab = ({
         console.log('Availability updated successfully:', data);
         queryClient.invalidateQueries(['planning-modal']);
         queryClient.invalidateQueries(['availability-modal']);
+        queryClient.invalidateQueries(['planning-hebdomadaire', planningYear, planningWeek]);
+        queryClient.invalidateQueries(['planning-hebdomadaire']);
         // Rafraîchir explicitement les données
         setTimeout(() => {
           refetchPlanning();
