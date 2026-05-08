@@ -3715,3 +3715,50 @@ body.dashboard-page {
 .fiche-detail-modal-content .rdv-form select.form-control {
   max-width: 220px !important;
 }
+
+/* Dashboard filters: override final (desktop) */
+.dashboard-page .search-panel {
+  display: inline-block !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+.dashboard-page .search-panel .search-form {
+  width: fit-content !important;
+  padding: 8px 10px !important;
+}
+
+.dashboard-page .search-panel .search-form-two-columns {
+  gap: 8px !important;
+  margin-bottom: 6px !important;
+  align-items: flex-start !important;
+}
+
+.dashboard-page .search-panel .search-form-left,
+.dashboard-page .search-panel .search-form-right {
+  flex: 0 0 auto !important;
+  gap: 6px !important;
+}
+
+.dashboard-page .search-panel .form-group {
+  margin: 0 !important;
+}
+
+.dashboard-page .search-panel .form-group label {
+  margin-bottom: 1px !important;
+}
+
+.dashboard-page .search-panel .form-group input,
+.dashboard-page .search-panel .form-group select,
+.dashboard-page .search-panel .date-time-inputs input[type="date"],
+.dashboard-page .search-panel .date-time-inputs input[type="time"],
+.dashboard-page .search-panel .date-time-inputs input[type="datetime-local"] {
+  width: 220px !important;
+  max-width: 220px !important;
+}
+
+.dashboard-page .search-panel .search-form-actions-left {
+  gap: 6px !important;
+  margin-top: 2px !important;
+  padding-top: 6px !important;
+}
