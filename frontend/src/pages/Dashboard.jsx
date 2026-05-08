@@ -380,26 +380,8 @@ const Dashboard = () => {
           }
           return;
         }
-        // Si on fait une recherche par critère uniquement, ne pas appliquer les filtres de date par défaut
-        // Supprimer les dates si elles sont les dates d'aujourd'hui (valeurs par défaut) et qu'on cherche par critère
-        if (key === 'date_debut' || key === 'date_fin' || key === 'date_champ' || key === 'time_debut' || key === 'time_fin') {
-          // Si critere est rempli : recherche globale (y compris confirmateur : enlever plage / date_champ par défaut)
-          if (searchParams.critere) {
-            const today = new Date().toISOString().split('T')[0];
-            if (key === 'date_debut' && searchParams.date_debut === today) {
-              delete searchParams[key];
-              return;
-            }
-            if (key === 'date_fin' && searchParams.date_fin === today) {
-              delete searchParams[key];
-              return;
-            }
-            if ((key === 'date_champ' || key === 'time_debut' || key === 'time_fin') && searchParams.critere) {
-              delete searchParams[key];
-              return;
-            }
-          }
-        }
+        // IMPORTANT: le critère doit se combiner avec les autres filtres (date, état, centre, etc.).
+        // On ne supprime plus les paramètres de date/time quand "critere" est renseigné.
         if (searchParams[key] === '' || searchParams[key] === null || searchParams[key] === undefined) {
           delete searchParams[key];
         }
