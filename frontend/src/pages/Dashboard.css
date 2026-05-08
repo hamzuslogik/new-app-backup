@@ -1336,9 +1336,9 @@ body.dashboard-page {
 /* État Final - largeur pour contenir "ANNULER ET A REPROGRAMMER" sans dépasser */
 .fiches-table th:nth-child(7),
 .fiches-table td:nth-child(7) {
-  min-width: 220px;
-  width: 220px;
-  max-width: 220px;
+  min-width: 260px;
+  width: 260px;
+  max-width: 260px;
   white-space: normal;
   word-wrap: break-word;
   word-break: break-word;
@@ -1346,12 +1346,25 @@ body.dashboard-page {
   line-height: 1.2;
 }
 
-/* Produit - colonne un peu plus large */
+/* Confirmateur / Commercial - colonnes réduites + retour ligne */
+.fiches-table th:nth-child(8),
+.fiches-table td:nth-child(8),
+.fiches-table th:nth-child(9),
+.fiches-table td:nth-child(9) {
+  min-width: 120px;
+  width: 120px;
+  max-width: 140px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Produit - colonne réduite */
 .fiches-table th:nth-child(11),
 .fiches-table td:nth-child(11) {
-  min-width: 72px;
-  width: 132px;
-  max-width: 160px;
+  min-width: 64px;
+  width: 88px;
+  max-width: 96px;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
