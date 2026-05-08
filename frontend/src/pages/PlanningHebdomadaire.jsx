@@ -61,6 +61,12 @@ const JOURS = [
   { value: '5', label: 'Vendredi' }
 ];
 
+const getDepartmentSortNumber = (value) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return Number.MAX_SAFE_INTEGER;
+  return parseInt(digits, 10);
+};
+
 const PlanningHebdomadaire = () => {
   useForceDesktopViewport('planning-hebdomadaire-page');
   const { user } = useAuth();
@@ -76,9 +82,8 @@ const PlanningHebdomadaire = () => {
   // Formulaire d'ajout
   const [formData, setFormData] = useState({
     jour: '',
-    id_departement: '',
-    nombre_commercial: '',
-    forcer: 'CRENAUX'
+    departement_input: '',
+    nombre_commercial: ''
   });
 
   // Copie planning
@@ -92,11 +97,18 @@ const PlanningHebdomadaire = () => {
         // Essayer d'abord la route planning/departements
         const res = await api.get('/planning/departements');
         if (res.data && res.data.success && res.data.data) {
-          return res.data.data.map(d => ({
-            id: d.id || d.departement_id || d.code,
-            code: d.code || d.departement_code,
-            nom: d.nom || d.departement_nom_uppercase || d.departement_nom
-          }));
+          return res.data.data
+            .map(d => ({
+              id: d.id || d.departement_id || d.code,
+              code: d.code || d.departement_code,
+              nom: d.nom || d.departement_nom_uppercase || d.departement_nom
+            }))
+            .sort((a, b) => {
+              const aNum = getDepartmentSortNumber(a.code || a.id);
+              const bNum = getDepartmentSortNumber(b.code || b.id);
+              if (aNum !== bNum) return aNum - bNum;
+              return String(a.code || a.id || '').localeCompare(String(b.code || b.id || ''), 'fr');
+            });
         }
         
         // Fallback : utiliser la route management
@@ -108,7 +120,13 @@ const PlanningHebdomadaire = () => {
               id: d.id || d.departement_id || d.departement_code,
               code: d.departement_code,
               nom: d.departement_nom_uppercase || d.departement_nom
-            }));
+            }))
+            .sort((a, b) => {
+              const aNum = getDepartmentSortNumber(a.code || a.id);
+              const bNum = getDepartmentSortNumber(b.code || b.id);
+              if (aNum !== bNum) return aNum - bNum;
+              return String(a.code || a.id || '').localeCompare(String(b.code || b.id || ''), 'fr');
+            });
         }
         
         return [];
@@ -124,7 +142,13 @@ const PlanningHebdomadaire = () => {
                 id: d.id || d.departement_id || d.departement_code,
                 code: d.departement_code,
                 nom: d.departement_nom_uppercase || d.departement_nom
-              }));
+              }))
+              .sort((a, b) => {
+                const aNum = getDepartmentSortNumber(a.code || a.id);
+                const bNum = getDepartmentSortNumber(b.code || b.id);
+                if (aNum !== bNum) return aNum - bNum;
+                return String(a.code || a.id || '').localeCompare(String(b.code || b.id || ''), 'fr');
+              });
           }
         } catch (err) {
           console.error('Erreur route management:', err);
@@ -254,9 +278,8 @@ const PlanningHebdomadaire = () => {
         toast.success('Disponibilité ajoutée avec succès');
         setFormData({
           jour: '',
-          id_departement: '',
-          nombre_commercial: '',
-          forcer: 'CRENAUX'
+          departement_input: '',
+          nombre_commercial: ''
         });
       },
       onError: (error) => {
@@ -323,11 +346,47 @@ const PlanningHebdomadaire = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.jour || !formData.id_departement || !formData.nombre_commercial) {
+    if (!formData.jour || !formData.departement_input || !formData.nombre_commercial) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
-    createMutation.mutate(formData);
+
+    const normalizeDepartmentValue = (value) =>
+      String(value || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const typed = normalizeDepartmentValue(formData.departement_input);
+    const departments = Array.isArray(departementsData) ? departementsData : [];
+
+    const exactMatch = departments.find((dept) => {
+      const code = normalizeDepartmentValue(dept.code);
+      const nom = normalizeDepartmentValue(dept.nom);
+      const id = normalizeDepartmentValue(dept.id);
+      return typed === code || typed === nom || typed === id;
+    });
+
+    const matchedDepartment =
+      exactMatch ||
+      departments.find((dept) => {
+        const code = normalizeDepartmentValue(dept.code);
+        const nom = normalizeDepartmentValue(dept.nom);
+        return code.startsWith(typed) || nom.includes(typed);
+      });
+
+    if (!matchedDepartment) {
+      toast.error('Département introuvable. Saisissez le code (ex: 75) ou le nom.');
+      return;
+    }
+
+    createMutation.mutate({
+      jour: formData.jour,
+      id_departement: matchedDepartment.id || matchedDepartment.code,
+      nombre_commercial: formData.nombre_commercial,
+      forcer: 'CRENAUX'
+    });
   };
 
   const handleDuplicate = () => {
@@ -431,19 +490,14 @@ const PlanningHebdomadaire = () => {
 
           <div className="form-group">
             <label>Département *:</label>
-            <select
-              value={formData.id_departement}
-              onChange={(e) => setFormData({ ...formData, id_departement: e.target.value })}
+            <input
+              type="text"
+              value={formData.departement_input}
+              onChange={(e) => setFormData({ ...formData, departement_input: e.target.value })}
+              placeholder="Code ou nom du département (ex: 75)"
               required
               disabled={isLoadingDepartements}
-            >
-              <option value="">-- Sélectionnez un Département --</option>
-              {departementsData && departementsData.map(dept => (
-                <option key={dept.id || dept.code} value={dept.id || dept.code}>
-                  {dept.nom || dept.code}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div className="form-group">
@@ -456,16 +510,6 @@ const PlanningHebdomadaire = () => {
               min="0"
               required
             />
-          </div>
-
-          <div className="form-group">
-            <label>Forcer :</label>
-            <select
-              value={formData.forcer}
-              onChange={(e) => setFormData({ ...formData, forcer: e.target.value })}
-            >
-              <option value="CRENAUX">CRENAUX</option>
-            </select>
           </div>
 
           <button type="submit" className="btn-ajouter" disabled={createMutation.isLoading}>
@@ -555,7 +599,17 @@ const PlanningHebdomadaire = () => {
                 </td>
               </tr>
             ) : (
-              Object.values(disponibilitesGrouped).map((item) => (
+              Object.values(disponibilitesGrouped)
+                .sort((a, b) => {
+                  const aNum = getDepartmentSortNumber(a.departement_code || a.departement_id);
+                  const bNum = getDepartmentSortNumber(b.departement_code || b.departement_id);
+                  if (aNum !== bNum) return aNum - bNum;
+                  return String(a.departement_code || a.departement_id || '').localeCompare(
+                    String(b.departement_code || b.departement_id || ''),
+                    'fr'
+                  );
+                })
+                .map((item) => (
                 <tr key={item.departement_id}>
                   <td>
                     <Link 
