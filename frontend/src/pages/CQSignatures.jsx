@@ -46,6 +46,7 @@ const TAB_DEFS = [
   { id: 'today', label: "Aujourd'hui", getRange: getTodayRange },
   { id: 'week', label: 'Cette semaine', getRange: getCurrentWeekRange },
   { id: 'month', label: 'Ce mois', getRange: getMonthRange },
+  { id: 'custom', label: 'Personnalisé' },
 ];
 
 const ETAT_FILTER_DEFS = [
@@ -58,17 +59,27 @@ const ETAT_FILTER_DEFS = [
 
 const CQSignatures = () => {
   useForceDesktopViewport('cq-signatures-page');
+  const todayLocal = getTodayLocal();
   const [activeTab, setActiveTab] = useState('today');
   const [activeEtatFinal, setActiveEtatFinal] = useState(13);
+  const [customDateDebut, setCustomDateDebut] = useState(todayLocal);
+  const [customDateFin, setCustomDateFin] = useState(todayLocal);
+  const [appliedCustomRange, setAppliedCustomRange] = useState({
+    dateDebut: todayLocal,
+    dateFin: todayLocal,
+  });
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState('date_planning');
   const [sortDir, setSortDir] = useState('desc');
   const limit = 100;
 
   const activeRange = useMemo(() => {
+    if (activeTab === 'custom') {
+      return appliedCustomRange;
+    }
     const found = TAB_DEFS.find((t) => t.id === activeTab) || TAB_DEFS[1];
     return found.getRange();
-  }, [activeTab]);
+  }, [activeTab, appliedCustomRange]);
 
   const { data, isLoading } = useQuery(
     ['cq-signatures', activeTab, activeRange.dateDebut, activeRange.dateFin, activeEtatFinal, page],
@@ -223,6 +234,38 @@ const CQSignatures = () => {
           ))}
         </div>
       </div>
+      {activeTab === 'custom' && (
+        <div className="cq-custom-range">
+          <label className="cq-custom-range-label" htmlFor="cq-custom-date-debut">Date début</label>
+          <input
+            id="cq-custom-date-debut"
+            type="date"
+            value={customDateDebut}
+            onChange={(e) => setCustomDateDebut(e.target.value)}
+          />
+          <label className="cq-custom-range-label" htmlFor="cq-custom-date-fin">Date fin</label>
+          <input
+            id="cq-custom-date-fin"
+            type="date"
+            value={customDateFin}
+            onChange={(e) => setCustomDateFin(e.target.value)}
+          />
+          <button
+            type="button"
+            className="cq-tab"
+            onClick={() => {
+              if (!customDateDebut || !customDateFin) return;
+              const dateDebut = customDateDebut <= customDateFin ? customDateDebut : customDateFin;
+              const dateFin = customDateDebut <= customDateFin ? customDateFin : customDateDebut;
+              setAppliedCustomRange({ dateDebut, dateFin });
+              setPage(1);
+            }}
+            disabled={!customDateDebut || !customDateFin}
+          >
+            Rechercher
+          </button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="loading">Chargement des signatures...</div>
