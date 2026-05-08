@@ -165,6 +165,38 @@
   max-width: 76px;
 }
 
+/* Retour à la ligne ciblé */
+.fiches-table th:nth-child(1),
+.fiches-table td:nth-child(1), /* Nom */
+.fiches-table th:nth-child(2),
+.fiches-table td:nth-child(2), /* Prénom */
+.fiches-table th:nth-child(5),
+.fiches-table td:nth-child(5) { /* Ville */
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Colonne Validé plus étroite */
+.fiches-table th:nth-child(13),
+.fiches-table td:nth-child(13) {
+  width: 54px;
+  min-width: 54px;
+  max-width: 54px;
+  text-align: center;
+}
+
+/* Colonne État actuel plus large + retour à la ligne */
+.fiches-table th:nth-child(8),
+.fiches-table td:nth-child(8) {
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
 .sortable-header {
   cursor: pointer;
   user-select: none;
@@ -177,6 +209,11 @@
   color: #fff;
   font-size: 11px;
   font-weight: 600;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  line-height: 1.2;
 }
 
 .produit-indicator {

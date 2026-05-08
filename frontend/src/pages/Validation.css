@@ -251,6 +251,31 @@
   overflow-wrap: anywhere;
 }
 
+/* Ajustements de largeurs colonnes (vue détaillée) */
+.fiches-table th:nth-child(2),
+.fiches-table td:nth-child(2), /* Nom */
+.fiches-table th:nth-child(3),
+.fiches-table td:nth-child(3), /* Prénom */
+.fiches-table th:nth-child(6),
+.fiches-table td:nth-child(6) { /* Ville */
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.fiches-table th:nth-child(4),
+.fiches-table td:nth-child(4) { /* Téléphone */
+  min-width: 140px;
+  width: 140px;
+}
+
+.fiches-table th:nth-child(7),
+.fiches-table td:nth-child(7) { /* Produit */
+  min-width: 72px;
+  width: 72px;
+  max-width: 72px;
+}
+
 .produit-indicator {
   display: inline-block;
   padding: 4px 6.4px;
