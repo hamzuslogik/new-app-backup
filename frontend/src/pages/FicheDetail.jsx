@@ -8212,12 +8212,12 @@ const PlanningViewForModal = ({
                     } else if (totalRdvInSlot > 0) {
                       bgColor = '#e74c3c'; // Rouge si des RDV mais pas de planning
                     }
-                    // Couleur de police demandée: rouge blindé/surplus, jaune partiel, vert aucun RDV
-                    const availabilityTextColor = (() => {
-                      if (totalRdvInSlot <= 0) return '#2e7d32';
-                      if (!hasPlanning || Number(displayAvailability) <= 0) return '#d32f2f';
-                      if (totalRdvInSlot >= Number(displayAvailability)) return '#d32f2f';
-                      return '#f7a219';
+                    // Couleur de fond du rectangle: rouge blindé/surplus, jaune partiel, vert aucun RDV
+                    const availabilityBadgeBgColor = (() => {
+                      if (totalRdvInSlot <= 0) return '#4caf50';
+                      if (!hasPlanning || Number(displayAvailability) <= 0) return '#f44336';
+                      if (totalRdvInSlot >= Number(displayAvailability)) return '#f44336';
+                      return '#ffc107';
                     })();
                     
                     // Note: L'ID est masqué, on ne peut plus comparer directement
@@ -8364,13 +8364,14 @@ const PlanningViewForModal = ({
                         ) : hasData ? (
                           <>
                             <div className="availability-info">
-                              <div className="availability-badge" style={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
+                              <div className="availability-badge" style={{ backgroundColor: availabilityBadgeBgColor, boxShadow: 'none' }}>
                                 <span
                                   className="availability-text-compact"
                                   style={{
-                                    color: availabilityTextColor,
-                                    WebkitTextFillColor: availabilityTextColor,
-                                    fontWeight: 800
+                                    color: '#000000',
+                                    WebkitTextFillColor: '#000000',
+                                    fontWeight: 900,
+                                    fontSize: '17px'
                                   }}
                                 >
                                   {`DEP ${dep || '-'} : ${totalRdvInSlot}/${displayAvailability}`}
