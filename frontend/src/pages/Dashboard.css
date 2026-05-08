@@ -1305,6 +1305,14 @@ body.dashboard-page {
   min-width: 0;
 }
 
+/* Nom / Prénom: retour à la ligne uniquement entre mots (pas de coupe au milieu d'un mot) */
+.fiches-table td:nth-child(1),
+.fiches-table td:nth-child(2) {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
 /* Téléphone - colonne un peu plus étroite */
 .fiches-table th:nth-child(3),
 .fiches-table td:nth-child(3) {
@@ -1475,6 +1483,14 @@ body.dashboard-page {
   .fiches-table td:nth-child(12),
   .fiches-table td:nth-child(13) {
     white-space: nowrap;
+  }
+
+  /* Nom / Prénom mobile: même règle, pas de retour à la ligne par lettres */
+  .fiches-table td:nth-child(1),
+  .fiches-table td:nth-child(2) {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: normal;
   }
 
   .fiches-table td::before {
