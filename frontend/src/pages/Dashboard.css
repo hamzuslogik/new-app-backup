@@ -1336,9 +1336,9 @@ body.dashboard-page {
 /* État Final - largeur pour contenir "ANNULER ET A REPROGRAMMER" sans dépasser */
 .dashboard-page .fiches-table th:nth-child(7),
 .dashboard-page .fiches-table td:nth-child(7) {
-  min-width: 280px !important;
-  width: 280px !important;
-  max-width: 280px !important;
+  min-width: 140px !important;
+  width: 140px !important;
+  max-width: 140px !important;
   white-space: normal;
   word-wrap: break-word;
   word-break: break-word;
