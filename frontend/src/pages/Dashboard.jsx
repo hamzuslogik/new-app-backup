@@ -28,9 +28,9 @@ function resolveDashboardFicheNumericId(fiche) {
 
 const TwoLineDateTimeInput = React.forwardRef(({ value, onClick, placeholder }, ref) => {
   const raw = String(value || '').trim();
-  const parts = raw.split(' ');
-  const datePart = parts[0] || '';
-  const timePart = parts[1] || '';
+  const timeMatch = raw.match(/(\d{1,2}):(\d{2})/);
+  const hours = timeMatch ? timeMatch[1].padStart(2, '0') : '';
+  const minutes = timeMatch ? timeMatch[2] : '';
   const hasValue = Boolean(raw);
 
   return (
@@ -39,10 +39,10 @@ const TwoLineDateTimeInput = React.forwardRef(({ value, onClick, placeholder }, 
       className="datetime-two-lines-input"
       onClick={onClick}
       ref={ref}
-      title={raw || placeholder || 'Choisir date et heure'}
+      title={raw || placeholder || 'Choisir heure et minutes'}
     >
-      <span className="datetime-two-lines-date">{hasValue ? datePart : (placeholder || 'Date')}</span>
-      <span className="datetime-two-lines-time">{hasValue ? timePart : '--:--'}</span>
+      <span className="datetime-two-lines-date">{hasValue ? `Heure ${hours}` : 'Heure --'}</span>
+      <span className="datetime-two-lines-time">{hasValue ? `Minutes ${minutes}` : 'Minutes --'}</span>
     </button>
   );
 });
@@ -1625,7 +1625,7 @@ const Dashboard = () => {
                           onChange={(d) => handleDatePickerChange('debut', d)}
                           showTimeSelect
                           timeIntervals={1}
-                          dateFormat="dd/MM/yyyy HH:mm"
+                          dateFormat="HH:mm"
                           timeFormat="HH:mm"
                           locale="fr"
                           todayButton="Actuellement"
@@ -1644,7 +1644,7 @@ const Dashboard = () => {
                           onChange={(d) => handleDatePickerChange('fin', d)}
                           showTimeSelect
                           timeIntervals={1}
-                          dateFormat="dd/MM/yyyy HH:mm"
+                          dateFormat="HH:mm"
                           timeFormat="HH:mm"
                           locale="fr"
                           todayButton="Actuellement"
@@ -2461,7 +2461,7 @@ const Dashboard = () => {
                         onChange={(d) => handleDatePickerChange('debut', d)}
                         showTimeSelect
                         timeIntervals={1}
-                        dateFormat="dd/MM/yyyy HH:mm"
+                        dateFormat="HH:mm"
                         timeFormat="HH:mm"
                         locale="fr"
                         todayButton="Actuellement"
@@ -2500,7 +2500,7 @@ const Dashboard = () => {
                         onChange={(d) => handleDatePickerChange('fin', d)}
                         showTimeSelect
                         timeIntervals={1}
-                        dateFormat="dd/MM/yyyy HH:mm"
+                        dateFormat="HH:mm"
                         timeFormat="HH:mm"
                         locale="fr"
                         todayButton="Actuellement"
