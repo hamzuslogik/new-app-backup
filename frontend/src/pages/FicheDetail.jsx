@@ -8175,7 +8175,7 @@ const PlanningViewForModal = ({
               const timeKey = hourToTimeKey(slot.hour);
               return (
                 <tr key={slot.hour}>
-                  <td className="time-slot-header">{slot.name}</td>
+                  <td className="time-slot-header" style={{ fontSize: '18px', fontWeight: 800, textAlign: 'center' }}>{slot.name}</td>
                   {days.map(day => {
                     // Le planning est structuré comme planning[date].time[timeKey]
                     const dayPlanning = planning?.[day.date]?.time?.[timeKey];
@@ -8315,9 +8315,13 @@ const PlanningViewForModal = ({
                                 }
                               }}
                               style={{
-                                width: '50px',
-                                padding: '2px 4px',
-                                fontSize: '11px',
+                                width: '30px',
+                                minWidth: '30px',
+                                maxWidth: '30px',
+                                height: '18px',
+                                padding: '0 2px',
+                                fontSize: '9px',
+                                lineHeight: 1,
                                 border: '1px solid #ccc',
                                 borderRadius: '3px'
                               }}
@@ -8414,7 +8418,7 @@ const PlanningViewForModal = ({
                                   min="0"
                                   placeholder="-"
                                   title="Saisir la valeur puis cliquer sur Valider"
-                                  style={{ width: '38px', padding: '1px 3px', fontSize: '10px', lineHeight: 1.1 }}
+                                  style={{ width: '30px', minWidth: '30px', maxWidth: '30px', height: '18px', padding: '0 2px', fontSize: '9px', lineHeight: 1 }}
                                 />
                                 {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
                                   <>
@@ -8481,7 +8485,7 @@ const PlanningViewForModal = ({
                                   min="0"
                                   placeholder="-"
                                   title="Saisir la valeur puis cliquer sur Valider"
-                                  style={{ width: '38px', padding: '1px 3px', fontSize: '10px', lineHeight: 1.1 }}
+                                  style={{ width: '30px', minWidth: '30px', maxWidth: '30px', height: '18px', padding: '0 2px', fontSize: '9px', lineHeight: 1 }}
                                 />
                                 {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
                                   <>
