@@ -678,6 +678,27 @@ const Dashboard = () => {
     }
   };
 
+  const buildDateTimeLocalValue = (dateValue, timeValue, defaultTime = '00:00:00') => {
+    const d = String(dateValue || '').trim();
+    if (!d) return '';
+    const tRaw = String(timeValue || defaultTime || '').trim();
+    const t = (tRaw.length >= 5 ? tRaw.slice(0, 5) : '00:00');
+    return `${d}T${t}`;
+  };
+
+  const handleDateTimeRangeChange = (bound, value) => {
+    if (!value) {
+      handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', '');
+      handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', '');
+      return;
+    }
+    const [datePart, timePartRaw] = String(value).split('T');
+    const hhmm = (timePartRaw || '').slice(0, 5);
+    const timeWithSeconds = hhmm ? `${hhmm}:00` : (bound === 'debut' ? '00:00:00' : '23:59:59');
+    handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', datePart || '');
+    handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', timeWithSeconds);
+  };
+
   const handlePageChange = (newPage) => {
     handleFilterChange('page', newPage);
   };
@@ -1548,14 +1569,9 @@ const Dashboard = () => {
                   <label>Date début</label>
                   <div className="date-time-inputs">
                     <input
-                      type="date"
-                      value={filters.date_debut || ''}
-                      onChange={(e) => handleFilterChange('date_debut', e.target.value)}
-                    />
-                    <input
-                      type="time"
-                      value={filters.time_debut || '00:00:00'}
-                      onChange={(e) => handleFilterChange('time_debut', e.target.value)}
+                      type="datetime-local"
+                      value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
+                      onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
                     />
                   </div>
                 </div>
@@ -1565,14 +1581,9 @@ const Dashboard = () => {
                   <label>Date fin</label>
                   <div className="date-time-inputs">
                     <input
-                      type="date"
-                      value={filters.date_fin || ''}
-                      onChange={(e) => handleFilterChange('date_fin', e.target.value)}
-                    />
-                    <input
-                      type="time"
-                      value={filters.time_fin || '23:59:59'}
-                      onChange={(e) => handleFilterChange('time_fin', e.target.value)}
+                      type="datetime-local"
+                      value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
+                      onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
                     />
                   </div>
                 </div>
@@ -2396,14 +2407,9 @@ const Dashboard = () => {
                   <label>Date début</label>
                   <div className="date-time-inputs">
                     <input
-                      type="date"
-                      value={filters.date_debut || ''}
-                      onChange={(e) => handleFilterChange('date_debut', e.target.value)}
-                    />
-                    <input
-                      type="time"
-                      value={filters.time_debut || '00:00:00'}
-                      onChange={(e) => handleFilterChange('time_debut', e.target.value)}
+                      type="datetime-local"
+                      value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
+                      onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
                     />
                   </div>
                 </div>
@@ -2431,14 +2437,9 @@ const Dashboard = () => {
                   <label>Date fin</label>
                   <div className="date-time-inputs">
                     <input
-                      type="date"
-                      value={filters.date_fin || ''}
-                      onChange={(e) => handleFilterChange('date_fin', e.target.value)}
-                    />
-                    <input
-                      type="time"
-                      value={filters.time_fin || '23:59:59'}
-                      onChange={(e) => handleFilterChange('time_fin', e.target.value)}
+                      type="datetime-local"
+                      value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
+                      onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
                     />
                   </div>
                 </div>
