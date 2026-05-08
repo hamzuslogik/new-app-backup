@@ -793,21 +793,15 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
 
 // Composant pour la vue Disponibilité
 const AvailabilityView = ({ availability, planning, days, timeSlots, week, year, dep, onUpdate, canEdit, onToggleClosed, isAdmin }) => {
-  // Fonction pour déterminer la couleur de fond du badge "nbr rdv / total" dans l'onglet disponibilité
-  const getAvailabilityBadgeColor = (rdvCount, totalAvailability) => {
-    if (totalAvailability === null || totalAvailability === undefined || totalAvailability === 0) {
-      return '#cccccc'; // Gris par défaut si pas de disponibilité
+  // Couleur du texte (font) pour "DEP xx : rdv/total"
+  // Rouge: blindé/surplus, Jaune: partiel, Vert: aucun RDV
+  const getAvailabilityFontColor = (rdvCount, totalAvailability) => {
+    if (rdvCount <= 0) return '#2e7d32'; // Vert
+    if (totalAvailability === null || totalAvailability === undefined || Number(totalAvailability) <= 0) {
+      return '#d32f2f'; // Rouge (surplus / pas de capacité)
     }
-    if (rdvCount > totalAvailability) {
-      return '#f44336'; // Rouge : dépassé
-    }
-    if (rdvCount === totalAvailability && rdvCount > 0) {
-      return '#4CAF50'; // Vert : blindé/complètement rempli
-    }
-    if (rdvCount > 0 && rdvCount < totalAvailability) {
-      return '#ffc107'; // Jaune : partiellement rempli
-    }
-    return '#cccccc'; // Gris : aucun RDV
+    if (rdvCount >= totalAvailability) return '#d32f2f'; // Rouge (blindé/surplus)
+    return '#f7a219'; // Jaune (partiellement blindé)
   };
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
@@ -975,7 +969,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                         className="availability-rdv-info"
                         style={{
                           backgroundColor: 'transparent',
-                          color: '#1f2937',
+                          color: getAvailabilityFontColor(rdvCount, currentValue),
                           fontWeight: '700',
                           padding: '0',
                           borderRadius: '0',
@@ -987,7 +981,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                         }}
                       >
                         <span className="rdv-count">
-                          {`DEP ${dep || '-'} ${rdvCount}/${currentValue ?? '-'}`}
+                          {`DEP ${dep || '-'} : ${rdvCount}/${currentValue ?? '-'}`}
                         </span>
                       </span>
                     );

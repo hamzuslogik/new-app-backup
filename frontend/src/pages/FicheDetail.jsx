@@ -8212,13 +8212,20 @@ const PlanningViewForModal = ({
                     } else if (totalRdvInSlot > 0) {
                       bgColor = '#e74c3c'; // Rouge si des RDV mais pas de planning
                     }
+                    // Couleur de police demandée: rouge blindé/surplus, jaune partiel, vert aucun RDV
+                    const availabilityTextColor = (() => {
+                      if (totalRdvInSlot <= 0) return '#2e7d32';
+                      if (!hasPlanning || Number(displayAvailability) <= 0) return '#d32f2f';
+                      if (totalRdvInSlot >= Number(displayAvailability)) return '#d32f2f';
+                      return '#f7a219';
+                    })();
                     
                     // Note: L'ID est masqué, on ne peut plus comparer directement
                     // On marque simplement le créneau si on a des RDV
                     const currentFicheInSlot = false;
                     const isEditing = editingCell === `${day.date}-${slot.hour}`;
-                    // canEditThis : éditable même si valeur = 0 ; bloqué seulement si le créneau est fermé (is_closed=1)
-                    const canEditThis = canEdit && !isClosed;
+                    // canEditThis : éditable même si créneau fermé (is_closed=1) pour permettre la réouverture via disponibilité.
+                    const canEditThis = canEdit;
                     
                     const dashboardSlotHref =
                       sessionCanOpenSlotDashboard && dep
@@ -8357,9 +8364,9 @@ const PlanningViewForModal = ({
                         ) : hasData ? (
                           <>
                             <div className="availability-info">
-                              <div className="availability-badge" style={{ backgroundColor: bgColor }}>
-                                <span className="availability-text-compact">
-                                  {totalRdvInSlot} / {displayAvailability}
+                              <div className="availability-badge" style={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
+                                <span className="availability-text-compact" style={{ color: availabilityTextColor, fontWeight: 800 }}>
+                                  {`DEP ${dep || '-'} : ${totalRdvInSlot}/${displayAvailability}`}
                                 </span>
                               </div>
                               {hasR2Placed && (
