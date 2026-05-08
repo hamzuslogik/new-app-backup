@@ -68,7 +68,7 @@ const Validation = () => {
       return res.data.data;
     },
     {
-      enabled: !!user && (user.fonction === 6 || user.fonction === 14 || [1, 2, 7].includes(user.fonction))
+      enabled: !!user && (user.fonction === 6 || user.fonction === 14 || [1, 2, 7, 11].includes(user.fonction))
     }
   );
 

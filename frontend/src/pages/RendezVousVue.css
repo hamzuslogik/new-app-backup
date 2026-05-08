@@ -144,6 +144,10 @@
   padding: 10px 12px;
   border-bottom: 1px solid #eee;
   font-size: 12px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
 }
 
 .fiches-table td:last-child {
