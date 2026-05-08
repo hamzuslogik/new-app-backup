@@ -1059,6 +1059,19 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   color: #15803d !important;
 }
 
+/* Forcer la couleur de l'icône (des règles globales de header la remettent en blanc) */
+.day-total-controls .save-btn svg,
+.day-total-controls .save-btn svg path {
+  color: #16a34a !important;
+  fill: #16a34a !important;
+}
+
+.day-total-controls .save-btn:hover svg,
+.day-total-controls .save-btn:hover svg path {
+  color: #15803d !important;
+  fill: #15803d !important;
+}
+
 .cancel-btn {
   background: #f44336;
   color: white;
