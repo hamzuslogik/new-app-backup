@@ -613,7 +613,7 @@ const PlanningHebdomadaire = () => {
                 <tr key={item.departement_id}>
                   <td>
                     <Link 
-                      to={`/planning?dp=${item.departement_code || item.departement_id}&w=${week}&y=${year}`}
+                      to={`/planning?dp=${item.departement_code || item.departement_id}&w=${week}&y=${year}&mode=availability`}
                       className="departement-link"
                     >
                       {item.departement_nom}
