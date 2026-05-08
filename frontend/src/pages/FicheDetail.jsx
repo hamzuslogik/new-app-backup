@@ -8365,7 +8365,14 @@ const PlanningViewForModal = ({
                           <>
                             <div className="availability-info">
                               <div className="availability-badge" style={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
-                                <span className="availability-text-compact" style={{ color: availabilityTextColor, fontWeight: 800 }}>
+                                <span
+                                  className="availability-text-compact"
+                                  style={{
+                                    color: availabilityTextColor,
+                                    WebkitTextFillColor: availabilityTextColor,
+                                    fontWeight: 800
+                                  }}
+                                >
                                   {`DEP ${dep || '-'} : ${totalRdvInSlot}/${displayAvailability}`}
                                 </span>
                               </div>

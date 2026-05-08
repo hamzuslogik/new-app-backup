@@ -981,7 +981,15 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                         }}
                       >
                         <span className="rdv-count">
-                          {`DEP ${dep || '-'} : ${rdvCount}/${currentValue ?? '-'}`}
+                          <span
+                            style={{
+                              color: getAvailabilityFontColor(rdvCount, currentValue),
+                              WebkitTextFillColor: getAvailabilityFontColor(rdvCount, currentValue),
+                              fontWeight: 800
+                            }}
+                          >
+                            {`DEP ${dep || '-'} : ${rdvCount}/${currentValue ?? '-'}`}
+                          </span>
                         </span>
                       </span>
                     );
