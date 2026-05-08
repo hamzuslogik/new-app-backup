@@ -52,7 +52,6 @@ router.get('/', authenticate, async (req, res) => {
       id_commercial,
       id_fiche,
       id_etat_final,
-      date_filter_field = 'planning',
       sort_by = 'date_planning',
       sort_order = 'desc',
       page = 1,
@@ -65,7 +64,6 @@ router.get('/', authenticate, async (req, res) => {
       id_commercial,
       id_fiche,
       id_etat_final,
-      date_filter_field,
       sort_by,
       sort_order,
       page,
@@ -85,18 +83,13 @@ router.get('/', authenticate, async (req, res) => {
       params.push(id_etat_final);
     }
 
-    const normalizedDateFilterField = String(date_filter_field).toLowerCase() === 'signature'
-      ? 'signature'
-      : 'planning';
-    const dateFilterColumn = normalizedDateFilterField === 'signature' ? 's.date_heure' : 'f.date_rdv_time';
-
-    // Filtrer par date de planning (date RDV) ou date de signature selon le contexte
+    // Filtrer par date de planning (date RDV de la fiche)
     if (date_debut) {
-      whereConditions.push(`${dateFilterColumn} >= ?`);
+      whereConditions.push('f.date_rdv_time >= ?');
       params.push(`${date_debut} 00:00:00`);
     }
     if (date_fin) {
-      whereConditions.push(`${dateFilterColumn} <= ?`);
+      whereConditions.push('f.date_rdv_time <= ?');
       params.push(`${date_fin} 23:59:59`);
     }
 
@@ -112,23 +105,29 @@ router.get('/', authenticate, async (req, res) => {
 
     // Filtrer par fiche
     if (id_fiche) {
-      whereConditions.push('s.id_fiche = ?');
+      whereConditions.push('f.id = ?');
       params.push(id_fiche);
     }
 
     const whereClause = 'WHERE ' + whereConditions.join(' AND ');
     console.log('[signature][list] filters built:', {
-      normalizedDateFilterField,
-      dateFilterColumn,
       whereClause,
       params
     });
 
     // Compter le total (JOIN fiches pour filtrer par date_rdv_time)
     const countResult = await queryOne(
-      `SELECT COUNT(DISTINCT s.id_fiche) as total 
-       FROM signature s 
-       INNER JOIN fiches f ON s.id_fiche = f.id 
+      `SELECT COUNT(*) as total
+       FROM fiches f
+       LEFT JOIN (
+         SELECT s1.*
+         FROM signature s1
+         INNER JOIN (
+           SELECT id_fiche, MAX(id) AS max_signature_id
+           FROM signature
+           GROUP BY id_fiche
+         ) latest_sig ON latest_sig.max_signature_id = s1.id
+       ) s ON s.id_fiche = f.id
        ${whereClause}`,
       params
     );
@@ -156,11 +155,11 @@ router.get('/', authenticate, async (req, res) => {
     const signatures = await query(
       `SELECT 
         s.id,
-        s.id_fiche,
+        f.id as id_fiche,
         s.confirmateur,
         s.ajoute,
         s.date_heure,
-        s.tel,
+        COALESCE(s.tel, f.tel) as tel,
         f.hash as fiche_hash,
         f.nom,
         f.prenom,
@@ -188,15 +187,16 @@ router.get('/', authenticate, async (req, res) => {
         u.pseudo as confirmateur_pseudo,
         u.nom as confirmateur_nom,
         u.prenom as confirmateur_prenom
-      FROM (
-        SELECT MAX(s.id) AS signature_id, s.id_fiche
-        FROM signature s
-        INNER JOIN fiches f ON s.id_fiche = f.id
-        ${whereClause}
-        GROUP BY s.id_fiche
-      ) latest
-      INNER JOIN signature s ON s.id = latest.signature_id
-      INNER JOIN fiches f ON s.id_fiche = f.id
+      FROM fiches f
+      LEFT JOIN (
+        SELECT s1.*
+        FROM signature s1
+        INNER JOIN (
+          SELECT id_fiche, MAX(id) AS max_signature_id
+          FROM signature
+          GROUP BY id_fiche
+        ) latest_sig ON latest_sig.max_signature_id = s1.id
+      ) s ON s.id_fiche = f.id
       LEFT JOIN centres c ON f.id_centre = c.id
       LEFT JOIN etats e ON f.id_etat_final = e.id
       LEFT JOIN utilisateurs uc ON f.id_commercial = uc.id

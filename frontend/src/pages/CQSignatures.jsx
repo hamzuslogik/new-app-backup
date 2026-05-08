@@ -89,10 +89,9 @@ const CQSignatures = () => {
         params: {
           date_debut: activeRange.dateDebut,
           date_fin: activeRange.dateFin,
-          date_filter_field: 'signature',
           page,
           limit,
-          sort_by: 'date_heure',
+          sort_by: 'date_planning',
           sort_order: 'desc',
           ...(activeEtatFinal !== null ? { id_etat_final: activeEtatFinal } : {}),
         },
@@ -300,7 +299,7 @@ const CQSignatures = () => {
               <tbody>
                 {sortedRows.map((sig) => (
                   <tr
-                    key={sig.id}
+                    key={sig.id_fiche || sig.id}
                     className="cq-table-row-by-etat"
                     style={{
                       backgroundColor: `${getEtatColor(sig.fiche_id_etat_final)}40`,
