@@ -118,6 +118,8 @@ const CQSignatures = () => {
         return String(row.cq_etat_titre || '').toLowerCase();
       case 'cq_dossier':
         return String(row.cq_dossier_titre || '').toLowerCase();
+      case 'installateur':
+        return String(row.installateur_nom || '').toLowerCase();
       case 'fiche':
         return Number(row.id_fiche || 0);
       case 'telephone':
@@ -216,11 +218,11 @@ const CQSignatures = () => {
                   <th className="sortable-header" onClick={() => handleSort('confirmateur')}>Confirmateur <span>{sortIndicator('confirmateur')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('commercial')}>Commercial <span>{sortIndicator('commercial')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('centre')}>Centre <span>{sortIndicator('centre')}</span></th>
+                  <th className="sortable-header" onClick={() => handleSort('installateur')}>Installateur <span>{sortIndicator('installateur')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('produit')}>Produit <span>{sortIndicator('produit')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('date_heure')}>Date signature <span>{sortIndicator('date_heure')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cq_etat')}>CQ État <span>{sortIndicator('cq_etat')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cq_dossier')}>CQ Dossier <span>{sortIndicator('cq_dossier')}</span></th>
-                  <th className="sortable-header" onClick={() => handleSort('score')}>Score <span>{sortIndicator('score')}</span></th>
                   <th>Détails</th>
                 </tr>
               </thead>
@@ -248,6 +250,7 @@ const CQSignatures = () => {
                     <td>{sig.confirmateur_pseudo || '-'}</td>
                     <td className="wrap-cell">{getCommercialsFormatted(sig)}</td>
                     <td className="wrap-cell">{sig.centre_titre || '-'}</td>
+                    <td className="wrap-cell">{sig.installateur_nom || '-'}</td>
                     <td>
                       <span
                         className="cq-produit-indicator"
@@ -262,7 +265,6 @@ const CQSignatures = () => {
                     <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                     <td className="wrap-cell">{sig.cq_etat_titre || '-'}</td>
                     <td className="wrap-cell">{sig.cq_dossier_titre || '-'}</td>
-                    <td>{sig.ajoute ?? '-'}</td>
                     <td className="cq-details-cell">
                       {sig.id_fiche ? (
                         <FicheDetailLink ficheId={sig.id_fiche}>
