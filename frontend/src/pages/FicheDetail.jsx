@@ -611,12 +611,6 @@ const FicheDetail = ({
     }
   }, [selectedEtat]);
 
-  useEffect(() => {
-    if (selectedEtat !== 7 || !confFormHydratePendingRef.current || !ficheData?.id) return;
-    setConfFormData(buildConfFormStateFromFiche(ficheData, user));
-    confFormHydratePendingRef.current = false;
-  }, [selectedEtat, ficheData, user]);
-
   // État pour le formulaire NRP
   const [nrpFormData, setNrpFormData] = useState({
     date_appel_date: '',
@@ -905,6 +899,12 @@ const FicheDetail = ({
       refetchOnReconnect: isModal // Rafraîchir quand la connexion est rétablie (modal uniquement)
     }
   );
+
+  useEffect(() => {
+    if (selectedEtat !== 7 || !confFormHydratePendingRef.current || !ficheData?.id) return;
+    setConfFormData(buildConfFormStateFromFiche(ficheData, user));
+    confFormHydratePendingRef.current = false;
+  }, [selectedEtat, ficheData, user]);
 
   useEffect(() => {
     if (!ficheData?.date_rdv_time) return;
