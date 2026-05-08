@@ -896,6 +896,35 @@
   line-height: 1.1 !important;
 }
 
+/* Onglet Planning (détail fiche): day total compact + blanc */
+.planning-tab .day-total-controls {
+  background: #ffffff !important;
+  border-radius: 6px !important;
+  padding: 2px 4px !important;
+  gap: 4px !important;
+}
+
+.planning-tab .day-total-controls .total-input {
+  width: 45px !important;
+  min-width: 45px !important;
+  max-width: 45px !important;
+  height: 27px !important;
+  padding: 0 3px !important;
+  font-size: 13.5px !important;
+  line-height: 1.1 !important;
+  background: #ffffff !important;
+}
+
+.planning-tab .day-total-controls .save-btn,
+.planning-tab .day-total-controls .cancel-btn {
+  width: 27px !important;
+  min-width: 27px !important;
+  max-width: 27px !important;
+  height: 27px !important;
+  padding: 0 !important;
+  font-size: 10px !important;
+}
+
 /* Réduire la taille du header horaire dans l'onglet Planning détail fiche */
 .planning-tab .planning-table .time-slot-header,
 .planning-tab .planning-table td.time-slot-header,

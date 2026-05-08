@@ -799,6 +799,9 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   justify-content: center;
   gap: 4px;
   margin-top: 4px;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 2px 4px;
 }
 
 .total-btn {
@@ -846,11 +849,16 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
 }
 
 .total-input {
-  width: 60px;
-  padding: 4px;
+  width: 45px;
+  min-width: 45px;
+  max-width: 45px;
+  height: 27px;
+  padding: 0 3px;
   border: 1px solid var(--filter-border, #86EFAC);
   border-radius: 4px;
   text-align: center;
+  font-size: 13.5px;
+  line-height: 1.1;
   background: #FFFFFF;
   color: var(--input-text, #064E3B);
 }
@@ -888,12 +896,16 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
 }
 
 .availability-input {
-  width: 50px;
-  padding: 6.4px;
+  width: 45px;
+  min-width: 45px;
+  max-width: 45px;
+  height: 27px;
+  padding: 0 3px;
   border: 1px solid var(--filter-border, #86EFAC);
   border-radius: 4px;
   text-align: center;
-  font-size: 11.9px;
+  font-size: 13.5px;
+  line-height: 1.1;
   margin: 0 auto;
   background: #FFFFFF;
   color: var(--input-text, #064E3B);
@@ -939,13 +951,15 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
 
 .save-btn,
 .cancel-btn {
-  padding: 4px 8px;
+  padding: 0;
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 10.2px;
-  width: 28px;
-  height: 28px;
+  font-size: 10px;
+  width: 27px;
+  min-width: 27px;
+  max-width: 27px;
+  height: 27px;
   display: flex;
   align-items: center;
   justify-content: center;

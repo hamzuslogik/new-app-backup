@@ -3671,3 +3671,31 @@ body.dashboard-page {
   font-size: 13.5px !important;
   line-height: 1 !important;
 }
+
+.fiche-detail-modal-content .planning-tab .day-total-controls {
+  background: #ffffff !important;
+  border-radius: 6px !important;
+  padding: 2px 4px !important;
+  gap: 4px !important;
+}
+
+.fiche-detail-modal-content .planning-tab .day-total-controls .total-input {
+  width: 45px !important;
+  min-width: 45px !important;
+  max-width: 45px !important;
+  height: 27px !important;
+  padding: 0 3px !important;
+  font-size: 13.5px !important;
+  line-height: 1.1 !important;
+  background: #ffffff !important;
+}
+
+.fiche-detail-modal-content .planning-tab .day-total-controls .save-btn,
+.fiche-detail-modal-content .planning-tab .day-total-controls .cancel-btn {
+  width: 27px !important;
+  min-width: 27px !important;
+  max-width: 27px !important;
+  height: 27px !important;
+  padding: 0 !important;
+  font-size: 10px !important;
+}
