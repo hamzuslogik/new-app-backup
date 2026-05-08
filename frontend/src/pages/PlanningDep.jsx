@@ -291,6 +291,40 @@ const PlanningDep = () => {
     };
   };
 
+  const computeBesoinDetailsForPlanning = (planningByDate, availabilityByDate, targetDate) => {
+    const dayPlanning = planningByDate?.[targetDate]?.time || {};
+    const dayAvailability = availabilityByDate?.[targetDate] || {};
+
+    const slots = TIME_SLOTS.map((slot) => {
+      const timeKey = hourToTimeKey(slot.hour);
+      const slotPlanning = dayPlanning?.[timeKey] || dayPlanning?.[String(timeKey)] || {};
+      const rdvPris = Array.isArray(slotPlanning?.planning) ? slotPlanning.planning.length : 0;
+
+      const avFromPlanning = slotPlanning?.av;
+      const avFromEndpoint = dayAvailability?.[slot.hour]?.nbr_com;
+      const disponibiliteRaw = (avFromPlanning !== null && avFromPlanning !== undefined)
+        ? avFromPlanning
+        : avFromEndpoint;
+      const disponibilite = Number.isFinite(Number(disponibiliteRaw)) ? Number(disponibiliteRaw) : 0;
+
+      return {
+        slotId: slot.id,
+        slotLabel: slot.name,
+        disponibilite,
+        rdvPris,
+        besoin: Math.max(disponibilite - rdvPris, 0),
+      };
+    });
+
+    const totals = slots.reduce((acc, slot) => ({
+      disponibilite: acc.disponibilite + slot.disponibilite,
+      rdvPris: acc.rdvPris + slot.rdvPris,
+      besoin: acc.besoin + slot.besoin,
+    }), { disponibilite: 0, rdvPris: 0, besoin: 0 });
+
+    return { ...totals, slots };
+  };
+
   const handleGenerateBesoin = async () => {
     if (!besoinDate) return;
     if (!departementsData || departementsData.length === 0) return;
@@ -318,7 +352,8 @@ const PlanningDep = () => {
           const planningByDate = planningRes?.data?.data || {};
           const availabilityByDate = availabilityRes?.data?.data || {};
           const metrics = computeBesoinForPlanning(planningByDate, availabilityByDate, besoinDate);
-          return { departement: d.code, nom: d.nom, ...metrics };
+          const details = computeBesoinDetailsForPlanning(planningByDate, availabilityByDate, besoinDate);
+          return { departement: d.code, nom: d.nom, ...metrics, details };
         })
       );
 
@@ -338,6 +373,15 @@ const PlanningDep = () => {
       doc.text(`Departement: ${besoinDep === 'all' ? 'Tous' : besoinDep}`, marginX, y);
       y += 10;
 
+      const getBesoinCellColor = (besoin, disponibilite) => {
+        if (!disponibilite || disponibilite <= 0) return [220, 220, 220];
+        const ratio = besoin / disponibilite;
+        if (ratio >= 0.7) return [255, 205, 210]; // rouge clair
+        if (ratio >= 0.4) return [255, 224, 178]; // orange clair
+        if (ratio > 0) return [255, 249, 196]; // jaune clair
+        return [200, 230, 201]; // vert clair
+      };
+
       doc.setFontSize(10);
       doc.text('Departement', 10, y);
       doc.text('Disponibilite', 85, y);
@@ -356,8 +400,56 @@ const PlanningDep = () => {
         doc.text(depLabel, 10, y);
         doc.text(String(row.disponibilite), 95, y, { align: 'right' });
         doc.text(String(row.rdvPris), 135, y, { align: 'right' });
+        const [r, g, b] = getBesoinCellColor(row.besoin, row.disponibilite);
+        doc.setFillColor(r, g, b);
+        doc.rect(150, y - 4.5, 28, 6, 'F');
+        doc.setTextColor(20, 20, 20);
         doc.text(String(row.besoin), 170, y, { align: 'right' });
+        doc.setTextColor(0, 0, 0);
         y += 7;
+      });
+
+      // Détails par créneau: conserver l'affichage existant, puis ajouter le détail en bas
+      y += 4;
+      doc.setFontSize(11);
+      doc.text('Details des besoins par creneau', marginX, y);
+      y += 6;
+
+      rows.forEach((row) => {
+        if (y > 272) {
+          doc.addPage();
+          y = 14;
+          doc.setFontSize(11);
+          doc.text('Details des besoins par creneau (suite)', marginX, y);
+          y += 6;
+        }
+
+        const depLabel = row.nom ? `${row.departement} - ${row.nom}` : row.departement;
+        doc.setFontSize(10);
+        doc.setTextColor(33, 33, 33);
+        doc.text(depLabel, marginX, y);
+        y += 5;
+
+        doc.setFontSize(9);
+        row.details.slots.forEach((slot) => {
+          if (y > 280) {
+            doc.addPage();
+            y = 14;
+          }
+          const [r, g, b] = getBesoinCellColor(slot.besoin, slot.disponibilite);
+          doc.setFillColor(r, g, b);
+          doc.rect(marginX, y - 3.5, 190, 5.5, 'F');
+          doc.setTextColor(30, 30, 30);
+          doc.text(
+            `${slot.slotLabel}  |  Dispo: ${slot.disponibilite}  |  RDV: ${slot.rdvPris}  |  Besoin: ${slot.besoin}`,
+            marginX + 2,
+            y
+          );
+          y += 6;
+        });
+
+        doc.setTextColor(0, 0, 0);
+        y += 2;
       });
 
       const safeDate = String(besoinDate || '').replace(/[^0-9-]/g, '');
