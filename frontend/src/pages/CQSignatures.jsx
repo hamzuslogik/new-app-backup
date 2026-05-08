@@ -82,24 +82,6 @@ const CQSignatures = () => {
     return found.getRange();
   }, [activeTab, appliedCustomRange]);
 
-  const { data, isLoading } = useQuery(
-    ['cq-signatures', activeTab, activeRange.dateDebut, activeRange.dateFin, activeEtatKey, activeEtatFinal, page],
-    async () => {
-      const res = await api.get('/signature', {
-        params: {
-          date_debut: activeRange.dateDebut,
-          date_fin: activeRange.dateFin,
-          page,
-          limit,
-          sort_by: 'date_planning',
-          sort_order: 'desc',
-          ...(activeEtatFinal !== null ? { id_etat_final: activeEtatFinal } : {}),
-        },
-      });
-      return res.data;
-    },
-    { keepPreviousData: true }
-  );
   const { data: etatsData } = useQuery('cq-signatures-etats', async () => {
     const res = await api.get('/management/etats');
     return res.data?.data || [];
@@ -128,6 +110,25 @@ const CQSignatures = () => {
     const found = etatFiltersResolved.find((f) => f.key === activeEtatKey);
     return found?.id ?? null;
   }, [etatFiltersResolved, activeEtatKey]);
+
+  const { data, isLoading } = useQuery(
+    ['cq-signatures', activeTab, activeRange.dateDebut, activeRange.dateFin, activeEtatKey, activeEtatFinal, page],
+    async () => {
+      const res = await api.get('/signature', {
+        params: {
+          date_debut: activeRange.dateDebut,
+          date_fin: activeRange.dateFin,
+          page,
+          limit,
+          sort_by: 'date_planning',
+          sort_order: 'desc',
+          ...(activeEtatFinal !== null ? { id_etat_final: activeEtatFinal } : {}),
+        },
+      });
+      return res.data;
+    },
+    { keepPreviousData: true }
+  );
 
   const rows = data?.data || [];
   const pagination = data?.pagination || {};
