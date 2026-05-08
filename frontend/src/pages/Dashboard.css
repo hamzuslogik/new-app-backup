@@ -1334,11 +1334,11 @@ body.dashboard-page {
 }
 
 /* État Final - largeur pour contenir "ANNULER ET A REPROGRAMMER" sans dépasser */
-.fiches-table th:nth-child(7),
-.fiches-table td:nth-child(7) {
-  min-width: 260px;
-  width: 260px;
-  max-width: 260px;
+.dashboard-page .fiches-table th:nth-child(7),
+.dashboard-page .fiches-table td:nth-child(7) {
+  min-width: 280px !important;
+  width: 280px !important;
+  max-width: 280px !important;
   white-space: normal;
   word-wrap: break-word;
   word-break: break-word;
@@ -1347,24 +1347,24 @@ body.dashboard-page {
 }
 
 /* Confirmateur / Commercial - colonnes réduites + retour ligne */
-.fiches-table th:nth-child(8),
-.fiches-table td:nth-child(8),
-.fiches-table th:nth-child(9),
-.fiches-table td:nth-child(9) {
-  min-width: 120px;
-  width: 120px;
-  max-width: 140px;
+.dashboard-page .fiches-table th:nth-child(8),
+.dashboard-page .fiches-table td:nth-child(8),
+.dashboard-page .fiches-table th:nth-child(9),
+.dashboard-page .fiches-table td:nth-child(9) {
+  min-width: 110px !important;
+  width: 110px !important;
+  max-width: 130px !important;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
 }
 
 /* Produit - colonne réduite */
-.fiches-table th:nth-child(11),
-.fiches-table td:nth-child(11) {
-  min-width: 64px;
-  width: 88px;
-  max-width: 96px;
+.dashboard-page .fiches-table th:nth-child(11),
+.dashboard-page .fiches-table td:nth-child(11) {
+  min-width: 56px !important;
+  width: 72px !important;
+  max-width: 80px !important;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
