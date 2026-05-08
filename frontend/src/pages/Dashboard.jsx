@@ -146,7 +146,7 @@ const Dashboard = () => {
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   /** Menu contextuel (clic droit) sur les lignes du tableau : admin (1), backoffice (11), RP (13), RE (14) */
   const canFicheContextMenu = [1, 11, 13, 14].includes(Number(user?.fonction));
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   // Par défaut : filtre vide (état Tous, date non sélectionnée, date début/fin vides)
@@ -244,7 +244,7 @@ const Dashboard = () => {
         setFilters(emptyUiFilters);
         setAppliedFilters(defaultApplied);
       }
-      setShowFilters(false);
+      setShowFilters(true);
     }
   }, [searchParams, user]);
 
@@ -951,6 +951,11 @@ const Dashboard = () => {
   // IMPORTANT: Ce useEffect doit être appelé AVANT tous les early returns pour respecter les règles des hooks React
   useEffect(() => {
     if (isDesktop !== undefined && isDesktop) {
+      // Admin: toujours garder le menu latéral visible
+      if (Number(user?.fonction) === 1) {
+        setAutoHide(false);
+        return;
+      }
       if (fichesData && fichesData.length > 0) {
         setAutoHide(true);
       } else {
@@ -958,7 +963,7 @@ const Dashboard = () => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fichesData.length, isDesktop]);
+  }, [fichesData.length, isDesktop, user?.fonction]);
 
   // Log performance total du traitement - IMPORTANT: Avant les early returns
   // Cette variable sera utilisée dans le useEffect, mais elle doit être déclarée avant
@@ -1402,17 +1407,12 @@ const Dashboard = () => {
 
       {/* Panneau de recherche et filtres */}
       <div className="search-panel">
-        <div 
-          className="search-panel-header"
-          onClick={() => setShowFilters(!showFilters)}
-        >
+        <div className="search-panel-header">
           <h2>
             <FaSearch /> Recherche et Filtres
           </h2>
-          {showFilters ? <FaChevronUp /> : <FaChevronDown />}
         </div>
 
-        {showFilters && (
           <form className="search-form" onSubmit={handleSearch}>
             <div className="search-form-two-columns">
               {/* Colonne de gauche */}
@@ -1751,7 +1751,6 @@ const Dashboard = () => {
               </div>
             </div>
           </form>
-        )}
       </div>
 
       {/* Résultats */}
