@@ -1023,12 +1023,13 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                       {isEditing ? (
                         <div className="edit-controls" onClick={(e) => e.stopPropagation()}>
                           <input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
+                            onChange={(e) => setEditValue(String(e.target.value || '').replace(/\D/g, ''))}
                             className="availability-input"
                             autoFocus
-                            min="0"
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 handleSave(day.date, slot.hour);
