@@ -138,6 +138,10 @@
   padding: 10px 12px;
   font-size: 12px;
   text-align: left;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
 }
 
 .fiches-table td {
@@ -152,6 +156,13 @@
 
 .fiches-table td:last-child {
   min-width: 110px;
+}
+
+.fiches-table th.produit-col,
+.fiches-table td.produit-col {
+  width: 76px;
+  min-width: 76px;
+  max-width: 76px;
 }
 
 .sortable-header {
@@ -170,9 +181,9 @@
 
 .produit-indicator {
   display: inline-block;
-  padding: 4px 8px;
+  padding: 3px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
 }
 

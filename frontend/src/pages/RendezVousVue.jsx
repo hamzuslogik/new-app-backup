@@ -83,6 +83,10 @@ const RendezVousVue = () => {
         return `${fiche.nom || ''} ${fiche.prenom || ''}`.trim().toLowerCase();
       case 'adresse':
         return `${fiche.adresse || ''} ${fiche.cp || ''} ${fiche.ville || ''}`.trim().toLowerCase();
+      case 'cp':
+        return String(fiche.cp || '').toLowerCase();
+      case 'ville':
+        return String(fiche.ville || '').toLowerCase();
       case 'date_rdv_time':
         return fiche.date_rdv_time ? new Date(fiche.date_rdv_time).getTime() : 0;
       case 'commerciaux':
@@ -271,14 +275,15 @@ const RendezVousVue = () => {
                   <th className="sortable-header" onClick={() => handleSort('fiche')}>Nom {getSortIndicator('fiche')}</th>
                   <th>Prénom</th>
                   <th>Téléphone</th>
-                  <th className="sortable-header" onClick={() => handleSort('adresse')}>CP / Ville {getSortIndicator('adresse')}</th>
+                  <th className="sortable-header" onClick={() => handleSort('cp')}>CP {getSortIndicator('cp')}</th>
+                  <th className="sortable-header" onClick={() => handleSort('ville')}>Ville {getSortIndicator('ville')}</th>
                   <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date Insertion {getSortIndicator('date_insert_time')}</th>
                   <th className="sortable-header" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
                   <th className="sortable-header" onClick={() => handleSort('etat')}>État actuel {getSortIndicator('etat')}</th>
                   <th>Confirmateur</th>
                   <th className="sortable-header" onClick={() => handleSort('commerciaux')}>Commercial {getSortIndicator('commerciaux')}</th>
                   <th>Centre</th>
-                  <th>Produit</th>
+                  <th className="produit-col">Produit</th>
                   <th>Validé</th>
                   <th></th>
                 </tr>
@@ -289,7 +294,8 @@ const RendezVousVue = () => {
                     <td>{f.nom || ''}</td>
                     <td>{f.prenom || ''}</td>
                     <td>{f.tel || ''}</td>
-                    <td>{[f.cp, f.ville].filter(Boolean).join(' ') || '—'}</td>
+                    <td>{f.cp || '—'}</td>
+                    <td>{f.ville || '—'}</td>
                     <td>{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : '—'}</td>
                     <td>{formatRdvDateTime(f.date_rdv_time)}</td>
                     <td>
@@ -300,7 +306,7 @@ const RendezVousVue = () => {
                     <td>{getConfirmateursFormatted(f) || '—'}</td>
                     <td>{[f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ') || '—'}</td>
                     <td>{getCentreName(f.id_centre) || '—'}</td>
-                    <td>
+                    <td className="produit-col">
                       <span className="produit-indicator" style={{ backgroundColor: getProduitColor(f.produit), color: '#fff' }}>
                         {getProduitName(f.produit) || '—'}
                       </span>

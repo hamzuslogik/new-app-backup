@@ -227,7 +227,10 @@
   font-size: 11.9px;
   color: #ffffff !important;
   background: #9cbfc8 !important;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
 }
 
 .fiches-table tbody tr {
@@ -242,7 +245,10 @@
 .fiches-table td {
   padding: 9.6px;
   font-size: 11.9px;
-  vertical-align: middle;
+  vertical-align: top;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .produit-indicator {
