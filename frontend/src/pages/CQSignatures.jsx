@@ -238,7 +238,7 @@ const CQSignatures = () => {
                     </td>
                     <td>{sig.confirmateur_pseudo || '-'}</td>
                     <td className="wrap-cell">{getCommercialsFormatted(sig)}</td>
-                    <td>{sig.centre_titre || '-'}</td>
+                    <td className="wrap-cell">{sig.centre_titre || '-'}</td>
                     <td>{getProduitLabel(sig.produit)}</td>
                     <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                     <td className="wrap-cell">{sig.cq_etat_titre || '-'}</td>
