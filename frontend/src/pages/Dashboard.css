@@ -3656,7 +3656,7 @@ body.dashboard-page {
 .fiche-detail-modal-content .planning-tab .planning-table td.time-slot-header,
 .fiche-detail-modal-content .planning-tab .planning-table .time-slot-header *,
 .fiche-detail-modal-content .planning-tab .planning-table td.time-slot-header * {
-  font-size: 36px !important;
+  font-size: 18px !important;
   font-weight: 900 !important;
   line-height: 1 !important;
   text-align: center !important;
