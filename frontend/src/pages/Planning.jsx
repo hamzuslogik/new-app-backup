@@ -1051,6 +1051,15 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                                   setEditValue(next);
                                 }}
                                 className="availability-input"
+                                style={{
+                                  width: '35px',
+                                  minWidth: '35px',
+                                  maxWidth: '35px',
+                                  height: '20px',
+                                  padding: '0 2px',
+                                  fontSize: '11px',
+                                  lineHeight: 1,
+                                }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
                                     handleSave(day.date, slot.hour);
