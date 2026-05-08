@@ -971,8 +971,11 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                           backgroundColor: getAvailabilityBadgeBgColor(rdvCount, currentValue),
                           color: '#000000',
                           fontWeight: '700',
-                          padding: '4px 8px',
+                          padding: '2px 6px',
                           borderRadius: '4px',
+                          border: 'none',
+                          boxShadow: 'none',
+                          outline: 'none',
                           display: 'inline-block',
                           position: 'absolute',
                           left: '4px',
@@ -986,7 +989,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                               color: '#000000',
                               WebkitTextFillColor: '#000000',
                               fontWeight: 900,
-                              fontSize: '27px'
+                              fontSize: '16px'
                             }}
                           >
                             {`DEP ${dep || '-'} : ${rdvCount}/${currentValue ?? '-'}`}
