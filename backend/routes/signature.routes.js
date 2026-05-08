@@ -57,6 +57,20 @@ router.get('/', authenticate, async (req, res) => {
       page = 1,
       limit = 50
     } = req.query;
+    console.log('[signature][list] query params:', {
+      date_debut,
+      date_fin,
+      id_confirmateur,
+      id_commercial,
+      id_fiche,
+      id_etat_final,
+      sort_by,
+      sort_order,
+      page,
+      limit,
+      user_id: req.user?.id || null,
+      user_fonction: req.user?.fonction || null
+    });
 
     // Limiter aux fiches actuellement signées (même critère que "recherche tout signé par date de planning")
     const etatsSignes = [13, 16, 38, 44, 45]; // SIGNER, SIGNER RETRACTER, SIGNER RETRACTER 2 FOIS, SIGNER PM, SIGNER COMPLET
@@ -96,6 +110,10 @@ router.get('/', authenticate, async (req, res) => {
     }
 
     const whereClause = 'WHERE ' + whereConditions.join(' AND ');
+    console.log('[signature][list] filters built:', {
+      whereClause,
+      params
+    });
 
     // Compter le total (JOIN fiches pour filtrer par date_rdv_time)
     const countResult = await queryOne(
@@ -106,6 +124,11 @@ router.get('/', authenticate, async (req, res) => {
       params
     );
     const total = countResult?.total || 0;
+    console.log('[signature][list] count result:', {
+      total,
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10)
+    });
 
     // Calculer la pagination
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -171,6 +194,15 @@ router.get('/', authenticate, async (req, res) => {
       LIMIT ? OFFSET ?`,
       [...params, limitValue, offset]
     );
+    console.log('[signature][list] rows fetched:', {
+      fetched: signatures?.length || 0,
+      offset,
+      limitValue,
+      first_row_id: signatures?.[0]?.id || null,
+      first_row_fiche_id: signatures?.[0]?.id_fiche || null,
+      first_row_date_planning: signatures?.[0]?.date_planning || null,
+      first_row_date_signature: signatures?.[0]?.date_heure || null
+    });
 
     res.json({
       success: true,
