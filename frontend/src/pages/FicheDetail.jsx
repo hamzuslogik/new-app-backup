@@ -8414,6 +8414,7 @@ const PlanningViewForModal = ({
                                   min="0"
                                   placeholder="-"
                                   title="Saisir la valeur puis cliquer sur Valider"
+                                  style={{ width: '38px', padding: '1px 3px', fontSize: '10px', lineHeight: 1.1 }}
                                 />
                                 {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
                                   <>
@@ -8480,6 +8481,7 @@ const PlanningViewForModal = ({
                                   min="0"
                                   placeholder="-"
                                   title="Saisir la valeur puis cliquer sur Valider"
+                                  style={{ width: '38px', padding: '1px 3px', fontSize: '10px', lineHeight: 1.1 }}
                                 />
                                 {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
                                   <>
