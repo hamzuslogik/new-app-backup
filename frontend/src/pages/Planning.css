@@ -408,12 +408,29 @@
   background-color: transparent !important;
 }
 
+/* Ne pas forcer le fond transparent sur les contrôles de saisie */
+.day-header-planning input,
+.day-header-planning button,
+.day-header-planning select,
+.day-header-planning textarea {
+  background: initial !important;
+  background-color: initial !important;
+}
+
 .planning-table th .day-header-planning,
 .planning-table th .day-header-planning *,
 .planning-table th .day-header-planning span {
   color: var(--label-color, #065F46) !important;
   background: transparent !important;
   background-color: transparent !important;
+}
+
+.planning-table th .day-header-planning input,
+.planning-table th .day-header-planning button,
+.planning-table th .day-header-planning select,
+.planning-table th .day-header-planning textarea {
+  background: initial !important;
+  background-color: initial !important;
 }
 
 /* Appliquer les couleurs de planning-header au th avec "Heure" */
@@ -864,14 +881,14 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
 }
 
 /* Override ciblé: annule le background transparent forcé par .day-header-planning * */
-.planning-page .planning-table th .day-header-planning .day-total-controls {
+.planning-page .day-header-planning .day-total-controls {
   background: #ffffff !important;
   background-color: #ffffff !important;
   border-radius: 4px !important;
   padding: 1px 3px !important;
 }
 
-.planning-page .planning-table th .day-header-planning .day-total-controls .total-input {
+.planning-page .day-header-planning .day-total-controls .total-input {
   width: 30px !important;
   min-width: 30px !important;
   max-width: 30px !important;
@@ -880,8 +897,8 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   background-color: #ffffff !important;
 }
 
-.planning-page .planning-table th .day-header-planning .day-total-controls .save-btn,
-.planning-page .planning-table th .day-header-planning .day-total-controls .cancel-btn {
+.planning-page .day-header-planning .day-total-controls .save-btn,
+.planning-page .day-header-planning .day-total-controls .cancel-btn {
   background-clip: padding-box;
 }
 
