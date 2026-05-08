@@ -902,6 +902,35 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   background-clip: padding-box;
 }
 
+/* Verrouillage fort: même rendu dans Planning + Availability */
+.planning-page .planning-table th .day-total-controls,
+.planning-page .availability-table th .day-total-controls {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-radius: 4px !important;
+  padding: 1px 2px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+}
+
+.planning-page .planning-table th .day-total-controls .total-input,
+.planning-page .availability-table th .day-total-controls .total-input {
+  width: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+  height: 14px !important;
+  padding: 0 1px !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  border: 1px solid var(--filter-border, #86EFAC) !important;
+  text-align: center !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  box-sizing: border-box !important;
+}
+
 .availability-cell {
   min-height: 60px;
   transition: background 0.3s;
