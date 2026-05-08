@@ -465,9 +465,6 @@ const PlanningHebdomadaire = () => {
       {/* Header */}
       <div className="planning-hebdomadaire-header">
         <div className="header-left">
-          <span className="header-title">Planning Hebdomadaire - Semaine {week}:</span>
-        </div>
-        <div className="header-right">
           <button className="nav-btn" onClick={handlePrevWeek} title="Semaine précédente">
             <FaChevronLeft />
           </button>
@@ -475,6 +472,9 @@ const PlanningHebdomadaire = () => {
           <button className="nav-btn" onClick={handleNextWeek} title="Semaine suivante">
             <FaChevronRight />
           </button>
+        </div>
+        <div className="header-right">
+          <span className="week-number">Semaine {week}</span>
         </div>
       </div>
 

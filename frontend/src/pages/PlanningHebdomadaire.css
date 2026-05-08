@@ -75,6 +75,13 @@
   color: var(--label-color, #065F46) !important;
 }
 
+.week-number {
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--label-color, #065F46) !important;
+}
+
 .planning-hebdomadaire-header span {
   color: var(--label-color, #065F46) !important;
 }
