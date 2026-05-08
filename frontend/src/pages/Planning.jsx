@@ -84,7 +84,7 @@ const Planning = () => {
   const [week, setWeek] = useState(parseInt(searchParams.get('w')) || currentWeek);
   const [year, setYear] = useState(parseInt(searchParams.get('y')) || currentYear);
   const [dep, setDep] = useState(searchParams.get('dp') || '');
-  const [viewMode, setViewMode] = useState(searchParams.get('mode') || 'planning'); // 'planning' ou 'availability'
+  const viewMode = 'availability';
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [editingAvailability, setEditingAvailability] = useState(null);
@@ -187,7 +187,7 @@ const Planning = () => {
     },
     { 
       keepPreviousData: true, 
-      enabled: viewMode === 'availability' && !!week && !!year,
+      enabled: !!week && !!year,
       // Rafraîchissement automatique toutes les 5 secondes
       refetchInterval: 5000,
       refetchOnWindowFocus: true,
@@ -204,7 +204,7 @@ const Planning = () => {
     },
     { 
       keepPreviousData: true, 
-      enabled: viewMode === 'availability' && !!week && !!year,
+      enabled: !!week && !!year,
       // Rafraîchissement automatique toutes les 5 secondes
       refetchInterval: 5000,
       refetchOnWindowFocus: true,
@@ -248,9 +248,7 @@ const Planning = () => {
         queryClient.invalidateQueries(['planning-modal']);
         queryClient.invalidateQueries(['availability-modal']);
         refetch();
-        if (viewMode === 'availability') {
-          refetchAvailability();
-        }
+        refetchAvailability();
         toast.success('Disponibilité mise à jour avec succès');
       },
       onError: (error) => {
@@ -274,9 +272,7 @@ const Planning = () => {
         queryClient.invalidateQueries(['planning-modal']);
         queryClient.invalidateQueries(['availability-modal']);
         refetch();
-        if (viewMode === 'availability') {
-          refetchAvailability();
-        }
+        refetchAvailability();
         toast.success(data.data?.message || 'Créneau mis à jour avec succès');
       },
       onError: (error) => {
@@ -346,11 +342,9 @@ const Planning = () => {
     newParams.set('w', week.toString());
     newParams.set('y', year.toString());
     newParams.set('dp', dep);
-    if (viewMode !== 'planning') {
-      newParams.set('mode', viewMode);
-    }
+    newParams.set('mode', 'availability');
     setSearchParams(newParams, { replace: true });
-  }, [week, year, dep, viewMode, setSearchParams]);
+  }, [week, year, dep, setSearchParams]);
 
   // Recharger les données quand le département change
   useEffect(() => {
@@ -546,20 +540,6 @@ const Planning = () => {
             </span>
             <button onClick={handleNextWeek} className="nav-btn">
               <FaChevronRight />
-            </button>
-          </div>
-          <div className="view-mode-toggle">
-            <button
-              className={viewMode === 'planning' ? 'active' : ''}
-              onClick={() => setViewMode('planning')}
-            >
-              Planning
-            </button>
-            <button
-              className={viewMode === 'availability' ? 'active' : ''}
-              onClick={() => setViewMode('availability')}
-            >
-              Disponibilité
             </button>
           </div>
           {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (

@@ -85,7 +85,7 @@ const Sidebar = ({ collapsed }) => {
       label: 'Planning',
       icon: FaCalendarAlt,
       permission: 'planning_view',
-      visible: true,
+      visible: false,
     },
     {
       path: '/planning-commercial',
