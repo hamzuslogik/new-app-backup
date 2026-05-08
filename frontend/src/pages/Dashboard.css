@@ -3764,6 +3764,36 @@ body.dashboard-page {
   padding-top: 6px !important;
 }
 
+/* DatePicker dashboard: rendu du champ sur 2 lignes (date + heure) */
+.datetime-two-lines-input {
+  width: 220px;
+  max-width: 220px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--input-text, #064E3B);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+}
+
+.datetime-two-lines-date {
+  font-size: 10.8px;
+  line-height: 1.1;
+}
+
+.datetime-two-lines-time {
+  font-size: 10px;
+  line-height: 1.1;
+  opacity: 0.9;
+}
+
 /* Dashboard table: Nom/Prénom un peu plus petits */
 .dashboard-page .fiches-table th:nth-child(1),
 .dashboard-page .fiches-table td:nth-child(1),

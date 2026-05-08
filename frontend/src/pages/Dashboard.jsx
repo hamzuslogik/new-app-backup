@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import DatePicker from 'react-datepicker';
+import DatePicker, { registerLocale } from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { fr } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
@@ -17,11 +18,35 @@ import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import './Dashboard.css';
 
+registerLocale('fr', fr);
+
 function resolveDashboardFicheNumericId(fiche) {
   if (!fiche) return null;
   if (fiche.id != null && Number(fiche.id) > 0) return Number(fiche.id);
   return decodeFicheIdFromHash(fiche.hash);
 }
+
+const TwoLineDateTimeInput = React.forwardRef(({ value, onClick, placeholder }, ref) => {
+  const raw = String(value || '').trim();
+  const parts = raw.split(' ');
+  const datePart = parts[0] || '';
+  const timePart = parts[1] || '';
+  const hasValue = Boolean(raw);
+
+  return (
+    <button
+      type="button"
+      className="datetime-two-lines-input"
+      onClick={onClick}
+      ref={ref}
+      title={raw || placeholder || 'Choisir date et heure'}
+    >
+      <span className="datetime-two-lines-date">{hasValue ? datePart : (placeholder || 'Date')}</span>
+      <span className="datetime-two-lines-time">{hasValue ? timePart : '--:--'}</span>
+    </button>
+  );
+});
+TwoLineDateTimeInput.displayName = 'TwoLineDateTimeInput';
 
 /** Aligné sur le garde-fou backend : fiche_search seul ne doit pas lancer une requête sur toute la table. */
 function dashboardUrlHasNarrowingCriteria(params) {
@@ -1602,10 +1627,11 @@ const Dashboard = () => {
                           timeIntervals={1}
                           dateFormat="dd/MM/yyyy HH:mm"
                           timeFormat="HH:mm"
+                          locale="fr"
                           todayButton="Actuellement"
                           isClearable
                           placeholderText="Date début"
-                          className="form-control"
+                          customInput={<TwoLineDateTimeInput />}
                         />
                       </div>
                     </div>
@@ -1620,10 +1646,11 @@ const Dashboard = () => {
                           timeIntervals={1}
                           dateFormat="dd/MM/yyyy HH:mm"
                           timeFormat="HH:mm"
+                          locale="fr"
                           todayButton="Actuellement"
                           isClearable
                           placeholderText="Date fin"
-                          className="form-control"
+                          customInput={<TwoLineDateTimeInput />}
                         />
                       </div>
                     </div>
@@ -2436,10 +2463,11 @@ const Dashboard = () => {
                         timeIntervals={1}
                         dateFormat="dd/MM/yyyy HH:mm"
                         timeFormat="HH:mm"
+                        locale="fr"
                         todayButton="Actuellement"
                         isClearable
                         placeholderText="Date début"
-                        className="form-control"
+                        customInput={<TwoLineDateTimeInput />}
                       />
                     </div>
                   </div>
@@ -2474,10 +2502,11 @@ const Dashboard = () => {
                         timeIntervals={1}
                         dateFormat="dd/MM/yyyy HH:mm"
                         timeFormat="HH:mm"
+                        locale="fr"
                         todayButton="Actuellement"
                         isClearable
                         placeholderText="Date fin"
-                        className="form-control"
+                        customInput={<TwoLineDateTimeInput />}
                       />
                     </div>
                   </div>
