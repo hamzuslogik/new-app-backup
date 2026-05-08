@@ -972,6 +972,17 @@ body.dashboard-page {
   box-sizing: border-box;
 }
 
+/* Dashboard: champs de filtre plus compacts (texte, date, listes) */
+.dashboard-page .search-panel .form-group input,
+.dashboard-page .search-panel .form-group select,
+.dashboard-page .search-panel .date-time-inputs input[type="date"],
+.dashboard-page .search-panel .date-time-inputs input[type="time"] {
+  padding: 5px 7px;
+  min-height: 30px;
+  font-size: 10.8px;
+  line-height: 1.2;
+}
+
 .form-group input::placeholder,
 .form-group select::placeholder {
   color: var(--input-placeholder, #6B7280);

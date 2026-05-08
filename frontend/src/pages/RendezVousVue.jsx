@@ -24,26 +24,32 @@ const RendezVousVue = () => {
   const [quickSearchDep, setQuickSearchDep] = useState('');
   const [ficheContextMenu, setFicheContextMenu] = useState(null);
   const [ficheDetailModal, setFicheDetailModal] = useState(null);
+  const autoRefreshOptions = {
+    enabled: true,
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  };
 
   const { data: dataJour, isLoading: loadingJour } = useQuery(
     ['rdv-vue', 'jour', dateJour],
     () => fetchRdvVue('jour', dateJour),
-    { enabled: true }
+    autoRefreshOptions
   );
   const { data: dataAffilie, isLoading: loadingAffilie } = useQuery(
     ['rdv-vue', 'affilie', dateJour],
     () => fetchRdvVue('affilie', dateJour),
-    { enabled: true }
+    autoRefreshOptions
   );
   const { data: dataNonAffilie, isLoading: loadingNonAffilie } = useQuery(
     ['rdv-vue', 'non_affilie', dateJour],
     () => fetchRdvVue('non_affilie', dateJour),
-    { enabled: true }
+    autoRefreshOptions
   );
   const { data: dataProductionRdv, isLoading: loadingProductionRdv } = useQuery(
     ['rdv-vue', 'production_rdv', dateJour],
     () => fetchRdvVue('production_rdv', dateJour),
-    { enabled: true }
+    autoRefreshOptions
   );
 
   const countJour = (dataJour || []).length;
