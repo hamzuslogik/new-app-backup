@@ -50,6 +50,7 @@ const TAB_DEFS = [
 ];
 
 const ETAT_FILTER_DEFS = [
+  { id: null, label: 'TOUS' },
   { id: 13, label: 'SIGNER' },
   { id: 45, label: 'COMPLET' },
   { id: 44, label: 'PM' },
@@ -61,7 +62,7 @@ const CQSignatures = () => {
   useForceDesktopViewport('cq-signatures-page');
   const todayLocal = getTodayLocal();
   const [activeTab, setActiveTab] = useState('today');
-  const [activeEtatFinal, setActiveEtatFinal] = useState(13);
+  const [activeEtatFinal, setActiveEtatFinal] = useState(null);
   const [customDateDebut, setCustomDateDebut] = useState(todayLocal);
   const [customDateFin, setCustomDateFin] = useState(todayLocal);
   const [appliedCustomRange, setAppliedCustomRange] = useState({
@@ -88,11 +89,11 @@ const CQSignatures = () => {
         params: {
           date_debut: activeRange.dateDebut,
           date_fin: activeRange.dateFin,
-          id_etat_final: activeEtatFinal,
           page,
           limit,
           sort_by: 'date_planning',
           sort_order: 'desc',
+          ...(activeEtatFinal !== null ? { id_etat_final: activeEtatFinal } : {}),
         },
       });
       return res.data;
