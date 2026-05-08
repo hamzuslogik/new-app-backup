@@ -212,6 +212,148 @@ function ficheHonoreASuivreViaCompteRendu(fiche) {
   );
 }
 
+const EMPTY_CONF_FORM_BASE = {
+  produit: '',
+  id_confirmateur: '',
+  id_confirmateur_2: '',
+  id_confirmateur_3: '',
+  conf_rdv_date: '',
+  conf_rdv_time: '',
+  conf_rdv_avec: '',
+  conf_appel_tunisie_avec: '',
+  conf_deja_etude: '',
+  conf_profession_monsieur: '',
+  conf_type_contrat_mr: '',
+  conf_profession_madame: '',
+  conf_type_contrat_madame: '',
+  conf_revenu: '',
+  conf_credit: '',
+  conf_mode_chauffage: '',
+  conf_complement_chauffage: '',
+  conf_consommation_electricite: '',
+  conf_consommation_chauffage: '',
+  conf_rdv_annule_precedent: '',
+  conf_presence_couple: '',
+  conf_orientation_toiture: '',
+  conf_zones_ombres: '',
+  conf_site_classe: '',
+  nb_pans: '',
+  annee_systeme_chauffage: '',
+  surface_chauffee: '',
+  consommation_chauffage: '',
+  conf_commentaire_produit: '',
+  id_commercial_2: ''
+};
+
+/**
+ * Formulaire « Informations de confirmation » (état 7) prérempli depuis la fiche (tous les champs conf_* + produit / RDV).
+ * Même logique que la création RDV : conf_appel_tunisie_avec avec repli sur entretien si besoin.
+ */
+function buildConfFormStateFromFiche(ficheData, user) {
+  const now = new Date();
+  const defaultDate = now.toISOString().split('T')[0];
+  const defaultTime = now.toTimeString().split(' ')[0].substring(0, 5);
+
+  if (!ficheData) {
+    return { ...EMPTY_CONF_FORM_BASE, conf_rdv_date: defaultDate, conf_rdv_time: defaultTime };
+  }
+
+  let rdvDate = defaultDate;
+  let rdvTime = defaultTime;
+  if (ficheData.date_rdv_time) {
+    const parts = String(ficheData.date_rdv_time).split(/[\sT]/);
+    if (parts[0]) rdvDate = parts[0];
+    if (parts[1]) rdvTime = parts[1].substring(0, 5);
+  }
+
+  const histoConf = Array.isArray(ficheData.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo.length > 0
+    ? ficheData.confirmateurs_from_histo.map((id) => String(id))
+    : null;
+  let idConf1 = histoConf ? (histoConf[0] || '') : (ficheData.id_confirmateur ? String(ficheData.id_confirmateur) : '');
+  let idConf2 = histoConf ? (histoConf[1] || '') : (ficheData.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : '');
+  let idConf3 = histoConf ? (histoConf[2] || '') : (ficheData.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : '');
+
+  if (Number(user?.fonction) === 6 && user?.id) {
+    const uid = String(user.id);
+    const alreadyConfirmed = !!(histoConf && histoConf.length > 0);
+    if (!alreadyConfirmed) {
+      idConf1 = uid;
+      idConf2 = '';
+      idConf3 = '';
+    } else {
+      idConf1 = uid;
+      idConf2 = histoConf[0] || '';
+      idConf3 = histoConf[1] || '';
+    }
+  }
+
+  const confAppelTunisie = (() => {
+    const c = ficheData.conf_appel_tunisie_avec;
+    if (c != null && String(c).trim() !== '') return String(c).trim();
+    const e = String(ficheData.entretien || '').trim();
+    if (!e) return '';
+    const u = e.toUpperCase();
+    if (u === 'MONSIEUR' || e === 'MR') return 'MR';
+    if (u === 'MADAME' || e === 'MME') return 'MME';
+    return '';
+  })();
+
+  const produit =
+    ficheData.produit != null && String(ficheData.produit).trim() !== ''
+      ? String(ficheData.produit)
+      : ficheData.conf_produit != null && String(ficheData.conf_produit).trim() !== ''
+        ? String(ficheData.conf_produit)
+        : '';
+
+  return {
+    produit,
+    id_confirmateur: idConf1,
+    id_confirmateur_2: idConf2,
+    id_confirmateur_3: idConf3,
+    conf_rdv_date: rdvDate,
+    conf_rdv_time: rdvTime,
+    conf_rdv_avec: ficheData.conf_rdv_avec || '',
+    conf_appel_tunisie_avec: confAppelTunisie,
+    conf_deja_etude: ficheData.conf_deja_etude || '',
+    conf_profession_monsieur: ficheData.conf_profession_monsieur != null ? String(ficheData.conf_profession_monsieur) : '',
+    conf_type_contrat_mr: ficheData.conf_type_contrat_mr != null ? String(ficheData.conf_type_contrat_mr) : '',
+    conf_profession_madame: ficheData.conf_profession_madame != null ? String(ficheData.conf_profession_madame) : '',
+    conf_type_contrat_madame: ficheData.conf_type_contrat_madame != null ? String(ficheData.conf_type_contrat_madame) : '',
+    conf_revenu: ficheData.conf_revenu || '',
+    conf_credit: ficheData.conf_credit || '',
+    conf_mode_chauffage:
+      ficheData.conf_mode_chauffage != null && ficheData.conf_mode_chauffage !== ''
+        ? String(ficheData.conf_mode_chauffage)
+        : ficheData.mode_chauffage
+          ? String(ficheData.mode_chauffage)
+          : '',
+    conf_complement_chauffage: ficheData.conf_complement_chauffage || '',
+    conf_consommation_electricite:
+      ficheData.conf_consommation_electricite != null && String(ficheData.conf_consommation_electricite).trim() !== ''
+        ? String(ficheData.conf_consommation_electricite)
+        : ficheData.consommation_electricite != null
+          ? String(ficheData.consommation_electricite)
+          : '',
+    conf_consommation_chauffage: ficheData.conf_consommation_chauffage || ficheData.consommation_chauffage || '',
+    conf_rdv_annule_precedent: ficheData.conf_rdv_annule_precedent || '',
+    conf_presence_couple: ficheData.conf_presence_couple || '',
+    conf_orientation_toiture: (ficheData.conf_orientation_toiture || ficheData.orientation_toiture || '').toString(),
+    conf_zones_ombres: (ficheData.conf_zones_ombres || ficheData.zones_ombres || '').toString(),
+    conf_site_classe: (ficheData.conf_site_classe || ficheData.site_classe || '').toString(),
+    nb_pans: ficheData.nb_pans != null && ficheData.nb_pans !== '' ? String(ficheData.nb_pans) : '',
+    annee_systeme_chauffage: ficheData.annee_systeme_chauffage != null ? String(ficheData.annee_systeme_chauffage) : '',
+    surface_chauffee: ficheData.surface_chauffee != null && ficheData.surface_chauffee !== '' ? String(ficheData.surface_chauffee) : '',
+    consommation_chauffage: ficheData.consommation_chauffage || '',
+    conf_commentaire_produit: ficheData.conf_commentaire_produit || ficheData.commentaire || '',
+    id_commercial_2:
+      ficheHonoreASuivreViaCompteRendu(ficheData) &&
+      ficheData.id_commercial_2 != null &&
+      Number(ficheData.id_commercial_2) > 0
+        ? String(ficheData.id_commercial_2)
+        : ''
+  };
+}
+
 // Créneaux horaires
 const TIME_SLOTS = [
   { hour: '09:00:00', name: '9H ( 9h uniquement )' },
@@ -460,12 +602,20 @@ const FicheDetail = ({
   const [confProfMmeDisplay, setConfProfMmeDisplay] = useState('');
   const [showSuggestionsMr, setShowSuggestionsMr] = useState(false);
   const [showSuggestionsMme, setShowSuggestionsMme] = useState(false);
+  /** Si l’utilisateur choisit Confirmer avant que ficheData soit chargé : réhydrater dès que la fiche arrive. */
+  const confFormHydratePendingRef = useRef(false);
 
   useEffect(() => {
     if (selectedEtat === 7) {
       setShowConfirmConfFields(false);
     }
   }, [selectedEtat]);
+
+  useEffect(() => {
+    if (selectedEtat !== 7 || !confFormHydratePendingRef.current || !ficheData?.id) return;
+    setConfFormData(buildConfFormStateFromFiche(ficheData, user));
+    confFormHydratePendingRef.current = false;
+  }, [selectedEtat, ficheData, user]);
 
   // État pour le formulaire NRP
   const [nrpFormData, setNrpFormData] = useState({
@@ -1844,118 +1994,12 @@ const FicheDetail = ({
         date_appel_time: prev.date_appel_time || `${hh}:${min}`
       }));
     }
-    // Si l'état est 7 (confirmer), initialiser les valeurs du formulaire
+    // Si l'état est 7 (confirmer), initialiser les valeurs du formulaire depuis la fiche (tous les conf_*)
     if (newEtatId === 7) {
-      const currentDate = new Date();
-      const dateStr = currentDate.toISOString().split('T')[0];
-      const timeStr = currentDate.toTimeString().split(' ')[0].substring(0, 5);
-      
-      // Extraire date et heure depuis date_rdv_time si disponible
-      let rdvDate = dateStr;
-      let rdvTime = timeStr;
-      if (ficheData?.date_rdv_time) {
-        const parts = ficheData.date_rdv_time.split(' ');
-        if (parts[0]) rdvDate = parts[0];
-        if (parts[1]) rdvTime = parts[1].substring(0, 5);
-      }
-      
-      // Confirmateurs : priorité fiches_histo (source de vérité) ; première confirmation => conf1 = connecté ; déjà confirmée => garder existants et ajouter connecté en conf2/conf3
-      const histoConf = Array.isArray(ficheData?.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo.length > 0
-        ? ficheData.confirmateurs_from_histo.map((id) => String(id))
-        : null;
-      let idConf1 = histoConf ? (histoConf[0] || '') : (ficheData?.id_confirmateur ? String(ficheData.id_confirmateur) : '');
-      let idConf2 = histoConf ? (histoConf[1] || '') : (ficheData?.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : '');
-      let idConf3 = histoConf ? (histoConf[2] || '') : (ficheData?.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : '');
-      // Confirmateurs : connecté = toujours conf1 ; si histo existe, décaler ancien conf1→conf2, ancien conf2→conf3
-      if (Number(user?.fonction) === 6 && user?.id) {
-        const uid = String(user.id);
-        const alreadyConfirmed = !!(histoConf && histoConf.length > 0);
-        if (!alreadyConfirmed) {
-          idConf1 = uid;
-          idConf2 = '';
-          idConf3 = '';
-        } else {
-          idConf1 = uid;
-          idConf2 = histoConf[0] || '';
-          idConf3 = histoConf[1] || '';
-        }
-      }
-      
-      setConfFormData({
-        produit: ficheData?.produit ? String(ficheData.produit) : '',
-        id_confirmateur: idConf1,
-        id_confirmateur_2: idConf2,
-        id_confirmateur_3: idConf3,
-        conf_rdv_date: rdvDate,
-        conf_rdv_time: rdvTime,
-        conf_rdv_avec: ficheData?.conf_rdv_avec || '',
-        conf_appel_tunisie_avec: ficheData?.conf_appel_tunisie_avec || '',
-        conf_deja_etude: ficheData?.conf_deja_etude || '',
-        conf_profession_monsieur: ficheData?.conf_profession_monsieur != null ? String(ficheData.conf_profession_monsieur) : '',
-        conf_type_contrat_mr: ficheData?.conf_type_contrat_mr != null ? String(ficheData.conf_type_contrat_mr) : '',
-        conf_profession_madame: ficheData?.conf_profession_madame != null ? String(ficheData.conf_profession_madame) : '',
-        conf_type_contrat_madame: ficheData?.conf_type_contrat_madame != null ? String(ficheData.conf_type_contrat_madame) : '',
-        conf_revenu: ficheData?.conf_revenu || '',
-        conf_credit: ficheData?.conf_credit || '',
-        conf_mode_chauffage:
-          ficheData?.conf_mode_chauffage != null && ficheData?.conf_mode_chauffage !== ''
-            ? String(ficheData.conf_mode_chauffage)
-            : ficheData?.mode_chauffage
-              ? String(ficheData.mode_chauffage)
-              : '',
-        conf_complement_chauffage: ficheData?.conf_complement_chauffage || '',
-        conf_consommation_electricite: ficheData?.conf_consommation_electricite || ficheData?.consommation_electricite || '',
-        conf_consommation_chauffage: ficheData?.conf_consommation_chauffage || ficheData?.consommation_chauffage || '',
-        conf_rdv_annule_precedent: ficheData?.conf_rdv_annule_precedent || '',
-        conf_presence_couple: ficheData?.conf_presence_couple || '',
-        conf_orientation_toiture: ficheData?.conf_orientation_toiture || ficheData?.orientation_toiture || '',
-        conf_zones_ombres: ficheData?.conf_zones_ombres || ficheData?.zones_ombres || '',
-        conf_site_classe: ficheData?.conf_site_classe || ficheData?.site_classe || '',
-        nb_pans: ficheData?.nb_pans ? String(ficheData.nb_pans) : '',
-        annee_systeme_chauffage: ficheData?.annee_systeme_chauffage ? String(ficheData.annee_systeme_chauffage) : '',
-        surface_chauffee: ficheData?.surface_chauffee || '',
-        consommation_chauffage: ficheData?.consommation_chauffage || '',
-        conf_commentaire_produit: ficheData?.conf_commentaire_produit || ficheData?.commentaire || '',
-        id_commercial_2:
-          ficheHonoreASuivreViaCompteRendu(ficheData) &&
-          ficheData?.id_commercial_2 != null &&
-          Number(ficheData.id_commercial_2) > 0
-            ? String(ficheData.id_commercial_2)
-            : ''
-      });
+      setConfFormData(buildConfFormStateFromFiche(ficheData, user));
+      confFormHydratePendingRef.current = !ficheData?.id;
     } else {
-      setConfFormData({
-        produit: '',
-        id_confirmateur: '',
-        id_confirmateur_2: '',
-        id_confirmateur_3: '',
-        conf_rdv_date: '',
-        conf_rdv_time: '',
-        conf_rdv_avec: '',
-        conf_appel_tunisie_avec: '',
-        conf_deja_etude: '',
-        conf_profession_monsieur: '',
-        conf_type_contrat_mr: '',
-        conf_profession_madame: '',
-        conf_type_contrat_madame: '',
-        conf_revenu: '',
-        conf_credit: '',
-        conf_mode_chauffage: '',
-        conf_complement_chauffage: '',
-        conf_consommation_electricite: '',
-        conf_consommation_chauffage: '',
-        conf_rdv_annule_precedent: '',
-        conf_presence_couple: '',
-        conf_orientation_toiture: '',
-        conf_zones_ombres: '',
-        nb_pans: '',
-        conf_site_classe: '',
-        annee_systeme_chauffage: '',
-        surface_chauffee: '',
-        consommation_chauffage: '',
-        conf_commentaire_produit: '',
-        id_commercial_2: ''
-      });
+      setConfFormData({ ...EMPTY_CONF_FORM_BASE });
       setConfProfMrDisplay('');
       setConfProfMmeDisplay('');
       setShowSuggestionsMr(false);
@@ -3915,7 +3959,7 @@ const FicheDetail = ({
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <label htmlFor="conf_presence_couple_validation_inline" style={{ fontWeight: '600', fontSize: '13px' }}>
-                                  Présence du couple <span style={{ color: 'red' }}>*</span>
+                                  Présence du couple (optionnel)
                                 </label>
                                 <select
                                   id="conf_presence_couple_validation_inline"
@@ -3953,7 +3997,7 @@ const FicheDetail = ({
                                       conf_presence_couple: confPresenceCoupleValue || null
                                     });
                                   }}
-                                  disabled={validateMutation.isLoading || !confPresenceCoupleValue}
+                                  disabled={validateMutation.isLoading}
                                   title="Valider la fiche confirmée"
                                 >
                                   {validateMutation.isLoading ? 'Validation...' : 'Valider la fiche'}
@@ -5344,7 +5388,10 @@ const FicheDetail = ({
                     <button
                       type="button"
                       className="btn-cancel"
-                      onClick={() => setShowConfirmConfFields(true)}
+                      onClick={() => {
+                        setShowConfirmConfFields(true);
+                        if (ficheData) setConfFormData(buildConfFormStateFromFiche(ficheData, user));
+                      }}
                       title="Afficher les champs conf_"
                     >
                       <FaReplyAll size={20} />
@@ -6845,7 +6892,7 @@ const FicheDetail = ({
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="conf_presence_couple_validation" style={{ fontWeight: '600', fontSize: '13px' }}>
-                    Présence du couple <span style={{ color: 'red' }}>*</span>
+                    Présence du couple (optionnel)
                   </label>
                   <select
                     id="conf_presence_couple_validation"
@@ -6868,7 +6915,7 @@ const FicheDetail = ({
                       conf_presence_couple: confPresenceCoupleValue || null
                     });
                   }}
-                  disabled={validateMutation.isLoading || !confPresenceCoupleValue}
+                  disabled={validateMutation.isLoading}
                   title="Valider la fiche confirmée"
                 >
                   {validateMutation.isLoading ? 'Validation...' : 'Valider la fiche'}

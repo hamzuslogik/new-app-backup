@@ -3826,9 +3826,22 @@ body.dashboard-page {
 }
 
 .dashboard-page .search-panel .search-form-actions-left {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  align-self: stretch !important;
   gap: 6px !important;
   margin-top: 2px !important;
   padding-top: 6px !important;
+}
+
+.dashboard-page .search-panel .search-form-actions-left .btn-search,
+.dashboard-page .search-panel .search-form-actions-left .btn-reset {
+  justify-content: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 /* Dashboard table: Nom/Prénom un peu plus petits */

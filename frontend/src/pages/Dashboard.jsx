@@ -696,16 +696,41 @@ const Dashboard = () => {
     (s) => etatModalNewId && Number(s.id_etat) === Number(etatModalNewId)
   );
 
+  const getTodayLocalYmd = () => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  };
+
   const handleFilterChange = (key, value) => {
     // Ne pas trim à la frappe: sinon l'espace de séparation des mots est supprimé
     // (ex: "BEN AHMED" devient difficile à saisir). Le trim est fait avant envoi API.
     const nextValue = value;
-    setFilters(prev => ({
-      ...prev,
-      [key]: nextValue,
-      ...(key === 'id_etat_final' ? { id_sous_etat: '', annuler_repro_type: '' } : {}),
-      page: key === 'page' ? value : 1
-    }));
+    setFilters(prev => {
+      const todayStr = getTodayLocalYmd();
+      const dateChampPatch =
+        key === 'date_champ'
+          ? (String(nextValue || '').trim() !== ''
+              ? {
+                  date_debut: todayStr,
+                  date_fin: todayStr,
+                  time_debut: '00:00:00',
+                  time_fin: '23:59:59',
+                }
+              : {
+                  date_debut: '',
+                  date_fin: '',
+                  time_debut: '',
+                  time_fin: '',
+                })
+          : {};
+      return {
+        ...prev,
+        [key]: nextValue,
+        ...dateChampPatch,
+        ...(key === 'id_etat_final' ? { id_sous_etat: '', annuler_repro_type: '' } : {}),
+        page: key === 'page' ? value : 1
+      };
+    });
     // Pagination et limite : mettre à jour appliedFilters pour lancer la requête
     if (key === 'page' || key === 'limit') {
       setAppliedFilters(prev => ({
@@ -1308,10 +1333,6 @@ const Dashboard = () => {
     if (!validationModalFiche?.hash) return;
     if (Number(validationModalFiche.id_etat_final) !== 7) {
       alert('Seules les fiches confirmées (état Confirmer) peuvent être validées.');
-      return;
-    }
-    if (!validationConfPresenceCouple) {
-      alert('Veuillez sélectionner la présence du couple.');
       return;
     }
     validateFromMenuMutation.mutate({
@@ -2861,7 +2882,7 @@ const Dashboard = () => {
                   </select>
                 </div>
                 <div className="dashboard-etat-modal-field">
-                  <label htmlFor="dashboard-validation-presence">Présence du couple *</label>
+                  <label htmlFor="dashboard-validation-presence">Présence du couple (optionnel)</label>
                   <select
                     id="dashboard-validation-presence"
                     value={validationConfPresenceCouple}
@@ -2888,8 +2909,7 @@ const Dashboard = () => {
                     className="btn-search"
                     disabled={
                       validationModalBusy ||
-                      Number(validationModalFiche.id_etat_final) !== 7 ||
-                      !validationConfPresenceCouple
+                      Number(validationModalFiche.id_etat_final) !== 7
                     }
                   >
                     {validationModalBusy ? '…' : 'Valider la fiche'}

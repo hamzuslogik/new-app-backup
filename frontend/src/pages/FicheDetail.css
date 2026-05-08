@@ -1157,16 +1157,26 @@
 
 .confirmation-form .rdv-form-table .form-control,
 .confirmation-form .rdv-form-table .autocomplete-input {
-  max-width: 280px;
+  max-width: 200px;
+  width: 100%;
   box-sizing: border-box;
 }
 
+/* Date / heure RDV : plus compacts */
+.confirmation-form .rdv-form-table input[type="date"].form-control {
+  max-width: 168px;
+}
+
+.confirmation-form .rdv-form-table input[type="time"].form-control {
+  max-width: 118px;
+}
+
 .confirmation-form .rdv-form-table textarea.form-control {
-  max-width: 320px;
+  max-width: 280px;
 }
 
 .confirmation-form .rdv-form-table .autocomplete-wrap {
-  max-width: 280px;
+  max-width: 200px;
 }
 
 .form-row {
@@ -1758,7 +1768,7 @@
   font-size: 13px;
   min-height: 56px;
   width: 100%;
-  max-width: 320px;
+  max-width: 280px;
   box-sizing: border-box;
 }
 
@@ -1880,9 +1890,25 @@
     grid-template-columns: 1fr;
   }
 
+  .confirmation-form .rdv-form-table .form-control,
+  .confirmation-form .rdv-form-table .autocomplete-input,
+  .confirmation-form .rdv-form-table textarea.form-control,
+  .confirmation-form .rdv-form-table input[type="date"].form-control,
+  .confirmation-form .rdv-form-table input[type="time"].form-control {
+    max-width: 100%;
+  }
+
+  .confirmation-form .rdv-form-table .autocomplete-wrap {
+    max-width: 100%;
+  }
+
   .rdv-modal .rdv-form .form-control,
   .rdv-modal .rdv-form .autocomplete-input,
   .rdv-modal .rdv-form textarea.form-control {
+    max-width: 100%;
+  }
+
+  .rdv-modal .rdv-form .autocomplete-wrap {
     max-width: 100%;
   }
 
