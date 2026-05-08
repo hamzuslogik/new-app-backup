@@ -869,7 +869,9 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   border-radius: 4px;
   text-align: center;
   background: #FFFFFF;
-  color: var(--input-text, #064E3B);
+  color: var(--input-text, #064E3B) !important;
+  -webkit-text-fill-color: var(--input-text, #064E3B) !important;
+  caret-color: var(--input-text, #064E3B) !important;
 }
 
 .total-input:focus {
@@ -913,6 +915,9 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   text-align: center !important;
   background: #ffffff !important;
   background-color: #ffffff !important;
+  color: var(--input-text, #064E3B) !important;
+  -webkit-text-fill-color: var(--input-text, #064E3B) !important;
+  caret-color: var(--input-text, #064E3B) !important;
   box-sizing: border-box !important;
 }
 
