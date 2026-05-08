@@ -8131,39 +8131,31 @@ const PlanningViewForModal = ({
                     <span>{day.dayName} {day.date.split('-')[2]}</span>
                     {canEdit && (
                       <div className="day-total-controls">
-                        {editingDayTotal === day.date ? (
-                          <>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={dayTotalValue}
-                              onChange={(e) => setDayTotalValue(String(e.target.value || '').replace(/\D/g, ''))}
-                              className="total-input"
-                              autoFocus
-                            />
-                            <button
-                              className="save-btn"
-                              onClick={() => handleSaveDayTotal(day.date)}
-                            >
-                              <FaCheck />
-                            </button>
-                            <button
-                              className="cancel-btn"
-                              onClick={() => setEditingDayTotal(null)}
-                            >
-                              <FaTimes />
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            className="total-btn"
-                            onClick={() => handleEditDayTotal(day.date)}
-                            title="Définir la disponibilité de toute la journée"
-                          >
-                            Total
-                          </button>
-                        )}
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={editingDayTotal === day.date ? dayTotalValue : ''}
+                          onFocus={() => handleEditDayTotal(day.date)}
+                          onChange={(e) => {
+                            if (editingDayTotal !== day.date) setEditingDayTotal(day.date);
+                            setDayTotalValue(String(e.target.value || '').replace(/\D/g, ''));
+                          }}
+                          className="total-input"
+                          placeholder="-"
+                        />
+                        <button
+                          className="save-btn"
+                          onClick={() => handleSaveDayTotal(day.date)}
+                        >
+                          <FaCheck />
+                        </button>
+                        <button
+                          className="cancel-btn"
+                          onClick={() => setEditingDayTotal(null)}
+                        >
+                          <FaTimes />
+                        </button>
                       </div>
                     )}
                   </div>

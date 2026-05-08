@@ -641,39 +641,36 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                     <span>{day.dayName} {day.date.split('-')[2]}</span>
                     {canEditAvailability && (
                       <div className="day-total-controls">
-                        {editingDayTotal === day.date ? (
-                          <>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={dayTotalValue}
-                              onChange={(e) => setDayTotalValue(String(e.target.value || '').replace(/\D/g, ''))}
-                              className="total-input"
-                              autoFocus
-                            />
-                            <button
-                              className="save-btn"
-                              onClick={() => handleSaveDayTotal(day.date)}
-                            >
-                              <FaCheck />
-                            </button>
-                            <button
-                              className="cancel-btn"
-                              onClick={() => setEditingDayTotal(null)}
-                            >
-                              <FaTimes />
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            className="total-btn"
-                            onClick={() => handleEditDayTotal(day.date)}
-                            title="Définir la disponibilité de toute la journée"
-                          >
-                            Total
-                          </button>
-                        )}
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={editingDayTotal === day.date ? dayTotalValue : ''}
+                          onFocus={() => handleEditDayTotal(day.date)}
+                          onChange={(e) => {
+                            if (editingDayTotal !== day.date) setEditingDayTotal(day.date);
+                            setDayTotalValue(String(e.target.value || '').replace(/\D/g, ''));
+                          }}
+                          className="total-input"
+                          placeholder="-"
+                        />
+                        <button
+                          className="save-btn"
+                          onClick={() => handleSaveDayTotal(day.date)}
+                          title="Valider le total journée"
+                        >
+                          <FaCheck />
+                        </button>
+                        <button
+                          className="cancel-btn"
+                          onClick={() => {
+                            setEditingDayTotal(null);
+                            setDayTotalValue('');
+                          }}
+                          title="Annuler"
+                        >
+                          <FaTimes />
+                        </button>
                       </div>
                     )}
                   </div>
@@ -896,48 +893,44 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                     <span>{day.dayName} {day.date.split('-')[2]}</span>
                     {canEdit && (
                       <div className="day-total-controls">
-                        {editingCell === `total-${day.date}` ? (
-                          <>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={editValue}
-                              onChange={(e) => setEditValue(String(e.target.value || '').replace(/\D/g, ''))}
-                              className="total-input"
-                              autoFocus
-                            />
-                            <button
-                              className="save-btn"
-                              onClick={() => handleSaveDayTotal(day.date)}
-                            >
-                              <FaCheck />
-                            </button>
-                            <button
-                              className="cancel-btn"
-                              onClick={() => setEditingCell(null)}
-                            >
-                              <FaTimes />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              className="total-btn"
-                              onClick={() => handleDayTotal(day.date)}
-                            >
-                              Total
-                            </button>
-                            {isAdmin && (
-                              <button
-                                className="day-toggle-closed-btn"
-                                onClick={() => handleToggleDayClosed(day.date)}
-                                title={isDayClosed(day.date) ? "Débloquer tous les créneaux de la journée" : "Bloquer tous les créneaux de la journée"}
-                              >
-                                <FaLock style={{ color: isDayClosed(day.date) ? '#f44336' : '#666' }} />
-                              </button>
-                            )}
-                          </>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={editingCell === `total-${day.date}` ? editValue : ''}
+                          onFocus={() => handleDayTotal(day.date)}
+                          onChange={(e) => {
+                            if (editingCell !== `total-${day.date}`) setEditingCell(`total-${day.date}`);
+                            setEditValue(String(e.target.value || '').replace(/\D/g, ''));
+                          }}
+                          className="total-input"
+                          placeholder="-"
+                        />
+                        <button
+                          className="save-btn"
+                          onClick={() => handleSaveDayTotal(day.date)}
+                          title="Valider le total journée"
+                        >
+                          <FaCheck />
+                        </button>
+                        <button
+                          className="cancel-btn"
+                          onClick={() => {
+                            setEditingCell(null);
+                            setEditValue('');
+                          }}
+                          title="Annuler"
+                        >
+                          <FaTimes />
+                        </button>
+                        {isAdmin && (
+                          <button
+                            className="day-toggle-closed-btn"
+                            onClick={() => handleToggleDayClosed(day.date)}
+                            title={isDayClosed(day.date) ? "Débloquer tous les créneaux de la journée" : "Bloquer tous les créneaux de la journée"}
+                          >
+                            <FaLock style={{ color: isDayClosed(day.date) ? '#f44336' : '#666' }} />
+                          </button>
                         )}
                       </div>
                     )}
@@ -1020,82 +1013,93 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                       {/* Badge rdv-count / availability-total - toujours affiché */}
                       {renderRdvBadge()}
                       
-                      {isEditing ? (
-                        <div className="edit-controls" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={editValue}
-                            onChange={(e) => setEditValue(String(e.target.value || '').replace(/\D/g, ''))}
-                            className="availability-input"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleSave(day.date, slot.hour);
-                              } else if (e.key === 'Escape') {
-                                setEditingCell(null);
-                              }
-                            }}
-                          />
-                          <button
-                            className="save-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSave(day.date, slot.hour);
-                            }}
-                          >
-                            <FaCheck />
-                          </button>
-                          <button
-                            className="cancel-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingCell(null);
-                            }}
-                          >
-                            <FaTimes />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="availability-value">
-                          {isClosed ? (
-                            <div className="closed-slot-indicator">
-                              <span className="closed-label">FERMÉ</span>
-                              {isAdmin && (
-                                <button
-                                  className="toggle-closed-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onToggleClosed(day.date, slot.hour);
-                                  }}
-                                  title="Ouvrir ce créneau"
-                                >
-                                  <FaLock />
-                                </button>
+                      <div className="availability-value">
+                        {isClosed ? (
+                          <div className="closed-slot-indicator">
+                            <span className="closed-label">FERMÉ</span>
+                            {isAdmin && (
+                              <button
+                                className="toggle-closed-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onToggleClosed(day.date, slot.hour);
+                                }}
+                                title="Ouvrir ce créneau"
+                              >
+                                <FaLock />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            <div className="edit-controls" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={isEditing ? editValue : String(currentValue ?? '')}
+                                onFocus={() => {
+                                  if (canEdit) {
+                                    setEditingCell(cellKey);
+                                    setEditValue(String(currentValue ?? ''));
+                                  }
+                                }}
+                                onChange={(e) => {
+                                  if (!canEdit) return;
+                                  const next = String(e.target.value || '').replace(/\D/g, '');
+                                  if (!isEditing) {
+                                    setEditingCell(cellKey);
+                                  }
+                                  setEditValue(next);
+                                }}
+                                className="availability-input"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleSave(day.date, slot.hour);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingCell(null);
+                                  }
+                                }}
+                                readOnly={!canEdit}
+                              />
+                              {isEditing && (
+                                <>
+                                  <button
+                                    className="save-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSave(day.date, slot.hour);
+                                    }}
+                                  >
+                                    <FaCheck />
+                                  </button>
+                                  <button
+                                    className="cancel-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingCell(null);
+                                    }}
+                                  >
+                                    <FaTimes />
+                                  </button>
+                                </>
                               )}
                             </div>
-                          ) : (
-                            <>
-                              {currentValue === null && rdvCount === 0 ? (
-                                <span>-</span>
-                              ) : null}
-                              {isAdmin && (
-                                <button
-                                  className="toggle-closed-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onToggleClosed(day.date, slot.hour);
-                                  }}
-                                  title="Fermer ce créneau"
-                                >
-                                  <FaLock />
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
+                            {isAdmin && (
+                              <button
+                                className="toggle-closed-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onToggleClosed(day.date, slot.hour);
+                                }}
+                                title="Fermer ce créneau"
+                              >
+                                <FaLock />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </td>
                   );
                 })}
