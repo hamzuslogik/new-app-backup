@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import DatePicker, { registerLocale } from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { fr } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
@@ -18,35 +15,11 @@ import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import './Dashboard.css';
 
-registerLocale('fr', fr);
-
 function resolveDashboardFicheNumericId(fiche) {
   if (!fiche) return null;
   if (fiche.id != null && Number(fiche.id) > 0) return Number(fiche.id);
   return decodeFicheIdFromHash(fiche.hash);
 }
-
-const TwoLineDateTimeInput = React.forwardRef(({ value, onClick, placeholder }, ref) => {
-  const raw = String(value || '').trim();
-  const timeMatch = raw.match(/(\d{1,2}):(\d{2})/);
-  const hours = timeMatch ? timeMatch[1].padStart(2, '0') : '';
-  const minutes = timeMatch ? timeMatch[2] : '';
-  const hasValue = Boolean(raw);
-
-  return (
-    <button
-      type="button"
-      className="datetime-two-lines-input"
-      onClick={onClick}
-      ref={ref}
-      title={raw || placeholder || 'Choisir heure et minutes'}
-    >
-      <span className="datetime-two-lines-date">{hasValue ? `Heure ${hours}` : 'Heure --'}</span>
-      <span className="datetime-two-lines-time">{hasValue ? `Minutes ${minutes}` : 'Minutes --'}</span>
-    </button>
-  );
-});
-TwoLineDateTimeInput.displayName = 'TwoLineDateTimeInput';
 
 /** Aligné sur le garde-fou backend : fiche_search seul ne doit pas lancer une requête sur toute la table. */
 function dashboardUrlHasNarrowingCriteria(params) {
@@ -705,29 +678,32 @@ const Dashboard = () => {
     }
   };
 
-  const parseFilterDateTimeToDate = (dateValue, timeValue, defaultTime = '00:00:00') => {
+  /** Valeur contrôlée pour input[type="datetime-local"] : YYYY-MM-DDTHH:mm */
+  const filterToDatetimeLocalValue = (dateValue, timeValue, defaultTime = '00:00:00') => {
     const d = String(dateValue || '').trim();
-    if (!d) return null;
+    if (!d) return '';
     const tRaw = String(timeValue || defaultTime || '').trim();
-    const hhmm = (tRaw.length >= 5 ? tRaw.slice(0, 5) : '00:00');
-    const [h, m] = hhmm.split(':');
-    const dt = new Date(`${d}T${h}:${m}:00`);
-    return Number.isNaN(dt.getTime()) ? null : dt;
+    const hhmm = tRaw.length >= 5 ? tRaw.slice(0, 5) : String(defaultTime || '00:00:00').slice(0, 5);
+    return `${d}T${hhmm}`;
   };
 
-  const handleDatePickerChange = (bound, dateObj) => {
-    if (!dateObj) {
+  const handleDatetimeLocalChange = (bound, e) => {
+    const v = e.target.value;
+    if (!v) {
       handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', '');
       handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', '');
       return;
     }
-    const yyyy = dateObj.getFullYear();
-    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const dd = String(dateObj.getDate()).padStart(2, '0');
-    const hh = String(dateObj.getHours()).padStart(2, '0');
-    const min = String(dateObj.getMinutes()).padStart(2, '0');
-    handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', `${yyyy}-${mm}-${dd}`);
-    handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', `${hh}:${min}:00`);
+    const [datePart, timePart] = v.split('T');
+    const hhmm =
+      timePart && timePart.length >= 5
+        ? timePart.slice(0, 5)
+        : bound === 'debut'
+          ? '00:00'
+          : '23:59';
+    const timeWithSeconds = `${hhmm}:00`;
+    handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', datePart || '');
+    handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', timeWithSeconds);
   };
 
   const handlePageChange = (newPage) => {
@@ -1624,18 +1600,13 @@ const Dashboard = () => {
                     <div className="form-group date-group">
                       <label>Date début</label>
                       <div className="date-time-inputs">
-                        <DatePicker
-                          selected={parseFilterDateTimeToDate(filters.date_debut, filters.time_debut, '00:00:00')}
-                          onChange={(d) => handleDatePickerChange('debut', d)}
-                          showTimeSelect
-                          timeIntervals={1}
-                          dateFormat="HH:mm"
-                          timeFormat="HH:mm"
-                          locale="fr"
-                          todayButton="Actuellement"
-                          isClearable
-                          placeholderText="Date début"
-                          customInput={<TwoLineDateTimeInput />}
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          step={60}
+                          value={filterToDatetimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
+                          onChange={(e) => handleDatetimeLocalChange('debut', e)}
+                          aria-label="Date et heure début"
                         />
                       </div>
                     </div>
@@ -1643,18 +1614,13 @@ const Dashboard = () => {
                     <div className="form-group date-group">
                       <label>Date fin</label>
                       <div className="date-time-inputs">
-                        <DatePicker
-                          selected={parseFilterDateTimeToDate(filters.date_fin, filters.time_fin, '23:59:59')}
-                          onChange={(d) => handleDatePickerChange('fin', d)}
-                          showTimeSelect
-                          timeIntervals={1}
-                          dateFormat="HH:mm"
-                          timeFormat="HH:mm"
-                          locale="fr"
-                          todayButton="Actuellement"
-                          isClearable
-                          placeholderText="Date fin"
-                          customInput={<TwoLineDateTimeInput />}
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          step={60}
+                          value={filterToDatetimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
+                          onChange={(e) => handleDatetimeLocalChange('fin', e)}
+                          aria-label="Date et heure fin"
                         />
                       </div>
                     </div>
@@ -2460,18 +2426,13 @@ const Dashboard = () => {
                   <div className="form-group">
                     <label>Date début</label>
                     <div className="date-time-inputs">
-                      <DatePicker
-                        selected={parseFilterDateTimeToDate(filters.date_debut, filters.time_debut, '00:00:00')}
-                        onChange={(d) => handleDatePickerChange('debut', d)}
-                        showTimeSelect
-                        timeIntervals={1}
-                        dateFormat="HH:mm"
-                        timeFormat="HH:mm"
-                        locale="fr"
-                        todayButton="Actuellement"
-                        isClearable
-                        placeholderText="Date début"
-                        customInput={<TwoLineDateTimeInput />}
+                      <input
+                        type="datetime-local"
+                        className="form-control"
+                        step={60}
+                        value={filterToDatetimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
+                        onChange={(e) => handleDatetimeLocalChange('debut', e)}
+                        aria-label="Date et heure début"
                       />
                     </div>
                   </div>
@@ -2499,18 +2460,13 @@ const Dashboard = () => {
                   <div className="form-group">
                     <label>Date fin</label>
                     <div className="date-time-inputs">
-                      <DatePicker
-                        selected={parseFilterDateTimeToDate(filters.date_fin, filters.time_fin, '23:59:59')}
-                        onChange={(d) => handleDatePickerChange('fin', d)}
-                        showTimeSelect
-                        timeIntervals={1}
-                        dateFormat="HH:mm"
-                        timeFormat="HH:mm"
-                        locale="fr"
-                        todayButton="Actuellement"
-                        isClearable
-                        placeholderText="Date fin"
-                        customInput={<TwoLineDateTimeInput />}
+                      <input
+                        type="datetime-local"
+                        className="form-control"
+                        step={60}
+                        value={filterToDatetimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
+                        onChange={(e) => handleDatetimeLocalChange('fin', e)}
+                        aria-label="Date et heure fin"
                       />
                     </div>
                   </div>
