@@ -1768,9 +1768,10 @@ body.dashboard-admin-page {
   position: relative;
   background: white;
   border-radius: 8px;
-  max-width: 70%;
+  /* Largeur : 30 % de moins qu’avant (70 % × 0,7 ≈ 49 %) */
+  max-width: 49%;
   min-width: 350px;
-  width: 70%;
+  width: 49%;
   min-height: 100vh; /* Prendre au moins la hauteur de la fenêtre */
   overflow: visible; /* Pas de scroll interne, utiliser le scroll de la page */
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);

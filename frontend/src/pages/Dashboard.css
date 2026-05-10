@@ -2327,9 +2327,10 @@ body.dashboard-page {
   position: relative;
   background: #f3f4f6;
   border-radius: 8px;
-  max-width: 70%;
+  /* Largeur : 30 % de moins qu’avant (70 % × 0,7 ≈ 49 %) */
+  max-width: 49%;
   min-width: 350px;
-  width: 70%;
+  width: 49%;
   min-height: 100vh; /* Prendre au moins la hauteur de la fenêtre */
   overflow-x: hidden; /* Empêcher la barre horizontale */
   overflow-y: visible; /* Garder le comportement vertical actuel */
