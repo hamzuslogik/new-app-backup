@@ -3874,86 +3874,116 @@ const FicheDetail = ({
                                 isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
                                 item.label === 'Date RDV' &&
                                 !!etatActuel.date_rdv_time;
+                              const currentInlineRdvTime = formatRdvTimeOnly(etatActuel.date_rdv_time);
+                              const saveInlineRdvTime = async () => {
+                                if (!dateRdvInlineEdit || dateRdvInlineEdit === currentInlineRdvTime) {
+                                  setDateRdvInlineEdit('');
+                                  return;
+                                }
+                                const datePart = String(etatActuel.date_rdv_time).match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+                                if (!datePart) {
+                                  setDateRdvInlineEdit('');
+                                  return;
+                                }
+                                const dateLabel = formatRdvDateOnly(etatActuel.date_rdv_time);
+                                if (!window.confirm(`Confirmer la nouvelle heure du RDV : ${dateLabel} à ${dateRdvInlineEdit} ?`)) {
+                                  return;
+                                }
+                                try {
+                                  await updateFieldMutation.mutateAsync({
+                                    field: 'date_rdv_time',
+                                    value: `${datePart} ${dateRdvInlineEdit}:00`,
+                                  });
+                                } finally {
+                                  setDateRdvInlineEdit('');
+                                }
+                              };
                               return (
                                 <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
                                   <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                     <strong>{item.label}:</strong>{' '}
                                     {isEditableDateRdvInline ? (
-                                      <span
-                                        className={hi?.className}
-                                        data-confirmer-hl={hi?.dataHl || undefined}
-                                        style={{
-                                          ...hi?.style,
-                                          padding: '6px 14px',
-                                          fontSize: '17px',
-                                          fontWeight: 800,
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '12px',
-                                          whiteSpace: 'nowrap',
-                                          flexWrap: 'nowrap',
-                                          wordBreak: 'keep-all',
-                                          maxWidth: 'none',
-                                        }}
-                                      >
-                                        <span style={{ whiteSpace: 'nowrap' }}>
-                                          {formatRdvDateOnly(etatActuel.date_rdv_time)}
-                                        </span>
-                                        <input
-                                          type="time"
-                                          disabled={updateFieldMutation.isLoading}
-                                          value={
-                                            dateRdvInlineEdit !== ''
-                                              ? dateRdvInlineEdit
-                                              : formatRdvTimeOnly(etatActuel.date_rdv_time)
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={saveInlineRdvTime}
+                                          disabled={
+                                            updateFieldMutation.isLoading ||
+                                            !dateRdvInlineEdit ||
+                                            dateRdvInlineEdit === currentInlineRdvTime
                                           }
-                                          onChange={(e) => setDateRdvInlineEdit(e.target.value)}
-                                          onBlur={async () => {
-                                            if (!dateRdvInlineEdit) return;
-                                            const currentTime = formatRdvTimeOnly(etatActuel.date_rdv_time);
-                                            if (dateRdvInlineEdit === currentTime) {
-                                              setDateRdvInlineEdit('');
-                                              return;
-                                            }
-                                            const datePart = String(etatActuel.date_rdv_time).match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
-                                            if (!datePart) {
-                                              setDateRdvInlineEdit('');
-                                              return;
-                                            }
-                                            const apiValue = `${datePart} ${dateRdvInlineEdit}:00`;
-                                            try {
-                                              await updateFieldMutation.mutateAsync({
-                                                field: 'date_rdv_time',
-                                                value: apiValue,
-                                              });
-                                            } finally {
-                                              setDateRdvInlineEdit('');
-                                            }
-                                          }}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                              e.preventDefault();
-                                              e.currentTarget.blur();
-                                            } else if (e.key === 'Escape') {
-                                              e.preventDefault();
-                                              setDateRdvInlineEdit('');
-                                              e.currentTarget.blur();
-                                            }
-                                          }}
                                           style={{
+                                            marginRight: '8px',
+                                            width: '30px',
+                                            height: '30px',
+                                            borderRadius: '50%',
+                                            border: '2px solid #15803d',
+                                            backgroundColor: '#dcfce7',
+                                            color: '#15803d',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
+                                            verticalAlign: 'middle',
+                                          }}
+                                          title="Valider la nouvelle heure du RDV"
+                                        >
+                                          <FaCheck />
+                                        </button>
+                                        <span
+                                          className={hi?.className}
+                                          data-confirmer-hl={hi?.dataHl || undefined}
+                                          style={{
+                                            ...hi?.style,
+                                            padding: '6px 14px',
                                             fontSize: '17px',
                                             fontWeight: 800,
-                                            fontFamily: 'inherit',
-                                            color: '#15803d',
-                                            backgroundColor: '#ffffff',
-                                            border: '1px solid #15803d',
-                                            borderRadius: '4px',
-                                            padding: '2px 6px',
-                                            cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            whiteSpace: 'nowrap',
+                                            flexWrap: 'nowrap',
+                                            wordBreak: 'keep-all',
+                                            maxWidth: 'none',
                                           }}
-                                          title="Modifier l'heure du RDV — Entrée pour valider, Échap pour annuler"
-                                        />
-                                      </span>
+                                        >
+                                          <span style={{ whiteSpace: 'nowrap' }}>
+                                            {formatRdvDateOnly(etatActuel.date_rdv_time)}
+                                          </span>
+                                          <input
+                                            type="time"
+                                            disabled={updateFieldMutation.isLoading}
+                                            value={
+                                              dateRdvInlineEdit !== ''
+                                                ? dateRdvInlineEdit
+                                                : currentInlineRdvTime
+                                            }
+                                            onChange={(e) => setDateRdvInlineEdit(e.target.value)}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                saveInlineRdvTime();
+                                              } else if (e.key === 'Escape') {
+                                                e.preventDefault();
+                                                setDateRdvInlineEdit('');
+                                                e.currentTarget.blur();
+                                              }
+                                            }}
+                                            style={{
+                                              fontSize: '17px',
+                                              fontWeight: 800,
+                                              fontFamily: 'inherit',
+                                              color: '#15803d',
+                                              backgroundColor: '#ffffff',
+                                              border: '1px solid #15803d',
+                                              borderRadius: '4px',
+                                              padding: '2px 6px',
+                                              cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
+                                            }}
+                                            title="Modifier l'heure du RDV puis cliquer sur le bouton de validation"
+                                          />
+                                        </span>
+                                      </>
                                     ) : (
                                       <span
                                         className={hi?.className}
