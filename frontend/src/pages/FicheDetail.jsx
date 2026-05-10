@@ -109,6 +109,26 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
   return null;
 }
 
+/** Convertit une date_rdv_time « YYYY-MM-DD HH:MM:SS » au format input datetime-local « YYYY-MM-DDTHH:MM ». */
+function dateRdvToDatetimeLocal(datetimeStr) {
+  if (datetimeStr == null || datetimeStr === '') return '';
+  const s = String(datetimeStr).trim();
+  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})/);
+  if (!match) return '';
+  const [, y, m, d, h, min] = match;
+  return `${y}-${m}-${d}T${h.padStart(2, '0')}:${min}`;
+}
+
+/** Convertit la valeur d'un input datetime-local « YYYY-MM-DDTHH:MM » vers le format API « YYYY-MM-DD HH:MM:SS ». */
+function datetimeLocalToDateRdv(datetimeLocalStr) {
+  if (!datetimeLocalStr) return '';
+  const s = String(datetimeLocalStr).trim();
+  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{1,2}):(\d{2})/);
+  if (!match) return '';
+  const [, y, m, d, h, min] = match;
+  return `${y}-${m}-${d} ${h.padStart(2, '0')}:${min}:00`;
+}
+
 /** Date d'appel exploitable pour affichage (détails fiche, pas historique). */
 function parseFicheDateAppel(fiche) {
   if (!fiche) return null;
@@ -691,6 +711,8 @@ const FicheDetail = ({
   const [showValidationCardForm, setShowValidationCardForm] = useState(false);
   const [validationRdvDate, setValidationRdvDate] = useState('');
   const [validationRdvTime, setValidationRdvTime] = useState('');
+  // Édition inline de Date RDV dans le bloc « État Actuel CONFIRMER »
+  const [dateRdvInlineEdit, setDateRdvInlineEdit] = useState('');
   const [showHistorique, setShowHistorique] = useState(false); // État pour contrôler l'affichage de l'historique
   const historiqueEtatsAnchorRef = useRef(null);
   /** Évite de régénérer le PDF plusieurs fois pour la même URL ?tab=pdf */
@@ -3868,17 +3890,71 @@ const FicheDetail = ({
                                 etatActuel.etat_titre,
                                 item.label
                               );
+                              const isEditableDateRdvInline =
+                                isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
+                                item.label === 'Date RDV' &&
+                                !!etatActuel.date_rdv_time;
                               return (
                                 <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
                                   <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                     <strong>{item.label}:</strong>{' '}
-                                    <span
-                                      className={hi?.className}
-                                      style={hi?.style}
-                                      data-confirmer-hl={hi?.dataHl || undefined}
-                                    >
-                                      {item.value || '-'}
-                                    </span>
+                                    {isEditableDateRdvInline ? (
+                                      <input
+                                        type="datetime-local"
+                                        className={hi?.className}
+                                        data-confirmer-hl={hi?.dataHl || undefined}
+                                        disabled={updateFieldMutation.isLoading}
+                                        value={
+                                          dateRdvInlineEdit !== ''
+                                            ? dateRdvInlineEdit
+                                            : dateRdvToDatetimeLocal(etatActuel.date_rdv_time)
+                                        }
+                                        onChange={(e) => setDateRdvInlineEdit(e.target.value)}
+                                        onBlur={async () => {
+                                          if (!dateRdvInlineEdit) return;
+                                          const apiValue = datetimeLocalToDateRdv(dateRdvInlineEdit);
+                                          const currentValue = dateRdvToDatetimeLocal(etatActuel.date_rdv_time);
+                                          if (!apiValue || dateRdvInlineEdit === currentValue) {
+                                            setDateRdvInlineEdit('');
+                                            return;
+                                          }
+                                          try {
+                                            await updateFieldMutation.mutateAsync({
+                                              field: 'date_rdv_time',
+                                              value: apiValue,
+                                            });
+                                          } finally {
+                                            setDateRdvInlineEdit('');
+                                          }
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            e.currentTarget.blur();
+                                          } else if (e.key === 'Escape') {
+                                            e.preventDefault();
+                                            setDateRdvInlineEdit('');
+                                            e.currentTarget.blur();
+                                          }
+                                        }}
+                                        style={{
+                                          ...hi?.style,
+                                          padding: '4px 8px',
+                                          fontSize: '13px',
+                                          fontFamily: 'inherit',
+                                          cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
+                                        }}
+                                        title="Modifier la date et l'heure du RDV — Entrée pour valider, Échap pour annuler"
+                                      />
+                                    ) : (
+                                      <span
+                                        className={hi?.className}
+                                        style={hi?.style}
+                                        data-confirmer-hl={hi?.dataHl || undefined}
+                                      >
+                                        {item.value || '-'}
+                                      </span>
+                                    )}
                                   </span>
                                 </div>
                               );
