@@ -4034,37 +4034,38 @@ const FicheDetail = ({
                                   overflow: 'hidden',
                                 }}
                               >
-                                {fiche.valider > 0 && (
-                                  <button
-                                    type="button"
-                                    disabled={validateMutation.isLoading}
-                                    onClick={() => {
-                                      if (window.confirm('Annuler la validation de cette fiche ?')) {
-                                        validateMutation.mutate({
-                                          type_valid: '0',
-                                          conf_rdv_avec: null,
-                                          conf_presence_couple: null,
-                                        });
-                                        setValidationDropdownOpen(false);
-                                      }
-                                    }}
-                                    style={{
-                                      display: 'block',
-                                      width: '100%',
-                                      padding: '12px 16px',
-                                      textAlign: 'left',
-                                      background: 'transparent',
-                                      border: 'none',
-                                      borderBottom: '1px solid #e5e7eb',
-                                      cursor: validateMutation.isLoading ? 'wait' : 'pointer',
-                                      fontSize: '14px',
-                                      fontWeight: 600,
-                                      color: '#111827',
-                                    }}
-                                  >
-                                    NON VALIDER
-                                  </button>
-                                )}
+                                <button
+                                  type="button"
+                                  disabled={validateMutation.isLoading}
+                                  onClick={() => {
+                                    const message = fiche.valider > 0
+                                      ? 'Annuler la validation de cette fiche ?'
+                                      : 'Marquer cette fiche comme NON VALIDÉ ?';
+                                    if (window.confirm(message)) {
+                                      validateMutation.mutate({
+                                        type_valid: '0',
+                                        conf_rdv_avec: null,
+                                        conf_presence_couple: null,
+                                      });
+                                      setValidationDropdownOpen(false);
+                                    }
+                                  }}
+                                  style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    textAlign: 'left',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderBottom: '1px solid #e5e7eb',
+                                    cursor: validateMutation.isLoading ? 'wait' : 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    color: '#111827',
+                                  }}
+                                >
+                                  NON VALIDÉ
+                                </button>
                                 <button
                                   type="button"
                                   disabled={validateMutation.isLoading}
