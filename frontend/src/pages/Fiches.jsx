@@ -1548,14 +1548,6 @@ const FicheFormModal = ({
                 {showPvFields && (
                   <>
                     <div className="form-group">
-                      <label>Surface bâtie au sol (m²)</label>
-                      <input type="text" name="surface_habitable" value={formData.surface_habitable || ''} onChange={handleChange} placeholder="Ex: 120" />
-                    </div>
-                    <div className="form-group">
-                      <label>Nombre de pans</label>
-                      <input type="number" name="nb_pans" value={formData.nb_pans ?? ''} onChange={handleChange} min="1" />
-                    </div>
-                    <div className="form-group">
                       <label>Consommation électricité</label>
                       <input type="text" name="consommation_electricite" value={formData.consommation_electricite || ''} onChange={handleChange} placeholder="Ex: 800 €/an" />
                     </div>
@@ -1564,14 +1556,6 @@ const FicheFormModal = ({
                 {showPacFields && (
                   <>
                     <div className="form-group">
-                      <label>Surface habitable (m²)</label>
-                      <input type="text" name="surface_habitable" value={formData.surface_habitable || ''} onChange={handleChange} placeholder="Ex: 120" />
-                    </div>
-                    <div className="form-group">
-                      <label>Nombre de pièces</label>
-                      <input type="number" name="nb_pieces" value={formData.nb_pieces || ''} onChange={handleChange} min="0" />
-                    </div>
-                    <div className="form-group">
                       <label>Mode de chauffage</label>
                       <select name="mode_chauffage" value={formData.mode_chauffage || ''} onChange={handleChange}>
                         <option value="">Sélectionner</option>
@@ -1579,16 +1563,6 @@ const FicheFormModal = ({
                           <option key={mode.id} value={mode.nom || mode.titre || ''}>{mode.nom || mode.titre || mode.id}</option>
                         ))}
                       </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Complément de chauffage (qualification)</label>
-                      <input
-                        type="text"
-                        name="complement_chauffage"
-                        value={formData.complement_chauffage || ''}
-                        onChange={handleChange}
-                        placeholder="Ex : appoint, poêle, précision sur le mode…"
-                      />
                     </div>
                     <div className="form-group">
                       <label>Année système chauffage</label>
@@ -1621,10 +1595,6 @@ const FicheFormModal = ({
                 {!showPacFields && !showPvFields && (
                   <>
                     <div className="form-group">
-                      <label>Surface habitable</label>
-                      <input type="text" name="surface_habitable" value={formData.surface_habitable || ''} onChange={handleChange} />
-                    </div>
-                    <div className="form-group">
                       <label>Surface chauffée</label>
                       <input type="text" name="surface_chauffee" value={formData.surface_chauffee || ''} onChange={handleChange} />
                     </div>
@@ -1648,16 +1618,6 @@ const FicheFormModal = ({
                       </select>
                     </div>
                     <div className="form-group">
-                      <label>Complément de chauffage (qualification)</label>
-                      <input
-                        type="text"
-                        name="complement_chauffage"
-                        value={formData.complement_chauffage || ''}
-                        onChange={handleChange}
-                        placeholder="Ex : appoint, poêle, précision sur le mode…"
-                      />
-                    </div>
-                    <div className="form-group">
                       <label>Consommation chauffage</label>
                       <input type="text" name="consommation_chauffage" value={formData.consommation_chauffage || ''} onChange={handleChange} />
                     </div>
@@ -1672,14 +1632,6 @@ const FicheFormModal = ({
                         <option value="OUI">OUI</option>
                         <option value="NON">NON</option>
                       </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Nombre de pièces</label>
-                      <input type="number" name="nb_pieces" value={formData.nb_pieces || ''} onChange={handleChange} min="0" />
-                    </div>
-                    <div className="form-group">
-                      <label>Nombre de pans</label>
-                      <input type="number" name="nb_pans" value={formData.nb_pans ?? ''} onChange={handleChange} min="1" />
                     </div>
                   </>
                 )}

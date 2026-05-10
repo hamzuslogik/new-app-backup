@@ -2911,11 +2911,7 @@ const FicheDetail = ({
                 modeChauffageAffiche(fiche.conf_mode_chauffage, fiche.mode_chauffage),
                 'text'
               )}
-              {hasConfValue(fiche.conf_complement_chauffage)
-                ? renderField('Complément de chauffage', 'conf_complement_chauffage', fiche.conf_complement_chauffage || '-', 'text')
-                : renderField('Complément de chauffage', 'complement_chauffage', fiche.complement_chauffage || '-', 'text')}
               {renderField('Année de système de chauffage', 'annee_systeme_chauffage', fiche.annee_systeme_chauffage || '-', 'number')}
-              {renderField('Surface habitable', 'surface_habitable', fiche.surface_habitable || '-', 'number')}
               {renderField('Consommation chauffage', 'consommation_chauffage',
                 (fiche.conf_consommations != null && fiche.conf_consommations !== '') ? String(fiche.conf_consommations) : (fiche.consommation_chauffage || '-'))}
               {renderField('Surface chauffée en M²', 'surface_chauffee', fiche.surface_chauffee || '-', 'number')}
@@ -2926,14 +2922,11 @@ const FicheDetail = ({
               ) : (
                 renderField('Consommation en M²', 'conso', '-', 'text')
               )}
-              {renderField('Isolation', 'isolation', fiche.isolation || '-')}
               {renderField('Propriétaire de la maison', 'proprietaire_maison', fiche.proprietaire_maison || '-', 'select', [
                 { value: 'MR', label: 'Mr' },
                 { value: 'MME', label: 'Mme' },
                 { value: 'LES DEUX', label: 'LES DEUX' }
               ])}
-              {renderField('Nombre de pièces', 'nb_pieces', fiche.nb_pieces || '-', 'number')}
-              {renderField('Nombre de pans', 'nb_pans', fiche.nb_pans || '-', 'number')}
               {renderField('Orientation de la toiture', 'orientation_toiture',
                 (fiche.conf_orientation_toiture != null && String(fiche.conf_orientation_toiture).trim() !== '') ? fiche.conf_orientation_toiture : (fiche.orientation_toiture || '-'), 'text')}
               {renderField('Zones d\'ombres', 'zones_ombres',
@@ -5842,19 +5835,6 @@ const FicheDetail = ({
                         />
                       </td>
                     </tr>
-                    <tr>
-                      <td><label htmlFor="conf_complement_chauffage_gen">Complément de chauffage :</label></td>
-                      <td>
-                        <input
-                          type="text"
-                          id="conf_complement_chauffage_gen"
-                          className="form-control"
-                          value={confFormData.conf_complement_chauffage || ''}
-                          onChange={(e) => setConfFormData({ ...confFormData, conf_complement_chauffage: e.target.value })}
-                          placeholder="Ex. appoint électrique, poêle…"
-                        />
-                      </td>
-                    </tr>
 
                     {/* Champs spécifiques PAC */}
                     {confFormData.produit === '1' && (
@@ -5946,19 +5926,6 @@ const FicheDetail = ({
                               <option value="OUI">OUI</option>
                               <option value="NON">NON</option>
                             </select>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td><label htmlFor="conf_nb_pans">Nombre de pans :</label></td>
-                          <td>
-                            <input
-                              type="number"
-                              id="conf_nb_pans"
-                              className="form-control"
-                              min="1"
-                              value={confFormData.nb_pans}
-                              onChange={(e) => setConfFormData({...confFormData, nb_pans: e.target.value})}
-                            />
                           </td>
                         </tr>
                       </>
@@ -9255,19 +9222,7 @@ const CreateRdvModal = ({
                       autoComplete="off"
                     />
                   </td>
-                </tr>
-                <tr>
-                  <td><label>Complément de chauffage</label></td>
-                  <td>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={rdvFormData.conf_complement_chauffage || ''}
-                      onChange={(e) => setRdvFormData({ ...rdvFormData, conf_complement_chauffage: e.target.value })}
-                      placeholder="Ex. appoint électrique, poêle…"
-                    />
-                  </td>
-                </tr>
+                    </tr>
                 <tr>
                   <td><label>Consommations électrique</label></td>
                   <td>
@@ -9350,20 +9305,6 @@ const CreateRdvModal = ({
                   return (
                     <>
                       <tr>
-                        <td><label htmlFor="rdv_surface_habitable">Surface habitable (m²)</label></td>
-                        <td>
-                          <input
-                            type="number"
-                            id="rdv_surface_habitable"
-                            className="form-control"
-                            value={rdvFormData.surface_habitable || ''}
-                            onChange={(e) => setRdvFormData({...rdvFormData, surface_habitable: e.target.value})}
-                            placeholder="Ex: 120"
-                            min="0"
-                          />
-                        </td>
-                      </tr>
-                      <tr>
                         <td><label htmlFor="rdv_orientation">Orientation toiture</label></td>
                         <td>
                           <input
@@ -9399,20 +9340,6 @@ const CreateRdvModal = ({
                             value={rdvFormData.conf_site_classe || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_site_classe: e.target.value})}
                             placeholder="Ex: Oui, Non, précisions..."
-                          />
-                        </td>
-                      </tr>
-                      <tr>
-                        <td><label htmlFor="rdv_nb_pans">Nombre de pans</label></td>
-                        <td>
-                          <input
-                            type="number"
-                            id="rdv_nb_pans"
-                            className="form-control"
-                            min="1"
-                            value={rdvFormData.nb_pans}
-                            onChange={(e) => setRdvFormData({...rdvFormData, nb_pans: e.target.value})}
-                            placeholder="Ex: 4"
                           />
                         </td>
                       </tr>
