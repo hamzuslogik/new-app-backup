@@ -109,26 +109,6 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
   return null;
 }
 
-/** Convertit une date_rdv_time « YYYY-MM-DD HH:MM:SS » au format input datetime-local « YYYY-MM-DDTHH:MM ». */
-function dateRdvToDatetimeLocal(datetimeStr) {
-  if (datetimeStr == null || datetimeStr === '') return '';
-  const s = String(datetimeStr).trim();
-  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})/);
-  if (!match) return '';
-  const [, y, m, d, h, min] = match;
-  return `${y}-${m}-${d}T${h.padStart(2, '0')}:${min}`;
-}
-
-/** Convertit la valeur d'un input datetime-local « YYYY-MM-DDTHH:MM » vers le format API « YYYY-MM-DD HH:MM:SS ». */
-function datetimeLocalToDateRdv(datetimeLocalStr) {
-  if (!datetimeLocalStr) return '';
-  const s = String(datetimeLocalStr).trim();
-  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{1,2}):(\d{2})/);
-  if (!match) return '';
-  const [, y, m, d, h, min] = match;
-  return `${y}-${m}-${d} ${h.padStart(2, '0')}:${min}:00`;
-}
-
 /** Date d'appel exploitable pour affichage (détails fiche, pas historique). */
 function parseFicheDateAppel(fiche) {
   if (!fiche) return null;
@@ -3899,54 +3879,75 @@ const FicheDetail = ({
                                   <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                     <strong>{item.label}:</strong>{' '}
                                     {isEditableDateRdvInline ? (
-                                      <input
-                                        type="datetime-local"
+                                      <span
                                         className={hi?.className}
                                         data-confirmer-hl={hi?.dataHl || undefined}
-                                        disabled={updateFieldMutation.isLoading}
-                                        value={
-                                          dateRdvInlineEdit !== ''
-                                            ? dateRdvInlineEdit
-                                            : dateRdvToDatetimeLocal(etatActuel.date_rdv_time)
-                                        }
-                                        onChange={(e) => setDateRdvInlineEdit(e.target.value)}
-                                        onBlur={async () => {
-                                          if (!dateRdvInlineEdit) return;
-                                          const apiValue = datetimeLocalToDateRdv(dateRdvInlineEdit);
-                                          const currentValue = dateRdvToDatetimeLocal(etatActuel.date_rdv_time);
-                                          if (!apiValue || dateRdvInlineEdit === currentValue) {
-                                            setDateRdvInlineEdit('');
-                                            return;
-                                          }
-                                          try {
-                                            await updateFieldMutation.mutateAsync({
-                                              field: 'date_rdv_time',
-                                              value: apiValue,
-                                            });
-                                          } finally {
-                                            setDateRdvInlineEdit('');
-                                          }
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            e.currentTarget.blur();
-                                          } else if (e.key === 'Escape') {
-                                            e.preventDefault();
-                                            setDateRdvInlineEdit('');
-                                            e.currentTarget.blur();
-                                          }
-                                        }}
                                         style={{
                                           ...hi?.style,
                                           padding: '6px 10px',
                                           fontSize: '17px',
                                           fontWeight: 800,
-                                          fontFamily: 'inherit',
-                                          cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '10px',
                                         }}
-                                        title="Modifier la date et l'heure du RDV — Entrée pour valider, Échap pour annuler"
-                                      />
+                                      >
+                                        <span>{formatRdvDateOnly(etatActuel.date_rdv_time)}</span>
+                                        <input
+                                          type="time"
+                                          disabled={updateFieldMutation.isLoading}
+                                          value={
+                                            dateRdvInlineEdit !== ''
+                                              ? dateRdvInlineEdit
+                                              : formatRdvTimeOnly(etatActuel.date_rdv_time)
+                                          }
+                                          onChange={(e) => setDateRdvInlineEdit(e.target.value)}
+                                          onBlur={async () => {
+                                            if (!dateRdvInlineEdit) return;
+                                            const currentTime = formatRdvTimeOnly(etatActuel.date_rdv_time);
+                                            if (dateRdvInlineEdit === currentTime) {
+                                              setDateRdvInlineEdit('');
+                                              return;
+                                            }
+                                            const datePart = String(etatActuel.date_rdv_time).match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+                                            if (!datePart) {
+                                              setDateRdvInlineEdit('');
+                                              return;
+                                            }
+                                            const apiValue = `${datePart} ${dateRdvInlineEdit}:00`;
+                                            try {
+                                              await updateFieldMutation.mutateAsync({
+                                                field: 'date_rdv_time',
+                                                value: apiValue,
+                                              });
+                                            } finally {
+                                              setDateRdvInlineEdit('');
+                                            }
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              e.preventDefault();
+                                              e.currentTarget.blur();
+                                            } else if (e.key === 'Escape') {
+                                              e.preventDefault();
+                                              setDateRdvInlineEdit('');
+                                              e.currentTarget.blur();
+                                            }
+                                          }}
+                                          style={{
+                                            fontSize: '17px',
+                                            fontWeight: 800,
+                                            fontFamily: 'inherit',
+                                            color: '#15803d',
+                                            backgroundColor: '#ffffff',
+                                            border: '1px solid #15803d',
+                                            borderRadius: '4px',
+                                            padding: '2px 6px',
+                                            cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
+                                          }}
+                                          title="Modifier l'heure du RDV — Entrée pour valider, Échap pour annuler"
+                                        />
+                                      </span>
                                     ) : (
                                       <span
                                         className={hi?.className}
