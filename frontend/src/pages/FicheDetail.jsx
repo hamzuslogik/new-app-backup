@@ -3885,32 +3885,6 @@ const FicheDetail = ({
                                     <strong>{item.label}:</strong>{' '}
                                     {isEditableDateRdvInline ? (
                                       <>
-                                        <button
-                                          type="button"
-                                          onClick={saveInlineRdvTime}
-                                          disabled={
-                                            updateFieldMutation.isLoading ||
-                                            !dateRdvInlineEdit ||
-                                            dateRdvInlineEdit === currentInlineRdvTime
-                                          }
-                                          style={{
-                                            marginRight: '8px',
-                                            width: '30px',
-                                            height: '30px',
-                                            borderRadius: '50%',
-                                            border: '2px solid #15803d',
-                                            backgroundColor: '#dcfce7',
-                                            color: '#15803d',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
-                                            verticalAlign: 'middle',
-                                          }}
-                                          title="Valider la nouvelle heure du RDV"
-                                        >
-                                          <FaCheck />
-                                        </button>
                                         <span
                                           className={hi?.className}
                                           data-confirmer-hl={hi?.dataHl || undefined}
@@ -3964,6 +3938,32 @@ const FicheDetail = ({
                                             title="Modifier l'heure du RDV puis cliquer sur le bouton de validation"
                                           />
                                         </span>
+                                        <button
+                                          type="button"
+                                          onClick={saveInlineRdvTime}
+                                          disabled={
+                                            updateFieldMutation.isLoading ||
+                                            !dateRdvInlineEdit ||
+                                            dateRdvInlineEdit === currentInlineRdvTime
+                                          }
+                                          style={{
+                                            marginLeft: '8px',
+                                            width: '30px',
+                                            height: '30px',
+                                            borderRadius: '50%',
+                                            border: '2px solid #15803d',
+                                            backgroundColor: '#dcfce7',
+                                            color: '#15803d',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
+                                            verticalAlign: 'middle',
+                                          }}
+                                          title="Valider la nouvelle heure du RDV"
+                                        >
+                                          <FaCheck />
+                                        </button>
                                       </>
                                     ) : (
                                       <span
