@@ -3983,11 +3983,10 @@ const FicheDetail = ({
                       )}
 
                       {hasPermission('fiche_validate') && (
-                        <div style={{ marginTop: '16px' }}>
+                        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
                           {fiche.valider > 0 && fiche.validation_date_time && (
                             <div
                               style={{
-                                marginBottom: '10px',
                                 padding: '8px 14px',
                                 background: '#f0fdf4',
                                 border: '1px solid #16a34a',
@@ -3995,7 +3994,7 @@ const FicheDetail = ({
                                 color: '#15803d',
                                 fontWeight: 700,
                                 fontSize: '14px',
-                                display: 'inline-block',
+                                alignSelf: 'flex-start',
                               }}
                             >
                               Le {formatRdvDateTime(fiche.validation_date_time)}
@@ -4004,7 +4003,7 @@ const FicheDetail = ({
                             </div>
                           )}
 
-                          <div style={{ position: 'relative', display: 'inline-block' }}>
+                          <div style={{ position: 'relative', display: 'inline-block', alignSelf: 'flex-start' }}>
                           <button
                             type="button"
                             onClick={() => setValidationDropdownOpen((prev) => !prev)}
