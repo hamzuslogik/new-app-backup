@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useSidebar } from '../contexts/SidebarContext';
 import { FaBars, FaBell, FaUser, FaSignOutAlt, FaTimes, FaCheck, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import api from '../config/api';
@@ -13,6 +13,15 @@ const Header = () => {
   const { toggleSidebar, sidebarCollapsed } = useSidebar();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  /** Sur /dashboard sans query : même effet que le logo sidebar — RDV du jour (Dashboard.jsx). */
+  const goDashboardHome = (e) => {
+    if (location.pathname !== '/dashboard') return;
+    if (location.search) return;
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('dashboard-reset-default'));
+  };
   const queryClient = useQueryClient();
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
@@ -246,7 +255,7 @@ const Header = () => {
         >
           <FaBars />
         </button>
-        <Link to="/dashboard" className="header-logo-container">
+        <Link to="/dashboard" className="header-logo-container" onClick={goDashboardHome}>
           <img src="/logo/logo.png" alt="JWS Group Logo" className="header-logo" />
         </Link>
         <h1 className="header-title">CRM JWS Group</h1>
