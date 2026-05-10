@@ -1612,9 +1612,9 @@ body.dashboard-page {
   .dashboard-page .fiches-table td:nth-child(1),
   .dashboard-page .fiches-table th:nth-child(2),
   .dashboard-page .fiches-table td:nth-child(2) {
-    min-width: 112px !important;
-    width: 112px !important;
-    max-width: 132px !important;
+    min-width: 96px !important;
+    width: 96px !important;
+    max-width: 118px !important;
   }
 
   .dashboard-page .fiches-table th:nth-child(4),
@@ -1697,9 +1697,9 @@ body.dashboard-page {
 .dashboard-page .fiches-table td:nth-child(1),
 .dashboard-page .fiches-table th:nth-child(2),
 .dashboard-page .fiches-table td:nth-child(2) {
-  min-width: 112px !important;
-  width: 112px !important;
-  max-width: 132px !important;
+  min-width: 96px !important;
+  width: 96px !important;
+  max-width: 118px !important;
 }
 
 /* Dashboard : CP — largeur mini pour code postal */
