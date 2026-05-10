@@ -2639,6 +2639,7 @@ body.dashboard-admin-page {
 .fiche-detail-modal-content .compte-rendu-section > .section-title {
   text-align: center !important;
   width: 100% !important;
+  margin-bottom: 14px !important;
 }
 
 .fiche-detail-modal-content .compte-rendu-section .compte-rendu-form {

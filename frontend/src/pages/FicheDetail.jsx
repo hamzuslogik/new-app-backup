@@ -3587,6 +3587,17 @@ const FicheDetail = ({
               // Dernière entrée historique = passage à l'état actuel (pour date_creation et from_compte_rendu)
               const lastHisto = fiche.historique && fiche.historique.length > 0 ? fiche.historique[fiche.historique.length - 1] : null;
               const lastHistoEtatActuel = (lastHisto && lastHisto.id_etat === fiche.id_etat_final) ? lastHisto : null;
+
+              /** Liste affichée sous « Historique des états » : sans la ligne qui duplique l'état actuel (déjà montrée au-dessus). */
+              const historiqueListeSansEtatActuel = (() => {
+                const hist = Array.isArray(fiche.historique) ? fiche.historique : [];
+                if (hist.length === 0) return [];
+                const last = hist[hist.length - 1];
+                if (last && Number(last.id_etat) === Number(fiche.id_etat_final)) {
+                  return hist.slice(0, -1);
+                }
+                return hist;
+              })();
               const dateCreationEtatActuel = (lastHisto && lastHisto.id_etat === fiche.id_etat_final) ? lastHisto.date_creation : (fiche.date_modif_time || fiche.date_insert_time || null);
               
               // Construire l'objet état actuel à partir des données de la fiche
@@ -4096,6 +4107,7 @@ const FicheDetail = ({
                     <>
                       {historiquePriorityState && (
                         <div
+                          ref={historiqueListeSansEtatActuel.length === 0 ? historiqueEtatsAnchorRef : undefined}
                           style={{
                             width: '100%',
                             marginBottom: '10px',
@@ -4114,6 +4126,8 @@ const FicheDetail = ({
                             : ''}
                         </div>
                       )}
+                      {historiqueListeSansEtatActuel.length > 0 && (
+                      <>
                       <div 
                         ref={historiqueEtatsAnchorRef}
                         className="section-title historique-title-bar" 
@@ -4135,7 +4149,7 @@ const FicheDetail = ({
                       >
                         <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#ffffff', WebkitTextFillColor: '#ffffff' }}>
                           <FaHistory style={{ marginRight: '8px', color: '#ffffff', fill: '#ffffff' }} />
-                          Historique des états ({fiche.historique.length} entrée{fiche.historique.length > 1 ? 's' : ''})
+                          Historique des états ({historiqueListeSansEtatActuel.length} entrée{historiqueListeSansEtatActuel.length > 1 ? 's' : ''})
                         </span>
                         {showHistorique
                           ? <FaChevronUp style={{ color: '#ffffff', fill: '#ffffff' }} />
@@ -4144,7 +4158,7 @@ const FicheDetail = ({
                       
                       {showHistorique && (
                         <div className="historique-list" style={{ marginTop: '10px' }}>
-                          {fiche.historique.slice().reverse().map((histo, index) => {
+                          {historiqueListeSansEtatActuel.slice().reverse().map((histo) => {
                             const detailItems = renderEtatDetails(histo);
                             
                             return (
@@ -4156,8 +4170,7 @@ const FicheDetail = ({
                                   padding: '15px',
                                   marginBottom: '15px',
                                   backgroundColor: '#f9f9f9',
-                                  borderRadius: '4px',
-                                  opacity: index === 0 && fiche.historique.length > 1 ? 0.7 : 1 // Légèrement transparent si c'est le dernier (déjà affiché en état actuel)
+                                  borderRadius: '4px'
                                 }}
                               >
                                 <div className="historique-header" style={{ marginBottom: '10px' }}>
@@ -4229,6 +4242,8 @@ const FicheDetail = ({
                             );
                           })}
                         </div>
+                      )}
+                      </>
                       )}
                     </>
                   )}

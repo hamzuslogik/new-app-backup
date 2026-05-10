@@ -360,16 +360,34 @@ body.planning-commercial-page .planning-commercial .fiches-table {
 /* Ordre colonnes Planning Commercial : Date RDV, Nom, Prénom, Tél, CP, Ville, Commercial, Produit, État, Compte rendu, Centre, Actions */
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(1),
 html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(1) {
-  min-width: 140px !important;
-  width: 140px !important;
-  max-width: 150px !important;
+  min-width: 128px !important;
+  width: 132px !important;
+  max-width: 140px !important;
 }
 
+/* Nom : colonne plus large + texte un peu plus grand */
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(2),
-html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(2),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(2) {
+  min-width: 168px !important;
+  width: 200px !important;
+  max-width: 240px !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(2) {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+/* Prénom : réduit pour équilibrer */
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(3),
 html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(3) {
   min-width: 0 !important;
+  width: 108px !important;
+  max-width: 120px !important;
   white-space: normal !important;
   word-break: normal !important;
   overflow-wrap: normal !important;
@@ -428,17 +446,17 @@ html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(9)
 
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(10),
 html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(10) {
-  min-width: 100px !important;
-  width: 112px !important;
-  max-width: 130px !important;
+  min-width: 88px !important;
+  width: 98px !important;
+  max-width: 110px !important;
   white-space: normal !important;
 }
 
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(11),
 html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(11) {
-  min-width: 90px !important;
-  width: 100px !important;
-  max-width: 120px !important;
+  min-width: 108px !important;
+  width: 122px !important;
+  max-width: 145px !important;
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: anywhere !important;
