@@ -1619,14 +1619,6 @@ const Dashboard = () => {
                     <div className="form-group date-group">
                       <label>Date début</label>
                       <div className="date-time-inputs date-time-with-actuellement">
-                        <button
-                          type="button"
-                          className="btn-datetime-actuellement"
-                          onClick={() => applyNowToDatetimeBound('debut')}
-                          title="Date et heure du moment"
-                        >
-                          Actuellement
-                        </button>
                         <input
                           type="datetime-local"
                           className="form-control"
@@ -1635,20 +1627,20 @@ const Dashboard = () => {
                           onChange={(e) => handleDatetimeLocalChange('debut', e)}
                           aria-label="Date et heure début"
                         />
+                        <button
+                          type="button"
+                          className="btn-datetime-actuellement"
+                          onClick={() => applyNowToDatetimeBound('debut')}
+                          title="Date et heure du moment"
+                        >
+                          Actuellement
+                        </button>
                       </div>
                     </div>
 
                     <div className="form-group date-group">
                       <label>Date fin</label>
                       <div className="date-time-inputs date-time-with-actuellement">
-                        <button
-                          type="button"
-                          className="btn-datetime-actuellement"
-                          onClick={() => applyNowToDatetimeBound('fin')}
-                          title="Date et heure du moment"
-                        >
-                          Actuellement
-                        </button>
                         <input
                           type="datetime-local"
                           className="form-control"
@@ -1657,6 +1649,14 @@ const Dashboard = () => {
                           onChange={(e) => handleDatetimeLocalChange('fin', e)}
                           aria-label="Date et heure fin"
                         />
+                        <button
+                          type="button"
+                          className="btn-datetime-actuellement"
+                          onClick={() => applyNowToDatetimeBound('fin')}
+                          title="Date et heure du moment"
+                        >
+                          Actuellement
+                        </button>
                       </div>
                     </div>
                   </>
@@ -2461,14 +2461,6 @@ const Dashboard = () => {
                   <div className="form-group">
                     <label>Date début</label>
                     <div className="date-time-inputs date-time-with-actuellement">
-                      <button
-                        type="button"
-                        className="btn-datetime-actuellement"
-                        onClick={() => applyNowToDatetimeBound('debut')}
-                        title="Date et heure du moment"
-                      >
-                        Actuellement
-                      </button>
                       <input
                         type="datetime-local"
                         className="form-control"
@@ -2477,6 +2469,14 @@ const Dashboard = () => {
                         onChange={(e) => handleDatetimeLocalChange('debut', e)}
                         aria-label="Date et heure début"
                       />
+                      <button
+                        type="button"
+                        className="btn-datetime-actuellement"
+                        onClick={() => applyNowToDatetimeBound('debut')}
+                        title="Date et heure du moment"
+                      >
+                        Actuellement
+                      </button>
                     </div>
                   </div>
                 )}
@@ -2503,14 +2503,6 @@ const Dashboard = () => {
                   <div className="form-group">
                     <label>Date fin</label>
                     <div className="date-time-inputs date-time-with-actuellement">
-                      <button
-                        type="button"
-                        className="btn-datetime-actuellement"
-                        onClick={() => applyNowToDatetimeBound('fin')}
-                        title="Date et heure du moment"
-                      >
-                        Actuellement
-                      </button>
                       <input
                         type="datetime-local"
                         className="form-control"
@@ -2519,6 +2511,14 @@ const Dashboard = () => {
                         onChange={(e) => handleDatetimeLocalChange('fin', e)}
                         aria-label="Date et heure fin"
                       />
+                      <button
+                        type="button"
+                        className="btn-datetime-actuellement"
+                        onClick={() => applyNowToDatetimeBound('fin')}
+                        title="Date et heure du moment"
+                      >
+                        Actuellement
+                      </button>
                     </div>
                   </div>
                 )}
