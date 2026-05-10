@@ -1,6 +1,9 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { fr } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
@@ -15,11 +18,35 @@ import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import './Dashboard.css';
 
+registerLocale('fr', fr);
+
 function resolveDashboardFicheNumericId(fiche) {
   if (!fiche) return null;
   if (fiche.id != null && Number(fiche.id) > 0) return Number(fiche.id);
   return decodeFicheIdFromHash(fiche.hash);
 }
+
+const TwoLineDateTimeInput = React.forwardRef(({ value, onClick, placeholder }, ref) => {
+  const raw = String(value || '').trim();
+  const timeMatch = raw.match(/(\d{1,2}):(\d{2})/);
+  const hours = timeMatch ? timeMatch[1].padStart(2, '0') : '';
+  const minutes = timeMatch ? timeMatch[2] : '';
+  const hasValue = Boolean(raw);
+
+  return (
+    <button
+      type="button"
+      className="datetime-two-lines-input"
+      onClick={onClick}
+      ref={ref}
+      title={raw || placeholder || 'Choisir heure et minutes'}
+    >
+      <span className="datetime-two-lines-date">{hasValue ? `Heure ${hours}` : 'Heure --'}</span>
+      <span className="datetime-two-lines-time">{hasValue ? `Minutes ${minutes}` : 'Minutes --'}</span>
+    </button>
+  );
+});
+TwoLineDateTimeInput.displayName = 'TwoLineDateTimeInput';
 
 /** Aligné sur le garde-fou backend : fiche_search seul ne doit pas lancer une requête sur toute la table. */
 function dashboardUrlHasNarrowingCriteria(params) {
@@ -250,9 +277,6 @@ const Dashboard = () => {
 
   // Ref pour le champ critère dans le modal (focus à l'ouverture)
   const searchModalCritereRef = useRef(null);
-  const searchFormColumnsRef = useRef(null);
-  const dateDebutAnchorRef = useRef(null);
-  const datetimeNowColRef = useRef(null);
   useEffect(() => {
     if (showSearchModal && searchModalCritereRef.current && user?.fonction !== 5) {
       const t = setTimeout(() => {
@@ -628,41 +652,6 @@ const Dashboard = () => {
   );
   const showSousEtatFilter = filters.id_etat_final && sousEtatsForSelectedEtat.length > 0;
 
-  useLayoutEffect(() => {
-    const col = datetimeNowColRef.current;
-    const anchor = dateDebutAnchorRef.current;
-    const row = searchFormColumnsRef.current;
-    if (!filters.date_champ || !col || !anchor || !row) {
-      if (col) col.style.paddingTop = '';
-      return undefined;
-    }
-    const sync = () => {
-      const c = datetimeNowColRef.current;
-      const a = dateDebutAnchorRef.current;
-      const r = searchFormColumnsRef.current;
-      if (!c || !a || !r) return;
-      const top = Math.max(0, Math.round(a.getBoundingClientRect().top - r.getBoundingClientRect().top));
-      c.style.paddingTop = `${top}px`;
-    };
-    sync();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(sync) : null;
-    if (ro && row) ro.observe(row);
-    window.addEventListener('resize', sync);
-    return () => {
-      window.removeEventListener('resize', sync);
-      if (ro) ro.disconnect();
-    };
-  }, [
-    filters.date_champ,
-    showSousEtatFilter,
-    filters.id_etat_final,
-    filters.annuler_repro_type,
-    filters.id_confirmateur,
-    user?.fonction,
-    isLoadingEtats,
-    etatsError,
-  ]);
-
   // Debug: afficher les états et leurs groupes
   if (etats.length > 0) {
     console.log('États chargés:', etats.length);
@@ -696,41 +685,16 @@ const Dashboard = () => {
     (s) => etatModalNewId && Number(s.id_etat) === Number(etatModalNewId)
   );
 
-  const getTodayLocalYmd = () => {
-    const n = new Date();
-    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
-  };
-
   const handleFilterChange = (key, value) => {
     // Ne pas trim à la frappe: sinon l'espace de séparation des mots est supprimé
     // (ex: "BEN AHMED" devient difficile à saisir). Le trim est fait avant envoi API.
     const nextValue = value;
-    setFilters(prev => {
-      const todayStr = getTodayLocalYmd();
-      const dateChampPatch =
-        key === 'date_champ'
-          ? (String(nextValue || '').trim() !== ''
-              ? {
-                  date_debut: todayStr,
-                  date_fin: todayStr,
-                  time_debut: '00:00:00',
-                  time_fin: '23:59:59',
-                }
-              : {
-                  date_debut: '',
-                  date_fin: '',
-                  time_debut: '',
-                  time_fin: '',
-                })
-          : {};
-      return {
-        ...prev,
-        [key]: nextValue,
-        ...dateChampPatch,
-        ...(key === 'id_etat_final' ? { id_sous_etat: '', annuler_repro_type: '' } : {}),
-        page: key === 'page' ? value : 1
-      };
-    });
+    setFilters(prev => ({
+      ...prev,
+      [key]: nextValue,
+      ...(key === 'id_etat_final' ? { id_sous_etat: '', annuler_repro_type: '' } : {}),
+      page: key === 'page' ? value : 1
+    }));
     // Pagination et limite : mettre à jour appliedFilters pour lancer la requête
     if (key === 'page' || key === 'limit') {
       setAppliedFilters(prev => ({
@@ -741,37 +705,29 @@ const Dashboard = () => {
     }
   };
 
-  const buildDateTimeLocalValue = (dateValue, timeValue, defaultTime = '00:00:00') => {
+  const parseFilterDateTimeToDate = (dateValue, timeValue, defaultTime = '00:00:00') => {
     const d = String(dateValue || '').trim();
-    if (!d) return '';
+    if (!d) return null;
     const tRaw = String(timeValue || defaultTime || '').trim();
-    const t = (tRaw.length >= 5 ? tRaw.slice(0, 5) : '00:00');
-    return `${d}T${t}`;
+    const hhmm = (tRaw.length >= 5 ? tRaw.slice(0, 5) : '00:00');
+    const [h, m] = hhmm.split(':');
+    const dt = new Date(`${d}T${h}:${m}:00`);
+    return Number.isNaN(dt.getTime()) ? null : dt;
   };
 
-  const handleDateTimeRangeChange = (bound, value) => {
-    if (!value) {
+  const handleDatePickerChange = (bound, dateObj) => {
+    if (!dateObj) {
       handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', '');
       handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', '');
       return;
     }
-    const [datePart, timePartRaw] = String(value).split('T');
-    const hhmm = (timePartRaw || '').slice(0, 5);
-    const timeWithSeconds = hhmm ? `${hhmm}:00` : (bound === 'debut' ? '00:00:00' : '23:59:59');
-    handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', datePart || '');
-    handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', timeWithSeconds);
-  };
-
-  const handleDateTimeNow = (bound) => {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    const hh = String(dateObj.getHours()).padStart(2, '0');
+    const min = String(dateObj.getMinutes()).padStart(2, '0');
     handleFilterChange(bound === 'debut' ? 'date_debut' : 'date_fin', `${yyyy}-${mm}-${dd}`);
-    handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', `${hh}:${min}:${ss}`);
+    handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', `${hh}:${min}:00`);
   };
 
   const handlePageChange = (newPage) => {
@@ -1335,6 +1291,10 @@ const Dashboard = () => {
       alert('Seules les fiches confirmées (état Confirmer) peuvent être validées.');
       return;
     }
+    if (!validationConfPresenceCouple) {
+      alert('Veuillez sélectionner la présence du couple.');
+      return;
+    }
     validateFromMenuMutation.mutate({
       hash: validationModalFiche.hash,
       type_valid: `1${validationConfRdvAvec ? `-${validationConfRdvAvec}` : ''}`,
@@ -1506,7 +1466,7 @@ const Dashboard = () => {
         </div>
 
           <form className="search-form" onSubmit={handleSearch}>
-            <div ref={searchFormColumnsRef} className="search-form-two-columns">
+            <div className="search-form-two-columns">
               {/* Colonne de gauche */}
               <div className="search-form-left">
                 {/* Département */}
@@ -1657,13 +1617,21 @@ const Dashboard = () => {
                 {/* Date début / fin: affichées uniquement si un champ de date est sélectionné */}
                 {filters.date_champ && (
                   <>
-                    <div ref={dateDebutAnchorRef} className="form-group date-group">
+                    <div className="form-group date-group">
                       <label>Date début</label>
                       <div className="date-time-inputs">
-                        <input
-                          type="datetime-local"
-                          value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
-                          onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
+                        <DatePicker
+                          selected={parseFilterDateTimeToDate(filters.date_debut, filters.time_debut, '00:00:00')}
+                          onChange={(d) => handleDatePickerChange('debut', d)}
+                          showTimeSelect
+                          timeIntervals={1}
+                          dateFormat="HH:mm"
+                          timeFormat="HH:mm"
+                          locale="fr"
+                          todayButton="Actuellement"
+                          isClearable
+                          placeholderText="Date début"
+                          customInput={<TwoLineDateTimeInput />}
                         />
                       </div>
                     </div>
@@ -1671,10 +1639,18 @@ const Dashboard = () => {
                     <div className="form-group date-group">
                       <label>Date fin</label>
                       <div className="date-time-inputs">
-                        <input
-                          type="datetime-local"
-                          value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
-                          onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
+                        <DatePicker
+                          selected={parseFilterDateTimeToDate(filters.date_fin, filters.time_fin, '23:59:59')}
+                          onChange={(d) => handleDatePickerChange('fin', d)}
+                          showTimeSelect
+                          timeIntervals={1}
+                          dateFormat="HH:mm"
+                          timeFormat="HH:mm"
+                          locale="fr"
+                          todayButton="Actuellement"
+                          isClearable
+                          placeholderText="Date fin"
+                          customInput={<TwoLineDateTimeInput />}
                         />
                       </div>
                     </div>
@@ -1703,23 +1679,6 @@ const Dashboard = () => {
                   </button>
                 </div>
               </div>
-
-              {filters.date_champ && (
-                <div ref={datetimeNowColRef} className="search-form-datetime-now-col">
-                  <div className="form-group datetime-now-group">
-                    <label className="datetime-now-label-spacer">&nbsp;</label>
-                    <button type="button" className="btn-datetime-now" onClick={() => handleDateTimeNow('debut')}>
-                      Actuellement
-                    </button>
-                  </div>
-                  <div className="form-group datetime-now-group">
-                    <label className="datetime-now-label-spacer">&nbsp;</label>
-                    <button type="button" className="btn-datetime-now" onClick={() => handleDateTimeNow('fin')}>
-                      Actuellement
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Colonne de droite */}
               <div className="search-form-right">
@@ -2496,15 +2455,20 @@ const Dashboard = () => {
                 {filters.date_champ && (
                   <div className="form-group">
                     <label>Date début</label>
-                    <div className="date-time-inputs date-time-inputs-with-now">
-                      <input
-                        type="datetime-local"
-                        value={buildDateTimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
-                        onChange={(e) => handleDateTimeRangeChange('debut', e.target.value)}
+                    <div className="date-time-inputs">
+                      <DatePicker
+                        selected={parseFilterDateTimeToDate(filters.date_debut, filters.time_debut, '00:00:00')}
+                        onChange={(d) => handleDatePickerChange('debut', d)}
+                        showTimeSelect
+                        timeIntervals={1}
+                        dateFormat="HH:mm"
+                        timeFormat="HH:mm"
+                        locale="fr"
+                        todayButton="Actuellement"
+                        isClearable
+                        placeholderText="Date début"
+                        customInput={<TwoLineDateTimeInput />}
                       />
-                      <button type="button" className="btn-datetime-now" onClick={() => handleDateTimeNow('debut')}>
-                        Actuellement
-                      </button>
                     </div>
                   </div>
                 )}
@@ -2530,15 +2494,20 @@ const Dashboard = () => {
                 {filters.date_champ && (
                   <div className="form-group">
                     <label>Date fin</label>
-                    <div className="date-time-inputs date-time-inputs-with-now">
-                      <input
-                        type="datetime-local"
-                        value={buildDateTimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
-                        onChange={(e) => handleDateTimeRangeChange('fin', e.target.value)}
+                    <div className="date-time-inputs">
+                      <DatePicker
+                        selected={parseFilterDateTimeToDate(filters.date_fin, filters.time_fin, '23:59:59')}
+                        onChange={(d) => handleDatePickerChange('fin', d)}
+                        showTimeSelect
+                        timeIntervals={1}
+                        dateFormat="HH:mm"
+                        timeFormat="HH:mm"
+                        locale="fr"
+                        todayButton="Actuellement"
+                        isClearable
+                        placeholderText="Date fin"
+                        customInput={<TwoLineDateTimeInput />}
                       />
-                      <button type="button" className="btn-datetime-now" onClick={() => handleDateTimeNow('fin')}>
-                        Actuellement
-                      </button>
                     </div>
                   </div>
                 )}
@@ -2882,7 +2851,7 @@ const Dashboard = () => {
                   </select>
                 </div>
                 <div className="dashboard-etat-modal-field">
-                  <label htmlFor="dashboard-validation-presence">Présence du couple (optionnel)</label>
+                  <label htmlFor="dashboard-validation-presence">Présence du couple *</label>
                   <select
                     id="dashboard-validation-presence"
                     value={validationConfPresenceCouple}
@@ -2909,7 +2878,8 @@ const Dashboard = () => {
                     className="btn-search"
                     disabled={
                       validationModalBusy ||
-                      Number(validationModalFiche.id_etat_final) !== 7
+                      Number(validationModalFiche.id_etat_final) !== 7 ||
+                      !validationConfPresenceCouple
                     }
                   >
                     {validationModalBusy ? '…' : 'Valider la fiche'}

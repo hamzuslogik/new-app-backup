@@ -855,56 +855,6 @@ body.dashboard-page {
   gap: 7px;
 }
 
-/* Colonne centrale : raccourcis « Actuellement » alignés avec Date début / fin (entre gauche et droite) */
-.search-form-datetime-now-col {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  flex: 0 0 auto;
-  min-width: 0;
-  align-self: flex-start;
-}
-
-.search-form .datetime-now-group {
-  margin: 0;
-}
-
-.datetime-now-label-spacer {
-  display: block;
-  margin-bottom: 1px;
-  min-height: 1em;
-  visibility: hidden;
-  user-select: none;
-}
-
-.btn-datetime-now {
-  padding: 6px 10px;
-  border: 1px solid var(--filter-border, #86EFAC);
-  border-radius: 4px;
-  background: #fff;
-  color: var(--input-text, #064E3B);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  align-self: flex-start;
-}
-
-.btn-datetime-now:hover {
-  background: var(--filter-bg, #DCFCE7);
-}
-
-.search-modal-fields .date-time-inputs-with-now {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.search-modal-fields .date-time-inputs-with-now .btn-datetime-now {
-  flex: 0 0 auto;
-}
-
 .search-form-actions-left {
   display: flex;
   gap: 8px;
@@ -3780,32 +3730,15 @@ body.dashboard-page {
 }
 
 .dashboard-page .search-panel .search-form-two-columns {
-  /* Même écart entre gauche ↔ boutons « Actuellement » et boutons ↔ droite (pas de flex gap asymétrique) */
-  gap: 2px !important;
+  gap: 4px !important;
   margin-bottom: 6px !important;
   align-items: flex-start !important;
 }
 
-/* Largeur alignée sur les champs (220px) : évite le vide à droite des inputs dans la colonne gauche,
-   qui grossissait visuellement l’espace avant la colonne centrale. */
-.dashboard-page .search-panel .search-form-left {
-  flex: 0 0 220px !important;
-  width: 220px !important;
-  max-width: 220px !important;
-  min-width: 0 !important;
-  box-sizing: border-box !important;
-  gap: 6px !important;
-}
-
-.dashboard-page .search-panel .search-form-right,
-.dashboard-page .search-panel .search-form-datetime-now-col {
+.dashboard-page .search-panel .search-form-left,
+.dashboard-page .search-panel .search-form-right {
   flex: 0 0 auto !important;
   gap: 6px !important;
-}
-
-.dashboard-page .search-panel .search-form-datetime-now-col .btn-datetime-now {
-  min-height: 34px;
-  box-sizing: border-box;
 }
 
 .dashboard-page .search-panel .form-group {
@@ -3826,22 +3759,39 @@ body.dashboard-page {
 }
 
 .dashboard-page .search-panel .search-form-actions-left {
-  flex-direction: column !important;
-  align-items: stretch !important;
-  align-self: stretch !important;
   gap: 6px !important;
   margin-top: 2px !important;
   padding-top: 6px !important;
 }
 
-.dashboard-page .search-panel .search-form-actions-left .btn-search,
-.dashboard-page .search-panel .search-form-actions-left .btn-reset {
-  justify-content: center !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  white-space: nowrap !important;
-  flex-shrink: 0 !important;
+/* DatePicker dashboard: rendu du champ sur 2 lignes (date + heure) */
+.datetime-two-lines-input {
+  width: 220px;
+  max-width: 220px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid var(--filter-border, #86EFAC);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--input-text, #064E3B);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+}
+
+.datetime-two-lines-date {
+  font-size: 10.8px;
+  line-height: 1.1;
+}
+
+.datetime-two-lines-time {
+  font-size: 10px;
+  line-height: 1.1;
+  opacity: 0.9;
 }
 
 /* Dashboard table: Nom/Prénom un peu plus petits */
