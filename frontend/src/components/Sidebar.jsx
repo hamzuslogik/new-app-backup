@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -32,7 +32,16 @@ import './Sidebar.css';
 
 const Sidebar = ({ collapsed }) => {
   const { user, hasPermission } = useAuth();
+  const location = useLocation();
   const fonctionId = user?.fonction;
+
+  /** Sur /dashboard sans query : éviter no-op du Link et rétablir la liste du jour (événement écouté par Dashboard.jsx). */
+  const goDashboardHome = (e) => {
+    if (location.pathname !== '/dashboard') return;
+    if (location.search) return;
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('dashboard-reset-default'));
+  };
 
   // Vérifier si l'utilisateur est un RE Qualification (a des agents sous sa responsabilité)
   const { data: agentsSousResponsabilite } = useQuery(
@@ -467,6 +476,7 @@ const Sidebar = ({ collapsed }) => {
                 <li key={item.path}>
                   <NavLink
                     to={item.path}
+                    onClick={item.path === '/dashboard' ? goDashboardHome : undefined}
                     className={({ isActive }) =>
                       `sidebar-link ${isActive ? 'active' : ''}`
                     }

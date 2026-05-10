@@ -464,6 +464,14 @@ body.dashboard-page {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+button.stat-card.stat-card-clickable {
+  border: none;
+  font: inherit;
+  text-align: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .stat-card-icon {
   width: 60px;
   height: 60px;

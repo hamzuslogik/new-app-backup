@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -177,7 +177,51 @@ const Dashboard = () => {
   const [filters, setFilters] = useState(getInitialFilters);
   // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
   const [appliedFilters, setAppliedFilters] = useState(getInitialFilters);
-  
+  /** Vue liste depuis la carte « RDV à venir » sans modifier l’URL ni les champs du formulaire */
+  const [statsListOverride, setStatsListOverride] = useState(null);
+
+  const applyDashboardDefaultsFromEmptyUrl = useCallback(() => {
+    if (!user) return;
+    setStatsListOverride(null);
+    const { dateStr, timeStart, timeEnd } = getTodayDateRange();
+    const emptyUiFilters = getFiltersForUser(user);
+    // Confirmateur : liste du jour sans toucher au filtre (backend = dernière ligne fiches_histo).
+    // Autres profils : fiches confirmées (état 7) du jour via fiches_histo_confirmation (aligné stats « journée »).
+    if (user.fonction === 6) {
+      const defaultApplied = {
+        ...getInitialFilters(),
+        page: 1,
+        limit: 999999,
+        fiche_search: true,
+        id_etat_final: '',
+        date_champ: 'fiches_histo',
+        date_debut: dateStr,
+        date_fin: dateStr,
+        time_debut: timeStart,
+        time_fin: timeEnd,
+        include_confirmateur_2: false,
+      };
+      setFilters(emptyUiFilters);
+      setAppliedFilters(defaultApplied);
+    } else {
+      const defaultApplied = {
+        ...getInitialFilters(),
+        page: 1,
+        limit: 999999,
+        fiche_search: true,
+        id_etat_final: 7,
+        date_champ: 'fiches_histo_confirmation',
+        date_debut: dateStr,
+        date_fin: dateStr,
+        time_debut: timeStart,
+        time_fin: timeEnd,
+      };
+      setFilters(emptyUiFilters);
+      setAppliedFilters(defaultApplied);
+    }
+    setShowFilters(true);
+  }, [user]);
+
   // Lire l’URL ; sans query : défaut confirmateur = actions du jour (fiches_histo), autres = confirmées du jour
   useEffect(() => {
     const urlParams = Object.fromEntries(searchParams.entries());
@@ -187,6 +231,7 @@ const Dashboard = () => {
       return;
     }
     if (hasUrl && urlParams.fiche_search === '1') {
+      setStatsListOverride(null);
       const newFilters = {
         page: parseInt(urlParams.page) || 1,
         limit: parseInt(urlParams.limit) || 999999,
@@ -206,47 +251,17 @@ const Dashboard = () => {
       setAppliedFilters(newFilters);
       setShowFilters(true);
     } else if (Object.keys(urlParams).length === 0 && user) {
-      const { dateStr, timeStart, timeEnd } = getTodayDateRange();
-      const emptyUiFilters = getFiltersForUser(user);
-      // Confirmateur : liste du jour sans toucher au filtre (backend = dernière ligne fiches_histo).
-      // Autres profils : fiches confirmées (état 7) du jour via fiches_histo_confirmation.
-      if (user.fonction === 6) {
-        const defaultApplied = {
-          ...getInitialFilters(),
-          page: 1,
-          limit: 999999,
-          fiche_search: true,
-          id_etat_final: '',
-          date_champ: 'fiches_histo',
-          date_debut: dateStr,
-          date_fin: dateStr,
-          time_debut: timeStart,
-          time_fin: timeEnd,
-          include_confirmateur_2: false,
-        };
-        // UI vide, mais résultats par défaut conservés
-        setFilters(emptyUiFilters);
-        setAppliedFilters(defaultApplied);
-      } else {
-        const defaultApplied = {
-          ...getInitialFilters(),
-          page: 1,
-          limit: 999999,
-          fiche_search: true,
-          id_etat_final: 7,
-          date_champ: 'fiches_histo_confirmation',
-          date_debut: dateStr,
-          date_fin: dateStr,
-          time_debut: timeStart,
-          time_fin: timeEnd,
-        };
-        // UI vide, mais résultats par défaut conservés
-        setFilters(emptyUiFilters);
-        setAppliedFilters(defaultApplied);
-      }
-      setShowFilters(true);
+      applyDashboardDefaultsFromEmptyUrl();
     }
-  }, [searchParams, user]);
+  }, [searchParams, user, applyDashboardDefaultsFromEmptyUrl]);
+
+  useEffect(() => {
+    const onLogoDashboardHome = () => {
+      if (user) applyDashboardDefaultsFromEmptyUrl();
+    };
+    window.addEventListener('dashboard-reset-default', onLogoDashboardHome);
+    return () => window.removeEventListener('dashboard-reset-default', onLogoDashboardHome);
+  }, [user, applyDashboardDefaultsFromEmptyUrl]);
 
   // Ref pour le champ critère dans le modal (focus à l'ouverture)
   const searchModalCritereRef = useRef(null);
@@ -323,6 +338,19 @@ const Dashboard = () => {
     const isQuickSearchActive = debouncedQuickSearch.trim() !== '';
     const limitParam = isQuickSearchActive ? 999999 : (src.limit === 999999 ? 999999 : src.limit);
     const pageParam = isQuickSearchActive ? 1 : (src.page || 1);
+
+    /* Carte « RDV à venir » : même requête qu’avant (état 7, date_rdv >= aujourd’hui), sans modifier filtres UI */
+    if (statsListOverride === 'upcoming') {
+      return {
+        fiche_search: 1,
+        page: pageParam,
+        limit: limitParam,
+        id_etat_final: 7,
+        date_champ: 'date_rdv_time',
+        date_debut: dateStr,
+        time_debut: '00:00:00',
+      };
+    }
     
     if (src.fiche_search) {
       const searchParams = { 
@@ -431,7 +459,7 @@ const Dashboard = () => {
 
   // Récupérer les fiches (requête lancée uniquement au clic Recherche, pagination ou reset)
   const { data, isLoading, isFetching, error, refetch } = useQuery(
-    ['fiches', appliedFilters, activeTab, debouncedQuickSearch],
+    ['fiches', appliedFilters, activeTab, debouncedQuickSearch, statsListOverride],
     async () => {
       console.time('[PERF] Requête API fiches - Total');
       const params = getQueryParams();
@@ -439,7 +467,7 @@ const Dashboard = () => {
       console.timeEnd('[PERF] Requête API fiches - Total');
       return response.data;
     },
-    { keepPreviousData: true, enabled: !!appliedFilters.fiche_search }
+    { keepPreviousData: true, enabled: !!appliedFilters.fiche_search || statsListOverride === 'upcoming' }
   );
 
   const updateEtatFromMenuMutation = useMutation(
@@ -783,12 +811,14 @@ const Dashboard = () => {
     
     setFilters(newFilters);
     setAppliedFilters(newFilters);
+    setStatsListOverride(null);
   };
 
   const handleReset = () => {
     const initial = getFiltersForUser(user);
     setFilters(initial);
     setAppliedFilters(initial);
+    setStatsListOverride(null);
   };
 
   // Réinitialiser isSearching quand la requête est terminée
@@ -1461,7 +1491,12 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <Link to={`/dashboard?fiche_search=1&id_etat_final=7&date_champ=date_rdv_time&date_debut=${todayStr}&time_debut=00:00:00`} className="stat-card stat-card-info">
+                <button
+                  type="button"
+                  className="stat-card stat-card-info stat-card-clickable"
+                  onClick={() => setStatsListOverride('upcoming')}
+                  title="Afficher les RDV à venir (sans modifier les filtres)"
+                >
                   <div className="stat-card-icon">
                     <FaCalendarAlt />
                   </div>
@@ -1469,7 +1504,7 @@ const Dashboard = () => {
                     <div className="stat-card-value">{dashboardStats.rdvUpcoming || 0}</div>
                     <div className="stat-card-label">RDV à venir</div>
                   </div>
-                </Link>
+                </button>
               )}
             </div>
           </div>
