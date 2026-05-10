@@ -3939,8 +3939,9 @@ const FicheDetail = ({
                                         }}
                                         style={{
                                           ...hi?.style,
-                                          padding: '4px 8px',
-                                          fontSize: '13px',
+                                          padding: '6px 10px',
+                                          fontSize: '17px',
+                                          fontWeight: 800,
                                           fontFamily: 'inherit',
                                           cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
                                         }}
