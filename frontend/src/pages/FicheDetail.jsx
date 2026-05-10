@@ -80,7 +80,15 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
   if (L === 'Date RDV') {
     return {
       className: 'fiche-detail-etat-confirmer-val--rdv',
-      style: { ...bold, color: '#15803d' },
+      style: {
+        ...bold,
+        color: '#15803d',
+        border: '2px solid #15803d',
+        borderRadius: '6px',
+        padding: '2px 8px',
+        display: 'inline-block',
+        backgroundColor: '#f0fdf4',
+      },
       dataHl: 'rdv',
     };
   }
@@ -3510,16 +3518,6 @@ const FicheDetail = ({
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                   // Champs conf_ (affichés uniquement si non vides)
                   if (etatData.conf_rdv_avec) items.push({ label: 'RDV pris avec', value: etatData.conf_rdv_avec });
-                  {
-                    const tunisieAvec = (() => {
-                      const c = etatData.conf_appel_tunisie_avec;
-                      if (c != null && String(c).trim() !== '') return String(c).trim();
-                      const e = etatData.entretien ?? fiche?.entretien;
-                      if (e != null && String(e).trim() !== '') return String(e).trim();
-                      return null;
-                    })();
-                    if (tunisieAvec) items.push({ label: 'Appel en Tunisie avec', value: tunisieAvec });
-                  }
                   if (etatData.conf_deja_etude) items.push({ label: 'A déjà fait une étude', value: etatData.conf_deja_etude });
                   if (etatData.conf_rdv_annule_precedent) items.push({ label: 'RDV déjà annulé précédemment', value: etatData.conf_rdv_annule_precedent });
                   if (etatData.conf_presence_couple) items.push({ label: 'Présence du couple ou célibataire', value: etatData.conf_presence_couple });
