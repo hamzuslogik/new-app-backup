@@ -1607,6 +1607,33 @@ body.dashboard-page {
     width: 160px !important;
   }
 
+  /* Dashboard : mêmes réductions qu’en desktop (viewport forcé inclus) */
+  .dashboard-page .fiches-table th:nth-child(1),
+  .dashboard-page .fiches-table td:nth-child(1),
+  .dashboard-page .fiches-table th:nth-child(2),
+  .dashboard-page .fiches-table td:nth-child(2) {
+    min-width: 112px !important;
+    width: 112px !important;
+    max-width: 132px !important;
+  }
+
+  .dashboard-page .fiches-table th:nth-child(4),
+  .dashboard-page .fiches-table td:nth-child(4) {
+    min-width: 44px !important;
+    width: 46px !important;
+    max-width: 50px !important;
+  }
+
+  .dashboard-page .fiches-table th:nth-child(5),
+  .dashboard-page .fiches-table td:nth-child(5),
+  .dashboard-page .fiches-table th:nth-child(6),
+  .dashboard-page .fiches-table td:nth-child(6) {
+    width: 16ch !important;
+    min-width: 16ch !important;
+    max-width: 17ch !important;
+    box-sizing: border-box !important;
+  }
+
   /* État Final - conserver le retour à la ligne */
   .fiches-table th:nth-child(7),
   .fiches-table td:nth-child(7) {
@@ -1665,14 +1692,45 @@ body.dashboard-page {
   box-sizing: border-box;
 }
 
-/* Priorité forte globale : élargir Nom / Prénom (desktop forcé inclus) */
+/* Dashboard : Nom / Prénom un peu plus étroits */
 .dashboard-page .fiches-table th:nth-child(1),
 .dashboard-page .fiches-table td:nth-child(1),
 .dashboard-page .fiches-table th:nth-child(2),
 .dashboard-page .fiches-table td:nth-child(2) {
-  min-width: 170px !important;
-  width: 170px !important;
-  max-width: 220px !important;
+  min-width: 112px !important;
+  width: 112px !important;
+  max-width: 132px !important;
+}
+
+/* Dashboard : CP — largeur mini pour code postal */
+.dashboard-page .fiches-table th:nth-child(4),
+.dashboard-page .fiches-table td:nth-child(4) {
+  min-width: 44px !important;
+  width: 46px !important;
+  max-width: 50px !important;
+}
+
+/* Dashboard : Date insertion / Date RDV — largeur ~ une ligne dd/mm/yyyy hh:mm (16ch) */
+.dashboard-page .fiches-table th:nth-child(5),
+.dashboard-page .fiches-table td:nth-child(5),
+.dashboard-page .fiches-table th:nth-child(6),
+.dashboard-page .fiches-table td:nth-child(6) {
+  width: 16ch !important;
+  min-width: 16ch !important;
+  max-width: 17ch !important;
+  box-sizing: border-box !important;
+}
+
+.dashboard-page .fiches-table td:nth-child(5),
+.dashboard-page .fiches-table td:nth-child(6) {
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-page .fiches-table th:nth-child(5),
+.dashboard-page .fiches-table th:nth-child(6) {
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  vertical-align: bottom !important;
 }
 
 .indicator {
