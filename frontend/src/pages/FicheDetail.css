@@ -1156,16 +1156,30 @@
 }
 
 /* !important : surcharge .fiche-detail select.form-control { max-width: 220px !important } dans la zone changement d'état */
-/* Select, texte, nombre, date, heure : même largeur */
-.confirmation-form .rdv-form-table .form-control:not(textarea),
-.confirmation-form .rdv-form-table .autocomplete-input {
+/* Select, texte, nombre, date, heure : même largeur utile (fixe px pour aligner navigateurs + autocomplete) */
+.confirmation-form .rdv-form-table .form-control:not(textarea) {
+  width: 200px !important;
   max-width: 200px !important;
-  width: 100%;
+  min-width: 200px !important;
   box-sizing: border-box;
 }
 
 .confirmation-form .rdv-form-table .autocomplete-wrap {
+  width: 200px !important;
   max-width: 200px !important;
+  min-width: 200px !important;
+  box-sizing: border-box;
+}
+
+/* Autocomplete : même bordure / padding que .etat-change-form .form-control pour égaler les inputs texte */
+.confirmation-form .rdv-form-table .autocomplete-wrap .autocomplete-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  border: 2px solid #ddd !important;
+  border-radius: 5px !important;
+  padding: 8px 12px !important;
+  font-size: 11.9px !important;
 }
 
 /* Commentaire : plus large et plus haut que les autres champs */
@@ -1743,18 +1757,32 @@
   width: 99%;
 }
 
-.rdv-modal .rdv-form .form-control:not(textarea),
-.rdv-modal .rdv-form .autocomplete-input {
+.rdv-modal .rdv-form .form-control:not(textarea) {
   padding: 5px 8px;
   font-size: 13px;
   min-height: 32px;
-  width: 100%;
+  width: 200px;
   max-width: 200px;
+  min-width: 200px;
   box-sizing: border-box;
 }
 
 .rdv-modal .rdv-form .autocomplete-wrap {
+  width: 200px;
   max-width: 200px;
+  min-width: 200px;
+  box-sizing: border-box;
+}
+
+.rdv-modal .rdv-form .autocomplete-wrap .autocomplete-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  border: 2px solid #ddd !important;
+  border-radius: 5px !important;
+  padding: 8px 12px !important;
+  font-size: 11.9px !important;
+  min-height: 32px;
 }
 
 .rdv-modal .rdv-form select.form-control {
@@ -1891,24 +1919,36 @@
     grid-template-columns: 1fr;
   }
 
-  .confirmation-form .rdv-form-table .form-control:not(textarea),
-  .confirmation-form .rdv-form-table .autocomplete-input,
+  .confirmation-form .rdv-form-table .form-control:not(textarea) {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
   .confirmation-form .rdv-form-table textarea.form-control {
     max-width: 100% !important;
   }
 
   .confirmation-form .rdv-form-table .autocomplete-wrap {
+    width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
   }
 
-  .rdv-modal .rdv-form .form-control:not(textarea),
-  .rdv-modal .rdv-form .autocomplete-input,
+  .rdv-modal .rdv-form .form-control:not(textarea) {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
   .rdv-modal .rdv-form textarea.form-control {
     max-width: 100% !important;
   }
 
   .rdv-modal .rdv-form .autocomplete-wrap {
+    width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
   }
 
   .rdv-etat-radio {
