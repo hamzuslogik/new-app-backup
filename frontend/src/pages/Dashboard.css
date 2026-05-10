@@ -3204,7 +3204,7 @@ body.dashboard-page {
   box-sizing: border-box !important;
 }
 
-/* Centrer les champs du bloc « Changer l'état » dans le modal */
+/* Modal « Changer l'état » : bloc centré ; libellés à gauche des champs */
 .fiche-detail-modal-content .etat-change-section .section-title {
   text-align: center !important;
 }
@@ -3216,19 +3216,41 @@ body.dashboard-page {
 }
 
 .fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group {
-  max-width: min(100%, 440px) !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px 14px !important;
+  max-width: min(100%, 520px) !important;
   margin-left: auto !important;
   margin-right: auto !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group label {
+  text-align: left !important;
+  flex: 0 0 auto !important;
+  min-width: 11rem !important;
+  max-width: 42% !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group > select.form-control,
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group > .form-control:not(textarea) {
+  flex: 1 1 12rem !important;
+  min-width: 0 !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group > p {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  margin-top: 4px !important;
+  text-align: left !important;
 }
 
 .fiche-detail-modal-content .etat-change-section .etat-change-form > .form-row {
   margin-left: auto !important;
   margin-right: auto !important;
-  max-width: min(100%, 440px) !important;
-}
-
-.fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group label {
-  text-align: center !important;
+  max-width: min(100%, 520px) !important;
+  width: 100% !important;
 }
 
 .fiche-detail-modal-content .etat-change-section .confirmation-form {
@@ -3250,12 +3272,20 @@ body.dashboard-page {
   margin-right: auto !important;
 }
 
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table td:first-child {
+  text-align: left !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table td:first-child label {
+  text-align: left !important;
+}
+
 .fiche-detail-modal-content .etat-change-section .nrp-form,
 .fiche-detail-modal-content .etat-change-section .etat-form {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
-  max-width: min(100%, 480px) !important;
+  max-width: min(100%, 520px) !important;
   margin-left: auto !important;
   margin-right: auto !important;
   width: 100% !important;
@@ -3269,24 +3299,143 @@ body.dashboard-page {
 
 .fiche-detail-modal-content .etat-change-section .nrp-form .form-group,
 .fiche-detail-modal-content .etat-change-section .etat-form .form-group {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  flex-wrap: wrap !important;
+  gap: 8px 14px !important;
   width: 100% !important;
-  max-width: 440px !important;
+  max-width: 520px !important;
 }
 
 .fiche-detail-modal-content .etat-change-section .nrp-form .form-group label,
 .fiche-detail-modal-content .etat-change-section .etat-form .form-group label {
-  text-align: center !important;
+  text-align: left !important;
+  flex: 0 0 auto !important;
+  min-width: 11rem !important;
+  max-width: 42% !important;
+  padding-top: 6px !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .nrp-form .form-group:has(> select.form-control) label,
+.fiche-detail-modal-content .etat-change-section .etat-form .form-group:has(> select.form-control) label,
+.fiche-detail-modal-content .etat-change-section .nrp-form .form-group:has(> input.form-control) label,
+.fiche-detail-modal-content .etat-change-section .etat-form .form-group:has(> input.form-control) label {
+  padding-top: 0 !important;
+  align-self: center !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .nrp-form .form-group > .form-control,
+.fiche-detail-modal-content .etat-change-section .etat-form .form-group > .form-control,
+.fiche-detail-modal-content .etat-change-section .nrp-form .form-group > select.form-control,
+.fiche-detail-modal-content .etat-change-section .etat-form .form-group > select.form-control {
+  flex: 1 1 12rem !important;
+  min-width: 0 !important;
 }
 
 .fiche-detail-modal-content .etat-change-section .etat-form .form-row {
   margin-left: auto !important;
   margin-right: auto !important;
-  max-width: min(100%, 440px) !important;
-  justify-content: center !important;
+  max-width: min(100%, 520px) !important;
+  width: 100% !important;
 }
 
 .fiche-detail-modal-content .etat-change-section .form-actions {
   justify-content: center !important;
+}
+
+/* Modal décalage : section centrée ; libellés à gauche */
+.fiche-detail-modal-content .decalage-form {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+.fiche-detail-modal-content .decalage-form > .section-title,
+.fiche-detail-modal-content .decalage-form > div {
+  width: 100% !important;
+  max-width: min(100%, 560px) !important;
+  box-sizing: border-box !important;
+}
+
+.fiche-detail-modal-content .decalage-form .form-group {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  flex-wrap: wrap !important;
+  gap: 8px 14px !important;
+}
+
+.fiche-detail-modal-content .decalage-form .form-group label {
+  text-align: left !important;
+  flex: 0 0 auto !important;
+  min-width: 11rem !important;
+  max-width: 42% !important;
+  padding-top: 6px !important;
+}
+
+.fiche-detail-modal-content .decalage-form .form-group > select.form-control,
+.fiche-detail-modal-content .decalage-form .form-group > textarea.form-control,
+.fiche-detail-modal-content .decalage-form .form-group > .form-control {
+  flex: 1 1 12rem !important;
+  min-width: 0 !important;
+}
+
+.fiche-detail-modal-content .decalage-form .form-group > label + div {
+  flex: 1 1 12rem !important;
+  min-width: 0 !important;
+}
+
+.fiche-detail-modal-content .decalage-form .form-group > small {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+}
+
+.fiche-detail-modal-content .decalage-form .form-group:has(> select.form-control) {
+  align-items: center !important;
+}
+
+.fiche-detail-modal-content .decalage-form .form-group:has(> select.form-control) label {
+  padding-top: 0 !important;
+}
+
+/* Modal compte rendu : section centrée ; libellés à gauche */
+.fiche-detail-modal-content .compte-rendu-section {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+.fiche-detail-modal-content .compte-rendu-section > .section-title {
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-form {
+  width: 100% !important;
+  max-width: min(100%, 520px) !important;
+  box-sizing: border-box !important;
+}
+
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-form > .form-group {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px 14px !important;
+}
+
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-form > .form-group label {
+  text-align: left !important;
+  flex: 0 0 auto !important;
+  min-width: 11rem !important;
+  max-width: 42% !important;
+}
+
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-form > .form-group > select,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-form > .form-group > .form-control {
+  flex: 1 1 12rem !important;
+  min-width: 0 !important;
 }
 
 /* Assurer que les textareas de commentaire passent à la ligne - règles renforcées */
