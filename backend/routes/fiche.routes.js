@@ -4140,6 +4140,29 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       [value || null, now, id]
     );
 
+    // Synchroniser fiches_histo pour la dernière entrée correspondant à l'état actuel
+    // afin que l'affichage « État actuel » reflète immédiatement la nouvelle valeur
+    // (le bloc lit en priorité lastHisto.date_rdv_time si lastHisto.id_etat === fiche.id_etat_final).
+    if (dbField === 'date_rdv_time' && fiche.id_etat_final != null) {
+      try {
+        const lastHistoMatch = await queryOne(
+          `SELECT id FROM fiches_histo
+           WHERE id_fiche = ? AND id_etat = ?
+           ORDER BY id DESC LIMIT 1`,
+          [id, fiche.id_etat_final]
+        );
+        if (lastHistoMatch && lastHistoMatch.id) {
+          await query(
+            `UPDATE fiches_histo SET date_rdv_time = ? WHERE id = ?`,
+            [value || null, lastHistoMatch.id]
+          );
+        }
+      } catch (syncErr) {
+        console.error('Erreur synchronisation fiches_histo.date_rdv_time:', syncErr);
+        // ne pas bloquer la réponse pour autant
+      }
+    }
+
     // Enregistrer la modification dans modifica (nom logique du champ pour l'audit)
     await logModification(
       id,

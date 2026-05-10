@@ -3982,7 +3982,7 @@ const FicheDetail = ({
                         </div>
                       )}
 
-                      {fiche.id_etat_final === 7 && hasPermission('fiche_validate') && (
+                      {hasPermission('fiche_validate') && (
                         <div style={{ marginTop: '16px', position: 'relative', display: 'inline-block' }}>
                           <button
                             type="button"
@@ -7406,6 +7406,117 @@ const FicheDetail = ({
   );
 };
 
+// Libellés français pour les noms de champs techniques stockés dans modifica.type
+const MODIFICA_TYPE_LABELS = {
+  // Identité
+  civ: 'Civilité',
+  nom: 'Nom',
+  prenom: 'Prénom',
+  tel: 'Téléphone',
+  gsm1: 'GSM 1',
+  gsm2: 'GSM 2',
+  email: 'Email',
+  adresse: 'Adresse',
+  cp: 'Code postal',
+  ville: 'Ville',
+  // Situation
+  situation_conjugale: 'Situation conjugale',
+  age_mr: 'Âge Monsieur',
+  age_madame: 'Âge Madame',
+  nb_enfants: "Nombre d'enfants",
+  // Profession / contrat
+  profession_mr: 'Profession Monsieur',
+  profession_madame: 'Profession Madame',
+  type_contrat_mr: 'Type contrat Monsieur',
+  type_contrat_madame: 'Type contrat Madame',
+  // Finance
+  revenu_foyer: 'Revenu du foyer',
+  credit_foyer: 'Crédit du foyer',
+  conf_revenu: 'Revenu',
+  conf_credit: 'Crédit',
+  // Logement
+  proprietaire_maison: 'Propriétaire',
+  surface_habitable: 'Surface habitable',
+  surface_chauffee: 'Surface chauffée',
+  annee_systeme_chauffage: 'Année système chauffage',
+  mode_chauffage: 'Mode de chauffage',
+  complement_chauffage: 'Complément de chauffage',
+  consommation_chauffage: 'Consommation chauffage',
+  consommation_electricite: 'Consommation électricité',
+  circuit_eau: "Circuit d'eau",
+  nb_pieces: 'Nombre de pièces',
+  nb_pans: 'Nombre de pans',
+  orientation_toiture: 'Orientation toiture',
+  site_classe: 'Site classé',
+  zones_ombres: "Zones d'ombre",
+  // Étude / produit
+  produit: 'Produit',
+  etude: 'Étude',
+  etude_raison: "Raison de l'étude",
+  // Affectations
+  id_centre: 'Centre',
+  id_agent: 'Agent',
+  id_confirmateur: 'Confirmateur',
+  id_confirmateur_2: 'Confirmateur 2',
+  id_confirmateur_3: 'Confirmateur 3',
+  id_commercial: 'Commercial',
+  id_commercial_2: 'Commercial 2',
+  // États & dates
+  id_etat_final: 'État',
+  id_sous_etat: 'Sous-état',
+  date_rdv_time: 'Date RDV',
+  date_appel_time: "Date d'appel",
+  date_appel: "Date d'appel",
+  date_rappel_time: 'Date rappel',
+  date_sign_time: 'Date signature',
+  is_urgent: 'RDV urgent',
+  // Validation / qualité
+  valider: 'Validation',
+  ko: 'KO',
+  hc: 'HC',
+  archive: 'Archivée',
+  cq_etat: 'Contrôle qualité — État',
+  cq_dossier: 'Contrôle qualité — Dossier',
+  observations_cq: 'Contrôle qualité — Observations',
+  commentaire_qualite: 'Commentaire qualité',
+  commentaire: 'Commentaire',
+  // Confirmation
+  conf_rdv_avec: 'RDV pris avec',
+  conf_appel_tunisie_avec: 'Appel Tunisie avec',
+  conf_deja_etude: 'A déjà fait une étude',
+  conf_rdv_annule_precedent: 'RDV déjà annulé précédemment',
+  conf_presence_couple: 'Présence du couple',
+  conf_mode_chauffage: 'Mode chauffage',
+  conf_complement_chauffage: 'Complément chauffage',
+  conf_consommation_electricite: 'Consommation électricité',
+  conf_consommation_chauffage: 'Consommation chauffage',
+  conf_orientation_toiture: 'Orientation toiture',
+  conf_zones_ombres: "Zones d'ombre",
+  conf_site_classe: 'Site classé',
+  conf_commentaire_produit: 'Commentaire confirmateur',
+  conf_profession_monsieur: 'Profession Monsieur',
+  conf_profession_madame: 'Profession Madame',
+  conf_type_contrat_mr: 'Type contrat Monsieur',
+  conf_type_contrat_madame: 'Type contrat Madame',
+  // Étiquettes spéciales
+  'Compte rendu': 'Compte rendu',
+  SMS: 'SMS',
+};
+
+function modificaTypeLabel(type) {
+  if (type == null || type === '') return '-';
+  return MODIFICA_TYPE_LABELS[type] || String(type);
+}
+
+function modificaValueDisplay(val) {
+  if (val == null) return '-';
+  const s = String(val).trim();
+  if (s === '') return '-';
+  if (s === '0') return 'Non';
+  if (s === '1') return 'Oui';
+  return s;
+}
+
 // Composant pour l'onglet Modifica
 const ModificaTab = ({ ficheHash }) => {
   const { data: modificaData, isLoading, error } = useQuery(
@@ -7477,9 +7588,9 @@ const ModificaTab = ({ ficheHash }) => {
               <tr key={mod.id}>
                 <td>{mod.date_modif_time ? new Date(mod.date_modif_time).toLocaleString('fr-FR') : '-'}</td>
                 <td>{mod.user_pseudo || '-'}</td>
-                <td>{mod.type || '-'}</td>
-                <td className="modifica-value">{mod.ancien_valeur || '-'}</td>
-                <td className="modifica-value">{mod.nouvelle_valeur || '-'}</td>
+                <td>{modificaTypeLabel(mod.type)}</td>
+                <td className="modifica-value">{modificaValueDisplay(mod.ancien_valeur)}</td>
+                <td className="modifica-value">{modificaValueDisplay(mod.nouvelle_valeur)}</td>
               </tr>
             ))}
           </tbody>
