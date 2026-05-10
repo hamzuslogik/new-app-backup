@@ -1048,6 +1048,35 @@ body.dashboard-page {
   flex: 1;
 }
 
+.date-time-with-actuellement {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-datetime-actuellement {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  font-size: 10px;
+  line-height: 1.25;
+  font-weight: 600;
+  border: 1px solid var(--filter-border, #86efac);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--label-color, #065f46);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-datetime-actuellement:hover {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--label-color, #065f46);
+}
+
+.date-time-with-actuellement input[type="datetime-local"] {
+  flex: 1;
+  min-width: 140px;
+}
+
 
 /* Actions du formulaire */
 .search-form-actions {
@@ -4022,9 +4051,9 @@ body.dashboard-page {
 .dashboard-page .search-panel .form-group select,
 .dashboard-page .search-panel .date-time-inputs input[type="date"],
 .dashboard-page .search-panel .date-time-inputs input[type="time"],
-.dashboard-page .search-panel .date-time-inputs input[type="datetime-local"] {
-  width: 220px !important;
-  max-width: 220px !important;
+.dashboard-page .search-panel .date-time-with-actuellement input[type="datetime-local"] {
+  width: 200px !important;
+  max-width: 200px !important;
 }
 
 .dashboard-page .search-panel .search-form-actions-left {

@@ -706,6 +706,25 @@ const Dashboard = () => {
     handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', timeWithSeconds);
   };
 
+  /** Remplit date début ou fin avec la date/heure actuelle */
+  const applyNowToDatetimeBound = (bound) => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const timeStr = `${hh}:${min}:00`;
+    setFilters((prev) => ({
+      ...prev,
+      ...(bound === 'debut'
+        ? { date_debut: dateStr, time_debut: timeStr }
+        : { date_fin: dateStr, time_fin: timeStr }),
+      page: 1,
+    }));
+  };
+
   const handlePageChange = (newPage) => {
     handleFilterChange('page', newPage);
   };
@@ -1599,7 +1618,15 @@ const Dashboard = () => {
                   <>
                     <div className="form-group date-group">
                       <label>Date début</label>
-                      <div className="date-time-inputs">
+                      <div className="date-time-inputs date-time-with-actuellement">
+                        <button
+                          type="button"
+                          className="btn-datetime-actuellement"
+                          onClick={() => applyNowToDatetimeBound('debut')}
+                          title="Date et heure du moment"
+                        >
+                          Actuellement
+                        </button>
                         <input
                           type="datetime-local"
                           className="form-control"
@@ -1613,7 +1640,15 @@ const Dashboard = () => {
 
                     <div className="form-group date-group">
                       <label>Date fin</label>
-                      <div className="date-time-inputs">
+                      <div className="date-time-inputs date-time-with-actuellement">
+                        <button
+                          type="button"
+                          className="btn-datetime-actuellement"
+                          onClick={() => applyNowToDatetimeBound('fin')}
+                          title="Date et heure du moment"
+                        >
+                          Actuellement
+                        </button>
                         <input
                           type="datetime-local"
                           className="form-control"
@@ -2425,7 +2460,15 @@ const Dashboard = () => {
                 {filters.date_champ && (
                   <div className="form-group">
                     <label>Date début</label>
-                    <div className="date-time-inputs">
+                    <div className="date-time-inputs date-time-with-actuellement">
+                      <button
+                        type="button"
+                        className="btn-datetime-actuellement"
+                        onClick={() => applyNowToDatetimeBound('debut')}
+                        title="Date et heure du moment"
+                      >
+                        Actuellement
+                      </button>
                       <input
                         type="datetime-local"
                         className="form-control"
@@ -2459,7 +2502,15 @@ const Dashboard = () => {
                 {filters.date_champ && (
                   <div className="form-group">
                     <label>Date fin</label>
-                    <div className="date-time-inputs">
+                    <div className="date-time-inputs date-time-with-actuellement">
+                      <button
+                        type="button"
+                        className="btn-datetime-actuellement"
+                        onClick={() => applyNowToDatetimeBound('fin')}
+                        title="Date et heure du moment"
+                      >
+                        Actuellement
+                      </button>
                       <input
                         type="datetime-local"
                         className="form-control"
