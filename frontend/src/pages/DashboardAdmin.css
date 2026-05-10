@@ -2574,7 +2574,14 @@ body.dashboard-admin-page {
   align-items: center !important;
 }
 
-.fiche-detail-modal-content .decalage-form > .section-title,
+/* Titre pleine largeur du modal (comme historique / compte rendu) ; contenus sous-jacents restent bornés */
+.fiche-detail-modal-content .decalage-form > .section-title {
+  width: 100% !important;
+  max-width: 100% !important;
+  align-self: stretch !important;
+  box-sizing: border-box !important;
+}
+
 .fiche-detail-modal-content .decalage-form > div {
   width: 100% !important;
   max-width: min(100%, 560px) !important;
