@@ -706,6 +706,45 @@ const Dashboard = () => {
     handleFilterChange(bound === 'debut' ? 'time_debut' : 'time_fin', timeWithSeconds);
   };
 
+  /** À la sélection d’un champ de date : plage du jour (00:00 → 23:59). */
+  const handleDateChampChange = (value) => {
+    setFilters((prev) => {
+      const next = { ...prev, date_champ: value, page: 1 };
+      if (value) {
+        const { dateStr, timeStart, timeEnd } = getTodayDateRange();
+        next.date_debut = dateStr;
+        next.date_fin = dateStr;
+        next.time_debut = timeStart;
+        next.time_fin = timeEnd;
+      } else {
+        next.date_debut = '';
+        next.date_fin = '';
+        next.time_debut = '';
+        next.time_fin = '';
+      }
+      return next;
+    });
+  };
+
+  /** Raccourci « maintenant » pour début ou fin de plage (comme l’ancien bouton du datepicker). */
+  const applyNowToDatetimeBound = (bound) => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const timeStr = `${hh}:${min}:00`;
+    setFilters((prev) => ({
+      ...prev,
+      ...(bound === 'debut'
+        ? { date_debut: dateStr, time_debut: timeStr }
+        : { date_fin: dateStr, time_fin: timeStr }),
+      page: 1,
+    }));
+  };
+
   const handlePageChange = (newPage) => {
     handleFilterChange('page', newPage);
   };
@@ -1549,7 +1588,7 @@ const Dashboard = () => {
                   <label>Champ de date</label>
                   <select
                     value={filters.date_champ || ''}
-                    onChange={(e) => handleFilterChange('date_champ', e.target.value)}
+                    onChange={(e) => handleDateChampChange(e.target.value)}
                   >
                     <option value="">Sélectionnez date</option>
                     <option value="date_modif_time">Date Modification</option>
@@ -1594,39 +1633,6 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Date début / fin: affichées uniquement si un champ de date est sélectionné */}
-                {filters.date_champ && (
-                  <>
-                    <div className="form-group date-group">
-                      <label>Date début</label>
-                      <div className="date-time-inputs">
-                        <input
-                          type="datetime-local"
-                          className="form-control"
-                          step={60}
-                          value={filterToDatetimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
-                          onChange={(e) => handleDatetimeLocalChange('debut', e)}
-                          aria-label="Date et heure début"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="form-group date-group">
-                      <label>Date fin</label>
-                      <div className="date-time-inputs">
-                        <input
-                          type="datetime-local"
-                          className="form-control"
-                          step={60}
-                          value={filterToDatetimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
-                          onChange={(e) => handleDatetimeLocalChange('fin', e)}
-                          aria-label="Date et heure fin"
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-
                 {/* Inclure archives */}
                 <div className="form-group">
                   <label>Archives</label>
@@ -1649,6 +1655,58 @@ const Dashboard = () => {
                   </button>
                 </div>
               </div>
+
+              {/* Entre gauche et droite : raccourcis « maintenant » + plage datetime */}
+              {filters.date_champ && (
+                <div className="search-form-datetime-bridge">
+                  <div className="datetime-quick-actions">
+                    <button
+                      type="button"
+                      className="btn-datetime-now"
+                      onClick={() => applyNowToDatetimeBound('debut')}
+                      title="Date et heure de début = maintenant"
+                    >
+                      Actuellement (début)
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-datetime-now"
+                      onClick={() => applyNowToDatetimeBound('fin')}
+                      title="Date et heure de fin = maintenant"
+                    >
+                      Actuellement (fin)
+                    </button>
+                  </div>
+                  <div className="datetime-fields-stack">
+                    <div className="form-group date-group">
+                      <label>Date début</label>
+                      <div className="date-time-inputs">
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          step={60}
+                          value={filterToDatetimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
+                          onChange={(e) => handleDatetimeLocalChange('debut', e)}
+                          aria-label="Date et heure début"
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group date-group">
+                      <label>Date fin</label>
+                      <div className="date-time-inputs">
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          step={60}
+                          value={filterToDatetimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
+                          onChange={(e) => handleDatetimeLocalChange('fin', e)}
+                          aria-label="Date et heure fin"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Colonne de droite */}
               <div className="search-form-right">
@@ -2364,7 +2422,7 @@ const Dashboard = () => {
                   <label>Champ de date</label>
                   <select
                     value={filters.date_champ || ''}
-                    onChange={(e) => handleFilterChange('date_champ', e.target.value)}
+                    onChange={(e) => handleDateChampChange(e.target.value)}
                   >
                     <option value="">Sélectionnez date</option>
                     <option value="date_modif_time">Date Modification</option>
@@ -2421,24 +2479,55 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Date début / fin: affichées uniquement si un champ de date est sélectionné */}
                 {filters.date_champ && (
-                  <div className="form-group">
-                    <label>Date début</label>
-                    <div className="date-time-inputs">
-                      <input
-                        type="datetime-local"
-                        className="form-control"
-                        step={60}
-                        value={filterToDatetimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
-                        onChange={(e) => handleDatetimeLocalChange('debut', e)}
-                        aria-label="Date et heure début"
-                      />
+                  <div className="search-modal-datetime-block">
+                    <div className="datetime-quick-actions">
+                      <button
+                        type="button"
+                        className="btn-datetime-now"
+                        onClick={() => applyNowToDatetimeBound('debut')}
+                        title="Date et heure de début = maintenant"
+                      >
+                        Actuellement (début)
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-datetime-now"
+                        onClick={() => applyNowToDatetimeBound('fin')}
+                        title="Date et heure de fin = maintenant"
+                      >
+                        Actuellement (fin)
+                      </button>
+                    </div>
+                    <div className="form-group">
+                      <label>Date début</label>
+                      <div className="date-time-inputs">
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          step={60}
+                          value={filterToDatetimeLocalValue(filters.date_debut, filters.time_debut, '00:00:00')}
+                          onChange={(e) => handleDatetimeLocalChange('debut', e)}
+                          aria-label="Date et heure début"
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Date fin</label>
+                      <div className="date-time-inputs">
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          step={60}
+                          value={filterToDatetimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
+                          onChange={(e) => handleDatetimeLocalChange('fin', e)}
+                          aria-label="Date et heure fin"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Commercial (aligné avec Date fin) */}
                 {user?.fonction !== 5 && (
                   <div className="form-group">
                     <label>Commercial</label>
@@ -2453,22 +2542,6 @@ const Dashboard = () => {
                         </option>
                       ))}
                     </select>
-                  </div>
-                )}
-
-                {filters.date_champ && (
-                  <div className="form-group">
-                    <label>Date fin</label>
-                    <div className="date-time-inputs">
-                      <input
-                        type="datetime-local"
-                        className="form-control"
-                        step={60}
-                        value={filterToDatetimeLocalValue(filters.date_fin, filters.time_fin, '23:59:59')}
-                        onChange={(e) => handleDatetimeLocalChange('fin', e)}
-                        aria-label="Date et heure fin"
-                      />
-                    </div>
                   </div>
                 )}
               </div>
