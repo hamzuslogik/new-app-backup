@@ -2121,3 +2121,86 @@
   -webkit-text-fill-color: #b91c1c !important;
 }
 
+/*
+ * Modal « détail fiche » : cette feuille est chargée après Dashboard.css.
+ * Les règles globales (.etat-change-form .form-control, autocomplete RDV en
+ * 11.9px !important, mediaqueries compactes, etc.) ont une spécificité qui
+ * empêchait les styles du modal d’être visibles. Bloc final = priorité cascade.
+ */
+.fiche-detail-modal-content .fiche-detail {
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+}
+
+.fiche-detail-modal-content .section-title {
+  font-size: 22px !important;
+}
+
+.fiche-detail-modal-content .field-label,
+.fiche-detail-modal-content .field-value,
+.fiche-detail-modal-content .field-display {
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+}
+
+.fiche-detail-modal-content .form-group > label,
+.fiche-detail-modal-content .etat-change-form label,
+.fiche-detail-modal-content .decalage-form .form-group label,
+.fiche-detail-modal-content .compte-rendu-form label,
+.fiche-detail-modal-content .nrp-form .form-group label,
+.fiche-detail-modal-content .etat-form .form-group label,
+.fiche-detail-modal-content .sms-form .form-group label,
+.fiche-detail-modal-content .confirmation-form .rdv-form-table td:first-child,
+.fiche-detail-modal-content .confirmation-form .rdv-form-table td:first-child label {
+  font-size: 16px !important;
+}
+
+.fiche-detail-modal-content .fiche-detail .edit-controls .form-control,
+.fiche-detail-modal-content .etat-change-form .form-control,
+.fiche-detail-modal-content .decalage-form .form-control,
+.fiche-detail-modal-content .sms-form .form-control,
+.fiche-detail-modal-content .nrp-form .form-control,
+.fiche-detail-modal-content .etat-form .form-control,
+.fiche-detail-modal-content .compte-rendu-form .form-control,
+.fiche-detail-modal-content textarea.form-control,
+.fiche-detail-modal-content input.form-control,
+.fiche-detail-modal-content select.form-control {
+  font-size: 16px !important;
+}
+
+.fiche-detail-modal-content .confirmation-form .rdv-form-table .autocomplete-wrap .autocomplete-input {
+  font-size: 16px !important;
+}
+
+.fiche-detail-modal-content input[type="date"],
+.fiche-detail-modal-content input[type="time"],
+.fiche-detail-modal-content input[type="datetime-local"],
+.fiche-detail-modal-content input[type="text"],
+.fiche-detail-modal-content input[type="email"],
+.fiche-detail-modal-content input[type="tel"],
+.fiche-detail-modal-content input[type="number"] {
+  font-size: 16px !important;
+}
+
+.fiche-detail-modal-content textarea,
+.fiche-detail-modal-content .confirmation-form .rdv-form-table textarea.form-control {
+  font-size: 16px !important;
+}
+
+@media (max-width: 768px) {
+  .fiche-detail-modal-content .section-title {
+    font-size: 18px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .fiche-detail-modal-content .field-label,
+  .fiche-detail-modal-content .field-value {
+    font-size: 15px !important;
+  }
+
+  .fiche-detail-modal-content .section-title {
+    font-size: 16px !important;
+  }
+}
+
