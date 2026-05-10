@@ -5938,7 +5938,7 @@ const FicheDetail = ({
                         <textarea
                           id="conf_commentaire_produit"
                           className="form-control"
-                          rows="4"
+                          rows={6}
                           value={confFormData.conf_commentaire_produit}
                           onChange={(e) => setConfFormData({...confFormData, conf_commentaire_produit: e.target.value})}
                         />
