@@ -1291,7 +1291,11 @@ const Dashboard = () => {
       alert('Seules les fiches confirmées (état Confirmer) peuvent être validées.');
       return;
     }
-    if (!validationConfPresenceCouple) {
+    if (!String(validationConfRdvAvec || '').trim()) {
+      alert('Veuillez sélectionner avec qui le RDV a été validé.');
+      return;
+    }
+    if (!String(validationConfPresenceCouple || '').trim()) {
       alert('Veuillez sélectionner la présence du couple.');
       return;
     }
@@ -2837,9 +2841,10 @@ const Dashboard = () => {
             ) : (
               <form onSubmit={submitValidationModal}>
                 <div className="dashboard-etat-modal-field">
-                  <label htmlFor="dashboard-validation-avec">Avec qui le RDV a-t-il été validé ? (optionnel)</label>
+                  <label htmlFor="dashboard-validation-avec">Avec qui le RDV a-t-il été validé ? *</label>
                   <select
                     id="dashboard-validation-avec"
+                    required
                     value={validationConfRdvAvec}
                     onChange={(e) => setValidationConfRdvAvec(e.target.value)}
                     disabled={validationModalBusy || Number(validationModalFiche.id_etat_final) !== 7}
@@ -2879,7 +2884,8 @@ const Dashboard = () => {
                     disabled={
                       validationModalBusy ||
                       Number(validationModalFiche.id_etat_final) !== 7 ||
-                      !validationConfPresenceCouple
+                      !String(validationConfRdvAvec || '').trim() ||
+                      !String(validationConfPresenceCouple || '').trim()
                     }
                   >
                     {validationModalBusy ? '…' : 'Valider la fiche'}

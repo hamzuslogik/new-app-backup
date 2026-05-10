@@ -3598,6 +3598,15 @@ const FicheDetail = ({
                 }
                 return hist;
               })();
+
+              const champsValidationComplets =
+                Boolean(
+                  String(validationRdvDate || '').trim() &&
+                  String(validationRdvTime || '').trim() &&
+                  String(confRdvAvecValue || '').trim() &&
+                  String(confPresenceCoupleValue || '').trim()
+                );
+
               const dateCreationEtatActuel = (lastHisto && lastHisto.id_etat === fiche.id_etat_final) ? lastHisto.date_creation : (fiche.date_modif_time || fiche.date_insert_time || null);
               
               // Construire l'objet état actuel à partir des données de la fiche
@@ -3911,20 +3920,22 @@ const FicheDetail = ({
                             <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  <label htmlFor="validation_rdv_date_inline" style={{ fontWeight: 600, fontSize: '13px' }}>Date RDV</label>
+                                  <label htmlFor="validation_rdv_date_inline" style={{ fontWeight: 600, fontSize: '13px' }}>Date RDV *</label>
                                   <input
                                     id="validation_rdv_date_inline"
                                     type="date"
+                                    required
                                     value={validationRdvDate || ''}
                                     onChange={(e) => setValidationRdvDate(e.target.value)}
                                     style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
                                   />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  <label htmlFor="validation_rdv_time_inline" style={{ fontWeight: 600, fontSize: '13px' }}>Heure RDV</label>
+                                  <label htmlFor="validation_rdv_time_inline" style={{ fontWeight: 600, fontSize: '13px' }}>Heure RDV *</label>
                                   <input
                                     id="validation_rdv_time_inline"
                                     type="time"
+                                    required
                                     value={validationRdvTime || ''}
                                     onChange={(e) => setValidationRdvTime(e.target.value)}
                                     style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
@@ -3953,10 +3964,11 @@ const FicheDetail = ({
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <label htmlFor="conf_rdv_avec_validation_inline" style={{ fontWeight: 600, fontSize: '13px' }}>
-                                  Avec qui le RDV a-t-il été validé ? (optionnel)
+                                  Avec qui le RDV a-t-il été validé ? *
                                 </label>
                                 <select
                                   id="conf_rdv_avec_validation_inline"
+                                  required
                                   value={confRdvAvecValue || ''}
                                   onChange={(e) => setConfRdvAvecValue(e.target.value)}
                                   style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
@@ -3970,10 +3982,11 @@ const FicheDetail = ({
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <label htmlFor="conf_presence_couple_validation_inline" style={{ fontWeight: '600', fontSize: '13px' }}>
-                                  Présence du couple (optionnel)
+                                  Présence du couple *
                                 </label>
                                 <select
                                   id="conf_presence_couple_validation_inline"
+                                  required
                                   value={confPresenceCoupleValue || ''}
                                   onChange={(e) => setConfPresenceCoupleValue(e.target.value)}
                                   style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
@@ -4001,14 +4014,19 @@ const FicheDetail = ({
                               ) : (
                                 <button
                                   className="btn-validate"
+                                  type="button"
                                   onClick={() => {
+                                    if (!champsValidationComplets) {
+                                      alert('Veuillez renseigner la date et l\'heure du RDV, « Avec qui » et « Présence du couple » avant de valider.');
+                                      return;
+                                    }
                                     validateMutation.mutate({
                                       type_valid: `1${confRdvAvecValue ? '-' + confRdvAvecValue : ''}`,
                                       conf_rdv_avec: confRdvAvecValue || null,
                                       conf_presence_couple: confPresenceCoupleValue || null
                                     });
                                   }}
-                                  disabled={validateMutation.isLoading}
+                                  disabled={validateMutation.isLoading || !champsValidationComplets}
                                   title="Valider la fiche confirmée"
                                 >
                                   {validateMutation.isLoading ? 'Validation...' : 'Valider la fiche'}
