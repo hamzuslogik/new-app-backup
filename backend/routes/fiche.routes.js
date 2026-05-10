@@ -6553,6 +6553,98 @@ router.get('/:id/modifica', authenticate, hashToIdMiddleware, async (req, res) =
     
     console.log('Modifications trouvées:', modificaList.length);
     console.log('Première modification (exemple):', modificaList[0]);
+
+    // Enrichir : résoudre les IDs (utilisateurs, centre, état, produit) en libellés lisibles
+    try {
+      const USER_FIELDS = new Set([
+        'id_agent', 'id_commercial', 'id_commercial_2',
+        'id_confirmateur', 'id_confirmateur_2', 'id_confirmateur_3',
+        'id_user', 'id_qualite'
+      ]);
+      const CENTRE_FIELDS = new Set(['id_centre']);
+      const ETAT_FIELDS = new Set(['id_etat_final', 'id_sous_etat']);
+      const PRODUIT_FIELDS = new Set(['produit']);
+
+      const collectIds = (set) => {
+        const ids = new Set();
+        for (const m of modificaList) {
+          if (!set.has(m.type)) continue;
+          [m.ancien_valeur, m.nouvelle_valeur].forEach((v) => {
+            if (v == null) return;
+            const s = String(v).trim();
+            if (s === '' || s === '0') return;
+            if (/^\d+$/.test(s)) ids.add(parseInt(s, 10));
+          });
+        }
+        return Array.from(ids);
+      };
+
+      const userIds = collectIds(USER_FIELDS);
+      const centreIds = collectIds(CENTRE_FIELDS);
+      const etatIds = collectIds(ETAT_FIELDS);
+      const produitIds = collectIds(PRODUIT_FIELDS);
+
+      const userMap = new Map();
+      const centreMap = new Map();
+      const etatMap = new Map();
+      const produitMap = new Map();
+
+      if (userIds.length > 0) {
+        const placeholders = userIds.map(() => '?').join(',');
+        const rows = await query(
+          `SELECT id, pseudo FROM utilisateurs WHERE id IN (${placeholders})`,
+          userIds
+        );
+        rows.forEach((r) => userMap.set(String(r.id), r.pseudo));
+      }
+      if (centreIds.length > 0) {
+        const placeholders = centreIds.map(() => '?').join(',');
+        const rows = await query(
+          `SELECT id, titre FROM centres WHERE id IN (${placeholders})`,
+          centreIds
+        );
+        rows.forEach((r) => centreMap.set(String(r.id), r.titre));
+      }
+      if (etatIds.length > 0) {
+        const placeholders = etatIds.map(() => '?').join(',');
+        const rows = await query(
+          `SELECT id, titre FROM etats WHERE id IN (${placeholders})`,
+          etatIds
+        );
+        rows.forEach((r) => etatMap.set(String(r.id), r.titre));
+      }
+      if (produitIds.length > 0) {
+        const placeholders = produitIds.map(() => '?').join(',');
+        try {
+          const rows = await query(
+            `SELECT id, nom FROM produits WHERE id IN (${placeholders})`,
+            produitIds
+          );
+          rows.forEach((r) => produitMap.set(String(r.id), r.nom));
+        } catch (e) { /* table peut ne pas exister */ }
+      }
+
+      const labelFor = (type, val) => {
+        if (val == null) return null;
+        const s = String(val).trim();
+        if (s === '' || s === '0') return null;
+        if (USER_FIELDS.has(type)) return userMap.get(s) || null;
+        if (CENTRE_FIELDS.has(type)) return centreMap.get(s) || null;
+        if (ETAT_FIELDS.has(type)) return etatMap.get(s) || null;
+        if (PRODUIT_FIELDS.has(type)) return produitMap.get(s) || null;
+        return null;
+      };
+
+      modificaList = modificaList.map((m) => ({
+        ...m,
+        ancien_valeur_label: labelFor(m.type, m.ancien_valeur),
+        nouvelle_valeur_label: labelFor(m.type, m.nouvelle_valeur),
+      }));
+    } catch (enrichErr) {
+      console.error('Erreur enrichissement modifica:', enrichErr);
+      // ne pas bloquer la réponse
+    }
+
     res.json({ success: true, data: modificaList });
   } catch (error) {
     console.error('Erreur lors de la récupération des modifications:', error);

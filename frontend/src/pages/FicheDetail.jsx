@@ -7529,10 +7529,79 @@ function modificaTypeLabel(type) {
   return MODIFICA_TYPE_LABELS[type] || String(type);
 }
 
-function modificaValueDisplay(val) {
+const MODIFICA_DATE_FIELDS = new Set([
+  'date_rdv_time', 'date_appel_time', 'date_appel',
+  'date_rappel_time', 'date_sign_time', 'date_modif_time',
+  'date_insert_time', 'date_creation'
+]);
+
+const MODIFICA_BOOLEAN_FIELDS = new Set([
+  'rdv_urgent', 'is_urgent', 'rdv_seul', 'archive', 'ko', 'hc'
+]);
+
+// Formate n'importe quelle valeur de date (ISO "2026-05-11 09:00:00",
+// JS Date.toString() "Mon May 11 2026 09:30:00 GMT+0000 (...)", ou ISO "2026-05-11T09:00:00.000Z")
+// en "JJ/MM/AAAA HH:MM" sans dépendre du fuseau horaire local.
+function formatModificaDate(val) {
   if (val == null) return '-';
   const s = String(val).trim();
   if (s === '') return '-';
+
+  // ISO "YYYY-MM-DD HH:MM[:SS]" ou "YYYY-MM-DDTHH:MM[:SS]"
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})/);
+  if (m) {
+    const [, y, mo, d, h, mi] = m;
+    return `${d}/${mo}/${y} ${h.padStart(2, '0')}:${mi}`;
+  }
+  // Date au format JS "Mon May 11 2026 09:30:00 GMT+0000 (...)"
+  if (/^[A-Za-z]{3}\s+[A-Za-z]{3}\s+\d{1,2}\s+\d{4}/.test(s)) {
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) {
+      const dd = String(dt.getUTCDate()).padStart(2, '0');
+      const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+      const yy = dt.getUTCFullYear();
+      const hh = String(dt.getUTCHours()).padStart(2, '0');
+      const mn = String(dt.getUTCMinutes()).padStart(2, '0');
+      return `${dd}/${mm}/${yy} ${hh}:${mn}`;
+    }
+  }
+  // Date seule "YYYY-MM-DD"
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) {
+    const [, y, mo, d] = m;
+    return `${d}/${mo}/${y}`;
+  }
+  return s;
+}
+
+function modificaValueDisplay(val, type, label) {
+  if (val == null) return '-';
+  const s = String(val).trim();
+  if (s === '') return '-';
+
+  // Affectations / état / produit / centre : le backend fournit un libellé
+  if (label != null && String(label).trim() !== '') {
+    return String(label).toUpperCase();
+  }
+
+  // Champs de date
+  if (type && MODIFICA_DATE_FIELDS.has(type)) {
+    return formatModificaDate(s);
+  }
+
+  // Champs booléens
+  if (type && MODIFICA_BOOLEAN_FIELDS.has(type)) {
+    if (s === '0') return 'Non';
+    if (s === '1') return 'Oui';
+  }
+
+  // Cas particulier : champ "validation" (string "Valider"/"Non Valider")
+  if (type === 'valider' || type === 'validation') {
+    if (s === '0') return 'Non Valider';
+    if (s === '1') return 'Valider';
+  }
+
+  // Comportement par défaut conservé
   if (s === '0') return 'Non';
   if (s === '1') return 'Oui';
   return s;
@@ -7610,8 +7679,8 @@ const ModificaTab = ({ ficheHash }) => {
                 <td>{mod.date_modif_time ? new Date(mod.date_modif_time).toLocaleString('fr-FR') : '-'}</td>
                 <td>{mod.user_pseudo || '-'}</td>
                 <td>{modificaTypeLabel(mod.type)}</td>
-                <td className="modifica-value">{modificaValueDisplay(mod.ancien_valeur)}</td>
-                <td className="modifica-value">{modificaValueDisplay(mod.nouvelle_valeur)}</td>
+                <td className="modifica-value">{modificaValueDisplay(mod.ancien_valeur, mod.type, mod.ancien_valeur_label)}</td>
+                <td className="modifica-value">{modificaValueDisplay(mod.nouvelle_valeur, mod.type, mod.nouvelle_valeur_label)}</td>
               </tr>
             ))}
           </tbody>
