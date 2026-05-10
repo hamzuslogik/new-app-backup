@@ -791,6 +791,52 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   background: rgb(156, 191, 200) !important;
 }
 
+/* Créneau : libellé court (9H) plus grand, détail entre parenthèses plus petit + retour à la ligne */
+.availability-view table.availability-table tbody td.time-slot-header.planning-time-slot-label {
+  text-align: center !important;
+  padding: 8px 6px !important;
+  vertical-align: middle !important;
+}
+
+.availability-view table.availability-table tbody td.time-slot-header.planning-time-slot-label .time-slot-header-main {
+  display: block;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  line-height: 1.15 !important;
+}
+
+.availability-view table.availability-table tbody td.time-slot-header.planning-time-slot-label .time-slot-header-sub {
+  display: block;
+  font-size: 0.62rem !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  margin-top: 4px !important;
+  white-space: normal !important;
+  max-width: 9rem;
+}
+
+.planning-view table.planning-table tbody td.time-slot-header.planning-time-slot-label {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.planning-view table.planning-table tbody td.time-slot-header.planning-time-slot-label .time-slot-header-main {
+  display: block;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  line-height: 1.15 !important;
+}
+
+.planning-view table.planning-table tbody td.time-slot-header.planning-time-slot-label .time-slot-header-sub {
+  display: block;
+  font-size: 0.62rem !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  margin-top: 4px !important;
+  white-space: normal !important;
+  max-width: 9rem;
+}
+
 .day-header {
   display: flex;
   flex-direction: column;

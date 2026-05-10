@@ -9,6 +9,7 @@ import { useRouteParams } from '../contexts/RouteParamsContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
+import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
 import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, format, addMonths } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
 import './FicheDetail.css';
@@ -8246,9 +8247,13 @@ const PlanningViewForModal = ({
           <tbody>
             {timeSlots.map(slot => {
               const timeKey = hourToTimeKey(slot.hour);
+              const { main: slotMain, sub: slotSub } = splitSlotDisplayName(slot.name);
               return (
                 <tr key={slot.hour}>
-                  <td className="time-slot-header" style={{ fontSize: '36px', fontWeight: 900, textAlign: 'center', lineHeight: 1 }}>{slot.name}</td>
+                  <td className="time-slot-header planning-time-slot-label">
+                    <span className="time-slot-header-main">{slotMain}</span>
+                    {slotSub ? <span className="time-slot-header-sub">{slotSub}</span> : null}
+                  </td>
                   {days.map(day => {
                     // Le planning est structuré comme planning[date].time[timeKey]
                     const dayPlanning = planning?.[day.date]?.time?.[timeKey];
@@ -8452,7 +8457,7 @@ const PlanningViewForModal = ({
                                     fontSize: '16px'
                                   }}
                                 >
-                                  {`DEP ${dep || '-'} : ${totalRdvInSlot}/${displayAvailability}`}
+                                  {`${totalRdvInSlot}/${displayAvailability}`}
                                 </span>
                               </div>
                               {hasR2Placed && (

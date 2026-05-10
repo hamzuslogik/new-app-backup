@@ -3969,6 +3969,19 @@ body.dashboard-page {
   text-align: center !important;
 }
 
+.fiche-detail-modal-content .planning-tab .planning-table td.planning-time-slot-label .time-slot-header-main {
+  font-size: 26px !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+}
+
+.fiche-detail-modal-content .planning-tab .planning-table td.planning-time-slot-label .time-slot-header-sub {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  margin-top: 3px !important;
+}
+
 .fiche-detail-modal-content .planning-tab .availability-input {
   width: 45px !important;
   min-width: 45px !important;

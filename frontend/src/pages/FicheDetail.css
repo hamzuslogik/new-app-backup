@@ -950,6 +950,22 @@
   text-align: center !important;
 }
 
+.planning-tab .planning-table td.planning-time-slot-label .time-slot-header-main {
+  display: block !important;
+  font-size: 36px !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+}
+
+.planning-tab .planning-table td.planning-time-slot-label .time-slot-header-sub {
+  display: block !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  margin-top: 4px !important;
+  white-space: normal !important;
+}
+
 .rdv-count-only {
   position: absolute;
   top: 5px;

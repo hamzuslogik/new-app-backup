@@ -11,6 +11,7 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './Planning.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -677,11 +678,15 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
             {timeSlots.map(slot => {
               // Calculer le timeKey directement à partir de l'heure pour éviter les problèmes de fuseau horaire
               const timeKey = hourToTimeKey(slot.hour);
+              const { main: slotMain, sub: slotSub } = splitSlotDisplayName(slot.name);
               // Capturer isAdmin dans la portée de cette fonction map
               const userIsAdmin = isAdmin;
               return (
                 <tr key={slot.hour}>
-                  <td className="time-slot-header">{slot.name}</td>
+                  <td className="time-slot-header planning-time-slot-label">
+                    <span className="time-slot-header-main">{slotMain}</span>
+                    {slotSub ? <span className="time-slot-header-sub">{slotSub}</span> : null}
+                  </td>
                   {days.map(day => {
                     const dayPlanning = planning[day.date]?.time?.[timeKey];
                     const rdvs = dayPlanning?.planning || [];
@@ -786,7 +791,7 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
 
 // Composant pour la vue Disponibilité
 const AvailabilityView = ({ availability, planning, days, timeSlots, week, year, dep, onUpdate, canEdit, onToggleClosed, isAdmin }) => {
-  // Couleur de fond du rectangle pour "DEP xx : rdv/total"
+  // Couleur de fond du rectangle pour « rdv/total » (badge disponibilité)
   // Rouge: blindé/surplus, Jaune: partiel, Vert: aucun RDV
   const getAvailabilityBadgeBgColor = (rdvCount, totalAvailability) => {
     if (rdvCount <= 0) return '#4caf50'; // Vert
@@ -941,9 +946,17 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
             </tr>
           </thead>
           <tbody>
-            {timeSlots.map(slot => (
+            {timeSlots.map(slot => {
+              const { main: slotMain, sub: slotSub } = splitSlotDisplayName(slot.name);
+              return (
               <tr key={slot.hour}>
-                <td className="time-slot-header" style={{ color: '#ffffff', backgroundColor: 'rgb(156, 191, 200)' }}>{slot.name}</td>
+                <td
+                  className="time-slot-header planning-time-slot-label"
+                  style={{ color: '#ffffff', backgroundColor: 'rgb(156, 191, 200)' }}
+                >
+                  <span className="time-slot-header-main">{slotMain}</span>
+                  {slotSub ? <span className="time-slot-header-sub">{slotSub}</span> : null}
+                </td>
                   {days.map(day => {
                   const cellKey = `${day.date}-${slot.hour}`;
                   const isEditing = editingCell === cellKey;
@@ -992,7 +1005,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                               fontSize: '14px'
                             }}
                           >
-                            {`DEP ${dep || '-'} : ${rdvCount}/${currentValue ?? '-'}`}
+                            {`${rdvCount}/${currentValue ?? '-'}`}
                           </span>
                         </span>
                       </span>
@@ -1108,7 +1121,8 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                   );
                 })}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
