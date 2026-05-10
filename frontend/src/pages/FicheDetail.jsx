@@ -688,11 +688,10 @@ const FicheDetail = ({
   // États pour le formulaire de validation
   const [confRdvAvecValue, setConfRdvAvecValue] = useState('');
   const [confPresenceCoupleValue, setConfPresenceCoupleValue] = useState('');
-  const [showValidationCardForm, setShowValidationCardForm] = useState(false);
-  const [validationRdvDate, setValidationRdvDate] = useState('');
-  const [validationRdvTime, setValidationRdvTime] = useState('');
   // Édition inline de Date RDV dans le bloc « État Actuel CONFIRMER »
   const [dateRdvInlineEdit, setDateRdvInlineEdit] = useState('');
+  // Liste déroulante de validation RDV (état actuel CONFIRMER)
+  const [validationDropdownOpen, setValidationDropdownOpen] = useState(false);
   const [showHistorique, setShowHistorique] = useState(false); // État pour contrôler l'affichage de l'historique
   const historiqueEtatsAnchorRef = useRef(null);
   /** Évite de régénérer le PDF plusieurs fois pour la même URL ?tab=pdf */
@@ -916,16 +915,6 @@ const FicheDetail = ({
     setConfFormData(buildConfFormStateFromFiche(ficheData, user));
     confFormHydratePendingRef.current = false;
   }, [selectedEtat, ficheData, user]);
-
-  useEffect(() => {
-    if (!ficheData?.date_rdv_time) return;
-    const raw = String(ficheData.date_rdv_time);
-    const normalized = raw.includes('T') ? raw.replace('T', ' ') : raw;
-    const [datePart, timePart] = normalized.split(' ');
-    const hhmm = (timePart || '').slice(0, 5);
-    if (datePart) setValidationRdvDate(datePart);
-    if (hhmm) setValidationRdvTime(hhmm);
-  }, [ficheData?.date_rdv_time]);
 
   // Modal (ex. menu contextuel dashboard) : onglet Fiches, historique des états déplié, scroll vers la section
   useEffect(() => {
@@ -3593,14 +3582,6 @@ const FicheDetail = ({
                 return hist;
               })();
 
-              const champsValidationComplets =
-                Boolean(
-                  String(validationRdvDate || '').trim() &&
-                  String(validationRdvTime || '').trim() &&
-                  String(confRdvAvecValue || '').trim() &&
-                  String(confPresenceCoupleValue || '').trim()
-                );
-
               const dateCreationEtatActuel = (lastHisto && lastHisto.id_etat === fiche.id_etat_final) ? lastHisto.date_creation : (fiche.date_modif_time || fiche.date_insert_time || null);
               
               // Construire l'objet état actuel à partir des données de la fiche
@@ -4002,143 +3983,147 @@ const FicheDetail = ({
                       )}
 
                       {fiche.id_etat_final === 7 && hasPermission('fiche_validate') && (
-                        <div style={{
-                          marginTop: '16px',
-                          padding: '14px',
-                          background: '#f8f9fa',
-                          border: '2px solid #000',
-                          borderRadius: '6px'
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                            <strong>Validation de la fiche</strong>
-                            <button
-                              type="button"
-                              className="btn-validate"
-                              onClick={() => setShowValidationCardForm((prev) => !prev)}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                            >
-                              <FaCheck />
-                              {showValidationCardForm ? 'Masquer' : 'Valider'}
-                            </button>
-                          </div>
+                        <div style={{ marginTop: '16px', position: 'relative', display: 'inline-block' }}>
+                          <button
+                            type="button"
+                            onClick={() => setValidationDropdownOpen((prev) => !prev)}
+                            disabled={validateMutation.isLoading}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '10px 18px',
+                              background: '#16a34a',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontWeight: 700,
+                              fontSize: '15px',
+                              cursor: validateMutation.isLoading ? 'wait' : 'pointer',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                            }}
+                            title="Validation RDV"
+                          >
+                            <FaCheck />
+                            <span>Validation RDV</span>
+                            <FaChevronDown size={12} />
+                          </button>
 
-                          {showValidationCardForm && (
-                            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  <label htmlFor="validation_rdv_date_inline" style={{ fontWeight: 600, fontSize: '13px' }}>Date RDV *</label>
-                                  <input
-                                    id="validation_rdv_date_inline"
-                                    type="date"
-                                    required
-                                    value={validationRdvDate || ''}
-                                    onChange={(e) => setValidationRdvDate(e.target.value)}
-                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                  />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  <label htmlFor="validation_rdv_time_inline" style={{ fontWeight: 600, fontSize: '13px' }}>Heure RDV *</label>
-                                  <input
-                                    id="validation_rdv_time_inline"
-                                    type="time"
-                                    required
-                                    value={validationRdvTime || ''}
-                                    onChange={(e) => setValidationRdvTime(e.target.value)}
-                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                  />
-                                </div>
-                              </div>
-
-                              <button
-                                type="button"
-                                className="btn-save"
-                                disabled={updateFieldMutation.isLoading || !validationRdvDate || !validationRdvTime}
-                                onClick={async () => {
-                                  try {
-                                    await updateFieldMutation.mutateAsync({
-                                      field: 'date_rdv_time',
-                                      value: `${validationRdvDate} ${validationRdvTime}:00`
-                                    });
-                                    alert('Heure du RDV mise à jour avec succès');
-                                  } catch (err) {
-                                    // Erreur déjà gérée par la mutation
-                                  }
+                          {validationDropdownOpen && (
+                            <>
+                              <div
+                                onClick={() => setValidationDropdownOpen(false)}
+                                style={{
+                                  position: 'fixed',
+                                  inset: 0,
+                                  zIndex: 99,
+                                  background: 'transparent',
+                                }}
+                              />
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: 'calc(100% + 6px)',
+                                  left: 0,
+                                  background: '#ffffff',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '8px',
+                                  minWidth: '240px',
+                                  boxShadow: '0 6px 18px rgba(0,0,0,0.14)',
+                                  zIndex: 100,
+                                  overflow: 'hidden',
                                 }}
                               >
-                                {updateFieldMutation.isLoading ? 'Mise à jour...' : 'Enregistrer heure RDV'}
-                              </button>
-
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <label htmlFor="conf_rdv_avec_validation_inline" style={{ fontWeight: 600, fontSize: '13px' }}>
-                                  Avec qui le RDV a-t-il été validé ? *
-                                </label>
-                                <select
-                                  id="conf_rdv_avec_validation_inline"
-                                  required
-                                  value={confRdvAvecValue || ''}
-                                  onChange={(e) => setConfRdvAvecValue(e.target.value)}
-                                  style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                >
-                                  <option value="">Sélectionner...</option>
-                                  <option value="MR">Mr</option>
-                                  <option value="MME">Mme</option>
-                                  <option value="MR et MME">Mr et Mme</option>
-                                </select>
-                              </div>
-
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <label htmlFor="conf_presence_couple_validation_inline" style={{ fontWeight: '600', fontSize: '13px' }}>
-                                  Présence du couple *
-                                </label>
-                                <select
-                                  id="conf_presence_couple_validation_inline"
-                                  required
-                                  value={confPresenceCoupleValue || ''}
-                                  onChange={(e) => setConfPresenceCoupleValue(e.target.value)}
-                                  style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                >
-                                  <option value="">Sélectionner...</option>
-                                  <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
-                                  <option value="MME SEULE SANS MR">MME SEULE SANS MR</option>
-                                  <option value="MR SEUL SANS MME">MR SEUL SANS MME</option>
-                                </select>
-                              </div>
-
-                              {fiche.valider > 0 ? (
+                                {fiche.valider > 0 && (
+                                  <button
+                                    type="button"
+                                    disabled={validateMutation.isLoading}
+                                    onClick={() => {
+                                      if (window.confirm('Annuler la validation de cette fiche ?')) {
+                                        validateMutation.mutate({
+                                          type_valid: '0',
+                                          conf_rdv_avec: null,
+                                          conf_presence_couple: null,
+                                        });
+                                        setValidationDropdownOpen(false);
+                                      }
+                                    }}
+                                    style={{
+                                      display: 'block',
+                                      width: '100%',
+                                      padding: '12px 16px',
+                                      textAlign: 'left',
+                                      background: 'transparent',
+                                      border: 'none',
+                                      borderBottom: '1px solid #e5e7eb',
+                                      cursor: validateMutation.isLoading ? 'wait' : 'pointer',
+                                      fontSize: '14px',
+                                      fontWeight: 600,
+                                      color: '#111827',
+                                    }}
+                                  >
+                                    NON VALIDER
+                                  </button>
+                                )}
                                 <button
-                                  className="btn-validate cancel"
-                                  onClick={() => {
-                                    if (window.confirm('Voulez-vous annuler la validation de cette fiche ?')) {
-                                      validateMutation.mutate({ type_valid: '0' });
-                                    }
-                                  }}
-                                  disabled={validateMutation.isLoading}
-                                  title="Annuler la validation"
-                                >
-                                  Annuler la validation
-                                </button>
-                              ) : (
-                                <button
-                                  className="btn-validate"
                                   type="button"
+                                  disabled={validateMutation.isLoading}
                                   onClick={() => {
-                                    if (!champsValidationComplets) {
-                                      alert('Veuillez renseigner la date et l\'heure du RDV, « Avec qui » et « Présence du couple » avant de valider.');
-                                      return;
+                                    if (window.confirm('Valider le RDV avec MR ?')) {
+                                      validateMutation.mutate({
+                                        type_valid: '1-MR',
+                                        conf_rdv_avec: 'MR',
+                                        conf_presence_couple: null,
+                                      });
+                                      setValidationDropdownOpen(false);
                                     }
-                                    validateMutation.mutate({
-                                      type_valid: `1${confRdvAvecValue ? '-' + confRdvAvecValue : ''}`,
-                                      conf_rdv_avec: confRdvAvecValue || null,
-                                      conf_presence_couple: confPresenceCoupleValue || null
-                                    });
                                   }}
-                                  disabled={validateMutation.isLoading || !champsValidationComplets}
-                                  title="Valider la fiche confirmée"
+                                  style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    textAlign: 'left',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderBottom: '1px solid #e5e7eb',
+                                    cursor: validateMutation.isLoading ? 'wait' : 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    color: '#111827',
+                                  }}
                                 >
-                                  {validateMutation.isLoading ? 'Validation...' : 'Valider la fiche'}
+                                  VALIDÉ AVEC MR
                                 </button>
-                              )}
-                            </div>
+                                <button
+                                  type="button"
+                                  disabled={validateMutation.isLoading}
+                                  onClick={() => {
+                                    if (window.confirm('Valider le RDV avec MME ?')) {
+                                      validateMutation.mutate({
+                                        type_valid: '1-MME',
+                                        conf_rdv_avec: 'MME',
+                                        conf_presence_couple: null,
+                                      });
+                                      setValidationDropdownOpen(false);
+                                    }
+                                  }}
+                                  style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    textAlign: 'left',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: validateMutation.isLoading ? 'wait' : 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    color: '#111827',
+                                  }}
+                                >
+                                  VALIDÉ AVEC MME
+                                </button>
+                              </div>
+                            </>
                           )}
                         </div>
                       )}
