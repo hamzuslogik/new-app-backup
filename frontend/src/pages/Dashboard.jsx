@@ -725,6 +725,26 @@ const Dashboard = () => {
     }));
   };
 
+  /** À la sélection d’un champ de date : plage par défaut = jour courant, 00:00 → 23:59 */
+  const handleDateChampChange = (value) => {
+    setFilters((prev) => {
+      const next = { ...prev, date_champ: value, page: 1 };
+      if (value) {
+        const { dateStr, timeStart, timeEnd } = getTodayDateRange();
+        next.date_debut = dateStr;
+        next.date_fin = dateStr;
+        next.time_debut = timeStart;
+        next.time_fin = timeEnd;
+      } else {
+        next.date_debut = '';
+        next.date_fin = '';
+        next.time_debut = '';
+        next.time_fin = '';
+      }
+      return next;
+    });
+  };
+
   const handlePageChange = (newPage) => {
     handleFilterChange('page', newPage);
   };
@@ -1568,7 +1588,7 @@ const Dashboard = () => {
                   <label>Champ de date</label>
                   <select
                     value={filters.date_champ || ''}
-                    onChange={(e) => handleFilterChange('date_champ', e.target.value)}
+                    onChange={(e) => handleDateChampChange(e.target.value)}
                   >
                     <option value="">Sélectionnez date</option>
                     <option value="date_modif_time">Date Modification</option>
@@ -2399,7 +2419,7 @@ const Dashboard = () => {
                   <label>Champ de date</label>
                   <select
                     value={filters.date_champ || ''}
-                    onChange={(e) => handleFilterChange('date_champ', e.target.value)}
+                    onChange={(e) => handleDateChampChange(e.target.value)}
                   >
                     <option value="">Sélectionnez date</option>
                     <option value="date_modif_time">Date Modification</option>
