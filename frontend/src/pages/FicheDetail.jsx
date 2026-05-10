@@ -83,7 +83,7 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
       style: {
         ...bold,
         color: '#15803d',
-        border: '2px solid #15803d',
+        border: '4px solid #15803d',
         borderRadius: '6px',
         padding: '2px 8px',
         display: 'inline-block',
@@ -3884,15 +3884,21 @@ const FicheDetail = ({
                                         data-confirmer-hl={hi?.dataHl || undefined}
                                         style={{
                                           ...hi?.style,
-                                          padding: '6px 10px',
+                                          padding: '6px 14px',
                                           fontSize: '17px',
                                           fontWeight: 800,
                                           display: 'inline-flex',
                                           alignItems: 'center',
-                                          gap: '10px',
+                                          gap: '12px',
+                                          whiteSpace: 'nowrap',
+                                          flexWrap: 'nowrap',
+                                          wordBreak: 'keep-all',
+                                          maxWidth: 'none',
                                         }}
                                       >
-                                        <span>{formatRdvDateOnly(etatActuel.date_rdv_time)}</span>
+                                        <span style={{ whiteSpace: 'nowrap' }}>
+                                          {formatRdvDateOnly(etatActuel.date_rdv_time)}
+                                        </span>
                                         <input
                                           type="time"
                                           disabled={updateFieldMutation.isLoading}
