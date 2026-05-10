@@ -3615,6 +3615,9 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
 
     // Récupérer "Validé par qui" pour fiches confirmées et validées (dernière validation avec valider=1)
     let validateur_pseudo = null;
+    let validation_date_time = null;
+    let validation_conf_rdv_avec = null;
+    let validation_conf_presence_couple = null;
     if (fiche.id_etat_final === 7 && fiche.valider > 0) {
       try {
         const tableExists = await queryOne(
@@ -3622,7 +3625,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         );
         if (tableExists && tableExists.c > 0) {
           const lastValid = await queryOne(
-            `SELECT u.pseudo 
+            `SELECT u.pseudo, v.date_valider_time, v.conf_rdv_avec, v.conf_presence_couple
              FROM validations v
              LEFT JOIN utilisateurs u ON v.id_user = u.id
              WHERE v.id_fiche = ? AND v.valider = 1
@@ -3630,6 +3633,9 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
             [id]
           );
           if (lastValid && lastValid.pseudo) validateur_pseudo = lastValid.pseudo;
+          if (lastValid && lastValid.date_valider_time) validation_date_time = lastValid.date_valider_time;
+          if (lastValid && lastValid.conf_rdv_avec) validation_conf_rdv_avec = lastValid.conf_rdv_avec;
+          if (lastValid && lastValid.conf_presence_couple) validation_conf_presence_couple = lastValid.conf_presence_couple;
         }
       } catch (e) { console.log('Erreur validateur:', e.message); }
     }
@@ -3665,6 +3671,9 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       produit_color: produit?.color || null,
       qualification_code: qualification_code || null,
       validateur_pseudo: validateur_pseudo,
+      validation_date_time: validation_date_time,
+      validation_conf_rdv_avec: validation_conf_rdv_avec,
+      validation_conf_presence_couple: validation_conf_presence_couple,
       confirmateurs_from_histo
     };
 
