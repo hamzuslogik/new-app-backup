@@ -3204,6 +3204,91 @@ body.dashboard-page {
   box-sizing: border-box !important;
 }
 
+/* Centrer les champs du bloc « Changer l'état » dans le modal */
+.fiche-detail-modal-content .etat-change-section .section-title {
+  text-align: center !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .etat-change-form {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group {
+  max-width: min(100%, 440px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .form-row {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  max-width: min(100%, 440px) !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group label {
+  text-align: center !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .confirmation-form {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  max-width: min(100%, 580px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .confirmation-form h3 {
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .nrp-form,
+.fiche-detail-modal-content .etat-change-section .etat-form {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  max-width: min(100%, 480px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 100% !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .nrp-form h3,
+.fiche-detail-modal-content .etat-change-section .etat-form > h3 {
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .nrp-form .form-group,
+.fiche-detail-modal-content .etat-change-section .etat-form .form-group {
+  width: 100% !important;
+  max-width: 440px !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .nrp-form .form-group label,
+.fiche-detail-modal-content .etat-change-section .etat-form .form-group label {
+  text-align: center !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .etat-form .form-row {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  max-width: min(100%, 440px) !important;
+  justify-content: center !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .form-actions {
+  justify-content: center !important;
+}
+
 /* Assurer que les textareas de commentaire passent à la ligne - règles renforcées */
 .fiche-detail-modal-content textarea.form-control,
 .fiche-detail-modal-content textarea,
