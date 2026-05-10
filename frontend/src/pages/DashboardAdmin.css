@@ -2040,8 +2040,8 @@ body.dashboard-admin-page {
   padding: 8px !important;
   margin: 0 !important;
   max-width: 100% !important;
-  font-size: 14px !important;
-  line-height: 0.9 !important;
+  font-size: 15px !important;
+  line-height: 1.25 !important;
   overflow: visible !important; /* Pas de scroll interne */
   flex: 1 1 auto !important;
   min-height: auto !important;
@@ -2109,8 +2109,8 @@ body.dashboard-admin-page {
 .fiche-detail-modal-content .field-value,
 .fiche-detail-modal-content .field-actions {
   padding: 0 2px !important;
-  font-size: 13px !important;
-  line-height: 0.9 !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
   font-weight: 600 !important;
@@ -2158,7 +2158,7 @@ body.dashboard-admin-page {
 }
 
 .fiche-detail-modal-content .field-value {
-  font-size: 13px !important;
+  font-size: 14px !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
   white-space: normal !important;
@@ -2169,7 +2169,7 @@ body.dashboard-admin-page {
 .fiche-detail-modal-content .field-display {
   padding: 0 !important;
   line-height: 1.4 !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   margin: 0 !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
@@ -2218,7 +2218,7 @@ body.dashboard-admin-page {
 
 .fiche-detail-modal-content .fiche-details-table tr {
   border-bottom: 1.5px solid #8a8a8a;
-  line-height: 0.4 !important;
+  line-height: 1.35 !important;
   margin: 0 !important;
   padding: 0 !important;
   height: auto !important;
@@ -2227,16 +2227,16 @@ body.dashboard-admin-page {
 }
 
 .fiche-detail-modal-content .fiche-details-table td {
-  line-height: 0.4 !important;
+  line-height: 1.35 !important;
   margin: 0 !important;
-  padding: 0 2px !important;
+  padding: 2px 4px !important;
   vertical-align: middle !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr {
   height: auto !important;
   min-height: 0 !important;
-  max-height: 8px !important;
+  max-height: none !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table tbody tr td {
@@ -2291,8 +2291,8 @@ body.dashboard-admin-page {
   text-align: center !important;
   padding: 10px 12px !important;
   padding-bottom: 10px !important;
-  font-size: 19px !important;
-  line-height: 1.0 !important;
+  font-size: 20px !important;
+  line-height: 1.15 !important;
   font-weight: 700 !important;
   background-color: #000000 !important;
   color: white !important;
@@ -2359,6 +2359,23 @@ body.dashboard-admin-page {
   box-sizing: border-box !important;
 }
 
+/* LibellÃ©s de champs (Nouvel Ã©tat, dÃ©calage, compte rendu, etc.) */
+.fiche-detail-modal-content .form-group > label,
+.fiche-detail-modal-content .etat-change-form label,
+.fiche-detail-modal-content .decalage-form .form-group label,
+.fiche-detail-modal-content .compte-rendu-form label,
+.fiche-detail-modal-content .nrp-form .form-group label,
+.fiche-detail-modal-content .etat-form .form-group label,
+.fiche-detail-modal-content .sms-form .form-group label {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.fiche-detail-modal-content .confirmation-form .rdv-form-table td:first-child,
+.fiche-detail-modal-content .confirmation-form .rdv-form-table td:first-child label {
+  font-size: 14px !important;
+}
+
 /* Assurer que tous les champs de texte dans le modal passent Ã  la ligne */
 .fiche-detail-modal-content .form-control,
 .fiche-detail-modal-content textarea,
@@ -2376,7 +2393,16 @@ body.dashboard-admin-page {
   overflow-x: hidden !important;
   min-width: 0 !important;
   word-break: break-word !important;
-  font-size: 12.5px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.fiche-detail-modal-content select.form-control,
+.fiche-detail-modal-content .fiche-detail select,
+.fiche-detail-modal-content input[type="date"],
+.fiche-detail-modal-content input[type="time"],
+.fiche-detail-modal-content input[type="datetime-local"] {
+  font-size: 14px !important;
   font-weight: 600 !important;
 }
 
