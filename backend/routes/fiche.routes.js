@@ -65,6 +65,61 @@ function chunkArray(arr, size) {
 }
 
 /**
+ * Filtre Département(s) / CP : valeurs séparées par des virgules (OU).
+ * - Code postal complet : 4 ou 5 chiffres → égalité sur CP normalisé (espaces/tirets retirés, 4 chiffres → 0 devant).
+ * - Département métropole : 2 chiffres → préfixe CP sur 2 caractères.
+ * - Département DOM (971, 972, …) : 3 chiffres → préfixe CP sur 3 caractères.
+ * @param {string[]} whereConditions
+ * @param {any[]} params
+ * @param {string} cpRaw
+ */
+function appendCpDepartementFilter(whereConditions, params, cpRaw) {
+  const tokens = String(cpRaw || '')
+    .split(',')
+    .map((d) => d.trim())
+    .filter((d) => d.length > 0);
+  if (tokens.length === 0) return;
+
+  const cpNorm = "REPLACE(REPLACE(TRIM(fiche.cp), ' ', ''), '-', '')";
+
+  const orParts = [];
+  const orParams = [];
+
+  for (const token of tokens) {
+    const digits = token.replace(/\D/g, '');
+
+    if (digits.length === 5 || digits.length === 4) {
+      const cp5 = digits.length === 4 ? `0${digits}` : digits;
+      orParts.push(`${cpNorm} = ?`);
+      orParams.push(cp5);
+      continue;
+    }
+
+    if (digits.length === 3) {
+      orParts.push(`SUBSTRING(${cpNorm}, 1, 3) = ?`);
+      orParams.push(digits);
+      continue;
+    }
+
+    if (digits.length === 2) {
+      orParts.push(`SUBSTRING(${cpNorm}, 1, 2) = ?`);
+      orParams.push(digits);
+      continue;
+    }
+
+    const t = token.trim().toUpperCase();
+    if (t.length === 2 && /^[0-9A-Z]{2}$/.test(t)) {
+      orParts.push(`SUBSTRING(${cpNorm}, 1, 2) = ?`);
+      orParams.push(t);
+    }
+  }
+
+  if (orParts.length === 0) return;
+  whereConditions.push(`(${orParts.join(' OR ')})`);
+  params.push(...orParams);
+}
+
+/**
  * Confirmateur : lignes fiches_histo (plage date_creation) dont l’auteur est userId,
  * et qui sont la dernière ligne globale de la fiche (pas de fh2 avec même id_fiche et id > fh.id).
  * includeMultiSlot : si true, la ligne peut être « signée » par userId en id_confirmateur, _2 ou _3 (case Dashboard).
@@ -1003,19 +1058,7 @@ router.get('/', authenticate, async (req, res) => {
       params.push(telSearch, telSearch, telSearch);
     }
     if (cp) {
-      // Support de plusieurs départements séparés par des virgules
-      const departements = cp.split(',').map(d => d.trim()).filter(d => d.length > 0);
-      if (departements.length > 0) {
-        if (departements.length === 1) {
-          // Un seul département
-          whereConditions.push('SUBSTRING(fiche.cp, 1, 2) = ?');
-          params.push(departements[0]);
-        } else {
-          // Plusieurs départements
-          whereConditions.push(`SUBSTRING(fiche.cp, 1, 2) IN (${departements.map(() => '?').join(',')})`);
-          params.push(...departements);
-        }
-      }
+      appendCpDepartementFilter(whereConditions, params, cp);
     }
     if (produit) {
       const produits = Array.isArray(produit) ? produit : [produit];
@@ -1910,19 +1953,7 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
 
     // Filtrer par code postal (département)
     if (cp) {
-      // Support de plusieurs départements séparés par des virgules
-      const departements = cp.split(',').map(d => d.trim()).filter(d => d.length > 0);
-      if (departements.length > 0) {
-        if (departements.length === 1) {
-          // Un seul département
-          whereConditions.push('SUBSTRING(fiche.cp, 1, 2) = ?');
-          params.push(departements[0]);
-        } else {
-          // Plusieurs départements
-          whereConditions.push(`SUBSTRING(fiche.cp, 1, 2) IN (${departements.map(() => '?').join(',')})`);
-          params.push(...departements);
-        }
-      }
+      appendCpDepartementFilter(whereConditions, params, cp);
     }
 
     const whereClause = whereConditions.join(' AND ');

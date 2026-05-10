@@ -1526,12 +1526,12 @@ const Dashboard = () => {
                 {/* Département */}
                 {(user?.fonction !== 5 && user?.fonction !== 6 && user?.fonction !== 3) && (
                   <div className="form-group">
-                    <label>Département(s)</label>
+                    <label>Département(s) / code postal</label>
                     <input
                       type="text"
                       value={filters.cp || ''}
                       onChange={(e) => handleFilterChange('cp', e.target.value)}
-                      placeholder="Département(s) (ex: 75 ou 75,13,69)"
+                      placeholder="Ex. 75, 75001, 971 — plusieurs valeurs séparées par une virgule"
                     />
                   </div>
                 )}
@@ -2320,12 +2320,12 @@ const Dashboard = () => {
                 {/* Département */}
                 {(user?.fonction !== 5 && user?.fonction !== 6 && user?.fonction !== 3) && (
                   <div className="form-group">
-                    <label>Département(s)</label>
+                    <label>Département(s) / code postal</label>
                     <input
                       type="text"
                       value={filters.cp || ''}
                       onChange={(e) => handleFilterChange('cp', e.target.value)}
-                      placeholder="Département(s) (ex: 75 ou 75,13,69)"
+                      placeholder="Ex. 75, 75001, 971 — plusieurs valeurs séparées par une virgule"
                     />
                   </div>
                 )}
