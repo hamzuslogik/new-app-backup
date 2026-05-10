@@ -1155,33 +1155,34 @@
   width: 99%;
 }
 
+/* !important : surcharge .fiche-detail select.form-control { max-width: 220px !important } dans la zone changement d'état */
 .confirmation-form .rdv-form-table .form-control,
 .confirmation-form .rdv-form-table .autocomplete-input {
-  max-width: 160px;
+  max-width: 160px !important;
   width: 100%;
   box-sizing: border-box;
 }
 
 /* Date / heure RDV : alignés sur la colonne étroite (revenu, conso., etc.) */
 .confirmation-form .rdv-form-table input[type="date"].form-control {
-  max-width: 140px;
+  max-width: 140px !important;
 }
 
 .confirmation-form .rdv-form-table input[type="time"].form-control {
-  max-width: 96px;
+  max-width: 96px !important;
 }
 
 .confirmation-form .rdv-form-table input[type="datetime-local"].form-control {
-  max-width: 160px;
+  max-width: 160px !important;
 }
 
 .confirmation-form .rdv-form-table textarea.form-control {
-  max-width: 200px;
+  max-width: 200px !important;
   min-width: 0;
 }
 
 .confirmation-form .rdv-form-table .autocomplete-wrap {
-  max-width: 160px;
+  max-width: 160px !important;
 }
 
 .form-row {
@@ -1913,27 +1914,27 @@
   .confirmation-form .rdv-form-table input[type="date"].form-control,
   .confirmation-form .rdv-form-table input[type="time"].form-control,
   .confirmation-form .rdv-form-table input[type="datetime-local"].form-control {
-    max-width: 100%;
+    max-width: 100% !important;
   }
 
   .confirmation-form .rdv-form-table .autocomplete-wrap {
-    max-width: 100%;
+    max-width: 100% !important;
   }
 
   .rdv-modal .rdv-form .form-control,
   .rdv-modal .rdv-form .autocomplete-input,
   .rdv-modal .rdv-form textarea.form-control {
-    max-width: 100%;
+    max-width: 100% !important;
   }
 
   .rdv-modal .rdv-form input[type="date"].form-control,
   .rdv-modal .rdv-form input[type="time"].form-control,
   .rdv-modal .rdv-form input[type="datetime-local"].form-control {
-    max-width: 100%;
+    max-width: 100% !important;
   }
 
   .rdv-modal .rdv-form .autocomplete-wrap {
-    max-width: 100%;
+    max-width: 100% !important;
   }
 
   .rdv-etat-radio {
