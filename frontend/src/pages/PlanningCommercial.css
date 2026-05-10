@@ -1,7 +1,17 @@
+/* Même principe que dashboard-page : largeur mini pour tableau CRM pleine largeur */
+html.planning-commercial-page,
+body.planning-commercial-page {
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow-x: auto !important;
+}
+
 .planning-commercial {
   padding: 16px;
+  min-width: 0;
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: visible;
 }
 
 .planning-commercial-header {
@@ -291,16 +301,38 @@
   color: #666;
 }
 
-/* Tableau */
+/* Tableau — même logique que Dashboard (.dashboard-page .fiches-table) : largeur min 1400px, colonnes fixes */
+html.planning-commercial-page .planning-commercial .fiches-table-container,
+body.planning-commercial-page .planning-commercial .fiches-table-container {
+  min-width: 1400px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 16px;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table,
+body.planning-commercial-page .planning-commercial .fiches-table {
+  min-width: 1400px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  font-size: 11px;
+}
+
 .fiches-table-container {
   overflow-x: auto;
   margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .fiches-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
-  font-size: 11.9px;
+  font-size: 11px;
 }
 
 .fiches-table thead {
@@ -309,23 +341,127 @@
 }
 
 .fiches-table th {
-  padding: 9.6px;
+  padding: 6px 6.4px;
   text-align: left;
-  font-weight: 600;
+  font-weight: 800;
+  font-size: 10.2px;
   white-space: nowrap;
 }
 
 .fiches-table td {
-  padding: 9.6px;
+  padding: 5px 6.4px;
   border-bottom: 1px solid #eee;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+/* Ordre colonnes Planning Commercial : Date RDV, Nom, Prénom, Tél, CP, Ville, Commercial, Produit, État, Compte rendu, Centre, Actions */
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(1),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(1) {
+  min-width: 140px !important;
+  width: 140px !important;
+  max-width: 150px !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(2),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(2),
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(3),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(3) {
+  min-width: 0 !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(4),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(4) {
+  width: 108px !important;
+  min-width: 100px !important;
+  max-width: 116px !important;
+  white-space: nowrap !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(5),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(5) {
+  min-width: 52px !important;
+  width: 52px !important;
+  white-space: nowrap !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(6),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(6) {
+  min-width: 88px !important;
+  width: 100px !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(7),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(7) {
+  min-width: 110px !important;
+  width: 120px !important;
+  max-width: 130px !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(8),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(8) {
+  min-width: 56px !important;
+  width: 72px !important;
+  max-width: 80px !important;
+  white-space: normal !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(9),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(9) {
+  min-width: 140px !important;
+  width: 140px !important;
+  max-width: 160px !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.2 !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(10),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(10) {
+  min-width: 100px !important;
+  width: 112px !important;
+  max-width: 130px !important;
+  white-space: normal !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(11),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(11) {
+  min-width: 90px !important;
+  width: 100px !important;
+  max-width: 120px !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(12),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(12) {
+  min-width: 52px !important;
+  width: 72px !important;
+  max-width: 88px !important;
+  text-align: center !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(12) {
+  vertical-align: middle !important;
 }
 
 .fiches-table tbody tr:hover {
-  background: #f8f9fa;
+  background-color: #f5f5f5;
 }
 
 .fiches-table tbody tr:last-child td {
-  border-bottom: none;
+  border-bottom: 1px solid #eee;
 }
 
 /* Badges */
@@ -419,43 +555,14 @@
     font-size: 20.4px;
   }
 
-  .fiches-table {
+  /* Comme Dashboard : garder le tableau + défilement horizontal (pas de mode « cartes ») */
+  html.planning-commercial-page .planning-commercial .fiches-table {
     font-size: 10.2px;
   }
 
-  .fiches-table th,
-  .fiches-table td {
-    padding: 6.4px;
-  }
-
-  .fiches-table thead {
-    display: none;
-  }
-
-  .fiches-table tbody tr {
-    display: block;
-    margin-bottom: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 8px;
-  }
-
-  .fiches-table tbody td {
-    display: flex;
-    justify-content: space-between;
-    padding: 6.4px 0;
-    border-bottom: 1px solid #eee;
-  }
-
-  .fiches-table tbody td:last-child {
-    border-bottom: none;
-  }
-
-  .fiches-table tbody td::before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: #666;
-    margin-right: 8px;
+  html.planning-commercial-page .planning-commercial .fiches-table th,
+  html.planning-commercial-page .planning-commercial .fiches-table td {
+    padding: 5px 4px;
   }
 }
 
