@@ -7769,10 +7769,6 @@ const PlanningTab = ({
   const canEdit = user?.fonction === 1;
   /** RE confirmation (14), RP confirmation (13), backoffice (11) : lien dashboard par créneau */
   const sessionCanOpenSlotDashboard = [14, 13, 11].includes(Number(user?.fonction));
-  /** Sessions Administrateur (1), Backoffice (11), RP confirmation (13) :
-   *  pas d'affichage du compteur de disponibilité ni du « Cliquer pour créer »,
-   *  et désactivation de la création d'un RDV directement depuis le planning. */
-  const sessionRestricted = [1, 11, 13].includes(Number(user?.fonction));
   
   const { data: planningResponse, isLoading: isLoadingPlanning, refetch: refetchPlanning } = useQuery(
     ['planning-modal', planningWeek, planningYear, planningDep],
@@ -8016,7 +8012,6 @@ const PlanningTab = ({
             canEdit={canEdit}
             currentFicheHash={ficheHash}
             sessionCanOpenSlotDashboard={sessionCanOpenSlotDashboard}
-            sessionRestricted={sessionRestricted}
           />
         ) : (
           <div className="error">Aucun planning disponible pour le département {planningDep}</div>
@@ -8391,8 +8386,7 @@ const PlanningViewForModal = ({
   onUpdateAvailability,
   canEdit = false,
   currentFicheHash, // Le hash est passé mais on ne peut plus comparer par ID car il est masqué
-  sessionCanOpenSlotDashboard = false,
-  sessionRestricted = false
+  sessionCanOpenSlotDashboard = false
 }) => {
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
@@ -8620,10 +8614,10 @@ const PlanningViewForModal = ({
                         style={{ 
                           backgroundColor: isBlocked ? 'rgba(34, 45, 50, 0.8)' : 'transparent',
                           position: 'relative',
-                          cursor: !sessionRestricted && isAvailable ? 'pointer' : 'default',
-                          border: !sessionRestricted && isAvailable && !hasData ? '2px dashed #8BC34A' : 'none'
+                          cursor: isAvailable ? 'pointer' : 'default',
+                          border: isAvailable && !hasData ? '2px dashed #8BC34A' : 'none'
                         }}
-                        onClick={() => !sessionRestricted && !isEditing && isAvailable && onSelectSlot(day.date, slot.hour)}
+                        onClick={() => !isEditing && isAvailable && onSelectSlot(day.date, slot.hour)}
                         onDoubleClick={(e) => canEditThis && handleCellDoubleClick(day.date, slot.hour, e)}
                         title={
                           (() => {
@@ -8633,7 +8627,7 @@ const PlanningViewForModal = ({
                             if (isEditing) return 'Modifier la disponibilité';
                             const actionLabel = canEditThis && hasData
                               ? `Double-cliquer pour modifier la disponibilité (${day.dayName} à ${slot.name})`
-                              : (!sessionRestricted && isAvailable)
+                              : isAvailable
                               ? `Cliquer pour créer un rendez-vous le ${day.dayName} à ${slot.name}`
                               : isBlocked
                               ? 'Créneau bloqué'
@@ -8747,32 +8741,30 @@ const PlanningViewForModal = ({
                           </div>
                         ) : hasData ? (
                           <>
-                            {!sessionRestricted && (
-                              <div className="availability-info">
-                                <div className="availability-badge" style={{ backgroundColor: availabilityBadgeBgColor, boxShadow: 'none', padding: '2px 6px' }}>
-                                  <span
-                                    className="availability-text-compact"
-                                    style={{
-                                      color: '#000000',
-                                      WebkitTextFillColor: '#000000',
-                                      fontWeight: 900,
-                                      fontSize: '16px'
-                                    }}
-                                  >
-                                    {`${totalRdvInSlot}/${displayAvailability}`}
-                                  </span>
-                                </div>
-                                {hasR2Placed && (
-                                  <span
-                                    className="availability-r2-star"
-                                    title="R2 placé"
-                                    aria-label="R2 placé"
-                                  >
-                                    ★
-                                  </span>
-                                )}
+                            <div className="availability-info">
+                              <div className="availability-badge" style={{ backgroundColor: availabilityBadgeBgColor, boxShadow: 'none', padding: '2px 6px' }}>
+                                <span
+                                  className="availability-text-compact"
+                                  style={{
+                                    color: '#000000',
+                                    WebkitTextFillColor: '#000000',
+                                    fontWeight: 900,
+                                    fontSize: '16px'
+                                  }}
+                                >
+                                  {`${totalRdvInSlot}/${displayAvailability}`}
+                                </span>
                               </div>
-                            )}
+                              {hasR2Placed && (
+                                <span
+                                  className="availability-r2-star"
+                                  title="R2 placé"
+                                  aria-label="R2 placé"
+                                >
+                                  ★
+                                </span>
+                              )}
+                            </div>
                             {canEditThis && (
                               <div
                                 onClick={(e) => e.stopPropagation()}
@@ -8832,15 +8824,13 @@ const PlanningViewForModal = ({
                           </>
                         ) : isAvailable && !isBlocked ? (
                           <>
-                            {!sessionRestricted && (
-                              <div className="availability-info">
-                                <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
-                                  <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
-                                    Cliquer pour créer
-                                  </span>
-                                </div>
+                            <div className="availability-info">
+                              <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
+                                <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
+                                  Cliquer pour créer
+                                </span>
                               </div>
-                            )}
+                            </div>
                             {canEditThis && (
                               <div
                                 onClick={(e) => e.stopPropagation()}
