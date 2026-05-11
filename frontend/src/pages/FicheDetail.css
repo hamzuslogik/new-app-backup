@@ -761,16 +761,16 @@
 /* Appliquer les couleurs de planning-header à day-header-planning */
 /* Cibler tous les th sauf le premier (qui est "Heure") */
 .planning-table thead th:not(:first-child) {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
 }
 
 /* Alternative avec :has() pour plus de précision si supporté */
 .planning-table thead th:has(.day-header-planning) {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
 }
 
 .day-header-planning {
@@ -778,7 +778,7 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -786,7 +786,7 @@
 .day-header-planning *,
 .day-header-planning span,
 .day-header-planning div {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -794,21 +794,21 @@
 .planning-table th .day-header-planning,
 .planning-table th .day-header-planning *,
 .planning-table th .day-header-planning span {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
   background: transparent !important;
   background-color: transparent !important;
 }
 
 /* Appliquer les couleurs de planning-header au th avec "Heure" */
 .planning-table thead th:first-child {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
-  color: var(--label-color, #065F46) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
+  color: #ffffff !important;
 }
 
 .planning-table thead th:first-child * {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
 }
 
 .availability-info {

@@ -284,35 +284,35 @@ table.production-table th,
 
 /* Appliquer les couleurs de planning-header */
 .planning-table thead th:first-child {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
-  color: var(--label-color, #065F46) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
+  color: #ffffff !important;
 }
 
 .planning-table thead th:first-child * {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
 }
 
 /* Appliquer le background aux th contenant day-header-planning */
 /* Cibler tous les th sauf le premier (qui est "Heure") */
 .planning-table thead th:not(:first-child) {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
 }
 
 /* Alternative avec :has() pour plus de précision si supporté */
 .planning-table thead th:has(.day-header-planning) {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
 }
 
 .planning-table .day-header-planning {
   background: transparent !important;
   background-color: transparent !important;
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
 }
 
 .planning-table .day-header-planning *,
@@ -321,7 +321,7 @@ table.production-table th,
 .planning-table th .day-header-planning,
 .planning-table th .day-header-planning *,
 .planning-table th .day-header-planning span {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -356,7 +356,7 @@ table.availability-table thead th *,
 .availability-table thead th *,
 table.availability-table th *,
 .availability-table th * {
-  background: #9cbfc8 !important;
+  background: #1b1e24 !important;
   color: #ffffff !important;
 }
 

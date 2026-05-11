@@ -1869,10 +1869,10 @@ body.dashboard-admin-page {
   min-width: 0 !important;
   padding: 6px 8px !important;
   font-size: 11px !important;
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
-  color: var(--label-color, #065F46) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
+  color: #ffffff !important;
 }
 
 /* Sur mobile, permettre aux colonnes de garder leur taille naturelle */
@@ -1882,36 +1882,36 @@ body.dashboard-admin-page {
 
 /* S'assurer que les th contenant day-header-planning ont le background */
 .fiche-detail-modal-content .planning-table thead th:not(:first-child) {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
 }
 
 /* Th avec "Heure" - Appliquer les couleurs de planning-header */
 .fiche-detail-modal-content .planning-table thead th:first-child {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
-  color: var(--label-color, #065F46) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
+  color: #ffffff !important;
 }
 
 /* day-header-planning - Appliquer les couleurs de planning-header */
 .fiche-detail-modal-content .planning-table thead th:has(.day-header-planning) {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
 }
 
 .fiche-detail-modal-content .planning-table .day-header-planning {
   background: transparent !important;
   background-color: transparent !important;
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
 }
 
 .fiche-detail-modal-content .planning-table .day-header-planning *,
 .fiche-detail-modal-content .planning-table .day-header-planning span,
 .fiche-detail-modal-content .planning-table .day-header-planning div {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
   background: transparent !important;
   background-color: transparent !important;
 }

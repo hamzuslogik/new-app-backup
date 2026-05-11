@@ -379,23 +379,23 @@
 /* Appliquer les couleurs de planning-header à day-header-planning */
 /* Cibler tous les th sauf le premier (qui est "Heure") */
 .planning-table thead th:not(:first-child) {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
 }
 
 /* Alternative avec :has() pour plus de précision si supporté */
 .planning-table thead th:has(.day-header-planning) {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
 }
 
 .day-header-planning {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -403,7 +403,7 @@
 .day-header-planning *,
 .day-header-planning span,
 .day-header-planning div {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -420,7 +420,7 @@
 .planning-table th .day-header-planning,
 .planning-table th .day-header-planning *,
 .planning-table th .day-header-planning span {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -435,14 +435,14 @@
 
 /* Appliquer les couleurs de planning-header au th avec "Heure" */
 .planning-table thead th:first-child {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
-  color: var(--label-color, #065F46) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
+  color: #ffffff !important;
 }
 
 .planning-table thead th:first-child * {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
 }
 
 /* Appliquer les couleurs de planning-header aux time-slot-header */
@@ -670,12 +670,12 @@
 }
 
 .availability-table thead {
-  background: #9cbfc8 !important;
+  background: #1b1e24 !important;
   color: #ffffff !important;
 }
 
 .availability-table thead th {
-  background: #9cbfc8 !important;
+  background: #1b1e24 !important;
   color: #ffffff !important;
   font-weight: 800;
   font-size: 11.9px;
@@ -683,7 +683,7 @@
 }
 
 .availability-table th {
-  background: #9cbfc8 !important;
+  background: #1b1e24 !important;
   color: #ffffff !important;
   font-weight: 800;
   font-size: 11.9px;
@@ -706,7 +706,7 @@
 .availability-table th::before,
 .availability-table th::after {
   color: #ffffff !important;
-  background-color: #9cbfc8 !important;
+  background-color: #1b1e24 !important;
 }
 
 /* Forcer le texte blanc pour les time-slot-header dans availability-table */
