@@ -4317,26 +4317,37 @@ const FicheDetail = ({
                             return (
                               <div
                                 key={histo.id}
-                                className="historique-item"
+                                className="historique-item etat-historique-card"
                                 style={{
-                                  borderLeft: `4px solid ${histo.etat_color || '#3498db'}`,
-                                  padding: '15px',
-                                  marginBottom: '15px',
-                                  backgroundColor: '#f9f9f9',
-                                  borderRadius: '4px'
+                                  maxWidth: '760px',
+                                  margin: '0 auto 15px auto',
+                                  backgroundColor: '#3a3a3a',
+                                  color: '#ffffff',
+                                  fontWeight: 'bold',
+                                  borderRadius: '8px',
+                                  overflow: 'hidden',
+                                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                                  border: '1px solid rgba(0,0,0,0.25)'
                                 }}
                               >
-                                <div className="historique-header" style={{ marginBottom: '10px' }}>
+                                <div
+                                  className="historique-header"
+                                  style={{
+                                    backgroundColor: histo.etat_color || '#3498db',
+                                    color: histo.etat_color === '#ffffff' || histo.etat_color === '#fff' ? '#000000' : '#ffffff',
+                                    padding: '8px 14px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                                     <span
                                       className="historique-etat"
                                       style={{
-                                        backgroundColor: histo.etat_color || '#3498db',
-                                        color: histo.etat_color === '#ffffff' || histo.etat_color === '#fff' ? '#000' : '#fff',
-                                        padding: '5px 15px',
-                                        borderRadius: '4px',
+                                        color: histo.etat_color === '#ffffff' || histo.etat_color === '#fff' ? '#000000' : '#ffffff',
                                         fontWeight: 'bold',
-                                        fontSize: '14px'
+                                        fontSize: '15px',
+                                        textTransform: 'uppercase',
+                                        flex: '0 1 auto'
                                       }}
                                     >
                                       {histo.from_compte_rendu && (
@@ -4347,10 +4358,10 @@ const FicheDetail = ({
                                     {histo.sous_etat_titre && (
                                       <span
                                         style={{
-                                          padding: '4px 10px',
+                                          padding: '3px 9px',
                                           borderRadius: '4px',
-                                          backgroundColor: '#e0e0e0',
-                                          color: '#333',
+                                          backgroundColor: 'rgba(255,255,255,0.22)',
+                                          color: histo.etat_color === '#ffffff' || histo.etat_color === '#fff' ? '#000000' : '#ffffff',
                                           fontSize: '12px',
                                           fontWeight: 'bold'
                                         }}
@@ -4358,14 +4369,22 @@ const FicheDetail = ({
                                         {histo.sous_etat_titre}
                                       </span>
                                     )}
-                                    <span className="historique-date" style={{ color: '#666', fontSize: '13px', marginLeft: 'auto' }}>
+                                    <span
+                                      className="historique-date"
+                                      style={{
+                                        color: histo.etat_color === '#ffffff' || histo.etat_color === '#fff' ? '#000000' : '#ffffff',
+                                        fontSize: '13px',
+                                        marginLeft: 'auto',
+                                        fontWeight: 'bold'
+                                      }}
+                                    >
                                       {histo.date_creation ? new Date(histo.date_creation).toLocaleString('fr-FR') : '-'}
                                     </span>
                                   </div>
                                 </div>
                                 
                                 {detailItems.length > 0 && (
-                                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #ddd', fontSize: '13px' }}>
+                                  <div style={{ padding: '15px', fontSize: '13px', color: '#ffffff' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                       {detailItems.map((item, idx) => {
                                         const hi = getConfirmerDetailHighlight(
@@ -4374,12 +4393,16 @@ const FicheDetail = ({
                                           item.label
                                         );
                                         return (
-                                          <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
-                                            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                              <strong>{item.label}:</strong>{' '}
+                                          <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff', fontWeight: 'bold' }}>
+                                            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ffffff' }}>
+                                              <strong style={{ color: '#ffffff', fontWeight: 'bold' }}>{item.label}:</strong>{' '}
                                               <span
                                                 className={hi?.className}
-                                                style={hi?.style}
+                                                style={{
+                                                  color: '#ffffff',
+                                                  fontWeight: 'bold',
+                                                  ...(hi?.style || {}),
+                                                }}
                                                 data-confirmer-hl={hi?.dataHl || undefined}
                                               >
                                                 {item.value || '-'}

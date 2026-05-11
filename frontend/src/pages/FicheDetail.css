@@ -2269,3 +2269,44 @@
   -webkit-text-fill-color: initial;
 }
 
+/* Historique : même rendu sombre que la carte État Actuel */
+.etat-historique-card,
+.etat-historique-card p,
+.etat-historique-card strong,
+.etat-historique-card b,
+.etat-historique-card div,
+.etat-historique-card span,
+.etat-historique-card a {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.etat-historique-card strong,
+.etat-historique-card b {
+  font-weight: 700 !important;
+}
+
+/* L'en-tête de chaque historique garde la couleur de l'état. */
+.etat-historique-card .historique-header,
+.etat-historique-card .historique-header * {
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+/* Conserver les couleurs particulières dans les historiques CONFIRMER. */
+.etat-historique-card span[data-confirmer-hl='rdv'],
+.etat-historique-card span.fiche-detail-etat-confirmer-val--rdv {
+  color: #15803d !important;
+  -webkit-text-fill-color: #15803d !important;
+}
+.etat-historique-card span[data-confirmer-hl='commercial'],
+.etat-historique-card span.fiche-detail-etat-confirmer-val--commercial {
+  color: #1d4ed8 !important;
+  -webkit-text-fill-color: #1d4ed8 !important;
+}
+.etat-historique-card span[data-confirmer-hl='confirmateur'],
+.etat-historique-card span.fiche-detail-etat-confirmer-val--confirmateur {
+  color: #b91c1c !important;
+  -webkit-text-fill-color: #b91c1c !important;
+}
+
