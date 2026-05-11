@@ -2874,9 +2874,14 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
     ];
     const params = [];
 
-    // Pour les confirmateurs (fonction 6) et RE Confirmation (fonction 14) : voir toutes les fiches à valider (pas de filtre par confirmateur)
-    // Les admins (1, 2, 7) voient également tout.
+    // Confirmateurs (fonction 6) : ne voient que les fiches où ils sont assignés
+    //   (id_confirmateur, id_confirmateur_2 ou id_confirmateur_3).
+    // RE Confirmation (14), Admins (1, 2, 7), Backoffice (11) : voient tout.
     console.log(`[Validation RDV] User fonction: ${req.user.fonction}, User ID: ${req.user.id}`);
+    if (Number(req.user.fonction) === 6) {
+      whereConditions.push('(f.id_confirmateur = ? OR f.id_confirmateur_2 = ? OR f.id_confirmateur_3 = ?)');
+      params.push(req.user.id, req.user.id, req.user.id);
+    }
 
     // Filtrer par validation
     if (valider !== undefined && valider !== '') {

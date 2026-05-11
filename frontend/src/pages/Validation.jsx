@@ -224,7 +224,6 @@ const Validation = () => {
             <table className="fiches-table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Nom</th>
                   <th>Prénom</th>
                   <th className="detail-column">Téléphone</th>
@@ -232,7 +231,6 @@ const Validation = () => {
                   <th className="detail-column">Ville</th>
                   <th>Produit</th>
                   <th>Date RDV</th>
-                  <th className="detail-column">Commercial</th>
                   <th className="detail-column">Confirmateur(s)</th>
                   <th>Statut</th>
                   <th>Actions</th>
@@ -247,7 +245,6 @@ const Validation = () => {
                   
                   return (
                     <tr key={fiche.id}>
-                      <td>{fiche.id}</td>
                       <td>{fiche.nom || '-'}</td>
                       <td>{fiche.prenom || '-'}</td>
                       <td className="detail-column">{fiche.tel || '-'}</td>
@@ -262,7 +259,6 @@ const Validation = () => {
                         </span>
                       </td>
                       <td>{`${formatRdvDateOnly(fiche.date_rdv_time)} ${formatRdvTimeOnly(fiche.date_rdv_time)}`.trim()}</td>
-                      <td className="detail-column">{fiche.commercial_pseudo || '-'}</td>
                       <td className="detail-column">{confirmateurs.join(', ') || '-'}</td>
                       <td>
                         {fiche.valider === 1 ? (
