@@ -2220,3 +2220,52 @@
   }
 }
 
+/* =====================================================
+   Carte « État Actuel » : fond gris foncé + texte blanc gras.
+   Force la couleur sur l'ensemble du contenu, sauf les éléments
+   qui portent déjà une couleur fonctionnelle (badge état, Date RDV
+   en vert, etc.). Utilise !important car React n'autorise pas
+   !important dans les styles inline.
+   ===================================================== */
+.etat-actuel-card,
+.etat-actuel-card h4,
+.etat-actuel-card p,
+.etat-actuel-card strong,
+.etat-actuel-card b,
+.etat-actuel-card div,
+.etat-actuel-card span,
+.etat-actuel-card a {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.etat-actuel-card h4,
+.etat-actuel-card strong,
+.etat-actuel-card b {
+  font-weight: 700 !important;
+}
+
+/* Conserver les couleurs particulières (highlight CONFIRMER) */
+.etat-actuel-card span[data-confirmer-hl='rdv'],
+.etat-actuel-card span.fiche-detail-etat-confirmer-val--rdv {
+  color: #15803d !important;
+  -webkit-text-fill-color: #15803d !important;
+}
+.etat-actuel-card span[data-confirmer-hl='commercial'],
+.etat-actuel-card span.fiche-detail-etat-confirmer-val--commercial {
+  color: #1d4ed8 !important;
+  -webkit-text-fill-color: #1d4ed8 !important;
+}
+.etat-actuel-card span[data-confirmer-hl='confirmateur'],
+.etat-actuel-card span.fiche-detail-etat-confirmer-val--confirmateur {
+  color: #b91c1c !important;
+  -webkit-text-fill-color: #b91c1c !important;
+}
+
+/* Boutons internes (Modifier, Valider, etc.) : laisser leur couleur propre */
+.etat-actuel-card button,
+.etat-actuel-card button * {
+  color: inherit;
+  -webkit-text-fill-color: initial;
+}
+
