@@ -547,7 +547,7 @@ const KPIs = () => {
           <div className="kpi-section">
             <h2 className="section-title">Statistiques Porte ouverte</h2>
             <p className="section-description" style={{ marginBottom: '1rem', color: '#555' }}>
-              Comptes rendus approuvés avec une qualification « porte ouverte » (Honoré à suivre, Refuser, Signer, Hors cible confirmateur, HHC technique, etc.), par date d&apos;approbation.
+              Comptes rendus approuvés avec une qualification « porte ouverte » (Honoré à suivre, Refuser, Signer, Hors cible confirmateur, HHC technique, etc.), par date de visite.
             </p>
             <div className="kpi-cards metrics">
               <div className="kpi-card conversion-rate">
@@ -648,7 +648,7 @@ const KPIs = () => {
                     <th>État</th>
                     <th>Commercial</th>
                     <th>Approbateur</th>
-                    <th>Date approbation</th>
+                    <th>Date de visite</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -671,7 +671,7 @@ const KPIs = () => {
                         <td>{row.etat_titre || `État #${row.id_etat_final}`}</td>
                         <td>{row.commercial_pseudo || '-'}</td>
                         <td>{row.approbateur_pseudo || '-'}</td>
-                        <td>{row.date_approbation || row.date_creation || '-'}</td>
+                        <td>{row.date_visite || row.date_approbation || row.date_creation || '-'}</td>
                       </tr>
                     ))
                   )}

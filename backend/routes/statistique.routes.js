@@ -2649,14 +2649,16 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
       const prevStartDt = `${previousStart} 00:00:00`;
       const prevEndDt = `${previousEnd} 23:59:59`;
 
+      // NB : on filtre désormais par date de visite (f.date_rdv_time) au lieu de
+      // la date d'approbation du compte rendu.
       const totalSql = `
         SELECT
           COUNT(*) AS total_lignes,
           COUNT(DISTINCT po.id_fiche) AS total_fiches
         FROM porte_ouverte po
         INNER JOIN fiches f ON f.id = po.id_fiche
-        WHERE COALESCE(po.date_approbation, po.date_creation) >= ?
-          AND COALESCE(po.date_approbation, po.date_creation) <= ?
+        WHERE f.date_rdv_time >= ?
+          AND f.date_rdv_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
           ${centreCondition}
       `;
@@ -2670,8 +2672,8 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
         FROM porte_ouverte po
         INNER JOIN fiches f ON f.id = po.id_fiche
         LEFT JOIN etats e ON e.id = po.id_etat_final
-        WHERE COALESCE(po.date_approbation, po.date_creation) >= ?
-          AND COALESCE(po.date_approbation, po.date_creation) <= ?
+        WHERE f.date_rdv_time >= ?
+          AND f.date_rdv_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
           ${centreCondition}
         GROUP BY po.id_etat_final, e.titre
@@ -2690,6 +2692,7 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
           f.tel,
           f.cp,
           f.ville,
+          f.date_rdv_time AS date_visite,
           c.titre AS centre_titre,
           uc.pseudo AS commercial_pseudo,
           ua.pseudo AS approbateur_pseudo,
@@ -2701,11 +2704,11 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
         LEFT JOIN etats e ON e.id = po.id_etat_final
         LEFT JOIN utilisateurs uc ON uc.id = po.id_commercial
         LEFT JOIN utilisateurs ua ON ua.id = po.id_approbateur
-        WHERE COALESCE(po.date_approbation, po.date_creation) >= ?
-          AND COALESCE(po.date_approbation, po.date_creation) <= ?
+        WHERE f.date_rdv_time >= ?
+          AND f.date_rdv_time <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
           ${centreCondition}
-        ORDER BY COALESCE(po.date_approbation, po.date_creation) DESC, po.id DESC
+        ORDER BY f.date_rdv_time DESC, po.id DESC
         LIMIT 500
       `;
       const detailRows = await query(detailsSql, baseParams(startDate, endDate));
@@ -2745,6 +2748,7 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
           centre_titre: r.centre_titre,
           commercial_pseudo: r.commercial_pseudo,
           approbateur_pseudo: r.approbateur_pseudo,
+          date_visite: r.date_visite,
           date_approbation: r.date_approbation,
           date_creation: r.date_creation,
         })),
