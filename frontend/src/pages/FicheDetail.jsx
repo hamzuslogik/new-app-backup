@@ -3326,6 +3326,32 @@ const FicheDetail = ({
           >
             {/* Fonction réutilisable pour afficher les détails selon l'état */}
             {(() => {
+              const SIGNER_ETAT_IDS = [13, 16, 44, 45];
+              const isEtatSigner = (id) => SIGNER_ETAT_IDS.includes(Number(id));
+              const cleanObservationCQ = (value) => {
+                if (value == null) return '';
+                return String(value)
+                  .split(/\r?\n/)
+                  .map((line) => {
+                    const normalized = line
+                      .trim()
+                      .toLowerCase()
+                      .normalize('NFD')
+                      .replace(/[\u0300-\u036f]/g, '');
+                    if (
+                      normalized.startsWith('cq etat') ||
+                      normalized.startsWith('cq dossier') ||
+                      normalized.startsWith('controle qualite')
+                    ) {
+                      const observationOnly = line.match(/observations?\s*:?\s*(.*)$/i)?.[1]?.trim();
+                      return observationOnly || '';
+                    }
+                    return line.replace(/^\s*observations?\s*:?\s*/i, '');
+                  })
+                  .filter((line) => String(line).trim() !== '')
+                  .join('\n')
+                  .trim();
+              };
               const renderEtatDetails = (etatData) => {
                 const etatId = etatData.id_etat;
                 const confirmateursList = [
@@ -3471,7 +3497,7 @@ const FicheDetail = ({
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // SIGNER, SIGNER RETRACTER, SIGNER COMPLET, SIGNER PM (13, 16, 45, 44) - Phase 3
-                else if ([13, 16, 45, 44].includes(etatId)) {
+                else if (isEtatSigner(etatId)) {
                   if (etatData.sous_etat_titre) items.push({ label: 'SOUS ETAT', value: etatData.sous_etat_titre });
                   if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurEtatListe });
                   // Signer/historique: priorité au commentaire enregistré dans fiches_histo (conf_commentaire_produit)
@@ -3505,10 +3531,11 @@ const FicheDetail = ({
                   if (etatData.ph3_nbr_annee_finance) items.push({ label: 'Nombre de mois du crédit', value: etatData.ph3_nbr_annee_finance });
                   if (etatData.ph3_alimentation) items.push({ label: 'Alimentation', value: etatData.ph3_alimentation });
                   if (etatData.date_sign_time) items.push({ label: 'DATE SIGNATURE', value: new Date(etatData.date_sign_time).toLocaleString('fr-FR') });
-                  // Contrôle qualité : affichage uniquement pour les états signer (actuel + historique)
+                  // Contrôle qualité : affichage uniquement pour les états signer (actuel + historique).
                   if (etatData.cq_etat) items.push({ label: 'CQ ETAT', value: etatData.cq_etat });
                   if (etatData.cq_dossier) items.push({ label: 'CQ DOSSIER', value: etatData.cq_dossier });
-                  if (etatData.observations_cq) items.push({ label: 'Observation', value: etatData.observations_cq, fullWidth: true });
+                  const observationCQ = cleanObservationCQ(etatData.observations_cq);
+                  if (observationCQ) items.push({ label: 'Observation', value: observationCQ, fullWidth: true });
                 }
                 // CONFIRMER (7) — afficher tous les champs conf_ remplis (non null) ; si entrée CR : commentaire commercial uniquement
                 else if (etatId === 7) {
@@ -4186,7 +4213,7 @@ const FicheDetail = ({
                       )}
 
                       {/* Contrôle Qualité (états signer : 13, 16, 44, 45) — intégré à la carte État actuel */}
-                      {[13, 16, 44, 45].includes(fiche.id_etat_final) && (
+                      {isEtatSigner(fiche.id_etat_final) && (
                         <div className="controle-qualite-card controle-qualite-card--embedded">
                           <div className="controle-qualite-card__header">CONTROLE QUALITE:</div>
                           <div className="controle-qualite-card__body">
@@ -4195,7 +4222,9 @@ const FicheDetail = ({
                             const form = cqFormByHash[ficheHash] || {};
                             const vCqEtat = form.cq_etat !== undefined ? form.cq_etat : String(fiche.cq_etat ?? '');
                             const vCqDossier = form.cq_dossier !== undefined ? form.cq_dossier : String(fiche.cq_dossier ?? '');
-                            const vObs = form.observations !== undefined ? form.observations : String(fiche.observations_cq ?? '');
+                            const vObs = form.observations !== undefined
+                              ? cleanObservationCQ(form.observations)
+                              : cleanObservationCQ(fiche.observations_cq);
                             return (
                               <>
                                 <div className="controle-qualite-row">
@@ -4253,7 +4282,7 @@ const FicheDetail = ({
                                     onClick={() => controleQualiteMutation.mutate({
                                       cq_etat: vCqEtat || null,
                                       cq_dossier: vCqDossier || null,
-                                      observations_cq: vObs || null
+                                      observations_cq: cleanObservationCQ(vObs) || null
                                     })}
                                   >
                                     {controleQualiteMutation.isLoading ? 'Enregistrement...' : 'VALIDER'}

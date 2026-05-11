@@ -4405,6 +4405,32 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
 
 // Contrôle Qualité : enregistrer CQ ETAT, CQ DOSSIER et OBSERVATIONS (états signer uniquement)
 // Utilise le champ dédié observations_cq (pas commentaire_qualite)
+function cleanObservationCQ(value) {
+  if (value === undefined || value === null) return null;
+  const cleaned = String(value)
+    .split(/\r?\n/)
+    .map((line) => {
+      const normalized = line
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+      if (
+        normalized.startsWith('cq etat') ||
+        normalized.startsWith('cq dossier') ||
+        normalized.startsWith('controle qualite')
+      ) {
+        const observationOnly = line.match(/observations?\s*:?\s*(.*)$/i)?.[1]?.trim();
+        return observationOnly || '';
+      }
+      return line.replace(/^\s*observations?\s*:?\s*/i, '');
+    })
+    .filter((line) => String(line).trim() !== '')
+    .join('\n')
+    .trim();
+  return cleaned || null;
+}
+
 router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
@@ -4417,7 +4443,7 @@ router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req
 
     // États signer : 13, 16, 44, 45
     const etatsSigner = [13, 16, 44, 45];
-    if (!etatsSigner.includes(fiche.id_etat_final)) {
+    if (!etatsSigner.includes(Number(fiche.id_etat_final))) {
       return res.status(400).json({
         success: false,
         message: 'Le contrôle qualité n\'est disponible que pour les fiches en état signé (SIGNER, SIGNER RETRACTER, SIGNER PM, SIGNER COMPLET)'
@@ -4427,7 +4453,7 @@ router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const cqEtatVal = cq_etat !== undefined && cq_etat !== '' ? parseInt(cq_etat) || null : fiche.cq_etat;
     const cqDossierVal = cq_dossier !== undefined && cq_dossier !== '' ? parseInt(cq_dossier) || null : fiche.cq_dossier;
-    const observationsVal = observations_cq !== undefined ? (observations_cq || null) : (fiche.observations_cq ?? null);
+    const observationsVal = observations_cq !== undefined ? cleanObservationCQ(observations_cq) : (fiche.observations_cq ?? null);
 
     await query(
       `UPDATE fiches SET cq_etat = ?, cq_dossier = ?, observations_cq = ?, date_modif_time = ? WHERE id = ?`,
