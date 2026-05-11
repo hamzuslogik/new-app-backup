@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
+import { useAuth } from '../contexts/AuthContext';
+import { getHomePage } from '../utils/getHomePage';
 import FicheDetail from '../pages/FicheDetail';
 
 const FicheDetailRoute = () => {
@@ -8,6 +10,7 @@ const FicheDetailRoute = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { openFicheDetail } = useFicheDetailModal();
+  const { user } = useAuth();
   const lastHandledRef = useRef('');
   const [isDirectAccess, setIsDirectAccess] = useState(false);
 
@@ -58,12 +61,15 @@ const FicheDetailRoute = () => {
           if (window.history.length > 1) {
             navigate(-1);
           } else {
-            navigate('/dashboard', { replace: true });
+            // Pas d'historique : revenir à la page d'accueil de l'utilisateur
+            // (commercial -> /planning-commercial) pour éviter "Accès refusé" sur /dashboard.
+            const home = getHomePage(user) || '/dashboard';
+            navigate(home, { replace: true });
           }
         }, 100);
       }
     }
-  }, [id, openFicheDetail, navigate, location.search]);
+  }, [id, openFicheDetail, navigate, location.search, user]);
 
   // Si accès direct (sans overlay=1), afficher la page FicheDetail directement (pas en modal)
   if (isDirectAccess && id) {

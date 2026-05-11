@@ -8,6 +8,7 @@ import { FaTimes } from 'react-icons/fa';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { getHomePage } from '../utils/getHomePage';
 import '../pages/Dashboard.css';
 
 const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
@@ -15,6 +16,8 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const previousPath = React.useRef(`${location.pathname}${location.search}`);
+  const userRef = React.useRef(user);
+  userRef.current = user;
   const modalContentRef = React.useRef(null);
   const isDirectAccess = React.useRef(false);
   const searchParams = new URLSearchParams(location.search);
@@ -98,7 +101,11 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
       if (!isDirectAccess.current && previousPath.current) {
         window.history.pushState(null, '', previousPath.current);
       } else if (isDirectAccess.current) {
-        navigate('/dashboard', { replace: true });
+        // Accès direct (URL /fiches/:id?overlay=...) : revenir à la page d'accueil
+        // de l'utilisateur (ex. commercial -> /planning-commercial) plutôt que
+        // /dashboard sur lequel certaines fonctions n'ont pas accès.
+        const home = getHomePage(userRef.current) || '/dashboard';
+        navigate(home, { replace: true });
       }
     };
   }, [navigate]);
