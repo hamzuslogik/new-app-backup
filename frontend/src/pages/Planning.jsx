@@ -1053,7 +1053,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                                 type="text"
                                 inputMode="numeric"
                                 pattern="[0-9]*"
-                                placeholder={String(currentValue ?? '')}
+                                placeholder=""
                                 value={isEditing ? editValue : ''}
                                 onFocus={() => {
                                   if (canEdit) {

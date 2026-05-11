@@ -8392,7 +8392,6 @@ const PlanningViewForModal = ({
   const [editValue, setEditValue] = useState('');
   const [editingDayTotal, setEditingDayTotal] = useState(null);
   const [dayTotalValue, setDayTotalValue] = useState('');
-  const [cellAvailabilityValues, setCellAvailabilityValues] = useState({});
   const [pendingAvailabilityEdits, setPendingAvailabilityEdits] = useState({});
   const alertBySlotAndDay = useMemo(() => {
     const map = {};
@@ -8404,26 +8403,7 @@ const PlanningViewForModal = ({
     });
     return map;
   }, [planningAlerts]);
-  
-  // Synchroniser le state local avec les données reçues
-  useEffect(() => {
-    if (planning && availability) {
-      const newValues = {};
-      days.forEach(day => {
-        timeSlots.forEach(slot => {
-          const dayPlanning = planning?.[day.date]?.time?.[hourToTimeKey(slot.hour)];
-          const availabilityFromPlanning = dayPlanning?.av ?? null;
-          const availData = availability?.[day.date]?.[slot.hour];
-          const availabilityCount = availabilityFromPlanning !== null ? availabilityFromPlanning : (availData?.nbr_com ?? null);
-          if (availabilityCount !== null && availabilityCount !== undefined) {
-            newValues[`${day.date}-${slot.hour}`] = availabilityCount;
-          }
-        });
-      });
-      setCellAvailabilityValues(newValues);
-    }
-  }, [planning, availability, days, timeSlots]);
-  
+
   const handleCellDoubleClick = (date, hour, e) => {
     e.stopPropagation();
     if (!canEdit) return;
@@ -8482,7 +8462,6 @@ const PlanningViewForModal = ({
     if (onUpdateAvailability) {
       onUpdateAvailability(date, hour, valueToSave, 'hour');
     }
-    setCellAvailabilityValues((prev) => ({ ...prev, [key]: valueToSave }));
     setPendingAvailabilityEdits((prev) => {
       const { [key]: _removed, ...rest } = prev;
       return rest;
@@ -8808,11 +8787,9 @@ const PlanningViewForModal = ({
                                   className="availability-input"
                                   value={pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined
                                     ? pendingAvailabilityEdits[`${day.date}-${slot.hour}`]
-                                    : (cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined
-                                      ? cellAvailabilityValues[`${day.date}-${slot.hour}`]
-                                      : '')}
+                                    : ''}
                                   onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, String(e.target.value || '').replace(/\D/g, ''))}
-                                  placeholder={availabilityCount !== null ? String(availabilityCount) : '-'}
+                                  placeholder=""
                                   title="Saisir la valeur puis cliquer sur Valider"
                                   style={{ width: '45px', minWidth: '45px', maxWidth: '45px', height: '27px', padding: '0 3px', fontSize: '13.5px', lineHeight: 1 }}
                                 />
@@ -8876,11 +8853,9 @@ const PlanningViewForModal = ({
                                   className="availability-input"
                                   value={pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined
                                     ? pendingAvailabilityEdits[`${day.date}-${slot.hour}`]
-                                    : (cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined
-                                      ? cellAvailabilityValues[`${day.date}-${slot.hour}`]
-                                      : '')}
+                                    : ''}
                                   onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, String(e.target.value || '').replace(/\D/g, ''))}
-                                  placeholder="-"
+                                  placeholder=""
                                   title="Saisir la valeur puis cliquer sur Valider"
                                   style={{ width: '45px', minWidth: '45px', maxWidth: '45px', height: '27px', padding: '0 3px', fontSize: '13.5px', lineHeight: 1 }}
                                 />
