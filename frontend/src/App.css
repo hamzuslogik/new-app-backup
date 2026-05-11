@@ -28,11 +28,16 @@ thead th:not(.planning-table th):not(.availability-table th):not(.production-tab
   color: #ffffff !important;
 }
 
-/* Planning table - en-têtes en blanc */
+/* Planning / availability table - en-têtes sombres avec texte blanc */
 .planning-table thead,
 .planning-table thead th,
 .availability-table thead,
-.availability-table thead th,
+.availability-table thead th {
+  background: #1b1e24 !important;
+  color: #ffffff !important;
+}
+
+/* Autres tableaux : conservent leur en-tête blanc */
 .production-table thead,
 .production-table thead th,
 .fiches-table thead,
@@ -54,7 +59,10 @@ thead th:not(.planning-table th):not(.availability-table th):not(.production-tab
 .availability-table thead *,
 .availability-table thead th *,
 .availability-table th,
-.availability-table th *,
+.availability-table th * {
+  color: #ffffff !important;
+}
+
 .production-table thead *,
 .production-table thead th *,
 .production-table th,

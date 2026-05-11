@@ -573,12 +573,12 @@
 }
 
 .planning-table thead {
-  background: #9cbfc8 !important;
+  background: #1b1e24 !important;
   color: #ffffff !important;
 }
 
 .planning-table thead th {
-  background: #9cbfc8 !important;
+  background: #1b1e24 !important;
   color: #ffffff !important;
   padding: 9.6px;
   text-align: center;
@@ -589,7 +589,7 @@
 }
 
 .planning-table th {
-  background: #9cbfc8 !important;
+  background: #1b1e24 !important;
   color: #ffffff !important;
   padding: 9.6px;
   text-align: center;
@@ -615,7 +615,7 @@
 .planning-table th::before,
 .planning-table th::after {
   color: #ffffff !important;
-  background-color: #9cbfc8 !important;
+  background-color: #1b1e24 !important;
 }
 
 .planning-view .planning-table tbody tr {

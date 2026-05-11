@@ -179,21 +179,21 @@
 }
 
 .planning-table thead {
-  background: var(--table-header-bg, #ECFDF5) !important;
-  color: var(--table-header-text, #064E3B) !important;
+  background: #1b1e24 !important;
+  color: #ffffff !important;
 }
 
 .planning-table thead th {
-  background: var(--table-header-bg, #ECFDF5) !important;
-  color: var(--table-header-text, #064E3B) !important;
+  background: #1b1e24 !important;
+  color: #ffffff !important;
   font-weight: bold;
   font-size: 11.9px;
   white-space: nowrap;
 }
 
 .planning-table th {
-  background: var(--table-header-bg, #ECFDF5) !important;
-  color: var(--table-header-text, #064E3B) !important;
+  background: #1b1e24 !important;
+  color: #ffffff !important;
   font-weight: bold;
   font-size: 11.9px;
   white-space: nowrap;
@@ -214,8 +214,8 @@
 .planning-table th div,
 .planning-table th::before,
 .planning-table th::after {
-  color: var(--table-header-text, #064E3B) !important;
-  background-color: var(--table-header-bg, #ECFDF5) !important;
+  color: #ffffff !important;
+  background-color: #1b1e24 !important;
 }
 
 .planning-table td {
