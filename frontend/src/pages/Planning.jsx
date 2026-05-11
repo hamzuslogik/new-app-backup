@@ -826,9 +826,8 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
     const availData = availability[date]?.[hour];
     const isClosed = availData?.is_closed === 1;
     if (isClosed) return; // Ne pas permettre l'édition si le créneau est fermé
-    const currentValue = availData?.nbr_com ?? 0; // null devient 0 pour l'édition
     setEditingCell(`${date}-${hour}`);
-    setEditValue(currentValue.toString());
+    setEditValue('');
   };
 
   const handleSave = (date, hour, type = 'hour') => {
@@ -1054,11 +1053,12 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                                 type="text"
                                 inputMode="numeric"
                                 pattern="[0-9]*"
-                                value={isEditing ? editValue : String(currentValue ?? '')}
+                                placeholder={String(currentValue ?? '')}
+                                value={isEditing ? editValue : ''}
                                 onFocus={() => {
                                   if (canEdit) {
                                     setEditingCell(cellKey);
-                                    setEditValue(String(currentValue ?? ''));
+                                    setEditValue('');
                                   }
                                 }}
                                 onChange={(e) => {

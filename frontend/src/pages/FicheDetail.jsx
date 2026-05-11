@@ -8431,9 +8431,8 @@ const PlanningViewForModal = ({
     const availData = availability?.[date]?.[hour];
     const isClosed = availData?.is_closed === 1;
     if (isClosed) return; // Ne pas permettre l'édition si le créneau est fermé
-    const currentValue = availData?.nbr_com ?? 0; // null devient 0 pour l'édition
     setEditingCell(`${date}-${hour}`);
-    setEditValue(currentValue.toString());
+    setEditValue('');
   };
   
   const handleSave = (date, hour) => {
@@ -8811,9 +8810,9 @@ const PlanningViewForModal = ({
                                     ? pendingAvailabilityEdits[`${day.date}-${slot.hour}`]
                                     : (cellAvailabilityValues[`${day.date}-${slot.hour}`] !== undefined
                                       ? cellAvailabilityValues[`${day.date}-${slot.hour}`]
-                                      : (availabilityCount !== null ? availabilityCount : ''))}
+                                      : '')}
                                   onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, String(e.target.value || '').replace(/\D/g, ''))}
-                                  placeholder="-"
+                                  placeholder={availabilityCount !== null ? String(availabilityCount) : '-'}
                                   title="Saisir la valeur puis cliquer sur Valider"
                                   style={{ width: '45px', minWidth: '45px', maxWidth: '45px', height: '27px', padding: '0 3px', fontSize: '13.5px', lineHeight: 1 }}
                                 />
