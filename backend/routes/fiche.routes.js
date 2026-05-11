@@ -4441,12 +4441,23 @@ router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req
       return res.status(404).json({ success: false, message: 'Fiche non trouvée' });
     }
 
-    // États signer : 13, 16, 44, 45
-    const etatsSigner = [13, 16, 44, 45];
-    if (!etatsSigner.includes(Number(fiche.id_etat_final))) {
+    // Le Contrôle Qualité est disponible :
+    //   - si l'état actuel est SIGNER (13)
+    //   - ou si la fiche a déjà été en SIGNER (13) à un moment donné dans son historique
+    //     (par ex. désormais en signer-retracter / signer-complet / signer-pm, ou autre).
+    const etatActuelIsSigner13 = Number(fiche.id_etat_final) === 13;
+    let hasSigner13InHistory = false;
+    if (!etatActuelIsSigner13) {
+      const histoSigner = await queryOne(
+        'SELECT 1 AS ok FROM fiches_histo WHERE id_fiche = ? AND id_etat = 13 LIMIT 1',
+        [id]
+      );
+      hasSigner13InHistory = !!histoSigner;
+    }
+    if (!etatActuelIsSigner13 && !hasSigner13InHistory) {
       return res.status(400).json({
         success: false,
-        message: 'Le contrôle qualité n\'est disponible que pour les fiches en état signé (SIGNER, SIGNER RETRACTER, SIGNER PM, SIGNER COMPLET)'
+        message: "Le contrôle qualité n'est disponible que pour les fiches passées par l'état SIGNER (13)."
       });
     }
 

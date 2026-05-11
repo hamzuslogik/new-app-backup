@@ -3328,6 +3328,8 @@ const FicheDetail = ({
             {(() => {
               const SIGNER_ETAT_IDS = [13, 16, 44, 45];
               const isEtatSigner = (id) => SIGNER_ETAT_IDS.includes(Number(id));
+              // État SIGNER (13) : seul état qui porte le bloc Contrôle Qualité (affichage CQ + formulaire).
+              const isEtatSigner13 = (id) => Number(id) === 13;
               const cleanObservationCQ = (value) => {
                 if (value == null) return '';
                 return String(value)
@@ -3352,6 +3354,103 @@ const FicheDetail = ({
                   .join('\n')
                   .trim();
               };
+
+              // Formulaire Contrôle Qualité réutilisable :
+              //   - utilisé dans la carte « État actuel » quand id_etat_final === 13
+              //   - utilisé dans l'entrée d'historique état 13 quand l'état actuel n'est pas 13
+              // Les données (cq_etat, cq_dossier, observations_cq) sont stockées sur la fiche (table fiches).
+              const renderControleQualiteForm = ({ embedded = false, keySuffix = '' } = {}) => {
+                const ficheHash = fiche.hash || hash;
+                const form = cqFormByHash[ficheHash] || {};
+                const vCqEtat = form.cq_etat !== undefined ? form.cq_etat : String(fiche.cq_etat ?? '');
+                const vCqDossier = form.cq_dossier !== undefined ? form.cq_dossier : String(fiche.cq_dossier ?? '');
+                const vObs = form.observations !== undefined
+                  ? cleanObservationCQ(form.observations)
+                  : cleanObservationCQ(fiche.observations_cq);
+                const idCqEtat = `cq_etat_signer${keySuffix}`;
+                const idCqDossier = `cq_dossier_signer${keySuffix}`;
+                const idObs = `cq_observations_signer${keySuffix}`;
+                return (
+                  <div className={`controle-qualite-card${embedded ? ' controle-qualite-card--embedded' : ''}`}>
+                    <div className="controle-qualite-card__header">CONTROLE QUALITE:</div>
+                    <div className="controle-qualite-card__body">
+                      <div className="controle-qualite-row">
+                        <label htmlFor={idCqEtat}>CQ ETAT :</label>
+                        <select
+                          id={idCqEtat}
+                          className="form-control"
+                          value={vCqEtat}
+                          onChange={(e) => setCqFormByHash(prev => ({
+                            ...prev,
+                            [ficheHash]: { ...(prev[ficheHash] || {}), cq_etat: e.target.value }
+                          }))}
+                        >
+                          <option value="">--SELECTIONNEZ--</option>
+                          <option value="1">NRP / INJOIGNABLE</option>
+                          <option value="2">RAS</option>
+                          <option value="3">NEGATIF</option>
+                        </select>
+                      </div>
+                      <div className="controle-qualite-row">
+                        <label htmlFor={idCqDossier}>CQ DOSSIER :</label>
+                        <select
+                          id={idCqDossier}
+                          className="form-control"
+                          value={vCqDossier}
+                          onChange={(e) => setCqFormByHash(prev => ({
+                            ...prev,
+                            [ficheHash]: { ...(prev[ficheHash] || {}), cq_dossier: e.target.value }
+                          }))}
+                        >
+                          <option value="">--SELECTIONNEZ--</option>
+                          <option value="1">COMPLET</option>
+                          <option value="2">INCOMPLET</option>
+                        </select>
+                      </div>
+                      <div className="controle-qualite-row">
+                        <label htmlFor={idObs}>OBSERVATIONS :</label>
+                        <textarea
+                          id={idObs}
+                          className="form-control"
+                          rows={3}
+                          value={vObs}
+                          onChange={(e) => setCqFormByHash(prev => ({
+                            ...prev,
+                            [ficheHash]: { ...(prev[ficheHash] || {}), observations: e.target.value }
+                          }))}
+                          placeholder="Commentaires..."
+                        />
+                      </div>
+                      <div className="controle-qualite-actions">
+                        <button
+                          type="button"
+                          className="btn-confirm"
+                          disabled={controleQualiteMutation.isLoading}
+                          onClick={() => controleQualiteMutation.mutate({
+                            cq_etat: vCqEtat || null,
+                            cq_dossier: vCqDossier || null,
+                            observations_cq: cleanObservationCQ(vObs) || null
+                          })}
+                        >
+                          {controleQualiteMutation.isLoading ? 'Enregistrement...' : 'VALIDER'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              };
+
+              // Une seule entrée d'historique « état 13 » porte le formulaire CQ (la plus récente).
+              // Sert quand l'état actuel n'est pas 13 (sinon le formulaire reste dans la carte État actuel).
+              const histoEtat13Id = (() => {
+                if (isEtatSigner13(fiche.id_etat_final)) return null;
+                const list = Array.isArray(fiche.historique) ? fiche.historique : [];
+                let pick = null;
+                for (const h of list) {
+                  if (Number(h.id_etat) === 13) pick = h; // dernière occurrence (boucle ascendante)
+                }
+                return pick ? pick.id : null;
+              })();
               const renderEtatDetails = (etatData) => {
                 const etatId = etatData.id_etat;
                 const confirmateursList = [
@@ -3531,11 +3630,13 @@ const FicheDetail = ({
                   if (etatData.ph3_nbr_annee_finance) items.push({ label: 'Nombre de mois du crédit', value: etatData.ph3_nbr_annee_finance });
                   if (etatData.ph3_alimentation) items.push({ label: 'Alimentation', value: etatData.ph3_alimentation });
                   if (etatData.date_sign_time) items.push({ label: 'DATE SIGNATURE', value: new Date(etatData.date_sign_time).toLocaleString('fr-FR') });
-                  // Contrôle qualité : affichage uniquement pour les états signer (actuel + historique).
-                  if (etatData.cq_etat) items.push({ label: 'CQ ETAT', value: etatData.cq_etat });
-                  if (etatData.cq_dossier) items.push({ label: 'CQ DOSSIER', value: etatData.cq_dossier });
-                  const observationCQ = cleanObservationCQ(etatData.observations_cq);
-                  if (observationCQ) items.push({ label: 'Observation', value: observationCQ, fullWidth: true });
+                  // Contrôle qualité : affichage uniquement pour l'état SIGNER (13), pas les autres états signer.
+                  if (isEtatSigner13(etatId)) {
+                    if (etatData.cq_etat) items.push({ label: 'CQ ETAT', value: etatData.cq_etat });
+                    if (etatData.cq_dossier) items.push({ label: 'CQ DOSSIER', value: etatData.cq_dossier });
+                    const observationCQ = cleanObservationCQ(etatData.observations_cq);
+                    if (observationCQ) items.push({ label: 'Observation', value: observationCQ, fullWidth: true });
+                  }
                 }
                 // CONFIRMER (7) — afficher tous les champs conf_ remplis (non null) ; si entrée CR : commentaire commercial uniquement
                 else if (etatId === 7) {
@@ -4043,7 +4144,7 @@ const FicheDetail = ({
                         </div>
                       )}
 
-                      {hasPermission('fiche_validate') && (
+                      {hasPermission('fiche_validate') && Number(fiche.id_etat_final) === 7 && (
                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
                           {fiche.valider > 0 && fiche.validation_date_time && (
                             <div
@@ -4212,88 +4313,9 @@ const FicheDetail = ({
                         </div>
                       )}
 
-                      {/* Contrôle Qualité (états signer : 13, 16, 44, 45) — intégré à la carte État actuel */}
-                      {isEtatSigner(fiche.id_etat_final) && (
-                        <div className="controle-qualite-card controle-qualite-card--embedded">
-                          <div className="controle-qualite-card__header">CONTROLE QUALITE:</div>
-                          <div className="controle-qualite-card__body">
-                          {(() => {
-                            const ficheHash = fiche.hash || hash;
-                            const form = cqFormByHash[ficheHash] || {};
-                            const vCqEtat = form.cq_etat !== undefined ? form.cq_etat : String(fiche.cq_etat ?? '');
-                            const vCqDossier = form.cq_dossier !== undefined ? form.cq_dossier : String(fiche.cq_dossier ?? '');
-                            const vObs = form.observations !== undefined
-                              ? cleanObservationCQ(form.observations)
-                              : cleanObservationCQ(fiche.observations_cq);
-                            return (
-                              <>
-                                <div className="controle-qualite-row">
-                                  <label htmlFor="cq_etat_signer">CQ ETAT :</label>
-                                  <select
-                                    id="cq_etat_signer"
-                                    className="form-control"
-                                    value={vCqEtat}
-                                    onChange={(e) => setCqFormByHash(prev => ({
-                                      ...prev,
-                                      [ficheHash]: { ...(prev[ficheHash] || {}), cq_etat: e.target.value }
-                                    }))}
-                                  >
-                                    <option value="">--SELECTIONNEZ--</option>
-                                    <option value="1">NRP / INJOIGNABLE</option>
-                                    <option value="2">RAS</option>
-                                    <option value="3">NEGATIF</option>
-                                  </select>
-                                </div>
-                                <div className="controle-qualite-row">
-                                  <label htmlFor="cq_dossier_signer">CQ DOSSIER :</label>
-                                  <select
-                                    id="cq_dossier_signer"
-                                    className="form-control"
-                                    value={vCqDossier}
-                                    onChange={(e) => setCqFormByHash(prev => ({
-                                      ...prev,
-                                      [ficheHash]: { ...(prev[ficheHash] || {}), cq_dossier: e.target.value }
-                                    }))}
-                                  >
-                                    <option value="">--SELECTIONNEZ--</option>
-                                    <option value="1">COMPLET</option>
-                                    <option value="2">INCOMPLET</option>
-                                  </select>
-                                </div>
-                                <div className="controle-qualite-row">
-                                  <label htmlFor="cq_observations_signer">OBSERVATIONS :</label>
-                                  <textarea
-                                    id="cq_observations_signer"
-                                    className="form-control"
-                                    rows={3}
-                                    value={vObs}
-                                    onChange={(e) => setCqFormByHash(prev => ({
-                                      ...prev,
-                                      [ficheHash]: { ...(prev[ficheHash] || {}), observations: e.target.value }
-                                    }))}
-                                    placeholder="Commentaires..."
-                                  />
-                                </div>
-                                <div className="controle-qualite-actions">
-                                  <button
-                                    type="button"
-                                    className="btn-confirm"
-                                    disabled={controleQualiteMutation.isLoading}
-                                    onClick={() => controleQualiteMutation.mutate({
-                                      cq_etat: vCqEtat || null,
-                                      cq_dossier: vCqDossier || null,
-                                      observations_cq: cleanObservationCQ(vObs) || null
-                                    })}
-                                  >
-                                    {controleQualiteMutation.isLoading ? 'Enregistrement...' : 'VALIDER'}
-                                  </button>
-                                </div>
-                              </>
-                            );
-                          })()}
-                          </div>
-                        </div>
-                      )}
+                      {/* Contrôle Qualité — affiché uniquement si l'état actuel est SIGNER (13).
+                          Si l'état actuel n'est pas 13, le formulaire est rendu dans l'entrée d'historique état 13 (voir plus bas). */}
+                      {isEtatSigner13(fiche.id_etat_final) && renderControleQualiteForm({ embedded: true })}
                     </div>
                     </div>
                     </>
@@ -4460,6 +4482,13 @@ const FicheDetail = ({
                                         );
                                       })}
                                     </div>
+                                  </div>
+                                )}
+                                {/* Formulaire Contrôle Qualité dans l'historique : uniquement si l'état actuel n'est PAS SIGNER (13)
+                                    et que cette entrée correspond à la dernière occurrence de l'état 13. */}
+                                {histoEtat13Id && histo.id === histoEtat13Id && (
+                                  <div style={{ padding: '0 15px 15px 15px' }}>
+                                    {renderControleQualiteForm({ embedded: true, keySuffix: `_histo_${histo.id}` })}
                                   </div>
                                 )}
                               </div>
