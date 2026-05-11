@@ -2483,6 +2483,35 @@
   min-height: 70px;
 }
 
+/* Forcer le texte noir des champs CQ même imbriqués dans .etat-actuel-card
+   (qui propage `-webkit-text-fill-color: #ffffff !important` aux descendants). */
+.etat-actuel-card .controle-qualite-row select.form-control,
+.etat-actuel-card .controle-qualite-row textarea.form-control,
+.etat-actuel-card .controle-qualite-row input.form-control,
+.controle-qualite-row select.form-control,
+.controle-qualite-row textarea.form-control,
+.controle-qualite-row input.form-control {
+  color: #1f2933 !important;
+  -webkit-text-fill-color: #1f2933 !important;
+  background-color: #ffffff !important;
+}
+
+/* Options du <select> (menu déroulant ouvert) : texte noir sur fond blanc. */
+.etat-actuel-card .controle-qualite-row select.form-control option,
+.controle-qualite-row select.form-control option {
+  color: #1f2933 !important;
+  -webkit-text-fill-color: #1f2933 !important;
+  background-color: #ffffff !important;
+}
+
+/* Placeholder du textarea OBSERVATIONS : gris lisible, jamais blanc. */
+.etat-actuel-card .controle-qualite-row textarea.form-control::placeholder,
+.controle-qualite-row textarea.form-control::placeholder {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+  opacity: 1;
+}
+
 .controle-qualite-actions {
   display: flex;
   justify-content: flex-end;
