@@ -3744,27 +3744,68 @@ const FicheDetail = ({
                   {/* Section État Actuel - Toujours visible en premier plan */}
                   {fiche.id_etat_final && (
                     <>
-                      {/* Bandeau ETAT ACTUEL - pleine largeur, couleur de l'état (comme l'en-tête des cartes d'historique) */}
+                      {/* Bannière titre ETAT ACTUEL - pleine largeur */}
                       <div
-                        className="etat-actuel-header-banner"
                         style={{
-                          backgroundColor: etatActuel.etat_color || '#3498db',
-                          color: etatActuel.etat_color === '#ffffff' || etatActuel.etat_color === '#fff' ? '#000000' : '#ffffff',
+                          backgroundColor: '#f97316',
+                          color: '#ffffff',
                           padding: '10px 18px',
                           borderRadius: '8px',
                           fontWeight: 'bold',
                           fontSize: '15px',
-                          letterSpacing: '0.5px',
+                          letterSpacing: '1px',
                           textTransform: 'uppercase',
                           display: 'flex',
                           alignItems: 'center',
-                          flexWrap: 'wrap',
                           gap: '10px',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
                           marginBottom: '12px',
                         }}
                       >
-                        <span style={{ flex: '0 1 auto' }}>
+                        <FaInfoCircle />
+                        <span>ETAT ACTUEL</span>
+                      </div>
+
+                      <div
+                        className="etat-actuel-wrapper"
+                        style={{
+                          maxWidth: '760px',
+                          margin: '0 auto 20px auto',
+                        }}
+                      >
+                    <div 
+                      className="etat-actuel-card"
+                      style={{
+                        padding: '20px',
+                        border: '6px solid #000000',
+                        borderRadius: '8px',
+                        backgroundColor: '#3a3a3a',
+                        color: '#ffffff',
+                        fontWeight: 'bold',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                        position: 'relative'
+                      }}
+                    >
+                      {/* Badge de l'état — pleine largeur de la carte, couleur de l'état */}
+                      <span
+                        style={{
+                          padding: '8px 18px',
+                          borderRadius: '6px',
+                          backgroundColor: etatActuel.etat_color || '#3498db',
+                          color: etatActuel.etat_color === '#ffffff' || etatActuel.etat_color === '#fff' ? '#000' : '#fff',
+                          fontWeight: 'bold',
+                          fontSize: '16px',
+                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          flexWrap: 'wrap',
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          marginBottom: '16px',
+                        }}
+                      >
+                        <span style={{ flex: '1 1 auto' }}>
                           {isCurrentStateFromCR ? (
                             <>
                               <span style={{ marginRight: '6px' }}>&lt;CR&gt;</span>
@@ -3778,7 +3819,7 @@ const FicheDetail = ({
                             style={{
                               padding: '3px 10px',
                               borderRadius: '4px',
-                              backgroundColor: 'rgba(255,255,255,0.22)',
+                              backgroundColor: 'rgba(255,255,255,0.25)',
                               fontSize: '12px',
                               fontWeight: 'bold',
                             }}
@@ -3806,28 +3847,8 @@ const FicheDetail = ({
                               })
                             : '-'}
                         </span>
-                      </div>
+                      </span>
 
-                      <div
-                        className="etat-actuel-wrapper"
-                        style={{
-                          maxWidth: '760px',
-                          margin: '0 auto 20px auto',
-                        }}
-                      >
-                    <div 
-                      className="etat-actuel-card"
-                      style={{
-                        padding: '20px',
-                        border: '6px solid #000000',
-                        borderRadius: '8px',
-                        backgroundColor: '#3a3a3a',
-                        color: '#ffffff',
-                        fontWeight: 'bold',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                        position: 'relative'
-                      }}
-                    >
                       {/* Détails de l'état actuel (même présentation que le bloc détails de l'historique) */}
                       {detailItemsActuel.length > 0 && (
                         <div
