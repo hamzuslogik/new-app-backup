@@ -63,16 +63,12 @@ const MesRappels = () => {
   const { data, isLoading, error } = useQuery(
     ['mes-rappels', activeTab, etatIdForTab, dateRappel, user?.id, idConfirmateurFilter, idREFilter, origineFilter],
     async () => {
+      // Endpoint dédié /fiches/mes-rappels : SELECT minimal, sans GROUP_CONCAT histo ni JOIN décalages.
+      // Beaucoup plus rapide que /fiches générique, surtout pour l'onglet « Honoré à suivre » (état 9)
+      // dont les fiches accumulent beaucoup d'historique.
       const params = {
-        fiche_search: 1,
         id_etat_final: etatIdForTab,
-        date_champ: 'date_rdv_time',
-        date_debut: dateRappel,
-        date_fin: dateRappel,
-        time_debut: '00:00:00',
-        time_fin: '23:59:59',
-        limit: 9999,
-        page: 1,
+        date_rappel: dateRappel,
       };
       if (
         origineFilter &&
@@ -80,21 +76,12 @@ const MesRappels = () => {
       ) {
         params.annuler_repro_type = origineFilter;
       }
-      if (isConfirmateur) {
-        params.id_confirmateur = user?.id;
-        // API confirmateur : inclure fiches où le connecté est conf. 2 ou 3 (sinon seul id_confirmateur est testé)
-        params.include_confirmateur_2 = 1;
-      } else if (isREConfirmation) {
-        if (idConfirmateurFilter && idConfirmateurFilter !== 'all') {
-          params.id_confirmateur = idConfirmateurFilter;
-          params.include_confirmateur_2 = 1;
-        }
+      if (isREConfirmation) {
+        params.id_confirmateur = idConfirmateurFilter || 'all';
       } else if (isRPConfirmation) {
-        if (idREFilter && idREFilter !== 'all') {
-          params.id_re = idREFilter;
-        }
+        params.id_re = idREFilter || 'all';
       }
-      const res = await api.get('/fiches', { params });
+      const res = await api.get('/fiches/mes-rappels', { params });
       return res.data?.data || [];
     },
     {
@@ -103,6 +90,9 @@ const MesRappels = () => {
         (isConfirmateur ||
           (isREConfirmation && (idConfirmateurFilter === 'all' || !!idConfirmateurFilter)) ||
           (isRPConfirmation && (idREFilter === 'all' || !!idREFilter))),
+      keepPreviousData: true,
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
     }
   );
 

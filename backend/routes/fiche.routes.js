@@ -3050,6 +3050,186 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
 });
 
 // =====================================================
+// MES RAPPELS (Confirmateur / RE Confirmation / RP Confirmation)
+// Endpoint dédié, optimisé : SELECT minimal, pas de GROUP_CONCAT histo
+// ni de JOIN décalages/cq_*/qualif/installateurs (l'onglet « Honoré à suivre »
+// accumule beaucoup d'historique → la route /fiches générique devient lente).
+// IMPORTANT: doit être définie AVANT router.get('/:id').
+// =====================================================
+router.get('/mes-rappels', authenticate, async (req, res) => {
+  const requestId = Math.random().toString(36).slice(2, 8);
+  const startTime = Date.now();
+  try {
+    const FONCTION_CONFIRMATEUR = 6;
+    const FONCTION_RE_CONFIRMATION = 14;
+    const FONCTION_RP_CONFIRMATION = 13;
+    const fonction = Number(req.user.fonction);
+    const allowed = [FONCTION_CONFIRMATEUR, FONCTION_RE_CONFIRMATION, FONCTION_RP_CONFIRMATION];
+    if (!allowed.includes(fonction)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
+    }
+
+    const { id_etat_final, date_rappel, id_confirmateur, id_re, annuler_repro_type } = req.query;
+    const etatId = parseInt(id_etat_final, 10);
+    // Onglets supportés : 19 (rappel bureau), 8 (annuler à reprogrammer), 9 (honoré à suivre)
+    if (![19, 8, 9].includes(etatId)) {
+      return res.status(400).json({ success: false, message: 'id_etat_final invalide' });
+    }
+    if (!date_rappel || !/^\d{4}-\d{2}-\d{2}$/.test(String(date_rappel))) {
+      return res.status(400).json({ success: false, message: 'date_rappel invalide (attendu YYYY-MM-DD)' });
+    }
+
+    const whereConditions = [
+      'fiche.id_etat_final = ?',
+      '(fiche.archive = 0 OR fiche.archive IS NULL)',
+      '(fiche.active = 1 OR fiche.active IS NULL)',
+      'fiche.date_rdv_time IS NOT NULL',
+      'fiche.date_rdv_time >= ?',
+      'fiche.date_rdv_time <= ?'
+    ];
+    const params = [etatId, `${date_rappel} 00:00:00`, `${date_rappel} 23:59:59`];
+
+    // Périmètre par fonction
+    if (fonction === FONCTION_CONFIRMATEUR) {
+      whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
+      params.push(req.user.id, req.user.id, req.user.id);
+    } else if (fonction === FONCTION_RE_CONFIRMATION) {
+      if (id_confirmateur && id_confirmateur !== 'all') {
+        // Vérifier que ce confirmateur est bien dans l'équipe
+        const confCheck = await queryOne(
+          'SELECT id FROM utilisateurs WHERE id = ? AND chef_equipe = ? AND fonction = ? AND (etat > 0 OR etat IS NULL)',
+          [id_confirmateur, req.user.id, FONCTION_CONFIRMATEUR]
+        );
+        if (!confCheck) {
+          return res.json({ success: true, data: [] });
+        }
+        whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
+        params.push(id_confirmateur, id_confirmateur, id_confirmateur);
+      } else {
+        const confs = await query(
+          'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = ? AND (etat > 0 OR etat IS NULL)',
+          [req.user.id, FONCTION_CONFIRMATEUR]
+        );
+        const confIds = confs.map((c) => c.id);
+        if (confIds.length === 0) {
+          return res.json({ success: true, data: [] });
+        }
+        const ph = confIds.map(() => '?').join(',');
+        whereConditions.push(
+          `(fiche.id_confirmateur IN (${ph}) OR fiche.id_confirmateur_2 IN (${ph}) OR fiche.id_confirmateur_3 IN (${ph}))`
+        );
+        params.push(...confIds, ...confIds, ...confIds);
+      }
+    } else if (fonction === FONCTION_RP_CONFIRMATION) {
+      let reIds = [];
+      if (id_re && id_re !== 'all') {
+        const reCheck = await queryOne(
+          'SELECT id FROM utilisateurs WHERE id = ? AND chef_equipe = ? AND fonction = ? AND (etat > 0 OR etat IS NULL)',
+          [id_re, req.user.id, FONCTION_RE_CONFIRMATION]
+        );
+        if (!reCheck) return res.json({ success: true, data: [] });
+        reIds = [parseInt(id_re, 10)];
+      } else {
+        const reList = await query(
+          'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = ? AND (etat > 0 OR etat IS NULL)',
+          [req.user.id, FONCTION_RE_CONFIRMATION]
+        );
+        reIds = reList.map((r) => r.id);
+      }
+      if (reIds.length === 0) return res.json({ success: true, data: [] });
+      const phRE = reIds.map(() => '?').join(',');
+      const confs = await query(
+        `SELECT id FROM utilisateurs WHERE chef_equipe IN (${phRE}) AND fonction = ? AND (etat > 0 OR etat IS NULL)`,
+        [...reIds, FONCTION_CONFIRMATEUR]
+      );
+      const confIds = confs.map((c) => c.id);
+      if (confIds.length === 0) return res.json({ success: true, data: [] });
+      const phC = confIds.map(() => '?').join(',');
+      whereConditions.push(
+        `(fiche.id_confirmateur IN (${phC}) OR fiche.id_confirmateur_2 IN (${phC}) OR fiche.id_confirmateur_3 IN (${phC}))`
+      );
+      params.push(...confIds, ...confIds, ...confIds);
+    }
+
+    // Filtre Origine pour les onglets « Annuler à reprogrammer » (8) et « Honoré à suivre » (9)
+    if (annuler_repro_type && (etatId === 8 || etatId === 9)) {
+      const lastHistoIsEtatFromCR = `EXISTS (
+        SELECT 1 FROM fiches_histo fh
+        WHERE fh.id_fiche = fiche.id AND fh.id_etat = ${etatId} AND fh.from_compte_rendu = 1
+        AND fh.id = (SELECT MAX(fh2.id) FROM fiches_histo fh2 WHERE fh2.id_fiche = fiche.id)
+      )`;
+      if (annuler_repro_type === 'compte_rendu') {
+        whereConditions.push(lastHistoIsEtatFromCR);
+      } else if (annuler_repro_type === 'repro_confirmateurs') {
+        whereConditions.push(`NOT (${lastHistoIsEtatFromCR})`);
+      }
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+    const selectStart = Date.now();
+    const fiches = await query(
+      `SELECT
+         fiche.id, fiche.civ, fiche.nom, fiche.prenom, fiche.tel, fiche.gsm1,
+         fiche.date_rdv_time, fiche.id_etat_final, fiche.id_confirmateur,
+         fiche.commentaire_commercial, fiche.conf_commentaire_produit,
+         u1.pseudo AS confirmateur_pseudo
+       FROM fiches fiche
+       LEFT JOIN utilisateurs u1 ON fiche.id_confirmateur = u1.id
+       WHERE ${whereClause}
+       ORDER BY fiche.date_rdv_time ASC
+       LIMIT 5000`,
+      params
+    );
+    console.log(`[MES_RAPPELS-${requestId}] SELECT ${Date.now() - selectStart}ms → ${fiches.length} fiches (etat=${etatId}, date=${date_rappel}, fonction=${fonction})`);
+
+    // Une seule requête pour récupérer la dernière ligne fiches_histo de chaque fiche :
+    //   - current_state_from_compte_rendu (from_compte_rendu de la dernière ligne)
+    //   - histo_last_conf_commentaire (tooltip)
+    if (fiches.length > 0) {
+      const ficheIds = fiches.map((f) => f.id);
+      const histoMap = new Map();
+      for (const chunk of chunkArray(ficheIds, FICHE_IDS_IN_CHUNK)) {
+        const ph = chunk.map(() => '?').join(',');
+        const rows = await query(
+          `SELECT fh.id_fiche, fh.from_compte_rendu,
+                  fh.conf_commentaire_produit AS histo_last_conf_commentaire
+           FROM fiches_histo fh
+           INNER JOIN (
+             SELECT id_fiche, MAX(id) AS max_id
+             FROM fiches_histo
+             WHERE id_fiche IN (${ph})
+             GROUP BY id_fiche
+           ) last ON fh.id_fiche = last.id_fiche AND fh.id = last.max_id`,
+          chunk
+        );
+        for (const r of rows) histoMap.set(r.id_fiche, r);
+      }
+      fiches.forEach((f) => {
+        const row = histoMap.get(f.id);
+        f.current_state_from_compte_rendu = !!(row && Number(row.from_compte_rendu) === 1);
+        f.histo_last_conf_commentaire = row ? (row.histo_last_conf_commentaire ?? null) : null;
+      });
+    }
+
+    const data = fiches.map((f) => ({
+      ...f,
+      hash: encodeFicheId(f.id),
+      id: undefined,
+    }));
+
+    console.log(`[MES_RAPPELS-${requestId}] total ${Date.now() - startTime}ms`);
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error(`[MES_RAPPELS-${requestId}] erreur:`, error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des rappels',
+      error: error.message,
+    });
+  }
+});
+
+// =====================================================
 // ROUTES POUR LES DEMANDES D'INSERTION
 // (Doivent être définies AVANT la route /:id pour éviter les conflits)
 // =====================================================

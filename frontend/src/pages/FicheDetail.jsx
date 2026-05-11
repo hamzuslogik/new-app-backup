@@ -4192,10 +4192,9 @@ const FicheDetail = ({
 
                   {/* Contrôle Qualité (états signer : 13, 16, 44, 45) */}
                   {[13, 16, 44, 45].includes(fiche.id_etat_final) && (
-                    <div className="fiche-section" style={{ marginTop: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#fafafa' }}>
-                      <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '15px', fontWeight: 'bold' }}>
-                        Contrôle Qualité
-                      </h3>
+                    <div className="controle-qualite-card">
+                      <div className="controle-qualite-card__header">CONTROLE QUALITE:</div>
+                      <div className="controle-qualite-card__body">
                       {(() => {
                         const ficheHash = fiche.hash || hash;
                         const form = cqFormByHash[ficheHash] || {};
@@ -4204,7 +4203,7 @@ const FicheDetail = ({
                         const vObs = form.observations !== undefined ? form.observations : String(fiche.observations_cq ?? '');
                         return (
                           <>
-                            <div className="form-group" style={{ marginBottom: '12px' }}>
+                            <div className="controle-qualite-row">
                               <label htmlFor="cq_etat_signer">CQ ETAT :</label>
                               <select
                                 id="cq_etat_signer"
@@ -4215,13 +4214,13 @@ const FicheDetail = ({
                                   [ficheHash]: { ...(prev[ficheHash] || {}), cq_etat: e.target.value }
                                 }))}
                               >
-                                <option value="">Sélectionnez</option>
+                                <option value="">--SELECTIONNEZ--</option>
                                 <option value="1">NRP / INJOIGNABLE</option>
                                 <option value="2">RAS</option>
                                 <option value="3">NEGATIF</option>
                               </select>
                             </div>
-                            <div className="form-group" style={{ marginBottom: '12px' }}>
+                            <div className="controle-qualite-row">
                               <label htmlFor="cq_dossier_signer">CQ DOSSIER :</label>
                               <select
                                 id="cq_dossier_signer"
@@ -4232,12 +4231,12 @@ const FicheDetail = ({
                                   [ficheHash]: { ...(prev[ficheHash] || {}), cq_dossier: e.target.value }
                                 }))}
                               >
-                                <option value="">Sélectionnez</option>
+                                <option value="">--SELECTIONNEZ--</option>
                                 <option value="1">COMPLET</option>
                                 <option value="2">INCOMPLET</option>
                               </select>
                             </div>
-                            <div className="form-group" style={{ marginBottom: '12px' }}>
+                            <div className="controle-qualite-row">
                               <label htmlFor="cq_observations_signer">OBSERVATIONS :</label>
                               <textarea
                                 id="cq_observations_signer"
@@ -4251,7 +4250,7 @@ const FicheDetail = ({
                                 placeholder="Commentaires..."
                               />
                             </div>
-                            <div style={{ marginTop: '12px' }}>
+                            <div className="controle-qualite-actions">
                               <button
                                 type="button"
                                 className="btn-confirm"
@@ -4262,12 +4261,13 @@ const FicheDetail = ({
                                   observations_cq: vObs || null
                                 })}
                               >
-                                {controleQualiteMutation.isLoading ? 'Enregistrement...' : 'Valider'}
+                                {controleQualiteMutation.isLoading ? 'Enregistrement...' : 'VALIDER'}
                               </button>
                             </div>
                           </>
                         );
                       })()}
+                      </div>
                     </div>
                   )}
                   
