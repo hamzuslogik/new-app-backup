@@ -3902,10 +3902,12 @@ const FicheDetail = ({
                                     {isEditableDateRdvInline ? (
                                       <>
                                         <span
-                                          className={hi?.className}
+                                          className={`${hi?.className || ''} etat-actuel-date-rdv-badge`.trim()}
                                           data-confirmer-hl={hi?.dataHl || undefined}
                                           style={{
                                             ...hi?.style,
+                                            backgroundColor: '#4a4a4a',
+                                            color: '#ffffff',
                                             padding: '6px 14px',
                                             fontSize: '17px',
                                             fontWeight: 800,
@@ -3918,7 +3920,7 @@ const FicheDetail = ({
                                             maxWidth: 'none',
                                           }}
                                         >
-                                          <span style={{ whiteSpace: 'nowrap' }}>
+                                          <span style={{ whiteSpace: 'nowrap', color: '#ffffff', fontWeight: 800 }}>
                                             {formatRdvDateOnly(etatActuel.date_rdv_time)}
                                           </span>
                                           <input
@@ -4006,12 +4008,13 @@ const FicheDetail = ({
                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
                           {fiche.valider > 0 && fiche.validation_date_time && (
                             <div
+                              className="etat-actuel-validation-badge"
                               style={{
                                 padding: '8px 14px',
-                                background: '#f0fdf4',
-                                border: '1px solid #16a34a',
+                                backgroundColor: '#4a4a4a',
+                                border: '2px solid #16a34a',
                                 borderRadius: '6px',
-                                color: '#15803d',
+                                color: '#ffffff',
                                 fontWeight: 700,
                                 fontSize: '14px',
                                 alignSelf: 'flex-start',
@@ -4319,8 +4322,11 @@ const FicheDetail = ({
                                 key={histo.id}
                                 className="historique-item etat-historique-card"
                                 style={{
+                                  width: '100%',
                                   maxWidth: '760px',
                                   margin: '0 auto 15px auto',
+                                  alignSelf: 'center',
+                                  boxSizing: 'border-box',
                                   backgroundColor: '#3a3a3a',
                                   color: '#ffffff',
                                   fontWeight: 'bold',

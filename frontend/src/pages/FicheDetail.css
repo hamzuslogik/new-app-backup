@@ -2269,7 +2269,58 @@
   -webkit-text-fill-color: initial;
 }
 
+/* Badge de validation « Le ... Valider avec ... par ... » :
+   fond gris, bordure verte, texte blanc lisible. */
+.etat-actuel-card .etat-actuel-validation-badge,
+.etat-actuel-card .etat-actuel-validation-badge * {
+  background-color: #4a4a4a !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.etat-actuel-card .etat-actuel-validation-badge {
+  border: 2px solid #16a34a !important;
+  border-radius: 6px !important;
+}
+
+/* Date RDV dans État Actuel : fond gris, bordure verte, texte date blanc.
+   Le champ heure reste blanc pour garder son comportement input natif. */
+.etat-actuel-card .etat-actuel-date-rdv-badge,
+.etat-actuel-card span.etat-actuel-date-rdv-badge[data-confirmer-hl='rdv'] {
+  background-color: #4a4a4a !important;
+  border: 2px solid #16a34a !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.etat-actuel-card .etat-actuel-date-rdv-badge > span {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+.etat-actuel-card .etat-actuel-date-rdv-badge input[type="time"] {
+  background-color: #ffffff !important;
+  color: #15803d !important;
+  -webkit-text-fill-color: #15803d !important;
+  border: 1px solid #15803d !important;
+}
+
 /* Historique : même rendu sombre que la carte État Actuel */
+.historique-list {
+  align-items: center !important;
+}
+
+.etat-historique-card {
+  width: 100% !important;
+  max-width: 760px !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  background: #3a3a3a !important;
+  border-left: none !important;
+}
+
 .etat-historique-card,
 .etat-historique-card p,
 .etat-historique-card strong,
