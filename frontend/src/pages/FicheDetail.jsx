@@ -3730,21 +3730,14 @@ const FicheDetail = ({
                 <>
                   {/* Section État Actuel - Toujours visible en premier plan */}
                   {fiche.id_etat_final && (
-                    <div
-                      className="etat-actuel-wrapper"
-                      style={{
-                        maxWidth: '760px',
-                        margin: '0 auto 20px auto',
-                      }}
-                    >
-                      {/* Bannière titre ETAT ACTUEL */}
+                    <>
+                      {/* Bannière titre ETAT ACTUEL - pleine largeur */}
                       <div
                         style={{
                           backgroundColor: '#f97316',
                           color: '#ffffff',
                           padding: '10px 18px',
-                          borderTopLeftRadius: '8px',
-                          borderTopRightRadius: '8px',
+                          borderRadius: '8px',
                           fontWeight: 'bold',
                           fontSize: '15px',
                           letterSpacing: '1px',
@@ -3753,21 +3746,29 @@ const FicheDetail = ({
                           alignItems: 'center',
                           gap: '10px',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                          marginBottom: '12px',
                         }}
                       >
                         <FaInfoCircle />
                         <span>ETAT ACTUEL</span>
                       </div>
 
+                      <div
+                        className="etat-actuel-wrapper"
+                        style={{
+                          maxWidth: '760px',
+                          margin: '0 auto 20px auto',
+                        }}
+                      >
                     <div 
                       className="etat-actuel-card"
                       style={{
                         padding: '20px',
                         border: '6px solid #000000',
-                        borderTop: 'none',
-                        borderBottomLeftRadius: '8px',
-                        borderBottomRightRadius: '8px',
-                        backgroundColor: '#ffffff',
+                        borderRadius: '8px',
+                        backgroundColor: '#3a3a3a',
+                        color: '#ffffff',
+                        fontWeight: 'bold',
                         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
                         position: 'relative'
                       }}
@@ -3820,9 +3821,9 @@ const FicheDetail = ({
                           )}
                         </div>
                         <span style={{ 
-                          color: '#666', 
+                          color: '#ffffff', 
                           fontSize: '14px',
-                          fontWeight: '500'
+                          fontWeight: 'bold'
                         }}>
                           {etatActuel.date_creation ? new Date(etatActuel.date_creation).toLocaleString('fr-FR', {
                             day: '2-digit',
@@ -3840,8 +3841,9 @@ const FicheDetail = ({
                           style={{
                             marginTop: '10px',
                             paddingTop: '10px',
-                            borderTop: '1px solid #ddd',
-                            fontSize: '13px'
+                            borderTop: '1px solid rgba(255,255,255,0.25)',
+                            fontSize: '13px',
+                            color: '#ffffff'
                           }}
                         >
                           <h4
@@ -3849,7 +3851,7 @@ const FicheDetail = ({
                               marginBottom: '10px',
                               fontSize: '15px',
                               fontWeight: 'bold',
-                              color: '#333',
+                              color: '#ffffff',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '8px'
@@ -4165,6 +4167,7 @@ const FicheDetail = ({
                       )}
                     </div>
                     </div>
+                    </>
                   )}
 
                   {/* Contrôle Qualité (états signer : 13, 16, 44, 45) */}
