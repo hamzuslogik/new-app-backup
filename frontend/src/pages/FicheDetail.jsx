@@ -7769,6 +7769,9 @@ const PlanningTab = ({
   const canEdit = user?.fonction === 1;
   /** RE confirmation (14), RP confirmation (13), backoffice (11) : lien dashboard par créneau */
   const sessionCanOpenSlotDashboard = [14, 13, 11].includes(Number(user?.fonction));
+  /** Admin (1) et Backoffice (11) : pas de création de RDV directement sur le planning,
+   *  seulement l'affichage des disponibilités. */
+  const canCreateRdvFromSlot = ![1, 11].includes(Number(user?.fonction));
   
   const { data: planningResponse, isLoading: isLoadingPlanning, refetch: refetchPlanning } = useQuery(
     ['planning-modal', planningWeek, planningYear, planningDep],
@@ -8007,7 +8010,7 @@ const PlanningTab = ({
             dep={planningDep}
             week={planningWeek}
             year={planningYear}
-            onSelectSlot={(date, hour) => onSelectSlot(date, hour, null, availabilityData)}
+            onSelectSlot={canCreateRdvFromSlot ? (date, hour) => onSelectSlot(date, hour, null, availabilityData) : null}
             onUpdateAvailability={handleUpdateAvailability}
             canEdit={canEdit}
             currentFicheHash={ficheHash}
@@ -8614,10 +8617,10 @@ const PlanningViewForModal = ({
                         style={{ 
                           backgroundColor: isBlocked ? 'rgba(34, 45, 50, 0.8)' : 'transparent',
                           position: 'relative',
-                          cursor: isAvailable ? 'pointer' : 'default',
-                          border: isAvailable && !hasData ? '2px dashed #8BC34A' : 'none'
+                          cursor: isAvailable && !!onSelectSlot ? 'pointer' : 'default',
+                          border: isAvailable && !hasData && !!onSelectSlot ? '2px dashed #8BC34A' : 'none'
                         }}
-                        onClick={() => !isEditing && isAvailable && onSelectSlot(day.date, slot.hour)}
+                        onClick={() => !isEditing && isAvailable && onSelectSlot && onSelectSlot(day.date, slot.hour)}
                         onDoubleClick={(e) => canEditThis && handleCellDoubleClick(day.date, slot.hour, e)}
                         title={
                           (() => {
@@ -8627,10 +8630,12 @@ const PlanningViewForModal = ({
                             if (isEditing) return 'Modifier la disponibilité';
                             const actionLabel = canEditThis && hasData
                               ? `Double-cliquer pour modifier la disponibilité (${day.dayName} à ${slot.name})`
-                              : isAvailable
+                              : isAvailable && !!onSelectSlot
                               ? `Cliquer pour créer un rendez-vous le ${day.dayName} à ${slot.name}`
                               : isBlocked
                               ? 'Créneau bloqué'
+                              : !onSelectSlot && isAvailable
+                              ? `Créneau disponible (${day.dayName} à ${slot.name})`
                               : 'Créneau non disponible';
                             return validatedLabel ? `${validatedLabel} — ${actionLabel}` : actionLabel;
                           })()
@@ -8824,13 +8829,15 @@ const PlanningViewForModal = ({
                           </>
                         ) : isAvailable && !isBlocked ? (
                           <>
-                            <div className="availability-info">
-                              <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
-                                <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
-                                  Cliquer pour créer
-                                </span>
+                            {onSelectSlot && (
+                              <div className="availability-info">
+                                <div className="availability-badge" style={{ backgroundColor: '#8BC34A', opacity: 0.7 }}>
+                                  <span className="availability-text-compact" style={{ fontSize: '8.5px' }}>
+                                    Cliquer pour créer
+                                  </span>
+                                </div>
                               </div>
-                            </div>
+                            )}
                             {canEditThis && (
                               <div
                                 onClick={(e) => e.stopPropagation()}
