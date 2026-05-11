@@ -2203,9 +2203,58 @@
   font-size: 16px !important;
 }
 
+.fiche-detail-modal-content .compte-rendu-signer-form {
+  max-width: 720px !important;
+  margin: 0 auto !important;
+}
+
+.fiche-detail-modal-content .compte-rendu-signer-form .form-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.fiche-detail-modal-content .compte-rendu-signer-form .form-group > label {
+  flex: 0 0 220px !important;
+  margin-bottom: 0 !important;
+  text-align: left !important;
+}
+
+.fiche-detail-modal-content .compte-rendu-signer-form .form-group > .form-control,
+.fiche-detail-modal-content .compte-rendu-signer-form .form-group > input,
+.fiche-detail-modal-content .compte-rendu-signer-form .form-group > select,
+.fiche-detail-modal-content .compte-rendu-signer-form .form-group > textarea {
+  width: 360px !important;
+  min-width: 360px !important;
+  max-width: 360px !important;
+  box-sizing: border-box !important;
+}
+
+.fiche-detail-modal-content .compte-rendu-signer-form .form-group > textarea {
+  min-height: 96px !important;
+}
+
 @media (max-width: 768px) {
   .fiche-detail-modal-content .section-title {
     font-size: 18px !important;
+  }
+
+  .fiche-detail-modal-content .compte-rendu-signer-form .form-group {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .fiche-detail-modal-content .compte-rendu-signer-form .form-group > label {
+    flex: 0 0 auto !important;
+  }
+
+  .fiche-detail-modal-content .compte-rendu-signer-form .form-group > .form-control,
+  .fiche-detail-modal-content .compte-rendu-signer-form .form-group > input,
+  .fiche-detail-modal-content .compte-rendu-signer-form .form-group > select,
+  .fiche-detail-modal-content .compte-rendu-signer-form .form-group > textarea {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
 }
 

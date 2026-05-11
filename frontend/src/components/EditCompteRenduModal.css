@@ -65,3 +65,52 @@
   color: #007bff;
 }
 
+.edit-compte-rendu-modal .compte-rendu-signer-form {
+  max-width: 720px !important;
+  margin: 0 auto 24px auto !important;
+}
+
+.edit-compte-rendu-modal .compte-rendu-signer-form .form-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.edit-compte-rendu-modal .compte-rendu-signer-form .form-group > label {
+  flex: 0 0 220px !important;
+  margin-bottom: 0 !important;
+  text-align: left !important;
+}
+
+.edit-compte-rendu-modal .compte-rendu-signer-form .form-group > input,
+.edit-compte-rendu-modal .compte-rendu-signer-form .form-group > select,
+.edit-compte-rendu-modal .compte-rendu-signer-form .form-group > textarea {
+  width: 360px !important;
+  min-width: 360px !important;
+  max-width: 360px !important;
+  box-sizing: border-box !important;
+}
+
+.edit-compte-rendu-modal .compte-rendu-signer-form .form-group > textarea {
+  min-height: 96px !important;
+}
+
+@media (max-width: 768px) {
+  .edit-compte-rendu-modal .compte-rendu-signer-form .form-group {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .edit-compte-rendu-modal .compte-rendu-signer-form .form-group > label {
+    flex: 0 0 auto !important;
+  }
+
+  .edit-compte-rendu-modal .compte-rendu-signer-form .form-group > input,
+  .edit-compte-rendu-modal .compte-rendu-signer-form .form-group > select,
+  .edit-compte-rendu-modal .compte-rendu-signer-form .form-group > textarea {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
+

@@ -59,6 +59,18 @@ function addMinutesToDateTimeString(dateTimeValue, minutesToAdd) {
   return `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())} ${pad(base.getHours())}:${pad(base.getMinutes())}:${pad(base.getSeconds())}`;
 }
 
+function splitDateTimeForInput(dateTimeValue, fallback = {}) {
+  const s = String(dateTimeValue ?? '').trim();
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2})/);
+  if (m) return { date: m[1], time: m[2] };
+  return { date: fallback.date || '', time: fallback.time || '' };
+}
+
+function getDateTimeLocalValue(dateValue, timeValue) {
+  if (!dateValue) return '';
+  return `${dateValue}T${timeValue || '00:00'}`;
+}
+
 /** Détecte l’affichage « Confirmer » : id 7 ou libellé d’état (API peut envoyer autre chose). */
 function isEtatConfirmerLike(etatId, etatTitre) {
   if (Number(etatId) === 7) return true;
@@ -4715,15 +4727,9 @@ const FicheDetail = ({
                                   if (topVal !== undefined && topVal !== null && String(topVal) !== '') return topVal;
                                   return fallback;
                                 };
-                                // Extraire date et heure de date_sign_time si disponible
-                                let dateSignDate = '';
-                                let dateSignTime = '';
-                                const rawDateSign = pickCrValue('date_sign_time', 'date_creation', '');
-                                if (rawDateSign) {
-                                  const dateSign = new Date(rawDateSign);
-                                  dateSignDate = dateSign.toISOString().split('T')[0];
-                                  dateSignTime = dateSign.toTimeString().split(' ')[0].substring(0, 5);
-                                }
+                                const fallbackSignDateTime = splitDateTimeForInput(ficheData?.date_rdv_time);
+                                const rawDateSign = pickCrValue('date_sign_time', 'date_sign_time', '');
+                                const { date: dateSignDate, time: dateSignTime } = splitDateTimeForInput(rawDateSign, fallbackSignDateTime);
                                 setEtatFormData({
                                   date_sign_date: dateSignDate,
                                   date_sign_time: dateSignTime,
@@ -4823,11 +4829,7 @@ const FicheDetail = ({
                     if (e.target.value === 'signer') {
                       setSelectedEtat(13); // SIGNER
                       // Réinitialiser le formulaire pour SIGNER
-                      const currentDate = new Date();
-                      const rdvRaw = String(ficheData?.date_rdv_time || '').trim();
-                      const rdvMatch = rdvRaw.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
-                      const dateStr = rdvMatch ? rdvMatch[1] : currentDate.toISOString().split('T')[0];
-                      const timeStr = rdvMatch ? rdvMatch[2] : currentDate.toTimeString().split(' ')[0].substring(0, 5);
+                      const { date: dateStr, time: timeStr } = splitDateTimeForInput(ficheData?.date_rdv_time);
                       setEtatFormData({
                         ...etatFormData,
                         date_sign_date: dateStr,
@@ -4911,11 +4913,7 @@ const FicheDetail = ({
                           if (e.target.value === 'signer') {
                             setSelectedEtat(13); // SIGNER
                             // Réinitialiser le formulaire pour SIGNER
-                            const currentDate = new Date();
-                            const rdvRaw = String(ficheData?.date_rdv_time || '').trim();
-                            const rdvMatch = rdvRaw.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
-                            const dateStr = rdvMatch ? rdvMatch[1] : currentDate.toISOString().split('T')[0];
-                            const timeStr = rdvMatch ? rdvMatch[2] : currentDate.toTimeString().split(' ')[0].substring(0, 5);
+                            const { date: dateStr, time: timeStr } = splitDateTimeForInput(ficheData?.date_rdv_time);
                             setEtatFormData({
                               ...etatFormData,
                               date_sign_date: dateStr,
@@ -5003,7 +5001,7 @@ const FicheDetail = ({
             {/* Formulaire SIGNER (états 13, 44, 45) pour commerciaux */}
             {[13, 44, 45].includes(selectedEtat) && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
-                <div className="etat-form">
+                <div className="etat-form compte-rendu-signer-form">
                   <h3>Informations Signature</h3>
                   
                   <div className="form-group">
@@ -5289,28 +5287,18 @@ const FicheDetail = ({
                     />
                   </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="compte_rendu_etat_date_sign_date">Date signature :</label>
-                      <input
-                        type="date"
-                        id="compte_rendu_etat_date_sign_date"
-                        className="form-control"
-                        value={etatFormData.date_sign_date}
-                        onChange={(e) => setEtatFormData({...etatFormData, date_sign_date: e.target.value})}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="compte_rendu_etat_date_sign_time">Heure :</label>
-                      <input
-                        type="time"
-                        id="compte_rendu_etat_date_sign_time"
-                        className="form-control"
-                        value={etatFormData.date_sign_time}
-                        onChange={(e) => setEtatFormData({...etatFormData, date_sign_time: e.target.value})}
-                      />
-                    </div>
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_date_sign_datetime">Date et heure signature :</label>
+                    <input
+                      type="datetime-local"
+                      id="compte_rendu_etat_date_sign_datetime"
+                      className="form-control"
+                      value={getDateTimeLocalValue(etatFormData.date_sign_date, etatFormData.date_sign_time)}
+                      onChange={(e) => {
+                        const [date = '', time = ''] = e.target.value.split('T');
+                        setEtatFormData({ ...etatFormData, date_sign_date: date, date_sign_time: time });
+                      }}
+                    />
                   </div>
 
                   <div className="form-group">

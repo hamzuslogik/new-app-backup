@@ -19,6 +19,18 @@ const getLocalNowTimeShort = () => {
   return `${p(n.getHours())}:${p(n.getMinutes())}`;
 };
 
+const splitDateTimeForInput = (dateTimeValue, fallback = {}) => {
+  const s = String(dateTimeValue ?? '').trim();
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2})/);
+  if (m) return { date: m[1], time: m[2] };
+  return { date: fallback.date || '', time: fallback.time || '' };
+};
+
+const getDateTimeLocalValue = (dateValue, timeValue) => {
+  if (!dateValue) return '';
+  return `${dateValue}T${timeValue || '00:00'}`;
+};
+
 const parseModifications = (mods) => {
   if (!mods) return {};
   if (typeof mods === 'string') {
@@ -29,13 +41,9 @@ const parseModifications = (mods) => {
 
 const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, readOnly = false }) => {
   const initialMods = useMemo(() => parseModifications(compteRendu.modifications), [compteRendu.modifications]);
-  const dateSignStr = initialMods.date_sign_time || compteRendu.date_sign_time || compteRendu.date_creation || '';
-  const [dateSignDate, dateSignTime] = (() => {
-    if (!dateSignStr) return ['', ''];
-    const normalized = String(dateSignStr).replace('T', ' ').trim();
-    const m = normalized.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::\d{2})?/);
-    return m ? [m[1], m[2].substring(0, 5)] : ['', ''];
-  })();
+  const defaultDateSign = splitDateTimeForInput(initialMods.date_rdv_time || compteRendu.date_rdv_time);
+  const dateSignStr = initialMods.date_sign_time || compteRendu.date_sign_time || '';
+  const { date: dateSignDate, time: dateSignTime } = splitDateTimeForInput(dateSignStr, defaultDateSign);
   const confRdvTime = initialMods.conf_rdv_time || '';
   const confRdvTimeShort = confRdvTime && /^\d{2}:\d{2}/.test(confRdvTime) ? confRdvTime.substring(0, 5) : confRdvTime;
   const dateRdvTimeStr = initialMods.date_rdv_time || '';
@@ -266,6 +274,10 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                   updates.conf_rdv_date = formData.conf_rdv_date || getLocalTodayDate();
                   updates.conf_rdv_time = formData.conf_rdv_time || getLocalNowTimeShort();
                 }
+                if (isCompteRenduSignerEtat(val) && !updates.date_sign_date) {
+                  updates.date_sign_date = defaultDateSign.date;
+                  updates.date_sign_time = defaultDateSign.time;
+                }
                 setFormData(updates);
               }}
               disabled={readOnly}
@@ -387,7 +399,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
           {/* État 13, 44, 45 - Signer */}
           {isEtatSigner && (
             <>
-              <div className="form-section">
+              <div className="form-section compte-rendu-signer-form">
                 <h3>Détails compte rendu</h3>
                 <div className="form-group">
                   <label>Pseudo :</label>
@@ -565,25 +577,17 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                     ))}
                   </select>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Date signature :</label>
-                    <input
-                      type="date"
-                      value={formData.date_sign_date}
-                      onChange={(e) => setFormData({ ...formData, date_sign_date: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Heure:</label>
-                    <input
-                      type="time"
-                      value={formData.date_sign_time}
-                      onChange={(e) => setFormData({ ...formData, date_sign_time: e.target.value })}
-                      disabled={readOnly}
-                    />
-                  </div>
+                <div className="form-group">
+                  <label>Date et heure signature :</label>
+                  <input
+                    type="datetime-local"
+                    value={getDateTimeLocalValue(formData.date_sign_date, formData.date_sign_time)}
+                    onChange={(e) => {
+                      const [date = '', time = ''] = e.target.value.split('T');
+                      setFormData({ ...formData, date_sign_date: date, date_sign_time: time });
+                    }}
+                    disabled={readOnly}
+                  />
                 </div>
                 <div className="form-group">
                   <label>Compte rendu :</label>
