@@ -8694,12 +8694,12 @@ const PlanningViewForModal = ({
                                 }
                               }}
                               style={{
-                                width: '45px',
-                                minWidth: '45px',
-                                maxWidth: '45px',
-                                height: '27px',
+                                width: '36px',
+                                minWidth: '36px',
+                                maxWidth: '36px',
+                                height: '22px',
                                 padding: '0 3px',
-                                fontSize: '13.5px',
+                                fontSize: '11.5px',
                                 lineHeight: 1,
                                 border: '1px solid #ccc',
                                 borderRadius: '3px'
@@ -8796,7 +8796,7 @@ const PlanningViewForModal = ({
                                   onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, String(e.target.value || '').replace(/\D/g, ''))}
                                   placeholder=""
                                   title="Saisir la valeur puis cliquer sur Valider"
-                                  style={{ width: '45px', minWidth: '45px', maxWidth: '45px', height: '27px', padding: '0 3px', fontSize: '13.5px', lineHeight: 1 }}
+                                  style={{ width: '36px', minWidth: '36px', maxWidth: '36px', height: '22px', padding: '0 3px', fontSize: '11.5px', lineHeight: 1 }}
                                 />
                                 {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
                                   <>
@@ -8864,7 +8864,7 @@ const PlanningViewForModal = ({
                                   onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, String(e.target.value || '').replace(/\D/g, ''))}
                                   placeholder=""
                                   title="Saisir la valeur puis cliquer sur Valider"
-                                  style={{ width: '45px', minWidth: '45px', maxWidth: '45px', height: '27px', padding: '0 3px', fontSize: '13.5px', lineHeight: 1 }}
+                                  style={{ width: '36px', minWidth: '36px', maxWidth: '36px', height: '22px', padding: '0 3px', fontSize: '11.5px', lineHeight: 1 }}
                                 />
                                 {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
                                   <>

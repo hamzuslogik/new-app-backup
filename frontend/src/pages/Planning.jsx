@@ -1071,12 +1071,12 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                                 }}
                                 className="availability-input"
                                 style={{
-                                  width: '35px',
-                                  minWidth: '35px',
-                                  maxWidth: '35px',
-                                  height: '20px',
+                                  width: '28px',
+                                  minWidth: '28px',
+                                  maxWidth: '28px',
+                                  height: '17px',
                                   padding: '0 2px',
-                                  fontSize: '11px',
+                                  fontSize: '10px',
                                   lineHeight: 1,
                                 }}
                                 onKeyDown={(e) => {

@@ -4058,12 +4058,12 @@ button.stat-card.stat-card-clickable {
 }
 
 .fiche-detail-modal-content .planning-tab .availability-input {
-  width: 45px !important;
-  min-width: 45px !important;
-  max-width: 45px !important;
-  height: 27px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 22px !important;
   padding: 0 3px !important;
-  font-size: 13.5px !important;
+  font-size: 11.5px !important;
   line-height: 1 !important;
 }
 

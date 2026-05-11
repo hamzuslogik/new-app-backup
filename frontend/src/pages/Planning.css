@@ -995,15 +995,15 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
 }
 
 .availability-input {
-  width: 35px;
-  min-width: 35px;
-  max-width: 35px;
-  height: 20px;
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  height: 17px;
   padding: 0 2px;
   border: 1px solid var(--filter-border, #86EFAC);
   border-radius: 4px;
   text-align: center;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
   margin: 0 auto;
   background: #FFFFFF;
