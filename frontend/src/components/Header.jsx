@@ -6,6 +6,7 @@ import { useSidebar } from '../contexts/SidebarContext';
 import { FaBars, FaBell, FaUser, FaSignOutAlt, FaTimes, FaCheck, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import api from '../config/api';
 import useLocalStorage from '../hooks/useLocalStorage';
+import useUserHomePage from '../hooks/useUserHomePage';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Header.css';
 
@@ -14,13 +15,15 @@ const Header = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const homePage = useUserHomePage();
 
   /** Sur /dashboard sans query : même effet que le logo sidebar — RDV du jour (Dashboard.jsx). */
-  const goDashboardHome = (e) => {
-    if (location.pathname !== '/dashboard') return;
-    if (location.search) return;
-    e.preventDefault();
-    window.dispatchEvent(new CustomEvent('dashboard-reset-default'));
+  const goHomePage = (e) => {
+    // Conserver le comportement « reset » uniquement si la page d'accueil est /dashboard
+    if (homePage === '/dashboard' && location.pathname === '/dashboard' && !location.search) {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent('dashboard-reset-default'));
+    }
   };
   const queryClient = useQueryClient();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -255,7 +258,7 @@ const Header = () => {
         >
           <FaBars />
         </button>
-        <Link to="/dashboard" className="header-logo-container" onClick={goDashboardHome}>
+        <Link to={homePage} className="header-logo-container" onClick={goHomePage}>
           <img src="/logo/logo.png" alt="JWS Group Logo" className="header-logo" />
         </Link>
         <h1 className="header-title">CRM JWS Group</h1>

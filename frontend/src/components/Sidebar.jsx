@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
+import useUserHomePage from '../hooks/useUserHomePage';
 import api from '../config/api';
 import {
   FaHome,
@@ -34,13 +35,15 @@ const Sidebar = ({ collapsed }) => {
   const { user, hasPermission } = useAuth();
   const location = useLocation();
   const fonctionId = user?.fonction;
+  const homePage = useUserHomePage();
 
   /** Sur /dashboard sans query : éviter no-op du Link et rétablir la liste du jour (événement écouté par Dashboard.jsx). */
-  const goDashboardHome = (e) => {
-    if (location.pathname !== '/dashboard') return;
-    if (location.search) return;
-    e.preventDefault();
-    window.dispatchEvent(new CustomEvent('dashboard-reset-default'));
+  const goHomePage = (e) => {
+    // Conserver le comportement « reset » uniquement si la page d'accueil est /dashboard
+    if (homePage === '/dashboard' && location.pathname === '/dashboard' && !location.search) {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent('dashboard-reset-default'));
+    }
   };
 
   // Vérifier si l'utilisateur est un RE Qualification (a des agents sous sa responsabilité)
@@ -443,7 +446,7 @@ const Sidebar = ({ collapsed }) => {
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      <Link to="/dashboard" className="sidebar-logo-container">
+      <Link to={homePage} className="sidebar-logo-container" onClick={goHomePage}>
         {collapsed ? (
           <img src="/logo/logo.png" alt="JWS Group" className="sidebar-logo-icon" />
         ) : (
@@ -476,7 +479,7 @@ const Sidebar = ({ collapsed }) => {
                 <li key={item.path}>
                   <NavLink
                     to={item.path}
-                    onClick={item.path === '/dashboard' ? goDashboardHome : undefined}
+                    onClick={item.path === '/dashboard' ? goHomePage : undefined}
                     className={({ isActive }) =>
                       `sidebar-link ${isActive ? 'active' : ''}`
                     }

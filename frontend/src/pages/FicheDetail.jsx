@@ -2389,8 +2389,8 @@ const FicheDetail = ({
         if (etatFormData.motif_qualif) {
           updateData.motif_qualif = etatFormData.motif_qualif;
         }
-      } else if ([5, 6, 9, 11, 12, 22, 23, 24, 25, 26, 29, 34].includes(selectedEtat)) {
-        // CLIENT HONORE A SUIVRE (9), RDV ANNULER (11), REFUSER (12), HORS CIBLE (23), HHC FINANCEMENT (34), ANNULER (5), HC ÂGE/DBL/LOC (6), ANNULER 2× (22), HC FINANCEMENT (24), REFUSER 2× (25), RDV ANNULER 2× (26), HC AIR AIR (29)
+      } else if ([5, 6, 9, 11, 12, 22, 23, 24, 25, 26, 29, 34, 35].includes(selectedEtat)) {
+        // CLIENT HONORE A SUIVRE (9), RDV ANNULER (11), REFUSER (12), HORS CIBLE (23), HHC FINANCEMENT (34), HCC TECHNIQUE (35), ANNULER (5), HC ÂGE/DBL/LOC (6), ANNULER 2× (22), HC FINANCEMENT (24), REFUSER 2× (25), RDV ANNULER 2× (26), HC AIR AIR (29)
         if (selectedEtat === 9 && etatFormData.conf_commentaire_produit) {
           updateData.conf_commentaire_produit = etatFormData.conf_commentaire_produit;
         }
@@ -2402,8 +2402,9 @@ const FicheDetail = ({
           if (motifCommentaire) updateData.motif_qualif = motifCommentaire;
         } else if ([5, 6, 22, 24, 25, 26, 29].includes(selectedEtat) && etatFormData.motif_qualif) {
           updateData.motif_qualif = etatFormData.motif_qualif;
-        } else if ([23, 34].includes(selectedEtat) && etatFormData.motif_qualif) {
-          updateData.motif_qualif = etatFormData.motif_qualif;
+        } else if ([23, 34, 35].includes(selectedEtat)) {
+          const motifCommentaire = (etatFormData.motif_qualif || etatFormData.conf_commentaire_produit || '').trim();
+          if (motifCommentaire) updateData.motif_qualif = motifCommentaire;
         }
         if (selectedEtat === 34 && etatFormData.conf_rdv_avec) {
           updateData.conf_rdv_avec = etatFormData.conf_rdv_avec;
@@ -5333,8 +5334,8 @@ const FicheDetail = ({
               </div>
             )}
 
-            {/* Formulaire pour états 9, 12, 23, 34 pour commerciaux */}
-            {[9, 12, 23, 34].includes(selectedEtat) && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
+            {/* Formulaire commentaire pour les comptes rendus commerciaux simples */}
+            {[9, 12, 23, 34, 35].includes(selectedEtat) && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
                 <div className="etat-form">
                   <h3>Commentaire</h3>
