@@ -1852,15 +1852,15 @@ body.dashboard-admin-page {
   max-width: 100px !important;
   padding: 6px 8px !important;
   font-size: 11px !important;
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
-  color: var(--label-color, #065F46) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
+  color: #ffffff !important;
 }
 
 .fiche-detail-modal-content .planning-table .time-slot-header *,
 .fiche-detail-modal-content .planning-table td.time-slot-header * {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
 }
 
 /* Colonnes des jours - rÃ©parties Ã©quitablement sur la largeur restante - Appliquer les couleurs de planning-header */

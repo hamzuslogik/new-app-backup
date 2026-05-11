@@ -331,16 +331,16 @@ table.production-table th,
 .planning-table tr td.time-slot-header,
 .planning-table tbody td.time-slot-header,
 table.planning-table td.time-slot-header {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
-  color: var(--label-color, #065F46) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
+  color: #ffffff !important;
 }
 
 .planning-table .time-slot-header *,
 .planning-table td.time-slot-header *,
 .time-slot-header * {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
 }
 
 /* Availability table - en-têtes en blanc (priorité maximale) */
@@ -367,8 +367,8 @@ table.availability-table th *,
 .availability-table tbody tr td.time-slot-header,
 table.availability-table td.time-slot-header,
 .availability-table tbody .time-slot-header {
-  background: #9cbfc8 !important;
-  background-color: #9cbfc8 !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
   color: #ffffff !important;
   color: rgb(255, 255, 255) !important;
 }
@@ -405,7 +405,7 @@ table.availability-table td.time-slot-header span {
 }
 
 .availability-table .time-slot-header {
-  background: #9cbfc8 !important;
+  background: #1b1e24 !important;
   color: #ffffff !important;
 }
 

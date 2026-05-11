@@ -228,16 +228,16 @@
 }
 
 .planning-table td.time-slot-header {
-  background: var(--table-header-bg, #ECFDF5) !important;
-  color: var(--table-header-text, #064E3B) !important;
+  background: #1b1e24 !important;
+  color: #ffffff !important;
   font-weight: bold;
   text-align: left !important;
   padding-left: 15px !important;
 }
 
 .time-slot-header {
-  background: var(--table-header-bg, #ECFDF5) !important;
-  color: var(--table-header-text, #064E3B) !important;
+  background: #1b1e24 !important;
+  color: #ffffff !important;
   font-weight: 600;
   text-align: left !important;
   padding-left: 15px !important;
@@ -249,8 +249,8 @@
 .planning-table tr td.time-slot-header,
 .planning-table tbody td.time-slot-header,
 .time-slot-header {
-  background: #9cbfc8 !important;
-  background-color: #9cbfc8 !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
   color: #ffffff !important;
   color: rgb(255, 255, 255) !important;
 }
@@ -448,15 +448,15 @@
 /* Appliquer les couleurs de planning-header aux time-slot-header */
 .planning-table .time-slot-header,
 .planning-table td.time-slot-header {
-  background: var(--filter-bg, #DCFCE7) !important;
-  background-color: var(--filter-bg, #DCFCE7) !important;
-  border: 1px solid var(--filter-border, #86EFAC) !important;
-  color: var(--label-color, #065F46) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
+  color: #ffffff !important;
 }
 
 .planning-table .time-slot-header *,
 .planning-table td.time-slot-header * {
-  color: var(--label-color, #065F46) !important;
+  color: #ffffff !important;
 }
 
 .availability-badge {
@@ -718,8 +718,8 @@
 table.availability-table td.time-slot-header,
 table.availability-table tbody td.time-slot-header,
 .availability-table tbody .time-slot-header {
-  background: #9cbfc8 !important;
-  background-color: rgb(156, 191, 200) !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
   color: #ffffff !important;
   color: rgb(255, 255, 255) !important;
   font-weight: 600;
@@ -732,8 +732,8 @@ table.availability-table tbody td.time-slot-header,
 .availability-table tbody tr td.time-slot-header *,
 .availability-table tbody tr td.time-slot-header span,
 .availability-table tbody tr td.time-slot-header div {
-  background-color: rgb(156, 191, 200) !important;
-  background: rgb(156, 191, 200) !important;
+  background-color: #1b1e24 !important;
+  background: #1b1e24 !important;
   color: rgb(255, 255, 255) !important;
   color: #ffffff !important;
 }
@@ -764,8 +764,8 @@ table.availability-table td.time-slot-header span {
 .availability-table tbody tr td.time-slot-header *,
 .availability-table tbody tr td.time-slot-header span,
 .availability-table tbody tr td.time-slot-header div {
-  background-color: rgb(156, 191, 200) !important;
-  background: rgb(156, 191, 200) !important;
+  background-color: #1b1e24 !important;
+  background: #1b1e24 !important;
   color: rgb(255, 255, 255) !important;
   color: #ffffff !important;
 }
@@ -787,8 +787,8 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
 .availability-view table.availability-table tbody tr td.time-slot-header span {
   color: #ffffff !important;
   color: rgb(255, 255, 255) !important;
-  background-color: rgb(156, 191, 200) !important;
-  background: rgb(156, 191, 200) !important;
+  background-color: #1b1e24 !important;
+  background: #1b1e24 !important;
 }
 
 /* Créneau : libellé court (9H) plus grand, détail entre parenthèses plus petit + retour à la ligne */

@@ -951,7 +951,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
               <tr key={slot.hour}>
                 <td
                   className="time-slot-header planning-time-slot-label"
-                  style={{ color: '#ffffff', backgroundColor: 'rgb(156, 191, 200)' }}
+                  style={{ color: '#ffffff', backgroundColor: '#1b1e24' }}
                 >
                   <span className="time-slot-header-main">{slotMain}</span>
                   {slotSub ? <span className="time-slot-header-sub">{slotSub}</span> : null}
