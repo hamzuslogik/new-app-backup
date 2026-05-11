@@ -229,10 +229,10 @@ const Validation = () => {
                   <th className="detail-column">Téléphone</th>
                   <th className="detail-column">CP</th>
                   <th className="detail-column">Ville</th>
-                  <th>Produit</th>
+                  <th className="product-column">Produit</th>
                   <th>Date RDV</th>
                   <th className="detail-column">Confirmateur(s)</th>
-                  <th>Statut</th>
+                  <th className="status-column">Statut</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -250,7 +250,7 @@ const Validation = () => {
                       <td className="detail-column">{fiche.tel || '-'}</td>
                       <td className="detail-column">{fiche.cp || '-'}</td>
                       <td className="detail-column">{fiche.ville || '-'}</td>
-                      <td>
+                      <td className="product-column">
                         <span 
                           className="produit-indicator"
                           style={{ backgroundColor: getProduitColor(fiche.produit) }}
@@ -260,7 +260,7 @@ const Validation = () => {
                       </td>
                       <td>{`${formatRdvDateOnly(fiche.date_rdv_time)} ${formatRdvTimeOnly(fiche.date_rdv_time)}`.trim()}</td>
                       <td className="detail-column">{confirmateurs.join(', ') || '-'}</td>
-                      <td>
+                      <td className="status-column">
                         {fiche.valider === 1 ? (
                           <span className="validation-badge validated">
                             <FaCheck /> Validé

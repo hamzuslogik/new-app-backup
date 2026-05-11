@@ -269,11 +269,17 @@
   width: 140px;
 }
 
-.fiches-table th:nth-child(7),
-.fiches-table td:nth-child(7) { /* Produit */
-  min-width: 72px;
-  width: 72px;
-  max-width: 72px;
+.fiches-table .product-column {
+  min-width: 54px;
+  width: 54px;
+  max-width: 54px;
+  text-align: center;
+}
+
+.fiches-table .status-column {
+  min-width: 135px;
+  width: 135px;
+  max-width: 160px;
 }
 
 .produit-indicator {
