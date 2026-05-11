@@ -2426,6 +2426,13 @@
   box-sizing: border-box;
 }
 
+/* Variante intégrée à la carte État actuel : pleine largeur du parent, marge top uniquement. */
+.etat-actuel-card .controle-qualite-card,
+.controle-qualite-card.controle-qualite-card--embedded {
+  margin: 18px 0 0 0;
+  max-width: none;
+}
+
 .controle-qualite-card__header {
   background-color: #3a3d44;
   color: #ffffff;
