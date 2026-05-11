@@ -3744,26 +3744,68 @@ const FicheDetail = ({
                   {/* Section État Actuel - Toujours visible en premier plan */}
                   {fiche.id_etat_final && (
                     <>
-                      {/* Bannière titre ETAT ACTUEL - pleine largeur */}
+                      {/* Bandeau ETAT ACTUEL - pleine largeur, couleur de l'état (comme l'en-tête des cartes d'historique) */}
                       <div
+                        className="etat-actuel-header-banner"
                         style={{
-                          backgroundColor: '#f97316',
-                          color: '#ffffff',
+                          backgroundColor: etatActuel.etat_color || '#3498db',
+                          color: etatActuel.etat_color === '#ffffff' || etatActuel.etat_color === '#fff' ? '#000000' : '#ffffff',
                           padding: '10px 18px',
                           borderRadius: '8px',
                           fontWeight: 'bold',
                           fontSize: '15px',
-                          letterSpacing: '1px',
+                          letterSpacing: '0.5px',
                           textTransform: 'uppercase',
                           display: 'flex',
                           alignItems: 'center',
+                          flexWrap: 'wrap',
                           gap: '10px',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
                           marginBottom: '12px',
                         }}
                       >
-                        <FaInfoCircle />
-                        <span>ETAT ACTUEL</span>
+                        <span style={{ flex: '0 1 auto' }}>
+                          {isCurrentStateFromCR ? (
+                            <>
+                              <span style={{ marginRight: '6px' }}>&lt;CR&gt;</span>
+                              {crPseudoEtatActuel && <span style={{ marginRight: '6px' }}>{crPseudoEtatActuel} – </span>}
+                            </>
+                          ) : null}
+                          {etatActuel.etat_titre}
+                        </span>
+                        {etatActuel.sous_etat_titre && (
+                          <span
+                            style={{
+                              padding: '3px 10px',
+                              borderRadius: '4px',
+                              backgroundColor: 'rgba(255,255,255,0.22)',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                            }}
+                          >
+                            {etatActuel.sous_etat_titre}
+                          </span>
+                        )}
+                        <span
+                          style={{
+                            marginLeft: 'auto',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            textTransform: 'none',
+                            letterSpacing: 0,
+                          }}
+                        >
+                          {etatActuel.date_creation
+                            ? new Date(etatActuel.date_creation).toLocaleString('fr-FR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                              })
+                            : '-'}
+                        </span>
                       </div>
 
                       <div
@@ -3786,81 +3828,17 @@ const FicheDetail = ({
                         position: 'relative'
                       }}
                     >
-                      
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '20px',
-                        flexWrap: 'wrap',
-                        gap: '15px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                          {/* État */}
-                          <span
-                            style={{
-                              padding: '8px 18px',
-                              borderRadius: '6px',
-                              backgroundColor: etatActuel.etat_color,
-                              color: etatActuel.etat_color === '#ffffff' || etatActuel.etat_color === '#fff' ? '#000' : '#fff',
-                              fontWeight: 'bold',
-                              fontSize: '16px',
-                              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                            }}
-                          >
-                            {isCurrentStateFromCR ? (
-                              <>
-                                <span style={{ marginRight: '6px' }}>&lt;CR&gt;</span>
-                                {crPseudoEtatActuel && <span style={{ marginRight: '6px' }}>{crPseudoEtatActuel} – </span>}
-                              </>
-                            ) : null}
-                            {etatActuel.etat_titre}
-                          </span>
-                          {/* Sous-état */}
-                          {etatActuel.sous_etat_titre && (
-                            <span
-                              style={{
-                                padding: '6px 12px',
-                                borderRadius: '6px',
-                                backgroundColor: '#e8e8e8',
-                                color: '#333',
-                                fontSize: '13px',
-                                fontWeight: 'bold',
-                                border: '1px solid #ccc'
-                              }}
-                            >
-                              {etatActuel.sous_etat_titre}
-                            </span>
-                          )}
-                        </div>
-                        <span style={{ 
-                          color: '#ffffff', 
-                          fontSize: '14px',
-                          fontWeight: 'bold'
-                        }}>
-                          {etatActuel.date_creation ? new Date(etatActuel.date_creation).toLocaleString('fr-FR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          }) : '-'}
-                        </span>
-                      </div>
-                      
                       {/* Détails de l'état actuel (même présentation que le bloc détails de l'historique) */}
                       {detailItemsActuel.length > 0 && (
                         <div
                           style={{
-                            marginTop: '10px',
-                            paddingTop: '10px',
-                            borderTop: '1px solid rgba(255,255,255,0.25)',
                             fontSize: '13px',
                             color: '#ffffff'
                           }}
                         >
                           <h4
                             style={{
+                              marginTop: 0,
                               marginBottom: '10px',
                               fontSize: '15px',
                               fontWeight: 'bold',
