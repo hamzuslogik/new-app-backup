@@ -3896,9 +3896,9 @@ const FicheDetail = ({
                                 }
                               };
                               return (
-                                <div key={idx} style={{ width: '100%', lineHeight: 1.45 }}>
-                                  <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                    <strong>{item.label}:</strong>{' '}
+                                <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff', fontWeight: 'bold' }}>
+                                  <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ffffff' }}>
+                                    <strong style={{ color: '#ffffff', fontWeight: 'bold' }}>{item.label}:</strong>{' '}
                                     {isEditableDateRdvInline ? (
                                       <>
                                         <span
@@ -3984,7 +3984,11 @@ const FicheDetail = ({
                                     ) : (
                                       <span
                                         className={hi?.className}
-                                        style={hi?.style}
+                                        style={{
+                                          color: '#ffffff',
+                                          fontWeight: 'bold',
+                                          ...(hi?.style || {}),
+                                        }}
                                         data-confirmer-hl={hi?.dataHl || undefined}
                                       >
                                         {item.value || '-'}
