@@ -3730,34 +3730,48 @@ const FicheDetail = ({
                 <>
                   {/* Section État Actuel - Toujours visible en premier plan */}
                   {fiche.id_etat_final && (
+                    <div
+                      className="etat-actuel-wrapper"
+                      style={{
+                        maxWidth: '760px',
+                        margin: '0 auto 20px auto',
+                      }}
+                    >
+                      {/* Bannière titre ETAT ACTUEL */}
+                      <div
+                        style={{
+                          backgroundColor: '#f97316',
+                          color: '#ffffff',
+                          padding: '10px 18px',
+                          borderTopLeftRadius: '8px',
+                          borderTopRightRadius: '8px',
+                          fontWeight: 'bold',
+                          fontSize: '15px',
+                          letterSpacing: '1px',
+                          textTransform: 'uppercase',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                        }}
+                      >
+                        <FaInfoCircle />
+                        <span>ETAT ACTUEL</span>
+                      </div>
+
                     <div 
                       className="etat-actuel-card"
                       style={{
                         padding: '20px',
                         border: '6px solid #000000',
-                        borderRadius: '8px',
-                        marginBottom: '20px',
+                        borderTop: 'none',
+                        borderBottomLeftRadius: '8px',
+                        borderBottomRightRadius: '8px',
                         backgroundColor: '#ffffff',
                         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
                         position: 'relative'
                       }}
                     >
-                      {/* Badge "État Actuel" */}
-                      <div style={{
-                        position: 'absolute',
-                        top: '-12px',
-                        right: '20px',
-                        backgroundColor: etatActuel.etat_color,
-                        color: etatActuel.etat_color === '#ffffff' || etatActuel.etat_color === '#fff' ? '#000' : '#fff',
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>
-                        État Actuel
-                      </div>
                       
                       <div style={{ 
                         display: 'flex', 
@@ -4149,6 +4163,7 @@ const FicheDetail = ({
                           </div>
                         </div>
                       )}
+                    </div>
                     </div>
                   )}
 
