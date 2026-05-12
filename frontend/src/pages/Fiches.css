@@ -602,14 +602,15 @@ table.fiches-table thead,
   white-space: nowrap;
 }
 
-.fiches-table td:nth-child(2),
 .fiches-table td:nth-child(7) {
   min-width: 0;
 }
 
-/* Nom + Prénom (col 1) : elargi car contient nom et prénom concaténés */
+/* Nom (col 1) et Prénom (col 2) : elargis avec retour a la ligne par mot entier */
 .fiches-table th:nth-child(1),
-.fiches-table td:nth-child(1) {
+.fiches-table td:nth-child(1),
+.fiches-table th:nth-child(2),
+.fiches-table td:nth-child(2) {
   min-width: 180px;
   width: 200px;
   max-width: 220px;
@@ -759,9 +760,11 @@ table.fiches-table thead,
     word-wrap: break-word !important;
   }
 
-  /* Nom (col 1) : agrandi car contient nom + prénom concaténés */
+  /* Nom (col 1) et Prenom (col 2) : agrandis */
   .fiches-table th:nth-child(1),
-  .fiches-table td:nth-child(1) {
+  .fiches-table td:nth-child(1),
+  .fiches-table th:nth-child(2),
+  .fiches-table td:nth-child(2) {
     min-width: 160px !important;
     width: 180px !important;
     max-width: 200px !important;
@@ -1393,9 +1396,11 @@ table.fiches-table thead,
     white-space: nowrap !important;
   }
 
-  /* Nom + Prenom (col 1) elargi */
+  /* Nom (col 1) et Prenom (col 2) elargis */
   .fiches-table th:nth-child(1),
-  .fiches-table td:nth-child(1) {
+  .fiches-table td:nth-child(1),
+  .fiches-table th:nth-child(2),
+  .fiches-table td:nth-child(2) {
     min-width: 180px !important;
     width: 200px !important;
     max-width: 220px !important;
