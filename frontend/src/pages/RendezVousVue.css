@@ -190,6 +190,34 @@
   word-wrap: break-word;
 }
 
+/* CP (col 4) : toujours 5 chiffres, largeur reduite */
+.fiches-table th:nth-child(4),
+.fiches-table td:nth-child(4) {
+  width: 56px;
+  min-width: 56px;
+  max-width: 60px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Date Insertion (col 6) : format "12/05/2026", largeur reduite */
+.fiches-table th:nth-child(6),
+.fiches-table td:nth-child(6) {
+  width: 92px;
+  min-width: 92px;
+  max-width: 96px;
+  white-space: nowrap;
+}
+
+/* Date RDV (col 7) : format "12/05/2026 09:00", largeur reduite */
+.fiches-table th:nth-child(7),
+.fiches-table td:nth-child(7) {
+  width: 132px;
+  min-width: 132px;
+  max-width: 136px;
+  white-space: nowrap;
+}
+
 /* Colonne Validé plus étroite */
 .fiches-table th:nth-child(13),
 .fiches-table td:nth-child(13) {

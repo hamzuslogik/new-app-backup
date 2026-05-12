@@ -628,18 +628,23 @@ table.fiches-table thead,
   max-width: 116px;
 }
 
-/* CP */
+/* CP (col 4) : toujours 5 chiffres, largeur reduite */
 .fiches-table th:nth-child(4),
 .fiches-table td:nth-child(4) {
-  min-width: 52px;
-  width: 52px;
+  min-width: 56px;
+  width: 56px;
+  max-width: 60px;
+  white-space: nowrap;
+  text-align: center;
 }
 
-/* Date Insertion */
+/* Date Insertion (col 5) : format "12/05/2026 09:00", largeur reduite */
 .fiches-table th:nth-child(5),
 .fiches-table td:nth-child(5) {
-  min-width: 140px;
-  width: 140px;
+  min-width: 124px;
+  width: 124px;
+  max-width: 128px;
+  white-space: nowrap;
 }
 
 /* État Final */
@@ -772,6 +777,25 @@ table.fiches-table thead,
     word-break: normal !important;
     overflow-wrap: break-word !important;
     word-wrap: break-word !important;
+  }
+
+  /* CP (col 4) : largeur tres reduite (5 chiffres) */
+  .fiches-table th:nth-child(4),
+  .fiches-table td:nth-child(4) {
+    min-width: 56px !important;
+    width: 56px !important;
+    max-width: 60px !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+
+  /* Date Insertion (col 5) : largeur reduite pour "12/05/2026 09:00" */
+  .fiches-table th:nth-child(5),
+  .fiches-table td:nth-child(5) {
+    min-width: 124px !important;
+    width: 124px !important;
+    max-width: 128px !important;
+    white-space: nowrap !important;
   }
 
   /* Produit (col 8) : réduit pour libérer de la place */
@@ -1410,11 +1434,23 @@ table.fiches-table thead,
     word-wrap: break-word !important;
   }
 
-  /* Colonne Date Insertion - largeur augmentée sur mobile */
+  /* CP (col 4) : largeur tres reduite (5 chiffres) */
+  .fiches-table th:nth-child(4),
+  .fiches-table td:nth-child(4) {
+    min-width: 56px !important;
+    width: 56px !important;
+    max-width: 60px !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+
+  /* Date Insertion (col 5) : largeur reduite pour "12/05/2026 09:00" */
   .fiches-table th:nth-child(5),
   .fiches-table td:nth-child(5) {
-    min-width: 160px !important;
-    width: 160px !important;
+    min-width: 124px !important;
+    width: 124px !important;
+    max-width: 128px !important;
+    white-space: nowrap !important;
   }
 
   /* État Final — retour à la ligne (mot entier) */
