@@ -6,6 +6,7 @@ import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
 import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSignature, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
 import FicheDetailModal from '../components/FicheDetailModal';
+import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
@@ -286,7 +287,7 @@ const Dashboard = () => {
   const [validationModalFiche, setValidationModalFiche] = useState(null);
   const [validationConfRdvAvec, setValidationConfRdvAvec] = useState('');
   const [validationConfPresenceCouple, setValidationConfPresenceCouple] = useState('');
-  const [lastViewedFicheHash, setLastViewedFicheHash] = useState(null);
+  const { lastViewedFicheHash, setLastViewedFicheHash } = useFicheDetailModal();
 
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV

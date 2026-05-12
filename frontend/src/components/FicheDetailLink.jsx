@@ -3,10 +3,14 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { FaSearch } from 'react-icons/fa';
 
 const FicheDetailLink = ({ ficheHash, ficheId, className = 'btn-detail', children, ...props }) => {
-  const { openFicheDetail } = useFicheDetailModal();
-  
+  const { openFicheDetail, lastViewedFicheHash } = useFicheDetailModal();
+
   // Utiliser hash si disponible, sinon utiliser id
   const hash = ficheHash || ficheId;
+  const isLastViewed =
+    lastViewedFicheHash != null &&
+    hash != null &&
+    String(lastViewedFicheHash) === String(hash);
 
   const handleClick = (e) => {
     e.preventDefault();
@@ -21,6 +25,7 @@ const FicheDetailLink = ({ ficheHash, ficheId, className = 'btn-detail', childre
 
   // Si c'est un className de bouton avec icône, utiliser le style du bouton
   if (className && (className.includes('btn-detail') || className.includes('btn-detail-link') || className.includes('btn-icon'))) {
+    const iconContent = children || <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />;
     return (
       <button
         type="button"
@@ -36,7 +41,34 @@ const FicheDetailLink = ({ ficheHash, ficheId, className = 'btn-detail', childre
         }}
         {...restProps}
       >
-        {children || <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />}
+        <span
+          style={{
+            position: 'relative',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {iconContent}
+          {isLastViewed && (
+            <span
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '28px',
+                height: '28px',
+                border: '3px solid #9e9e9e',
+                borderRadius: '1px',
+                backgroundColor: 'transparent',
+                boxSizing: 'border-box',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+        </span>
       </button>
     );
   }

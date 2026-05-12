@@ -3,6 +3,7 @@ import { useQuery } from 'react-query';
 import { FaCheckCircle, FaSearch } from 'react-icons/fa';
 import api from '../config/api';
 import FicheDetailModal from '../components/FicheDetailModal';
+import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './CQSignatures.css';
@@ -73,7 +74,7 @@ const CQSignatures = () => {
   const [sortKey, setSortKey] = useState('date_planning');
   const [sortDir, setSortDir] = useState('desc');
   const [ficheDetailModal, setFicheDetailModal] = useState(null);
-  const [lastViewedFicheHash, setLastViewedFicheHash] = useState(null);
+  const { lastViewedFicheHash, setLastViewedFicheHash } = useFicheDetailModal();
   const limit = 100;
 
   const activeRange = useMemo(() => {
