@@ -228,7 +228,7 @@
 }
 
 .planning-table td.time-slot-header {
-  background: #000000 !important;
+  background: #1b1e24 !important;
   color: #ffffff !important;
   font-weight: 800 !important;
   font-size: 1.05rem !important;
@@ -238,7 +238,7 @@
 }
 
 .time-slot-header {
-  background: #000000 !important;
+  background: #1b1e24 !important;
   color: #ffffff !important;
   font-weight: 800 !important;
   font-size: 1.05rem !important;
@@ -253,8 +253,8 @@
 .planning-table tr td.time-slot-header,
 .planning-table tbody td.time-slot-header,
 .time-slot-header {
-  background: #000000 !important;
-  background-color: #000000 !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
   color: #ffffff !important;
   color: rgb(255, 255, 255) !important;
   font-weight: 800 !important;
@@ -458,9 +458,9 @@
 /* Appliquer les couleurs de planning-header aux time-slot-header */
 .planning-table .time-slot-header,
 .planning-table td.time-slot-header {
-  background: #000000 !important;
-  background-color: #000000 !important;
-  border: 1px solid #000000 !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border: 1px solid #1b1e24 !important;
   color: #ffffff !important;
   font-weight: 800 !important;
   font-size: 1.05rem !important;

@@ -194,8 +194,8 @@
 
 html body .affectation-dep table.planning-grid thead,
 html body .affectation-dep .planning-grid thead {
-  background: #000000 !important;
-  background-color: #000000 !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
 }
 
 html body .affectation-dep table.planning-grid thead th,
@@ -210,9 +210,9 @@ html body .affectation-dep .planning-grid th {
   font-weight: 800 !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
-  background: #000000 !important;
-  background-color: #000000 !important;
-  border-bottom: 2px solid #000000 !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
+  border-bottom: 2px solid #1b1e24 !important;
   font-size: 1.05rem !important;
   white-space: nowrap;
 }
@@ -220,15 +220,15 @@ html body .affectation-dep .planning-grid th {
 html body .affectation-dep table.planning-grid td.time-slot-header,
 html body .affectation-dep .planning-grid td.time-slot-header,
 html body .affectation-dep .planning-grid .time-slot-header {
-  background: #000000 !important;
-  background-color: #000000 !important;
+  background: #1b1e24 !important;
+  background-color: #1b1e24 !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   font-weight: 800 !important;
   text-align: center !important;
   vertical-align: middle !important;
   padding: 10px 8px !important;
-  border-right: 2px solid #000000 !important;
+  border-right: 2px solid #1b1e24 !important;
   font-size: 1.05rem !important;
 }
 
