@@ -6,6 +6,7 @@ import FicheDetailModal from '../components/FicheDetailModal';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
+import { cleanObservationCQ } from '../utils/cleanObservationCQ';
 import './CQSignatures.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -168,7 +169,7 @@ const CQSignatures = () => {
       case 'cq_dossier':
         return String(row.cq_dossier_titre || '').toLowerCase();
       case 'observation':
-        return String(row.observations_cq || '').toLowerCase();
+        return cleanObservationCQ(row.observations_cq).toLowerCase();
       case 'installateur':
         return String(row.installateur_nom || '').toLowerCase();
       case 'fiche':
@@ -366,7 +367,7 @@ const CQSignatures = () => {
                     <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                     <td className="wrap-cell">{sig.cq_etat_titre || '-'}</td>
                     <td className="wrap-cell">{sig.cq_dossier_titre || '-'}</td>
-                    <td className="wrap-word-cell observation-col">{sig.observations_cq || '-'}</td>
+                    <td className="wrap-word-cell observation-col">{cleanObservationCQ(sig.observations_cq) || '-'}</td>
                     <td className="cq-details-cell">
                       {sig.id_fiche ? (
                         <button
