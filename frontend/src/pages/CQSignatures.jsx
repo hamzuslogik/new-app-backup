@@ -312,7 +312,7 @@ const CQSignatures = () => {
                   <th className="sortable-header wrap-header" onClick={() => handleSort('nom')}>Nom <span>{sortIndicator('nom')}</span></th>
                   <th className="sortable-header wrap-header" onClick={() => handleSort('prenom')}>Prénom <span>{sortIndicator('prenom')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('telephone')}>Téléphone <span>{sortIndicator('telephone')}</span></th>
-                  <th className="sortable-header" onClick={() => handleSort('cp')}>CP <span>{sortIndicator('cp')}</span></th>
+                  <th className="sortable-header cp-col" onClick={() => handleSort('cp')}>CP <span>{sortIndicator('cp')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date insertion <span>{sortIndicator('date_insert_time')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('date_planning')}>Date RDV <span>{sortIndicator('date_planning')}</span></th>
                   <th className="sortable-header etat-col" onClick={() => handleSort('etat')}>État <span>{sortIndicator('etat')}</span></th>
@@ -341,7 +341,7 @@ const CQSignatures = () => {
                     <td className="wrap-word-cell">{sig.nom || '-'}</td>
                     <td className="wrap-word-cell">{sig.prenom || '-'}</td>
                     <td>{sig.tel || sig.fiche_tel || '-'}</td>
-                    <td>{sig.cp || '-'}</td>
+                    <td className="cp-col">{sig.cp || '-'}</td>
                     <td>{sig.date_insert_time ? formatRdvDateTime(sig.date_insert_time) : '-'}</td>
                     <td>{sig.date_planning ? formatRdvDateTime(sig.date_planning) : '-'}</td>
                     <td className="etat-col">
