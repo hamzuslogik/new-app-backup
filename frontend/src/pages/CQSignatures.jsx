@@ -7,6 +7,7 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { cleanObservationCQ } from '../utils/cleanObservationCQ';
+import { getEffectiveEtatColor, getEffectiveEtatTitle } from '../utils/etatSignerComplet';
 import './CQSignatures.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -136,9 +137,12 @@ const CQSignatures = () => {
 
   const rows = data?.data || [];
   const pagination = data?.pagination || {};
-  const getEtatColor = (etatId) => {
-    const etat = (etatsData || []).find((e) => Number(e.id) === Number(etatId));
-    return etat?.color || '#9cbfc8';
+  const getEtatColor = (rowOrEtatId) => {
+    const row = typeof rowOrEtatId === 'object' ? rowOrEtatId : { fiche_id_etat_final: rowOrEtatId };
+    return getEffectiveEtatColor(row, etatsData || [], [], '#9cbfc8');
+  };
+  const getEtatTitle = (row) => {
+    return getEffectiveEtatTitle(row, etatsData || [], []) || row.etat_titre || '-';
   };
   const getSortValue = (row, key) => {
     switch (key) {
@@ -153,7 +157,7 @@ const CQSignatures = () => {
       case 'date_planning':
         return row.date_planning ? new Date(row.date_planning).getTime() : 0;
       case 'etat':
-        return String(row.etat_titre || '').toLowerCase();
+        return String(getEtatTitle(row) || '').toLowerCase();
       case 'date_heure':
         return row.date_heure ? new Date(row.date_heure).getTime() : 0;
       case 'confirmateur':
@@ -333,8 +337,8 @@ const CQSignatures = () => {
                     key={sig.id_fiche || sig.id}
                     className="cq-table-row-by-etat"
                     style={{
-                      backgroundColor: `${getEtatColor(sig.fiche_id_etat_final)}40`,
-                      borderLeft: `4px solid ${getEtatColor(sig.fiche_id_etat_final)}`
+                      backgroundColor: `${getEtatColor(sig)}40`,
+                      borderLeft: `4px solid ${getEtatColor(sig)}`
                     }}
                   >
                     <td className="wrap-word-cell nom-col">{sig.nom || '-'}</td>
@@ -343,8 +347,8 @@ const CQSignatures = () => {
                     <td className="cp-col">{sig.cp || '-'}</td>
                     <td className="date-rdv-col">{sig.date_planning ? formatRdvDateTime(sig.date_planning) : '-'}</td>
                     <td className="etat-col">
-                      <span className="etat-badge" style={{ backgroundColor: getEtatColor(sig.fiche_id_etat_final) }}>
-                        {sig.etat_titre || '-'}
+                      <span className="etat-badge" style={{ backgroundColor: getEtatColor(sig) }}>
+                        {getEtatTitle(sig)}
                       </span>
                     </td>
                     <td className="wrap-word-cell confirmateur-col">{sig.confirmateur_pseudo || '-'}</td>

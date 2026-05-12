@@ -9,6 +9,7 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
+import { getEffectiveEtatColor, getEffectiveEtatTitle } from '../utils/etatSignerComplet';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
@@ -454,6 +455,12 @@ const Fiches = () => {
     return etat?.titre || '';
   };
 
+  const getFicheEtatColor = (fiche) =>
+    getEffectiveEtatColor(fiche, etats, sousEtatsData || [], getEtatColor(fiche?.id_etat_final));
+
+  const getFicheEtatName = (fiche) =>
+    getEffectiveEtatTitle(fiche, etats, sousEtatsData || []) || getEtatName(fiche?.id_etat_final);
+
   // <CR> si état 8 ou 9 et dernière ligne historio = compte rendu (aligné Dashboard)
   const ID_ETAT_ANNULER_A_REPROGRAMMER = 8;
   const ID_ETAT_HONORE_A_SUIVRE = 9;
@@ -530,7 +537,7 @@ const Fiches = () => {
           formatDate(fiche.date_insert_time),
           formatRdvDateTime(fiche.date_rdv_time),
           formatDate(fiche.date_modif_time),
-          isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getEtatName(fiche.id_etat_final),
+          isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getFicheEtatName(fiche),
           getConfirmateursFormatted(fiche),
           getUserName(fiche.id_commercial),
           getCentreName(fiche.id_centre),
@@ -1008,7 +1015,7 @@ const Fiches = () => {
                 </thead>
                 <tbody>
                   {fiches.map((fiche) => {
-                    const etatColor = getEtatColor(fiche.id_etat_final);
+                    const etatColor = getFicheEtatColor(fiche);
                     const produitColor = getProduitColor(fiche.produit);
                     
                     return (
@@ -1028,7 +1035,7 @@ const Fiches = () => {
                             style={{ backgroundColor: etatColor }}
                           >
                             {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
-                            {isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getEtatName(fiche.id_etat_final)}
+                            {isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getFicheEtatName(fiche)}
                             {(fiche.ko === 1 || fiche.ko === '1') && (
                               <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>(KO)</span>
                             )}

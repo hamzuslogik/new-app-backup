@@ -164,6 +164,7 @@ router.get('/', authenticate, async (req, res) => {
         f.prenom as fiche_prenom,
         f.tel as fiche_tel,
         f.id_etat_final as fiche_id_etat_final,
+        f.id_sous_etat as fiche_id_sous_etat,
         f.id_commercial,
         f.id_commercial_2,
         f.produit,
@@ -174,6 +175,7 @@ router.get('/', authenticate, async (req, res) => {
         f.ph3_installateur as fiche_installateur_id,
         c.titre as centre_titre,
         e.titre as etat_titre,
+        se.titre as sous_etat_titre,
         uc.pseudo as commercial_pseudo,
         uc2.pseudo as commercial_2_pseudo,
         cqe.titre as cq_etat_titre,
@@ -192,6 +194,7 @@ router.get('/', authenticate, async (req, res) => {
       )
       LEFT JOIN centres c ON f.id_centre = c.id
       LEFT JOIN etats e ON f.id_etat_final = e.id
+      LEFT JOIN sous_etat se ON f.id_sous_etat = se.id
       LEFT JOIN utilisateurs uc ON f.id_commercial = uc.id
       LEFT JOIN utilisateurs uc2 ON f.id_commercial_2 = uc2.id
       LEFT JOIN cq_etat cqe ON f.cq_etat = cqe.id
