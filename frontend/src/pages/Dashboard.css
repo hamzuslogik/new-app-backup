@@ -1465,7 +1465,7 @@ button.stat-card.stat-card-clickable {
   text-align: center;
 }
 
-.fiches-table td:nth-child(13) {
+.dashboard-page .fiches-table td:nth-child(13) {
   display: flex;
   flex-direction: column;
   align-items: center;

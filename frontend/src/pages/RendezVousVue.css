@@ -219,12 +219,14 @@
 }
 
 /* Colonne Validé plus étroite */
-.fiches-table th:nth-child(13),
-.fiches-table td:nth-child(13) {
+.rdv-vue-page .fiches-table th:nth-child(13),
+.rdv-vue-page .fiches-table td:nth-child(13) {
   width: 54px;
   min-width: 54px;
   max-width: 54px;
   text-align: center;
+  display: table-cell;
+  vertical-align: top;
 }
 
 /* Colonne État actuel plus large + retour à la ligne par mot entier */
