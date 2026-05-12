@@ -167,6 +167,8 @@ const CQSignatures = () => {
         return String(row.cq_etat_titre || '').toLowerCase();
       case 'cq_dossier':
         return String(row.cq_dossier_titre || '').toLowerCase();
+      case 'observation':
+        return String(row.observations_cq || '').toLowerCase();
       case 'installateur':
         return String(row.installateur_nom || '').toLowerCase();
       case 'fiche':
@@ -306,8 +308,8 @@ const CQSignatures = () => {
             <table className="cq-table">
               <thead>
                 <tr>
-                  <th className="sortable-header" onClick={() => handleSort('nom')}>Nom <span>{sortIndicator('nom')}</span></th>
-                  <th className="sortable-header" onClick={() => handleSort('prenom')}>Prénom <span>{sortIndicator('prenom')}</span></th>
+                  <th className="sortable-header wrap-header" onClick={() => handleSort('nom')}>Nom <span>{sortIndicator('nom')}</span></th>
+                  <th className="sortable-header wrap-header" onClick={() => handleSort('prenom')}>Prénom <span>{sortIndicator('prenom')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('telephone')}>Téléphone <span>{sortIndicator('telephone')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cp')}>CP <span>{sortIndicator('cp')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date insertion <span>{sortIndicator('date_insert_time')}</span></th>
@@ -321,6 +323,7 @@ const CQSignatures = () => {
                   <th className="sortable-header" onClick={() => handleSort('date_heure')}>Date signature <span>{sortIndicator('date_heure')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cq_etat')}>CQ État <span>{sortIndicator('cq_etat')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('cq_dossier')}>CQ Dossier <span>{sortIndicator('cq_dossier')}</span></th>
+                  <th className="sortable-header wrap-header observation-col" onClick={() => handleSort('observation')}>Observation <span>{sortIndicator('observation')}</span></th>
                   <th>Détails</th>
                 </tr>
               </thead>
@@ -334,8 +337,8 @@ const CQSignatures = () => {
                       borderLeft: `4px solid ${getEtatColor(sig.fiche_id_etat_final)}`
                     }}
                   >
-                    <td>{sig.nom || '-'}</td>
-                    <td>{sig.prenom || '-'}</td>
+                    <td className="wrap-word-cell">{sig.nom || '-'}</td>
+                    <td className="wrap-word-cell">{sig.prenom || '-'}</td>
                     <td>{sig.tel || sig.fiche_tel || '-'}</td>
                     <td>{sig.cp || '-'}</td>
                     <td>{sig.date_insert_time ? formatRdvDateTime(sig.date_insert_time) : '-'}</td>
@@ -363,6 +366,7 @@ const CQSignatures = () => {
                     <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                     <td className="wrap-cell">{sig.cq_etat_titre || '-'}</td>
                     <td className="wrap-cell">{sig.cq_dossier_titre || '-'}</td>
+                    <td className="wrap-word-cell observation-col">{sig.observations_cq || '-'}</td>
                     <td className="cq-details-cell">
                       {sig.id_fiche ? (
                         <button

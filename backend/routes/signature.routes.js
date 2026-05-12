@@ -170,6 +170,7 @@ router.get('/', authenticate, async (req, res) => {
         f.valider,
         f.cq_etat as fiche_cq_etat_id,
         f.cq_dossier as fiche_cq_dossier_id,
+        f.observations_cq,
         f.ph3_installateur as fiche_installateur_id,
         c.titre as centre_titre,
         e.titre as etat_titre,

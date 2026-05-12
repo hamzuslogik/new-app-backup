@@ -122,14 +122,38 @@
 /* Ajustement des largeurs colonnes */
 .cq-table th.etat-col,
 .cq-table td.etat-col {
-  width: 220px;
-  min-width: 220px;
+  width: 140px;
+  min-width: 120px;
+  max-width: 150px;
 }
 
 .cq-table th.produit-col,
 .cq-table td.produit-col {
   width: 90px;
   min-width: 90px;
+}
+
+/* Colonnes Nom / Prenom / Observation : retour a la ligne par mot (pas par lettre)
+   et meme regle pour les <th> correspondants. */
+.cq-signatures-page .cq-table td.wrap-word-cell,
+.cq-signatures-page .cq-table th.wrap-header {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  hyphens: none !important;
+}
+
+.cq-signatures-page .cq-table th.wrap-header,
+.cq-signatures-page .cq-table td.wrap-word-cell {
+  min-width: 110px;
+  max-width: 160px;
+}
+
+.cq-signatures-page .cq-table th.wrap-header.observation-col,
+.cq-signatures-page .cq-table td.wrap-word-cell.observation-col {
+  min-width: 160px;
+  max-width: 220px;
 }
 
 .cq-details-cell {
