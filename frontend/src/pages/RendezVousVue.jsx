@@ -291,7 +291,7 @@ const RendezVousVue = () => {
                   <th>Centre</th>
                   <th className="produit-col">Produit</th>
                   <th>Validé</th>
-                  <th>Détail</th>
+                  <th>Détails</th>
                 </tr>
               </thead>
               <tbody>
@@ -317,7 +317,7 @@ const RendezVousVue = () => {
                         {getProduitName(f.produit) || '—'}
                       </span>
                     </td>
-                    <td>{Number(f.valider) > 0 ? '✓' : '—'}</td>
+                    <td>{Number(f.valider) > 0 ? '✓' : ''}</td>
                     <td>
                       <div className="fiche-indicators">
                         {f.id_commercial_2 && Number(f.id_commercial_2) > 0 && <span className="indicator r2" title="R2 placé">R2</span>}
