@@ -9,6 +9,7 @@ import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getHomePage } from '../utils/getHomePage';
+import { getEffectiveEtatColor } from '../utils/etatSignerComplet';
 import '../pages/Dashboard.css';
 
 const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
@@ -135,20 +136,18 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   }, [ficheHash, onClose, isOverlayLocked]);
 
   // Déterminer la couleur du border selon l'état de la fiche
+  // Applique aussi la logique "Signer Complet" (état SIGNER + sous-état COMPLETE → couleur de l'état 45)
   const getEtatColor = () => {
     if (!ficheData) return '#3498db'; // Couleur par défaut
-    
-    if (ficheData.etat_final_color) {
-      return ficheData.etat_final_color;
-    }
-    
-    // Si pas de couleur dans les données, chercher dans la liste des états
-    if (etatsData && ficheData.id_etat_final) {
-      const etat = etatsData.find(e => e.id === ficheData.id_etat_final);
-      return etat?.color || '#3498db';
-    }
-    
-    return '#3498db'; // Couleur par défaut
+
+    const ficheForColor = {
+      id_etat_final: ficheData.id_etat_final,
+      etat_titre: ficheData.etat_final_titre,
+      etat_color: ficheData.etat_final_color,
+      sous_etat_titre: ficheData.sous_etat_titre,
+      id_sous_etat: ficheData.id_sous_etat,
+    };
+    return getEffectiveEtatColor(ficheForColor, etatsData || [], [], '#3498db');
   };
 
   const etatColor = getEtatColor();
