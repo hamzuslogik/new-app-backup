@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaCheckCircle, FaTimesCircle, FaCalendarWeek, FaCalendarAlt, FaFileAlt, FaCube } from 'react-icons/fa';
+import { FaCheckCircle, FaTimesCircle, FaCalendarWeek, FaCalendarAlt, FaFileAlt, FaCube, FaSearch } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
@@ -111,8 +111,13 @@ const Phase3 = () => {
           </>
         )}
         <td>
-          <FicheDetailLink ficheId={fiche.id} className="btn-link">
-            Voir détails
+          <FicheDetailLink
+            ficheId={fiche.id}
+            className="btn-detail"
+            title="Voir les détails"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
           </FicheDetailLink>
         </td>
       </tr>

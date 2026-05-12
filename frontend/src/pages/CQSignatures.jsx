@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import { FaCheckCircle, FaSearch } from 'react-icons/fa';
 import api from '../config/api';
-import FicheDetailLink from '../components/FicheDetailLink';
+import FicheDetailModal from '../components/FicheDetailModal';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './CQSignatures.css';
@@ -72,6 +72,8 @@ const CQSignatures = () => {
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState('date_planning');
   const [sortDir, setSortDir] = useState('desc');
+  const [ficheDetailModal, setFicheDetailModal] = useState(null);
+  const [lastViewedFicheHash, setLastViewedFicheHash] = useState(null);
   const limit = 100;
 
   const activeRange = useMemo(() => {
@@ -362,9 +364,49 @@ const CQSignatures = () => {
                     <td className="wrap-cell">{sig.cq_dossier_titre || '-'}</td>
                     <td className="cq-details-cell">
                       {sig.id_fiche ? (
-                        <FicheDetailLink ficheId={sig.id_fiche}>
-                          <FaSearch className="cq-search-icon" />
-                        </FicheDetailLink>
+                        <button
+                          type="button"
+                          className="btn-detail"
+                          title="Voir les détails"
+                          onClick={() => {
+                            const hash = sig.fiche_hash || sig.hash || sig.id_fiche;
+                            setFicheDetailModal({ hash });
+                            setLastViewedFicheHash(hash);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <span
+                            style={{
+                              position: 'relative',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <FaSearch className="cq-search-icon" />
+                            {lastViewedFicheHash === (sig.fiche_hash || sig.hash || sig.id_fiche) && (
+                              <span
+                                style={{
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '28px',
+                                  height: '28px',
+                                  border: '3px solid #9e9e9e',
+                                  borderRadius: '1px',
+                                  backgroundColor: 'transparent',
+                                  boxSizing: 'border-box',
+                                }}
+                              />
+                            )}
+                          </span>
+                        </button>
                       ) : '-'}
                     </td>
                   </tr>
@@ -397,6 +439,13 @@ const CQSignatures = () => {
             </div>
           )}
         </>
+      )}
+
+      {ficheDetailModal && (
+        <FicheDetailModal
+          ficheHash={ficheDetailModal.hash}
+          onClose={() => setFicheDetailModal(null)}
+        />
       )}
     </div>
   );

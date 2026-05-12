@@ -847,7 +847,7 @@ const ProductionQualif = () => {
                                 justifyContent: 'center'
                               }}
                             >
-                              <FaFileAlt />
+                              <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
                             </span>
                           ) : (
                             <FicheDetailLink 
@@ -855,8 +855,9 @@ const ProductionQualif = () => {
                               ficheId={fiche.id}
                               className="btn-detail"
                               title="Voir les détails"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             >
-                              <FaFileAlt />
+                              <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
                             </FicheDetailLink>
                           )}
                         </td>

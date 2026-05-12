@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaEdit, FaEye, FaClipboardList, FaCheck, FaTimes, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { FaEdit, FaEye, FaClipboardList, FaCheck, FaTimes, FaClock, FaCheckCircle, FaTimesCircle, FaSearch } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import EditCompteRenduModal from '../components/EditCompteRenduModal';
@@ -383,7 +383,7 @@ const CompteRendu = () => {
                     </div>
                     <div className="cr-actions">
                       <FicheDetailLink ficheHash={cr.fiche_hash} ficheId={cr.id_fiche} className="btn-icon" title="Voir fiche">
-                        <FaEye />
+                        <FaSearch />
                       </FicheDetailLink>
                       {canApprove && (
                         <>

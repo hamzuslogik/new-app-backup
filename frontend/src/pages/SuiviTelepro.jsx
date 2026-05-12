@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaChartLine, FaSignature, FaFileAlt, FaPrint } from 'react-icons/fa';
+import { FaChartLine, FaSignature, FaFileAlt, FaPrint, FaSearch } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './SuiviTelepro.css';
@@ -231,8 +231,13 @@ const SuiviTelepro = () => {
                             <td>{detail.tel || '-'}</td>
                             <td>{detail.ajoute || 0}</td>
                             <td>
-                              <FicheDetailLink ficheId={detail.id} className="btn-link">
-                                Voir fiche
+                              <FicheDetailLink
+                                ficheId={detail.id}
+                                className="btn-detail"
+                                title="Voir la fiche"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
                               </FicheDetailLink>
                             </td>
                           </tr>

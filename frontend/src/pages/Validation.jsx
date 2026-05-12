@@ -3,7 +3,7 @@ import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaCheck, FaTimes, FaCalendarAlt, FaFilter, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaCalendarAlt, FaFilter, FaEye, FaEyeSlash, FaSearch } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
 import './Validation.css';
@@ -278,8 +278,10 @@ const Validation = () => {
                         <FicheDetailLink 
                           ficheId={fiche.id}
                           className="btn-detail"
+                          title="Voir les détails"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
-                          Détails
+                          <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
                         </FicheDetailLink>
                       </td>
                     </tr>

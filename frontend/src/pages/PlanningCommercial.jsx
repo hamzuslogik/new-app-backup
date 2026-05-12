@@ -854,8 +854,10 @@ const PlanningCommercial = () => {
                           <FicheDetailLink 
                             ficheHash={fiche.hash}
                             className="btn-detail"
+                            title="Voir les détails"
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
-                            Détails
+                            <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
                           </FicheDetailLink>
                         </td>
                       </tr>

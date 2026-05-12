@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaCheck, FaTimes, FaEye, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaEye, FaClock, FaCheckCircle, FaTimesCircle, FaSearch } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
@@ -188,7 +188,7 @@ const CompteRenduPending = () => {
                 </div>
                 <div className="cr-actions">
                   <FicheDetailLink ficheHash={cr.fiche_hash} ficheId={cr.id_fiche} className="btn-icon" title="Voir fiche">
-                    <FaEye />
+                    <FaSearch />
                   </FicheDetailLink>
                   {canApprove && cr.statut === 'pending' && (
                     <>
