@@ -62,32 +62,33 @@
 }
 
 .filter-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, max-content));
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   align-items: end;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
-  max-width: 180px;
+  max-width: 140px;
 }
 
 .filter-group label {
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   font-weight: 600;
   color: #000000;
-  font-size: 10.5px;
+  font-size: 9.5px;
+  line-height: 1.1;
 }
 
 .filter-group .form-control {
-  padding: 4px 8px;
+  padding: 2px 5px;
   border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 11px;
-  height: 28px;
-  line-height: 1.2;
+  border-radius: 3px;
+  font-size: 10px;
+  height: 22px;
+  line-height: 1.1;
   transition: border-color 0.3s;
 }
 
@@ -98,12 +99,15 @@
 
 .filter-group input[type="date"].form-control,
 .filter-group input[type="datetime-local"].form-control {
-  max-width: 140px;
-  padding: 4px 6px;
+  max-width: 110px;
+  padding: 2px 4px;
+  font-size: 10px;
 }
 
 .filter-group select.form-control {
-  max-width: 180px;
+  max-width: 140px;
+  font-size: 10px;
+  padding: 2px 4px;
 }
 
 .btn-generate {
@@ -344,8 +348,7 @@
   }
 
   .filter-row {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    gap: 6px;
   }
 }
 
@@ -380,8 +383,7 @@
   }
 
   .filter-row {
-    grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 6px;
   }
 
   .btn-generate {
@@ -412,14 +414,6 @@
     font-size: 13.6px;
   }
 
-  .filter-group label {
-    font-size: 11px;
-  }
-}
-  .filter-row {
-    grid-template-columns: 1fr;
-  }
-
   .stats-menu {
     flex-wrap: wrap;
   }
@@ -438,4 +432,3 @@
     padding: 6.4px;
   }
 }
-
