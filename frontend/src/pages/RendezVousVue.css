@@ -239,6 +239,30 @@
   word-wrap: break-word;
 }
 
+/* Confirmateur (col 9) : largeur augmentee + retour a la ligne par mot entier */
+.fiches-table th:nth-child(9),
+.fiches-table td:nth-child(9) {
+  width: 150px;
+  min-width: 150px;
+  max-width: 170px;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Commercial (col 10) : largeur reduite + retour a la ligne par mot entier */
+.fiches-table th:nth-child(10),
+.fiches-table td:nth-child(10) {
+  width: 110px;
+  min-width: 110px;
+  max-width: 120px;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
 .sortable-header {
   cursor: pointer;
   user-select: none;
