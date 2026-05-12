@@ -192,16 +192,16 @@
   min-width: 800px;
 }
 
-.affectation-dep .planning-grid thead,
-.affectation-dep table.planning-grid thead {
+html body .affectation-dep table.planning-grid thead,
+html body .affectation-dep .planning-grid thead {
   background: #000000 !important;
   background-color: #000000 !important;
 }
 
-.affectation-dep .planning-grid thead th,
-.affectation-dep .planning-grid th,
-.affectation-dep table.planning-grid thead th,
-.affectation-dep table.planning-grid th {
+html body .affectation-dep table.planning-grid thead th,
+html body .affectation-dep table.planning-grid th,
+html body .affectation-dep .planning-grid thead th,
+html body .affectation-dep .planning-grid th {
   padding: 16px 8px !important;
   height: 56px !important;
   min-height: 56px !important;
@@ -209,6 +209,7 @@
   vertical-align: middle !important;
   font-weight: 800 !important;
   color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   background: #000000 !important;
   background-color: #000000 !important;
   border-bottom: 2px solid #000000 !important;
@@ -216,12 +217,13 @@
   white-space: nowrap;
 }
 
-.affectation-dep .planning-grid .time-slot-header,
-.affectation-dep .planning-grid td.time-slot-header,
-.affectation-dep table.planning-grid td.time-slot-header {
+html body .affectation-dep table.planning-grid td.time-slot-header,
+html body .affectation-dep .planning-grid td.time-slot-header,
+html body .affectation-dep .planning-grid .time-slot-header {
   background: #000000 !important;
   background-color: #000000 !important;
   color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   font-weight: 800 !important;
   text-align: center !important;
   vertical-align: middle !important;
@@ -230,13 +232,18 @@
   font-size: 1.05rem !important;
 }
 
-.affectation-dep .planning-grid .time-slot-header *,
-.affectation-dep .planning-grid td.time-slot-header *,
-.affectation-dep .planning-grid thead th *,
-.affectation-dep .planning-grid th * {
+html body .affectation-dep table.planning-grid thead th *,
+html body .affectation-dep .planning-grid thead th *,
+html body .affectation-dep .planning-grid th *,
+html body .affectation-dep table.planning-grid td.time-slot-header *,
+html body .affectation-dep .planning-grid td.time-slot-header *,
+html body .affectation-dep .planning-grid .time-slot-header * {
   color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   font-weight: 800 !important;
   text-align: center !important;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .planning-grid td {

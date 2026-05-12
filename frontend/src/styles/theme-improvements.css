@@ -72,9 +72,9 @@ label,
 }
 
 /* Textes dans les tableaux */
-table:not(.planning-table):not(.distance-table),
-table:not(.planning-table):not(.production-table):not(.distance-table) td,
-table:not(.planning-table):not(.production-table):not(.distance-table) th:not(.planning-table th):not(.production-table th):not(.distance-table th) {
+table:not(.planning-table):not(.planning-grid):not(.distance-table),
+table:not(.planning-table):not(.planning-grid):not(.production-table):not(.distance-table) td,
+table:not(.planning-table):not(.planning-grid):not(.production-table):not(.distance-table) th:not(.planning-table th):not(.planning-grid th):not(.production-table th):not(.distance-table th) {
   color: var(--text-primary, #333333) !important;
 }
 
