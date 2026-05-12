@@ -2300,6 +2300,14 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
+/* Badge d'etat pour NRP / EN-ATTENTE : texte sombre #333333 (fond clair) */
+.etat-actuel-card span.etat-actuel-badge--dark-text,
+.etat-actuel-card span.etat-actuel-badge--dark-text span,
+.etat-actuel-card span.etat-actuel-badge--dark-text * {
+  color: #333333 !important;
+  -webkit-text-fill-color: #333333 !important;
+}
+
 .etat-actuel-card h4,
 .etat-actuel-card strong,
 .etat-actuel-card b {

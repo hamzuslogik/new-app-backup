@@ -3916,6 +3916,11 @@ const FicheDetail = ({
                     >
                       {/* Badge de l'état — pleine largeur de la carte, couleur de l'état */}
                       <span
+                        className={
+                          Number(etatActuel.id_etat) === 1 || Number(etatActuel.id_etat) === 2
+                            ? 'etat-actuel-badge etat-actuel-badge--dark-text'
+                            : 'etat-actuel-badge'
+                        }
                         style={{
                           padding: '8px 18px',
                           borderRadius: '6px',
