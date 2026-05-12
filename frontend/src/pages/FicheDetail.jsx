@@ -88,16 +88,16 @@ function isEtatConfirmerLike(etatId, etatTitre) {
 function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
   const L = normalizeDetailItemLabel(itemLabel);
   const bold = { fontWeight: 700 };
-  // Commercial : toujours en bleu, quel que soit l'etat
-  if (L === 'Commercial' || L === 'Commercial 2') {
+  // Commercial : toujours en bleu, quel que soit l'etat (gere aussi « Commercial 1 », « Commercial 2 »)
+  if (/^Commercial(\s*\d+)?$/i.test(L)) {
     return {
       className: 'fiche-detail-etat-confirmer-val--commercial',
       style: { ...bold, color: '#1d4ed8' },
       dataHl: 'commercial',
     };
   }
-  // Confirmateur : toujours en rouge, quel que soit l'etat
-  if (L === 'Confirmateur') {
+  // Confirmateur : toujours en rouge, quel que soit l'etat (gere aussi « Confirmateur 1 », « Confirmateur 2 », « Confirmateur 3 »)
+  if (/^Confirmateur(\s*\d+)?$/i.test(L)) {
     return {
       className: 'fiche-detail-etat-confirmer-val--confirmateur',
       style: { ...bold, color: '#b91c1c' },
@@ -3479,7 +3479,7 @@ const FicheDetail = ({
                 
                 const items = [];
 
-                if (etatData.from_compte_rendu) {
+                if (etatData.from_compte_rendu && !isEtatSigner(etatId)) {
                   const nomCommercial =
                     etatData.cr_commercial_pseudo || etatData.commercial_pseudo;
                   const affiche =
@@ -3600,7 +3600,43 @@ const FicheDetail = ({
                 // SIGNER, SIGNER RETRACTER, SIGNER COMPLET, SIGNER PM (13, 16, 45, 44) - Phase 3
                 else if (isEtatSigner(etatId)) {
                   if (etatData.sous_etat_titre) items.push({ label: 'SOUS ETAT', value: etatData.sous_etat_titre });
-                  if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurEtatListe });
+                  // Confirmateur(s) : si >= 2, afficher chaque pseudo sur sa propre ligne (« Confirmateur 1 », « Confirmateur 2 », « Confirmateur 3 »).
+                  {
+                    const confsSigner = [
+                      etatData.confirmateur_pseudo,
+                      etatData.confirmateur_2_pseudo,
+                      etatData.confirmateur_3_pseudo,
+                    ]
+                      .map((p) => (p != null ? String(p).trim() : ''))
+                      .filter((p) => p !== '');
+                    if (confsSigner.length >= 2) {
+                      confsSigner.forEach((pseudo, idx) => {
+                        items.push({ label: `Confirmateur ${idx + 1}`, value: pseudo });
+                      });
+                    } else if (confsSigner.length === 1) {
+                      items.push({ label: 'Confirmateur', value: confsSigner[0] });
+                    } else if (etatData.histo_confirmateur_pseudo) {
+                      items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                    }
+                  }
+                  // Commercial(s) : si >= 2, afficher chaque pseudo sur sa propre ligne (« Commercial 1 », « Commercial 2 »).
+                  {
+                    const comsSigner = [
+                      etatData.commercial_pseudo,
+                      etatData.commercial_2_pseudo,
+                    ]
+                      .map((p) => (p != null ? String(p).trim() : ''))
+                      .filter((p) => p !== '');
+                    if (comsSigner.length >= 2) {
+                      comsSigner.forEach((pseudo, idx) => {
+                        items.push({ label: `Commercial ${idx + 1}`, value: pseudo });
+                      });
+                    } else if (comsSigner.length === 1) {
+                      items.push({ label: 'Commercial', value: comsSigner[0] });
+                    } else if (etatData.from_compte_rendu && etatData.cr_commercial_pseudo) {
+                      items.push({ label: 'Commercial', value: String(etatData.cr_commercial_pseudo).trim() });
+                    }
+                  }
                   // Signer/historique: priorité au commentaire enregistré dans fiches_histo (conf_commentaire_produit)
                   if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
