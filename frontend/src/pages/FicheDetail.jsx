@@ -3920,7 +3920,10 @@ const FicheDetail = ({
                           padding: '8px 18px',
                           borderRadius: '6px',
                           backgroundColor: etatActuel.etat_color || '#3498db',
-                          color: etatActuel.etat_color === '#ffffff' || etatActuel.etat_color === '#fff' ? '#000' : '#fff',
+                          color:
+                            Number(etatActuel.id_etat) === 2 || Number(etatActuel.id_etat) === 1
+                              ? '#333333'
+                              : (etatActuel.etat_color === '#ffffff' || etatActuel.etat_color === '#fff' ? '#000' : '#fff'),
                           fontWeight: 'bold',
                           fontSize: '16px',
                           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
