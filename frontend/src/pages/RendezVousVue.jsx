@@ -291,7 +291,7 @@ const RendezVousVue = () => {
                   <th>Centre</th>
                   <th className="produit-col">Produit</th>
                   <th>Validé</th>
-                  <th></th>
+                  <th>Détail</th>
                 </tr>
               </thead>
               <tbody>
