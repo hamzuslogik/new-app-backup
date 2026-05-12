@@ -582,8 +582,9 @@ table.fiches-table thead,
   padding: 5px 6.4px;
   border-bottom: 1px solid #eee;
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
   vertical-align: top;
 }
 
@@ -637,8 +638,8 @@ table.fiches-table thead,
   max-width: 220px;
   white-space: normal;
   word-wrap: break-word;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
   line-height: 1.2;
 }
 
@@ -649,8 +650,9 @@ table.fiches-table thead,
   width: 132px;
   max-width: 160px;
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 /* Validé */
@@ -713,10 +715,14 @@ table.fiches-table thead,
     font-size: 9.4px;
   }
 
+  /* Retour à la ligne par mot entier (pas par lettre) pour th et td */
+  .fiches-table th,
   .fiches-table td {
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    hyphens: none !important;
     vertical-align: top;
   }
 
@@ -725,14 +731,45 @@ table.fiches-table thead,
   .fiches-table td:nth-child(5),
   .fiches-table td:nth-child(9),
   .fiches-table td:nth-child(10) {
-    white-space: nowrap;
+    white-space: nowrap !important;
   }
 
   .fiches-table th:nth-child(6),
   .fiches-table td:nth-child(6) {
     white-space: normal !important;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+  }
+
+  /* Nom (col 1) : agrandi car contient nom + prénom concaténés */
+  .fiches-table th:nth-child(1),
+  .fiches-table td:nth-child(1) {
+    min-width: 160px !important;
+    width: 180px !important;
+    max-width: 200px !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+  }
+
+  /* Produit (col 8) : réduit pour libérer de la place */
+  .fiches-table th:nth-child(8),
+  .fiches-table td:nth-child(8) {
+    min-width: 56px !important;
+    width: 60px !important;
+    max-width: 70px !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+  }
+
+  .fiches-table th:nth-child(8) .produit-indicator,
+  .fiches-table td:nth-child(8) .produit-indicator {
+    padding: 2px 4px;
+    font-size: 8px;
   }
 
   /* Cacher les ::before */
