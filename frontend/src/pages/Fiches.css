@@ -602,10 +602,21 @@ table.fiches-table thead,
   white-space: nowrap;
 }
 
-.fiches-table td:nth-child(1),
 .fiches-table td:nth-child(2),
 .fiches-table td:nth-child(7) {
   min-width: 0;
+}
+
+/* Nom + Prénom (col 1) : elargi car contient nom et prénom concaténés */
+.fiches-table th:nth-child(1),
+.fiches-table td:nth-child(1) {
+  min-width: 180px;
+  width: 200px;
+  max-width: 220px;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 /* Téléphone */
@@ -643,16 +654,22 @@ table.fiches-table thead,
   line-height: 1.2;
 }
 
-/* Produit */
+/* Produit (col 8) : reduit pour liberer de la place pour Nom */
 .fiches-table th:nth-child(8),
 .fiches-table td:nth-child(8) {
-  min-width: 72px;
-  width: 132px;
-  max-width: 160px;
+  min-width: 56px;
+  width: 64px;
+  max-width: 72px;
   white-space: normal;
   word-break: normal;
   overflow-wrap: break-word;
   word-wrap: break-word;
+  text-align: center;
+}
+
+.fiches-table td:nth-child(8) .produit-indicator {
+  padding: 3px 4px;
+  font-size: 9px;
 }
 
 /* Validé */
@@ -1357,10 +1374,14 @@ table.fiches-table thead,
     font-size: 10.2px;
   }
 
+  /* Retour a la ligne par mot entier (pas par lettre) */
+  .fiches-table th,
   .fiches-table td {
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    hyphens: none !important;
     vertical-align: top;
   }
 
@@ -1369,7 +1390,19 @@ table.fiches-table thead,
   .fiches-table td:nth-child(5),
   .fiches-table td:nth-child(9),
   .fiches-table td:nth-child(10) {
-    white-space: nowrap;
+    white-space: nowrap !important;
+  }
+
+  /* Nom + Prenom (col 1) elargi */
+  .fiches-table th:nth-child(1),
+  .fiches-table td:nth-child(1) {
+    min-width: 180px !important;
+    width: 200px !important;
+    max-width: 220px !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
   }
 
   /* Colonne Date Insertion - largeur augmentée sur mobile */
@@ -1379,12 +1412,31 @@ table.fiches-table thead,
     width: 160px !important;
   }
 
-  /* État Final — retour à la ligne */
+  /* État Final — retour à la ligne (mot entier) */
   .fiches-table th:nth-child(6),
   .fiches-table td:nth-child(6) {
     white-space: normal !important;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+  }
+
+  /* Produit (col 8) reduit */
+  .fiches-table th:nth-child(8),
+  .fiches-table td:nth-child(8) {
+    min-width: 56px !important;
+    width: 64px !important;
+    max-width: 72px !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    text-align: center !important;
+  }
+
+  .fiches-table td:nth-child(8) .produit-indicator {
+    padding: 2px 4px;
+    font-size: 9px;
   }
 
   /* Cacher les ::before sur mobile car on garde le format tableau */
