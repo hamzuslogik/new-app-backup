@@ -311,13 +311,13 @@ const CQSignatures = () => {
                 <tr>
                   <th className="sortable-header wrap-header nom-col" onClick={() => handleSort('nom')}>Nom <span>{sortIndicator('nom')}</span></th>
                   <th className="sortable-header wrap-header" onClick={() => handleSort('prenom')}>Prénom <span>{sortIndicator('prenom')}</span></th>
-                  <th className="sortable-header" onClick={() => handleSort('telephone')}>Téléphone <span>{sortIndicator('telephone')}</span></th>
+                  <th className="sortable-header telephone-col" onClick={() => handleSort('telephone')}>Téléphone <span>{sortIndicator('telephone')}</span></th>
                   <th className="sortable-header cp-col" onClick={() => handleSort('cp')}>CP <span>{sortIndicator('cp')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('date_planning')}>Date RDV <span>{sortIndicator('date_planning')}</span></th>
                   <th className="sortable-header etat-col" onClick={() => handleSort('etat')}>État <span>{sortIndicator('etat')}</span></th>
                   <th className="sortable-header wrap-header confirmateur-col" onClick={() => handleSort('confirmateur')}>Confirmateur <span>{sortIndicator('confirmateur')}</span></th>
                   <th className="sortable-header wrap-header commercial-col" onClick={() => handleSort('commercial')}>Commercial <span>{sortIndicator('commercial')}</span></th>
-                  <th className="sortable-header" onClick={() => handleSort('centre')}>Centre <span>{sortIndicator('centre')}</span></th>
+                  <th className="sortable-header wrap-header centre-col" onClick={() => handleSort('centre')}>Centre <span>{sortIndicator('centre')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('installateur')}>Installateur <span>{sortIndicator('installateur')}</span></th>
                   <th className="sortable-header produit-col" onClick={() => handleSort('produit')}>Produit <span>{sortIndicator('produit')}</span></th>
                   <th className="sortable-header" onClick={() => handleSort('date_heure')}>Date signature <span>{sortIndicator('date_heure')}</span></th>
@@ -339,7 +339,7 @@ const CQSignatures = () => {
                   >
                     <td className="wrap-word-cell nom-col">{sig.nom || '-'}</td>
                     <td className="wrap-word-cell">{sig.prenom || '-'}</td>
-                    <td>{sig.tel || sig.fiche_tel || '-'}</td>
+                    <td className="telephone-col">{sig.tel || sig.fiche_tel || '-'}</td>
                     <td className="cp-col">{sig.cp || '-'}</td>
                     <td>{sig.date_planning ? formatRdvDateTime(sig.date_planning) : '-'}</td>
                     <td className="etat-col">
@@ -349,7 +349,7 @@ const CQSignatures = () => {
                     </td>
                     <td className="wrap-word-cell confirmateur-col">{sig.confirmateur_pseudo || '-'}</td>
                     <td className="wrap-word-cell commercial-col">{getCommercialsFormatted(sig)}</td>
-                    <td className="wrap-cell">{sig.centre_titre || '-'}</td>
+                    <td className="wrap-word-cell centre-col">{sig.centre_titre || '-'}</td>
                     <td className="wrap-cell">{sig.installateur_nom || '-'}</td>
                     <td className="produit-col">
                       <span

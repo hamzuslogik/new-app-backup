@@ -142,6 +142,14 @@
   min-width: 90px;
 }
 
+.cq-table th.telephone-col,
+.cq-table td.telephone-col {
+  width: 132px;
+  min-width: 120px;
+  max-width: 150px;
+  white-space: nowrap;
+}
+
 /* Colonnes Nom / Prenom / Observation : retour a la ligne par mot (pas par lettre)
    et meme regle pour les <th> correspondants. */
 .cq-signatures-page .cq-table td.wrap-word-cell,
@@ -162,9 +170,16 @@
 /* Nom : un peu plus large que Prenom car souvent compose */
 .cq-signatures-page .cq-table th.wrap-header.nom-col,
 .cq-signatures-page .cq-table td.wrap-word-cell.nom-col {
-  width: 170px;
-  min-width: 150px;
-  max-width: 200px;
+  width: 150px;
+  min-width: 130px;
+  max-width: 170px;
+}
+
+.cq-signatures-page .cq-table th.wrap-header.centre-col,
+.cq-signatures-page .cq-table td.wrap-word-cell.centre-col {
+  width: 150px;
+  min-width: 130px;
+  max-width: 170px;
 }
 
 /* Confirmateur : pseudo (peut etre plusieurs), un peu plus large */
