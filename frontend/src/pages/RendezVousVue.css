@@ -139,8 +139,9 @@
   font-size: 12px;
   text-align: left;
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
   vertical-align: top;
 }
 
@@ -149,8 +150,9 @@
   border-bottom: 1px solid #eee;
   font-size: 12px;
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
   vertical-align: top;
 }
 
@@ -165,16 +167,27 @@
   max-width: 76px;
 }
 
-/* Retour à la ligne ciblé */
+/* Nom (col 1) et Prenom (col 2) : largeur augmentee + retour a la ligne par mot entier */
 .fiches-table th:nth-child(1),
-.fiches-table td:nth-child(1), /* Nom */
+.fiches-table td:nth-child(1),
 .fiches-table th:nth-child(2),
-.fiches-table td:nth-child(2), /* Prénom */
-.fiches-table th:nth-child(5),
-.fiches-table td:nth-child(5) { /* Ville */
+.fiches-table td:nth-child(2) {
+  min-width: 140px;
+  width: 160px;
+  max-width: 180px;
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Ville (col 5) : retour a la ligne par mot entier */
+.fiches-table th:nth-child(5),
+.fiches-table td:nth-child(5) {
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 /* Colonne Validé plus étroite */
@@ -186,15 +199,16 @@
   text-align: center;
 }
 
-/* Colonne État actuel plus large + retour à la ligne */
+/* Colonne État actuel plus large + retour à la ligne par mot entier */
 .fiches-table th:nth-child(8),
 .fiches-table td:nth-child(8) {
   width: 220px;
   min-width: 220px;
   max-width: 220px;
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .sortable-header {
