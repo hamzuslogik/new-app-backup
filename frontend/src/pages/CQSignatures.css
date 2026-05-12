@@ -159,11 +159,35 @@
   max-width: 160px;
 }
 
+/* Nom : un peu plus large que Prenom car souvent compose */
+.cq-signatures-page .cq-table th.wrap-header.nom-col,
+.cq-signatures-page .cq-table td.wrap-word-cell.nom-col {
+  width: 170px;
+  min-width: 150px;
+  max-width: 200px;
+}
+
+/* Confirmateur : pseudo (peut etre plusieurs), un peu plus large */
+.cq-signatures-page .cq-table th.wrap-header.confirmateur-col,
+.cq-signatures-page .cq-table td.wrap-word-cell.confirmateur-col {
+  width: 150px;
+  min-width: 130px;
+  max-width: 170px;
+}
+
+/* Commercial : peut afficher "C1 | C2", plus de place */
+.cq-signatures-page .cq-table th.wrap-header.commercial-col,
+.cq-signatures-page .cq-table td.wrap-word-cell.commercial-col {
+  width: 160px;
+  min-width: 140px;
+  max-width: 180px;
+}
+
 .cq-signatures-page .cq-table th.wrap-header.observation-col,
 .cq-signatures-page .cq-table td.wrap-word-cell.observation-col {
-  width: 320px;
-  min-width: 260px;
-  max-width: 360px;
+  width: 240px;
+  min-width: 200px;
+  max-width: 280px;
 }
 
 .cq-details-cell {
