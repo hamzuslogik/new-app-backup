@@ -86,10 +86,26 @@ function isEtatConfirmerLike(etatId, etatTitre) {
  * Garde aussi les classes pour cohérence avec FicheDetail.css.
  */
 function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
-  if (!isEtatConfirmerLike(etatId, etatTitre)) return null;
   const L = normalizeDetailItemLabel(itemLabel);
   const bold = { fontWeight: 700 };
-  if (L === 'Date RDV') {
+  // Commercial : toujours en bleu, quel que soit l'etat
+  if (L === 'Commercial' || L === 'Commercial 2') {
+    return {
+      className: 'fiche-detail-etat-confirmer-val--commercial',
+      style: { ...bold, color: '#1d4ed8' },
+      dataHl: 'commercial',
+    };
+  }
+  // Confirmateur : toujours en rouge, quel que soit l'etat
+  if (L === 'Confirmateur') {
+    return {
+      className: 'fiche-detail-etat-confirmer-val--confirmateur',
+      style: { ...bold, color: '#b91c1c' },
+      dataHl: 'confirmateur',
+    };
+  }
+  // Date RDV : surlignage vert encadre, uniquement quand l'etat est CONFIRMER
+  if (L === 'Date RDV' && isEtatConfirmerLike(etatId, etatTitre)) {
     return {
       className: 'fiche-detail-etat-confirmer-val--rdv',
       style: {
@@ -102,20 +118,6 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
         backgroundColor: '#f0fdf4',
       },
       dataHl: 'rdv',
-    };
-  }
-  if (L === 'Commercial' || L === 'Commercial 2') {
-    return {
-      className: 'fiche-detail-etat-confirmer-val--commercial',
-      style: { ...bold, color: '#1d4ed8' },
-      dataHl: 'commercial',
-    };
-  }
-  if (L === 'Confirmateur') {
-    return {
-      className: 'fiche-detail-etat-confirmer-val--confirmateur',
-      style: { ...bold, color: '#b91c1c' },
-      dataHl: 'confirmateur',
     };
   }
   return null;
