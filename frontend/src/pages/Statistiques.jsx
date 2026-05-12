@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaChartBar } from 'react-icons/fa';
+import { FaChartBar, FaFilter } from 'react-icons/fa';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './Statistiques.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -658,7 +658,15 @@ const Statistiques = () => {
 
       {/* Formulaire de filtres */}
       <div className="stats-filters">
-        <h3>{activeTab === 'statko' ? 'Statistiques fiches KO (ko=1) par Agent' : `Statistiques par ${activeTab.toUpperCase()}`}</h3>
+        <div className="stats-filters-header">
+          <div className="stats-filters-title">
+            <span className="stats-filters-icon"><FaFilter /></span>
+            <div>
+              <h3>{activeTab === 'statko' ? 'Statistiques fiches KO par Agent' : `Statistiques par ${activeTab.toUpperCase()}`}</h3>
+              <p>Affinez les résultats avec des filtres rapides.</p>
+            </div>
+          </div>
+        </div>
         {renderFilterForm()}
       </div>
 
