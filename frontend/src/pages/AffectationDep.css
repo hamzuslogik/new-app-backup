@@ -192,22 +192,33 @@
   min-width: 800px;
 }
 
-.planning-grid thead {
+.affectation-dep .planning-grid thead,
+.affectation-dep table.planning-grid thead {
   background: #000000 !important;
+  background-color: #000000 !important;
 }
 
-.planning-grid th {
-  padding: 6px 6px;
-  text-align: center;
+.affectation-dep .planning-grid thead th,
+.affectation-dep .planning-grid th,
+.affectation-dep table.planning-grid thead th,
+.affectation-dep table.planning-grid th {
+  padding: 16px 8px !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
   font-weight: 800 !important;
   color: #ffffff !important;
   background: #000000 !important;
-  border-bottom: 2px solid #000000;
-  font-size: 1.05rem;
+  background-color: #000000 !important;
+  border-bottom: 2px solid #000000 !important;
+  font-size: 1.05rem !important;
   white-space: nowrap;
 }
 
-.planning-grid .time-slot-header {
+.affectation-dep .planning-grid .time-slot-header,
+.affectation-dep .planning-grid td.time-slot-header,
+.affectation-dep table.planning-grid td.time-slot-header {
   background: #000000 !important;
   background-color: #000000 !important;
   color: #ffffff !important;
@@ -215,12 +226,14 @@
   text-align: center !important;
   vertical-align: middle !important;
   padding: 10px 8px !important;
-  border-right: 2px solid #000000;
+  border-right: 2px solid #000000 !important;
   font-size: 1.05rem !important;
 }
 
-.planning-grid .time-slot-header *,
-.planning-grid th * {
+.affectation-dep .planning-grid .time-slot-header *,
+.affectation-dep .planning-grid td.time-slot-header *,
+.affectation-dep .planning-grid thead th *,
+.affectation-dep .planning-grid th * {
   color: #ffffff !important;
   font-weight: 800 !important;
   text-align: center !important;

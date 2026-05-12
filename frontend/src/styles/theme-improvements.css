@@ -162,14 +162,14 @@ table:not(.planning-table):not(.production-table):not(.distance-table) th:not(.p
 }
 
 /* En-têtes de tableaux avec fond clair - texte sombre (par défaut) */
-table thead:not(.planning-table thead):not(.fiches-table thead):not(.stats-table thead):not(.suivi-table thead):not(.data-table thead):not(.availability-table thead):not(.production-table thead):not(.distance-table thead),
-thead:not(.planning-table thead):not(.fiches-table thead):not(.stats-table thead):not(.suivi-table thead):not(.data-table thead):not(.availability-table thead):not(.production-table thead):not(.distance-table thead) {
+table thead:not(.planning-table thead):not(.planning-grid thead):not(.fiches-table thead):not(.stats-table thead):not(.suivi-table thead):not(.data-table thead):not(.availability-table thead):not(.production-table thead):not(.distance-table thead),
+thead:not(.planning-table thead):not(.planning-grid thead):not(.fiches-table thead):not(.stats-table thead):not(.suivi-table thead):not(.data-table thead):not(.availability-table thead):not(.production-table thead):not(.distance-table thead) {
   background: var(--bg-tertiary, #e9ecef) !important;
   color: #333333 !important; /* Texte sombre sur fond clair */
 }
 
-table thead th:not(.planning-table th):not(.fiches-table th):not(.stats-table th):not(.suivi-table th):not(.data-table th):not(.availability-table th):not(.production-table th):not(.distance-table th),
-thead th:not(.planning-table th):not(.fiches-table th):not(.stats-table th):not(.suivi-table th):not(.data-table th):not(.availability-table th):not(.production-table th):not(.distance-table th) {
+table thead th:not(.planning-table th):not(.planning-grid th):not(.fiches-table th):not(.stats-table th):not(.suivi-table th):not(.data-table th):not(.availability-table th):not(.production-table th):not(.distance-table th),
+thead th:not(.planning-table th):not(.planning-grid th):not(.fiches-table th):not(.stats-table th):not(.suivi-table th):not(.data-table th):not(.availability-table th):not(.production-table th):not(.distance-table th) {
   color: #333333 !important; /* Texte sombre sur fond clair */
 }
 
