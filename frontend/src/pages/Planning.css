@@ -228,31 +228,39 @@
 }
 
 .planning-table td.time-slot-header {
-  background: #1b1e24 !important;
+  background: #000000 !important;
   color: #ffffff !important;
-  font-weight: bold;
-  text-align: left !important;
-  padding-left: 15px !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  text-align: center !important;
+  padding: 10px 8px !important;
+  vertical-align: middle !important;
 }
 
 .time-slot-header {
-  background: #1b1e24 !important;
+  background: #000000 !important;
   color: #ffffff !important;
-  font-weight: 600;
-  text-align: left !important;
-  padding-left: 15px !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  text-align: center !important;
+  padding: 10px 8px !important;
+  vertical-align: middle !important;
 }
 
-/* Forcer le texte blanc pour tous les time-slot-header */
+/* Forcer le texte blanc, gras, grand et centre pour tous les time-slot-header */
 .planning-table .time-slot-header,
 .planning-table td.time-slot-header,
 .planning-table tr td.time-slot-header,
 .planning-table tbody td.time-slot-header,
 .time-slot-header {
-  background: #1b1e24 !important;
-  background-color: #1b1e24 !important;
+  background: #000000 !important;
+  background-color: #000000 !important;
   color: #ffffff !important;
   color: rgb(255, 255, 255) !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  text-align: center !important;
+  vertical-align: middle !important;
 }
 
 .planning-table .time-slot-header *,
@@ -260,6 +268,8 @@
 .time-slot-header * {
   color: #ffffff !important;
   color: rgb(255, 255, 255) !important;
+  font-weight: 800 !important;
+  text-align: center !important;
 }
 
 .planning-cell {
@@ -448,15 +458,21 @@
 /* Appliquer les couleurs de planning-header aux time-slot-header */
 .planning-table .time-slot-header,
 .planning-table td.time-slot-header {
-  background: #1b1e24 !important;
-  background-color: #1b1e24 !important;
-  border: 1px solid #1b1e24 !important;
+  background: #000000 !important;
+  background-color: #000000 !important;
+  border: 1px solid #000000 !important;
   color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  text-align: center !important;
+  vertical-align: middle !important;
 }
 
 .planning-table .time-slot-header *,
 .planning-table td.time-slot-header * {
   color: #ffffff !important;
+  font-weight: 800 !important;
+  text-align: center !important;
 }
 
 .availability-badge {
