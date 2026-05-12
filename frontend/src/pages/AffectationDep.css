@@ -193,29 +193,37 @@
 }
 
 .planning-grid thead {
-  background: var(--table-header-bg, #ECFDF5) !important;
+  background: #000000 !important;
 }
 
 .planning-grid th {
   padding: 6px 6px;
   text-align: center;
-  font-weight: 600;
-  color: var(--table-header-text, #064E3B);
-  background: var(--table-header-bg, #ECFDF5) !important;
-  border-bottom: 2px solid #ddd;
-  font-size: 11px;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  background: #000000 !important;
+  border-bottom: 2px solid #000000;
+  font-size: 1.05rem;
   white-space: nowrap;
 }
 
 .planning-grid .time-slot-header {
-  background: var(--table-header-bg, #ECFDF5) !important;
-  font-weight: 600;
-  text-align: left;
-  padding: 6px 10px;
-  border-right: 2px solid #ddd;
-  font-size: 11px;
-  color: var(--table-header-text, #064E3B);
-  font-weight: bold;
+  background: #000000 !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  padding: 10px 8px !important;
+  border-right: 2px solid #000000;
+  font-size: 1.05rem !important;
+}
+
+.planning-grid .time-slot-header *,
+.planning-grid th * {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  text-align: center !important;
 }
 
 .planning-grid td {
