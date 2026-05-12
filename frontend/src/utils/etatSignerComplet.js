@@ -30,7 +30,14 @@ export function isSignerCompletBySousEtat(fiche, etats = [], sousEtats = []) {
   const etatTitle = normalizeLabel(getEtatTitle(fiche, etats));
   const sousEtatTitle = normalizeLabel(getSousEtatTitle(fiche, sousEtats));
   const isBaseSigner = etatId === 13 || etatTitle === 'signer';
-  const isSousEtatComplet = sousEtatTitle === 'complet' || sousEtatTitle === 'signer complet';
+  // Le titre du sous-état en BDD est "COMPLETE" (cf. insert_sous_etat_liste_fixee.sql),
+  // mais on accepte aussi les variantes "COMPLET" et "SIGNER COMPLET".
+  const isSousEtatComplet =
+    sousEtatTitle === 'complet' ||
+    sousEtatTitle === 'complete' ||
+    sousEtatTitle === 'signer complet' ||
+    sousEtatTitle === 'signer complete' ||
+    sousEtatTitle.startsWith('complet'); // couvre "complet", "complete", "complétée", etc.
 
   return isBaseSigner && isSousEtatComplet;
 }
@@ -43,8 +50,18 @@ export function getSignerCompletEtat(etats = []) {
   );
 }
 
+function isAlreadySignerComplet(fiche, etats = []) {
+  const etatId = Number(getEtatId(fiche));
+  if (etatId === 45) return true;
+  const etatTitle = normalizeLabel(getEtatTitle(fiche, etats));
+  return etatTitle === 'signer complet';
+}
+
 export function getEffectiveEtatTitle(fiche, etats = [], sousEtats = []) {
-  if (isSignerCompletBySousEtat(fiche, etats, sousEtats)) {
+  if (
+    isAlreadySignerComplet(fiche, etats) ||
+    isSignerCompletBySousEtat(fiche, etats, sousEtats)
+  ) {
     return 'Signer Complet';
   }
   return getEtatTitle(fiche, etats);
@@ -52,7 +69,12 @@ export function getEffectiveEtatTitle(fiche, etats = [], sousEtats = []) {
 
 export function getEffectiveEtatColor(fiche, etats = [], sousEtats = [], fallbackColor = '#cccccc') {
   if (isSignerCompletBySousEtat(fiche, etats, sousEtats)) {
-    return getSignerCompletEtat(etats)?.color || fallbackColor;
+    return (
+      getSignerCompletEtat(etats)?.color ||
+      fiche?.etat_color ||
+      fiche?.etat_final_color ||
+      fallbackColor
+    );
   }
 
   const explicitColor = fiche?.etat_color || fiche?.etat_final_color;
