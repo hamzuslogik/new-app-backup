@@ -16,10 +16,12 @@ import {
 } from 'react-icons/fa';
 import { toLocalDateString, getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './StatistiquesV2.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const COLORS = ['#9cbfc8', '#4a7a87', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#e83e8c'];
 
 const StatistiquesV2 = () => {
+  useForceDesktopViewport('statistiques-v2-page');
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('qualification');
   const [selectedPeriod, setSelectedPeriod] = useState('mois');

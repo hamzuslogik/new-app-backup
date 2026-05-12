@@ -16,8 +16,10 @@ import {
   FaDoorOpen
 } from 'react-icons/fa';
 import './KPIs.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const KPIs = () => {
+  useForceDesktopViewport('kpis-page');
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('qualification'); // qualification, confirmation, confirmation-jws, porte-ouverte
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois

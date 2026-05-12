@@ -6,8 +6,10 @@ import api from '../config/api';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import './DemandesInsertion.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const DemandesInsertion = () => {
+  useForceDesktopViewport('demandes-insertion-page');
   const { openFicheDetail } = useFicheDetailModal();
   const queryClient = useQueryClient();
   const [statutFilter, setStatutFilter] = useState('');

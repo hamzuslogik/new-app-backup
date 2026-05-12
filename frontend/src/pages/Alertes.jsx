@@ -5,8 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { FaBell, FaFilter } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Alertes.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Alertes = () => {
+  useForceDesktopViewport('alertes-page');
   const { user } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
   // Masquer la colonne "Id qualité" (Envoyée par) pour la session Agent qualification (fonction 3)

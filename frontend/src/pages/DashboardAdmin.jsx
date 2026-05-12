@@ -9,8 +9,10 @@ import FicheDetailModal from '../components/FicheDetailModal';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import './DashboardAdmin.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const DashboardAdmin = () => {
+  useForceDesktopViewport('dashboard-admin-page');
   const { user, hasPermission } = useAuth();
   const { setAutoHide, isDesktop } = useSidebar();
   const queryClient = useQueryClient();

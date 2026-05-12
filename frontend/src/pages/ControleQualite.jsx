@@ -10,12 +10,14 @@ import RemarquesContent from '../components/RemarquesContent';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import './ControleQualite.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 // ID de l'état KO et HC
 const ETAT_KO_ID = 54;
 const ETAT_HC_ID = 55;
 
 const ControleQualite = () => {
+  useForceDesktopViewport('controle-qualite-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showFilters, setShowFilters] = useState(true);

@@ -5,8 +5,10 @@ import api from '../config/api';
 import { FaSearch, FaUsers } from 'react-icons/fa';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import './MonEquipe.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const MonEquipe = () => {
+  useForceDesktopViewport('mon-equipe-page');
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 

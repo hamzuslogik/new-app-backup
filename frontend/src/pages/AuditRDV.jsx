@@ -7,8 +7,10 @@ import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './AuditRDV.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const AuditRDV = () => {
+  useForceDesktopViewport('audit-rdv-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const today = new Date().toISOString().split('T')[0];

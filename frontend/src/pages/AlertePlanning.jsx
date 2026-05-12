@@ -8,6 +8,7 @@ import {
   labelForPlanningWeekKey,
   utcPlanningWeekNumber,
 } from '../utils/planningWeekKeys';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const SLOT_OPTIONS = [
   { value: '09:00:00', label: '9H' },
@@ -115,6 +116,7 @@ const WeekPickerBlock = ({
 );
 
 const AlertePlanning = () => {
+  useForceDesktopViewport('alerte-planning-page');
   const queryClient = useQueryClient();
   const baseWeekPickerKeys = useMemo(() => {
     const now = new Date();

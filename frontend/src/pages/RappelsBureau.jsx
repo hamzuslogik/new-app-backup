@@ -7,6 +7,7 @@ import { FaSearch, FaCalendarAlt } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './RappelsBureau.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 // État 19 = RAPPEL POUR BUREAU (date rappel stockée dans date_rdv_time)
 const ETAT_RAPPEL_BUREAU = 19;
@@ -15,6 +16,7 @@ const FONCTION_RE_CONFIRMATION = 14;
 const FONCTION_RP_CONFIRMATION = 13;
 
 const RappelsBureau = () => {
+  useForceDesktopViewport('rappels-bureau-page');
   const { user } = useAuth();
   const isRPConfirmation = Number(user?.fonction) === FONCTION_RP_CONFIRMATION;
 

@@ -5,8 +5,10 @@ import api from '../config/api';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { FaChartLine, FaExclamationTriangle, FaBan } from 'react-icons/fa';
 import './KPIAgentQualification.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const KPIAgentQualification = () => {
+  useForceDesktopViewport('kpi-agent-qualification-page');
   const { user } = useAuth();
 
   const [filters, setFilters] = useState({

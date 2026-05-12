@@ -7,8 +7,10 @@ import { Link } from 'react-router-dom';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './Phase3.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Phase3 = () => {
+  useForceDesktopViewport('phase3-page');
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('rdv-affilie'); // rdv-affilie, rdv-non-affilie, signes-semaine, signes-mois
 

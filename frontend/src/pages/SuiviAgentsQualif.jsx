@@ -7,8 +7,10 @@ import { toast } from 'react-toastify';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import './SuiviAgentsQualif.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const SuiviAgentsQualif = () => {
+  useForceDesktopViewport('suivi-agents-qualif-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showFilters, setShowFilters] = useState(true);

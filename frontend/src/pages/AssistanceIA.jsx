@@ -6,8 +6,10 @@ import { FaRobot, FaCalendarAlt, FaExclamationTriangle, FaCheckCircle, FaInfoCir
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import './AssistanceIA.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const AssistanceIA = () => {
+  useForceDesktopViewport('assistance-ia-page');
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeTab, setActiveTab] = useState('problems'); // 'problems', 'qualification', 'report'

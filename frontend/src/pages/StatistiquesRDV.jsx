@@ -4,8 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaCalendarCheck, FaCalendarTimes, FaCalendarAlt, FaEye, FaEyeSlash } from 'react-icons/fa';
 import './StatistiquesRDV.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const StatistiquesRDV = () => {
+  useForceDesktopViewport('statistiques-rdv-page');
   const { user } = useAuth();
   const [showConfirmateursTable, setShowConfirmateursTable] = useState(true);
 

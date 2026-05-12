@@ -13,8 +13,10 @@ import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import './Fiches.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Fiches = () => {
+  useForceDesktopViewport('fiches-page');
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

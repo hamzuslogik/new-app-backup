@@ -5,8 +5,10 @@ import api from '../config/api';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { FaUserTie, FaFileAlt, FaFilter, FaChartBar } from 'react-icons/fa';
 import './SuiviAgents.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const SuiviAgents = () => {
+  useForceDesktopViewport('suivi-agents-page');
   const { user } = useAuth();
   
   // Vérifier si l'utilisateur est un RE Qualification (a des agents sous sa responsabilité)

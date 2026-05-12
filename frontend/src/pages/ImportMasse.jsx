@@ -6,6 +6,7 @@ import { FaUpload, FaFileExcel, FaFileCsv, FaCheck, FaTimes, FaDownload, FaSpinn
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import './ImportMasse.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const SESSION_STORAGE_JOB_KEY = 'import_masse_job_id';
 const SESSION_STORAGE_RESULT_KEY = 'import_masse_last_result';
@@ -35,6 +36,7 @@ function progressToResult(data) {
 }
 
 const ImportMasse = () => {
+  useForceDesktopViewport('import-masse-page');
   const { user, hasPermission } = useAuth();
   const [file, setFile] = useState(null);
   const [previewData, setPreviewData] = useState(null);

@@ -6,8 +6,10 @@ import { FaChartLine, FaSignature, FaFileAlt, FaPrint } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './SuiviTelepro.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const SuiviTelepro = () => {
+  useForceDesktopViewport('suivi-telepro-page');
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('commissions'); // commissions, signatures, new-repro
 

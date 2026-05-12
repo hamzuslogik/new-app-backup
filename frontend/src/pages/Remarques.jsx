@@ -2,8 +2,10 @@ import React from 'react';
 import { FaCommentDots } from 'react-icons/fa';
 import RemarquesContent from '../components/RemarquesContent';
 import './Remarques.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Remarques = () => {
+  useForceDesktopViewport('remarques-page');
   return (
     <div className="page-remarques">
       <div className="page-header">

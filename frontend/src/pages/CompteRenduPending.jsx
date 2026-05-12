@@ -9,8 +9,10 @@ import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './CompteRenduPending.css';
 import { isCompteRenduSignerEtat, SIGNATURE_ONLY_MODIFICATION_KEYS } from '../utils/compteRenduSigner';
 import { getDateRappelAffichage } from '../utils/compteRenduDateRappel';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const CompteRenduPending = () => {
+  useForceDesktopViewport('compte-rendu-pending-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedStatut, setSelectedStatut] = useState(user.fonction === 5 ? 'pending' : 'all'); // Commerciaux voient seulement 'pending' par défaut

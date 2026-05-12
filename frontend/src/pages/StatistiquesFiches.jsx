@@ -19,6 +19,7 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getLastDayOfMonthLocal } from '../utils/dateUtils';
 import './StatistiquesFiches.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const initialFilters = () => ({
   date_debut: getFirstOfMonthLocal(),
@@ -47,6 +48,7 @@ function dateToSortNumber(value) {
 }
 
 const StatistiquesFiches = () => {
+  useForceDesktopViewport('statistiques-fiches-page');
   // Forcer le viewport à 1400px pour désactiver la responsivité mobile (identique à Dashboard.jsx)
   useEffect(() => {
     const originalViewport = document.querySelector('meta[name="viewport"]');

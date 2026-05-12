@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaTrophy, FaUsers, FaChartLine, FaCalendarDay, FaCalendarWeek, FaCalendarAlt } from 'react-icons/fa';
 import './KPIQualification.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 /** taux côté API = fiches validées / fiches produites sur le périmètre autorisé (global ou équipe) */
 function getTauxConversionDisplay(tauxConversion) {
@@ -26,6 +27,7 @@ function getTauxConversionDisplay(tauxConversion) {
 }
 
 const KPIQualification = () => {
+  useForceDesktopViewport('kpi-qualification-page');
   const { user } = useAuth();
   const canUseScopeFilters = user?.fonction === 11 || user?.fonction === 1;
   const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois

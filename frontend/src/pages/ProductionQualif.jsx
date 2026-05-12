@@ -10,8 +10,10 @@ import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './ProductionQualif.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const ProductionQualif = () => {
+  useForceDesktopViewport('production-qualif-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showFilters, setShowFilters] = useState(true);

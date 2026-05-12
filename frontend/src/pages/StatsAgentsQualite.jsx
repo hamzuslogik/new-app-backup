@@ -8,10 +8,12 @@ import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './StatsAgentsQualite.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const CHART_COLORS = ['#9cbfc8', '#4a7a87', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#e83e8c'];
 
 const StatsAgentsQualite = () => {
+  useForceDesktopViewport('stats-agents-qualite-page');
   const { user } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState('stats'); // 'stats', 'fiches' ou 'kpis'
