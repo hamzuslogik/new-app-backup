@@ -67,8 +67,8 @@
 
 .cq-signatures-page .wrap-cell {
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
   max-width: 220px;
 }
 
@@ -81,6 +81,7 @@
 
 .cq-table {
   width: 100%;
+  min-width: 1780px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -120,34 +121,107 @@
 }
 
 /* Ajustement des largeurs colonnes */
-.cq-table th.cp-col,
-.cq-table td.cp-col {
-  width: 56px;
-  min-width: 50px;
-  max-width: 60px;
-  white-space: nowrap;
-  text-align: center;
+.cq-signatures-page .cq-table th,
+.cq-signatures-page .cq-table td,
+.cq-signatures-page .etat-badge {
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  hyphens: none !important;
 }
 
-.cq-table th.etat-col,
-.cq-table td.etat-col {
-  width: 100px;
-  min-width: 90px;
-  max-width: 110px;
-}
-
-.cq-table th.produit-col,
-.cq-table td.produit-col {
-  width: 90px;
-  min-width: 90px;
+.cq-table th.nom-col,
+.cq-table td.nom-col,
+.cq-table th.prenom-col,
+.cq-table td.prenom-col {
+  width: 112px;
+  min-width: 112px;
+  max-width: 112px;
 }
 
 .cq-table th.telephone-col,
 .cq-table td.telephone-col {
-  width: 132px;
-  min-width: 120px;
-  max-width: 150px;
+  width: 106px;
+  min-width: 106px;
+  max-width: 106px;
   white-space: nowrap;
+}
+
+.cq-table th.cp-col,
+.cq-table td.cp-col {
+  width: 56px;
+  min-width: 56px;
+  max-width: 56px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.cq-table th.date-rdv-col,
+.cq-table td.date-rdv-col,
+.cq-table th.date-signature-col,
+.cq-table td.date-signature-col {
+  width: 136px;
+  min-width: 136px;
+  max-width: 136px;
+}
+
+.cq-table th.etat-col,
+.cq-table td.etat-col {
+  width: 118px;
+  min-width: 118px;
+  max-width: 118px;
+}
+
+.cq-table th.confirmateur-col,
+.cq-table td.confirmateur-col,
+.cq-table th.commercial-col,
+.cq-table td.commercial-col {
+  width: 92px;
+  min-width: 92px;
+  max-width: 92px;
+}
+
+.cq-table th.centre-col,
+.cq-table td.centre-col {
+  width: 124px;
+  min-width: 124px;
+  max-width: 124px;
+}
+
+.cq-table th.installateur-col,
+.cq-table td.installateur-col {
+  width: 92px;
+  min-width: 92px;
+  max-width: 92px;
+}
+
+.cq-table th.produit-col,
+.cq-table td.produit-col {
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+}
+
+.cq-table th.cq-etat-col,
+.cq-table td.cq-etat-col {
+  width: 74px;
+  min-width: 74px;
+  max-width: 74px;
+}
+
+.cq-table th.cq-dossier-col,
+.cq-table td.cq-dossier-col {
+  width: 92px;
+  min-width: 92px;
+  max-width: 92px;
+}
+
+.cq-table th.details-col,
+.cq-table td.details-col {
+  width: 76px;
+  min-width: 76px;
+  max-width: 76px;
+  text-align: center;
 }
 
 /* Colonnes Nom / Prenom / Observation : retour a la ligne par mot (pas par lettre)
@@ -161,47 +235,10 @@
   hyphens: none !important;
 }
 
-.cq-signatures-page .cq-table th.wrap-header,
-.cq-signatures-page .cq-table td.wrap-word-cell {
-  min-width: 110px;
-  max-width: 160px;
-}
-
-/* Nom : un peu plus large que Prenom car souvent compose */
-.cq-signatures-page .cq-table th.wrap-header.nom-col,
-.cq-signatures-page .cq-table td.wrap-word-cell.nom-col {
-  width: 150px;
-  min-width: 130px;
-  max-width: 170px;
-}
-
-.cq-signatures-page .cq-table th.wrap-header.centre-col,
-.cq-signatures-page .cq-table td.wrap-word-cell.centre-col {
-  width: 150px;
-  min-width: 130px;
-  max-width: 170px;
-}
-
-/* Confirmateur : pseudo (peut etre plusieurs), un peu plus large */
-.cq-signatures-page .cq-table th.wrap-header.confirmateur-col,
-.cq-signatures-page .cq-table td.wrap-word-cell.confirmateur-col {
-  width: 150px;
-  min-width: 130px;
-  max-width: 170px;
-}
-
-/* Commercial : peut afficher "C1 | C2", plus de place */
-.cq-signatures-page .cq-table th.wrap-header.commercial-col,
-.cq-signatures-page .cq-table td.wrap-word-cell.commercial-col {
-  width: 160px;
-  min-width: 140px;
-  max-width: 180px;
-}
-
 .cq-signatures-page .cq-table th.wrap-header.observation-col,
 .cq-signatures-page .cq-table td.wrap-word-cell.observation-col {
-  width: 240px;
-  min-width: 200px;
+  width: 280px;
+  min-width: 280px;
   max-width: 280px;
 }
 
@@ -234,8 +271,8 @@
 /* Si l'état est long, retour à la ligne dans la colonne */
 .cq-signatures-page .etat-badge {
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
   max-width: 100%;
   line-height: 1.2;
 }
