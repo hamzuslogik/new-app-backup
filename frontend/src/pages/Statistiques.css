@@ -42,137 +42,45 @@
   border-bottom-color: #f7a219;
 }
 
-/* Formulaire de filtres */
-.stats-filters {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  padding: 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+/* Filtres : on reutilise le style Dashboard (.search-panel, .search-form, .form-group, .btn-search) */
+/* Permettre au panneau de prendre toute la largeur sur la page Statistiques */
+.statistiques-page .search-panel {
+  width: 100%;
+  max-width: 100%;
   margin-bottom: 24px;
 }
 
-.stats-filters-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+/* Grille des filtres : adapter aux champs Statistiques (5 a 7 colonnes en desktop) */
+.statistiques-page .search-form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
-.stats-filters-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+@media (max-width: 1400px) {
+  .statistiques-page .search-form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
 }
 
-.stats-filters-icon {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: #1b1e24;
+@media (max-width: 992px) {
+  .statistiques-page .search-form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .statistiques-page .search-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Le bouton "Generer" reprend le style btn-search vert du Dashboard */
+.statistiques-page .search-form-actions-left .btn-search {
+  background-color: #16a34a;
   color: #ffffff;
-  box-shadow: 0 6px 14px rgba(27, 30, 36, 0.22);
 }
 
-.stats-filters h3 {
-  margin: 0;
-  color: #1f2937;
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.15;
-}
-
-.stats-filters p {
-  margin: 3px 0 0 0;
-  color: #6b7280;
-  font-size: 10.5px;
-}
-
-.stats-filter-form {
-  width: 100%;
-}
-
-.filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: end;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  max-width: 150px;
-}
-
-.filter-group label {
-  margin-bottom: 4px;
-  font-weight: 800;
-  color: #374151;
-  font-size: 9.5px;
-  line-height: 1.1;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.filter-group .form-control {
-  padding: 3px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 9px;
-  font-size: 10px;
-  height: 25px;
-  line-height: 1.1;
-  color: #111827;
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
-  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
-}
-
-.filter-group .form-control:focus {
-  outline: none;
-  border-color: #f7a219;
-  background: #fffaf0;
-  box-shadow: 0 0 0 3px rgba(247, 162, 25, 0.16);
-}
-
-.filter-group input[type="date"].form-control,
-.filter-group input[type="datetime-local"].form-control {
-  max-width: 118px;
-  padding: 3px 6px;
-  font-size: 10px;
-}
-
-.filter-group select.form-control {
-  max-width: 150px;
-  font-size: 10px;
-  padding: 3px 22px 3px 8px;
-}
-
-.btn-generate {
-  height: 25px;
-  padding: 3px 12px;
-  background: linear-gradient(135deg, #f7a219, #e6940f);
-  color: white;
-  border: none;
-  border-radius: 9px;
-  font-weight: 800;
-  font-size: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  box-shadow: 0 6px 14px rgba(247, 162, 25, 0.28);
-}
-
-.btn-generate:hover {
-  background: linear-gradient(135deg, #ffb13b, #e6940f);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(247, 162, 25, 0.34);
+.statistiques-page .search-form-actions-left .btn-search:hover {
+  background-color: #15803d;
 }
 
 /* Résultats */
@@ -386,13 +294,6 @@
     padding: 12px;
   }
 
-  .stats-filters {
-    padding: 16px;
-  }
-
-  .filter-row {
-    gap: 6px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -417,19 +318,7 @@
     min-width: 100px;
   }
 
-  .stats-filters {
-    padding: 12px;
-  }
-
-  .stats-filters h3 {
-    font-size: 15.3px;
-  }
-
-  .filter-row {
-    gap: 6px;
-  }
-
-  .btn-generate {
+  .statistiques-page .search-form-actions-left .btn-search {
     width: 100%;
     justify-content: center;
   }

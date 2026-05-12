@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaChartBar, FaFilter } from 'react-icons/fa';
+import { FaChartBar, FaSearch } from 'react-icons/fa';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './Statistiques.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -127,14 +127,13 @@ const Statistiques = () => {
 
   const renderFilterForm = () => {
     return (
-      <form onSubmit={handleSubmit} className="stats-filter-form">
-        <div className="filter-row">
-          <div className="filter-group">
+      <form onSubmit={handleSubmit} className="search-form stats-filter-form">
+        <div className="search-form-grid">
+          <div className="form-group">
             <label>Énergie</label>
             <select
               value={filters.produit}
               onChange={(e) => handleFilterChange('produit', e.target.value)}
-              className="form-control"
             >
               <option value="">PAC ET PV</option>
               <option value="1">PAC</option>
@@ -142,12 +141,11 @@ const Statistiques = () => {
             </select>
           </div>
 
-          <div className="filter-group">
+          <div className="form-group">
             <label>Type de date</label>
             <select
               value={filters.date}
               onChange={(e) => handleFilterChange('date', e.target.value)}
-              className="form-control"
             >
               {activeTab === 'agent' ? (
                 <option value="date_insert_time">Date Insertion (Saisie)</option>
@@ -162,12 +160,11 @@ const Statistiques = () => {
           </div>
 
           {activeTab === 'centre' && (
-            <div className="filter-group">
+            <div className="form-group">
               <label>Centre</label>
               <select
                 value={filters.id_centre}
                 onChange={(e) => handleFilterChange('id_centre', e.target.value)}
-                className="form-control"
               >
                 <option value="">TOUS LES CENTRES</option>
                 {centresData?.map(centre => (
@@ -179,12 +176,11 @@ const Statistiques = () => {
 
           {activeTab === 'confirmateur' && (
             <>
-              <div className="filter-group">
+              <div className="form-group">
                 <label>Centre</label>
                 <select
                   value={filters.id_centre}
                   onChange={(e) => handleFilterChange('id_centre', e.target.value)}
-                  className="form-control"
                 >
                   <option value="">TOUS LES CENTRES</option>
                   {centresData?.map(centre => (
@@ -192,12 +188,11 @@ const Statistiques = () => {
                   ))}
                 </select>
               </div>
-              <div className="filter-group">
+              <div className="form-group">
                 <label>Confirmateur</label>
                 <select
                   value={filters.id_confirmateur}
                   onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
-                  className="form-control"
                 >
                   <option value="">TOUS LES CONFIRMATEURS</option>
                   {confirmateursData?.map(conf => (
@@ -209,12 +204,11 @@ const Statistiques = () => {
           )}
 
           {activeTab === 'commercial' && (
-            <div className="filter-group">
+            <div className="form-group">
               <label>Commercial</label>
               <select
                 value={filters.id_commercial}
                 onChange={(e) => handleFilterChange('id_commercial', e.target.value)}
-                className="form-control"
               >
                 <option value="">TOUS LES COMMERCIAUX</option>
                 {commerciauxData?.map(com => (
@@ -225,12 +219,11 @@ const Statistiques = () => {
           )}
 
           {activeTab === 'agent' && (
-            <div className="filter-group">
+            <div className="form-group">
               <label>Agent</label>
               <select
                 value={filters.id_agent}
                 onChange={(e) => handleFilterChange('id_agent', e.target.value)}
-                className="form-control"
               >
                 <option value="">TOUS LES AGENTS</option>
                 {agentsData?.map(agent => (
@@ -240,32 +233,29 @@ const Statistiques = () => {
             </div>
           )}
 
-          <div className="filter-group">
+          <div className="form-group">
             <label>Date début</label>
             <input
               type="date"
               value={filters.date_debut}
               onChange={(e) => handleFilterChange('date_debut', e.target.value)}
-              className="form-control"
             />
           </div>
 
-          <div className="filter-group">
+          <div className="form-group">
             <label>Date fin</label>
             <input
               type="date"
               value={filters.date_fin}
               onChange={(e) => handleFilterChange('date_fin', e.target.value)}
-              className="form-control"
             />
           </div>
 
-          <div className="filter-group">
+          <div className="form-group">
             <label>Affichage</label>
             <select
               value={statType}
               onChange={(e) => setStatType(e.target.value)}
-              className="form-control"
             >
               <option value="net">EN CHIFFRE</option>
               <option value="taux">EN TAUX</option>
@@ -275,12 +265,12 @@ const Statistiques = () => {
               <option value="camembert">CAMEMBERT</option>
             </select>
           </div>
+        </div>
 
-          <div className="filter-group">
-            <button type="submit" className="btn-generate">
-              <span>📊</span> Générer
-            </button>
-          </div>
+        <div className="search-form-actions-left">
+          <button type="submit" className="btn-search">
+            <FaSearch /> Générer
+          </button>
         </div>
       </form>
     );
@@ -656,16 +646,12 @@ const Statistiques = () => {
         </button>
       </div>
 
-      {/* Formulaire de filtres */}
-      <div className="stats-filters">
-        <div className="stats-filters-header">
-          <div className="stats-filters-title">
-            <span className="stats-filters-icon"><FaFilter /></span>
-            <div>
-              <h3>{activeTab === 'statko' ? 'Statistiques fiches KO par Agent' : `Statistiques par ${activeTab.toUpperCase()}`}</h3>
-              <p>Affinez les résultats avec des filtres rapides.</p>
-            </div>
-          </div>
+      {/* Formulaire de filtres (style Dashboard) */}
+      <div className="stats-filters search-panel">
+        <div className="search-panel-header">
+          <h2>
+            <FaSearch /> {activeTab === 'statko' ? 'Statistiques fiches KO par Agent' : `Statistiques par ${activeTab.toUpperCase()}`}
+          </h2>
         </div>
         {renderFilterForm()}
       </div>
