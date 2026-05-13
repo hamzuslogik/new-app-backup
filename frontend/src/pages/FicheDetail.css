@@ -2496,9 +2496,9 @@
   margin-right: 0 !important;
 }
 
-/* Champs (selects, textarea, input) du décalage : fond blanc + texte noir pur.
-   On utilise #000000 pour battre tout héritage de couleur foncée et
-   garantir une parfaite lisibilité (notamment pour le nom dans le select Confirmateur). */
+/* Champs (selects, textarea, input) du décalage : fond blanc + texte sombre.
+   La version modale est répétée pour battre les règles génériques qui
+   propagent parfois la couleur blanche aux champs imbriqués. */
 .decalage-form .form-control,
 .decalage-form select.form-control,
 .decalage-form textarea.form-control,
@@ -2511,22 +2511,22 @@
   max-width: 100% !important;
   box-sizing: border-box !important;
   background-color: #ffffff !important;
-  color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important;
+  color: #1f2933 !important;
+  -webkit-text-fill-color: #1f2933 !important;
   border: 1px solid #cfd4da !important;
   border-radius: 4px !important;
   padding: 8px 10px !important;
   font-size: 14px !important;
 }
 
-/* Options du <select> ouvert (notamment Confirmateur) : nom en noir sur fond blanc. */
+/* Options du <select> ouvert (notamment Confirmateur) : texte sombre sur fond blanc. */
 .decalage-form select.form-control option,
 .decalage-form select.form-control optgroup,
 .fiche-detail-modal-content .decalage-form select.form-control option,
 .fiche-detail-modal-content .decalage-form select.form-control optgroup {
   background-color: #ffffff !important;
-  color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important;
+  color: #1f2933 !important;
+  -webkit-text-fill-color: #1f2933 !important;
   font-weight: 600 !important;
 }
 
