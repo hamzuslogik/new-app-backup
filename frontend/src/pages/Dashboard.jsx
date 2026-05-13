@@ -1372,6 +1372,13 @@ const Dashboard = () => {
     generatePdfFromMenuMutation.mutate(hash);
   };
 
+  const openFicheDetailFromMenu = () => {
+    if (!ficheContextMenu?.fiche?.hash) return;
+    setFicheDetailModal({ hash: ficheContextMenu.fiche.hash });
+    setLastViewedFicheHash(ficheContextMenu.fiche.hash);
+    setFicheContextMenu(null);
+  };
+
   const openFicheHistoriqueOverlay = () => {
     if (!ficheContextMenu?.fiche?.hash) return;
     setFicheDetailModal({ hash: ficheContextMenu.fiche.hash, focusHistoriqueEtats: true });
@@ -2621,6 +2628,13 @@ const Dashboard = () => {
           }}
           role="menu"
         >
+          <button
+            type="button"
+            className="dashboard-fiche-context-menu-item"
+            onClick={openFicheDetailFromMenu}
+          >
+            Détails
+          </button>
           <button
             type="button"
             className="dashboard-fiche-context-menu-item"
