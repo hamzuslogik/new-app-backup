@@ -390,6 +390,7 @@ const TIME_SLOTS = [
 
 // États sans transition possible (aligné sur backend management.routes.js) : pas de « nouvel état »
 const ETATS_SANS_NOUVEL_ETAT = [22, 25, 26, 34, 35]; // ANNULER 2 FOIS, REFUSER 2 FOIS, RDV ANNULER 2 FOIS, HHC FINANCEMENT, HHC TECHNIQUE
+const ETATS_AUTORISES_VERS_CONFIRMER_PLANNING = [1, 2, 5, 8, 9, 11, 12, 19];
 
 /** Commentaire (motif_qualif) en détails fiche : annuler, annuler 2×, RDV annuler, RDV annuler 2×, refuser, refuser 2×, hors cible air air, âge/doublon/locataire, financement, HC confirmateur, HHC financement à vérifier. */
 const ETATS_AVEC_COMMENTAIRE_MOTIF = [5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34];
@@ -1040,6 +1041,12 @@ const FicheDetail = ({
   // États regroupés par phase (0,1,2,3), ordre BDD, pour les selects
   const etatsList = etats || [];
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etatsList);
+  const currentEtatFinalId = ficheData?.id_etat_final != null ? Number(ficheData.id_etat_final) : null;
+  const canSelectEtatConfirmerInChangeSection = etatsList.some((etat) => Number(etat.id) === 7);
+  const canOpenConfirmEtatFromPlanning =
+    currentEtatFinalId != null &&
+    ETATS_AUTORISES_VERS_CONFIRMER_PLANNING.includes(currentEtatFinalId) &&
+    canSelectEtatConfirmerInChangeSection;
   
   // Vérifier si c'est un commercial (fonction 5)
   const isCommercial = userFonction === 5;
@@ -1671,6 +1678,10 @@ const FicheDetail = ({
   };
 
   const handleOpenConfirmEtatFromPlanningSlot = (date, hour) => {
+    if (!canOpenConfirmEtatFromPlanning) {
+      return;
+    }
+
     let dateStr = date;
     let timeStr = hour;
 
@@ -7592,7 +7603,7 @@ const FicheDetail = ({
           setPlanningWeek={setPlanningWeek}
           setPlanningYear={setPlanningYear}
           setPlanningDep={setPlanningDep}
-          onSelectSlot={handleOpenConfirmEtatFromPlanningSlot}
+          onSelectSlot={canOpenConfirmEtatFromPlanning ? handleOpenConfirmEtatFromPlanningSlot : null}
           getUserColor={getUserColor}
           getUserName={getUserName}
           getAvailabilityColor={getAvailabilityColor}
@@ -8216,7 +8227,7 @@ const PlanningTab = ({
             dep={planningDep}
             week={planningWeek}
             year={planningYear}
-            onSelectSlot={canCreateRdvFromSlot ? (date, hour) => onSelectSlot(date, hour, null, availabilityData) : null}
+            onSelectSlot={canCreateRdvFromSlot && onSelectSlot ? (date, hour) => onSelectSlot(date, hour, null, availabilityData) : null}
             onUpdateAvailability={handleUpdateAvailability}
             canEdit={canEdit}
             currentFicheHash={ficheHash}
