@@ -2817,6 +2817,70 @@
   box-sizing: border-box !important;
 }
 
+/* Décalage : forcer exactement le même thème que la section Changement d'état,
+   y compris sur les sous-blocs qui portent des styles inline hérités. */
+.fiche-section.decalage-form,
+.fiche-detail-modal-content .fiche-section.decalage-form {
+  background-color: #3a3a3a !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: #4a4d52 !important;
+}
+
+.fiche-section.decalage-form > .section-title,
+.fiche-detail-modal-content .fiche-section.decalage-form > .section-title {
+  background-color: #332e2e !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-bottom: 1px solid #4a4d52 !important;
+}
+
+.fiche-section.decalage-form .decalage-existing-list,
+.fiche-section.decalage-form .decalage-new-form,
+.fiche-section.decalage-form .decalage-existing-item,
+.fiche-section.decalage-form .decalage-readonly-value,
+.fiche-section.decalage-form .decalage-date-preview,
+.fiche-detail-modal-content .fiche-section.decalage-form .decalage-existing-list,
+.fiche-detail-modal-content .fiche-section.decalage-form .decalage-new-form,
+.fiche-detail-modal-content .fiche-section.decalage-form .decalage-existing-item,
+.fiche-detail-modal-content .fiche-section.decalage-form .decalage-readonly-value,
+.fiche-detail-modal-content .fiche-section.decalage-form .decalage-date-preview {
+  background-color: #3a3a3a !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: #4a4d52 !important;
+}
+
+.fiche-section.decalage-form label,
+.fiche-section.decalage-form h3,
+.fiche-section.decalage-form div,
+.fiche-section.decalage-form span,
+.fiche-section.decalage-form strong,
+.fiche-section.decalage-form small,
+.fiche-detail-modal-content .fiche-section.decalage-form label,
+.fiche-detail-modal-content .fiche-section.decalage-form h3,
+.fiche-detail-modal-content .fiche-section.decalage-form div,
+.fiche-detail-modal-content .fiche-section.decalage-form span,
+.fiche-detail-modal-content .fiche-section.decalage-form strong,
+.fiche-detail-modal-content .fiche-section.decalage-form small {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.fiche-section.decalage-form .form-control,
+.fiche-section.decalage-form input.form-control,
+.fiche-section.decalage-form select.form-control,
+.fiche-section.decalage-form textarea.form-control,
+.fiche-detail-modal-content .fiche-section.decalage-form .form-control,
+.fiche-detail-modal-content .fiche-section.decalage-form input.form-control,
+.fiche-detail-modal-content .fiche-section.decalage-form select.form-control,
+.fiche-detail-modal-content .fiche-section.decalage-form textarea.form-control {
+  background-color: #ffffff !important;
+  color: #1f2933 !important;
+  -webkit-text-fill-color: #1f2933 !important;
+  border-color: #cfd4da !important;
+}
+
 /* =====================================================
    Carte « CONTROLE QUALITE » (états signer : 13, 16, 44, 45)
    Cadre avec bandeau d'en-tête + formulaire en ligne (label gauche / champ droite).
