@@ -7592,7 +7592,7 @@ const FicheDetail = ({
           setPlanningWeek={setPlanningWeek}
           setPlanningYear={setPlanningYear}
           setPlanningDep={setPlanningDep}
-          onSelectSlot={handleSelectPlanningSlot}
+          onSelectSlot={handleOpenConfirmEtatFromPlanningSlot}
           getUserColor={getUserColor}
           getUserName={getUserName}
           getAvailabilityColor={getAvailabilityColor}
@@ -8823,10 +8823,9 @@ const PlanningViewForModal = ({
                         style={{ 
                           backgroundColor: isBlocked ? 'rgba(34, 45, 50, 0.8)' : 'transparent',
                           position: 'relative',
-                          cursor: hasData && isAvailable && !!onSelectSlot ? 'pointer' : 'default',
+                          cursor: 'default',
                           border: isAvailable && !hasData && !!onSelectSlot ? '2px dashed #8BC34A' : 'none'
                         }}
-                        onClick={() => !isEditing && isAvailable && hasData && onSelectSlot && onSelectSlot(day.date, slot.hour)}
                         onDoubleClick={(e) => canEditThis && handleCellDoubleClick(day.date, slot.hour, e)}
                         title={
                           (() => {
