@@ -3582,7 +3582,7 @@ const FicheDetail = ({
                       items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                     }
                   }
-                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateTime(etatData.date_rdv_time) });
+                  if (etatData.histo_date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateTime(etatData.histo_date_rdv_time) });
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
                 }
                 // RAPPEL POUR BUREAU (19)
@@ -3863,6 +3863,7 @@ const FicheDetail = ({
               const currentDateAppelTime = (lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.date_appel_time)
                 ? lastHisto.date_appel_time
                 : fiche.date_appel_time;
+              const currentHistoDateRappelTime = (lastHistoEtatActuel?.histo_date_rdv_time || lastHistoEtatActuel?.date_rdv_time || null);
               const currentDateRappelTime = (lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.date_rdv_time)
                 ? lastHisto.date_rdv_time
                 : fiche.date_rdv_time;
@@ -3909,6 +3910,7 @@ const FicheDetail = ({
                 conf_orientation_toiture: fiche.conf_orientation_toiture ?? fiche.orientation_toiture ?? null,
                 conf_zones_ombres: fiche.conf_zones_ombres ?? fiche.zones_ombres ?? null,
                 conf_site_classe: fiche.conf_site_classe ?? fiche.site_classe ?? null,
+                histo_date_rdv_time: currentHistoDateRappelTime,
                 date_rdv_time: currentDateRappelTime || null,
                 date_appel_time: currentDateAppelTime || null,
                 date_sign_time: fiche.date_sign_time || null,
@@ -6388,24 +6390,16 @@ const FicheDetail = ({
                 <h3>Informations NRP</h3>
 
                 <div className="form-group">
-                  <label htmlFor="nrp_date_appel_date">Date d&apos;appel :</label>
+                  <label htmlFor="nrp_date_appel_datetime">Date et heure d&apos;appel :</label>
                   <input
-                    id="nrp_date_appel_date"
-                    type="date"
+                    id="nrp_date_appel_datetime"
+                    type="datetime-local"
                     className="form-control"
-                    value={nrpFormData.date_appel_date}
-                    onChange={(e) => setNrpFormData({ ...nrpFormData, date_appel_date: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="nrp_date_appel_time">Heure d&apos;appel :</label>
-                  <input
-                    id="nrp_date_appel_time"
-                    type="time"
-                    className="form-control"
-                    value={nrpFormData.date_appel_time}
-                    onChange={(e) => setNrpFormData({ ...nrpFormData, date_appel_time: e.target.value })}
+                    value={getDateTimeLocalValue(nrpFormData.date_appel_date, nrpFormData.date_appel_time)}
+                    onChange={(e) => {
+                      const [date = '', time = ''] = e.target.value.split('T');
+                      setNrpFormData({ ...nrpFormData, date_appel_date: date, date_appel_time: time });
+                    }}
                   />
                 </div>
 
@@ -6512,28 +6506,18 @@ const FicheDetail = ({
                   </select>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="etat_conf_rdv_date_8">A Rappeler Le :</label>
-                    <input
-                      type="date"
-                      id="etat_conf_rdv_date_8"
-                      className="form-control"
-                      value={etatFormData.conf_rdv_date}
-                      onChange={(e) => setEtatFormData({...etatFormData, conf_rdv_date: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="etat_conf_rdv_time_8">Heure :</label>
-                    <input
-                      type="time"
-                      id="etat_conf_rdv_time_8"
-                      className="form-control"
-                      value={etatFormData.conf_rdv_time}
-                      onChange={(e) => setEtatFormData({...etatFormData, conf_rdv_time: e.target.value})}
-                    />
-                  </div>
+                <div className="form-group">
+                  <label htmlFor="etat_conf_rdv_datetime_8">A Rappeler Le :</label>
+                  <input
+                    type="datetime-local"
+                    id="etat_conf_rdv_datetime_8"
+                    className="form-control"
+                    value={getDateTimeLocalValue(etatFormData.conf_rdv_date, etatFormData.conf_rdv_time)}
+                    onChange={(e) => {
+                      const [date = '', time = ''] = e.target.value.split('T');
+                      setEtatFormData({ ...etatFormData, conf_rdv_date: date, conf_rdv_time: time });
+                    }}
+                  />
                 </div>
 
                 <div className="form-group">
@@ -6562,28 +6546,18 @@ const FicheDetail = ({
               <div className="etat-form" style={{ marginTop: '20px' }}>
                 <h3>Informations Rappel pour Bureau</h3>
                 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="etat_date_rappel_date_19">A Rappeler Le :</label>
-                    <input
-                      type="date"
-                      id="etat_date_rappel_date_19"
-                      className="form-control"
-                      value={etatFormData.date_rappel_date}
-                      onChange={(e) => setEtatFormData({...etatFormData, date_rappel_date: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="etat_date_rappel_time_19">Heure :</label>
-                    <input
-                      type="time"
-                      id="etat_date_rappel_time_19"
-                      className="form-control"
-                      value={etatFormData.date_rappel_time}
-                      onChange={(e) => setEtatFormData({...etatFormData, date_rappel_time: e.target.value})}
-                    />
-                  </div>
+                <div className="form-group">
+                  <label htmlFor="etat_date_rappel_datetime_19">A Rappeler Le :</label>
+                  <input
+                    type="datetime-local"
+                    id="etat_date_rappel_datetime_19"
+                    className="form-control"
+                    value={getDateTimeLocalValue(etatFormData.date_rappel_date, etatFormData.date_rappel_time)}
+                    onChange={(e) => {
+                      const [date = '', time = ''] = e.target.value.split('T');
+                      setEtatFormData({ ...etatFormData, date_rappel_date: date, date_rappel_time: time });
+                    }}
+                  />
                 </div>
 
                 {sousEtats.length > 0 && (
@@ -6952,28 +6926,18 @@ const FicheDetail = ({
                   />
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="etat_date_sign_date">Date signature :</label>
-                    <input
-                      type="date"
-                      id="etat_date_sign_date"
-                      className="form-control"
-                      value={etatFormData.date_sign_date}
-                      onChange={(e) => setEtatFormData({...etatFormData, date_sign_date: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="etat_date_sign_time">Heure :</label>
-                    <input
-                      type="time"
-                      id="etat_date_sign_time"
-                      className="form-control"
-                      value={etatFormData.date_sign_time}
-                      onChange={(e) => setEtatFormData({...etatFormData, date_sign_time: e.target.value})}
-                    />
-                  </div>
+                <div className="form-group">
+                  <label htmlFor="etat_date_sign_datetime">Date et heure signature :</label>
+                  <input
+                    type="datetime-local"
+                    id="etat_date_sign_datetime"
+                    className="form-control"
+                    value={getDateTimeLocalValue(etatFormData.date_sign_date, etatFormData.date_sign_time)}
+                    onChange={(e) => {
+                      const [date = '', time = ''] = e.target.value.split('T');
+                      setEtatFormData({ ...etatFormData, date_sign_date: date, date_sign_time: time });
+                    }}
+                  />
                 </div>
 
                 <div className="form-group">

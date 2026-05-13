@@ -3899,6 +3899,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           confirmateur_3_pseudo: confirmateur3?.pseudo || null,
           // Historique: conserver le commentaire au moment du passage d'état
           conf_commentaire_produit: histo.conf_commentaire_produit || null,
+          histo_date_rdv_time: histo.date_rdv_time || null,
           conf_rdv_avec: fiche.conf_rdv_avec || null,
           conf_appel_tunisie_avec: fiche.conf_appel_tunisie_avec || null,
           conf_deja_etude: fiche.conf_deja_etude || null,
