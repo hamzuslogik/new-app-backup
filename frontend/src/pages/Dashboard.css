@@ -1465,12 +1465,28 @@ button.stat-card.stat-card-clickable {
   text-align: center;
 }
 
+/* On garde le TD en table-cell pour que sa largeur reste synchronisée
+   avec le TH "Actions" (52px). Le centrage vertical/horizontal est fait
+   sur les enfants pour ne pas casser la mise en page du tableau. */
 .dashboard-page .fiches-table td:nth-child(13) {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  text-align: center;
+  vertical-align: middle;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.dashboard-page .fiches-table td:nth-child(13) .fiche-indicators {
   justify-content: center;
-  gap: 4px;
+  margin: 0 auto 4px;
+}
+
+.dashboard-page .fiches-table td:nth-child(13) .fiche-indicators:empty {
+  display: none;
+  margin: 0 auto;
+}
+
+.dashboard-page .fiches-table td:nth-child(13) .btn-detail {
+  margin: 0 auto;
 }
 
 .fiches-table tbody tr:hover {
