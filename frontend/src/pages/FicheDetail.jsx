@@ -3557,7 +3557,16 @@ const FicheDetail = ({
                   items.push({ label: 'Commercial', value: affiche });
                 }
                 if (Number(etatId) === 7 && etatData.commercial_2_pseudo) {
-                  items.push({ label: 'Commercial', value: etatData.commercial_2_pseudo });
+                  // Ne pas dupliquer si commercial 1 == commercial 2 (même utilisateur saisi deux fois)
+                  const c1 = String(etatData.commercial_pseudo || '').trim().toLowerCase();
+                  const c2 = String(etatData.commercial_2_pseudo || '').trim().toLowerCase();
+                  const sameById =
+                    etatData.id_commercial != null &&
+                    etatData.id_commercial_2 != null &&
+                    Number(etatData.id_commercial) === Number(etatData.id_commercial_2);
+                  if (!sameById && (c1 === '' || c1 !== c2)) {
+                    items.push({ label: 'Commercial', value: etatData.commercial_2_pseudo });
+                  }
                 }
 
                 // NRP (2)
@@ -3688,13 +3697,29 @@ const FicheDetail = ({
                     }
                   }
                   // Commercial(s) : si >= 2, afficher chaque pseudo sur sa propre ligne (« Commercial 1 », « Commercial 2 »).
+                  // Si commercial 1 == commercial 2 (même utilisateur), n'afficher qu'une seule ligne « Commercial ».
                   {
-                    const comsSigner = [
+                    const sameCommercialById =
+                      etatData.id_commercial != null &&
+                      etatData.id_commercial_2 != null &&
+                      Number(etatData.id_commercial) === Number(etatData.id_commercial_2);
+                    const rawComs = [
                       etatData.commercial_pseudo,
                       etatData.commercial_2_pseudo,
                     ]
                       .map((p) => (p != null ? String(p).trim() : ''))
                       .filter((p) => p !== '');
+                    // Déduplication par pseudo (insensible à la casse) — couvre aussi le cas où
+                    // l'id n'est pas dispo dans l'objet courant (historique enrichi côté backend).
+                    const seen = new Set();
+                    const comsSigner = sameCommercialById
+                      ? rawComs.slice(0, 1)
+                      : rawComs.filter((p) => {
+                          const key = p.toLowerCase();
+                          if (seen.has(key)) return false;
+                          seen.add(key);
+                          return true;
+                        });
                     if (comsSigner.length >= 2) {
                       comsSigner.forEach((pseudo, idx) => {
                         items.push({ label: `Commercial ${idx + 1}`, value: pseudo });
@@ -3886,6 +3911,8 @@ const FicheDetail = ({
                 date_sign_time: fiche.date_sign_time || null,
                 commercial_pseudo: commerciaux?.find(c => c.id === fiche.id_commercial)?.pseudo || null,
                 commercial_2_pseudo: commerciaux?.find(c => c.id === fiche.id_commercial_2)?.pseudo || null,
+                id_commercial: fiche.id_commercial != null ? fiche.id_commercial : null,
+                id_commercial_2: fiche.id_commercial_2 != null ? fiche.id_commercial_2 : null,
                 installeur_nom: installateurs?.find(i => i.id === fiche.ph3_installateur)?.nom || null,
                 // Phase 3
                 ph3_pac: fiche.ph3_pac || null,
