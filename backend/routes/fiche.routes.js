@@ -3472,36 +3472,38 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
           histoValues
         );
         
-        // Créer des notifications pour l'agent et son superviseur (si existe)
-        const messageAcceptation = `Votre demande d'insertion de fiche pour ${donneesFiche.nom || ''} ${donneesFiche.prenom || ''} a été approuvée par ${traitantPseudo}. La fiche existante a été archivée et la nouvelle fiche a été créée.`;
-        const metadataAcceptation = JSON.stringify({
-          id_demande: id,
-          id_fiche_existante: demande.id_fiche_existante,
-          id_nouvelle_fiche: insertId,
-          hash_nouvelle_fiche: nouvelleFicheHash
+        // Notifications statiques supprimées : déclenchement du workflow dédié
+        // (les anciens INSERT manuels dans `notifications` ont été remplacés par le trigger `demande_insertion_approved`).
+        executeWorkflow('demande_insertion_approved', {
+          user: req.user,
+          fiche: {
+            id: insertId,
+            hash: nouvelleFicheHash,
+            nom: donneesFiche.nom || null,
+            prenom: donneesFiche.prenom || null,
+            tel: donneesFiche.tel || null,
+            id_agent: donneesFiche.id_agent || demande.id_agent || null,
+            id_centre: donneesFiche.id_centre || null,
+            id_etat_final: donneesFiche.id_etat_final || null,
+          },
+          demande_insertion: {
+            id: parseInt(id, 10),
+            id_fiche_existante: demande.id_fiche_existante,
+            id_nouvelle_fiche: insertId,
+            hash_nouvelle_fiche: nouvelleFicheHash,
+            id_agent: demande.id_agent,
+            agent_pseudo: agentInfo?.pseudo || null,
+            id_superviseur: agentInfo?.chef_equipe || null,
+            superviseur_pseudo: agentInfo?.superviseur_pseudo || null,
+            id_rp_qualif: agentInfo?.id_rp_qualif || null,
+            id_traitant: req.user.id,
+            traitant_pseudo: traitantPseudo,
+            commentaire: commentaire || null,
+            date_traitement: now,
+          },
+        }).catch((wfError) => {
+          console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (demande_insertion_approved):', wfError);
         });
-        
-        // Notification pour l'agent
-        if (demande.id_agent && messageAcceptation && messageAcceptation.trim() !== '') {
-          await query(
-            `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-             VALUES (?, ?, ?, ?, ?, 0, ?)`,
-            ['demande_insertion_acceptee', insertId, messageAcceptation.trim(), demande.id_agent, now, metadataAcceptation]
-          ).catch(err => {
-            console.error('Erreur lors de la création de la notification pour l\'agent:', err);
-          });
-        }
-        
-        // Notification pour le superviseur (si existe)
-        if (agentInfo?.chef_equipe && messageAcceptation && messageAcceptation.trim() !== '') {
-          await query(
-            `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-             VALUES (?, ?, ?, ?, ?, 0, ?)`,
-            ['demande_insertion_acceptee', insertId, messageAcceptation.trim(), agentInfo.chef_equipe, now, metadataAcceptation]
-          ).catch(err => {
-            console.error('Erreur lors de la création de la notification pour le superviseur:', err);
-          });
-        }
       } catch (insertError) {
         console.error('Erreur lors de l\'insertion de la fiche:', insertError);
         return res.status(500).json({

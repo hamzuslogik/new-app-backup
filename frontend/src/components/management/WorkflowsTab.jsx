@@ -51,6 +51,16 @@ const TRIGGER_VARIABLES = {
     '{demande_insertion.agent_pseudo}', '{demande_insertion.donnees_fiche}', '{demande_insertion.date_demande}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
+  demande_insertion_approved: [
+    '{fiche.id}', '{fiche.hash}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
+    '{fiche.id_agent}', '{fiche.id_centre}', '{fiche.id_etat_final}',
+    '{demande_insertion.id}', '{demande_insertion.id_fiche_existante}', '{demande_insertion.id_nouvelle_fiche}',
+    '{demande_insertion.hash_nouvelle_fiche}', '{demande_insertion.id_agent}', '{demande_insertion.agent_pseudo}',
+    '{demande_insertion.id_superviseur}', '{demande_insertion.superviseur_pseudo}', '{demande_insertion.id_rp_qualif}',
+    '{demande_insertion.id_traitant}', '{demande_insertion.traitant_pseudo}', '{demande_insertion.commentaire}',
+    '{demande_insertion.date_traitement}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
   planning_created: [
     '{planning.week}', '{planning.semaine}', '{planning.dep}', '{planning.departement}',
     '{planning.date}', '{planning.hour}', '{planning.scope}', '{planning.source}', '{planning.value}',
@@ -622,6 +632,7 @@ const WorkflowsTab = () => {
                         <option value="compte_rendu_created">Compte rendu créé</option>
                         <option value="compte_rendu_approved">Compte rendu approuvé</option>
                         <option value="demande_insertion_created">Demande d'insertion créée</option>
+                        <option value="demande_insertion_approved">Demande d'insertion approuvée</option>
                         <option value="planning_created">Planning créé</option>
                         <option value="planning_updated">Planning modifié</option>
                         <option value="decalage_created">Décalage créé</option>
