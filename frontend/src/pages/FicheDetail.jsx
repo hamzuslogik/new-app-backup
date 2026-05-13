@@ -687,6 +687,7 @@ const FicheDetail = ({
   const [confPresenceCoupleValue, setConfPresenceCoupleValue] = useState('');
   // Édition inline de Date RDV dans le bloc « État Actuel CONFIRMER »
   const [dateRdvInlineEdit, setDateRdvInlineEdit] = useState('');
+  const [showDateRdvHistory, setShowDateRdvHistory] = useState(false);
   // Liste déroulante de validation RDV (état actuel CONFIRMER)
   const [validationDropdownOpen, setValidationDropdownOpen] = useState(false);
   // Référence vers le bouton qui ouvre la liste pour calculer la position du menu (rendu via portail
@@ -935,6 +936,24 @@ const FicheDetail = ({
       refetchOnWindowFocus: isModal, // Rafraîchir quand la fenêtre redevient active (modal uniquement)
       refetchOnReconnect: isModal // Rafraîchir quand la connexion est rétablie (modal uniquement)
     }
+  );
+
+  const { data: modificaData = [] } = useQuery(
+    ['modifica', hash],
+    async () => {
+      const res = await api.get(`/fiches/${hash}/modifica`);
+      return res.data.success ? (res.data.data || []) : [];
+    },
+    {
+      enabled: !!hash,
+      retry: 1,
+    }
+  );
+
+  const dateRdvModifications = useMemo(
+    () => (Array.isArray(modificaData) ? modificaData : [])
+      .filter((mod) => String(mod.type || mod.champ || '').trim() === 'date_rdv_time'),
+    [modificaData]
   );
 
   useEffect(() => {
