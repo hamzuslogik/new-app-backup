@@ -7278,7 +7278,7 @@ const FicheDetail = ({
             </h2>
             
             {decalagesData && decalagesData.length > 0 && (
-              <div style={{ 
+              <div className="decalage-existing-list" style={{ 
                 border: '1px solid #e0e0e0', 
                 borderTop: 'none', 
                 padding: '15px',
@@ -7290,7 +7290,7 @@ const FicheDetail = ({
                 </h3>
                 <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                   {decalagesData.map((decalage, index) => (
-                    <div key={decalage.id || index} style={{ 
+                    <div key={decalage.id || index} className="decalage-existing-item" style={{ 
                       background: '#fff', 
                       padding: '10px', 
                       marginBottom: '8px', 
@@ -7323,7 +7323,7 @@ const FicheDetail = ({
               </div>
             )}
             
-            <div style={{ 
+            <div className="decalage-new-form" style={{ 
               border: '1px solid #e0e0e0', 
               borderTop: 'none', 
               padding: '15px',
@@ -7384,7 +7384,7 @@ const FicheDetail = ({
               </div>
 
               {decalageFormData.nouvelle_date && (
-                <div className="form-group" style={{ 
+                <div className="form-group decalage-date-preview" style={{ 
                   background: '#e8f5e9', 
                   padding: '10px', 
                   borderRadius: '4px',
@@ -7396,7 +7396,7 @@ const FicheDetail = ({
                     {formatRdvDateTime(decalageFormData.nouvelle_date)}
                   </span>
                   {ficheData?.date_rdv_time && (
-                    <div style={{ marginTop: '8px', fontSize: '10.2px', color: '#666', fontStyle: 'italic' }}>
+                    <div className="decalage-date-originale" style={{ marginTop: '8px', fontSize: '10.2px', color: '#666', fontStyle: 'italic' }}>
                       Date originale : {formatRdvDateTime(ficheData.date_rdv_time)}
                     </div>
                   )}
@@ -7407,11 +7407,11 @@ const FicheDetail = ({
                 <div className="form-group">
                   <label htmlFor="id_confirmateur_dec_bottom">Confirmateur :</label>
                   {ficheData?.id_confirmateur ? (
-                    <div style={{ background: '#f0f0f0', padding: '10px', borderRadius: '4px', fontWeight: 'bold' }}>
+                    <div className="decalage-readonly-value" style={{ background: '#f0f0f0', padding: '10px', borderRadius: '4px', fontWeight: 'bold' }}>
                       {confirmateurs?.find(c => c.id === ficheData.id_confirmateur)?.pseudo || `ID: ${ficheData.id_confirmateur}`}
                     </div>
                   ) : (
-                    <div style={{ color: 'red', fontStyle: 'italic' }}>
+                    <div className="decalage-warning-text" style={{ color: 'red', fontStyle: 'italic' }}>
                       Aucun confirmateur assigné à cette fiche. Veuillez assigner un confirmateur avant de créer un décalage.
                     </div>
                   )}
