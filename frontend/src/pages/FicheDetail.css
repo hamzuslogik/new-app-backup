@@ -2441,6 +2441,124 @@
   -webkit-text-fill-color: #b91c1c !important;
 }
 
+/* Décalage : même largeur et même rendu sombre que État actuel / Historique */
+.fiche-section.decalage-form {
+  width: 100% !important;
+  max-width: 760px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  background: #3a3a3a !important;
+  border: 1px solid #4a4d52 !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+}
+
+.decalage-form > .section-title {
+  margin: 0 !important;
+  background: #332e2e !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-radius: 0 !important;
+  border-bottom: 1px solid #4a4d52 !important;
+  font-size: 21px !important;
+  font-weight: 700 !important;
+}
+
+.decalage-form > div {
+  background: #3a3a3a !important;
+  border: none !important;
+  border-top: 1px solid #4a4d52 !important;
+  padding: 18px 20px !important;
+  box-sizing: border-box !important;
+}
+
+.decalage-form,
+.decalage-form h3,
+.decalage-form label,
+.decalage-form strong,
+.decalage-form small,
+.decalage-form div,
+.decalage-form span {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.decalage-form .form-group {
+  max-width: 720px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.decalage-form .form-control,
+.decalage-form select.form-control,
+.decalage-form textarea.form-control,
+.decalage-form input.form-control {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+  background-color: #ffffff !important;
+  color: #1f2933 !important;
+  -webkit-text-fill-color: #1f2933 !important;
+  border: 1px solid #cfd4da !important;
+  border-radius: 4px !important;
+  padding: 8px 10px !important;
+  font-size: 14px !important;
+}
+
+.decalage-form select.form-control option {
+  background-color: #ffffff !important;
+  color: #1f2933 !important;
+  -webkit-text-fill-color: #1f2933 !important;
+}
+
+.decalage-form textarea.form-control::placeholder {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+  opacity: 1;
+}
+
+.decalage-form .decalage-existing-list,
+.decalage-form .decalage-new-form {
+  background-color: #3a3a3a !important;
+}
+
+.decalage-form .decalage-existing-item,
+.decalage-form .decalage-readonly-value,
+.decalage-form .decalage-date-preview {
+  background-color: #4a4a4a !important;
+  border: 1px solid #5f6368 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.decalage-form .decalage-date-preview {
+  border-color: #16a34a !important;
+}
+
+.decalage-form .decalage-warning-text {
+  background-color: #4a4a4a !important;
+  border: 1px solid #b91c1c !important;
+  border-radius: 4px !important;
+  padding: 10px !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.decalage-form .btn-confirm {
+  background-color: #4a4d52 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: 1px solid #6c7079 !important;
+}
+
+.decalage-form .btn-confirm:hover:not(:disabled) {
+  background-color: #5a5e64 !important;
+  border-color: #80848d !important;
+}
+
 /* =====================================================
    Carte « CONTROLE QUALITE » (états signer : 13, 16, 44, 45)
    Cadre avec bandeau d'en-tête + formulaire en ligne (label gauche / champ droite).
