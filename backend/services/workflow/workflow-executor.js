@@ -423,6 +423,38 @@ async function insertNotification(query, type, id_fiche, message, destination, d
 }
 
 /**
+ * Enrichit eventData.fiche avec id_superviseur_qualif_agent :
+ * id de l'utilisateur (fonction 2 = superviseur qualification) qui est le chef_equipe
+ * de l'agent (fonction 3) dont l'id figure dans fiche.id_agent.
+ * Modifie l'objet en place ; ne fait rien si pas d'agent rattaché.
+ */
+async function enrichSuperviseurQualifAgent(eventData) {
+  try {
+    if (!eventData || !eventData.fiche) return;
+    if (eventData.fiche.id_superviseur_qualif_agent !== undefined && eventData.fiche.id_superviseur_qualif_agent !== null) return;
+    const agentId = eventData.fiche.id_agent;
+    if (!agentId) return;
+    const { queryOne } = require('../../config/database');
+    const row = await queryOne(
+      `SELECT u_sup.id AS id_superviseur
+         FROM utilisateurs u_agent
+         LEFT JOIN utilisateurs u_sup ON u_sup.id = u_agent.chef_equipe AND u_sup.fonction = 2 AND (u_sup.etat > 0 OR u_sup.etat IS NULL)
+        WHERE u_agent.id = ? AND u_agent.fonction = 3
+        LIMIT 1`,
+      [agentId]
+    );
+    if (row && row.id_superviseur) {
+      eventData.fiche.id_superviseur_qualif_agent = parseInt(row.id_superviseur, 10);
+      console.log(`[WORKFLOW] enrichSuperviseurQualifAgent: id_agent=${agentId} → id_superviseur_qualif_agent=${eventData.fiche.id_superviseur_qualif_agent}`);
+    } else {
+      eventData.fiche.id_superviseur_qualif_agent = null;
+    }
+  } catch (e) {
+    console.warn(`[WORKFLOW] enrichSuperviseurQualifAgent erreur :`, e.message);
+  }
+}
+
+/**
  * Action : Notification interne
  */
 async function executeNotificationAction(config, eventData) {
@@ -437,6 +469,10 @@ async function executeNotificationAction(config, eventData) {
   
   const { query, queryOne } = require('../../config/database');
   const { type, message, destination, destination_type, destination_fonctions, destination_utilisateurs, afficher_expediteur } = config;
+
+  // Pré-calcule fiche.id_superviseur_qualif_agent (superviseur qualif de l'agent qui a créé la fiche)
+  // pour qu'il soit résoluble via destination_utilisateurs ou destination legacy.
+  await enrichSuperviseurQualifAgent(eventData);
   const idExpediteur = eventData.user?.id ?? null;
   const showExpediteur = afficher_expediteur !== false ? 1 : 0;
   
@@ -657,6 +693,9 @@ async function executeNotificationAction(config, eventData) {
   } else if (destination === 'id_qualite' && eventData.fiche?.id_qualite) {
     destId = eventData.fiche.id_qualite;
     console.log(`[WORKFLOW] Destination résolue depuis id_qualite (agent qualité):`, destId);
+  } else if (destination === 'id_superviseur_qualif_agent' && eventData.fiche?.id_superviseur_qualif_agent) {
+    destId = eventData.fiche.id_superviseur_qualif_agent;
+    console.log(`[WORKFLOW] Destination résolue depuis id_superviseur_qualif_agent (superviseur qualif de l'agent de la fiche):`, destId);
   }
 
   // Validation stricte du destinataire
@@ -871,6 +910,9 @@ async function executeSystemMessageAction(config, eventData) {
   
   const { query } = require('../../config/database');
   const { titre, message, type = 'info', priorite = 1, date_debut, date_fin, actif = 1, afficher_une_seule_fois = 0, cibles_fonctions, cibles_utilisateurs, afficher_expediteur } = config;
+
+  // Pré-calcule fiche.id_superviseur_qualif_agent pour les cibles_utilisateurs dynamiques.
+  await enrichSuperviseurQualifAgent(eventData);
   const showExpediteurMsg = afficher_expediteur !== false ? 1 : 0;
   
   // Validation

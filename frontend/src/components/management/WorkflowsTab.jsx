@@ -94,7 +94,8 @@ const DYNAMIC_RECIPIENT_OPTIONS = [
   { value: '{fiche.id_confirmateur_3}', label: 'Confirmateur tertiaire ({fiche.id_confirmateur_3})' },
   { value: '{fiche.id_qualite}', label: 'Agent qualite ({fiche.id_qualite})' },
   { value: '{fiche.id_commercial}', label: 'Commercial principal ({fiche.id_commercial})' },
-  { value: '{fiche.id_commercial_2}', label: 'Commercial secondaire ({fiche.id_commercial_2})' }
+  { value: '{fiche.id_commercial_2}', label: 'Commercial secondaire ({fiche.id_commercial_2})' },
+  { value: '{fiche.id_superviseur_qualif_agent}', label: "Superviseur qualif de l'agent de la fiche ({fiche.id_superviseur_qualif_agent})" }
 ];
 
 const WorkflowsTab = () => {
@@ -975,6 +976,7 @@ const WorkflowsTab = () => {
                             <option value="id_qualite">Agent qualité qui a audité ({'{fiche.id_qualite}'})</option>
                             <option value="id_commercial">Commercial principal ({'{fiche.id_commercial}'})</option>
                             <option value="id_commercial_2">Commercial secondaire ({'{fiche.id_commercial_2}'})</option>
+                            <option value="id_superviseur_qualif_agent">Superviseur qualif de l&apos;agent de la fiche ({'{fiche.id_superviseur_qualif_agent}'})</option>
                           </select>
                           <small>Utilisé uniquement si aucun utilisateur ni fonction n’est sélectionné ci-dessus.</small>
                         </div>
@@ -1351,6 +1353,7 @@ const WorkflowsTab = () => {
                               <option value="{fiche.id_qualite}">Agent qualité ({'{fiche.id_qualite}'})</option>
                               <option value="{fiche.id_commercial}">Commercial principal ({'{fiche.id_commercial}'})</option>
                               <option value="{fiche.id_commercial_2}">Commercial secondaire ({'{fiche.id_commercial_2}'})</option>
+                              <option value="{fiche.id_superviseur_qualif_agent}">Superviseur qualif de l&apos;agent de la fiche ({'{fiche.id_superviseur_qualif_agent}'})</option>
                             </optgroup>
                             <optgroup label="Utilisateurs spécifiques">
                               {utilisateursData?.map(u => (
