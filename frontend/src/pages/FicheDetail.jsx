@@ -8824,7 +8824,7 @@ const PlanningViewForModal = ({
                           backgroundColor: isBlocked ? 'rgba(34, 45, 50, 0.8)' : 'transparent',
                           position: 'relative',
                           cursor: 'default',
-                          border: isAvailable && !hasData && !!onSelectSlot ? '2px dashed #8BC34A' : 'none'
+                          border: 'none'
                         }}
                         onDoubleClick={(e) => canEditThis && handleCellDoubleClick(day.date, slot.hour, e)}
                         title={
@@ -8835,11 +8835,11 @@ const PlanningViewForModal = ({
                             if (isEditing) return 'Modifier la disponibilité';
                             const actionLabel = canEditThis && hasData
                               ? `Double-cliquer pour modifier la disponibilité (${day.dayName} à ${slot.name})`
-                              : isAvailable && !!onSelectSlot
+                              : hasData && hasPlanning && availabilityCount > 0 && !!onSelectSlot
                               ? `Cliquer sur + pour créer un rendez-vous le ${day.dayName} à ${slot.name}`
                               : isBlocked
                               ? 'Créneau bloqué'
-                              : !onSelectSlot && isAvailable
+                              : isAvailable
                               ? `Créneau disponible (${day.dayName} à ${slot.name})`
                               : 'Créneau non disponible';
                             return validatedLabel ? `${validatedLabel} — ${actionLabel}` : actionLabel;
@@ -8975,6 +8975,42 @@ const PlanningViewForModal = ({
                                 </span>
                               )}
                             </div>
+                            {onSelectSlot && hasPlanning && availabilityCount > 0 && (
+                              <button
+                                type="button"
+                                className="planning-create-btn"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  onSelectSlot(day.date, slot.hour);
+                                }}
+                                title={`Créer un rendez-vous le ${day.dayName} à ${slot.name}`}
+                                aria-label="Créer un rendez-vous"
+                                style={{
+                                  position: 'absolute',
+                                  right: '4px',
+                                  bottom: '4px',
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '50%',
+                                  border: 'none',
+                                  background: '#8BC34A',
+                                  color: '#000',
+                                  fontSize: '18px',
+                                  fontWeight: 900,
+                                  lineHeight: 1,
+                                  cursor: 'pointer',
+                                  zIndex: 6,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  padding: 0,
+                                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)'
+                                }}
+                              >
+                                +
+                              </button>
+                            )}
                             {canEditThis && (
                               <div
                                 onClick={(e) => e.stopPropagation()}
@@ -9034,43 +9070,6 @@ const PlanningViewForModal = ({
                           </>
                         ) : isAvailable && !isBlocked ? (
                           <>
-                            {onSelectSlot && (
-                              <button
-                                type="button"
-                                className="planning-create-btn"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  onSelectSlot(day.date, slot.hour);
-                                }}
-                                title={`Créer un rendez-vous le ${day.dayName} à ${slot.name}`}
-                                aria-label="Créer un rendez-vous"
-                                style={{
-                                  position: 'absolute',
-                                  left: '50%',
-                                  top: '50%',
-                                  transform: 'translate(-50%, -50%)',
-                                  width: '34px',
-                                  height: '34px',
-                                  borderRadius: '50%',
-                                  border: 'none',
-                                  background: '#8BC34A',
-                                  color: '#000',
-                                  fontSize: '24px',
-                                  fontWeight: 900,
-                                  lineHeight: 1,
-                                  cursor: 'pointer',
-                                  zIndex: 5,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  padding: 0,
-                                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)'
-                                }}
-                              >
-                                +
-                              </button>
-                            )}
                             {canEditThis && (
                               <div
                                 onClick={(e) => e.stopPropagation()}
