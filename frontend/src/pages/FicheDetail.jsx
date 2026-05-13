@@ -3521,7 +3521,7 @@ const FicheDetail = ({
                 }
                 return pick ? pick.id : null;
               })();
-              const renderEtatDetails = (etatData) => {
+              const renderEtatDetails = (etatData, { isCurrent = false } = {}) => {
                 const etatId = etatData.id_etat;
                 const confirmateursList = [
                   etatData.confirmateur_pseudo,
@@ -3569,15 +3569,18 @@ const FicheDetail = ({
                   }
                 }
 
-                // NRP (2)
+                // NRP (2) — Le commentaire n'est PAS affiché dans la carte « État actuel »
+                // (demande explicite). Il reste visible dans l'historique des passages NRP.
                 if (etatId === 2) {
                   if (etatData.sous_etat_titre) items.push({ label: 'Sous-état', value: etatData.sous_etat_titre });
                   if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
-                  // Afficher le commentaire commercial en priorité s'il existe
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                  if (!isCurrent) {
+                    // Afficher le commentaire commercial en priorité s'il existe
+                    if (etatData.commentaire_commercial) {
+                      items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
+                    } else if (etatData.conf_commentaire_produit) {
+                      items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
+                    }
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateTime(etatData.date_rdv_time) });
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: new Date(etatData.date_creation || etatData.date_appel_time).toLocaleString('fr-FR') });
@@ -3950,7 +3953,7 @@ const FicheDetail = ({
               const isCurrentStateFromCR = lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.from_compte_rendu;
               const crPseudoEtatActuel = isCurrentStateFromCR ? (lastHisto.cr_commercial_pseudo || '') : '';
               
-              const detailItemsActuel = renderEtatDetails(etatActuel);
+              const detailItemsActuel = renderEtatDetails(etatActuel, { isCurrent: true });
               const normalizeEtatTitle = (v) =>
                 String(v || '')
                   .toLowerCase()
@@ -5250,13 +5253,28 @@ const FicheDetail = ({
               );
             })()}
 
-            {/* Afficher les formulaires pour les commerciaux après sélection d'une option (uniquement si on édite un compte rendu ou si on crée un nouveau) */}
-            {/* Formulaire SIGNER (états 13, 44, 45) pour commerciaux */}
-            {[13, 44, 45].includes(selectedEtat) && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
+            {/* Formulaire de compte rendu UNIFIÉ pour les commerciaux.
+                - Pseudo et "Compte rendu" sont toujours visibles dès qu'une option est choisie.
+                - Les autres champs (signature, sous-état, dates...) apparaissent selon l'option. */}
+            {[8, 9, 12, 13, 23, 34, 35, 44, 45].includes(selectedEtat) && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
-                <div className="etat-form compte-rendu-signer-form">
-                  <h3>Informations Signature</h3>
-                  
+                <div className={`etat-form${[13, 44, 45].includes(selectedEtat) ? ' compte-rendu-signer-form' : ''}`}>
+
+                  {/* Pseudo (toujours visible) */}
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_pseudo">Pseudo :</label>
+                    <input
+                      type="text"
+                      id="compte_rendu_etat_pseudo"
+                      className="form-control"
+                      value={etatFormData.pseudo}
+                      onChange={(e) => setEtatFormData({ ...etatFormData, pseudo: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Champs spécifiques SIGNER (états 13, 44, 45) */}
+                  {[13, 44, 45].includes(selectedEtat) && (
+                    <>
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_produit_signer">Signature pour :</label>
                     <select
@@ -5339,17 +5357,6 @@ const FicheDetail = ({
                       </select>
                     </div>
                   )}
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_pseudo_signer">Pseudo :</label>
-                    <input
-                      type="text"
-                      id="compte_rendu_etat_pseudo_signer"
-                      className="form-control"
-                      value={etatFormData.pseudo}
-                      onChange={(e) => setEtatFormData({...etatFormData, pseudo: e.target.value})}
-                    />
-                  </div>
 
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_ph3_pac_signer">Pac :</label>
@@ -5581,97 +5588,13 @@ const FicheDetail = ({
                       }}
                     />
                   </div>
+                    </>
+                  )}
 
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_conf_commentaire_signer">Compte rendu :</label>
-                    <textarea
-                      id="compte_rendu_etat_conf_commentaire_signer"
-                      className="form-control"
-                      rows="4"
-                      value={etatFormData.conf_commentaire_produit}
-                      onChange={(e) => setEtatFormData({...etatFormData, conf_commentaire_produit: e.target.value})}
-                      placeholder="Saisissez votre compte rendu commercial..."
-                    />
-                  </div>
-
-                  <div className="form-actions">
-                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
-                    <button className="btn-cancel" onClick={() => {
-                      setSelectedEtat(null);
-                      setCompteRenduOption('');
-                      setEtatFormData({
-                        ...etatFormData,
-                        date_sign_date: '', date_sign_time: '', produit: '', id_sous_etat: '', id_commercial: '', 
-                        id_commercial_2: '', pseudo: '', ph3_pac: 'reau', ph3_rr_model: '', ph3_puissance: '', 
-                        ph3_ballon: '', ph3_marque_ballon: '', ph3_alimentation: '', ph3_type: '', ph3_prix: '', 
-                        ph3_installateur: '', conf_consommations: '', ph3_bonus_30: '', valeur_mensualite: '', 
-                        ph3_mensualite: '', ph3_attente: '', nbr_annee_finance: '', credit_immobilier: '', 
-                        credit_autre: '', conf_commentaire_produit: ''
-                      });
-                    }}>Annuler</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Formulaire commentaire pour les comptes rendus commerciaux simples */}
-            {[9, 12, 23, 34, 35].includes(selectedEtat) && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
-              <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
-                <div className="etat-form">
-                  <h3>Commentaire</h3>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_pseudo_simple">Pseudo :</label>
-                    <input
-                      type="text"
-                      id="compte_rendu_etat_pseudo_simple"
-                      className="form-control"
-                      value={etatFormData.pseudo}
-                      onChange={(e) => setEtatFormData({ ...etatFormData, pseudo: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_conf_commentaire_simple">Compte rendu :</label>
-                    <textarea
-                      id="compte_rendu_etat_conf_commentaire_simple"
-                      className="form-control"
-                      rows="4"
-                      value={etatFormData.conf_commentaire_produit}
-                      onChange={(e) => setEtatFormData({...etatFormData, conf_commentaire_produit: e.target.value})}
-                      placeholder="Saisissez votre compte rendu commercial..."
-                    />
-                  </div>
-                  <div className="form-actions">
-                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
-                    <button className="btn-cancel" onClick={() => {
-                      setSelectedEtat(null);
-                      setCompteRenduOption('');
-                      setEtatFormData({...etatFormData, conf_commentaire_produit: '', pseudo: ''});
-                    }}>Annuler</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Formulaire ANNULER À REPROGRAMMER (état 8) pour commerciaux */}
-            {selectedEtat === 8 && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
-              <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
-                <div className="etat-form">
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_pseudo_8">Pseudo :</label>
-                    <input
-                      type="text"
-                      id="compte_rendu_etat_pseudo_8"
-                      className="form-control"
-                      value={etatFormData.pseudo}
-                      onChange={(e) => setEtatFormData({ ...etatFormData, pseudo: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Pour l'option "Porte / Imprévu / NRP", le commercial ne remplit que le commentaire.
-                      Les autres champs seront saisis dans la page Compte Rendu. */}
-                  {Number(user?.fonction) === 5 && compteRenduOption === 'porte_imprevu_nrp' ? null : (
+                  {/* Champs spécifiques ANNULER À REPROGRAMMER (état 8).
+                      Pour l'option "Porte / Imprévu / NRP", le commercial ne remplit que le commentaire,
+                      les autres champs seront saisis dans la page Compte Rendu. */}
+                  {selectedEtat === 8 && !(Number(user?.fonction) === 5 && compteRenduOption === 'porte_imprevu_nrp') && (
                     <>
                       {sousEtats.length > 0 && (
                         <div className="form-group">
@@ -5733,14 +5656,15 @@ const FicheDetail = ({
                     </>
                   )}
 
+                  {/* Compte rendu (toujours visible) */}
                   <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_conf_commentaire_8">Compte rendu :</label>
+                    <label htmlFor="compte_rendu_etat_conf_commentaire">Compte rendu :</label>
                     <textarea
-                      id="compte_rendu_etat_conf_commentaire_8"
+                      id="compte_rendu_etat_conf_commentaire"
                       className="form-control"
                       rows="4"
                       value={etatFormData.conf_commentaire_produit}
-                      onChange={(e) => setEtatFormData({...etatFormData, conf_commentaire_produit: e.target.value})}
+                      onChange={(e) => setEtatFormData({ ...etatFormData, conf_commentaire_produit: e.target.value })}
                       placeholder="Saisissez votre compte rendu commercial..."
                     />
                   </div>
@@ -5750,7 +5674,16 @@ const FicheDetail = ({
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
-                      setEtatFormData({...etatFormData, conf_rdv_date: '', conf_rdv_time: '', id_sous_etat: '', conf_rdv_avec: '', conf_commentaire_produit: '', pseudo: ''});
+                      setEtatFormData({
+                        ...etatFormData,
+                        date_sign_date: '', date_sign_time: '', produit: '', id_sous_etat: '', id_commercial: '',
+                        id_commercial_2: '', pseudo: '', ph3_pac: 'reau', ph3_rr_model: '', ph3_puissance: '',
+                        ph3_ballon: '', ph3_marque_ballon: '', ph3_alimentation: '', ph3_type: '', ph3_prix: '',
+                        ph3_installateur: '', conf_consommations: '', ph3_bonus_30: '', valeur_mensualite: '',
+                        ph3_mensualite: '', ph3_attente: '', nbr_annee_finance: '', credit_immobilier: '',
+                        credit_autre: '', conf_commentaire_produit: '',
+                        conf_rdv_date: '', conf_rdv_time: '', conf_rdv_avec: '', motif_qualif: ''
+                      });
                     }}>Annuler</button>
                   </div>
                 </div>
