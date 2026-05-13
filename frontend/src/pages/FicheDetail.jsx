@@ -205,21 +205,6 @@ function formatDateAppelRelativeDescription(date) {
   return `${dayLabel}${rel}`;
 }
 
-// Résout l'id d'une profession : si le libellé existe en base on le renvoie, sinon on crée la profession et on renvoie le nouvel id
-async function resolveProfessionId(apiClient, displayName, currentId, professionsList) {
-  const trimmed = displayName != null ? String(displayName).trim() : '';
-  if (!trimmed) return currentId || '';
-  const found = (professionsList || []).find(p => (p.nom || '').trim() === trimmed);
-  if (found) return String(found.id);
-  try {
-    const res = await apiClient.post('/management/professions/find-or-create', { nom: trimmed });
-    if (res.data?.success && res.data?.data?.id) return String(res.data.data.id);
-  } catch (err) {
-    console.error('Erreur find-or-create profession:', err);
-  }
-  return currentId || '';
-}
-
 /** La fiche est passée au moins une fois par « honoré à suivre » (état 9) suite à un compte rendu : ligne d’historique ou CR approuvé. */
 function ficheHonoreASuivreViaCompteRendu(fiche) {
   if (!fiche) return false;
@@ -623,10 +608,6 @@ const FicheDetail = ({
     conf_commentaire_produit: '',
     id_commercial_2: ''
   });
-  const [confProfMrDisplay, setConfProfMrDisplay] = useState('');
-  const [confProfMmeDisplay, setConfProfMmeDisplay] = useState('');
-  const [showSuggestionsMr, setShowSuggestionsMr] = useState(false);
-  const [showSuggestionsMme, setShowSuggestionsMme] = useState(false);
   /** Si l’utilisateur choisit Confirmer avant que ficheData soit chargé : réhydrater dès que la fiche arrive. */
   const confFormHydratePendingRef = useRef(false);
 
@@ -791,19 +772,6 @@ const FicheDetail = ({
     const res = await api.get('/management/type-contrat');
     return res.data.data || [];
   });
-
-  // Synchroniser l'affichage autocomplete profession avec l'id sélectionné (préremplissage, sans écraser la saisie)
-  useEffect(() => {
-    if (!professions || selectedEtat !== 7) return;
-    if (confFormData.conf_profession_monsieur) {
-      const p = professions.find(pr => String(pr.id) === String(confFormData.conf_profession_monsieur));
-      if (p?.nom && (confProfMrDisplay === '' || confProfMrDisplay === p.nom)) setConfProfMrDisplay(p.nom);
-    }
-    if (confFormData.conf_profession_madame) {
-      const p = professions.find(pr => String(pr.id) === String(confFormData.conf_profession_madame));
-      if (p?.nom && (confProfMmeDisplay === '' || confProfMmeDisplay === p.nom)) setConfProfMmeDisplay(p.nom);
-    }
-  }, [selectedEtat, confFormData.conf_profession_monsieur, confFormData.conf_profession_madame, professions]);
 
   const { data: produits } = useQuery('produits', async () => {
     try {
@@ -1803,9 +1771,9 @@ const FicheDetail = ({
         conf_rdv_avec: data.conf_rdv_avec || null,
         conf_appel_tunisie_avec: data.conf_appel_tunisie_avec || null,
         conf_deja_etude: data.conf_deja_etude || null,
-        conf_profession_monsieur: data.conf_profession_monsieur ? parseInt(data.conf_profession_monsieur) : null,
+        conf_profession_monsieur: data.conf_profession_monsieur || null,
         conf_type_contrat_mr: data.conf_type_contrat_mr ? parseInt(data.conf_type_contrat_mr) : null,
-        conf_profession_madame: data.conf_profession_madame ? parseInt(data.conf_profession_madame) : null,
+        conf_profession_madame: data.conf_profession_madame || null,
         conf_type_contrat_madame: data.conf_type_contrat_madame ? parseInt(data.conf_type_contrat_madame) : null,
         conf_revenu: data.conf_revenu || null,
         conf_credit: data.conf_credit || null,
@@ -1948,7 +1916,6 @@ const FicheDetail = ({
       queryClient.invalidateQueries(['fiche', hash]);
       queryClient.invalidateQueries(['planning-week']);
       queryClient.invalidateQueries(['planning-availability']);
-      queryClient.invalidateQueries('professions'); // Rafraîchir la liste (nouvelle profession éventuelle)
       queryClient.invalidateQueries(['planning-modal']);
       queryClient.invalidateQueries(['availability-modal']);
       
@@ -2170,10 +2137,6 @@ const FicheDetail = ({
         }
       }
 
-      // Résoudre les professions (créer en base si libellé saisi n'existe pas)
-      const idProfMr = await resolveProfessionId(api, confProfMrDisplay, confFormData.conf_profession_monsieur, professions);
-      const idProfMme = await resolveProfessionId(api, confProfMmeDisplay, confFormData.conf_profession_madame, professions);
-
       // Préparer les données à envoyer
       const updateData = {
         id_etat_final: 7,
@@ -2185,9 +2148,9 @@ const FicheDetail = ({
         conf_rdv_avec: confFormData.conf_rdv_avec || null,
         conf_appel_tunisie_avec: confFormData.conf_appel_tunisie_avec || null,
         conf_deja_etude: confFormData.conf_deja_etude || null,
-        conf_profession_monsieur: idProfMr ? parseInt(idProfMr) : null,
+        conf_profession_monsieur: confFormData.conf_profession_monsieur || null,
         conf_type_contrat_mr: confFormData.conf_type_contrat_mr ? parseInt(confFormData.conf_type_contrat_mr) : null,
-        conf_profession_madame: idProfMme ? parseInt(idProfMme) : null,
+        conf_profession_madame: confFormData.conf_profession_madame || null,
         conf_type_contrat_madame: confFormData.conf_type_contrat_madame ? parseInt(confFormData.conf_type_contrat_madame) : null,
         conf_revenu: confFormData.conf_revenu || null,
         conf_credit: confFormData.conf_credit || null,
@@ -2221,7 +2184,6 @@ const FicheDetail = ({
         queryClient.invalidateQueries(['fiches']);
         queryClient.invalidateQueries(['modifica', hash]); // Invalider les modifications
         queryClient.invalidateQueries(['planning-commercial']); // Mettre à jour le planning commercial
-        queryClient.invalidateQueries('professions'); // Rafraîchir la liste (nouvelle profession éventuelle)
         setSelectedEtat(null);
         setCompteRenduOption('');
         setEditingCompteRendu(null);
@@ -2257,10 +2219,6 @@ const FicheDetail = ({
           conf_commentaire_produit: '',
           id_commercial_2: ''
         });
-        setConfProfMrDisplay('');
-        setConfProfMmeDisplay('');
-        setShowSuggestionsMr(false);
-        setShowSuggestionsMme(false);
         alert('Fiche confirmée avec succès');
       }
     } catch (error) {
@@ -6106,38 +6064,14 @@ const FicheDetail = ({
                     <tr>
                       <td><label>Profession MR :</label></td>
                       <td>
-                        <div className="autocomplete-wrap">
-                          <input
-                            type="text"
-                            className="autocomplete-input"
-                            placeholder="Rechercher ou saisir une profession..."
-                            autoComplete="off"
-                            value={confProfMrDisplay}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setConfProfMrDisplay(v);
-                              const match = professions?.find(p => (p.nom || '') === v);
-                              if (!match && confFormData.conf_profession_monsieur) {
-                                setConfFormData(prev => ({ ...prev, conf_profession_monsieur: '' }));
-                              }
-                            }}
-                            onFocus={() => setShowSuggestionsMr(true)}
-                            onBlur={() => setTimeout(() => setShowSuggestionsMr(false), 200)}
-                          />
-                          <div className={`autocomplete-suggestions ${showSuggestionsMr ? 'active' : ''}`}>
-                            {(professions || [])
-                              .filter(p => !confProfMrDisplay || (p.nom || '').toLowerCase().includes(confProfMrDisplay.toLowerCase()))
-                              .slice(0, 50)
-                              .map(prof => (
-                                <div
-                                  key={prof.id}
-                                  onMouseDown={(e) => { e.preventDefault(); setConfFormData(prev => ({ ...prev, conf_profession_monsieur: String(prof.id) })); setConfProfMrDisplay(prof.nom || ''); setShowSuggestionsMr(false); }}
-                                >
-                                  {prof.nom}
-                                </div>
-                              ))}
-                          </div>
-                        </div>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Saisir une profession..."
+                          autoComplete="off"
+                          value={confFormData.conf_profession_monsieur || ''}
+                          onChange={(e) => setConfFormData({ ...confFormData, conf_profession_monsieur: e.target.value })}
+                        />
                       </td>
                     </tr>
                     <tr>
@@ -6159,38 +6093,14 @@ const FicheDetail = ({
                     <tr>
                       <td><label>Profession MME :</label></td>
                       <td>
-                        <div className="autocomplete-wrap">
-                          <input
-                            type="text"
-                            className="autocomplete-input"
-                            placeholder="Rechercher ou saisir une profession..."
-                            autoComplete="off"
-                            value={confProfMmeDisplay}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setConfProfMmeDisplay(v);
-                              const match = professions?.find(p => (p.nom || '') === v);
-                              if (!match && confFormData.conf_profession_madame) {
-                                setConfFormData(prev => ({ ...prev, conf_profession_madame: '' }));
-                              }
-                            }}
-                            onFocus={() => setShowSuggestionsMme(true)}
-                            onBlur={() => setTimeout(() => setShowSuggestionsMme(false), 200)}
-                          />
-                          <div className={`autocomplete-suggestions ${showSuggestionsMme ? 'active' : ''}`}>
-                            {(professions || [])
-                              .filter(p => !confProfMmeDisplay || (p.nom || '').toLowerCase().includes(confProfMmeDisplay.toLowerCase()))
-                              .slice(0, 50)
-                              .map(prof => (
-                                <div
-                                  key={prof.id}
-                                  onMouseDown={(e) => { e.preventDefault(); setConfFormData(prev => ({ ...prev, conf_profession_madame: String(prof.id) })); setConfProfMmeDisplay(prof.nom || ''); setShowSuggestionsMme(false); }}
-                                >
-                                  {prof.nom}
-                                </div>
-                              ))}
-                          </div>
-                        </div>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Saisir une profession..."
+                          autoComplete="off"
+                          value={confFormData.conf_profession_madame || ''}
+                          onChange={(e) => setConfFormData({ ...confFormData, conf_profession_madame: e.target.value })}
+                        />
                       </td>
                     </tr>
                     <tr>
@@ -9264,56 +9174,10 @@ const CreateRdvModal = ({
     });
   }, [ficheData, setRdvFormData]);
 
-  const { data: professionsRdv } = useQuery('professions', async () => {
-    const res = await api.get('/management/professions');
-    return res.data?.data || res.data || [];
-  });
   const { data: typeContratRdv } = useQuery('type-contrat', async () => {
     const res = await api.get('/management/type-contrat');
     return res.data?.data || res.data || [];
   });
-  const [rdvProfMrDisplay, setRdvProfMrDisplay] = useState('');
-  const [rdvProfMmeDisplay, setRdvProfMmeDisplay] = useState('');
-  const [showRdvSuggestionsMr, setShowRdvSuggestionsMr] = useState(false);
-  const [showRdvSuggestionsMme, setShowRdvSuggestionsMme] = useState(false);
-
-  // Afficher le nom de la profession dans l'autocomplete quand ficheData ou rdvFormData a un id (après déclaration de professionsRdv / state)
-  useEffect(() => {
-    if (!professionsRdv?.length) return;
-    const normalize = (v) => String(v || '').trim().toLowerCase();
-    const resolveProfessionName = (value) => {
-      if (value == null || String(value).trim() === '') return '';
-      const byId = professionsRdv.find((pr) => String(pr.id) === String(value));
-      if (byId?.nom) return byId.nom;
-      const byName = professionsRdv.find((pr) => normalize(pr.nom) === normalize(value));
-      if (byName?.nom) return byName.nom;
-      // Fallback: afficher la valeur brute si déjà une chaîne métier stockée en base.
-      return typeof value === 'string' ? value : '';
-    };
-    const professionMonsieurValue = rdvFormData.conf_profession_monsieur || ficheData?.conf_profession_monsieur || '';
-    const professionMadameValue = rdvFormData.conf_profession_madame || ficheData?.conf_profession_madame || '';
-
-    if (professionMonsieurValue) {
-      const name = resolveProfessionName(professionMonsieurValue);
-      if (name && (rdvProfMrDisplay === '' || normalize(rdvProfMrDisplay) !== normalize(name))) {
-        setRdvProfMrDisplay(name);
-      }
-    }
-    if (professionMadameValue) {
-      const name = resolveProfessionName(professionMadameValue);
-      if (name && (rdvProfMmeDisplay === '' || normalize(rdvProfMmeDisplay) !== normalize(name))) {
-        setRdvProfMmeDisplay(name);
-      }
-    }
-  }, [
-    professionsRdv,
-    rdvFormData.conf_profession_monsieur,
-    rdvFormData.conf_profession_madame,
-    ficheData?.conf_profession_monsieur,
-    ficheData?.conf_profession_madame,
-    rdvProfMrDisplay,
-    rdvProfMmeDisplay
-  ]);
 
   const { data: produits, isLoading: isLoadingProduits, error: produitsError } = useQuery(
     'produits-modal', 
@@ -9369,9 +9233,7 @@ const CreateRdvModal = ({
           <form className="rdv-form" onSubmit={async (e) => {
             e.preventDefault();
             if (rdvSubmitting) return;
-            const idMr = await resolveProfessionId(api, rdvProfMrDisplay, rdvFormData.conf_profession_monsieur, professionsRdv);
-            const idMme = await resolveProfessionId(api, rdvProfMmeDisplay, rdvFormData.conf_profession_madame, professionsRdv);
-            onSubmit({ ...rdvFormData, conf_profession_monsieur: idMr, conf_profession_madame: idMme });
+            onSubmit(rdvFormData);
           }}>
             <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'flex-end' }}>
               {!showRdvConfFields ? (
@@ -9705,37 +9567,14 @@ const CreateRdvModal = ({
                 <tr>
                   <td><label>Profession MR</label></td>
                   <td>
-                    <div className="autocomplete-wrap">
-                      <input
-                        type="text"
-                        className="autocomplete-input"
-                        placeholder="Rechercher ou saisir une profession..."
-                        autoComplete="off"
-                        value={rdvProfMrDisplay}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setRdvProfMrDisplay(v);
-                          if (!(professionsRdv || []).find(p => (p.nom || '') === v) && rdvFormData.conf_profession_monsieur) {
-                            setRdvFormData(prev => ({ ...prev, conf_profession_monsieur: '' }));
-                          }
-                        }}
-                        onFocus={() => setShowRdvSuggestionsMr(true)}
-                        onBlur={() => setTimeout(() => setShowRdvSuggestionsMr(false), 200)}
-                      />
-                      <div className={`autocomplete-suggestions ${showRdvSuggestionsMr ? 'active' : ''}`}>
-                        {(professionsRdv || [])
-                          .filter(p => !rdvProfMrDisplay || (p.nom || '').toLowerCase().includes(rdvProfMrDisplay.toLowerCase()))
-                          .slice(0, 50)
-                          .map(prof => (
-                            <div
-                              key={prof.id}
-                              onMouseDown={(e) => { e.preventDefault(); setRdvFormData(prev => ({ ...prev, conf_profession_monsieur: String(prof.id) })); setRdvProfMrDisplay(prof.nom || ''); setShowRdvSuggestionsMr(false); }}
-                            >
-                              {prof.nom}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Saisir une profession..."
+                      autoComplete="off"
+                      value={rdvFormData.conf_profession_monsieur || ''}
+                      onChange={(e) => setRdvFormData({ ...rdvFormData, conf_profession_monsieur: e.target.value })}
+                    />
                   </td>
                 </tr>
                 <tr>
@@ -9756,37 +9595,14 @@ const CreateRdvModal = ({
                 <tr>
                   <td><label>Profession MME</label></td>
                   <td>
-                    <div className="autocomplete-wrap">
-                      <input
-                        type="text"
-                        className="autocomplete-input"
-                        placeholder="Rechercher ou saisir une profession..."
-                        autoComplete="off"
-                        value={rdvProfMmeDisplay}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setRdvProfMmeDisplay(v);
-                          if (!(professionsRdv || []).find(p => (p.nom || '') === v) && rdvFormData.conf_profession_madame) {
-                            setRdvFormData(prev => ({ ...prev, conf_profession_madame: '' }));
-                          }
-                        }}
-                        onFocus={() => setShowRdvSuggestionsMme(true)}
-                        onBlur={() => setTimeout(() => setShowRdvSuggestionsMme(false), 200)}
-                      />
-                      <div className={`autocomplete-suggestions ${showRdvSuggestionsMme ? 'active' : ''}`}>
-                        {(professionsRdv || [])
-                          .filter(p => !rdvProfMmeDisplay || (p.nom || '').toLowerCase().includes(rdvProfMmeDisplay.toLowerCase()))
-                          .slice(0, 50)
-                          .map(prof => (
-                            <div
-                              key={prof.id}
-                              onMouseDown={(e) => { e.preventDefault(); setRdvFormData(prev => ({ ...prev, conf_profession_madame: String(prof.id) })); setRdvProfMmeDisplay(prof.nom || ''); setShowRdvSuggestionsMme(false); }}
-                            >
-                              {prof.nom}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Saisir une profession..."
+                      autoComplete="off"
+                      value={rdvFormData.conf_profession_madame || ''}
+                      onChange={(e) => setRdvFormData({ ...rdvFormData, conf_profession_madame: e.target.value })}
+                    />
                   </td>
                 </tr>
                 <tr>
