@@ -6067,9 +6067,8 @@ const FicheDetail = ({
                           onChange={(e) => setConfFormData({...confFormData, conf_deja_etude: e.target.value})}
                         >
                           <option value="">Sélectionner</option>
-                          <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
-                          <option value="MME SEULE SANS MR">MME SEULE SANS MR</option>
-                          <option value="MR SEUL SANS MME">MR SEUL SANS MME</option>
+                          <option value="OUI">OUI</option>
+                          <option value="NON">NON</option>
                         </select>
                       </td>
                     </tr>
@@ -6098,8 +6097,9 @@ const FicheDetail = ({
                           onChange={(e) => setConfFormData({...confFormData, conf_presence_couple: e.target.value})}
                         >
                           <option value="">Sélectionner</option>
-                          <option value="OUI">OUI</option>
-                          <option value="NON">NON</option>
+                          <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
+                          <option value="MME SEULE SANS MR">MME SEULE SANS MR</option>
+                          <option value="MR SEUL SANS MME">MR SEUL SANS MME</option>
                         </select>
                       </td>
                     </tr>
@@ -9249,6 +9249,17 @@ const CreateRdvModal = ({
         hasChanges = true;
       }
 
+      // Professions déjà confirmées : les reprendre dans la création RDV si le formulaire est vide.
+      if (!prev.conf_profession_monsieur && ficheData.conf_profession_monsieur != null) {
+        updates.conf_profession_monsieur = String(ficheData.conf_profession_monsieur);
+        hasChanges = true;
+      }
+
+      if (!prev.conf_profession_madame && ficheData.conf_profession_madame != null) {
+        updates.conf_profession_madame = String(ficheData.conf_profession_madame);
+        hasChanges = true;
+      }
+
       return hasChanges ? { ...prev, ...updates } : prev;
     });
   }, [ficheData, setRdvFormData]);
@@ -9279,19 +9290,30 @@ const CreateRdvModal = ({
       // Fallback: afficher la valeur brute si déjà une chaîne métier stockée en base.
       return typeof value === 'string' ? value : '';
     };
-    if (rdvFormData.conf_profession_monsieur) {
-      const name = resolveProfessionName(rdvFormData.conf_profession_monsieur);
+    const professionMonsieurValue = rdvFormData.conf_profession_monsieur || ficheData?.conf_profession_monsieur || '';
+    const professionMadameValue = rdvFormData.conf_profession_madame || ficheData?.conf_profession_madame || '';
+
+    if (professionMonsieurValue) {
+      const name = resolveProfessionName(professionMonsieurValue);
       if (name && (rdvProfMrDisplay === '' || normalize(rdvProfMrDisplay) !== normalize(name))) {
         setRdvProfMrDisplay(name);
       }
     }
-    if (rdvFormData.conf_profession_madame) {
-      const name = resolveProfessionName(rdvFormData.conf_profession_madame);
+    if (professionMadameValue) {
+      const name = resolveProfessionName(professionMadameValue);
       if (name && (rdvProfMmeDisplay === '' || normalize(rdvProfMmeDisplay) !== normalize(name))) {
         setRdvProfMmeDisplay(name);
       }
     }
-  }, [professionsRdv, rdvFormData.conf_profession_monsieur, rdvFormData.conf_profession_madame]);
+  }, [
+    professionsRdv,
+    rdvFormData.conf_profession_monsieur,
+    rdvFormData.conf_profession_madame,
+    ficheData?.conf_profession_monsieur,
+    ficheData?.conf_profession_madame,
+    rdvProfMrDisplay,
+    rdvProfMmeDisplay
+  ]);
 
   const { data: produits, isLoading: isLoadingProduits, error: produitsError } = useQuery(
     'produits-modal', 

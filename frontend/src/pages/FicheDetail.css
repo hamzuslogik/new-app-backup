@@ -2770,6 +2770,46 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
+/* Suggestions de l'autocomplétion (ex. Profession MR / MME) dans les sections
+   sombres : le fond reste blanc, mais on rétablit un texte foncé sinon il est
+   blanc sur blanc (hérité de la règle .rdv-form-table td { color: #fff }). */
+.etat-change-section .autocomplete-wrap .autocomplete-suggestions,
+.fiche-section.decalage-form .autocomplete-wrap .autocomplete-suggestions,
+.fiche-detail-modal-content .etat-change-section .autocomplete-wrap .autocomplete-suggestions,
+.fiche-detail-modal-content .fiche-section.decalage-form .autocomplete-wrap .autocomplete-suggestions {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
+}
+
+.etat-change-section .autocomplete-wrap .autocomplete-suggestions > div,
+.fiche-section.decalage-form .autocomplete-wrap .autocomplete-suggestions > div,
+.fiche-detail-modal-content .etat-change-section .autocomplete-wrap .autocomplete-suggestions > div,
+.fiche-detail-modal-content .fiche-section.decalage-form .autocomplete-wrap .autocomplete-suggestions > div {
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
+  background: #ffffff !important;
+}
+
+.etat-change-section .autocomplete-wrap .autocomplete-suggestions > div:hover,
+.fiche-section.decalage-form .autocomplete-wrap .autocomplete-suggestions > div:hover,
+.fiche-detail-modal-content .etat-change-section .autocomplete-wrap .autocomplete-suggestions > div:hover,
+.fiche-detail-modal-content .fiche-section.decalage-form .autocomplete-wrap .autocomplete-suggestions > div:hover {
+  background: #e8f4f8 !important;
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
+}
+
+/* L'input texte (champ saisi) garde un fond blanc et un texte foncé pour rester lisible. */
+.etat-change-section .autocomplete-wrap .autocomplete-input,
+.fiche-section.decalage-form .autocomplete-wrap .autocomplete-input,
+.fiche-detail-modal-content .etat-change-section .autocomplete-wrap .autocomplete-input,
+.fiche-detail-modal-content .fiche-section.decalage-form .autocomplete-wrap .autocomplete-input {
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
+  background: #ffffff !important;
+}
+
 /* Section « Changement d'état » : disposition uniforme label-gauche / champ-droite,
    utilisée à la fois pour « Nouvel état », « Confirmateur (historique) » et tous
    les champs du formulaire de confirmation (état 7). On fige la largeur du label
