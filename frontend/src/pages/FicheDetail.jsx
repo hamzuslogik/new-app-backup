@@ -4304,13 +4304,14 @@ const FicheDetail = ({
                               type="button"
                               onClick={() => setValidationDropdownOpen((prev) => !prev)}
                               disabled={validateMutation.isLoading}
+                              className="etat-actuel-modifier-validation-btn"
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '8px',
                                 padding: '8px 14px',
                                 background: '#ffffff',
-                                color: '#111827',
+                                color: '#000000',
                                 border: '1px solid #d1d5db',
                                 borderRadius: '6px',
                                 fontWeight: 700,
@@ -4320,8 +4321,9 @@ const FicheDetail = ({
                               }}
                               title="Modifier la validation"
                             >
-                              <FaEdit />
-                              <span>Modifier</span>
+                              <FaEdit style={{ color: '#000000' }} />
+                              <span style={{ color: '#000000' }}>Modifier</span>
+                              <FaChevronDown size={11} style={{ color: '#000000' }} />
                             </button>
                           ) : (
                             <button

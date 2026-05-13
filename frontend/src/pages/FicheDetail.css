@@ -2339,6 +2339,16 @@
   -webkit-text-fill-color: initial;
 }
 
+/* Bouton « Modifier » de la validation RDV : fond blanc → texte noir lisible.
+   Doit battre la règle `.etat-actuel-card span { color:#ffffff !important; }`
+   ci-dessus, d'où l'usage de !important sur les enfants. */
+.etat-actuel-card .etat-actuel-modifier-validation-btn,
+.etat-actuel-card .etat-actuel-modifier-validation-btn * {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  fill: #000000 !important;
+}
+
 /* Badge de validation « Le ... Valider avec ... par ... » :
    fond gris, bordure verte, texte blanc lisible. */
 .etat-actuel-card .etat-actuel-validation-badge,
