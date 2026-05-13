@@ -4228,7 +4228,7 @@ const FicheDetail = ({
 
                       {hasPermission('fiche_validate') && Number(fiche.id_etat_final) === 7 && (
                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
-                          {fiche.valider > 0 && fiche.validation_date_time && (
+                          {fiche.valider > 0 && (
                             <div
                               className="etat-actuel-validation-badge"
                               style={{
@@ -4242,37 +4242,70 @@ const FicheDetail = ({
                                 alignSelf: 'flex-start',
                               }}
                             >
-                              Le {formatRdvDateTime(fiche.validation_date_time)}
-                              {' '}Valider{fiche.validation_conf_rdv_avec ? ` avec ${String(fiche.validation_conf_rdv_avec).toUpperCase()}` : ''}
-                              {fiche.validateur_pseudo ? ` par ${String(fiche.validateur_pseudo).toUpperCase()}` : ''}
+                              {fiche.validation_date_time ? (
+                                <>
+                                  Le {formatRdvDateTime(fiche.validation_date_time)}
+                                  {' '}Valider{fiche.validation_conf_rdv_avec ? ` avec ${String(fiche.validation_conf_rdv_avec).toUpperCase()}` : ''}
+                                  {fiche.validateur_pseudo ? ` par ${String(fiche.validateur_pseudo).toUpperCase()}` : ''}
+                                </>
+                              ) : (
+                                <>Validé</>
+                              )}
                             </div>
                           )}
 
                           <div style={{ position: 'relative', display: 'inline-block', alignSelf: 'flex-start' }}>
-                          <button
-                            type="button"
-                            onClick={() => setValidationDropdownOpen((prev) => !prev)}
-                            disabled={validateMutation.isLoading}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '10px 18px',
-                              background: '#16a34a',
-                              color: '#ffffff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontWeight: 700,
-                              fontSize: '15px',
-                              cursor: validateMutation.isLoading ? 'wait' : 'pointer',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-                            }}
-                            title="Validation RDV"
-                          >
-                            <FaCheck />
-                            <span>Validation RDV</span>
-                            <FaChevronDown size={12} />
-                          </button>
+                          {fiche.valider > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => setValidationDropdownOpen((prev) => !prev)}
+                              disabled={validateMutation.isLoading}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '8px 14px',
+                                background: '#ffffff',
+                                color: '#111827',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                fontWeight: 700,
+                                fontSize: '13px',
+                                cursor: validateMutation.isLoading ? 'wait' : 'pointer',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                              }}
+                              title="Modifier la validation"
+                            >
+                              <FaEdit />
+                              <span>Modifier</span>
+                              <FaChevronDown size={11} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setValidationDropdownOpen((prev) => !prev)}
+                              disabled={validateMutation.isLoading}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 18px',
+                                background: '#16a34a',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontWeight: 700,
+                                fontSize: '15px',
+                                cursor: validateMutation.isLoading ? 'wait' : 'pointer',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                              }}
+                              title="Validation RDV"
+                            >
+                              <FaCheck />
+                              <span>Validation RDV</span>
+                              <FaChevronDown size={12} />
+                            </button>
+                          )}
 
                           {validationDropdownOpen && (
                             <>
