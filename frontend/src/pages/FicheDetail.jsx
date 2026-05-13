@@ -9668,6 +9668,20 @@ const CreateRdvModal = ({
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_deja_etude: e.target.value})}
                     >
                       <option value="">Sélectionner</option>
+                      <option value="OUI">OUI</option>
+                      <option value="NON">NON</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td><label>Présence du couple ou célibataire</label></td>
+                  <td>
+                    <select
+                      className="form-control"
+                      value={rdvFormData.conf_presence_couple || ''}
+                      onChange={(e) => setRdvFormData({...rdvFormData, conf_presence_couple: e.target.value})}
+                    >
+                      <option value="">Sélectionner</option>
                       <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
                       <option value="MME SEULE SANS MR">MME SEULE SANS MR</option>
                       <option value="MR SEUL SANS MME">MR SEUL SANS MME</option>
