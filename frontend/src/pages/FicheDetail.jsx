@@ -3099,6 +3099,18 @@ const FicheDetail = ({
                 false,
                 fiche.conf_appel_tunisie_avec || ''
               )}
+              {/* Champ Agent : visible uniquement pour Admin (1, 7), Qualité Qualification (2, 8, 12),
+                  Qualité Confirmation (4), Backoffice (11), RP Confirmation (13) et RE Confirmation (14).
+                  Affiché au-dessus de Centre, en lecture seule. */}
+              {[1, 2, 4, 7, 8, 11, 12, 13, 14].includes(Number(user?.fonction)) &&
+                renderField(
+                  'Agent',
+                  'id_agent',
+                  getUserName(fiche.id_agent) || fiche.agent_pseudo || '-',
+                  'text',
+                  null,
+                  true
+                )}
               {renderField('Centre', 'id_centre',
                 centres?.find(c => c.id === fiche.id_centre)?.titre || fiche.centre_titre || '-',
                 'select', centres)}

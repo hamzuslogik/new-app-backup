@@ -1006,6 +1006,7 @@ const Fiches = () => {
                     <th>Téléphone</th>
                     <th>CP</th>
                     <th>Date Insertion</th>
+                    <th>Agent</th>
                     <th>État Final</th>
                     <th>Centre</th>
                     <th>Produit</th>
@@ -1029,6 +1030,7 @@ const Fiches = () => {
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
+                        <td data-label="Agent:">{getUserName(fiche.id_agent) || (fiche.agent_pseudo || '')}</td>
                         <td data-label="État:">
                           <span 
                             className="etat-badge"
