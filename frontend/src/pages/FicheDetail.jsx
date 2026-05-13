@@ -5786,7 +5786,6 @@ const FicheDetail = ({
             {/* Formulaire de confirmation (état 7) */}
             {selectedEtat === 7 && (
               <div className="confirmation-form">
-                <h3>Informations de confirmation</h3>
                 <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'flex-end' }}>
                   {!showConfirmConfFields ? (
                     <button

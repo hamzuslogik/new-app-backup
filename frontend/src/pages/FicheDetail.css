@@ -1148,7 +1148,7 @@
   color: #ffffff;
   -webkit-text-fill-color: #ffffff;
   border-radius: 8px;
-  border: 1px solid #4a4d52;
+  border: none;
 }
 
 .confirmation-form h3 {
@@ -2728,29 +2728,44 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
-/* Tableau .rdv-form-table dans la section « Changement d'état » : même thème
-   sombre que .confirmation-form (le tableau lui-même n'avait pas de fond, mais
-   on neutralise tout fond hérité et on assure que les cellules sont blanches). */
+/* Tableau .rdv-form-table dans les sections sombres (« Changement d'état » et
+   « Décalage ») : même thème sombre que .confirmation-form (le tableau lui-même
+   n'a pas de fond, mais on neutralise tout fond hérité et on assure que les
+   cellules / labels sont blancs). */
 .etat-change-section .rdv-form-table,
 .etat-change-section .rdv-form-table tbody,
 .etat-change-section .rdv-form-table tr,
 .etat-change-section .rdv-form-table td,
 .etat-change-section .rdv-form-table th,
+.fiche-section.decalage-form .rdv-form-table,
+.fiche-section.decalage-form .rdv-form-table tbody,
+.fiche-section.decalage-form .rdv-form-table tr,
+.fiche-section.decalage-form .rdv-form-table td,
+.fiche-section.decalage-form .rdv-form-table th,
 .fiche-detail-modal-content .etat-change-section .rdv-form-table,
 .fiche-detail-modal-content .etat-change-section .rdv-form-table tbody,
 .fiche-detail-modal-content .etat-change-section .rdv-form-table tr,
 .fiche-detail-modal-content .etat-change-section .rdv-form-table td,
-.fiche-detail-modal-content .etat-change-section .rdv-form-table th {
+.fiche-detail-modal-content .etat-change-section .rdv-form-table th,
+.fiche-detail-modal-content .fiche-section.decalage-form .rdv-form-table,
+.fiche-detail-modal-content .fiche-section.decalage-form .rdv-form-table tbody,
+.fiche-detail-modal-content .fiche-section.decalage-form .rdv-form-table tr,
+.fiche-detail-modal-content .fiche-section.decalage-form .rdv-form-table td,
+.fiche-detail-modal-content .fiche-section.decalage-form .rdv-form-table th {
   background-color: transparent !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
-  border-color: #4a4d52 !important;
+  border: none !important;
 }
 
 .etat-change-section .rdv-form-table td label,
 .etat-change-section .rdv-form-table th,
+.fiche-section.decalage-form .rdv-form-table td label,
+.fiche-section.decalage-form .rdv-form-table th,
 .fiche-detail-modal-content .etat-change-section .rdv-form-table td label,
-.fiche-detail-modal-content .etat-change-section .rdv-form-table th {
+.fiche-detail-modal-content .etat-change-section .rdv-form-table th,
+.fiche-detail-modal-content .fiche-section.decalage-form .rdv-form-table td label,
+.fiche-detail-modal-content .fiche-section.decalage-form .rdv-form-table th {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
 }
