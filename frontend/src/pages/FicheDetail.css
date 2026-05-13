@@ -2441,11 +2441,14 @@
   -webkit-text-fill-color: #b91c1c !important;
 }
 
-/* Décalage : même largeur effective que la carte État Actuel.
+/* Décalage / Changer l'état / Compte rendu : même largeur effective et
+   même rendu sombre que la carte État Actuel.
    La carte État Actuel est rendue à 760px avec une bordure noire de 6px
    et un padding interne de 20px. Pour aligner visuellement, on cale
-   le bloc décalage sur la même largeur de contenu utile (~660px). */
-.fiche-section.decalage-form {
+   ces blocs sur la même largeur de contenu utile (~660px). */
+.fiche-section.decalage-form,
+.fiche-section.etat-change-section,
+.fiche-section.compte-rendu-section {
   width: 100% !important;
   max-width: 660px !important;
   margin-left: auto !important;
@@ -2459,7 +2462,17 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
 }
 
-.decalage-form > .section-title {
+/* Annule les anciens styles globaux de la section "changement d'état"
+   (fond gris clair, marge top, border-top) pour éviter qu'ils ne ressurgissent. */
+.fiche-section.etat-change-section {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  border-top: none !important;
+}
+
+.decalage-form > .section-title,
+.etat-change-section > .section-title,
+.compte-rendu-section > .section-title {
   margin: 0 !important;
   background: #332e2e !important;
   color: #ffffff !important;
@@ -2470,43 +2483,103 @@
   font-weight: 700 !important;
 }
 
-.decalage-form > div {
+/* Conteneur principal du formulaire (zone sous le titre). On cible des
+   classes précises pour ne pas styliser chaque item de liste comme les
+   .compte-rendu-item (qui ont leur propre look ci-dessous). */
+.decalage-form > .decalage-existing-list,
+.decalage-form > .decalage-new-form,
+.etat-change-section > .etat-change-form,
+.etat-change-section > .etat-form,
+.compte-rendu-section > .compte-rendu-form {
   background: #3a3a3a !important;
   border: none !important;
   border-top: 1px solid #4a4d52 !important;
+  margin: 0 !important;
   padding: 18px 20px !important;
   box-sizing: border-box !important;
 }
 
+/* Le conteneur direct dans compte-rendu-section "en attente" n'a pas de classe
+   de formulaire (la liste des items est directement sous le titre). On lui
+   donne juste un padding pour aérer, sans border-top supplémentaire. */
+.compte-rendu-section > .compte-rendu-item:first-of-type {
+  margin-top: 18px !important;
+}
+
+.compte-rendu-section > .compte-rendu-item {
+  margin-left: 20px !important;
+  margin-right: 20px !important;
+}
+
+.compte-rendu-section > .compte-rendu-item:last-of-type {
+  margin-bottom: 18px !important;
+}
+
 .decalage-form,
 .decalage-form h3,
+.decalage-form h4,
 .decalage-form label,
 .decalage-form strong,
 .decalage-form small,
 .decalage-form div,
-.decalage-form span {
+.decalage-form span,
+.etat-change-section,
+.etat-change-section h3,
+.etat-change-section h4,
+.etat-change-section label,
+.etat-change-section strong,
+.etat-change-section small,
+.etat-change-section div,
+.etat-change-section span,
+.compte-rendu-section,
+.compte-rendu-section h3,
+.compte-rendu-section h4,
+.compte-rendu-section label,
+.compte-rendu-section strong,
+.compte-rendu-section small,
+.compte-rendu-section div,
+.compte-rendu-section span {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
 }
 
-.decalage-form .form-group {
+.decalage-form .form-group,
+.etat-change-section .form-group,
+.compte-rendu-section .form-group {
   width: 100% !important;
   max-width: 100% !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
+  margin-bottom: 14px !important;
 }
 
-/* Champs (selects, textarea, input) du décalage : fond blanc + texte sombre.
+/* Champs (selects, textarea, input) : fond blanc + texte sombre.
    La version modale est répétée pour battre les règles génériques qui
    propagent parfois la couleur blanche aux champs imbriqués. */
 .decalage-form .form-control,
 .decalage-form select.form-control,
 .decalage-form textarea.form-control,
 .decalage-form input.form-control,
+.etat-change-section .form-control,
+.etat-change-section select.form-control,
+.etat-change-section textarea.form-control,
+.etat-change-section input.form-control,
+.compte-rendu-section .form-control,
+.compte-rendu-section select.form-control,
+.compte-rendu-section textarea.form-control,
+.compte-rendu-section input.form-control,
 .fiche-detail-modal-content .decalage-form .form-control,
 .fiche-detail-modal-content .decalage-form select.form-control,
 .fiche-detail-modal-content .decalage-form textarea.form-control,
-.fiche-detail-modal-content .decalage-form input.form-control {
+.fiche-detail-modal-content .decalage-form input.form-control,
+.fiche-detail-modal-content .etat-change-section .form-control,
+.fiche-detail-modal-content .etat-change-section select.form-control,
+.fiche-detail-modal-content .etat-change-section textarea.form-control,
+.fiche-detail-modal-content .etat-change-section input.form-control,
+.fiche-detail-modal-content .compte-rendu-section .form-control,
+.fiche-detail-modal-content .compte-rendu-section select.form-control,
+.fiche-detail-modal-content .compte-rendu-section textarea.form-control,
+.fiche-detail-modal-content .compte-rendu-section input.form-control {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -2519,18 +2592,28 @@
   font-size: 14px !important;
 }
 
-/* Options du <select> ouvert (notamment Confirmateur) : texte sombre sur fond blanc. */
+/* Options des <select> ouverts : texte sombre sur fond blanc. */
 .decalage-form select.form-control option,
 .decalage-form select.form-control optgroup,
+.etat-change-section select.form-control option,
+.etat-change-section select.form-control optgroup,
+.compte-rendu-section select.form-control option,
+.compte-rendu-section select.form-control optgroup,
 .fiche-detail-modal-content .decalage-form select.form-control option,
-.fiche-detail-modal-content .decalage-form select.form-control optgroup {
+.fiche-detail-modal-content .decalage-form select.form-control optgroup,
+.fiche-detail-modal-content .etat-change-section select.form-control option,
+.fiche-detail-modal-content .etat-change-section select.form-control optgroup,
+.fiche-detail-modal-content .compte-rendu-section select.form-control option,
+.fiche-detail-modal-content .compte-rendu-section select.form-control optgroup {
   background-color: #ffffff !important;
   color: #1f2933 !important;
   -webkit-text-fill-color: #1f2933 !important;
   font-weight: 600 !important;
 }
 
-.decalage-form textarea.form-control::placeholder {
+.decalage-form textarea.form-control::placeholder,
+.etat-change-section textarea.form-control::placeholder,
+.compte-rendu-section textarea.form-control::placeholder {
   color: #6b7280 !important;
   -webkit-text-fill-color: #6b7280 !important;
   opacity: 1;
@@ -2563,16 +2646,55 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
-.decalage-form .btn-confirm {
+.decalage-form .btn-confirm,
+.etat-change-section .btn-confirm,
+.compte-rendu-section .btn-confirm {
   background-color: #4a4d52 !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   border: 1px solid #6c7079 !important;
 }
 
-.decalage-form .btn-confirm:hover:not(:disabled) {
+.decalage-form .btn-confirm:hover:not(:disabled),
+.etat-change-section .btn-confirm:hover:not(:disabled),
+.compte-rendu-section .btn-confirm:hover:not(:disabled) {
   background-color: #5a5e64 !important;
   border-color: #80848d !important;
+}
+
+.etat-change-section .btn-cancel,
+.compte-rendu-section .btn-cancel {
+  background-color: #4a4d52 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: 1px solid #6c7079 !important;
+}
+
+.etat-change-section .btn-cancel:hover:not(:disabled),
+.compte-rendu-section .btn-cancel:hover:not(:disabled) {
+  background-color: #5a5e64 !important;
+  border-color: #80848d !important;
+}
+
+/* Items "Compte rendu en attente" : on remplace les fonds colorés inline
+   (jaune / vert / rouge) par un fond sombre uniforme pour rester cohérent
+   avec le reste de la carte. Le texte reste blanc (règle globale). */
+.compte-rendu-section .compte-rendu-item {
+  background-color: #4a4a4a !important;
+  border: 1px solid #5f6368 !important;
+  border-radius: 6px !important;
+}
+
+.compte-rendu-section .compte-rendu-item .btn-edit {
+  background-color: #9cbfc8 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: 1px solid #9cbfc8 !important;
+}
+
+.compte-rendu-section .compte-rendu-item .btn-edit:hover:not(:disabled) {
+  background-color: #1a2529 !important;
+  border-color: #1a2529 !important;
 }
 
 /* =====================================================
