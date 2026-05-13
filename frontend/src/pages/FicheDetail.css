@@ -1144,17 +1144,20 @@
 .confirmation-form {
   margin-top: 24px;
   padding: 20px;
-  background: white;
+  background: #3a3a3a;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
   border-radius: 8px;
-  border: 2px solid #f7a219;
+  border: 1px solid #4a4d52;
 }
 
 .confirmation-form h3 {
   margin-top: 0;
   margin-bottom: 20px;
-  color: #9cbfc8;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
   font-size: 17px;
-  border-bottom: 2px solid #f7a219;
+  border-bottom: 1px solid #4a4d52;
   font-weight: bold;
   padding-bottom: 8px;
 }
@@ -2715,6 +2718,14 @@
   padding-left: 0 !important;
   padding-right: 0 !important;
   box-sizing: border-box !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .confirmation-form,
+.fiche-detail-modal-content .etat-change-section .confirmation-form label,
+.fiche-detail-modal-content .etat-change-section .confirmation-form td,
+.fiche-detail-modal-content .etat-change-section .confirmation-form h3 {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 /* =====================================================
