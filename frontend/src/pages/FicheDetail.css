@@ -2770,6 +2770,53 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
+/* Formulaire de confirmation (état 7) : passer la table en disposition bloc
+   pour que les labels s'empilent au-dessus des champs (comme « Nouvel état »)
+   et que tous les champs aient la même largeur (pleine largeur du conteneur). */
+.etat-change-section .confirmation-form .rdv-form-table,
+.etat-change-section .confirmation-form .rdv-form-table tbody,
+.etat-change-section .confirmation-form .rdv-form-table tr,
+.etat-change-section .confirmation-form .rdv-form-table td,
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table,
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table tbody,
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table tr,
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table td {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.etat-change-section .confirmation-form .rdv-form-table tr,
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table tr {
+  margin-bottom: 12px !important;
+}
+
+.etat-change-section .confirmation-form .rdv-form-table td:first-child,
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table td:first-child {
+  white-space: normal !important;
+  padding: 0 0 6px 0 !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+.etat-change-section .confirmation-form .rdv-form-table td:last-child,
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table td:last-child {
+  padding: 0 !important;
+}
+
+.etat-change-section .confirmation-form .rdv-form-table .form-control:not(textarea),
+.etat-change-section .confirmation-form .rdv-form-table .autocomplete-wrap,
+.etat-change-section .confirmation-form .rdv-form-table textarea.form-control,
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table .form-control:not(textarea),
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table .autocomplete-wrap,
+.fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table textarea.form-control {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
 /* =====================================================
    Carte « CONTROLE QUALITE » (états signer : 13, 16, 44, 45)
    Cadre avec bandeau d'en-tête + formulaire en ligne (label gauche / champ droite).
