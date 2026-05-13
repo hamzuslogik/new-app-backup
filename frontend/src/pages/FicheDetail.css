@@ -2728,6 +2728,33 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
+/* Tableau .rdv-form-table dans la section « Changement d'état » : même thème
+   sombre que .confirmation-form (le tableau lui-même n'avait pas de fond, mais
+   on neutralise tout fond hérité et on assure que les cellules sont blanches). */
+.etat-change-section .rdv-form-table,
+.etat-change-section .rdv-form-table tbody,
+.etat-change-section .rdv-form-table tr,
+.etat-change-section .rdv-form-table td,
+.etat-change-section .rdv-form-table th,
+.fiche-detail-modal-content .etat-change-section .rdv-form-table,
+.fiche-detail-modal-content .etat-change-section .rdv-form-table tbody,
+.fiche-detail-modal-content .etat-change-section .rdv-form-table tr,
+.fiche-detail-modal-content .etat-change-section .rdv-form-table td,
+.fiche-detail-modal-content .etat-change-section .rdv-form-table th {
+  background-color: transparent !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: #4a4d52 !important;
+}
+
+.etat-change-section .rdv-form-table td label,
+.etat-change-section .rdv-form-table th,
+.fiche-detail-modal-content .etat-change-section .rdv-form-table td label,
+.fiche-detail-modal-content .etat-change-section .rdv-form-table th {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 /* =====================================================
    Carte « CONTROLE QUALITE » (états signer : 13, 16, 44, 45)
    Cadre avec bandeau d'en-tête + formulaire en ligne (label gauche / champ droite).
