@@ -4297,6 +4297,108 @@ const FicheDetail = ({
                                         >
                                           <FaCheck />
                                         </button>
+                                        {(() => {
+                                          const sinceTs = etatActuel.date_creation
+                                            ? new Date(etatActuel.date_creation).getTime()
+                                            : null;
+                                          const histoSinceConfirmer = dateRdvModifications.filter((mod) => {
+                                            if (!sinceTs) return true;
+                                            const d = mod.date_modif_time ? new Date(mod.date_modif_time).getTime() : null;
+                                            return d != null && !Number.isNaN(d) && d >= sinceTs;
+                                          });
+                                          if (histoSinceConfirmer.length === 0) return null;
+                                          return (
+                                            <div style={{ marginTop: '10px', width: '100%' }}>
+                                              <button
+                                                type="button"
+                                                onClick={() => setShowDateRdvHistory((prev) => !prev)}
+                                                title="Voir l'historique des modifications de l'heure du RDV"
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '6px',
+                                                  background: 'transparent',
+                                                  border: '1px solid #ffffff',
+                                                  color: '#ffffff',
+                                                  borderRadius: '4px',
+                                                  padding: '4px 10px',
+                                                  fontSize: '12px',
+                                                  fontWeight: 700,
+                                                  cursor: 'pointer'
+                                                }}
+                                              >
+                                                <FaHistory />
+                                                Historique des modifications ({histoSinceConfirmer.length})
+                                              </button>
+                                              {showDateRdvHistory && (
+                                                <div
+                                                  style={{
+                                                    marginTop: '8px',
+                                                    background: '#ffffff',
+                                                    color: '#1f2937',
+                                                    borderRadius: '6px',
+                                                    padding: '8px',
+                                                    border: '1px solid #d1d5db',
+                                                    maxWidth: '720px'
+                                                  }}
+                                                >
+                                                  <table
+                                                    style={{
+                                                      width: '100%',
+                                                      borderCollapse: 'collapse',
+                                                      fontSize: '12px',
+                                                      color: '#1f2937'
+                                                    }}
+                                                  >
+                                                    <thead>
+                                                      <tr style={{ background: '#f3f4f6' }}>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Quand</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Qui</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Ancienne valeur</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Nouvelle valeur</th>
+                                                      </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                      {histoSinceConfirmer
+                                                        .slice()
+                                                        .sort((a, b) => {
+                                                          const ta = a.date_modif_time ? new Date(a.date_modif_time).getTime() : 0;
+                                                          const tb = b.date_modif_time ? new Date(b.date_modif_time).getTime() : 0;
+                                                          return tb - ta;
+                                                        })
+                                                        .map((mod) => (
+                                                          <tr key={mod.id}>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
+                                                              {mod.date_modif_time
+                                                                ? new Date(mod.date_modif_time).toLocaleString('fr-FR')
+                                                                : '-'}
+                                                            </td>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                                                              {mod.user_pseudo || '-'}
+                                                            </td>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                                                              {modificaValueDisplay(
+                                                                mod.ancien_valeur,
+                                                                mod.type || 'date_rdv_time',
+                                                                mod.ancien_valeur_label
+                                                              )}
+                                                            </td>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                                                              {modificaValueDisplay(
+                                                                mod.nouvelle_valeur,
+                                                                mod.type || 'date_rdv_time',
+                                                                mod.nouvelle_valeur_label
+                                                              )}
+                                                            </td>
+                                                          </tr>
+                                                        ))}
+                                                    </tbody>
+                                                  </table>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })()}
                                       </>
                                     ) : (
                                       <span

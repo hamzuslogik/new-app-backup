@@ -626,7 +626,7 @@
 .planning-view .planning-table td {
   padding: 6.4px;
   text-align: center;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #6b7280;
   vertical-align: top;
   height: 120px !important;
   min-height: 120px !important;
@@ -647,7 +647,7 @@
 .planning-table td {
   padding: 6.4px;
   text-align: center;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #6b7280;
   vertical-align: top;
   height: 120px !important;
   min-height: 120px !important;
@@ -659,6 +659,20 @@
 .planning-table tbody td {
   height: 120px !important;
   min-height: 120px !important;
+}
+
+/* Bordures fines et visibles entre les créneaux du planning dans le modal détails fiche.
+   Une spécificité .planning-tab permet de cibler uniquement le tableau du modal
+   (la page Planning principale n'est pas affectée). */
+.planning-tab .planning-table {
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+}
+.planning-tab .planning-table th,
+.planning-tab .planning-table td,
+.planning-tab .planning-view .planning-table th,
+.planning-tab .planning-view .planning-table td {
+  border: 1px solid #6b7280 !important;
 }
 
 /* Lien info : dashboard filtré par créneau (RE / RP / backoffice) */
