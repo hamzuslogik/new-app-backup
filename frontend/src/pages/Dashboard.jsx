@@ -1393,6 +1393,42 @@ const Dashboard = () => {
     setFicheContextMenu(null);
   };
 
+  const getFicheContextMenuStyle = () => {
+    if (!ficheContextMenu || typeof window === 'undefined') {
+      return { position: 'fixed', zIndex: 10050 };
+    }
+
+    const MENU_WIDTH = 220;
+    const ITEM_HEIGHT = 38;
+    const MENU_PADDING_Y = 8;
+    const VIEWPORT_PADDING = 8;
+    const itemCount = hasPermission('fiche_validate') ? 9 : 8;
+    const menuHeight = (itemCount * ITEM_HEIGHT) + MENU_PADDING_Y;
+    const spaceBelow = window.innerHeight - ficheContextMenu.y;
+    const spaceAbove = ficheContextMenu.y;
+    const openUpward = spaceBelow < menuHeight + VIEWPORT_PADDING && spaceAbove > spaceBelow;
+
+    const top = openUpward
+      ? Math.max(VIEWPORT_PADDING, ficheContextMenu.y - menuHeight)
+      : Math.min(
+          ficheContextMenu.y,
+          Math.max(VIEWPORT_PADDING, window.innerHeight - menuHeight - VIEWPORT_PADDING)
+        );
+    const left = Math.min(
+      Math.max(VIEWPORT_PADDING, ficheContextMenu.x),
+      Math.max(VIEWPORT_PADDING, window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING)
+    );
+
+    return {
+      position: 'fixed',
+      left,
+      top,
+      zIndex: 10050,
+      maxHeight: `calc(100vh - ${VIEWPORT_PADDING * 2}px)`,
+      overflowY: 'auto',
+    };
+  };
+
   const validationModalBusy = validateFromMenuMutation.isLoading;
 
   return (
@@ -2620,12 +2656,7 @@ const Dashboard = () => {
       {ficheContextMenu && (
         <div
           className="dashboard-fiche-context-menu"
-          style={{
-            position: 'fixed',
-            left: Math.min(ficheContextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 224 : ficheContextMenu.x),
-            top: Math.min(ficheContextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 340 : ficheContextMenu.y),
-            zIndex: 10050,
-          }}
+          style={getFicheContextMenuStyle()}
           role="menu"
         >
           <button
