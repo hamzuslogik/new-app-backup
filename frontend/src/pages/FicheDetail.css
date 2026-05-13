@@ -332,6 +332,7 @@
 /* Ordre demandé: État actuel -> Historique -> Changement état -> Demande décalage */
 .fiche-sections > .etat-current-history-section {
   order: -4;
+  min-height: 600px;
 }
 
 .fiche-sections > .etat-change-section {

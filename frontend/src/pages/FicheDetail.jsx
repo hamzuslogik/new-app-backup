@@ -4321,13 +4321,13 @@ const FicheDetail = ({
                               <div
                                 style={{
                                   position: 'absolute',
-                                  top: 'calc(100% + 4px)',
+                                  top: 'calc(100% + 6px)',
                                   left: 0,
                                   background: '#ffffff',
                                   border: '1px solid #d1d5db',
-                                  borderRadius: '6px',
-                                  minWidth: '160px',
-                                  boxShadow: '0 4px 12px rgba(0,0,0,0.14)',
+                                  borderRadius: '8px',
+                                  minWidth: '240px',
+                                  boxShadow: '0 6px 18px rgba(0,0,0,0.14)',
                                   zIndex: 100,
                                   overflow: 'hidden',
                                 }}
@@ -4351,16 +4351,15 @@ const FicheDetail = ({
                                   style={{
                                     display: 'block',
                                     width: '100%',
-                                    padding: '6px 10px',
+                                    padding: '12px 16px',
                                     textAlign: 'left',
                                     background: 'transparent',
                                     border: 'none',
                                     borderBottom: '1px solid #e5e7eb',
                                     cursor: validateMutation.isLoading ? 'wait' : 'pointer',
-                                    fontSize: '12px',
+                                    fontSize: '14px',
                                     fontWeight: 600,
                                     color: '#111827',
-                                    lineHeight: 1.2,
                                   }}
                                 >
                                   NON VALIDÉ
@@ -4381,16 +4380,15 @@ const FicheDetail = ({
                                   style={{
                                     display: 'block',
                                     width: '100%',
-                                    padding: '6px 10px',
+                                    padding: '12px 16px',
                                     textAlign: 'left',
                                     background: 'transparent',
                                     border: 'none',
                                     borderBottom: '1px solid #e5e7eb',
                                     cursor: validateMutation.isLoading ? 'wait' : 'pointer',
-                                    fontSize: '12px',
+                                    fontSize: '14px',
                                     fontWeight: 600,
                                     color: '#111827',
-                                    lineHeight: 1.2,
                                   }}
                                 >
                                   VALIDÉ AVEC MR
@@ -4411,15 +4409,14 @@ const FicheDetail = ({
                                   style={{
                                     display: 'block',
                                     width: '100%',
-                                    padding: '6px 10px',
+                                    padding: '12px 16px',
                                     textAlign: 'left',
                                     background: 'transparent',
                                     border: 'none',
                                     cursor: validateMutation.isLoading ? 'wait' : 'pointer',
-                                    fontSize: '12px',
+                                    fontSize: '14px',
                                     fontWeight: 600,
                                     color: '#111827',
-                                    lineHeight: 1.2,
                                   }}
                                 >
                                   VALIDÉ AVEC MME
