@@ -7,7 +7,6 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { cleanObservationCQ } from '../utils/cleanObservationCQ';
-import { getEffectiveEtatColor, getEffectiveEtatTitle } from '../utils/etatSignerComplet';
 import './CQSignatures.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -138,11 +137,14 @@ const CQSignatures = () => {
   const rows = data?.data || [];
   const pagination = data?.pagination || {};
   const getEtatColor = (rowOrEtatId) => {
-    const row = typeof rowOrEtatId === 'object' ? rowOrEtatId : { fiche_id_etat_final: rowOrEtatId };
-    return getEffectiveEtatColor(row, etatsData || [], [], '#9cbfc8');
+    const row = typeof rowOrEtatId === 'object' ? rowOrEtatId : null;
+    const etatId = row ? (row.fiche_id_etat_final ?? row.id_etat_final ?? row.id_etat) : rowOrEtatId;
+    if (row?.etat_color) return row.etat_color;
+    const etat = (etatsData || []).find((e) => Number(e.id) === Number(etatId));
+    return etat?.color || '#9cbfc8';
   };
   const getEtatTitle = (row) => {
-    return getEffectiveEtatTitle(row, etatsData || [], []) || row.etat_titre || '-';
+    return row.etat_titre || '-';
   };
   const getSortValue = (row, key) => {
     switch (key) {

@@ -11,7 +11,6 @@ import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
-import { getEffectiveEtatColor, getEffectiveEtatTitle } from '../utils/etatSignerComplet';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
@@ -898,8 +897,6 @@ const Dashboard = () => {
 
   // Obtenir la couleur de l'état : priorité à etat_color renvoyé par l'API (couvre tous les états dont ceux hors filtre confirmateur), sinon etatsData
   const getEtatColor = (etatId, fiche) => {
-    const effectiveColor = getEffectiveEtatColor(fiche, etatsData || [], sousEtatsData || [], null);
-    if (effectiveColor) return effectiveColor;
     if (fiche?.etat_color) return fiche.etat_color;
     const etat = (etatsData || []).find(e => e.id === etatId || e.id === Number(etatId));
     return etat?.color || '#cccccc';
@@ -1005,7 +1002,7 @@ const Dashboard = () => {
 
   // Libellé d'état à afficher : priorité au etat_titre renvoyé par l'API (affiche tous les états en session confirmateur, ex. en attente)
   const getEtatDisplayName = (fiche) =>
-    (getEffectiveEtatTitle(fiche, etatsData || [], sousEtatsData || []) || fiche?.etat_titre || getEtatName(fiche?.id_etat_final) || '').trim();
+    (fiche?.etat_titre || getEtatName(fiche?.id_etat_final) || '').trim();
 
   // Bulle au survol : nom, téléphone, puis commentaire.
   // — État actuel issu d’un compte rendu (dernière ligne fiches_histo.from_compte_rendu) → commentaire commercial (fiches).

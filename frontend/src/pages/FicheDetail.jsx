@@ -9,11 +9,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRouteParams } from '../contexts/RouteParamsContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
-import {
-  getEffectiveEtatColor,
-  getEffectiveEtatTitle,
-  isSignerCompletBySousEtat,
-} from '../utils/etatSignerComplet';
 import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
 import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
 import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, format, addMonths } from 'date-fns';
@@ -2751,20 +2746,7 @@ const FicheDetail = ({
 
   const userFonctionTop = user ? Number(user.fonction) : null;
   const canEditModificationRapideTop = userFonctionTop === 14 || userFonctionTop === 13 || userFonctionTop === 11 || (typeof hasPermission === 'function' && hasPermission('fiche_quick_edit'));
-  // Pour la logique "Signer Complet" (état SIGNER + sous-état COMPLETE),
-  // on construit un objet façon-fiche compatible avec l'utilitaire etatSignerComplet.
-  const ficheForSignerComplet = {
-    id_etat_final: fiche.id_etat_final,
-    etat_titre: fiche.etat_final_titre,
-    etat_color: fiche.etat_final_color,
-    sous_etat_titre: fiche.sous_etat_titre,
-    id_sous_etat: fiche.id_sous_etat,
-  };
-  const ficheIsSignerComplet = isSignerCompletBySousEtat(ficheForSignerComplet, etats || [], []);
-
   const getEtatColor = () => {
-    const effective = getEffectiveEtatColor(ficheForSignerComplet, etats || [], [], null);
-    if (effective) return effective;
     if (fiche.etat_final_color) {
       return fiche.etat_final_color;
     }
@@ -2785,15 +2767,12 @@ const FicheDetail = ({
 
   const etatActuelHeaderTitre = fiche.id_etat_final
     ? (
-        getEffectiveEtatTitle(ficheForSignerComplet, etats || [], []) ||
         fiche.etat_final_titre ||
         etats?.find((e) => Number(e.id) === Number(fiche.id_etat_final))?.titre ||
         'État inconnu'
       )
     : null;
-  // Lorsqu'on rebaptise déjà "Signer Complet" dans le titre, on n'affiche pas le sous-état
-  // en double dans la pill d'en-tête (sinon on aurait "Signer Complet · COMPLETE").
-  const etatActuelHeaderSous = ficheIsSignerComplet ? null : (fiche.sous_etat_titre || null);
+  const etatActuelHeaderSous = fiche.sous_etat_titre || null;
 
   const generatePDF = () =>
     generateFicheClientPdf(fiche, {
@@ -3886,20 +3865,11 @@ const FicheDetail = ({
 
               const etatActuelBaseTitre = fiche.etat_final_titre || etats?.find((e) => Number(e.id) === Number(fiche.id_etat_final))?.titre || 'État inconnu';
               const etatActuelBaseColor = fiche.etat_final_color || etats?.find((e) => Number(e.id) === Number(fiche.id_etat_final))?.color || '#3498db';
-              const etatActuelForSignerComplet = {
-                id_etat_final: fiche.id_etat_final,
-                etat_titre: etatActuelBaseTitre,
-                etat_color: etatActuelBaseColor,
-                sous_etat_titre: fiche.sous_etat_titre,
-                id_sous_etat: fiche.id_sous_etat,
-              };
-              const etatActuelIsSignerComplet = isSignerCompletBySousEtat(etatActuelForSignerComplet, etats || [], []);
               const etatActuel = {
                 id_etat: fiche.id_etat_final,
-                etat_titre: getEffectiveEtatTitle(etatActuelForSignerComplet, etats || [], []) || etatActuelBaseTitre,
-                etat_color: getEffectiveEtatColor(etatActuelForSignerComplet, etats || [], [], etatActuelBaseColor),
-                // On masque le sous-état si on a déjà rebaptisé l'état en "Signer Complet"
-                sous_etat_titre: etatActuelIsSignerComplet ? null : (fiche.sous_etat_titre || null),
+                etat_titre: etatActuelBaseTitre,
+                etat_color: etatActuelBaseColor,
+                sous_etat_titre: fiche.sous_etat_titre || null,
                 // Pseudo utilisateur ayant enregistré le passage à cet état (colonne id_confirmateur de la ligne fiches_histo)
                 histo_confirmateur_pseudo: lastHistoEtatActuel?.histo_confirmateur_pseudo || null,
                 // Utiliser les données actuelles de la fiche
@@ -4583,10 +4553,13 @@ const FicheDetail = ({
                         <div className="historique-list" style={{ marginTop: '10px' }}>
                           {historiqueListeSansEtatActuel.slice().reverse().map((histo) => {
                             const detailItems = renderEtatDetails(histo);
-                            const histoEtatColor = getEffectiveEtatColor(histo, etats || [], [], histo.etat_color || '#3498db');
-                            const histoEtatTitre = getEffectiveEtatTitle(histo, etats || [], []) || histo.etat_titre || 'État inconnu';
-                            const histoIsSignerComplet = isSignerCompletBySousEtat(histo, etats || [], []);
-                            const histoSousEtatTitre = histoIsSignerComplet ? null : histo.sous_etat_titre;
+                            const histoEtatColor = histo.etat_color
+                              || etats?.find((e) => Number(e.id) === Number(histo.id_etat))?.color
+                              || '#3498db';
+                            const histoEtatTitre = histo.etat_titre
+                              || etats?.find((e) => Number(e.id) === Number(histo.id_etat))?.titre
+                              || 'État inconnu';
+                            const histoSousEtatTitre = histo.sous_etat_titre;
                             const histoHeaderTextColor = histoEtatColor === '#ffffff' || histoEtatColor === '#fff' ? '#000000' : '#ffffff';
                             
                             return (
