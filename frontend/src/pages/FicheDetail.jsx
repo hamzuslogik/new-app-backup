@@ -4322,7 +4322,6 @@ const FicheDetail = ({
                             >
                               <FaEdit />
                               <span>Modifier</span>
-                              <FaChevronDown size={11} />
                             </button>
                           ) : (
                             <button
