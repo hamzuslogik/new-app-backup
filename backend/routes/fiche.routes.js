@@ -3825,9 +3825,30 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       } catch (e) { console.log('Erreur validateur:', e.message); }
     }
 
+    // Formate un DATETIME MySQL (objet Date local côté mysql2) en chaîne "YYYY-MM-DDTHH:mm:ss"
+    // SANS passer par toISOString() qui convertit en UTC et provoque un décalage horaire
+    // visible côté front (new Date(...).toLocaleString interprète alors en local) :
+    //   - formatRdvDateTime fait une regex sur la chaîne (accepte T ou espace),
+    //   - formatDateNoSeconds passe par new Date(value).toLocaleString(...).
+    // Le séparateur 'T' est ISO 8601 et parsé en local par tous les navigateurs modernes.
+    const toLocalDatetimeString = (value) => {
+      if (value == null || value === '') return null;
+      if (typeof value === 'string') return value;
+      if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
+      }
+      return null;
+    };
+
     // Construire l'objet fiche enrichi
     const ficheEnrichie = {
       ...fiche,
+      // Sérialiser les DATETIME en chaîne LOCALE pour éviter un décalage UTC côté front
+      // lorsque ces champs sont utilisés en repli (« Date d'appel » via formatDateNoSeconds).
+      date_appel_time: toLocalDatetimeString(fiche.date_appel_time),
+      date_modif_time: toLocalDatetimeString(fiche.date_modif_time),
+      date_insert_time: toLocalDatetimeString(fiche.date_insert_time),
       cqe: cq_etat,
       cqd: cq_dossier,
       installeur: installeur,
@@ -3886,18 +3907,6 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       
       // Enrichir chaque entrée de l'historique avec les données de la fiche actuelle
       if (historique && historique.length > 0 && fiche) {
-        // Formate un DATETIME MySQL (objet Date local côté mysql2) en chaîne "YYYY-MM-DD HH:mm:ss"
-        // SANS passer par toISOString() qui convertit en UTC et provoque un décalage horaire
-        // visible côté front (formatRdvDateTime fait une regex sur la chaîne).
-        const toLocalDatetimeString = (value) => {
-          if (value == null || value === '') return null;
-          if (typeof value === 'string') return value;
-          if (value instanceof Date && !Number.isNaN(value.getTime())) {
-            const pad = (n) => String(n).padStart(2, '0');
-            return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
-          }
-          return null;
-        };
         historique = historique.map(histo => ({
           ...histo,
           histo_id_confirmateur: histo.id_confirmateur,
@@ -3931,7 +3940,12 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           conf_presence_couple: fiche.conf_presence_couple || null,
           // Pour l'historique, priorité aux valeurs historisées de la ligne (sinon repli fiche courante)
           date_rdv_time: (histo.date_rdv_time ?? fiche.date_rdv_time) || null,
-          date_appel_time: (histo.date_appel_time ?? fiche.date_appel_time) || null,
+          // date_appel_time : DATETIME MySQL → mysql2 renvoie un Date local → JSON.stringify
+          // le convertit en ISO UTC, ce qui décale l'heure côté front (« Date d'appel » affichée
+          // via new Date(...).toLocaleString). On sérialise en chaîne locale pour éviter le décalage.
+          date_appel_time: toLocalDatetimeString(histo.date_appel_time ?? fiche.date_appel_time),
+          // Même problématique pour date_creation (utilisée comme fallback de « Date d'appel »).
+          date_creation: toLocalDatetimeString(histo.date_creation),
           profession_mr: fiche.profession_mr || null,
           profession_madame: fiche.profession_madame || null,
           type_contrat_mr: fiche.type_contrat_mr || null,
