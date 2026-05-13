@@ -5274,6 +5274,34 @@ const FicheDetail = ({
                     </select>
                   </div>
 
+                  {/* Sous État SIGNER : on n'affiche QUE les sous-états COMPLETE et IMCOMPLETE
+                      (les autres valeurs présentes en BDD sont ignorées ici). */}
+                  {(() => {
+                    const sousEtatsSigner = (sousEtats || []).filter((se) => {
+                      const titre = (se?.titre || '').toString().trim().toUpperCase();
+                      return titre === 'COMPLETE' || titre === 'IMCOMPLETE' || titre === 'INCOMPLETE';
+                    });
+                    if (sousEtatsSigner.length === 0) return null;
+                    return (
+                      <div className="form-group">
+                        <label htmlFor="compte_rendu_etat_id_sous_etat_signer">Sous État :</label>
+                        <select
+                          id="compte_rendu_etat_id_sous_etat_signer"
+                          className="form-control"
+                          value={etatFormData.id_sous_etat}
+                          onChange={(e) => setEtatFormData({ ...etatFormData, id_sous_etat: e.target.value })}
+                        >
+                          <option value="">Sélectionner</option>
+                          {sousEtatsSigner.map((setat) => (
+                            <option key={setat.id} value={setat.id}>
+                              {setat.titre}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })()}
+
                   {([1, 2, 7].includes(user?.fonction)) && (
                     <div className="form-group">
                       <label htmlFor="compte_rendu_etat_id_commercial_signer">Commercial :</label>
@@ -6674,24 +6702,33 @@ const FicheDetail = ({
                   </select>
                 </div>
 
-                {sousEtats.length > 0 && (
-                  <div className="form-group">
-                    <label htmlFor="etat_id_sous_etat_signer">Sous État :</label>
-                    <select
-                      id="etat_id_sous_etat_signer"
-                      className="form-control"
-                      value={etatFormData.id_sous_etat}
-                      onChange={(e) => setEtatFormData({...etatFormData, id_sous_etat: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      {sousEtats.map(setat => (
-                        <option key={setat.id} value={setat.id}>
-                          {setat.titre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                {/* Sous État SIGNER : on n'affiche QUE les sous-états COMPLETE et IMCOMPLETE
+                    (les autres valeurs présentes en BDD sont ignorées ici). */}
+                {(() => {
+                  const sousEtatsSigner = (sousEtats || []).filter((se) => {
+                    const titre = (se?.titre || '').toString().trim().toUpperCase();
+                    return titre === 'COMPLETE' || titre === 'IMCOMPLETE' || titre === 'INCOMPLETE';
+                  });
+                  if (sousEtatsSigner.length === 0) return null;
+                  return (
+                    <div className="form-group">
+                      <label htmlFor="etat_id_sous_etat_signer">Sous État :</label>
+                      <select
+                        id="etat_id_sous_etat_signer"
+                        className="form-control"
+                        value={etatFormData.id_sous_etat}
+                        onChange={(e) => setEtatFormData({...etatFormData, id_sous_etat: e.target.value})}
+                      >
+                        <option value="">Sélectionner</option>
+                        {sousEtatsSigner.map((setat) => (
+                          <option key={setat.id} value={setat.id}>
+                            {setat.titre}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })()}
 
                 {([1, 2, 7].includes(user?.fonction)) && (
                   <div className="form-group">
