@@ -2441,10 +2441,13 @@
   -webkit-text-fill-color: #b91c1c !important;
 }
 
-/* Décalage : même largeur et même rendu sombre que État actuel / Historique */
+/* Décalage : même largeur effective que la carte État Actuel.
+   La carte État Actuel est rendue à 760px avec une bordure noire de 6px
+   et un padding interne de 20px. Pour aligner visuellement, on cale
+   le bloc décalage sur la même largeur de contenu utile (~660px). */
 .fiche-section.decalage-form {
   width: 100% !important;
-  max-width: 760px !important;
+  max-width: 660px !important;
   margin-left: auto !important;
   margin-right: auto !important;
   box-sizing: border-box !important;
@@ -2487,31 +2490,44 @@
 }
 
 .decalage-form .form-group {
-  max-width: 720px !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
+/* Champs (selects, textarea, input) du décalage : fond blanc + texte noir pur.
+   On utilise #000000 pour battre tout héritage de couleur foncée et
+   garantir une parfaite lisibilité (notamment pour le nom dans le select Confirmateur). */
 .decalage-form .form-control,
 .decalage-form select.form-control,
 .decalage-form textarea.form-control,
-.decalage-form input.form-control {
+.decalage-form input.form-control,
+.fiche-detail-modal-content .decalage-form .form-control,
+.fiche-detail-modal-content .decalage-form select.form-control,
+.fiche-detail-modal-content .decalage-form textarea.form-control,
+.fiche-detail-modal-content .decalage-form input.form-control {
   width: 100% !important;
-  max-width: none !important;
+  max-width: 100% !important;
   box-sizing: border-box !important;
   background-color: #ffffff !important;
-  color: #1f2933 !important;
-  -webkit-text-fill-color: #1f2933 !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
   border: 1px solid #cfd4da !important;
   border-radius: 4px !important;
   padding: 8px 10px !important;
   font-size: 14px !important;
 }
 
-.decalage-form select.form-control option {
+/* Options du <select> ouvert (notamment Confirmateur) : nom en noir sur fond blanc. */
+.decalage-form select.form-control option,
+.decalage-form select.form-control optgroup,
+.fiche-detail-modal-content .decalage-form select.form-control option,
+.fiche-detail-modal-content .decalage-form select.form-control optgroup {
   background-color: #ffffff !important;
-  color: #1f2933 !important;
-  -webkit-text-fill-color: #1f2933 !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-weight: 600 !important;
 }
 
 .decalage-form textarea.form-control::placeholder {
