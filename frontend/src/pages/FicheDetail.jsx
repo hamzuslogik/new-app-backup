@@ -1273,27 +1273,23 @@ const FicheDetail = ({
     });
   };
 
-  // Initialiser les données NRP si la fiche est déjà en état NRP (y compris après re-sélection du même état dans la liste)
+  // Initialiser les données NRP si la fiche est déjà en état NRP.
+  // On utilise la date/heure ACTUELLES (et non celles déjà enregistrées en BDD)
+  // afin qu'un changement d'état vers NRP horodate toujours l'action en cours.
   useEffect(() => {
     if (ficheData && ficheData.id_etat_final === 2 && (selectedEtat === null || selectedEtat === 2)) {
-      // Si la fiche est en état NRP, initialiser les données du formulaire
-      if (ficheData.date_appel_time) {
-        const dateAppel = new Date(ficheData.date_appel_time);
-        setNrpFormData({
-          date_appel_date: dateAppel.toISOString().split('T')[0],
-          date_appel_time: dateAppel.toTimeString().slice(0, 5),
-          id_sous_etat: '',
-          conf_commentaire_produit: ficheData.conf_commentaire_produit || ''
-        });
-      } else {
-        // Initialiser avec des valeurs vides si pas de date_appel_time
-        setNrpFormData({
-          date_appel_date: '',
-          date_appel_time: '',
-          id_sous_etat: '',
-          conf_commentaire_produit: ficheData.conf_commentaire_produit || ''
-        });
-      }
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      setNrpFormData({
+        date_appel_date: `${yyyy}-${mm}-${dd}`,
+        date_appel_time: `${hh}:${min}`,
+        id_sous_etat: '',
+        conf_commentaire_produit: ficheData.conf_commentaire_produit || '',
+      });
     }
   }, [ficheData, selectedEtat]);
 
@@ -2037,7 +2033,9 @@ const FicheDetail = ({
         }));
       }
     }
-    // NRP (2) : date/heure d'appel par défaut = maintenant
+    // NRP (2) : date/heure d'appel TOUJOURS forcées à « maintenant » lors d'un
+    // changement d'état vers NRP (on n'utilise jamais la valeur précédente afin
+    // que la fiche enregistre l'heure exacte de l'action en cours).
     if (newEtatId === 2) {
       const now = new Date();
       const yyyy = now.getFullYear();
@@ -2047,8 +2045,8 @@ const FicheDetail = ({
       const min = String(now.getMinutes()).padStart(2, '0');
       setNrpFormData((prev) => ({
         ...prev,
-        date_appel_date: prev.date_appel_date || `${yyyy}-${mm}-${dd}`,
-        date_appel_time: prev.date_appel_time || `${hh}:${min}`
+        date_appel_date: `${yyyy}-${mm}-${dd}`,
+        date_appel_time: `${hh}:${min}`,
       }));
     }
     // Si l'état est 7 (confirmer), initialiser les valeurs du formulaire depuis la fiche (tous les conf_*)
@@ -6369,8 +6367,6 @@ const FicheDetail = ({
             {/* Formulaire NRP (état 2) */}
             {selectedEtat === 2 && (
               <div className="nrp-form" style={{ marginTop: '20px' }}>
-                <h3>Informations NRP</h3>
-
                 <div className="form-group">
                   <label htmlFor="nrp_date_appel_datetime">Date et heure d&apos;appel :</label>
                   <input
@@ -6452,8 +6448,6 @@ const FicheDetail = ({
             {/* Formulaire ANNULER À REPROGRAMMER (état 8) - visible aussi pour commerciaux (mais seulement si pas déjà dans section compte rendu) */}
             {selectedEtat === 8 && !(user?.fonction === 5 && compteRenduOption) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
-                <h3>Informations Annuler à Reprogrammer</h3>
-                
                 {sousEtats.length > 0 && (
                   <div className="form-group">
                     <label htmlFor="etat_id_sous_etat_8">Sous État :</label>
@@ -6526,8 +6520,6 @@ const FicheDetail = ({
             {/* Formulaire RAPPEL POUR BUREAU (état 19) */}
             {selectedEtat === 19 && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
-                <h3>Informations Rappel pour Bureau</h3>
-                
                 <div className="form-group">
                   <label htmlFor="etat_date_rappel_datetime_19">A Rappeler Le :</label>
                   <input
@@ -6966,8 +6958,6 @@ const FicheDetail = ({
             {/* Formulaire SIGNER RETRACTER (états 16, 38) */}
             {[16, 38].includes(selectedEtat) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
-                <h3>Informations Signer Retracter</h3>
-                
                 {([1, 2, 7].includes(user?.fonction)) && (
                   <div className="form-group">
                     <label htmlFor="etat_id_commercial_retracter">Commercial :</label>
@@ -7030,7 +7020,6 @@ const FicheDetail = ({
             {/* Formulaire Honoré à suivre (état 9) */}
             {selectedEtat === 9 && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
-                <h3>Honoré à suivre</h3>
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="etat_date_rappel_9">A Rappeler le :</label>
@@ -7100,13 +7089,6 @@ const FicheDetail = ({
             {/* États avec commentaire (motif_qualif) : annuler, refus, hors cible, etc. */}
             {[5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34].includes(selectedEtat) && (
               <div className="etat-form" style={{ marginTop: '20px' }}>
-                <h3>
-                  {[11, 12].includes(selectedEtat)
-                    ? 'RDV annulé / Refus'
-                    : [23, 34].includes(selectedEtat)
-                      ? 'Informations complémentaires'
-                      : "Commentaire sur l'état"}
-                </h3>
                 {[11, 12].includes(selectedEtat) && sousEtats.length > 0 && (
                   <div className="form-group">
                     <label htmlFor="etat_id_sous_etat_11_12">Sous-état (facultatif) :</label>
