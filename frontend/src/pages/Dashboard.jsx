@@ -779,6 +779,55 @@ const Dashboard = () => {
     handleFilterChange('page', newPage);
   };
 
+  /**
+   * Convertit l'objet de filtres en paramètres d'URL lisibles, en filtrant les valeurs vides.
+   * Sert à conserver les critères de recherche dans l'URL : ainsi un rafraîchissement de la page
+   * relance la même recherche (cf. useEffect qui lit `searchParams` au montage).
+   */
+  const filtersToUrlParams = (f) => {
+    const out = {};
+    const set = (key, value) => {
+      if (value === undefined || value === null) return;
+      if (typeof value === 'boolean') {
+        if (value) out[key] = '1';
+        return;
+      }
+      const s = String(value).trim();
+      if (s === '') return;
+      out[key] = s;
+    };
+    set('fiche_search', true);
+    set('page', f.page || 1);
+    if (f.limit && f.limit !== 999999) set('limit', f.limit);
+    set('id_etat_final', f.id_etat_final);
+    set('id_sous_etat', f.id_sous_etat);
+    set('annuler_repro_type', f.annuler_repro_type);
+    set('date_champ', f.date_champ);
+    set('date_debut', f.date_debut);
+    set('date_fin', f.date_fin);
+    set('time_debut', f.time_debut);
+    set('time_fin', f.time_fin);
+    set('id_confirmateur', f.id_confirmateur);
+    set('id_commercial', f.id_commercial);
+    set('id_centre', f.id_centre);
+    set('id_agent', f.id_agent);
+    set('id_re', f.id_re);
+    set('critere', f.critere);
+    set('critere_champ', f.critere_champ);
+    set('cp', f.cp);
+    set('tel', f.tel);
+    set('nom', f.nom);
+    set('prenom', f.prenom);
+    set('ko', f.ko);
+    set('include_archive', !!f.include_archive);
+    set('include_confirmateur_2', !!f.include_confirmateur_2);
+    if (f.produit !== undefined && f.produit !== null && f.produit !== '') {
+      const p = Array.isArray(f.produit) ? f.produit[0] : f.produit;
+      set('produit', p);
+    }
+    return out;
+  };
+
   const handleSearch = async (e) => {
     e.preventDefault();
     // Afficher la confirmation uniquement si la recherche n'est pas affinée (risque de recherche lourde)
@@ -814,6 +863,8 @@ const Dashboard = () => {
     setFilters(newFilters);
     setAppliedFilters(newFilters);
     setStatsListOverride(null);
+    // Persister la recherche dans l'URL : le rafraîchissement de la page rejoue la même requête.
+    setSearchParams(filtersToUrlParams(newFilters), { replace: true });
   };
 
   const handleReset = () => {
@@ -821,6 +872,8 @@ const Dashboard = () => {
     setFilters(initial);
     setAppliedFilters(initial);
     setStatsListOverride(null);
+    // Nettoyer l'URL pour revenir au comportement par défaut au prochain rafraîchissement.
+    setSearchParams({}, { replace: true });
   };
 
   // Réinitialiser isSearching quand la requête est terminée
