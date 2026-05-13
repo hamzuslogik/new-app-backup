@@ -1043,10 +1043,18 @@ const FicheDetail = ({
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etatsList);
   const currentEtatFinalId = ficheData?.id_etat_final != null ? Number(ficheData.id_etat_final) : null;
   const canSelectEtatConfirmerInChangeSection = etatsList.some((etat) => Number(etat.id) === 7);
-  const canOpenConfirmEtatFromPlanning =
-    currentEtatFinalId != null &&
-    ETATS_AUTORISES_VERS_CONFIRMER_PLANNING.includes(currentEtatFinalId) &&
-    canSelectEtatConfirmerInChangeSection;
+  // Matrice de transitions vers "Confirmer" via le bouton + du planning :
+  // - Confirmateur (fonction 6) : on applique strictement la matrice
+  //   (sinon impossible de passer de "Confirmer" à "Confirmer", de "Annuler 2 fois" à "Confirmer", etc.).
+  // - Autres rôles autorisés à voir le bouton + : aucune restriction d'état actuel.
+  const isConfirmateurSessionForPlanning = Number(user?.fonction) === 6;
+  const canOpenConfirmEtatFromPlanning = isConfirmateurSessionForPlanning
+    ? (
+        currentEtatFinalId != null &&
+        ETATS_AUTORISES_VERS_CONFIRMER_PLANNING.includes(currentEtatFinalId) &&
+        canSelectEtatConfirmerInChangeSection
+      )
+    : true;
   
   // Vérifier si c'est un commercial (fonction 5)
   const isCommercial = userFonction === 5;
@@ -7984,8 +7992,8 @@ const PlanningTab = ({
   
   // Vérifier si l'utilisateur peut éditer (uniquement fonction 1)
   const canEdit = user?.fonction === 1;
-  /** RE confirmation (14), RP confirmation (13), backoffice (11) : lien dashboard par créneau */
-  const sessionCanOpenSlotDashboard = [14, 13, 11].includes(Number(user?.fonction));
+  /** Confirmateur (6), RE confirmation (14), RP confirmation (13), backoffice (11) : lien dashboard par créneau */
+  const sessionCanOpenSlotDashboard = [6, 14, 13, 11].includes(Number(user?.fonction));
   /** Admin (1) et Backoffice (11) : pas de création de RDV directement sur le planning,
    *  seulement l'affichage des disponibilités. */
   const canCreateRdvFromSlot = ![1, 11].includes(Number(user?.fonction));
