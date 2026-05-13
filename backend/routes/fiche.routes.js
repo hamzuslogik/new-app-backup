@@ -3886,6 +3886,18 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       
       // Enrichir chaque entrée de l'historique avec les données de la fiche actuelle
       if (historique && historique.length > 0 && fiche) {
+        // Formate un DATETIME MySQL (objet Date local côté mysql2) en chaîne "YYYY-MM-DD HH:mm:ss"
+        // SANS passer par toISOString() qui convertit en UTC et provoque un décalage horaire
+        // visible côté front (formatRdvDateTime fait une regex sur la chaîne).
+        const toLocalDatetimeString = (value) => {
+          if (value == null || value === '') return null;
+          if (typeof value === 'string') return value;
+          if (value instanceof Date && !Number.isNaN(value.getTime())) {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
+          }
+          return null;
+        };
         historique = historique.map(histo => ({
           ...histo,
           histo_id_confirmateur: histo.id_confirmateur,
@@ -3899,7 +3911,9 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           confirmateur_3_pseudo: confirmateur3?.pseudo || null,
           // Historique: conserver le commentaire au moment du passage d'état
           conf_commentaire_produit: histo.conf_commentaire_produit || null,
-          histo_date_rdv_time: histo.date_rdv_time || null,
+          // Valeur date_rdv_time PROPRE à la ligne fiches_histo (sans repli sur la fiche courante),
+          // sérialisée en chaîne locale pour éviter le décalage UTC côté front.
+          histo_date_rdv_time: toLocalDatetimeString(histo.date_rdv_time),
           conf_rdv_avec: fiche.conf_rdv_avec || null,
           conf_appel_tunisie_avec: fiche.conf_appel_tunisie_avec || null,
           conf_deja_etude: fiche.conf_deja_etude || null,
