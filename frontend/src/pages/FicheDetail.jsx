@@ -5619,6 +5619,18 @@ const FicheDetail = ({
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
                 <div className="etat-form">
                   <h3>Commentaire</h3>
+
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_pseudo_simple">Pseudo :</label>
+                    <input
+                      type="text"
+                      id="compte_rendu_etat_pseudo_simple"
+                      className="form-control"
+                      value={etatFormData.pseudo}
+                      onChange={(e) => setEtatFormData({ ...etatFormData, pseudo: e.target.value })}
+                    />
+                  </div>
+
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_conf_commentaire_simple">Compte rendu :</label>
                     <textarea
@@ -5635,7 +5647,7 @@ const FicheDetail = ({
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
-                      setEtatFormData({...etatFormData, conf_commentaire_produit: ''});
+                      setEtatFormData({...etatFormData, conf_commentaire_produit: '', pseudo: ''});
                     }}>Annuler</button>
                   </div>
                 </div>
@@ -5646,6 +5658,17 @@ const FicheDetail = ({
             {selectedEtat === 8 && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
                 <div className="etat-form">
+                  <div className="form-group">
+                    <label htmlFor="compte_rendu_etat_pseudo_8">Pseudo :</label>
+                    <input
+                      type="text"
+                      id="compte_rendu_etat_pseudo_8"
+                      className="form-control"
+                      value={etatFormData.pseudo}
+                      onChange={(e) => setEtatFormData({ ...etatFormData, pseudo: e.target.value })}
+                    />
+                  </div>
+
                   {/* Pour l'option "Porte / Imprévu / NRP", le commercial ne remplit que le commentaire.
                       Les autres champs seront saisis dans la page Compte Rendu. */}
                   {Number(user?.fonction) === 5 && compteRenduOption === 'porte_imprevu_nrp' ? null : (
@@ -5727,7 +5750,7 @@ const FicheDetail = ({
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
-                      setEtatFormData({...etatFormData, conf_rdv_date: '', conf_rdv_time: '', id_sous_etat: '', conf_rdv_avec: '', conf_commentaire_produit: ''});
+                      setEtatFormData({...etatFormData, conf_rdv_date: '', conf_rdv_time: '', id_sous_etat: '', conf_rdv_avec: '', conf_commentaire_produit: '', pseudo: ''});
                     }}>Annuler</button>
                   </div>
                 </div>
