@@ -751,6 +751,7 @@ const FicheDetail = ({
   }, [validationDropdownOpen]);
   const [showHistorique, setShowHistorique] = useState(false); // État pour contrôler l'affichage de l'historique
   const historiqueEtatsAnchorRef = useRef(null);
+  const etatChangeSectionRef = useRef(null);
   /** Évite de régénérer le PDF plusieurs fois pour la même URL ?tab=pdf */
   const autoPdfFromQueryRef = useRef(false);
 
@@ -1667,6 +1668,50 @@ const FicheDetail = ({
     
     setSelectedSlot({ date, hour });
     setShowRdvModal(true);
+  };
+
+  const handleOpenConfirmEtatFromPlanningSlot = (date, hour) => {
+    let dateStr = date;
+    let timeStr = hour;
+
+    if (timeStr && timeStr.includes(':')) {
+      const timeParts = timeStr.split(':');
+      timeStr = `${timeParts[0]}:${timeParts[1] || '00'}`;
+    } else if (!timeStr) {
+      timeStr = '00:00';
+    }
+
+    if (!dateStr || !dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      try {
+        const parsedDate = new Date(dateStr);
+        if (!isNaN(parsedDate.getTime())) {
+          dateStr = formatDateLocal(parsedDate);
+        } else {
+          console.error('Date invalide:', dateStr);
+          alert('Erreur: Date invalide');
+          return;
+        }
+      } catch (e) {
+        console.error('Erreur lors du parsing de la date:', e);
+        alert('Erreur: Format de date invalide');
+        return;
+      }
+    }
+
+    setSelectedSlot({ date: dateStr, hour });
+    setShowRdvModal(false);
+    setActiveTab('fiches');
+    setSelectedEtat(7);
+    setConfFormData({
+      ...buildConfFormStateFromFiche(ficheData, user),
+      conf_rdv_date: dateStr,
+      conf_rdv_time: timeStr
+    });
+    confFormHydratePendingRef.current = false;
+
+    setTimeout(() => {
+      etatChangeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   };
 
   // Fonction pour créer le RDV depuis le formulaire (formData optionnel = données avec professions résolues)
@@ -5683,7 +5728,7 @@ const FicheDetail = ({
         {!(isModal && isQualiteQualif) && ((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 8 || Number(user?.fonction) === 11 || Number(user?.fonction) === 12) ||
           (Number(user?.fonction) === 3 && user?.centre === ficheData?.id_centre) ||
           (Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13)) && (
-          <div className="fiche-section etat-change-section">
+          <div ref={etatChangeSectionRef} className="fiche-section etat-change-section">
             <h2 className="section-title">Changer l'état de la fiche</h2>
             <div className="etat-change-form">
               <div className="form-group">
@@ -8995,6 +9040,7 @@ const PlanningViewForModal = ({
                                 type="button"
                                 className="planning-create-btn"
                                 onClick={(e) => {
+                                  e.preventDefault();
                                   e.stopPropagation();
                                   onSelectSlot(day.date, slot.hour);
                                 }}
