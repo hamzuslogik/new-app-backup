@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { FaEdit, FaCheck, FaTimes, FaCalendar, FaUser, FaUserPlus, FaPhone, FaMapMarkerAlt, FaHome, FaBriefcase, FaFileAlt, FaHistory, FaArrowLeft, FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaReplyAll, FaSms, FaListAlt, FaInfoCircle, FaFilePdf } from 'react-icons/fa';
@@ -711,6 +712,48 @@ const FicheDetail = ({
   const [dateRdvInlineEdit, setDateRdvInlineEdit] = useState('');
   // Liste déroulante de validation RDV (état actuel CONFIRMER)
   const [validationDropdownOpen, setValidationDropdownOpen] = useState(false);
+  // Référence vers le bouton qui ouvre la liste pour calculer la position du menu (rendu via portail
+  // pour ne pas être tronqué par un parent en overflow:hidden et pour éviter de déborder de la fenêtre).
+  const validationButtonRef = useRef(null);
+  const [validationDropdownPosition, setValidationDropdownPosition] = useState(null);
+
+  const updateValidationDropdownPosition = () => {
+    if (!validationButtonRef.current) return;
+    const rect = validationButtonRef.current.getBoundingClientRect();
+    const DROPDOWN_WIDTH = 240;
+    const DROPDOWN_HEIGHT = 156; // ~3 boutons * ~52px
+    const GAP = 6;
+    const PADDING = 8;
+    const viewportH = typeof window !== 'undefined' ? window.innerHeight : 0;
+    const viewportW = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const spaceBelow = viewportH - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUpward = spaceBelow < DROPDOWN_HEIGHT + GAP + PADDING && spaceAbove > spaceBelow;
+    const top = openUpward
+      ? Math.max(PADDING, rect.top - GAP - DROPDOWN_HEIGHT)
+      : Math.min(viewportH - DROPDOWN_HEIGHT - PADDING, rect.bottom + GAP);
+    const left = Math.min(
+      Math.max(PADDING, rect.left),
+      Math.max(PADDING, viewportW - DROPDOWN_WIDTH - PADDING)
+    );
+    setValidationDropdownPosition({ top, left, width: DROPDOWN_WIDTH });
+  };
+
+  useEffect(() => {
+    if (!validationDropdownOpen) {
+      setValidationDropdownPosition(null);
+      return undefined;
+    }
+    updateValidationDropdownPosition();
+    const onResize = () => updateValidationDropdownPosition();
+    const onScroll = () => updateValidationDropdownPosition();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [validationDropdownOpen]);
   const [showHistorique, setShowHistorique] = useState(false); // État pour contrôler l'affichage de l'historique
   const historiqueEtatsAnchorRef = useRef(null);
   /** Évite de régénérer le PDF plusieurs fois pour la même URL ?tab=pdf */
@@ -4257,6 +4300,7 @@ const FicheDetail = ({
                           <div style={{ position: 'relative', display: 'inline-block', alignSelf: 'flex-start' }}>
                           {fiche.valider > 0 ? (
                             <button
+                              ref={validationButtonRef}
                               type="button"
                               onClick={() => setValidationDropdownOpen((prev) => !prev)}
                               disabled={validateMutation.isLoading}
@@ -4282,6 +4326,7 @@ const FicheDetail = ({
                             </button>
                           ) : (
                             <button
+                              ref={validationButtonRef}
                               type="button"
                               onClick={() => setValidationDropdownOpen((prev) => !prev)}
                               disabled={validateMutation.isLoading}
@@ -4307,28 +4352,28 @@ const FicheDetail = ({
                             </button>
                           )}
 
-                          {validationDropdownOpen && (
+                          {validationDropdownOpen && validationDropdownPosition && createPortal(
                             <>
                               <div
                                 onClick={() => setValidationDropdownOpen(false)}
                                 style={{
                                   position: 'fixed',
                                   inset: 0,
-                                  zIndex: 99,
+                                  zIndex: 99999,
                                   background: 'transparent',
                                 }}
                               />
                               <div
                                 style={{
-                                  position: 'absolute',
-                                  top: 'calc(100% + 6px)',
-                                  left: 0,
+                                  position: 'fixed',
+                                  top: validationDropdownPosition.top,
+                                  left: validationDropdownPosition.left,
                                   background: '#ffffff',
                                   border: '1px solid #d1d5db',
                                   borderRadius: '8px',
-                                  minWidth: '240px',
+                                  width: validationDropdownPosition.width,
                                   boxShadow: '0 6px 18px rgba(0,0,0,0.14)',
-                                  zIndex: 100,
+                                  zIndex: 100000,
                                   overflow: 'hidden',
                                 }}
                               >
@@ -4422,7 +4467,8 @@ const FicheDetail = ({
                                   VALIDÉ AVEC MME
                                 </button>
                               </div>
-                            </>
+                            </>,
+                            document.body
                           )}
                           </div>
                         </div>
