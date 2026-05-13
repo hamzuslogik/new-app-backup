@@ -2697,6 +2697,26 @@
   border-color: #1a2529 !important;
 }
 
+/* Changement d'état : aligner les champs fixes (Nouvel état, Confirmateur)
+   avec les champs affichés après sélection de l'état. */
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group > .form-control,
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group > select.form-control {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .etat-form,
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .nrp-form,
+.fiche-detail-modal-content .etat-change-section .etat-change-form > .confirmation-form {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
 /* =====================================================
    Carte « CONTROLE QUALITE » (états signer : 13, 16, 44, 45)
    Cadre avec bandeau d'en-tête + formulaire en ligne (label gauche / champ droite).
