@@ -710,9 +710,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         writeLog("Etat final BRUT (id 53) ajoute a la fiche");
         
         // Validation des champs requis
-        if (empty($ficheData['nom']) || empty($ficheData['prenom']) || empty($ficheData['tel'])) {
-            throw new Exception("Les champs nom, prenom et telephone sont obligatoires");
-        }
+        // Tous les champs sont optionnels : aucune validation bloquante côté serveur.
         
         // Ajouter les données optionnelles avec validation
         $professionMr = !empty(trim($_POST['profession_mr'] ?? '')) ? sanitizeInput($_POST['profession_mr']) : null;
@@ -973,35 +971,35 @@ if (isset($_SESSION['error_message'])) {
                 <div class="section-title">Informations depuis Vicidial</div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Nom <span class="required">*</span></label>
-                        <input type="text" name="nom" value="<?php echo htmlspecialchars($vicidialData['last_name'] ?? ''); ?>" required>
+                        <label>Nom</label>
+                        <input type="text" name="nom" value="<?php echo htmlspecialchars($vicidialData['last_name'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Prénom <span class="required">*</span></label>
-                        <input type="text" name="prenom" value="<?php echo htmlspecialchars($vicidialData['first_name'] ?? ''); ?>" required>
+                        <label>Prénom</label>
+                        <input type="text" name="prenom" value="<?php echo htmlspecialchars($vicidialData['first_name'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Téléphone <span class="required">*</span></label>
-                        <input type="tel" name="telephone" value="<?php echo htmlspecialchars($vicidialData['phone_number'] ?? ''); ?>" required>
+                        <label>Téléphone</label>
+                        <input type="tel" name="telephone" value="<?php echo htmlspecialchars($vicidialData['phone_number'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label>GSM</label>
                         <input type="tel" name="gsm" value="<?php echo htmlspecialchars($vicidialData['alt_phone'] ?? ''); ?>">
                     </div>
                     <div class="form-group full-width">
-                        <label>Adresse <span class="required">*</span></label>
+                        <label>Adresse</label>
                         <input type="text" name="adresse" value="<?php 
                             $adresse = trim(($vicidialData['address1'] ?? '') . ' ' . ($vicidialData['address2'] ?? ''));
                             echo htmlspecialchars($adresse);
-                        ?>" required>
+                        ?>">
                     </div>
                     <div class="form-group">
-                        <label>Code Postal <span class="required">*</span></label>
-                        <input type="text" name="code_postal" value="<?php echo htmlspecialchars($vicidialData['postal_code'] ?? ''); ?>" required>
+                        <label>Code Postal</label>
+                        <input type="text" name="code_postal" value="<?php echo htmlspecialchars($vicidialData['postal_code'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Ville <span class="required">*</span></label>
-                        <input type="text" name="ville" value="<?php echo htmlspecialchars($vicidialData['city'] ?? ''); ?>" required>
+                        <label>Ville</label>
+                        <input type="text" name="ville" value="<?php echo htmlspecialchars($vicidialData['city'] ?? ''); ?>">
                     </div>
                 </div>
             </div>
@@ -1029,8 +1027,8 @@ if (isset($_SESSION['error_message'])) {
                 <div class="section-title">Critères Client</div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Situation Conjugale <span class="required">*</span></label>
-                        <select name="situation_conjugale" id="situation_conjugale" required>
+                        <label>Situation Conjugale</label>
+                        <select name="situation_conjugale" id="situation_conjugale">
                             <option value="">-- Sélectionner --</option>
                             <option value="Célibataire">Célibataire</option>
                             <option value="Marié(e)">Marié(e)</option>
@@ -1056,12 +1054,12 @@ if (isset($_SESSION['error_message'])) {
                         <input type="text" name="profession_mr" placeholder="Saisir une profession..." autocomplete="off" value="">
                     </div>
                     <div class="form-group cond-required-if-couple">
-                        <label>Profession Mme <span class="required" id="label-required-profession_madame">*</span></label>
-                        <input type="text" name="profession_madame" placeholder="Saisir une profession..." autocomplete="off" value="" required>
+                        <label>Profession Mme</label>
+                        <input type="text" name="profession_madame" placeholder="Saisir une profession..." autocomplete="off" value="">
                     </div>
                     <div class="form-group cond-required-if-couple">
-                        <label>Type Contrat M. <span class="required" id="label-required-type_contrat_mr">*</span></label>
-                        <select name="type_contrat_mr" required>
+                        <label>Type Contrat M.</label>
+                        <select name="type_contrat_mr">
                             <option value="">-- Sélectionner --</option>
                             <?php foreach ($typeContrats as $contrat): ?>
                                 <option value="<?php echo htmlspecialchars($contrat['id']); ?>">
@@ -1082,8 +1080,8 @@ if (isset($_SESSION['error_message'])) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Entretien avec <span class="required">*</span></label>
-                        <select name="entretien_avec" required>
+                        <label>Entretien avec</label>
+                        <select name="entretien_avec">
                             <option value="">-- Sélectionner --</option>
                             <option value="Monsieur">Monsieur</option>
                             <option value="Madame">Madame</option>
@@ -1100,8 +1098,8 @@ if (isset($_SESSION['error_message'])) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Revenu du Foyer <span class="required">*</span></label>
-                        <input type="text" name="revenu_foyer" placeholder="Ex: 3000-5000€" required>
+                        <label>Revenu du Foyer</label>
+                        <input type="text" name="revenu_foyer" placeholder="Ex: 3000-5000€">
                     </div>
                 </div>
             </div>
@@ -1111,8 +1109,8 @@ if (isset($_SESSION['error_message'])) {
                 <div class="section-title">Critères Techniques</div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Produit <span class="required">*</span></label>
-                        <select name="produit" id="produit" onchange="toggleProductFields()" required>
+                        <label>Produit</label>
+                        <select name="produit" id="produit" onchange="toggleProductFields()">
                             <option value="">-- Sélectionner --</option>
                             <?php foreach ($produits as $produit): ?>
                                 <option value="<?php echo htmlspecialchars($produit['id']); ?>" 
@@ -1133,18 +1131,18 @@ if (isset($_SESSION['error_message'])) {
                     
                     <!-- Champs communs -->
                     <div class="form-group champ-pac" style="display: none;">
-                        <label>Surface Habitable (m²) <span class="required">*</span></label>
-                        <input type="text" name="surface_habitable" placeholder="Ex: 120" required>
+                        <label>Surface Habitable (m²)</label>
+                        <input type="text" name="surface_habitable" placeholder="Ex: 120">
                     </div>
                     <div class="form-group champ-commun champ-pac">
-                        <label>Nombre de Pièces <span class="required">*</span></label>
-                        <input type="number" name="nb_pieces" min="1" required>
+                        <label>Nombre de Pièces</label>
+                        <input type="number" name="nb_pieces" min="1">
                     </div>
                     
                     <!-- Champs spécifiques PAC -->
                     <div class="form-group champ-pac" style="display: none;">
-                        <label>Mode de Chauffage <span class="required">*</span></label>
-                        <input type="text" name="mode_chauffage" maxlength="255" placeholder="Ex. : gaz, fioul, PAC air-eau, électrique…" required>
+                        <label>Mode de Chauffage</label>
+                        <input type="text" name="mode_chauffage" maxlength="255" placeholder="Ex. : gaz, fioul, PAC air-eau, électrique…">
                     </div>
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Complément de chauffage (qualification)</label>
@@ -1181,12 +1179,12 @@ if (isset($_SESSION['error_message'])) {
                         <input type="text" name="orientation_toiture" placeholder="Ex: Sud, Nord-Est...">
                     </div>
                     <div class="form-group champ-pv" style="display: none;">
-                        <label>Zones d'Ombres <span class="required">*</span></label>
-                        <input type="text" name="zones_ombres" placeholder="Décrire les zones d'ombres" required>
+                        <label>Zones d'Ombres</label>
+                        <input type="text" name="zones_ombres" placeholder="Décrire les zones d'ombres">
                     </div>
                     <div class="form-group champ-pv" style="display: none;">
-                        <label>Site Classé <span class="required">*</span></label>
-                        <select name="site_classe" required>
+                        <label>Site Classé</label>
+                        <select name="site_classe">
                             <option value="">-- Sélectionner --</option>
                             <option value="OUI">OUI</option>
                             <option value="NON">NON</option>
@@ -1207,18 +1205,12 @@ if (isset($_SESSION['error_message'])) {
     </div>
     
     <script>
+        // Tous les champs sont optionnels : on ne fait que retirer les éventuels attributs `required`
+        // qui auraient pu être ajoutés ailleurs (sécurité, on n'en ajoute jamais).
         function setRequiredInContainer(container, required) {
             const inputs = container.querySelectorAll('input, select, textarea');
             inputs.forEach(function(el) {
-                if (required && el.getAttribute('data-force-optional') === '1') {
-                    el.removeAttribute('required');
-                    return;
-                }
-                if (required) {
-                    el.setAttribute('required', 'required');
-                } else {
-                    el.removeAttribute('required');
-                }
+                el.removeAttribute('required');
             });
         }
         function toggleProductFields() {
@@ -1263,26 +1255,13 @@ if (isset($_SESSION['error_message'])) {
             }
         }
         
+        // Tous les champs sont optionnels : on s'assure qu'aucun attribut `required`
+        // n'est ajouté en fonction de la situation conjugale.
         function updateRequiredCoupleFields() {
-            var sit = document.getElementById('situation_conjugale');
-            if (!sit) return;
-            var val = (sit.value || '').trim();
-            var optionalWhenSingle = ['Célibataire', 'Veuf(ve)', 'Divorcé(e)'];
-            var notRequired = optionalWhenSingle.indexOf(val) !== -1;
             var professionMadameInput = document.querySelector('input[name="profession_madame"]');
             var typeContratMrSelect = document.querySelector('select[name="type_contrat_mr"]');
-            var labelProf = document.getElementById('label-required-profession_madame');
-            var labelType = document.getElementById('label-required-type_contrat_mr');
-            if (professionMadameInput) {
-                if (notRequired) professionMadameInput.removeAttribute('required');
-                else professionMadameInput.setAttribute('required', 'required');
-            }
-            if (typeContratMrSelect) {
-                if (notRequired) typeContratMrSelect.removeAttribute('required');
-                else typeContratMrSelect.setAttribute('required', 'required');
-            }
-            if (labelProf) labelProf.style.display = notRequired ? 'none' : '';
-            if (labelType) labelType.style.display = notRequired ? 'none' : '';
+            if (professionMadameInput) professionMadameInput.removeAttribute('required');
+            if (typeContratMrSelect) typeContratMrSelect.removeAttribute('required');
         }
         
         // Appeler la fonction au chargement de la page si un produit est déjà sélectionné
