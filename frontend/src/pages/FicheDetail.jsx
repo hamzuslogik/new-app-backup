@@ -7904,9 +7904,8 @@ const PlanningTab = ({
   const canEdit = user?.fonction === 1;
   /** Confirmateur (6), RE confirmation (14), RP confirmation (13), backoffice (11) : lien dashboard par créneau */
   const sessionCanOpenSlotDashboard = [6, 14, 13, 11].includes(Number(user?.fonction));
-  /** Admin (1) et Backoffice (11) : pas de création de RDV directement sur le planning,
-   *  seulement l'affichage des disponibilités. */
-  const canCreateRdvFromSlot = ![1, 11].includes(Number(user?.fonction));
+  /** Bouton + sur le planning : uniquement confirmateur (6), RP confirmation (13), RE confirmation (14). */
+  const canCreateRdvFromSlot = [6, 13, 14].includes(Number(user?.fonction));
   
   const { data: planningResponse, isLoading: isLoadingPlanning, refetch: refetchPlanning } = useQuery(
     ['planning-modal', planningWeek, planningYear, planningDep],
@@ -8917,15 +8916,16 @@ const PlanningViewForModal = ({
                                 aria-label="Créer un rendez-vous"
                                 style={{
                                   position: 'absolute',
-                                  right: '4px',
-                                  bottom: '4px',
-                                  width: '24px',
-                                  height: '24px',
+                                  left: '50%',
+                                  top: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '34px',
+                                  height: '34px',
                                   borderRadius: '50%',
                                   border: 'none',
                                   background: '#8BC34A',
                                   color: '#000',
-                                  fontSize: '18px',
+                                  fontSize: '24px',
                                   fontWeight: 900,
                                   lineHeight: 1,
                                   cursor: 'pointer',
