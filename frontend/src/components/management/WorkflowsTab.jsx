@@ -43,6 +43,8 @@ const TRIGGER_VARIABLES = {
   ],
   compte_rendu_approved: [
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
+    '{fiche.id_etat_final}',
+    '{old_etat}', '{new_etat}',
     '{compte_rendu.id}', '{compte_rendu.id_fiche}', '{compte_rendu.statut}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],

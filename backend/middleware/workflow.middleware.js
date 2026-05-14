@@ -319,10 +319,15 @@ const triggerWorkflowOnCompteRenduApproved = async (req, res, next) => {
           const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [compteRendu.id_fiche]);
           if (fiche) {
             console.log('[WORKFLOW] Compte rendu approuvé détecté - Compte rendu ID:', compteRenduId);
+            const etatMeta = req.workflowCompteRenduEtat;
             executeWorkflow('compte_rendu_approved', {
               fiche,
               user: req.user,
-              compte_rendu: compteRendu
+              compte_rendu: compteRendu,
+              old_etat: etatMeta != null ? etatMeta.old_etat : null,
+              new_etat: etatMeta != null && etatMeta.new_etat != null && etatMeta.new_etat !== ''
+                ? etatMeta.new_etat
+                : fiche.id_etat_final
             }).catch(error => {
               console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (compte_rendu_approved):', error);
             });

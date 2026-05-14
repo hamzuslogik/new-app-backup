@@ -1118,6 +1118,11 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       }
     }
 
+    req.workflowCompteRenduEtat = {
+      old_etat: ancienEtat,
+      new_etat: nouveauEtat
+    };
+
     res.json({
       success: true,
       message: 'Compte rendu approuvé et modifications appliquées avec succès'
