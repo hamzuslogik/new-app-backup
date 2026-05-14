@@ -3,7 +3,7 @@ const { getDefaultSMSProvider, sendSMSViaProvider } = require('../sms.service');
 
 /**
  * Exécute un workflow pour un événement donné
- * @param {string} triggerType - Type d'événement (fiche_created, etat_changed, etc.)
+ * @param {string} triggerType - Type d'événement (fiche_created, etat_changed, remarque_created, alerte_ko_created, decalage_refused, etc.)
  * @param {Object} eventData - Données de l'événement (fiche, user, etc.)
  * @returns {Promise<Array>} Liste des workflows exécutés
  */
@@ -696,6 +696,21 @@ async function executeNotificationAction(config, eventData) {
   } else if (destination === 'id_superviseur_qualif_agent' && eventData.fiche?.id_superviseur_qualif_agent) {
     destId = eventData.fiche.id_superviseur_qualif_agent;
     console.log(`[WORKFLOW] Destination résolue depuis id_superviseur_qualif_agent (superviseur qualif de l'agent de la fiche):`, destId);
+  } else if (destination === 'remarque_destinataire' && eventData.remarque?.id_destinataire) {
+    destId = eventData.remarque.id_destinataire;
+    console.log('[WORKFLOW] Destination résolue depuis remarque_destinataire:', destId);
+  } else if (destination === 'remarque_expediteur' && eventData.remarque?.id_expediteur) {
+    destId = eventData.remarque.id_expediteur;
+    console.log('[WORKFLOW] Destination résolue depuis remarque_expediteur:', destId);
+  } else if (destination === 'alerte_ko_agent' && eventData.alerte_ko?.id_agent) {
+    destId = eventData.alerte_ko.id_agent;
+    console.log('[WORKFLOW] Destination résolue depuis alerte_ko_agent:', destId);
+  } else if (destination === 'decalage_expediteur' && eventData.decalage?.expediteur) {
+    destId = eventData.decalage.expediteur;
+    console.log('[WORKFLOW] Destination résolue depuis decalage_expediteur:', destId);
+  } else if (destination === 'decalage_destination' && eventData.decalage?.destination) {
+    destId = eventData.decalage.destination;
+    console.log('[WORKFLOW] Destination résolue depuis decalage_destination (confirmateur):', destId);
   }
 
   // Validation stricte du destinataire

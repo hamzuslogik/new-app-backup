@@ -87,8 +87,25 @@ const TRIGGER_VARIABLES = {
     '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
-  scheduled: ['{workflow_id}', '{workflow_nom}', '{cron_expression}', '{scheduled_at}']
-  ,
+  decalage_refused: [
+    '{fiche.id}', '{fiche.date_rdv_time}',
+    '{decalage.id}', '{decalage.id_fiche}', '{decalage.old_etat}', '{decalage.new_etat}',
+    '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  remarque_created: [
+    '{remarque.id}', '{remarque.nature_remarque}', '{remarque.commentaire}', '{remarque.id_expediteur}', '{remarque.id_destinataire}',
+    '{remarque.id_fiche}', '{remarque.date_remarque}',
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  alerte_ko_created: [
+    '{alerte_ko.id}', '{alerte_ko.id_fiche}', '{alerte_ko.id_agent}', '{alerte_ko.id_qualite}', '{alerte_ko.type_alerte}',
+    '{alerte_ko.num_alerte}', '{alerte_ko.date_alerte}', '{alerte_ko.commentaire}', '{alerte_ko.nom}', '{alerte_ko.prenom}', '{alerte_ko.tel}',
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  scheduled: ['{workflow_id}', '{workflow_nom}', '{cron_expression}', '{scheduled_at}'],
   fiche_rdv_etat_check: [
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
     '{fiche.date_rdv_time}', '{fiche.id_etat_final}',
@@ -105,7 +122,12 @@ const DYNAMIC_RECIPIENT_OPTIONS = [
   { value: '{fiche.id_qualite}', label: 'Agent qualite ({fiche.id_qualite})' },
   { value: '{fiche.id_commercial}', label: 'Commercial principal ({fiche.id_commercial})' },
   { value: '{fiche.id_commercial_2}', label: 'Commercial secondaire ({fiche.id_commercial_2})' },
-  { value: '{fiche.id_superviseur_qualif_agent}', label: "Superviseur qualif de l'agent de la fiche ({fiche.id_superviseur_qualif_agent})" }
+  { value: '{fiche.id_superviseur_qualif_agent}', label: "Superviseur qualif de l'agent de la fiche ({fiche.id_superviseur_qualif_agent})" },
+  { value: '{remarque.id_destinataire}', label: 'Destinataire de la remarque ({remarque.id_destinataire})' },
+  { value: '{remarque.id_expediteur}', label: 'Expéditeur de la remarque ({remarque.id_expediteur})' },
+  { value: '{alerte_ko.id_agent}', label: "Agent destinataire de l'alerte KO ({alerte_ko.id_agent})" },
+  { value: '{decalage.expediteur}', label: 'Expéditeur du décalage ({decalage.expediteur})' },
+  { value: '{decalage.destination}', label: 'Confirmateur (destination du décalage) ({decalage.destination})' }
 ];
 
 const WorkflowsTab = () => {
@@ -637,6 +659,9 @@ const WorkflowsTab = () => {
                         <option value="planning_updated">Planning modifié</option>
                         <option value="decalage_created">Décalage créé</option>
                         <option value="decalage_accepted">Décalage accepté</option>
+                        <option value="decalage_refused">Décalage refusé</option>
+                        <option value="remarque_created">Remarque créée</option>
+                        <option value="alerte_ko_created">Alerte KO créée</option>
                         <option value="scheduled">Programmé (cron)</option>
                         <option value="fiche_rdv_etat_check">Filtre fiche (date RDV + état)</option>
                       </select>
@@ -988,6 +1013,11 @@ const WorkflowsTab = () => {
                             <option value="id_commercial">Commercial principal ({'{fiche.id_commercial}'})</option>
                             <option value="id_commercial_2">Commercial secondaire ({'{fiche.id_commercial_2}'})</option>
                             <option value="id_superviseur_qualif_agent">Superviseur qualif de l&apos;agent de la fiche ({'{fiche.id_superviseur_qualif_agent}'})</option>
+                            <option value="remarque_destinataire">Destinataire de la remarque (déclencheur remarque)</option>
+                            <option value="remarque_expediteur">Expéditeur de la remarque (déclencheur remarque)</option>
+                            <option value="alerte_ko_agent">Agent destinataire de l&apos;alerte KO</option>
+                            <option value="decalage_expediteur">Expéditeur du décalage (ex. commercial)</option>
+                            <option value="decalage_destination">Confirmateur du décalage (destination)</option>
                           </select>
                           <small>Utilisé uniquement si aucun utilisateur ni fonction n’est sélectionné ci-dessus.</small>
                         </div>
@@ -1365,6 +1395,11 @@ const WorkflowsTab = () => {
                               <option value="{fiche.id_commercial}">Commercial principal ({'{fiche.id_commercial}'})</option>
                               <option value="{fiche.id_commercial_2}">Commercial secondaire ({'{fiche.id_commercial_2}'})</option>
                               <option value="{fiche.id_superviseur_qualif_agent}">Superviseur qualif de l&apos;agent de la fiche ({'{fiche.id_superviseur_qualif_agent}'})</option>
+                              <option value="{remarque.id_destinataire}">Destinataire de la remarque ({'{remarque.id_destinataire}'})</option>
+                              <option value="{remarque.id_expediteur}">Expéditeur de la remarque ({'{remarque.id_expediteur}'})</option>
+                              <option value="{alerte_ko.id_agent}">Agent destinataire alerte KO ({'{alerte_ko.id_agent}'})</option>
+                              <option value="{decalage.expediteur}">Expéditeur du décalage ({'{decalage.expediteur}'})</option>
+                              <option value="{decalage.destination}">Confirmateur du décalage ({'{decalage.destination}'})</option>
                             </optgroup>
                             <optgroup label="Utilisateurs spécifiques">
                               {utilisateursData?.map(u => (

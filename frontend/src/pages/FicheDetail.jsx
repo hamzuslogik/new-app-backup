@@ -1902,27 +1902,7 @@ const FicheDetail = ({
       }
 
       if (needsApproval) {
-        // Créer une notification pour les admins
-        const dateFormatted = formatRdvDateTime(updateData.date_rdv_time);
-        
-        try {
-          await api.post('/notifications', {
-            type: 'rdv_approval',
-            fiche_hash: hash,
-            message: `Demande d'approbation pour un RDV le ${dateFormatted} - Fiche: ${ficheData?.nom || ''} ${ficheData?.prenom || ''} (${ficheData?.tel || ''}). Créneau sans disponibilité ou limite atteinte.`,
-            metadata: {
-              date_rdv_time: updateData.date_rdv_time,
-              date_formatted: dateFormatted,
-              nom: ficheData?.nom || '',
-              prenom: ficheData?.prenom || '',
-              tel: ficheData?.tel || ''
-            }
-          });
-        } catch (notifError) {
-          console.error('Erreur lors de la création de la notification:', notifError);
-        }
-
-        alert(`RDV créé en PRE-CONFIRMER. Une demande d'approbation a été envoyée aux administrateurs.`);
+        alert(`RDV créé en PRE-CONFIRMER. Les notifications d'approbation automatiques sont désactivées.`);
       } else {
         alert(`Rendez-vous créé avec succès${data.is_urgent ? ' (RDV URGENT)' : ' (CONFIRMER)'}`);
       }

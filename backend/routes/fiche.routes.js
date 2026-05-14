@@ -3514,33 +3514,7 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
       }
     } else if (statut === 'REJETEE') {
       // Refus : ne pas modifier la fiche existante (garder son état), ne pas insérer la nouvelle fiche.
-      // Notifier l'agent qualification, son RE et son RP de la décision (avec commentaire)
-      const messageRefus = `Demande d'insertion refusée. Fiche concernée : ${ficheExistante?.nom || ''} ${ficheExistante?.prenom || ''}. Rejetée par ${traitantPseudo}.${commentaire ? ` Commentaire : ${commentaire}` : ''}`;
-      const metadataRefus = JSON.stringify({
-        id_demande: id,
-        id_fiche_existante: demande.id_fiche_existante,
-        commentaire: commentaire || null
-      });
-
-      const destinations = [
-        demande.id_agent,
-        agentInfo?.chef_equipe || null,
-        agentInfo?.id_rp_qualif || null
-      ].filter(Boolean);
-      const seen = new Set();
-      for (const destId of destinations) {
-        if (seen.has(destId)) continue;
-        seen.add(destId);
-        if (messageRefus && messageRefus.trim() !== '') {
-          await query(
-            `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-             VALUES (?, ?, ?, ?, ?, 0, ?)`,
-            ['demande_insertion_refusee', demande.id_fiche_existante, messageRefus.trim(), destId, now, metadataRefus]
-          ).catch(err => {
-            console.error('Erreur notification refus (destination:', destId, '):', err);
-          });
-        }
-      }
+      // Notifications internes (demande_insertion_refusee) désactivées — à brancher sur un workflow si besoin.
     }
     
     // Mettre à jour la demande
@@ -5541,8 +5515,9 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
     }
     const num_alerte = nb_alertes + 1;
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    let insertAlertHeader;
     try {
-      await query(
+      insertAlertHeader = await query(
         `INSERT INTO alert_ko (id_fiche, id_agent, id_qualite, type_alerte, num_alerte, date_alerte, nom, prenom, tel, commentaire)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -5578,6 +5553,34 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
       success: true,
       message: `Alerte ${num_alerte}/3 envoyée à l'agent`,
       data: { num_alerte, nb_alertes_total: newTotal }
+    });
+
+    let ficheFull = null;
+    try {
+      ficheFull = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
+    } catch (e) {
+      /* ignore */
+    }
+    const alerteKoId = insertAlertHeader && insertAlertHeader.insertId ? insertAlertHeader.insertId : null;
+    executeWorkflow('alerte_ko_created', {
+      user: req.user,
+      fiche: ficheFull || { id, ...fiche },
+      fiche_id: id,
+      alerte_ko: {
+        id: alerteKoId,
+        id_fiche: id,
+        id_agent: fiche.id_agent,
+        id_qualite: req.user.id,
+        type_alerte: typeAlerte,
+        num_alerte,
+        date_alerte: now,
+        commentaire: commentaire || null,
+        nom: fiche.nom ?? null,
+        prenom: fiche.prenom ?? null,
+        tel: fiche.tel ?? null
+      }
+    }).catch((wfError) => {
+      console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (alerte_ko_created):', wfError);
     });
   } catch (error) {
     console.error('Erreur POST alerte-ko:', error);

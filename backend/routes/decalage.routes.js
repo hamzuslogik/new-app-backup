@@ -513,50 +513,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       console.log('Impossible d\'enregistrer dans modifica:', err.message);
     }
 
-    // Notification manuelle conservée uniquement pour le refus (l'acceptation passe par workflow "decalage_accepted")
-    if (estRefuse) {
-      try {
-        // Récupérer les informations de la fiche et du confirmateur
-        const ficheInfo = await queryOne(
-          'SELECT nom, prenom, tel FROM fiches WHERE id = ?',
-          [decalage.id_fiche]
-        );
-        
-        const confirmateurInfo = await queryOne(
-          'SELECT pseudo FROM utilisateurs WHERE id = ?',
-          [decalage.destination]
-        );
-        
-        const expediteurInfo = await queryOne(
-          'SELECT pseudo FROM utilisateurs WHERE id = ?',
-          [decalage.expediteur]
-        );
-
-        const notificationMessage = `Votre demande de décalage de RDV pour ${ficheInfo?.nom || ''} ${ficheInfo?.prenom || ''} (${ficheInfo?.tel || ''}) a été refusée par ${confirmateurInfo?.pseudo || 'le confirmateur'}.`;
-
-        const notificationMetadata = JSON.stringify({
-          id_decalage: id,
-          id_fiche: decalage.id_fiche,
-          date_rdv_original: decalage.date_prevu || null,
-          date_rdv_nouvelle: decalage.date_nouvelle || null,
-          statut: 'refuse',
-          confirmateur_pseudo: confirmateurInfo?.pseudo || null
-        });
-
-        // Créer la notification pour l'expediteur (commercial)
-        if (decalage.expediteur && notificationMessage && notificationMessage.trim() !== '') {
-          await query(
-            `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
-             VALUES (?, ?, ?, ?, ?, 0, ?)`,
-            ['decalage_response', decalage.id_fiche, notificationMessage.trim(), decalage.expediteur, now, notificationMetadata]
-          ).catch(err => {
-            console.error('Erreur lors de la création de la notification pour le commercial:', err);
-          });
-        }
-      } catch (notifError) {
-        console.error('Erreur lors de la création de la notification de réponse:', notifError);
-      }
-    }
+    // Refus : notification interne remplacée par le déclencheur workflow decalage_refused.
 
     res.json({
       success: true,
@@ -579,6 +536,25 @@ router.put('/:id/statut', authenticate, async (req, res) => {
         },
       }).catch((wfError) => {
         console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (decalage_accepted):', wfError);
+      });
+    }
+    if (estRefuse) {
+      executeWorkflow('decalage_refused', {
+        fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_prevu || decalage.date_nouvelle || null } : null,
+        user: req.user,
+        decalage: {
+          id: parseInt(id, 10),
+          id_fiche: decalage.id_fiche,
+          old_etat: decalage.id_etat,
+          new_etat: id_etat,
+          expediteur: decalage.expediteur,
+          destination: decalage.destination,
+          date_prevu: decalage.date_prevu,
+          date_nouvelle: decalage.date_nouvelle,
+          modifie_le: now,
+        },
+      }).catch((wfError) => {
+        console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (decalage_refused):', wfError);
       });
     }
   } catch (error) {

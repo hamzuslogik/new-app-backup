@@ -7,6 +7,9 @@ const { query, queryOne } = require('../config/database');
 const crypto = require('crypto');
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
 
+/** Création de notifications via POST / (hors workflows) — désactivé */
+const NOTIFICATION_CREATE_VIA_API_ENABLED = false;
+
 // Vérifier et créer la table notifications si elle n'existe pas
 const ensureNotificationsTable = async () => {
   try {
@@ -366,6 +369,14 @@ const decodeFicheId = (hash) => {
 // Créer une notification
 router.post('/', authenticate, async (req, res) => {
   try {
+    if (!NOTIFICATION_CREATE_VIA_API_ENABLED) {
+      return res.status(200).json({
+        success: true,
+        skipped: true,
+        message: 'La création de notifications via cette API est désactivée.'
+      });
+    }
+
     const { type, id_fiche, fiche_hash, message, destination, date_rdv_time, metadata } = req.body;
 
     // Validation stricte

@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { hasPermission } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
+const { executeWorkflow } = require('../services/workflow/workflow-executor');
 
 const NATURES_REMARQUE = [
   'Discours non conforme',
@@ -180,17 +181,20 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const idFicheParsed = id_fiche != null && id_fiche !== '' ? parseInt(id_fiche, 10) : null;
+    const idDestParsed = parseInt(id_destinataire, 10);
+    let insertResult;
     try {
-      await query(
+      insertResult = await query(
         `INSERT INTO remarques (nature_remarque, commentaire, id_expediteur, id_destinataire, date_remarque, id_fiche)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
           nature_remarque,
           commentaire || null,
           req.user.id,
-          parseInt(id_destinataire, 10),
+          idDestParsed,
           now,
-          id_fiche != null && id_fiche !== '' ? parseInt(id_fiche, 10) : null
+          idFicheParsed
         ]
       );
     } catch (insertErr) {
@@ -206,7 +210,33 @@ router.post('/', authenticate, async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Remarque envoyée.',
-      data: { nature_remarque, id_destinataire, date_remarque: now }
+      data: { nature_remarque, id_destinataire: idDestParsed, date_remarque: now }
+    });
+
+    const remarqueId = insertResult && insertResult.insertId ? insertResult.insertId : null;
+    let fiche = null;
+    if (idFicheParsed) {
+      try {
+        fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [idFicheParsed]);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+    executeWorkflow('remarque_created', {
+      user: req.user,
+      fiche: fiche || undefined,
+      fiche_id: idFicheParsed || undefined,
+      remarque: {
+        id: remarqueId,
+        nature_remarque,
+        commentaire: commentaire || null,
+        id_expediteur: req.user.id,
+        id_destinataire: idDestParsed,
+        id_fiche: idFicheParsed,
+        date_remarque: now
+      }
+    }).catch((wfError) => {
+      console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (remarque_created):', wfError);
     });
   } catch (error) {
     console.error('Erreur POST /remarques:', error);
