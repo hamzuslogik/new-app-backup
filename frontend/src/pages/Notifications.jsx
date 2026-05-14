@@ -324,6 +324,8 @@ const Notifications = () => {
 
             const clickPath = getNotificationClickPath(notification);
             const canOpenFiche = notification.hash && user?.fonction !== 5 && user?.fonction !== 3;
+
+            return (
               <div
                 key={notification.id}
                 role="button"
