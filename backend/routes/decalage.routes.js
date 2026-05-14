@@ -21,6 +21,18 @@ const encodeFicheId = (id) => {
   return `${hash.substring(0, 16)}${encodedId}`;
 };
 
+/** Coordonnées client sur la fiche pour les workflows ({decalage.fiche_nom}, etc.). */
+function pickFicheContactForWorkflow(row) {
+  if (!row) {
+    return { fiche_nom: null, fiche_prenom: null, fiche_tel: null };
+  }
+  return {
+    fiche_nom: row.nom != null && row.nom !== '' ? String(row.nom) : null,
+    fiche_prenom: row.prenom != null && row.prenom !== '' ? String(row.prenom) : null,
+    fiche_tel: row.tel != null && row.tel !== '' ? String(row.tel) : null
+  };
+}
+
 // Récupérer les décalages avec règles de consultation :
 // - Confirmateurs (fonction 6) : voient les décalages où ils sont destinataires
 // - Commerciaux (fonction 5) : voient leurs propres décalages créés
@@ -184,7 +196,7 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
 
     // Vérifier que la fiche existe et est active, récupérer aussi la date RDV
     const fiche = await queryOne(
-      'SELECT id, archive, ko, active, date_rdv_time FROM fiches WHERE id = ?', 
+      'SELECT id, archive, ko, active, date_rdv_time, nom, prenom, tel FROM fiches WHERE id = ?',
       [idFicheNum]
     );
     
@@ -345,6 +357,7 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
         date_prevu: dateRdvOriginale,
         date_nouvelle: dateNouvelle,
         date_creation: now,
+        ...pickFicheContactForWorkflow(fiche),
       },
     }).catch((wfError) => {
       console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (decalage_created):', wfError);
@@ -486,6 +499,16 @@ router.put('/:id/statut', authenticate, async (req, res) => {
 
       await recordModificaSuppression();
 
+      let ficheContactAnnule = { fiche_nom: null, fiche_prenom: null, fiche_tel: null };
+      if (decalage.id_fiche) {
+        try {
+          const fc = await queryOne('SELECT nom, prenom, tel FROM fiches WHERE id = ?', [decalage.id_fiche]);
+          ficheContactAnnule = pickFicheContactForWorkflow(fc);
+        } catch (e) {
+          /* ignore */
+        }
+      }
+
       executeWorkflow('demande_decalage_annulee', {
         fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_prevu || decalage.date_nouvelle || null } : null,
         user: req.user,
@@ -499,6 +522,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
           date_prevu: decalage.date_prevu,
           date_nouvelle: decalage.date_nouvelle,
           modifie_le: now,
+          ...ficheContactAnnule,
         },
       }).catch((wfError) => {
         console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (demande_decalage_annulee):', wfError);
@@ -621,6 +645,17 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       success: true,
       message: 'Statut du décalage mis à jour'
     });
+
+    let ficheContactDecalage = { fiche_nom: null, fiche_prenom: null, fiche_tel: null };
+    if (decalage.id_fiche) {
+      try {
+        const fc = await queryOne('SELECT nom, prenom, tel FROM fiches WHERE id = ?', [decalage.id_fiche]);
+        ficheContactDecalage = pickFicheContactForWorkflow(fc);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
     if (estValide) {
       executeWorkflow('decalage_accepted', {
         fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_nouvelle || decalage.date_prevu || null } : null,
@@ -635,6 +670,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
           date_prevu: decalage.date_prevu,
           date_nouvelle: decalage.date_nouvelle,
           modifie_le: now,
+          ...ficheContactDecalage,
         },
       }).catch((wfError) => {
         console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (decalage_accepted):', wfError);
@@ -654,6 +690,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
           date_prevu: decalage.date_prevu,
           date_nouvelle: decalage.date_nouvelle,
           modifie_le: now,
+          ...ficheContactDecalage,
         },
       }).catch((wfError) => {
         console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (decalage_refused):', wfError);

@@ -87,24 +87,28 @@ const TRIGGER_VARIABLES = {
     '{fiche.id}', '{fiche.date_rdv_time}',
     '{decalage.id}', '{decalage.id_fiche}', '{decalage.expediteur}', '{decalage.destination}', '{decalage.id_etat}',
     '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.date_creation}',
+    '{decalage.fiche_nom}', '{decalage.fiche_prenom}', '{decalage.fiche_tel}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   decalage_accepted: [
     '{fiche.id}', '{fiche.date_rdv_time}',
     '{decalage.id}', '{decalage.id_fiche}', '{decalage.old_etat}', '{decalage.new_etat}',
     '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
+    '{decalage.fiche_nom}', '{decalage.fiche_prenom}', '{decalage.fiche_tel}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   decalage_refused: [
     '{fiche.id}', '{fiche.date_rdv_time}',
     '{decalage.id}', '{decalage.id_fiche}', '{decalage.old_etat}', '{decalage.new_etat}',
     '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
+    '{decalage.fiche_nom}', '{decalage.fiche_prenom}', '{decalage.fiche_tel}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   demande_decalage_annulee: [
     '{fiche.id}', '{fiche.date_rdv_time}',
     '{decalage.id}', '{decalage.id_fiche}', '{decalage.old_etat}', '{decalage.new_etat}',
     '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
+    '{decalage.fiche_nom}', '{decalage.fiche_prenom}', '{decalage.fiche_tel}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   remarque_created: [
