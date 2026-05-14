@@ -387,6 +387,34 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       });
     }
 
+    const idEtatRequested = parseInt(id_etat, 10);
+    const currentEtat = parseInt(decalage.id_etat, 10);
+
+    // Annulation (état 6) : uniquement si la demande est encore en attente (id 1), et rôle autorisé
+    if (idEtatRequested === 6) {
+      if (Number.isNaN(currentEtat) || currentEtat !== 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Seules les demandes de décalage en attente peuvent être annulées.'
+        });
+      }
+      const isCommercial = req.user.fonction === 5;
+      const canStaffAnnuler = [1, 2, 7, 11].includes(req.user.fonction);
+      if (isCommercial) {
+        if (parseInt(decalage.expediteur, 10) !== parseInt(req.user.id, 10)) {
+          return res.status(403).json({
+            success: false,
+            message: 'Vous ne pouvez annuler que vos propres demandes de décalage.'
+          });
+        }
+      } else if (!canStaffAnnuler) {
+        return res.status(403).json({
+          success: false,
+          message: 'Vous n\'avez pas la permission d\'annuler cette demande.'
+        });
+      }
+    }
+
     // Vérifier les permissions :
     // - Les commerciaux (fonction 5) peuvent annuler (id_etat = 6)
     // - Les confirmateurs (fonction 6), RE Confirmation (fonction 14), RP Confirmation (fonction 13) et admins peuvent refuser (id_etat = 4) ou valider

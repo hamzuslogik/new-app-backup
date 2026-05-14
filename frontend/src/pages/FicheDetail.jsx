@@ -1129,6 +1129,36 @@ const FicheDetail = ({
     }
   }, [ficheData?.date_rdv_time]);
 
+  const ID_ETAT_DECALAGE_EN_ATTENTE = 1;
+  const ID_ETAT_DECALAGE_ANNULE = 6;
+
+  const canAnnulerDecalageEnAttente = (decalage) => {
+    if (!decalage?.id) return false;
+    if (Number(decalage.id_etat) !== ID_ETAT_DECALAGE_EN_ATTENTE) return false;
+    const fn = Number(user?.fonction);
+    if (fn === 5) return Number(decalage.expediteur) === Number(user?.id);
+    if ([1, 2, 7, 11].includes(fn)) return true;
+    return false;
+  };
+
+  const cancelDecalageMutation = useMutation(
+    async (decalageId) => {
+      const res = await api.put(`/decalages/${decalageId}/statut`, { id_etat: ID_ETAT_DECALAGE_ANNULE });
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['decalages', ficheData?.id]);
+        queryClient.invalidateQueries(['decalages', user?.id]);
+        queryClient.invalidateQueries(['fiche', hash]);
+        alert('Demande de décalage annulée.');
+      },
+      onError: (err) => {
+        alert(err.response?.data?.message || 'Impossible d\'annuler le décalage.');
+      }
+    }
+  );
+
   // Mutation pour créer/mettre à jour un décalage
   const decalageMutation = useMutation(
     async (data) => {
@@ -1139,6 +1169,7 @@ const FicheDetail = ({
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['decalages', ficheData?.id]);
+        queryClient.invalidateQueries(['decalages', user?.id]);
         queryClient.invalidateQueries(['fiche', hash]);
         alert('Décalage créé avec succès');
         setDecalageFormData({
@@ -3177,6 +3208,27 @@ const FicheDetail = ({
                           <strong>État:</strong> {decalage.etat_dec}
                         </div>
                       )}
+                      {canAnnulerDecalageEnAttente(decalage) && (
+                        <div style={{ marginTop: '8px' }}>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => {
+                              if (!window.confirm('Annuler cette demande de décalage ?')) return;
+                              cancelDecalageMutation.mutate(decalage.id);
+                            }}
+                            disabled={cancelDecalageMutation.isLoading}
+                            style={{
+                              fontSize: '10px',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer'
+                            }}
+                          >
+                            {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -3629,7 +3681,8 @@ const FicheDetail = ({
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
+                  const rappelEtat8 = etatData.histo_date_rdv_time || etatData.date_rdv_time;
+                  if (rappelEtat8) items.push({ label: 'A rappeler le', value: formatRdvDateTime(rappelEtat8) });
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
                 }
                 // CLIENT HONORE A SUIVRE (9)
@@ -4875,6 +4928,27 @@ const FicheDetail = ({
                       {decalage.etat_dec && (
                         <div style={{ fontSize: '10.2px', marginTop: '5px' }}>
                           <strong>État:</strong> {decalage.etat_dec}
+                        </div>
+                      )}
+                      {canAnnulerDecalageEnAttente(decalage) && (
+                        <div style={{ marginTop: '8px' }}>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => {
+                              if (!window.confirm('Annuler cette demande de décalage ?')) return;
+                              cancelDecalageMutation.mutate(decalage.id);
+                            }}
+                            disabled={cancelDecalageMutation.isLoading}
+                            style={{
+                              fontSize: '10px',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer'
+                            }}
+                          >
+                            {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
+                          </button>
                         </div>
                       )}
                     </div>
@@ -7399,6 +7473,27 @@ const FicheDetail = ({
                       {decalage.etat_dec && (
                         <div style={{ fontSize: '10.2px', marginTop: '5px' }}>
                           <strong>État:</strong> {decalage.etat_dec}
+                        </div>
+                      )}
+                      {canAnnulerDecalageEnAttente(decalage) && (
+                        <div style={{ marginTop: '8px' }}>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => {
+                              if (!window.confirm('Annuler cette demande de décalage ?')) return;
+                              cancelDecalageMutation.mutate(decalage.id);
+                            }}
+                            disabled={cancelDecalageMutation.isLoading}
+                            style={{
+                              fontSize: '10px',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer'
+                            }}
+                          >
+                            {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
+                          </button>
                         </div>
                       )}
                     </div>
