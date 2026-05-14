@@ -3,7 +3,7 @@ const { getDefaultSMSProvider, sendSMSViaProvider } = require('../sms.service');
 
 /**
  * Exécute un workflow pour un événement donné
- * @param {string} triggerType - Type d'événement (fiche_created, etat_changed, remarque_created, alerte_ko_created, decalage_refused, etc.)
+ * @param {string} triggerType - Type d'événement (fiche_created, etat_changed, remarque_created, alerte_ko_created, decalage_refused, demande_decalage_annulee, etc.)
  * @param {Object} eventData - Données de l'événement (fiche, user, etc.)
  * @returns {Promise<Array>} Liste des workflows exécutés
  */

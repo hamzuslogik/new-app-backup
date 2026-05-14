@@ -93,6 +93,12 @@ const TRIGGER_VARIABLES = {
     '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
+  demande_decalage_annulee: [
+    '{fiche.id}', '{fiche.date_rdv_time}',
+    '{decalage.id}', '{decalage.id_fiche}', '{decalage.old_etat}', '{decalage.new_etat}',
+    '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
   remarque_created: [
     '{remarque.id}', '{remarque.nature_remarque}', '{remarque.commentaire}', '{remarque.id_expediteur}', '{remarque.id_destinataire}',
     '{remarque.id_fiche}', '{remarque.date_remarque}',
@@ -660,6 +666,7 @@ const WorkflowsTab = () => {
                         <option value="decalage_created">Décalage créé</option>
                         <option value="decalage_accepted">Décalage accepté</option>
                         <option value="decalage_refused">Décalage refusé</option>
+                        <option value="demande_decalage_annulee">Demande de décalage annulée</option>
                         <option value="remarque_created">Remarque créée</option>
                         <option value="alerte_ko_created">Alerte KO créée</option>
                         <option value="scheduled">Programmé (cron)</option>

@@ -585,6 +585,25 @@ router.put('/:id/statut', authenticate, async (req, res) => {
         console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (decalage_refused):', wfError);
       });
     }
+    if (estAnnule) {
+      executeWorkflow('demande_decalage_annulee', {
+        fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_prevu || decalage.date_nouvelle || null } : null,
+        user: req.user,
+        decalage: {
+          id: parseInt(id, 10),
+          id_fiche: decalage.id_fiche,
+          old_etat: decalage.id_etat,
+          new_etat: id_etat,
+          expediteur: decalage.expediteur,
+          destination: decalage.destination,
+          date_prevu: decalage.date_prevu,
+          date_nouvelle: decalage.date_nouvelle,
+          modifie_le: now,
+        },
+      }).catch((wfError) => {
+        console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (demande_decalage_annulee):', wfError);
+      });
+    }
   } catch (error) {
     console.error('Erreur lors de la mise à jour du statut:', error);
     res.status(500).json({

@@ -3222,7 +3222,8 @@ const FicheDetail = ({
                               fontSize: '10px',
                               padding: '4px 10px',
                               borderRadius: '4px',
-                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer'
+                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer',
+                              color: cancelDecalageMutation.isLoading ? '#666' : '#000'
                             }}
                           >
                             {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
@@ -4944,7 +4945,8 @@ const FicheDetail = ({
                               fontSize: '10px',
                               padding: '4px 10px',
                               borderRadius: '4px',
-                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer'
+                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer',
+                              color: cancelDecalageMutation.isLoading ? '#666' : '#000'
                             }}
                           >
                             {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
@@ -7489,7 +7491,8 @@ const FicheDetail = ({
                               fontSize: '10px',
                               padding: '4px 10px',
                               borderRadius: '4px',
-                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer'
+                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer',
+                              color: cancelDecalageMutation.isLoading ? '#666' : '#000'
                             }}
                           >
                             {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
