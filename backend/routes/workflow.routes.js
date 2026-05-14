@@ -6,7 +6,9 @@ const { executeWorkflow } = require('../services/workflow/workflow-executor');
 
 /** `or` = au moins une ligne de déclencheur (même type) matche ; `and` = toutes doivent matcher */
 function normalizeCombineTriggers(v) {
-  if (v === 'and' || v === 'AND') return 'and';
+  if (v === true || v === 1 || v === '1') return 'and';
+  const s = String(v == null ? '' : v).trim().toLowerCase();
+  if (s === 'and' || s === 'true') return 'and';
   return 'or';
 }
 
@@ -37,16 +39,13 @@ ensureWorkflowCombineTriggersColumn();
 router.get('/', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const workflows = await query(`
-      SELECT 
+      SELECT
         w.*,
         u.pseudo as created_by_pseudo,
-        COUNT(DISTINCT wt.id) as triggers_count,
-        COUNT(DISTINCT wa.id) as actions_count
+        (SELECT COUNT(*) FROM workflow_triggers wt WHERE wt.id_workflow = w.id) AS triggers_count,
+        (SELECT COUNT(*) FROM workflow_actions wa WHERE wa.id_workflow = w.id) AS actions_count
       FROM workflows w
       LEFT JOIN utilisateurs u ON w.created_by = u.id
-      LEFT JOIN workflow_triggers wt ON w.id = wt.id_workflow
-      LEFT JOIN workflow_actions wa ON w.id = wa.id_workflow
-      GROUP BY w.id
       ORDER BY w.priorite ASC, w.date_creation DESC
     `);
     
@@ -123,7 +122,8 @@ router.get('/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) 
 // Créer un workflow
 router.post('/', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
-    const { nom, description, actif, priorite, triggers, actions, combine_triggers } = req.body;
+    const { nom, description, actif, priorite, triggers, actions } = req.body;
+    const combine_triggers = req.body.combine_triggers ?? req.body.combineTriggers;
 
     if (!nom) {
       return res.status(400).json({ success: false, message: 'Le nom est requis' });
@@ -194,7 +194,8 @@ router.post('/', authenticate, checkPermission(1, 2, 7, 11), async (req, res) =>
 router.put('/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
-    const { nom, description, actif, priorite, triggers, actions, combine_triggers } = req.body;
+    const { nom, description, actif, priorite, triggers, actions } = req.body;
+    const combine_triggers = req.body.combine_triggers ?? req.body.combineTriggers;
 
     const workflow = await queryOne('SELECT * FROM workflows WHERE id = ?', [id]);
     if (!workflow) {

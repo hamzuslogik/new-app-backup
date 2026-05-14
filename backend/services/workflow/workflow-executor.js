@@ -77,6 +77,18 @@ async function enrichWorkflowEventData(triggerType, eventData) {
   return eventData;
 }
 
+/** Lit combine_triggers quelle que soit la casse / alias driver MySQL */
+function isWorkflowCombineAnd(workflow) {
+  if (!workflow) return false;
+  const raw =
+    workflow.combine_triggers ??
+    workflow.COMBINE_TRIGGERS ??
+    workflow.combineTriggers ??
+    'or';
+  const s = String(raw).trim().toLowerCase();
+  return s === 'and' || s === '1' || s === 'true';
+}
+
 /**
  * Une ligne workflow_triggers (DB) matche-t-elle l'événement + conditions JSON ?
  * @returns {boolean}
@@ -212,6 +224,24 @@ async function executeWorkflow(triggerType, eventDataIn) {
       ORDER BY w.priorite ASC
     `, Number.isFinite(targetWorkflowId) && targetWorkflowId > 0 ? [triggerType, targetWorkflowId] : [triggerType]);
 
+    const workflowIds = [...new Set((workflows || []).map((w) => w.id).filter((id) => id != null))];
+    if (workflowIds.length > 0) {
+      try {
+        const placeholders = workflowIds.map(() => '?').join(',');
+        const combineRows = await query(
+          `SELECT id, combine_triggers FROM workflows WHERE id IN (${placeholders})`,
+          workflowIds
+        );
+        const idToCombine = new Map(combineRows.map((r) => [Number(r.id), r.combine_triggers]));
+        for (const w of workflows) {
+          const v = idToCombine.get(Number(w.id));
+          if (v !== undefined && v !== null) w.combine_triggers = v;
+        }
+      } catch (hydrateErr) {
+        console.warn('[WORKFLOW] Hydratation combine_triggers ignorée:', hydrateErr.message);
+      }
+    }
+
     console.log('[WORKFLOW] Nombre de workflows trouvés:', workflows.length);
     if (workflows.length === 0) {
       console.log('[WORKFLOW] ⚠️  AUCUN WORKFLOW ACTIF TROUVÉ pour le trigger:', triggerType);
@@ -243,8 +273,13 @@ async function executeWorkflow(triggerType, eventDataIn) {
           console.log(`[WORKFLOW]   Trigger ${index + 1}: ID=${t.id}, Config=${t.config}, Conditions=${t.conditions}`);
         });
 
-        const combineAnd = String(workflow.combine_triggers || 'or').toLowerCase() === 'and';
-        console.log(`[WORKFLOW] Combinaison des lignes de déclencheur (même type d'événement): ${combineAnd ? 'ET (toutes doivent matcher)' : 'OU (au moins une)'}`);
+        const combineAnd = isWorkflowCombineAnd(workflow);
+        console.log(
+          `[WORKFLOW] combine_triggers (workflow ${workflow.id})=`,
+          workflow.combine_triggers,
+          '=>',
+          combineAnd ? 'ET (toutes les lignes même type)' : 'OU (au moins une ligne)'
+        );
 
         let shouldExecute = false;
         if (triggers.length === 0) {
