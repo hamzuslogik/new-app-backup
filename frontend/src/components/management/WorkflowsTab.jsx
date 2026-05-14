@@ -88,6 +88,7 @@ const TRIGGER_VARIABLES = {
     '{fiche.id}', '{fiche.date_rdv_time}',
     '{decalage.id}', '{decalage.id_fiche}', '{decalage.expediteur}', '{decalage.destination}', '{decalage.id_etat}',
     '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.date_creation}',
+    '{decalage.message}', '{decalage_message}',
     '{decalage.fiche_nom}', '{decalage.fiche_prenom}', '{decalage.fiche_tel}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
@@ -95,6 +96,7 @@ const TRIGGER_VARIABLES = {
     '{fiche.id}', '{fiche.date_rdv_time}',
     '{decalage.id}', '{decalage.id_fiche}', '{decalage.old_etat}', '{decalage.new_etat}',
     '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
+    '{decalage.message}', '{decalage_message}',
     '{decalage.fiche_nom}', '{decalage.fiche_prenom}', '{decalage.fiche_tel}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
@@ -102,6 +104,7 @@ const TRIGGER_VARIABLES = {
     '{fiche.id}', '{fiche.date_rdv_time}',
     '{decalage.id}', '{decalage.id_fiche}', '{decalage.old_etat}', '{decalage.new_etat}',
     '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
+    '{decalage.message}', '{decalage_message}',
     '{decalage.fiche_nom}', '{decalage.fiche_prenom}', '{decalage.fiche_tel}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
@@ -109,6 +112,7 @@ const TRIGGER_VARIABLES = {
     '{fiche.id}', '{fiche.date_rdv_time}',
     '{decalage.id}', '{decalage.id_fiche}', '{decalage.old_etat}', '{decalage.new_etat}',
     '{decalage.expediteur}', '{decalage.destination}', '{decalage.date_prevu}', '{decalage.date_nouvelle}', '{decalage.modifie_le}',
+    '{decalage.message}', '{decalage_message}',
     '{decalage.fiche_nom}', '{decalage.fiche_prenom}', '{decalage.fiche_tel}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],

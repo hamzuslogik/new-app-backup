@@ -345,9 +345,12 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
       message: 'Décalage créé avec succès',
       data: { id: result.insertId }
     });
+    const decalageMessage =
+      message != null && String(message).trim() !== '' ? String(message).trim() : null;
     executeWorkflow('decalage_created', {
       fiche: { id: idFicheNum, date_rdv_time: fiche?.date_rdv_time || null },
       user: req.user,
+      decalage_message: decalageMessage,
       decalage: {
         id: result.insertId,
         id_fiche: idFicheNum,
@@ -357,6 +360,7 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
         date_prevu: dateRdvOriginale,
         date_nouvelle: dateNouvelle,
         date_creation: now,
+        message: decalageMessage,
         ...pickFicheContactForWorkflow(fiche),
       },
     }).catch((wfError) => {
@@ -512,6 +516,10 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       executeWorkflow('demande_decalage_annulee', {
         fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_prevu || decalage.date_nouvelle || null } : null,
         user: req.user,
+        decalage_message:
+          decalage.message != null && String(decalage.message).trim() !== ''
+            ? String(decalage.message).trim()
+            : null,
         decalage: {
           id: parseInt(id, 10),
           id_fiche: decalage.id_fiche,
@@ -522,6 +530,10 @@ router.put('/:id/statut', authenticate, async (req, res) => {
           date_prevu: decalage.date_prevu,
           date_nouvelle: decalage.date_nouvelle,
           modifie_le: now,
+          message:
+            decalage.message != null && String(decalage.message).trim() !== ''
+              ? String(decalage.message).trim()
+              : null,
           ...ficheContactAnnule,
         },
       }).catch((wfError) => {
@@ -656,10 +668,16 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       }
     }
 
+    const decalageMessageForWorkflow =
+      decalage.message != null && String(decalage.message).trim() !== ''
+        ? String(decalage.message).trim()
+        : null;
+
     if (estValide) {
       executeWorkflow('decalage_accepted', {
         fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_nouvelle || decalage.date_prevu || null } : null,
         user: req.user,
+        decalage_message: decalageMessageForWorkflow,
         decalage: {
           id: parseInt(id, 10),
           id_fiche: decalage.id_fiche,
@@ -670,6 +688,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
           date_prevu: decalage.date_prevu,
           date_nouvelle: decalage.date_nouvelle,
           modifie_le: now,
+          message: decalageMessageForWorkflow,
           ...ficheContactDecalage,
         },
       }).catch((wfError) => {
@@ -680,6 +699,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       executeWorkflow('decalage_refused', {
         fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_prevu || decalage.date_nouvelle || null } : null,
         user: req.user,
+        decalage_message: decalageMessageForWorkflow,
         decalage: {
           id: parseInt(id, 10),
           id_fiche: decalage.id_fiche,
@@ -690,6 +710,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
           date_prevu: decalage.date_prevu,
           date_nouvelle: decalage.date_nouvelle,
           modifie_le: now,
+          message: decalageMessageForWorkflow,
           ...ficheContactDecalage,
         },
       }).catch((wfError) => {
