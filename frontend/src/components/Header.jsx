@@ -29,35 +29,55 @@ const Header = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   const [isBlinking, setIsBlinking] = useState(false);
-  const previousCountRef = useRef(0);
+  const previousCountRef = useRef(null);
+  const notificationsBootstrappedRef = useRef(false);
   const [soundEnabled, setSoundEnabled] = useLocalStorage('notification-sound-enabled', true);
   const audioContextRef = useRef(null);
 
-  // Récupérer les notifications (admins, backoffice, confirmateurs, RE Confirmation, commerciaux)
+  const notificationQueryOpts = {
+    enabled: !!user,
+    staleTime: 0,
+    refetchInterval: 8000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true
+  };
+
+  // Récupérer les notifications (toutes sessions : le backend filtre par rôle pour la liste)
   const { data: notificationsData } = useQuery(
     'notifications',
     async () => {
       const res = await api.get('/notifications');
       return res.data.data || [];
     },
-    {
-      enabled: !!user,
-      refetchInterval: 20000, // Rafraîchir toutes les 20 secondes
-    }
+    notificationQueryOpts
   );
 
-  // Compter les notifications non lues (pour tous les utilisateurs)
+  // Compter les notifications non lues (pour tous les utilisateurs connectés)
   const { data: notificationsCount } = useQuery(
     'notifications-count',
     async () => {
       const res = await api.get('/notifications/count');
       return res.data.count || 0;
     },
-    {
-      enabled: !!user, // Activer pour tous les utilisateurs connectés
-      refetchInterval: 20000, // Rafraîchir toutes les 20 secondes
-    }
+    notificationQueryOpts
   );
+
+  // Rafraîchir dès que l’onglet redevient visible (complète refetchInterval)
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState !== 'visible' || !user) return;
+      queryClient.invalidateQueries('notifications');
+      queryClient.invalidateQueries(['notifications-all']);
+      queryClient.invalidateQueries('notifications-count');
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [queryClient, user]);
+
+  useEffect(() => {
+    notificationsBootstrappedRef.current = false;
+    previousCountRef.current = null;
+  }, [user?.id]);
 
   const markAsReadMutation = useMutation(
     async (id) => {
@@ -67,6 +87,7 @@ const Header = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('notifications');
+        queryClient.invalidateQueries(['notifications-all']);
         queryClient.invalidateQueries('notifications-count');
       }
     }
@@ -80,6 +101,7 @@ const Header = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('notifications');
+        queryClient.invalidateQueries(['notifications-all']);
         queryClient.invalidateQueries('notifications-count');
       }
     }
@@ -93,6 +115,7 @@ const Header = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('notifications');
+        queryClient.invalidateQueries(['notifications-all']);
         queryClient.invalidateQueries('notifications-count');
         queryClient.invalidateQueries('fiche');
         queryClient.invalidateQueries('planning-week');
@@ -111,6 +134,7 @@ const Header = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('notifications');
+        queryClient.invalidateQueries(['notifications-all']);
         queryClient.invalidateQueries('notifications-count');
         queryClient.invalidateQueries('fiche');
         queryClient.invalidateQueries('planning-week');
@@ -192,50 +216,47 @@ const Header = () => {
         }, delay);
       };
       
-      // Fonction pour créer et jouer une note
+      // Son type messagerie : deux brefs « pop » discrets (triangle + enveloppe courte)
       const createAndPlayTone = (ctx, freq) => {
         const oscillator = ctx.createOscillator();
         const gainNode = ctx.createGain();
-        
         oscillator.connect(gainNode);
         gainNode.connect(ctx.destination);
-        
         oscillator.frequency.value = freq;
-        oscillator.type = 'sine';
-        
+        oscillator.type = 'triangle';
         const now = ctx.currentTime;
+        const peak = 0.12;
         gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.1, now + 0.1);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-        
+        gainNode.gain.linearRampToValueAtTime(peak, now + 0.012);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
         oscillator.start(now);
-        oscillator.stop(now + 0.3);
+        oscillator.stop(now + 0.12);
       };
-      
-      // Jouer deux notes pour un effet "ding-dong"
-      playSound(800, 0);
-      playSound(600, 150);
+
+      playSound(523.25, 0);
+      playSound(659.25, 72);
     } catch (error) {
       console.warn('Impossible de jouer le son de notification:', error);
     }
   }, [soundEnabled]);
 
-  // Détecter quand une nouvelle notification arrive
+  // Détecter quand une nouvelle notification arrive (y compris 0 → 1 ; l’ancien code exigeait previous > 0)
   useEffect(() => {
-    if (unreadCount > previousCountRef.current && previousCountRef.current > 0) {
-      // Une nouvelle notification est arrivée
+    if (notificationsCount === undefined) return;
+    if (!notificationsBootstrappedRef.current) {
+      notificationsBootstrappedRef.current = true;
+      previousCountRef.current = unreadCount;
+      return;
+    }
+    if (unreadCount > (previousCountRef.current ?? 0)) {
       setIsBlinking(true);
-      // Jouer le son de notification
       playNotificationSound();
-      // Arrêter le clignotement après 5 secondes
-      const timer = setTimeout(() => {
-        setIsBlinking(false);
-      }, 5000);
+      const timer = setTimeout(() => setIsBlinking(false), 5000);
+      previousCountRef.current = unreadCount;
       return () => clearTimeout(timer);
     }
     previousCountRef.current = unreadCount;
-  }, [unreadCount, playNotificationSound]);
+  }, [unreadCount, notificationsCount, playNotificationSound]);
 
   // Arrêter le clignotement quand l'utilisateur ouvre les notifications
   useEffect(() => {

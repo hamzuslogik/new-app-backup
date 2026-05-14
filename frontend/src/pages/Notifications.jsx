@@ -18,6 +18,13 @@ const Notifications = () => {
   const notificationsListRef = useRef(null);
   const markedOnScrollRef = useRef(new Set());
 
+  const notificationsQueryOpts = {
+    staleTime: 0,
+    refetchInterval: 8000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true
+  };
+
   // Récupérer toutes les notifications (lues et non lues)
   const { data: notificationsData, isLoading } = useQuery(
     ['notifications-all', filter],
@@ -35,9 +42,7 @@ const Notifications = () => {
       // Si filter === 'all', on garde toutes les notifications. Les plus récentes en premier.
       return [...notifications].sort((a, b) => new Date(b.date_creation || 0) - new Date(a.date_creation || 0));
     },
-    {
-      refetchInterval: 30000, // Rafraîchir toutes les 30 secondes
-    }
+    notificationsQueryOpts
   );
 
   // Compter les notifications non lues
@@ -46,8 +51,19 @@ const Notifications = () => {
     async () => {
       const res = await api.get('/notifications/count');
       return res.data.count || 0;
-    }
+    },
+    notificationsQueryOpts
   );
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState !== 'visible') return;
+      queryClient.invalidateQueries(['notifications-all']);
+      queryClient.invalidateQueries('notifications-count');
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [queryClient]);
 
   const markAsReadMutation = useMutation(
     async (id) => {
@@ -183,6 +199,8 @@ const Notifications = () => {
         return 'Demande d\'insertion acceptée';
       case 'demande_insertion_refusee':
         return 'Demande d\'insertion refusée';
+      case 'workflow':
+        return 'Workflow / alerte';
       default:
         return type;
     }
@@ -197,6 +215,8 @@ const Notifications = () => {
       case 'decalage_request':
         return 'type-warning';
       case 'rdv_approval':
+        return 'type-info';
+      case 'workflow':
         return 'type-info';
       default:
         return 'type-default';
