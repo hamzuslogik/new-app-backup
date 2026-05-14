@@ -106,11 +106,23 @@ const triggerWorkflowOnFicheUpdated = async (req, res, next) => {
           if (oldEtatNum !== null && newEtatNum !== null && oldEtatNum !== newEtatNum) {
             // Déclencher workflow de changement d'état
             console.log('[WORKFLOW] Déclenchement workflow: etat_changed');
+            let oldEtatTitre = null;
+            let newEtatTitre = null;
+            try {
+              const rowOld = await queryOne('SELECT titre FROM etats WHERE id = ?', [oldEtatNum]);
+              const rowNew = await queryOne('SELECT titre FROM etats WHERE id = ?', [newEtatNum]);
+              oldEtatTitre = rowOld?.titre ?? null;
+              newEtatTitre = rowNew?.titre ?? null;
+            } catch (err) {
+              console.error('[WORKFLOW] Impossible de charger les titres d\'état (etat_changed):', err.message);
+            }
             executeWorkflow('etat_changed', {
               fiche,
               user: req.user,
               old_etat: oldEtatNum, // Passer en nombre
-              new_etat: newEtatNum  // Passer en nombre
+              new_etat: newEtatNum, // Passer en nombre
+              old_etat_titre: oldEtatTitre,
+              new_etat_titre: newEtatTitre
             }).then(result => {
               console.log('[WORKFLOW] Workflow etat_changed exécuté avec succès:', JSON.stringify(result, null, 2));
             }).catch(error => {
@@ -177,11 +189,23 @@ const triggerWorkflowOnEtatChanged = async (req, res, next) => {
         
         if (fiche && oldEtatNum !== null && newEtatNum !== null && oldEtatNum !== newEtatNum) {
           console.log('[WORKFLOW] Déclenchement workflow: etat_changed (via etat rapide)');
+          let oldEtatTitre = null;
+          let newEtatTitre = null;
+          try {
+            const rowOld = await queryOne('SELECT titre FROM etats WHERE id = ?', [oldEtatNum]);
+            const rowNew = await queryOne('SELECT titre FROM etats WHERE id = ?', [newEtatNum]);
+            oldEtatTitre = rowOld?.titre ?? null;
+            newEtatTitre = rowNew?.titre ?? null;
+          } catch (err) {
+            console.error('[WORKFLOW] Impossible de charger les titres d\'état (etat_changed rapide):', err.message);
+          }
           executeWorkflow('etat_changed', {
             fiche,
             user: req.user,
             old_etat: oldEtatNum, // Passer en nombre
-            new_etat: newEtatNum   // Passer en nombre
+            new_etat: newEtatNum, // Passer en nombre
+            old_etat_titre: oldEtatTitre,
+            new_etat_titre: newEtatTitre
           }).catch(error => {
             console.error('Erreur lors de l\'exécution des workflows (etat_changed):', error);
           });
@@ -327,7 +351,9 @@ const triggerWorkflowOnCompteRenduApproved = async (req, res, next) => {
               old_etat: etatMeta != null ? etatMeta.old_etat : null,
               new_etat: etatMeta != null && etatMeta.new_etat != null && etatMeta.new_etat !== ''
                 ? etatMeta.new_etat
-                : fiche.id_etat_final
+                : fiche.id_etat_final,
+              old_etat_titre: etatMeta != null ? etatMeta.old_etat_titre : null,
+              new_etat_titre: etatMeta != null ? etatMeta.new_etat_titre : null
             }).catch(error => {
               console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (compte_rendu_approved):', error);
             });

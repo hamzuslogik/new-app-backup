@@ -1118,9 +1118,28 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       }
     }
 
+    let oldEtatTitre = null;
+    let newEtatTitre = null;
+    try {
+      const [rowOld, rowNew] = await Promise.all([
+        ancienEtat != null && ancienEtat !== ''
+          ? queryOne('SELECT titre FROM etats WHERE id = ?', [ancienEtat])
+          : null,
+        nouveauEtat != null && nouveauEtat !== ''
+          ? queryOne('SELECT titre FROM etats WHERE id = ?', [nouveauEtat])
+          : null
+      ]);
+      oldEtatTitre = rowOld?.titre != null ? String(rowOld.titre) : null;
+      newEtatTitre = rowNew?.titre != null ? String(rowNew.titre) : null;
+    } catch (_) {
+      /* ignore */
+    }
+
     req.workflowCompteRenduEtat = {
       old_etat: ancienEtat,
-      new_etat: nouveauEtat
+      new_etat: nouveauEtat,
+      old_etat_titre: oldEtatTitre,
+      new_etat_titre: newEtatTitre
     };
 
     res.json({

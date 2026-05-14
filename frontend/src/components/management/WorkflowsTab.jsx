@@ -44,7 +44,7 @@ const TRIGGER_VARIABLES = {
   compte_rendu_approved: [
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
     '{fiche.id_etat_final}',
-    '{old_etat}', '{new_etat}',
+    '{old_etat}', '{new_etat}', '{old_etat_titre}', '{new_etat_titre}',
     '{compte_rendu.id}', '{compte_rendu.id_fiche}', '{compte_rendu.statut}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
@@ -410,31 +410,48 @@ const WorkflowsTab = () => {
     const parts = [];
     parts.push(trigger.type.replace('_', ' '));
     
-    if (trigger.type === 'etat_changed') {
+    if (trigger.type === 'etat_changed' || trigger.type === 'compte_rendu_approved') {
       const config = trigger.config || {};
-      if (config.etat_from && Array.isArray(config.etat_from) && config.etat_from.length > 0) {
-        const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
-        const etatFromNames = etatFrom.map(id => {
-          const etat = etatsData?.find(e => e.id === id);
-          return etat ? `${etat.id}(${etat.titre})` : id;
-        });
-        parts.push(`de: ${etatFromNames.join(', ')}`);
-      } else {
-        parts.push('de: Tous les états');
-      }
-      if (config.etat_to || config.etat_id) {
-        const etatTo = Array.isArray(config.etat_to) ? config.etat_to : (config.etat_to ? [config.etat_to] : (config.etat_id ? [config.etat_id] : []));
-        if (etatTo.length > 0) {
-          const etatToNames = etatTo.map(id => {
+      const hasEtatWorkflowCfg =
+        trigger.type === 'etat_changed' ||
+        config.etat_from_any || config.etat_to_any ||
+        (Array.isArray(config.etat_from) && config.etat_from.length > 0) ||
+        (Array.isArray(config.etat_to) && config.etat_to.length > 0) ||
+        (config.etat_id != null && config.etat_id !== '') ||
+        (Array.isArray(config.etat_from_titres) && config.etat_from_titres.length > 0) ||
+        (Array.isArray(config.etat_to_titres) && config.etat_to_titres.length > 0) ||
+        (config.etat_from != null && config.etat_from !== '' && !Array.isArray(config.etat_from)) ||
+        (config.etat_to != null && config.etat_to !== '' && !Array.isArray(config.etat_to));
+
+      if (hasEtatWorkflowCfg || trigger.type === 'etat_changed') {
+        if (config.etat_from && Array.isArray(config.etat_from) && config.etat_from.length > 0) {
+          const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
+          const etatFromNames = etatFrom.map(id => {
             const etat = etatsData?.find(e => e.id === id);
             return etat ? `${etat.id}(${etat.titre})` : id;
           });
-          parts.push(`vers: ${etatToNames.join(', ')}`);
+          parts.push(`de: ${etatFromNames.join(', ')}`);
+        } else {
+          parts.push('de: Tous les états');
+        }
+        if (config.etat_to || config.etat_id) {
+          const etatTo = Array.isArray(config.etat_to) ? config.etat_to : (config.etat_to ? [config.etat_to] : (config.etat_id ? [config.etat_id] : []));
+          if (etatTo.length > 0) {
+            const etatToNames = etatTo.map(id => {
+              const etat = etatsData?.find(e => e.id === id);
+              return etat ? `${etat.id}(${etat.titre})` : id;
+            });
+            parts.push(`vers: ${etatToNames.join(', ')}`);
+          } else {
+            parts.push('vers: Tous les états');
+          }
         } else {
           parts.push('vers: Tous les états');
         }
-      } else {
-        parts.push('vers: Tous les états');
+        const aft = Array.isArray(config.etat_from_titres) ? config.etat_from_titres.filter(Boolean) : [];
+        const att = Array.isArray(config.etat_to_titres) ? config.etat_to_titres.filter(Boolean) : [];
+        if (aft.length) parts.push(`titres de: ${aft.join(' | ')}`);
+        if (att.length) parts.push(`titres vers: ${att.join(' | ')}`);
       }
     } else if (trigger.type === 'scheduled' && trigger.config?.cron) {
       parts.push(`cron: ${trigger.config.cron}`);
@@ -739,8 +756,13 @@ const WorkflowsTab = () => {
                         ))}
                       </div>
                     </div>
-                    {trigger.type === 'etat_changed' && (
+                    {(trigger.type === 'etat_changed' || trigger.type === 'compte_rendu_approved') && (
                       <>
+                        {trigger.type === 'compte_rendu_approved' && (
+                          <div style={{ padding: '8px', background: '#e8f5e9', borderRadius: '4px', fontSize: '12px', marginBottom: '10px' }}>
+                            Filtre sur la transition d&apos;état au moment de l&apos;approbation du compte rendu (IDs et/ou titres en base).
+                          </div>
+                        )}
                         <div className="form-group">
                           <label>
                             <input
@@ -893,6 +915,38 @@ const WorkflowsTab = () => {
                               </>
                             );
                           })()}
+                        </div>
+                        <div className="form-group">
+                          <label>Titres état source (optionnel, une ligne = un motif)</label>
+                          <textarea
+                            rows={2}
+                            placeholder="Ex.: ANNULER ou CLIENT HONORE (une ligne par variante)"
+                            value={Array.isArray(trigger.config?.etat_from_titres) ? trigger.config.etat_from_titres.join('\n') : (typeof trigger.config?.etat_from_titres === 'string' ? trigger.config.etat_from_titres : '')}
+                            onChange={(e) => {
+                              const lines = e.target.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+                              updateTrigger(index, 'config', {
+                                ...trigger.config,
+                                etat_from_titres: lines.length > 0 ? lines : undefined
+                              });
+                            }}
+                          />
+                          <small>Comparé au titre réel de l&apos;état source (sans tenir compte de la casse ni des accents). Avec des IDs sélectionnés : les deux conditions s&apos;appliquent (ET).</small>
+                        </div>
+                        <div className="form-group">
+                          <label>Titres état cible (optionnel, une ligne = un motif)</label>
+                          <textarea
+                            rows={2}
+                            placeholder="Ex. ANNULER ET A REPROGRAMMER"
+                            value={Array.isArray(trigger.config?.etat_to_titres) ? trigger.config.etat_to_titres.join('\n') : (typeof trigger.config?.etat_to_titres === 'string' ? trigger.config.etat_to_titres : '')}
+                            onChange={(e) => {
+                              const lines = e.target.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+                              updateTrigger(index, 'config', {
+                                ...trigger.config,
+                                etat_to_titres: lines.length > 0 ? lines : undefined
+                              });
+                            }}
+                          />
+                          <small>Comparé au titre réel du nouvel état. Utile pour distinguer des états proches (ex. Annuler vs Annuler à reprogrammer).</small>
                         </div>
                       </>
                     )}
@@ -1600,13 +1654,34 @@ const WorkflowsTab = () => {
                       {workflow.triggers?.map((t, idx) => (
                         <div key={idx} style={{ marginBottom: '4px', padding: '4px', background: '#f5f5f5', borderRadius: '3px' }}>
                           <strong>{t.type.replace('_', ' ')}</strong>
-                          {t.type === 'etat_changed' && (t.config?.etat_from || t.config?.etat_to || t.config?.etat_id) && (
+                          {(t.type === 'etat_changed' || t.type === 'compte_rendu_approved') && (t.config?.etat_from || t.config?.etat_to || t.config?.etat_id || t.config?.etat_from_any || t.config?.etat_to_any || (Array.isArray(t.config?.etat_from_titres) && t.config.etat_from_titres.length > 0) || (Array.isArray(t.config?.etat_to_titres) && t.config.etat_to_titres.length > 0)) && (
                             <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
-                              {t.config?.etat_from && (
-                                <>De: {Array.isArray(t.config.etat_from) ? t.config.etat_from.join(', ') : t.config.etat_from} </>
+                              {t.config?.etat_from_any ? (
+                                <>De: tous </>
+                              ) : t.config?.etat_from && (
+                                <>De: {Array.isArray(t.config.etat_from)
+                                  ? t.config.etat_from.map((id) => {
+                                      const etat = etatsData?.find((e) => e.id === id);
+                                      return etat ? `${etat.id}(${etat.titre})` : id;
+                                    }).join(', ')
+                                  : t.config.etat_from}{' '}
+                                </>
                               )}
-                              {(t.config?.etat_to || t.config?.etat_id) && (
-                                <>Vers: {Array.isArray(t.config?.etat_to) ? t.config.etat_to.join(', ') : (t.config?.etat_to || t.config?.etat_id)}</>
+                              {t.config?.etat_to_any ? (
+                                <>Vers: tous</>
+                              ) : (t.config?.etat_to || t.config?.etat_id) && (
+                                <>Vers: {Array.isArray(t.config?.etat_to)
+                                  ? t.config.etat_to.map((id) => {
+                                      const etat = etatsData?.find((e) => e.id === id);
+                                      return etat ? `${etat.id}(${etat.titre})` : id;
+                                    }).join(', ')
+                                  : (t.config?.etat_to || t.config?.etat_id)}</>
+                              )}
+                              {Array.isArray(t.config?.etat_from_titres) && t.config.etat_from_titres.length > 0 && (
+                                <div style={{ marginTop: '2px' }}>Titres de: {t.config.etat_from_titres.join(' | ')}</div>
+                              )}
+                              {Array.isArray(t.config?.etat_to_titres) && t.config.etat_to_titres.length > 0 && (
+                                <div style={{ marginTop: '2px' }}>Titres vers: {t.config.etat_to_titres.join(' | ')}</div>
                               )}
                             </div>
                           )}

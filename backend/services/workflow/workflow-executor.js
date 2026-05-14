@@ -100,66 +100,153 @@ function configSpecifiesEtatTransition(config) {
   if (from !== undefined && from !== null && from !== '') return true;
   if (Array.isArray(to) && to.length > 0) return true;
   if (to !== undefined && to !== null && to !== '') return true;
+  const fromTitres = titreEtatVersListe('etat_from_titres', config);
+  const toTitres = titreEtatVersListe('etat_to_titres', config);
+  if (fromTitres.length > 0 || toTitres.length > 0) return true;
   return false;
 }
 
+function normalizeEtatTitreLabel(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+/** Lit etat_*_titres : tableau ou chaîne avec retours / virgules */
+function titreEtatVersListe(key, config) {
+  const raw = config[key];
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map((x) => String(x).trim()).filter(Boolean);
+  return String(raw)
+    .split(/[\n,;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function hasEtatIdNumbers(config) {
+  return config.etat_id !== undefined && config.etat_id !== null && config.etat_id !== '';
+}
+
+function hasEtatFromNumbers(config) {
+  const from = config.etat_from;
+  if (Array.isArray(from) && from.length > 0) return true;
+  if (!Array.isArray(from) && from !== undefined && from !== null && from !== '') return true;
+  return false;
+}
+
+function hasEtatToNumbers(config) {
+  const to = config.etat_to;
+  if (Array.isArray(to) && to.length > 0) return true;
+  if (!Array.isArray(to) && to !== undefined && to !== null && to !== '') return true;
+  return false;
+}
+
+/** Au moins un motif non vide */
+function matchEtatTitresList(patterns, titreReel, logTag, direction) {
+  if (!patterns.length) return true;
+  const t = normalizeEtatTitreLabel(titreReel);
+  if (!t) {
+    console.log(`[WORKFLOW] [${logTag}] ❌ Titre état ${direction} absent — motifs:`, patterns);
+    return false;
+  }
+  const ok = patterns.some((p) => {
+    const n = normalizeEtatTitreLabel(p);
+    if (!n) return false;
+    return t === n || t.includes(n) || n.includes(t);
+  });
+  if (!ok) {
+    console.log(
+      `[WORKFLOW] [${logTag}] ❌ Titre état ${direction} « ${String(titreReel).trim()} » (norm="${t}") ne correspond à aucun motif`,
+      patterns.map((p) => normalizeEtatTitreLabel(p))
+    );
+  } else {
+    console.log(`[WORKFLOW] [${logTag}] ✅ Titre état ${direction} OK pour motifs`, patterns);
+  }
+  return ok;
+}
+
 /**
- * Même logique que l'ancien bloc « etat_changed » : etat_from / etat_to / etat_id.
- * @param {string} logTag ex. etat_changed | compte_rendu_approved+état
+ * etat_from / etat_to (IDs) + optionnel etat_from_titres / etat_to_titres (libellés états en base).
+ * @param {string|null|undefined} oldEtatTitre
+ * @param {string|null|undefined} newEtatTitre
  */
-function matchEtatTransitionConfig(config, oldEtatRaw, newEtatRaw, logTag = 'etat') {
+function matchEtatTransitionConfig(config, oldEtatRaw, newEtatRaw, logTag = 'etat', oldEtatTitre = null, newEtatTitre = null) {
   const oldEtatNum = oldEtatRaw != null && oldEtatRaw !== '' ? parseInt(oldEtatRaw, 10) : null;
   const newEtatNum = newEtatRaw != null && newEtatRaw !== '' ? parseInt(newEtatRaw, 10) : null;
+  const fromTitres = titreEtatVersListe('etat_from_titres', config);
+  const toTitres = titreEtatVersListe('etat_to_titres', config);
 
-  console.log(`[WORKFLOW] [${logTag}] État — Ancien: ${oldEtatRaw} (${oldEtatNum}), Nouveau: ${newEtatRaw} (${newEtatNum})`);
-  console.log(`[WORKFLOW] [${logTag}] Config etat_from:`, config.etat_from, 'etat_from_any:', config.etat_from_any);
-  console.log(`[WORKFLOW] [${logTag}] Config etat_to:`, config.etat_to, 'etat_to_any:', config.etat_to_any);
+  console.log(`[WORKFLOW] [${logTag}] État — Ancien: ${oldEtatRaw} (${oldEtatNum}) «${oldEtatTitre || ''}», Nouveau: ${newEtatRaw} (${newEtatNum}) «${newEtatTitre || ''}»`);
+  console.log(`[WORKFLOW] [${logTag}] Config etat_from:`, config.etat_from, 'etat_from_any:', config.etat_from_any, 'etat_from_titres:', fromTitres);
+  console.log(`[WORKFLOW] [${logTag}] Config etat_to:`, config.etat_to, 'etat_to_any:', config.etat_to_any, 'etat_to_titres:', toTitres);
 
   let triggerMatches = true;
 
   const fromAnyState = config.etat_from_any === true ||
     (config.etat_from === undefined || config.etat_from === null || config.etat_from === '');
-  const fromNoSelection = Array.isArray(config.etat_from) && config.etat_from.length === 0 && !config.etat_from_any;
+  const hasFromNums = hasEtatFromNumbers(config);
+  const hasFromTitres = fromTitres.length > 0;
+  const fromNoSelection = !fromAnyState && !hasFromNums && !hasFromTitres;
 
   if (fromNoSelection) {
-    console.log(`[WORKFLOW] [${logTag}] ❌ État source: liste vide (aucun état sélectionné)`);
+    console.log(`[WORKFLOW] [${logTag}] ❌ État source: aucune sélection (IDs ni titres)`);
     triggerMatches = false;
   } else if (fromAnyState) {
     console.log(`[WORKFLOW] [${logTag}] ✅ État source: n'importe quel état (etat_from_any ou non défini)`);
   } else {
-    const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
-    const etatFromNums = etatFrom.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
-    if (oldEtatNum === null || !etatFromNums.includes(oldEtatNum)) {
-      console.log(`[WORKFLOW] [${logTag}] ❌ État source ne correspond pas: ${oldEtatNum} n'est pas dans [${etatFromNums.join(', ')}]`);
-      triggerMatches = false;
-    } else {
-      console.log(`[WORKFLOW] [${logTag}] ✅ État source correspond: ${oldEtatNum}`);
+    let fromOk = true;
+    if (hasFromNums) {
+      const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
+      const etatFromNums = etatFrom.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
+      if (oldEtatNum === null || !etatFromNums.includes(oldEtatNum)) {
+        console.log(`[WORKFLOW] [${logTag}] ❌ État source (ID) ne correspond pas: ${oldEtatNum} pas dans [${etatFromNums.join(', ')}]`);
+        fromOk = false;
+      } else {
+        console.log(`[WORKFLOW] [${logTag}] ✅ État source (ID) correspond: ${oldEtatNum}`);
+      }
     }
+    if (hasFromTitres) {
+      if (!matchEtatTitresList(fromTitres, oldEtatTitre, logTag, 'source')) fromOk = false;
+    }
+    if (!fromOk) triggerMatches = false;
   }
 
   const toAnyState = config.etat_to_any === true ||
     (config.etat_to === undefined || config.etat_to === null || config.etat_to === '');
-  const toNoSelection = Array.isArray(config.etat_to) && config.etat_to.length === 0 && !config.etat_to_any;
+  const hasToNums = hasEtatToNumbers(config);
+  const hasToTitres = toTitres.length > 0;
+  const toNoSelection = !toAnyState && !hasToNums && !hasToTitres && !hasEtatIdNumbers(config);
 
   if (toNoSelection) {
-    console.log(`[WORKFLOW] [${logTag}] ❌ État cible: liste vide (aucun état sélectionné)`);
+    console.log(`[WORKFLOW] [${logTag}] ❌ État cible: aucune sélection (IDs, titres ni etat_id)`);
     triggerMatches = false;
   } else if (toAnyState) {
     console.log(`[WORKFLOW] [${logTag}] ✅ État cible: n'importe quel état (etat_to_any ou non défini)`);
   } else {
-    const etatTo = Array.isArray(config.etat_to) ? config.etat_to : [config.etat_to];
-    const etatToNums = etatTo.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
-    if (newEtatNum === null || !etatToNums.includes(newEtatNum)) {
-      console.log(`[WORKFLOW] [${logTag}] ❌ État cible ne correspond pas: ${newEtatNum} n'est pas dans [${etatToNums.join(', ')}]`);
-      triggerMatches = false;
-    } else {
-      console.log(`[WORKFLOW] [${logTag}] ✅ État cible correspond: ${newEtatNum}`);
+    let toOk = true;
+    if (hasToNums) {
+      const etatTo = Array.isArray(config.etat_to) ? config.etat_to : [config.etat_to];
+      const etatToNums = etatTo.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
+      if (newEtatNum === null || !etatToNums.includes(newEtatNum)) {
+        console.log(`[WORKFLOW] [${logTag}] ❌ État cible (ID) ne correspond pas: ${newEtatNum} pas dans [${etatToNums.join(', ')}]`);
+        toOk = false;
+      } else {
+        console.log(`[WORKFLOW] [${logTag}] ✅ État cible (ID) correspond: ${newEtatNum}`);
+      }
     }
+    if (hasToTitres) {
+      if (!matchEtatTitresList(toTitres, newEtatTitre, logTag, 'cible')) toOk = false;
+    }
+    if (!toOk) triggerMatches = false;
   }
 
   if (triggerMatches && !toAnyState &&
       (config.etat_to === undefined || config.etat_to === null || (Array.isArray(config.etat_to) && config.etat_to.length === 0)) &&
-      config.etat_id !== undefined && config.etat_id !== null && config.etat_id !== '') {
+      !hasToTitres &&
+      hasEtatIdNumbers(config)) {
     const etatId = Array.isArray(config.etat_id) ? config.etat_id : [config.etat_id];
     const etatIdNums = etatId.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
     if (newEtatNum === null || !etatIdNums.includes(newEtatNum)) {
@@ -197,7 +284,14 @@ function doesWorkflowTriggerRowFire(trigger, triggerType, eventData) {
   if (triggerType === 'etat_changed') {
     const oldEtat = eventData.old_etat;
     const newEtat = eventData.new_etat || eventData.fiche?.id_etat_final;
-    triggerMatches = matchEtatTransitionConfig(config, oldEtat, newEtat, 'etat_changed');
+    triggerMatches = matchEtatTransitionConfig(
+      config,
+      oldEtat,
+      newEtat,
+      'etat_changed',
+      eventData.old_etat_titre,
+      eventData.new_etat_titre
+    );
   } else if (triggerType === 'compte_rendu_approved' && configSpecifiesEtatTransition(config)) {
     const oldEtat = eventData.old_etat;
     const newEtat = eventData.new_etat != null && eventData.new_etat !== ''
@@ -210,7 +304,14 @@ function doesWorkflowTriggerRowFire(trigger, triggerType, eventData) {
       );
       triggerMatches = false;
     } else {
-      triggerMatches = matchEtatTransitionConfig(config, oldEtat, newEtat, 'compte_rendu_approved+état');
+      triggerMatches = matchEtatTransitionConfig(
+        config,
+        oldEtat,
+        newEtat,
+        'compte_rendu_approved+état',
+        eventData.old_etat_titre,
+        eventData.new_etat_titre
+      );
     }
   }
 
