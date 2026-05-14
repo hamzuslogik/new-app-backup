@@ -180,19 +180,19 @@ router.get('/', authenticate, async (req, res) => {
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     } else {
-      // Agents qualification (3), RP qualif (12), etc. : insertion/décalage + workflow (alertes qualité, etc.)
+      // Agents qualification (3), RP qualif (12), qualité (8), etc. : toutes les notifications
+      // dont l'utilisateur est destinataire (pas de filtre sur type : les workflows peuvent utiliser
+      // « workflow », une variante, ou un type personnalisé — l’important est destination = user).
       const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
          ${NOTIF_JOIN_EXP}
          WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-         AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response' OR n.type = 'workflow')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
          WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-         AND (n.type LIKE 'demande_insertion_%' OR n.type = 'decalage_request' OR n.type = 'decalage_response' OR n.type = 'workflow')
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
       notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
     }
@@ -291,13 +291,12 @@ router.get('/count', authenticate, async (req, res) => {
       );
       count = result?.count || 0;
     } else {
-      // Agents qualification, RP qualif, etc. : idem + workflow
+      // Agents qualification, RP qualif, etc. : toutes les notifications non lues pour ce destinataire
       const result = await queryOne(
         `SELECT COUNT(*) as count
          FROM notifications
          WHERE destination = ?
-         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}
-         AND (type LIKE 'demande_insertion_%' OR type = 'decalage_request' OR type = 'decalage_response' OR type = 'workflow')`,
+         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}`,
         [req.user.id]
       );
       count = result?.count || 0;
