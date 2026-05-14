@@ -295,12 +295,14 @@ async function executeWorkflowActions(workflowId, eventData, triggerType) {
         
         // Vérifier que le résultat est valide (surtout pour les notifications)
         if (action.type === 'notification' && result) {
-          if (result.count && result.count > 0) {
+          if (result.count > 0) {
             console.log(`[WORKFLOW] ✅ ${result.count} notification(s) créée(s) avec succès`);
           } else if (result.notification_id) {
             console.log(`[WORKFLOW] ✅ Notification ID=${result.notification_id} créée avec succès`);
+          } else if (result.skipped > 0) {
+            console.log(`[WORKFLOW] ℹ️  Notification(s) non créées : ${result.skipped} doublon(s) (même fiche, destinataire, type et message aujourd’hui). Réf. existante si besoin dans les logs d’insertion.`);
           } else {
-            console.warn(`[WORKFLOW] ⚠️  Résultat de notification sans ID ni count:`, result);
+            console.warn(`[WORKFLOW] ⚠️  Résultat de notification inattendu:`, result);
           }
         }
         
@@ -385,20 +387,22 @@ async function executeAction(actionType, config, eventData) {
  * si la table n'a pas ces colonnes (migration non exécutée), réessaie sans.
  */
 async function insertNotification(query, type, id_fiche, message, destination, date_creation, idExpediteur, showExpediteur) {
-  // Anti-duplication journalière demandée:
-  // ne pas recréer une notification pour le même destinataire et la même fiche le même jour.
-  if (id_fiche !== null && id_fiche !== undefined && destination) {
+  // Anti-douplication : même événement rejoué (ex. deux déclencheurs le même payload) ne doit pas
+  // dupliquer la même ligne. On compare type + message : deux alertes différentes le même jour restent possibles.
+  if (id_fiche !== null && id_fiche !== undefined && destination && type != null && message != null) {
     const alreadyExists = await query(
       `SELECT id
        FROM notifications
        WHERE destination = ?
          AND id_fiche = ?
          AND DATE(date_creation) = DATE(?)
+         AND COALESCE(type, '') = COALESCE(?, '')
+         AND message = ?
        LIMIT 1`,
-      [destination, id_fiche, date_creation]
+      [destination, id_fiche, date_creation, type, message]
     );
     if (Array.isArray(alreadyExists) && alreadyExists.length > 0) {
-      return { skipped: true, reason: 'duplicate_same_fiche_same_day', id: alreadyExists[0].id };
+      return { skipped: true, reason: 'duplicate_same_fiche_dest_type_message_day', id: alreadyExists[0].id };
     }
   }
 
