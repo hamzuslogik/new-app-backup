@@ -147,70 +147,23 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const { all } = req.query;
     const includeRead = all === 'true' || all === '1';
-    const userFonction = Number(req.user.fonction);
     const luCondition = includeRead ? '' : 'AND n.lu = 0';
-    let notifications = [];
-    
-    if ([1, 2, 7, 11].includes(userFonction)) {
-      const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
-         FROM notifications n
-         LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-         ${NOTIF_JOIN_EXP}
-         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-      const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
-         FROM notifications n
-         LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-      notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
-    } else if (userFonction === 6) {
-      // Confirmateurs : afficher toutes les notifications qui leur sont destinées
-      // (inclut les notifications workflow personnalisées)
-      const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
-         FROM notifications n
-         LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-         ${NOTIF_JOIN_EXP}
-         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-      const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
-         FROM notifications n
-         LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-      notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
-    } else if (userFonction === 14) {
-      // RE Confirmation : afficher toutes les notifications réellement destinées au RE.
-      // Ne pas dépendre de l'existence actuelle de confirmateurs actifs (sinon notifications "disparaissent").
-      const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
-         FROM notifications n
-         LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-         ${NOTIF_JOIN_EXP}
-         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-      const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
-         FROM notifications n
-         LEFT JOIN fiches f ON n.id_fiche = f.id AND f.archive = 0 AND f.ko = 0 AND f.active = 1
-         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
-         ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-      notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
-    } else {
-      // Commerciaux (5), agents qualification (3), RP qualif (12), qualité (8), etc. : toutes les notifications
-      // dont l'utilisateur est destinataire (pas de filtre sur type : les workflows peuvent utiliser
-      // « workflow », une variante, ou un type personnalisé — l’important est destination = user).
-      const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
+
+    // Toutes sessions : afficher toute notification dont le destinataire est l'utilisateur connecté.
+    // Filtres conservés : lu (liste courte = non lues seulement), archive sur la ligne notification.
+    // Pas de filtre par type ni par état de fiche sur le JOIN (sinon des notifs « perdues » pour confirmateur, etc.).
+    const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
          ${NOTIF_JOIN_EXP}
          WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-      const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
+    const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
          WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-      notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
-    }
+    const notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
 
     // Ajouter le hash et parser les métadonnées pour chaque notification
     // IMPORTANT: Utiliser id_fiche de la notification (pas fiche_id du JOIN) car la fiche peut ne plus exister
@@ -261,50 +214,14 @@ router.get('/', authenticate, async (req, res) => {
 // Compter les notifications non lues
 router.get('/count', authenticate, async (req, res) => {
   try {
-    let count = 0;
-    const userFonction = Number(req.user.fonction);
-    
-    if ([1, 2, 7, 11].includes(userFonction)) {
-      // Admins et Backoffice : compter toutes les notifications
-      const result = await queryOne(
-        `SELECT COUNT(*) as count
-         FROM notifications
-         WHERE destination = ?
-         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}`,
-        [req.user.id]
-      );
-      count = result?.count || 0;
-    } else if (userFonction === 6) {
-      // Confirmateurs : compter toutes les notifications non lues qui leur sont destinées
-      const result = await queryOne(
-        `SELECT COUNT(*) as count
-         FROM notifications
-         WHERE destination = ?
-         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}`,
-        [req.user.id]
-      );
-      count = result?.count || 0;
-    } else if (userFonction === 14) {
-      // RE Confirmation : compter toutes les notifications non lues destinées au RE.
-      const result = await queryOne(
-        `SELECT COUNT(*) as count
-         FROM notifications
-         WHERE destination = ?
-         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}`,
-        [req.user.id]
-      );
-      count = result?.count || 0;
-    } else {
-      // Commerciaux (5), agents qualification, RP qualif, etc. : toutes les notifications non lues pour ce destinataire
-      const result = await queryOne(
-        `SELECT COUNT(*) as count
-         FROM notifications
-         WHERE destination = ?
-         AND lu = 0 ${COUNT_ARCHIVE_CONDITION}`,
-        [req.user.id]
-      );
-      count = result?.count || 0;
-    }
+    const result = await queryOne(
+      `SELECT COUNT(*) as count
+       FROM notifications
+       WHERE destination = ?
+       AND lu = 0 ${COUNT_ARCHIVE_CONDITION}`,
+      [req.user.id]
+    );
+    const count = result?.count || 0;
 
     res.json({
       success: true,

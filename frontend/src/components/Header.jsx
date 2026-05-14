@@ -43,7 +43,7 @@ const Header = () => {
     refetchOnReconnect: true
   };
 
-  // Récupérer les notifications (toutes sessions : le backend filtre par rôle pour la liste)
+  // Liste courte non lues : le backend renvoie uniquement les notifications dont destination = utilisateur connecté
   const { data: notificationsData } = useQuery(
     'notifications',
     async () => {
