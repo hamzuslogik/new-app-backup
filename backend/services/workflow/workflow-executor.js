@@ -67,8 +67,15 @@ async function executeWorkflow(triggerType, eventData) {
 
         let shouldExecute = false;
         for (const trigger of triggers) {
-          const conditions = trigger.conditions ? JSON.parse(trigger.conditions) : null;
-          const config = trigger.config ? JSON.parse(trigger.config) : {};
+          let conditions = null;
+          let config = {};
+          try {
+            conditions = trigger.conditions ? JSON.parse(trigger.conditions) : null;
+            config = trigger.config ? JSON.parse(trigger.config) : {};
+          } catch (parseErr) {
+            console.error(`[WORKFLOW] Trigger id=${trigger.id}: JSON config/conditions invalide, ignoré:`, parseErr.message);
+            continue;
+          }
           
           console.log(`[WORKFLOW] Évaluation du trigger ID=${trigger.id}`);
           console.log(`[WORKFLOW] Config:`, JSON.stringify(config, null, 2));

@@ -5626,7 +5626,6 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
       fromControleQualite === 1 ||
       fromControleQualite === '1' ||
       fromControleQualite === 'true';
-    const workflowTriggerType = cq ? 'alerte_controle_qualite_created' : 'alerte_ko_created';
     const eventPayload = {
       user: req.user,
       fiche: ficheFull || { id, ...fiche },
@@ -5648,9 +5647,19 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
     if (cq) {
       eventPayload.from_controle_qualite = true;
     }
-    executeWorkflow(workflowTriggerType, eventPayload).catch((wfError) => {
-      console.error(`[WORKFLOW] Erreur lors de l'exécution des workflows (${workflowTriggerType}):`, wfError);
-    });
+    // Depuis la page CQ on envoie aussi alerte_controle_qualite_created ; les workflows
+    // historiques restent souvent sur alerte_ko_created — on exécute les deux pour que
+    // les notifications se créent dans tous les cas (éviter doublons : un seul workflow actif par type).
+    const runAlerteWorkflow = (triggerType) =>
+      executeWorkflow(triggerType, eventPayload).catch((wfError) => {
+        console.error(`[WORKFLOW] Erreur lors de l'exécution des workflows (${triggerType}):`, wfError);
+      });
+    if (cq) {
+      runAlerteWorkflow('alerte_controle_qualite_created');
+      runAlerteWorkflow('alerte_ko_created');
+    } else {
+      runAlerteWorkflow('alerte_ko_created');
+    }
   } catch (error) {
     console.error('Erreur POST alerte-ko:', error);
     res.status(500).json({

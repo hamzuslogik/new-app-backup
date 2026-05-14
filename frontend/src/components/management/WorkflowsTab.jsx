@@ -688,8 +688,8 @@ const WorkflowsTab = () => {
                         <option value="decalage_refused">Décalage refusé</option>
                         <option value="demande_decalage_annulee">Demande de décalage annulée</option>
                         <option value="remarque_created">Remarque créée</option>
-                        <option value="alerte_ko_created">Alerte qualité (message agent, sans KO fiche — hors page CQ)</option>
-                        <option value="alerte_controle_qualite_created">Alerte qualité depuis Contrôle Qualité (sans KO fiche)</option>
+                        <option value="alerte_ko_created">Alerte qualité (sans KO fiche ; aussi depuis Contrôle Qualité)</option>
+                        <option value="alerte_controle_qualite_created">Alerte qualité — uniquement depuis Contrôle Qualité</option>
                         <option value="fiche_ko_created">Fiche mise en KO (ko = 1, validation qualité ou bascule KO)</option>
                         <option value="scheduled">Programmé (cron)</option>
                         <option value="fiche_rdv_etat_check">Filtre fiche (date RDV + état)</option>
