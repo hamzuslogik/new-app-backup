@@ -12,6 +12,27 @@ function normalizeCombineTriggers(v) {
   return 'or';
 }
 
+/** Normalise les IDs d'état côté serveur (évite chaînes / format legacy etat_id seul). */
+function sanitizeWorkflowTriggerConfig(type, config) {
+  if (!config || typeof config !== 'object') return config || {};
+  if (type !== 'etat_changed' && type !== 'compte_rendu_approved') return config;
+  const out = { ...config };
+  if (Array.isArray(out.etat_from)) {
+    out.etat_from = out.etat_from.map((x) => parseInt(x, 10)).filter((n) => !Number.isNaN(n));
+  }
+  if (Array.isArray(out.etat_to)) {
+    out.etat_to = out.etat_to.map((x) => parseInt(x, 10)).filter((n) => !Number.isNaN(n));
+  }
+  if (out.etat_id != null && out.etat_id !== '') {
+    const n = parseInt(out.etat_id, 10);
+    if (!Number.isNaN(n) && (!Array.isArray(out.etat_to) || out.etat_to.length === 0)) {
+      out.etat_to = [n];
+    }
+    delete out.etat_id;
+  }
+  return out;
+}
+
 async function ensureWorkflowCombineTriggersColumn() {
   try {
     const col = await queryOne(
@@ -154,7 +175,7 @@ router.post('/', authenticate, checkPermission(1, 2, 7, 11), async (req, res) =>
           [
             workflowId,
             trigger.type,
-            trigger.config ? JSON.stringify(trigger.config) : null,
+            trigger.config ? JSON.stringify(sanitizeWorkflowTriggerConfig(trigger.type, trigger.config)) : null,
             trigger.conditions ? JSON.stringify(trigger.conditions) : null
           ]
         );
@@ -240,7 +261,7 @@ router.put('/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) 
               [
                 id,
                 trigger.type,
-                trigger.config ? JSON.stringify(trigger.config) : null,
+                trigger.config ? JSON.stringify(sanitizeWorkflowTriggerConfig(trigger.type, trigger.config)) : null,
                 trigger.conditions ? JSON.stringify(trigger.conditions) : null
               ]
             );

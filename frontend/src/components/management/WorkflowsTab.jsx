@@ -26,7 +26,8 @@ const TRIGGER_VARIABLES = {
   ],
   etat_changed: [
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_etat_final}',
-    '{old_etat}', '{new_etat}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+    '{old_etat}', '{new_etat}', '{old_etat_titre}', '{new_etat_titre}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   rdv_created: [
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.date_rdv_time}',
@@ -151,6 +152,45 @@ const TRIGGER_VARIABLES = {
     '{workflow_id}', '{workflow_nom}', '{cron_expression}', '{scheduled_at}'
   ]
 };
+
+/** Liste d’IDs entiers pour les cases à cocher (évite mélange string/number au reload). */
+function etatIdListFromConfig(value, legacyEtatId) {
+  if (Array.isArray(value)) {
+    return value.map((v) => parseInt(String(v), 10)).filter((n) => !Number.isNaN(n));
+  }
+  if (value != null && value !== '') {
+    const n = parseInt(String(value), 10);
+    return Number.isNaN(n) ? [] : [n];
+  }
+  if (legacyEtatId != null && legacyEtatId !== '') {
+    const n = parseInt(String(legacyEtatId), 10);
+    return Number.isNaN(n) ? [] : [n];
+  }
+  return [];
+}
+
+function normalizeTriggerConfigForForm(trigger) {
+  const t = { ...trigger, config: { ...(trigger.config || {}) } };
+  const c = t.config;
+  if (t.type !== 'etat_changed' && t.type !== 'compte_rendu_approved') return t;
+  if (Array.isArray(c.etat_from)) {
+    c.etat_from = c.etat_from.map((x) => parseInt(String(x), 10)).filter((n) => !Number.isNaN(n));
+  }
+  if (Array.isArray(c.etat_to)) {
+    c.etat_to = c.etat_to.map((x) => parseInt(String(x), 10)).filter((n) => !Number.isNaN(n));
+  } else if (c.etat_to != null && c.etat_to !== '') {
+    const n = parseInt(String(c.etat_to), 10);
+    c.etat_to = Number.isNaN(n) ? [] : [n];
+  }
+  if (c.etat_id != null && c.etat_id !== '') {
+    const n = parseInt(String(c.etat_id), 10);
+    if (!Number.isNaN(n) && (!Array.isArray(c.etat_to) || c.etat_to.length === 0)) {
+      c.etat_to = [n];
+    }
+    delete c.etat_id;
+  }
+  return t;
+}
 
 const DYNAMIC_RECIPIENT_OPTIONS = [
   { value: '{fiche.id_insert}', label: 'Agent qui a cree la fiche ({fiche.id_insert})' },
@@ -364,13 +404,14 @@ const WorkflowsTab = () => {
 
   const handleEdit = (workflow) => {
     setEditingId(workflow.id);
+    const rawTriggers = workflow.triggers || [{ type: 'fiche_created', config: {}, conditions: [] }];
     setFormData({
       nom: workflow.nom,
       description: workflow.description || '',
       actif: workflow.actif,
       priorite: workflow.priorite || 0,
       combine_triggers: workflow.combine_triggers === 'and' ? 'and' : 'or',
-      triggers: workflow.triggers || [{ type: 'fiche_created', config: {}, conditions: [] }],
+      triggers: rawTriggers.map(normalizeTriggerConfigForForm),
       actions: workflow.actions || [{ type: 'notification', config: {}, conditions: [], ordre: 0, delay_seconds: 0 }]
     });
     setShowForm(true);
@@ -564,9 +605,35 @@ const WorkflowsTab = () => {
   };
 
   const updateTrigger = (index, field, value) => {
-    const newTriggers = [...formData.triggers];
-    newTriggers[index] = { ...newTriggers[index], [field]: value };
-    setFormData({ ...formData, triggers: newTriggers });
+    setFormData((prev) => {
+      const newTriggers = [...prev.triggers];
+      newTriggers[index] = { ...newTriggers[index], [field]: value };
+      return { ...prev, triggers: newTriggers };
+    });
+  };
+
+  const toggleTriggerEtatList = (triggerIndex, configKey, etatId, checked) => {
+    const idNum = parseInt(String(etatId), 10);
+    if (Number.isNaN(idNum)) return;
+    setFormData((prev) => {
+      const newTriggers = [...prev.triggers];
+      const t = newTriggers[triggerIndex];
+      const cfg = { ...(t.config || {}) };
+      if (configKey === 'etat_from') {
+        const list = etatIdListFromConfig(cfg.etat_from, undefined);
+        const next = checked ? (list.includes(idNum) ? list : [...list, idNum]) : list.filter((x) => x !== idNum);
+        cfg.etat_from = next;
+        cfg.etat_from_any = false;
+      } else {
+        const list = etatIdListFromConfig(cfg.etat_to, cfg.etat_id);
+        const next = checked ? (list.includes(idNum) ? list : [...list, idNum]) : list.filter((x) => x !== idNum);
+        cfg.etat_to = next;
+        cfg.etat_to_any = false;
+        delete cfg.etat_id;
+      }
+      newTriggers[triggerIndex] = { ...t, config: cfg };
+      return { ...prev, triggers: newTriggers };
+    });
   };
 
   const addAction = () => {
@@ -584,13 +651,18 @@ const WorkflowsTab = () => {
   };
 
   const updateAction = (index, field, value) => {
-    const newActions = [...formData.actions];
-    if (field === 'config' && typeof value === 'object') {
-      newActions[index] = { ...newActions[index], config: { ...newActions[index].config, ...value } };
-    } else {
-      newActions[index] = { ...newActions[index], [field]: value };
-    }
-    setFormData({ ...formData, actions: newActions });
+    setFormData((prev) => {
+      const newActions = [...prev.actions];
+      if (field === 'config' && typeof value === 'object') {
+        newActions[index] = {
+          ...newActions[index],
+          config: { ...(newActions[index].config || {}), ...value }
+        };
+      } else {
+        newActions[index] = { ...newActions[index], [field]: value };
+      }
+      return { ...prev, actions: newActions };
+    });
   };
 
   if (isLoading) return <LoadingSpinner text="Chargement des workflows..." />;
@@ -799,21 +871,51 @@ const WorkflowsTab = () => {
                             </div>
                           ) : (
                             <>
-                              <select
-                                multiple
-                                value={Array.isArray(trigger.config?.etat_from) ? trigger.config.etat_from.map(String) : (trigger.config?.etat_from ? [String(trigger.config.etat_from)] : [])}
-                                onChange={(e) => {
-                                  const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
-                                  updateTrigger(index, 'config', { ...trigger.config, etat_from_any: false, etat_from: selected.length > 0 ? selected : [] });
+                              <div
+                                role="group"
+                                aria-label="États source"
+                                style={{
+                                  marginTop: '8px',
+                                  maxHeight: '220px',
+                                  overflowY: 'auto',
+                                  border: '1px solid #ccc',
+                                  borderRadius: '4px',
+                                  padding: '8px',
+                                  background: '#fafafa'
                                 }}
-                                size={5}
-                                style={{ marginTop: '8px' }}
                               >
-                                {etatsData?.map(e => (
-                                  <option key={e.id} value={e.id}>{e.id} - {e.titre}</option>
-                                ))}
-                              </select>
-                              <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états sources. (Si aucun état n'est sélectionné, le trigger ne matchera pas.)</small>
+                                {(etatsData || []).map((e) => {
+                                  const idNum = parseInt(String(e.id), 10);
+                                  const selected = etatIdListFromConfig(trigger.config?.etat_from, undefined);
+                                  const isChecked = selected.includes(idNum);
+                                  return (
+                                    <label
+                                      key={e.id}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '8px',
+                                        cursor: 'pointer',
+                                        marginBottom: '6px',
+                                        fontSize: '13px',
+                                        lineHeight: 1.35
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(ev) => toggleTriggerEtatList(index, 'etat_from', e.id, ev.target.checked)}
+                                      />
+                                      <span>
+                                        <strong>{idNum}</strong>
+                                        {' — '}
+                                        {e.titre}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                              <small>Cochez un ou plusieurs états sources (ID affiché explicitement pour éviter toute confusion entre libellés proches).</small>
                             </>
                           )}
                         </div>
@@ -858,30 +960,51 @@ const WorkflowsTab = () => {
                             </div>
                           ) : (
                             <>
-                              <select
-                                multiple
-                                value={Array.isArray(trigger.config?.etat_to) ? trigger.config.etat_to.map(String) : (trigger.config?.etat_to ? [String(trigger.config.etat_to)] : (trigger.config?.etat_id ? [String(trigger.config.etat_id)] : []))}
-                                onChange={(e) => {
-                                  const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
-                                  const newConfig = { ...trigger.config };
-                                  if (selected.length > 0) {
-                                    newConfig.etat_to = selected;
-                                    newConfig.etat_to_any = false;
-                                    delete newConfig.etat_id; // Supprimer l'ancien format pour compatibilité
-                                  } else {
-                                    newConfig.etat_to_any = false;
-                                    newConfig.etat_to = [];
-                                  }
-                                  updateTrigger(index, 'config', newConfig);
+                              <div
+                                role="group"
+                                aria-label="États cible"
+                                style={{
+                                  marginTop: '8px',
+                                  maxHeight: '220px',
+                                  overflowY: 'auto',
+                                  border: '1px solid #ccc',
+                                  borderRadius: '4px',
+                                  padding: '8px',
+                                  background: '#fafafa'
                                 }}
-                                size={5}
-                                style={{ marginTop: '8px' }}
                               >
-                                {etatsData?.map(e => (
-                                  <option key={e.id} value={e.id}>{e.id} - {e.titre}</option>
-                                ))}
-                              </select>
-                              <small>Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs états cibles. (Si aucun état n'est sélectionné, le trigger ne matchera pas.)</small>
+                                {(etatsData || []).map((e) => {
+                                  const idNum = parseInt(String(e.id), 10);
+                                  const selected = etatIdListFromConfig(trigger.config?.etat_to, trigger.config?.etat_id);
+                                  const isChecked = selected.includes(idNum);
+                                  return (
+                                    <label
+                                      key={e.id}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '8px',
+                                        cursor: 'pointer',
+                                        marginBottom: '6px',
+                                        fontSize: '13px',
+                                        lineHeight: 1.35
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(ev) => toggleTriggerEtatList(index, 'etat_to', e.id, ev.target.checked)}
+                                      />
+                                      <span>
+                                        <strong>{idNum}</strong>
+                                        {' — '}
+                                        {e.titre}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                              <small>Cochez un ou plusieurs états cibles (ex. 8 — ANNULER ET A REPROGRAMMER, distinct de 5 — ANNULER).</small>
                             </>
                           )}
                         </div>
