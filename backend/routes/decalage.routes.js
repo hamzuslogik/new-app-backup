@@ -33,6 +33,29 @@ function pickFicheContactForWorkflow(row) {
   };
 }
 
+/**
+ * Chargement fiche pour executeWorkflow (décalage) : sans cela, {fiche.id_confirmateur} et
+ * assimilés restent vides alors que RE/RP passent par destination_fonctions — d’où notif confirmateur manquante.
+ */
+async function getFicheWorkflowContext(idFiche) {
+  if (!idFiche) return null;
+  const id = parseInt(idFiche, 10);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  try {
+    const row = await queryOne(
+      `SELECT id, date_rdv_time, nom, prenom, tel,
+              id_confirmateur, id_confirmateur_2, id_confirmateur_3,
+              id_agent, id_insert, id_commercial, id_commercial_2, id_qualite
+       FROM fiches WHERE id = ?`,
+      [id]
+    );
+    if (row) return row;
+    return { id, date_rdv_time: null };
+  } catch (_) {
+    return { id, date_rdv_time: null };
+  }
+}
+
 // Récupérer les décalages avec règles de consultation :
 // - Confirmateurs (fonction 6) : voient les décalages où ils sont destinataires
 // - Commerciaux (fonction 5) : voient leurs propres décalages créés
@@ -194,9 +217,12 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
       });
     }
 
-    // Vérifier que la fiche existe et est active, récupérer aussi la date RDV
+    // Vérifier que la fiche existe et est active, récupérer aussi la date RDV et les IDs pour les workflows
     const fiche = await queryOne(
-      'SELECT id, archive, ko, active, date_rdv_time, nom, prenom, tel FROM fiches WHERE id = ?',
+      `SELECT id, archive, ko, active, date_rdv_time, nom, prenom, tel,
+              id_confirmateur, id_confirmateur_2, id_confirmateur_3,
+              id_agent, id_insert, id_commercial, id_commercial_2, id_qualite
+       FROM fiches WHERE id = ?`,
       [idFicheNum]
     );
     
@@ -347,8 +373,9 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
     });
     const decalageMessage =
       message != null && String(message).trim() !== '' ? String(message).trim() : null;
+    const { archive: _a, ko: _k, active: _ac, ...ficheWorkflowPayload } = fiche || {};
     executeWorkflow('decalage_created', {
-      fiche: { id: idFicheNum, date_rdv_time: fiche?.date_rdv_time || null },
+      fiche: fiche ? ficheWorkflowPayload : null,
       user: req.user,
       decalage_message: decalageMessage,
       decalage: {
@@ -503,18 +530,18 @@ router.put('/:id/statut', authenticate, async (req, res) => {
 
       await recordModificaSuppression();
 
-      let ficheContactAnnule = { fiche_nom: null, fiche_prenom: null, fiche_tel: null };
-      if (decalage.id_fiche) {
-        try {
-          const fc = await queryOne('SELECT nom, prenom, tel FROM fiches WHERE id = ?', [decalage.id_fiche]);
-          ficheContactAnnule = pickFicheContactForWorkflow(fc);
-        } catch (e) {
-          /* ignore */
-        }
-      }
+      const ficheCtxAnnule = await getFicheWorkflowContext(decalage.id_fiche);
+      const ficheContactAnnule = pickFicheContactForWorkflow(ficheCtxAnnule);
+      const fichePayloadAnnule = ficheCtxAnnule
+        ? {
+            ...ficheCtxAnnule,
+            date_rdv_time:
+              decalage.date_prevu || decalage.date_nouvelle || ficheCtxAnnule.date_rdv_time || null,
+          }
+        : null;
 
       executeWorkflow('demande_decalage_annulee', {
-        fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_prevu || decalage.date_nouvelle || null } : null,
+        fiche: fichePayloadAnnule,
         user: req.user,
         decalage_message:
           decalage.message != null && String(decalage.message).trim() !== ''
@@ -658,15 +685,8 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       message: 'Statut du décalage mis à jour'
     });
 
-    let ficheContactDecalage = { fiche_nom: null, fiche_prenom: null, fiche_tel: null };
-    if (decalage.id_fiche) {
-      try {
-        const fc = await queryOne('SELECT nom, prenom, tel FROM fiches WHERE id = ?', [decalage.id_fiche]);
-        ficheContactDecalage = pickFicheContactForWorkflow(fc);
-      } catch (e) {
-        /* ignore */
-      }
-    }
+    const ficheForWorkflow = await getFicheWorkflowContext(decalage.id_fiche);
+    const ficheContactDecalage = pickFicheContactForWorkflow(ficheForWorkflow);
 
     const decalageMessageForWorkflow =
       decalage.message != null && String(decalage.message).trim() !== ''
@@ -675,7 +695,13 @@ router.put('/:id/statut', authenticate, async (req, res) => {
 
     if (estValide) {
       executeWorkflow('decalage_accepted', {
-        fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_nouvelle || decalage.date_prevu || null } : null,
+        fiche: ficheForWorkflow
+          ? {
+              ...ficheForWorkflow,
+              date_rdv_time:
+                decalage.date_nouvelle || decalage.date_prevu || ficheForWorkflow.date_rdv_time || null,
+            }
+          : null,
         user: req.user,
         decalage_message: decalageMessageForWorkflow,
         decalage: {
@@ -697,7 +723,13 @@ router.put('/:id/statut', authenticate, async (req, res) => {
     }
     if (estRefuse) {
       executeWorkflow('decalage_refused', {
-        fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_prevu || decalage.date_nouvelle || null } : null,
+        fiche: ficheForWorkflow
+          ? {
+              ...ficheForWorkflow,
+              date_rdv_time:
+                decalage.date_prevu || decalage.date_nouvelle || ficheForWorkflow.date_rdv_time || null,
+            }
+          : null,
         user: req.user,
         decalage_message: decalageMessageForWorkflow,
         decalage: {
