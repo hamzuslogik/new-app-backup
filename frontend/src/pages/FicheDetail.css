@@ -2560,6 +2560,24 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
+/* Bouton « Annuler la demande » (décalage) : texte noir — le bloc .decalage-form impose le blanc aux descendants. */
+.decalage-form button.decalage-annuler-demande-btn,
+.fiche-detail-modal-content .decalage-form button.decalage-annuler-demande-btn {
+  font-size: 10px !important;
+  padding: 4px 10px !important;
+  border-radius: 4px !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  cursor: pointer;
+}
+
+.decalage-form button.decalage-annuler-demande-btn:disabled,
+.fiche-detail-modal-content .decalage-form button.decalage-annuler-demande-btn:disabled {
+  color: #666666 !important;
+  -webkit-text-fill-color: #666666 !important;
+  cursor: wait !important;
+}
+
 .decalage-form .form-group,
 .etat-change-section .form-group,
 .compte-rendu-section .form-group {

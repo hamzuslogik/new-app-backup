@@ -1151,7 +1151,6 @@ const FicheDetail = ({
         queryClient.invalidateQueries(['decalages', ficheData?.id]);
         queryClient.invalidateQueries(['decalages', user?.id]);
         queryClient.invalidateQueries(['fiche', hash]);
-        alert('Demande de décalage supprimée.');
       },
       onError: (err) => {
         alert(err.response?.data?.message || 'Impossible d\'annuler le décalage.');
@@ -3212,19 +3211,12 @@ const FicheDetail = ({
                         <div style={{ marginTop: '8px' }}>
                           <button
                             type="button"
-                            className="btn-secondary"
+                            className="btn-secondary decalage-annuler-demande-btn"
                             onClick={() => {
                               if (!window.confirm('Supprimer définitivement cette demande de décalage ?')) return;
                               cancelDecalageMutation.mutate(decalage.id);
                             }}
                             disabled={cancelDecalageMutation.isLoading}
-                            style={{
-                              fontSize: '10px',
-                              padding: '4px 10px',
-                              borderRadius: '4px',
-                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer',
-                              color: cancelDecalageMutation.isLoading ? '#666' : '#000'
-                            }}
                           >
                             {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
                           </button>
@@ -4935,19 +4927,12 @@ const FicheDetail = ({
                         <div style={{ marginTop: '8px' }}>
                           <button
                             type="button"
-                            className="btn-secondary"
+                            className="btn-secondary decalage-annuler-demande-btn"
                             onClick={() => {
                               if (!window.confirm('Supprimer définitivement cette demande de décalage ?')) return;
                               cancelDecalageMutation.mutate(decalage.id);
                             }}
                             disabled={cancelDecalageMutation.isLoading}
-                            style={{
-                              fontSize: '10px',
-                              padding: '4px 10px',
-                              borderRadius: '4px',
-                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer',
-                              color: cancelDecalageMutation.isLoading ? '#666' : '#000'
-                            }}
                           >
                             {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
                           </button>
@@ -7481,19 +7466,12 @@ const FicheDetail = ({
                         <div style={{ marginTop: '8px' }}>
                           <button
                             type="button"
-                            className="btn-secondary"
+                            className="btn-secondary decalage-annuler-demande-btn"
                             onClick={() => {
                               if (!window.confirm('Supprimer définitivement cette demande de décalage ?')) return;
                               cancelDecalageMutation.mutate(decalage.id);
                             }}
                             disabled={cancelDecalageMutation.isLoading}
-                            style={{
-                              fontSize: '10px',
-                              padding: '4px 10px',
-                              borderRadius: '4px',
-                              cursor: cancelDecalageMutation.isLoading ? 'wait' : 'pointer',
-                              color: cancelDecalageMutation.isLoading ? '#666' : '#000'
-                            }}
                           >
                             {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
                           </button>
