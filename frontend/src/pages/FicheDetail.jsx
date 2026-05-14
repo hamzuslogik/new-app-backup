@@ -1151,7 +1151,7 @@ const FicheDetail = ({
         queryClient.invalidateQueries(['decalages', ficheData?.id]);
         queryClient.invalidateQueries(['decalages', user?.id]);
         queryClient.invalidateQueries(['fiche', hash]);
-        alert('Demande de décalage annulée.');
+        alert('Demande de décalage supprimée.');
       },
       onError: (err) => {
         alert(err.response?.data?.message || 'Impossible d\'annuler le décalage.');
@@ -3214,7 +3214,7 @@ const FicheDetail = ({
                             type="button"
                             className="btn-secondary"
                             onClick={() => {
-                              if (!window.confirm('Annuler cette demande de décalage ?')) return;
+                              if (!window.confirm('Supprimer définitivement cette demande de décalage ?')) return;
                               cancelDecalageMutation.mutate(decalage.id);
                             }}
                             disabled={cancelDecalageMutation.isLoading}
@@ -4937,7 +4937,7 @@ const FicheDetail = ({
                             type="button"
                             className="btn-secondary"
                             onClick={() => {
-                              if (!window.confirm('Annuler cette demande de décalage ?')) return;
+                              if (!window.confirm('Supprimer définitivement cette demande de décalage ?')) return;
                               cancelDecalageMutation.mutate(decalage.id);
                             }}
                             disabled={cancelDecalageMutation.isLoading}
@@ -7483,7 +7483,7 @@ const FicheDetail = ({
                             type="button"
                             className="btn-secondary"
                             onClick={() => {
-                              if (!window.confirm('Annuler cette demande de décalage ?')) return;
+                              if (!window.confirm('Supprimer définitivement cette demande de décalage ?')) return;
                               cancelDecalageMutation.mutate(decalage.id);
                             }}
                             disabled={cancelDecalageMutation.isLoading}

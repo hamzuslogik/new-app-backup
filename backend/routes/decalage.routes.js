@@ -439,6 +439,80 @@ router.put('/:id/statut', authenticate, async (req, res) => {
 
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
+    // Annulation = suppression de la ligne (évite FK sur id_etat absent de etat_decalage, ex. id 6)
+    if (idEtatRequested === 6) {
+      const recordModificaSuppression = async () => {
+        try {
+          const tableExists = await queryOne(
+            `SELECT COUNT(*) as count 
+             FROM information_schema.tables 
+             WHERE table_schema = SCHEMA() 
+             AND table_name = 'modifica'`
+          );
+          if (!tableExists || tableExists.count === 0) return;
+          if (!decalage.id_fiche) return;
+          const columns = await query(
+            `SELECT COLUMN_NAME 
+             FROM information_schema.COLUMNS 
+             WHERE TABLE_SCHEMA = SCHEMA() 
+             AND TABLE_NAME = 'modifica'`
+          );
+          const columnNames = columns.map((col) => col.COLUMN_NAME);
+          const hasNewStructure = columnNames.includes('type') &&
+            columnNames.includes('ancien_valeur') &&
+            columnNames.includes('nouvelle_valeur');
+          const hasOldStructure = columnNames.includes('champ') &&
+            columnNames.includes('last_val') &&
+            columnNames.includes('val');
+          const dateCol = columnNames.includes('date_modif_time') ? 'date_modif_time' : 'date';
+          const oldEtat = decalage.id_etat || '';
+          if (hasNewStructure) {
+            await query(
+              `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, \`${dateCol}\`)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [decalage.id_fiche, req.user.id, 'Decalage supprime', String(oldEtat), 'SUPPRIME', now]
+            );
+          } else if (hasOldStructure) {
+            await query(
+              `INSERT INTO modifica (id_fiche, id_user, champ, last_val, val, \`${dateCol}\`)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [decalage.id_fiche, req.user.id, 'Decalage supprime', String(oldEtat), 'SUPPRIME', now]
+            );
+          }
+        } catch (err) {
+          console.log('Impossible d\'enregistrer la suppression de décalage dans modifica:', err.message);
+        }
+      };
+
+      await recordModificaSuppression();
+
+      executeWorkflow('demande_decalage_annulee', {
+        fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_prevu || decalage.date_nouvelle || null } : null,
+        user: req.user,
+        decalage: {
+          id: parseInt(id, 10),
+          id_fiche: decalage.id_fiche,
+          old_etat: decalage.id_etat,
+          new_etat: 'supprime',
+          expediteur: decalage.expediteur,
+          destination: decalage.destination,
+          date_prevu: decalage.date_prevu,
+          date_nouvelle: decalage.date_nouvelle,
+          modifie_le: now,
+        },
+      }).catch((wfError) => {
+        console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (demande_decalage_annulee):', wfError);
+      });
+
+      await query('DELETE FROM decalages WHERE id = ?', [id]);
+
+      return res.json({
+        success: true,
+        message: 'Demande de décalage supprimée.',
+        deleted: true,
+      });
+    }
+
     await query(
       `UPDATE decalages SET
        id_etat = ?,
@@ -583,25 +657,6 @@ router.put('/:id/statut', authenticate, async (req, res) => {
         },
       }).catch((wfError) => {
         console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (decalage_refused):', wfError);
-      });
-    }
-    if (estAnnule) {
-      executeWorkflow('demande_decalage_annulee', {
-        fiche: decalage?.id_fiche ? { id: decalage.id_fiche, date_rdv_time: decalage.date_prevu || decalage.date_nouvelle || null } : null,
-        user: req.user,
-        decalage: {
-          id: parseInt(id, 10),
-          id_fiche: decalage.id_fiche,
-          old_etat: decalage.id_etat,
-          new_etat: id_etat,
-          expediteur: decalage.expediteur,
-          destination: decalage.destination,
-          date_prevu: decalage.date_prevu,
-          date_nouvelle: decalage.date_nouvelle,
-          modifie_le: now,
-        },
-      }).catch((wfError) => {
-        console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (demande_decalage_annulee):', wfError);
       });
     }
   } catch (error) {
