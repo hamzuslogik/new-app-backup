@@ -250,7 +250,8 @@ const ControleQualite = () => {
     async ({ hash, type_alerte, commentaire }) => {
       const res = await api.post(`/fiches/${hash}/alerte-ko`, {
         type_alerte: type_alerte || 'PERSO',
-        commentaire: commentaire || null
+        commentaire: commentaire || null,
+        from_controle_qualite: true
       });
       return res.data;
     },

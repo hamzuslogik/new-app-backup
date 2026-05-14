@@ -61,6 +61,14 @@ const TRIGGER_VARIABLES = {
     '{demande_insertion.date_traitement}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
+  demande_insertion_refusee: [
+    '{fiche.id}', '{fiche.hash}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
+    '{demande_insertion.id}', '{demande_insertion.id_fiche_existante}', '{demande_insertion.id_agent}',
+    '{demande_insertion.agent_pseudo}', '{demande_insertion.id_superviseur}', '{demande_insertion.superviseur_pseudo}',
+    '{demande_insertion.id_rp_qualif}', '{demande_insertion.id_traitant}', '{demande_insertion.traitant_pseudo}',
+    '{demande_insertion.commentaire}', '{demande_insertion.date_traitement}', '{demande_insertion.statut}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
   planning_created: [
     '{planning.week}', '{planning.semaine}', '{planning.dep}', '{planning.departement}',
     '{planning.date}', '{planning.hour}', '{planning.scope}', '{planning.source}', '{planning.value}',
@@ -111,6 +119,17 @@ const TRIGGER_VARIABLES = {
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
+  alerte_controle_qualite_created: [
+    '{alerte_ko.id}', '{alerte_ko.id_fiche}', '{alerte_ko.id_agent}', '{alerte_ko.id_qualite}', '{alerte_ko.type_alerte}',
+    '{alerte_ko.num_alerte}', '{alerte_ko.date_alerte}', '{alerte_ko.commentaire}', '{alerte_ko.nom}', '{alerte_ko.prenom}', '{alerte_ko.tel}',
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  fiche_ko_created: [
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}', '{fiche.id_etat_final}', '{fiche.id_sous_etat}', '{fiche.ko}',
+    '{fiche_ko.source}', '{fiche_ko.id_sous_etat}', '{fiche_ko.sous_etat_titre}', '{fiche_ko.commentaire_ko}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
   scheduled: ['{workflow_id}', '{workflow_nom}', '{cron_expression}', '{scheduled_at}'],
   fiche_rdv_etat_check: [
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
@@ -131,7 +150,7 @@ const DYNAMIC_RECIPIENT_OPTIONS = [
   { value: '{fiche.id_superviseur_qualif_agent}', label: "Superviseur qualif de l'agent de la fiche ({fiche.id_superviseur_qualif_agent})" },
   { value: '{remarque.id_destinataire}', label: 'Destinataire de la remarque ({remarque.id_destinataire})' },
   { value: '{remarque.id_expediteur}', label: 'Expéditeur de la remarque ({remarque.id_expediteur})' },
-  { value: '{alerte_ko.id_agent}', label: "Agent destinataire de l'alerte KO ({alerte_ko.id_agent})" },
+  { value: '{alerte_ko.id_agent}', label: "Agent destinataire de l'alerte qualité / notification ({alerte_ko.id_agent})" },
   { value: '{decalage.expediteur}', label: 'Expéditeur du décalage ({decalage.expediteur})' },
   { value: '{decalage.destination}', label: 'Confirmateur (destination du décalage) ({decalage.destination})' }
 ];
@@ -661,6 +680,7 @@ const WorkflowsTab = () => {
                         <option value="compte_rendu_approved">Compte rendu approuvé</option>
                         <option value="demande_insertion_created">Demande d'insertion créée</option>
                         <option value="demande_insertion_approved">Demande d'insertion approuvée</option>
+                        <option value="demande_insertion_refusee">Demande d'insertion refusée</option>
                         <option value="planning_created">Planning créé</option>
                         <option value="planning_updated">Planning modifié</option>
                         <option value="decalage_created">Décalage créé</option>
@@ -668,7 +688,9 @@ const WorkflowsTab = () => {
                         <option value="decalage_refused">Décalage refusé</option>
                         <option value="demande_decalage_annulee">Demande de décalage annulée</option>
                         <option value="remarque_created">Remarque créée</option>
-                        <option value="alerte_ko_created">Alerte KO créée</option>
+                        <option value="alerte_ko_created">Alerte qualité (message agent, sans KO fiche — hors page CQ)</option>
+                        <option value="alerte_controle_qualite_created">Alerte qualité depuis Contrôle Qualité (sans KO fiche)</option>
+                        <option value="fiche_ko_created">Fiche mise en KO (ko = 1, validation qualité ou bascule KO)</option>
                         <option value="scheduled">Programmé (cron)</option>
                         <option value="fiche_rdv_etat_check">Filtre fiche (date RDV + état)</option>
                       </select>
@@ -1022,7 +1044,7 @@ const WorkflowsTab = () => {
                             <option value="id_superviseur_qualif_agent">Superviseur qualif de l&apos;agent de la fiche ({'{fiche.id_superviseur_qualif_agent}'})</option>
                             <option value="remarque_destinataire">Destinataire de la remarque (déclencheur remarque)</option>
                             <option value="remarque_expediteur">Expéditeur de la remarque (déclencheur remarque)</option>
-                            <option value="alerte_ko_agent">Agent destinataire de l&apos;alerte KO</option>
+                            <option value="alerte_ko_agent">Agent destinataire de l&apos;alerte qualité (notification, pas KO fiche)</option>
                             <option value="decalage_expediteur">Expéditeur du décalage (ex. commercial)</option>
                             <option value="decalage_destination">Confirmateur du décalage (destination)</option>
                           </select>
@@ -1404,7 +1426,7 @@ const WorkflowsTab = () => {
                               <option value="{fiche.id_superviseur_qualif_agent}">Superviseur qualif de l&apos;agent de la fiche ({'{fiche.id_superviseur_qualif_agent}'})</option>
                               <option value="{remarque.id_destinataire}">Destinataire de la remarque ({'{remarque.id_destinataire}'})</option>
                               <option value="{remarque.id_expediteur}">Expéditeur de la remarque ({'{remarque.id_expediteur}'})</option>
-                              <option value="{alerte_ko.id_agent}">Agent destinataire alerte KO ({'{alerte_ko.id_agent}'})</option>
+                              <option value="{alerte_ko.id_agent}">Agent destinataire alerte qualité ({'{alerte_ko.id_agent}'})</option>
                               <option value="{decalage.expediteur}">Expéditeur du décalage ({'{decalage.expediteur}'})</option>
                               <option value="{decalage.destination}">Confirmateur du décalage ({'{decalage.destination}'})</option>
                             </optgroup>

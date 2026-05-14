@@ -3513,8 +3513,7 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
         });
       }
     } else if (statut === 'REJETEE') {
-      // Refus : ne pas modifier la fiche existante (garder son état), ne pas insérer la nouvelle fiche.
-      // Notifications internes (demande_insertion_refusee) désactivées — à brancher sur un workflow si besoin.
+      // Refus : pas d’insertion de fiche ; notification via workflow `demande_insertion_refusee`.
     }
     
     // Mettre à jour la demande
@@ -3527,6 +3526,46 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
        WHERE id = ?`,
       [statut, req.user.id, commentaire || null, id]
     );
+
+    if (statut === 'REJETEE') {
+      let ficheWorkflow = null;
+      try {
+        if (demande.id_fiche_existante) {
+          ficheWorkflow = await queryOne('SELECT * FROM fiches WHERE id = ?', [demande.id_fiche_existante]);
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      executeWorkflow('demande_insertion_refusee', {
+        user: req.user,
+        fiche: ficheWorkflow || (ficheExistante?.id
+          ? {
+              id: ficheExistante.id,
+              nom: ficheExistante.nom,
+              prenom: ficheExistante.prenom,
+              tel: ficheExistante.tel,
+              hash: ficheHash,
+            }
+          : null),
+        fiche_id: demande.id_fiche_existante,
+        demande_insertion: {
+          id: parseInt(id, 10),
+          id_fiche_existante: demande.id_fiche_existante,
+          id_agent: demande.id_agent,
+          agent_pseudo: agentInfo?.pseudo || null,
+          id_superviseur: agentInfo?.chef_equipe || null,
+          superviseur_pseudo: agentInfo?.superviseur_pseudo || null,
+          id_rp_qualif: agentInfo?.id_rp_qualif || null,
+          id_traitant: req.user.id,
+          traitant_pseudo: traitantPseudo,
+          commentaire: commentaire || null,
+          date_traitement: now,
+          statut: 'REJETEE',
+        },
+      }).catch((wfError) => {
+        console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (demande_insertion_refusee):', wfError);
+      });
+    }
     
     res.json({
       success: true,
@@ -5229,7 +5268,27 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
         date_fiche: ficheInfosKo.date_insert_time ?? null
       });
     }
-    
+
+    let ficheApresKo = null;
+    try {
+      ficheApresKo = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
+    } catch (e) {
+      /* ignore */
+    }
+    executeWorkflow('fiche_ko_created', {
+      user: req.user,
+      fiche: ficheApresKo || { id, id_etat_final: newEtatId, id_sous_etat: id_sous_etat, ko: 1 },
+      fiche_id: id,
+      fiche_ko: {
+        source: 'validation_qualite',
+        id_sous_etat: id_sous_etat,
+        sous_etat_titre: sousEtat.titre,
+        commentaire_ko: commentaire_ko || null
+      }
+    }).catch((wfError) => {
+      console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (fiche_ko_created / validation qualité):', wfError);
+    });
+
     res.json({
       success: true,
       message: 'Fiche validée (KO) : En-Attente, non comptabilisée pour l\'agent',
@@ -5476,7 +5535,7 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
     if (!fiche.id_agent) {
       return res.status(400).json({ success: false, message: 'Cette fiche n\'a pas d\'agent assigné' });
     }
-    const { type_alerte, commentaire } = req.body;
+    const { type_alerte, commentaire, from_controle_qualite: fromControleQualite } = req.body;
     const typeAlerte = (type_alerte === 'TECHNIQUE' || type_alerte === 'PERSO') ? type_alerte : 'PERSO';
     let nb_alertes = 0;
     let nb_alertes_ce_type_agent_mois = 0;
@@ -5562,7 +5621,13 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
       /* ignore */
     }
     const alerteKoId = insertAlertHeader && insertAlertHeader.insertId ? insertAlertHeader.insertId : null;
-    executeWorkflow('alerte_ko_created', {
+    const cq =
+      fromControleQualite === true ||
+      fromControleQualite === 1 ||
+      fromControleQualite === '1' ||
+      fromControleQualite === 'true';
+    const workflowTriggerType = cq ? 'alerte_controle_qualite_created' : 'alerte_ko_created';
+    const eventPayload = {
       user: req.user,
       fiche: ficheFull || { id, ...fiche },
       fiche_id: id,
@@ -5579,8 +5644,12 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
         prenom: fiche.prenom ?? null,
         tel: fiche.tel ?? null
       }
-    }).catch((wfError) => {
-      console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (alerte_ko_created):', wfError);
+    };
+    if (cq) {
+      eventPayload.from_controle_qualite = true;
+    }
+    executeWorkflow(workflowTriggerType, eventPayload).catch((wfError) => {
+      console.error(`[WORKFLOW] Erreur lors de l'exécution des workflows (${workflowTriggerType}):`, wfError);
     });
   } catch (error) {
     console.error('Erreur POST alerte-ko:', error);
@@ -6448,12 +6517,36 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
     }
 
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const oldKoVal = fiche.ko != null ? Number(fiche.ko) : 0;
+    const newKoVal = ko ? 1 : 0;
     await query(
       `UPDATE fiches SET ko = ?, date_modif_time = ? WHERE id = ?`,
-      [ko ? 1 : 0, now, id]
+      [newKoVal, now, id]
     );
 
     logUserActivityEvent(req.user.id, ko ? 'fiche_ko_active' : 'fiche_ko_retire', { id_fiche: Number(id) });
+
+    if (newKoVal === 1 && oldKoVal !== 1) {
+      let ficheApresToggle = null;
+      try {
+        ficheApresToggle = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
+      } catch (e) {
+        /* ignore */
+      }
+      executeWorkflow('fiche_ko_created', {
+        user: req.user,
+        fiche: ficheApresToggle || { ...fiche, ko: 1 },
+        fiche_id: parseInt(id, 10),
+        fiche_ko: {
+          source: 'toggle_admin',
+          id_sous_etat: null,
+          sous_etat_titre: null,
+          commentaire_ko: null
+        }
+      }).catch((wfError) => {
+        console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (fiche_ko_created / toggle KO):', wfError);
+      });
+    }
 
     res.json({
       success: true,
