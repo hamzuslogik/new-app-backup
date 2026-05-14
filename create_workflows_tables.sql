@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `workflows` (
   `description` text CHARACTER SET utf8,
   `actif` tinyint(1) DEFAULT 1,
   `priorite` int(11) DEFAULT 0 COMMENT 'Ordre d''exécution (plus petit = prioritaire)',
+  `combine_triggers` varchar(8) NOT NULL DEFAULT 'or' COMMENT 'or ou and : lignes de declencheur de meme type',
   `date_creation` datetime DEFAULT NULL,
   `date_modif` datetime DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,

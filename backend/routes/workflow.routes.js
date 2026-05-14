@@ -4,6 +4,31 @@ const { authenticate, checkPermission } = require('../middleware/auth.middleware
 const { query, queryOne, transaction } = require('../config/database');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 
+/** `or` = au moins une ligne de déclencheur (même type) matche ; `and` = toutes doivent matcher */
+function normalizeCombineTriggers(v) {
+  if (v === 'and' || v === 'AND') return 'and';
+  return 'or';
+}
+
+async function ensureWorkflowCombineTriggersColumn() {
+  try {
+    const col = await queryOne(
+      `SELECT 1 AS ok FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = SCHEMA() AND TABLE_NAME = 'workflows' AND COLUMN_NAME = 'combine_triggers'`
+    );
+    if (!col) {
+      await query(
+        `ALTER TABLE workflows ADD COLUMN combine_triggers VARCHAR(8) NOT NULL DEFAULT 'or'`
+      );
+      console.log('[WORKFLOWS] Colonne combine_triggers ajoutée sur workflows');
+    }
+  } catch (e) {
+    console.warn('[WORKFLOWS] ensureWorkflowCombineTriggersColumn:', e.message);
+  }
+}
+
+ensureWorkflowCombineTriggersColumn();
+
 // =====================================================
 // WORKFLOWS
 // =====================================================
@@ -98,7 +123,7 @@ router.get('/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) 
 // Créer un workflow
 router.post('/', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
-    const { nom, description, actif, priorite, triggers, actions } = req.body;
+    const { nom, description, actif, priorite, triggers, actions, combine_triggers } = req.body;
 
     if (!nom) {
       return res.status(400).json({ success: false, message: 'Le nom est requis' });
@@ -115,9 +140,10 @@ router.post('/', authenticate, checkPermission(1, 2, 7, 11), async (req, res) =>
     const result = await transaction(async (connection) => {
       // Créer le workflow
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const combine = normalizeCombineTriggers(combine_triggers);
       const [workflowResult] = await connection.execute(
-        'INSERT INTO workflows (nom, description, actif, priorite, created_by, date_creation) VALUES (?, ?, ?, ?, ?, ?)',
-        [nom, description || null, actif !== undefined ? actif : 1, priorite || 0, req.user.id, now]
+        'INSERT INTO workflows (nom, description, actif, priorite, combine_triggers, created_by, date_creation) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [nom, description || null, actif !== undefined ? actif : 1, priorite || 0, combine, req.user.id, now]
       );
       const workflowId = workflowResult.insertId;
 
@@ -168,7 +194,7 @@ router.post('/', authenticate, checkPermission(1, 2, 7, 11), async (req, res) =>
 router.put('/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
-    const { nom, description, actif, priorite, triggers, actions } = req.body;
+    const { nom, description, actif, priorite, triggers, actions, combine_triggers } = req.body;
 
     const workflow = await queryOne('SELECT * FROM workflows WHERE id = ?', [id]);
     if (!workflow) {
@@ -177,13 +203,17 @@ router.put('/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) 
 
     await transaction(async (connection) => {
       // Mettre à jour le workflow
-      if (nom !== undefined || description !== undefined || actif !== undefined || priorite !== undefined) {
+      if (nom !== undefined || description !== undefined || actif !== undefined || priorite !== undefined || combine_triggers !== undefined) {
         const updates = [];
         const values = [];
         if (nom !== undefined) { updates.push('nom = ?'); values.push(nom); }
         if (description !== undefined) { updates.push('description = ?'); values.push(description); }
         if (actif !== undefined) { updates.push('actif = ?'); values.push(actif); }
         if (priorite !== undefined) { updates.push('priorite = ?'); values.push(priorite); }
+        if (combine_triggers !== undefined) {
+          updates.push('combine_triggers = ?');
+          values.push(normalizeCombineTriggers(combine_triggers));
+        }
         // Mettre à jour date_modif
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
         updates.push('date_modif = ?');

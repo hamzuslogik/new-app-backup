@@ -78,6 +78,107 @@ async function enrichWorkflowEventData(triggerType, eventData) {
 }
 
 /**
+ * Une ligne workflow_triggers (DB) matche-t-elle l'événement + conditions JSON ?
+ * @returns {boolean}
+ */
+function doesWorkflowTriggerRowFire(trigger, triggerType, eventData) {
+  let conditions = null;
+  let config = {};
+  try {
+    conditions = trigger.conditions ? JSON.parse(trigger.conditions) : null;
+    config = trigger.config ? JSON.parse(trigger.config) : {};
+  } catch (parseErr) {
+    console.error(`[WORKFLOW] Trigger id=${trigger.id}: JSON config/conditions invalide:`, parseErr.message);
+    return false;
+  }
+
+  console.log(`[WORKFLOW] Évaluation du trigger ID=${trigger.id}`);
+  console.log(`[WORKFLOW] Config:`, JSON.stringify(config, null, 2));
+  console.log(`[WORKFLOW] Conditions:`, JSON.stringify(conditions, null, 2));
+
+  let triggerMatches = true;
+
+  if (triggerType === 'etat_changed') {
+    const oldEtat = eventData.old_etat;
+    const newEtat = eventData.new_etat || eventData.fiche?.id_etat_final;
+
+    const oldEtatNum = oldEtat ? parseInt(oldEtat, 10) : null;
+    const newEtatNum = newEtat ? parseInt(newEtat, 10) : null;
+
+    console.log(`[WORKFLOW] État - Ancien: ${oldEtat} (${oldEtatNum}), Nouveau: ${newEtat} (${newEtatNum})`);
+    console.log(`[WORKFLOW] Config etat_from:`, config.etat_from, 'etat_from_any:', config.etat_from_any);
+    console.log(`[WORKFLOW] Config etat_to:`, config.etat_to, 'etat_to_any:', config.etat_to_any);
+
+    const fromAnyState = config.etat_from_any === true ||
+      (config.etat_from === undefined || config.etat_from === null || config.etat_from === '');
+    const fromNoSelection = Array.isArray(config.etat_from) && config.etat_from.length === 0 && !config.etat_from_any;
+
+    if (fromNoSelection) {
+      console.log(`[WORKFLOW] ❌ État source: liste vide (aucun état sélectionné)`);
+      triggerMatches = false;
+    } else if (fromAnyState) {
+      console.log(`[WORKFLOW] ✅ État source: n'importe quel état (etat_from_any ou non défini)`);
+    } else {
+      const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
+      const etatFromNums = etatFrom.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
+      if (oldEtatNum === null || !etatFromNums.includes(oldEtatNum)) {
+        console.log(`[WORKFLOW] ❌ État source ne correspond pas: ${oldEtatNum} n'est pas dans [${etatFromNums.join(', ')}]`);
+        triggerMatches = false;
+      } else {
+        console.log(`[WORKFLOW] ✅ État source correspond: ${oldEtatNum}`);
+      }
+    }
+
+    const toAnyState = config.etat_to_any === true ||
+      (config.etat_to === undefined || config.etat_to === null || config.etat_to === '');
+    const toNoSelection = Array.isArray(config.etat_to) && config.etat_to.length === 0 && !config.etat_to_any;
+
+    if (toNoSelection) {
+      console.log(`[WORKFLOW] ❌ État cible: liste vide (aucun état sélectionné)`);
+      triggerMatches = false;
+    } else if (toAnyState) {
+      console.log(`[WORKFLOW] ✅ État cible: n'importe quel état (etat_to_any ou non défini)`);
+    } else {
+      const etatTo = Array.isArray(config.etat_to) ? config.etat_to : [config.etat_to];
+      const etatToNums = etatTo.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
+      if (newEtatNum === null || !etatToNums.includes(newEtatNum)) {
+        console.log(`[WORKFLOW] ❌ État cible ne correspond pas: ${newEtatNum} n'est pas dans [${etatToNums.join(', ')}]`);
+        triggerMatches = false;
+      } else {
+        console.log(`[WORKFLOW] ✅ État cible correspond: ${newEtatNum}`);
+      }
+    }
+
+    if (triggerMatches && !toAnyState &&
+        (config.etat_to === undefined || config.etat_to === null || (Array.isArray(config.etat_to) && config.etat_to.length === 0)) &&
+        config.etat_id !== undefined && config.etat_id !== null && config.etat_id !== '') {
+      const etatId = Array.isArray(config.etat_id) ? config.etat_id : [config.etat_id];
+      const etatIdNums = etatId.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
+      if (newEtatNum === null || !etatIdNums.includes(newEtatNum)) {
+        console.log(`[WORKFLOW] ❌ État ID ne correspond pas: ${newEtatNum} n'est pas dans [${etatIdNums.join(', ')}]`);
+        triggerMatches = false;
+      } else {
+        console.log(`[WORKFLOW] ✅ État ID correspond: ${newEtatNum}`);
+      }
+    }
+  }
+
+  if (!triggerMatches) {
+    console.log(`[WORKFLOW] ❌ Trigger ne correspond pas aux critères spécifiés`);
+    return false;
+  }
+
+  const conditionsResult = evaluateConditions(conditions, eventData);
+  console.log(`[WORKFLOW] Résultat de l'évaluation des conditions:`, conditionsResult);
+  if (conditionsResult) {
+    console.log(`[WORKFLOW] ✅ Ligne de déclencheur satisfaite`);
+  } else {
+    console.log(`[WORKFLOW] ❌ Conditions non satisfaites`);
+  }
+  return !!conditionsResult;
+}
+
+/**
  * Exécute un workflow pour un événement donné
  * @param {string} triggerType - Type d'événement (fiche_created, etat_changed, remarque_created, alerte_ko_created, alerte_controle_qualite_created, fiche_ko_created, decalage_refused, demande_decalage_annulee, demande_insertion_refusee, etc.)
  * @param {Object} eventData - Données de l'événement (fiche, user, etc.)
@@ -142,120 +243,33 @@ async function executeWorkflow(triggerType, eventDataIn) {
           console.log(`[WORKFLOW]   Trigger ${index + 1}: ID=${t.id}, Config=${t.config}, Conditions=${t.conditions}`);
         });
 
-        let shouldExecute = false;
-        for (const trigger of triggers) {
-          let conditions = null;
-          let config = {};
-          try {
-            conditions = trigger.conditions ? JSON.parse(trigger.conditions) : null;
-            config = trigger.config ? JSON.parse(trigger.config) : {};
-          } catch (parseErr) {
-            console.error(`[WORKFLOW] Trigger id=${trigger.id}: JSON config/conditions invalide, ignoré:`, parseErr.message);
-            continue;
-          }
-          
-          console.log(`[WORKFLOW] Évaluation du trigger ID=${trigger.id}`);
-          console.log(`[WORKFLOW] Config:`, JSON.stringify(config, null, 2));
-          console.log(`[WORKFLOW] Conditions:`, JSON.stringify(conditions, null, 2));
-          
-          // Vérifier les conditions spécifiques au type de trigger
-          let triggerMatches = true;
-          
-          // Pour etat_changed, vérifier etat_from et etat_to si spécifiés
-          if (triggerType === 'etat_changed') {
-            const oldEtat = eventData.old_etat;
-            const newEtat = eventData.new_etat || eventData.fiche?.id_etat_final;
-            
-            // Convertir en nombres pour la comparaison
-            const oldEtatNum = oldEtat ? parseInt(oldEtat, 10) : null;
-            const newEtatNum = newEtat ? parseInt(newEtat, 10) : null;
-            
-            console.log(`[WORKFLOW] État - Ancien: ${oldEtat} (${oldEtatNum}), Nouveau: ${newEtat} (${newEtatNum})`);
-            console.log(`[WORKFLOW] Config etat_from:`, config.etat_from, 'etat_from_any:', config.etat_from_any);
-            console.log(`[WORKFLOW] Config etat_to:`, config.etat_to, 'etat_to_any:', config.etat_to_any);
-            
-            // "N'importe quel état" = etat_from_any true OU etat_from null/undefined (rétrocompat)
-            const fromAnyState = config.etat_from_any === true ||
-              (config.etat_from === undefined || config.etat_from === null || config.etat_from === '');
-            // Liste vide sans "from any" = aucun état sélectionné → ne matche pas
-            const fromNoSelection = Array.isArray(config.etat_from) && config.etat_from.length === 0 && !config.etat_from_any;
-            
-            // Vérifier etat_from
-            if (fromNoSelection) {
-              console.log(`[WORKFLOW] ❌ État source: liste vide (aucun état sélectionné)`);
-              triggerMatches = false;
-            } else if (fromAnyState) {
-              console.log(`[WORKFLOW] ✅ État source: n'importe quel état (etat_from_any ou non défini)`);
-            } else {
-              const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
-              const etatFromNums = etatFrom.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
-              if (oldEtatNum === null || !etatFromNums.includes(oldEtatNum)) {
-                console.log(`[WORKFLOW] ❌ État source ne correspond pas: ${oldEtatNum} n'est pas dans [${etatFromNums.join(', ')}]`);
-                triggerMatches = false;
-              } else {
-                console.log(`[WORKFLOW] ✅ État source correspond: ${oldEtatNum}`);
-              }
-            }
-            
-            // "N'importe quel état" = etat_to_any true OU etat_to null/undefined (rétrocompat)
-            const toAnyState = config.etat_to_any === true ||
-              (config.etat_to === undefined || config.etat_to === null || config.etat_to === '');
-            const toNoSelection = Array.isArray(config.etat_to) && config.etat_to.length === 0 && !config.etat_to_any;
-            
-            // Vérifier etat_to
-            if (toNoSelection) {
-              console.log(`[WORKFLOW] ❌ État cible: liste vide (aucun état sélectionné)`);
-              triggerMatches = false;
-            } else if (toAnyState) {
-              console.log(`[WORKFLOW] ✅ État cible: n'importe quel état (etat_to_any ou non défini)`);
-            } else {
-              const etatTo = Array.isArray(config.etat_to) ? config.etat_to : [config.etat_to];
-              const etatToNums = etatTo.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
-              if (newEtatNum === null || !etatToNums.includes(newEtatNum)) {
-                console.log(`[WORKFLOW] ❌ État cible ne correspond pas: ${newEtatNum} n'est pas dans [${etatToNums.join(', ')}]`);
-                triggerMatches = false;
-              } else {
-                console.log(`[WORKFLOW] ✅ État cible correspond: ${newEtatNum}`);
-              }
-            }
-            
-            // Support pour l'ancien format etat_id (compatibilité) - seulement si etat_to non défini et pas "to any"
-            if (triggerMatches && !toAnyState &&
-                (config.etat_to === undefined || config.etat_to === null || (Array.isArray(config.etat_to) && config.etat_to.length === 0)) &&
-                config.etat_id !== undefined && config.etat_id !== null && config.etat_id !== '') {
-              const etatId = Array.isArray(config.etat_id) ? config.etat_id : [config.etat_id];
-              const etatIdNums = etatId.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
-              if (newEtatNum === null || !etatIdNums.includes(newEtatNum)) {
-                console.log(`[WORKFLOW] ❌ État ID ne correspond pas: ${newEtatNum} n'est pas dans [${etatIdNums.join(', ')}]`);
-                triggerMatches = false;
-              } else {
-                console.log(`[WORKFLOW] ✅ État ID correspond: ${newEtatNum}`);
-              }
-            }
-          }
-          
-          if (!triggerMatches) {
-            console.log(`[WORKFLOW] ❌ Trigger ne correspond pas aux critères spécifiés`);
-            continue;
-          }
-          
-          // Vérifier les conditions générales
-          const conditionsResult = evaluateConditions(conditions, eventData);
-          console.log(`[WORKFLOW] Résultat de l'évaluation des conditions:`, conditionsResult);
-          
-          if (conditionsResult) {
-            shouldExecute = true;
-            console.log(`[WORKFLOW] ✅ Conditions satisfaites - Le workflow sera exécuté`);
-            break;
-          } else {
-            console.log(`[WORKFLOW] ❌ Conditions non satisfaites`);
-          }
-        }
+        const combineAnd = String(workflow.combine_triggers || 'or').toLowerCase() === 'and';
+        console.log(`[WORKFLOW] Combinaison des lignes de déclencheur (même type d'événement): ${combineAnd ? 'ET (toutes doivent matcher)' : 'OU (au moins une)'}`);
 
-        // Si pas de conditions, exécuter par défaut
+        let shouldExecute = false;
         if (triggers.length === 0) {
-          console.log(`[WORKFLOW] ⚠️  Aucune condition - exécution par défaut`);
+          console.log(`[WORKFLOW] ⚠️  Aucune ligne de déclencheur pour ce type - exécution par défaut`);
           shouldExecute = true;
+        } else if (!combineAnd) {
+          for (const trigger of triggers) {
+            if (doesWorkflowTriggerRowFire(trigger, triggerType, eventData)) {
+              shouldExecute = true;
+              console.log(`[WORKFLOW] ✅ Mode OU : au moins une ligne matche - le workflow sera exécuté`);
+              break;
+            }
+          }
+        } else {
+          shouldExecute = true;
+          for (const trigger of triggers) {
+            if (!doesWorkflowTriggerRowFire(trigger, triggerType, eventData)) {
+              shouldExecute = false;
+              console.log(`[WORKFLOW] ❌ Mode ET : une ligne ne matche pas - le workflow ne sera pas exécuté`);
+              break;
+            }
+          }
+          if (shouldExecute) {
+            console.log(`[WORKFLOW] ✅ Mode ET : toutes les lignes matchent`);
+          }
         }
 
         if (shouldExecute) {
