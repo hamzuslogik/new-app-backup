@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { getNotificationClickPath } from '../utils/notificationNavigation';
 import './Notifications.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -150,13 +151,34 @@ const Notifications = () => {
     if (notification.lu === 0) {
       markAsReadMutation.mutate(notification.id);
     }
+    const path = getNotificationClickPath(notification);
+    if (path) {
+      navigate(path);
+      return;
+    }
     if (notification.fiche_id && notification.hash) {
       navigate(`/fiches/${notification.hash}`);
     }
   };
 
   const handleCardClick = (e, notification) => {
-    if (notification.lu === 0 && !e.target.closest('button')) {
+    if (e.target.closest('button')) return;
+    const path = getNotificationClickPath(notification);
+    if (path) {
+      if (notification.lu === 0) {
+        markAsReadMutation.mutate(notification.id);
+      }
+      navigate(path);
+      return;
+    }
+    if (notification.fiche_id && notification.hash) {
+      if (notification.lu === 0) {
+        markAsReadMutation.mutate(notification.id);
+      }
+      navigate(`/fiches/${notification.hash}`);
+      return;
+    }
+    if (notification.lu === 0) {
       markAsReadMutation.mutate(notification.id);
     }
   };
@@ -300,7 +322,8 @@ const Notifications = () => {
               }
             }
 
-            return (
+            const clickPath = getNotificationClickPath(notification);
+            const canOpenFiche = notification.hash && user?.fonction !== 5 && user?.fonction !== 3;
               <div
                 key={notification.id}
                 role="button"
@@ -310,7 +333,14 @@ const Notifications = () => {
                 onClick={(e) => handleCardClick(e, notification)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(e, notification); } }}
                 className={`notification-card ${notification.lu === 0 ? 'unread' : ''} ${getNotificationTypeClass(notification.type)}`}
-                aria-label={notification.lu === 0 ? 'Cliquer pour marquer comme lu' : ''}
+                style={{ cursor: clickPath || (notification.hash && notification.fiche_id) ? 'pointer' : undefined }}
+                aria-label={
+                  clickPath || (notification.hash && notification.fiche_id)
+                    ? 'Cliquer pour ouvrir la page ou la fiche'
+                    : notification.lu === 0
+                      ? 'Cliquer pour marquer comme lu'
+                      : ''
+                }
               >
                 <div className="notification-header">
                   <div className="notification-type">
@@ -396,7 +426,7 @@ const Notifications = () => {
                         </button>
                       </>
                     )}
-                    {notification.hash && user?.fonction !== 5 && user?.fonction !== 3 && (
+                    {(clickPath || canOpenFiche) && (
                       <button
                         className="btn-view"
                         onClick={(e) => {
@@ -404,7 +434,7 @@ const Notifications = () => {
                           handleNotificationClick(notification);
                         }}
                       >
-                        <FaEye /> Voir la fiche
+                        <FaEye /> {clickPath ? 'Ouvrir la page' : 'Voir la fiche'}
                       </button>
                     )}
                     {notification.lu === 0 && (

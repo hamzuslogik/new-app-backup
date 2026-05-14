@@ -8,6 +8,7 @@ import api from '../config/api';
 import useLocalStorage from '../hooks/useLocalStorage';
 import useUserHomePage from '../hooks/useUserHomePage';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { getNotificationClickPath } from '../utils/notificationNavigation';
 import './Header.css';
 
 const Header = () => {
@@ -167,7 +168,21 @@ const Header = () => {
     navigate('/login');
   };
 
-  const handleNotificationClick = () => {
+  const navigateFromNotificationItem = (notification) => {
+    if (notification.lu === 0) {
+      markAsReadMutation.mutate(notification.id);
+    }
+    const path = getNotificationClickPath(notification);
+    if (path) {
+      navigate(path);
+      setShowNotifications(false);
+      return;
+    }
+    if (notification.hash && notification.fiche_id) {
+      navigate(`/fiches/${notification.hash}`);
+      setShowNotifications(false);
+      return;
+    }
     setShowNotifications(false);
     navigate('/notifications');
   };
@@ -377,7 +392,7 @@ const Header = () => {
                           onClick={(e) => {
                             if (e.target.closest('button')) return;
                             if (canAction) return;
-                            handleNotificationClick();
+                            navigateFromNotificationItem(notification);
                           }}
                           style={{ cursor: 'pointer' }}
                         >

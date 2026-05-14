@@ -460,10 +460,29 @@ async function executeAction(actionType, config, eventData) {
 }
 
 /**
- * Insère une notification. Tente d'abord avec id_expediteur et afficher_expediteur ;
- * si la table n'a pas ces colonnes (migration non exécutée), réessaie sans.
+ * Métadonnées JSON pour lien au clic (slug ou chemin relatif app interne uniquement).
+ * @param {string} [linkPage] — ex. "compte-rendu" ou "/compte-rendu"
+ * @returns {string|null}
  */
-async function insertNotification(query, type, id_fiche, message, destination, date_creation, idExpediteur, showExpediteur) {
+function buildNotificationLinkMetadataJson(linkPage) {
+  if (linkPage == null) return null;
+  const raw = String(linkPage).trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  if (lower.includes('://') || lower.startsWith('//') || lower.includes('javascript:') || lower.includes('@')) {
+    return null;
+  }
+  let path = raw.startsWith('/') ? raw : `/${raw}`;
+  path = path.replace(/\/+/g, '/');
+  if (path === '/' || path.length < 2) return null;
+  return JSON.stringify({ link_path: path, link_page: raw });
+}
+
+/**
+ * Insère une notification. Tente d'abord avec id_expediteur, afficher_expediteur et metadata ;
+ * en cas de colonnes absentes, réessaie avec des schémas plus simples.
+ */
+async function insertNotification(query, type, id_fiche, message, destination, date_creation, idExpediteur, showExpediteur, metadataStr = null) {
   // Anti-douplication : même événement rejoué (ex. deux déclencheurs le même payload) ne doit pas
   // dupliquer la même ligne. On compare type + message : deux alertes différentes le même jour restent possibles.
   if (id_fiche !== null && id_fiche !== undefined && destination && type != null && message != null) {
@@ -483,31 +502,44 @@ async function insertNotification(query, type, id_fiche, message, destination, d
     }
   }
 
-  const withExpediteur = async () => {
-    await query(
-      `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
-      [type, id_fiche, message, destination, date_creation, idExpediteur, showExpediteur]
-    );
-  };
-  const withoutExpediteur = async () => {
-    await query(
-      `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
-       VALUES (?, ?, ?, ?, ?, 0)`,
-      [type, id_fiche, message, destination, date_creation]
-    );
-  };
-  try {
-    await withExpediteur();
-  } catch (err) {
-    const unknownColumn = err.errno === 1054 || (err.code === 'ER_BAD_FIELD_ERROR') || (err.message && String(err.message).includes('Unknown column'));
-    if (unknownColumn) {
-      console.log('[WORKFLOW] Colonnes id_expediteur/afficher_expediteur absentes, insertion sans expéditeur');
-      await withoutExpediteur();
-    } else {
-      throw err;
+  const attempts = [
+    {
+      sql: `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur, metadata)
+            VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+      params: [type, id_fiche, message, destination, date_creation, idExpediteur, showExpediteur, metadataStr]
+    },
+    {
+      sql: `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
+            VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
+      params: [type, id_fiche, message, destination, date_creation, idExpediteur, showExpediteur]
+    },
+    {
+      sql: `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, metadata)
+            VALUES (?, ?, ?, ?, ?, 0, ?)`,
+      params: [type, id_fiche, message, destination, date_creation, metadataStr]
+    },
+    {
+      sql: `INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
+            VALUES (?, ?, ?, ?, ?, 0)`,
+      params: [type, id_fiche, message, destination, date_creation]
+    }
+  ];
+
+  let lastErr = null;
+  for (const { sql, params } of attempts) {
+    try {
+      await query(sql, params);
+      return;
+    } catch (err) {
+      const unknownColumn =
+        err.errno === 1054 ||
+        err.code === 'ER_BAD_FIELD_ERROR' ||
+        (err.message && String(err.message).includes('Unknown column'));
+      if (!unknownColumn) throw err;
+      lastErr = err;
     }
   }
+  throw lastErr || new Error('insertNotification: aucun schéma INSERT compatible');
 }
 
 /**
@@ -556,7 +588,15 @@ async function executeNotificationAction(config, eventData) {
   }, null, 2));
   
   const { query, queryOne } = require('../../config/database');
-  const { type, message, destination, destination_type, destination_fonctions, destination_utilisateurs, afficher_expediteur } = config;
+  const { type, message, destination, destination_type, destination_fonctions, destination_utilisateurs, afficher_expediteur, link_page, link_page_manual } = config;
+
+  const linkRaw =
+    link_page_manual != null && String(link_page_manual).trim() !== ''
+      ? String(link_page_manual).trim()
+      : link_page != null && String(link_page).trim() !== ''
+        ? String(link_page).trim()
+        : '';
+  const metadataJson = buildNotificationLinkMetadataJson(linkRaw);
 
   // Pré-calcule fiche.id_superviseur_qualif_agent (superviseur qualif de l'agent qui a créé la fiche)
   // pour qu'il soit résoluble via destination_utilisateurs ou destination legacy.
@@ -644,7 +684,7 @@ async function executeNotificationAction(config, eventData) {
     let createdCount = 0;
     let skippedCount = 0;
     for (const uid of recipientIds) {
-      const insertResult = await insertNotification(query, finalType, finalFicheId, finalMessage, uid, now, idExpediteur, showExpediteur);
+      const insertResult = await insertNotification(query, finalType, finalFicheId, finalMessage, uid, now, idExpediteur, showExpediteur, metadataJson);
       if (insertResult && insertResult.skipped) skippedCount += 1;
       else createdCount += 1;
     }
@@ -695,65 +735,30 @@ async function executeNotificationAction(config, eventData) {
       throw new Error('Aucun administrateur valide trouvé');
     }
     
-    // Construire les valeurs pour l'insertion en lot (avec id_expediteur, afficher_expediteur si colonnes présentes)
-    const flatValues = [];
-    const placeholders = [];
-    
+    let createdCount = 0;
+    let skippedCount = 0;
     for (const admin of validAdmins) {
-      placeholders.push('(?, ?, ?, ?, ?, 0, ?, ?)');
-      flatValues.push(finalType || null);
-      flatValues.push(finalFicheId !== undefined ? finalFicheId : null);
-      flatValues.push(finalMessage || null);
-      flatValues.push(admin.id || null);
-      flatValues.push(now || null);
-      flatValues.push(idExpediteur);
-      flatValues.push(showExpediteur);
+      const insertResult = await insertNotification(
+        query,
+        finalType,
+        finalFicheId,
+        finalMessage,
+        admin.id,
+        now,
+        idExpediteur,
+        showExpediteur,
+        metadataJson
+      );
+      if (insertResult && insertResult.skipped) skippedCount += 1;
+      else createdCount += 1;
     }
-    
-    console.log(`[WORKFLOW] Insertion de ${validAdmins.length} notification(s) pour les admins...`);
-    console.log(`[WORKFLOW] Nombre de placeholders:`, placeholders.length);
-    console.log(`[WORKFLOW] Nombre de valeurs:`, flatValues.length);
-    console.log(`[WORKFLOW] Exemple de valeurs (première notification):`, {
-      type: flatValues[0],
-      id_fiche: flatValues[1],
-      message: flatValues[2]?.substring(0, 50) + '...',
-      destination: flatValues[3],
-      date: flatValues[4]
-    });
-    
-    // Vérifier que le nombre de valeurs correspond aux placeholders (7 par ligne : type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
-    const expectedValues = placeholders.length * 7;
-    if (flatValues.length !== expectedValues) {
-      console.error(`[WORKFLOW] ❌ Nombre de valeurs incorrect: ${flatValues.length} au lieu de ${expectedValues}`);
-      throw new Error(`Erreur de construction des valeurs: ${flatValues.length} valeurs pour ${expectedValues} attendues`);
-    }
-    
-    const sqlQueryWithExpediteur = `
-      INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu, id_expediteur, afficher_expediteur)
-      VALUES ${placeholders.join(', ')}
-    `;
-    console.log(`[WORKFLOW] Nombre de paramètres:`, flatValues.length);
-    try {
-      await query(sqlQueryWithExpediteur, flatValues);
-    } catch (err) {
-      const unknownColumn = err.errno === 1054 || (err.code === 'ER_BAD_FIELD_ERROR') || (err.message && String(err.message).includes('Unknown column'));
-      if (unknownColumn) {
-        console.log('[WORKFLOW] Colonnes id_expediteur/afficher_expediteur absentes, insertion sans expéditeur');
-        const placeholdersLegacy = validAdmins.map(() => '(?, ?, ?, ?, ?, 0)').join(', ');
-        const flatValuesLegacy = [];
-        for (const admin of validAdmins) {
-          flatValuesLegacy.push(finalType || null, finalFicheId !== undefined ? finalFicheId : null, finalMessage || null, admin.id || null, now || null);
-        }
-        await query(`
-          INSERT INTO notifications (type, id_fiche, message, destination, date_creation, lu)
-          VALUES ${placeholdersLegacy}
-        `, flatValuesLegacy);
-      } else {
-        throw err;
-      }
-    }
-    console.log(`[WORKFLOW] ✅ ${validAdmins.length} notification(s) créée(s) avec succès`);
-    return { success: true, message: `${validAdmins.length} notification(s) créée(s)`, count: validAdmins.length };
+    console.log(`[WORKFLOW] ✅ ${createdCount} notification(s) admin créée(s), ${skippedCount} doublon(s) ignorée(s)`);
+    return {
+      success: true,
+      message: `${createdCount} notification(s) créée(s) pour les administrateurs`,
+      count: createdCount,
+      skipped: skippedCount
+    };
   }
   
   // Gérer les destinations spécifiques
@@ -867,7 +872,7 @@ async function executeNotificationAction(config, eventData) {
     date_creation: now
   });
 
-  const singleInsertResult = await insertNotification(query, finalType, finalFicheId, finalMessage, finalDestId, now, idExpediteur, showExpediteur);
+  const singleInsertResult = await insertNotification(query, finalType, finalFicheId, finalMessage, finalDestId, now, idExpediteur, showExpediteur, metadataJson);
   let notificationId = null;
   if (singleInsertResult && singleInsertResult.skipped) {
     notificationId = singleInsertResult.id || null;

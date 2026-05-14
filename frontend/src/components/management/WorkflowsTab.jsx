@@ -10,6 +10,7 @@ import { exportToCSV } from '../../utils/exportToCSV';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import './ManagementTab.css';
+import { NOTIFICATION_LINK_PAGE_PRESETS } from '../../utils/notificationNavigation';
 
 const TRIGGER_VARIABLES = {
   fiche_created: [
@@ -171,7 +172,7 @@ const WorkflowsTab = () => {
     actif: 1,
     priorite: 0,
     triggers: [{ type: 'fiche_created', config: {}, conditions: [] }],
-    actions: [{ type: 'notification', config: { type: 'workflow', message: '', destination: '' }, conditions: [], ordre: 0, delay_seconds: 0 }]
+    actions: [{ type: 'notification', config: { type: 'workflow', message: '', destination: '', link_page: '', link_page_manual: '' }, conditions: [], ordre: 0, delay_seconds: 0 }]
   });
   const [searchTerm, setSearchTerm] = useLocalStorage('management_workflows_search', '');
   const [currentPage, setCurrentPage] = useState(1);
@@ -279,7 +280,7 @@ const WorkflowsTab = () => {
           actif: 1,
           priorite: 0,
           triggers: [{ type: 'fiche_created', config: {}, conditions: [] }],
-          actions: [{ type: 'notification', config: { type: 'workflow', message: '', destination: '' }, conditions: [], ordre: 0, delay_seconds: 0 }]
+          actions: [{ type: 'notification', config: { type: 'workflow', message: '', destination: '', link_page: '', link_page_manual: '' }, conditions: [], ordre: 0, delay_seconds: 0 }]
         });
       },
       onError: (error) => {
@@ -585,7 +586,7 @@ const WorkflowsTab = () => {
               actif: 1,
               priorite: 0,
               triggers: [{ type: 'fiche_created', config: {}, conditions: [] }],
-              actions: [{ type: 'notification', config: { type: 'workflow', message: '', destination: '' }, conditions: [], ordre: 0, delay_seconds: 0 }]
+              actions: [{ type: 'notification', config: { type: 'workflow', message: '', destination: '', link_page: '', link_page_manual: '' }, conditions: [], ordre: 0, delay_seconds: 0 }]
             });
           }}>
             <FaPlus /> Créer un workflow
@@ -1067,6 +1068,28 @@ const WorkflowsTab = () => {
                             Afficher l&apos;expéditeur
                           </label>
                           <small>Si décoché, le nom de l&apos;expéditeur ne sera pas affiché dans la notification.</small>
+                        </div>
+                        <div className="form-group">
+                          <label>Clic sur la notification — page de destination</label>
+                          <select
+                            value={action.config?.link_page || ''}
+                            onChange={(e) => updateAction(index, 'config', { ...action.config, link_page: e.target.value })}
+                          >
+                            {NOTIFICATION_LINK_PAGE_PRESETS.map((opt) => (
+                              <option key={opt.value === '' ? '_default' : opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                          <small>Par défaut : ouverture de la fiche liée. Sinon : page interne (ex. compte-rendu → /compte-rendu).</small>
+                        </div>
+                        <div className="form-group">
+                          <label>Ou chemin / slug personnalisé (prioritaire)</label>
+                          <input
+                            type="text"
+                            value={action.config?.link_page_manual || ''}
+                            onChange={(e) => updateAction(index, 'config', { ...action.config, link_page_manual: e.target.value })}
+                            placeholder="ex. compte-rendu-pending ou /statistiques"
+                          />
+                          <small>Si ce champ est rempli, il remplace le menu ci-dessus.</small>
                         </div>
                       </>
                     )}

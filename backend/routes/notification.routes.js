@@ -89,6 +89,37 @@ const encodeFicheId = (id) => {
   return `${hash.substring(0, 16)}${encodedId}`;
 };
 
+/** Même règle que workflow-executor : slug ou chemin interne → JSON metadata.link_path */
+function mergeLinkPageIntoMetadata(metadata, linkPage) {
+  let base = {};
+  if (metadata != null) {
+    if (typeof metadata === 'string') {
+      try {
+        const parsed = JSON.parse(metadata);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) base = { ...parsed };
+      } catch (_) {
+        /* ignore */
+      }
+    } else if (typeof metadata === 'object' && !Array.isArray(metadata)) {
+      base = { ...metadata };
+    }
+  }
+  if (linkPage == null || String(linkPage).trim() === '') {
+    return Object.keys(base).length ? base : null;
+  }
+  const raw = String(linkPage).trim();
+  const lower = raw.toLowerCase();
+  if (lower.includes('://') || lower.startsWith('//') || lower.includes('javascript:') || lower.includes('@')) {
+    return Object.keys(base).length ? base : null;
+  }
+  let path = raw.startsWith('/') ? raw : `/${raw}`;
+  path = path.replace(/\/+/g, '/');
+  if (path === '/' || path.length < 2) {
+    return Object.keys(base).length ? base : null;
+  }
+  return { ...base, link_path: path, link_page: raw };
+}
+
 // Requêtes avec et sans colonnes expéditeur (si migration non exécutée)
 const NOTIF_SELECT_WITH_EXP = `n.*, n.id_fiche as notification_fiche_id,
          f.nom, f.prenom, f.tel, f.date_rdv_time, f.id as fiche_id, f.id_etat_final,
@@ -377,7 +408,7 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
-    const { type, id_fiche, fiche_hash, message, destination, date_rdv_time, metadata } = req.body;
+    const { type, id_fiche, fiche_hash, message, destination, date_rdv_time, metadata, link_page } = req.body;
 
     // Validation stricte
     if (!type || typeof type !== 'string' || type.trim() === '') {
@@ -402,9 +433,8 @@ router.post('/', authenticate, async (req, res) => {
 
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     
-    // Stocker les métadonnées (date_rdv_time, etc.) dans un champ JSON ou texte
-    // Pour simplifier, on utilise un champ texte pour stocker du JSON
-    const metadataStr = metadata ? JSON.stringify(metadata) : null;
+    const mergedMeta = mergeLinkPageIntoMetadata(metadata, link_page);
+    const metadataStr = mergedMeta ? JSON.stringify(mergedMeta) : null;
 
     // Si destination est spécifiée, créer pour cet utilisateur
     // Sinon, créer pour tous les admins (fonction 1, 2, 7)
