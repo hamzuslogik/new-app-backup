@@ -4,14 +4,6 @@ const { authenticate, checkPermission } = require('../middleware/auth.middleware
 const { query, queryOne, transaction } = require('../config/database');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 
-/** `or` = au moins une ligne de déclencheur (même type) matche ; `and` = toutes doivent matcher */
-function normalizeCombineTriggers(v) {
-  if (v === true || v === 1 || v === '1') return 'and';
-  const s = String(v == null ? '' : v).trim().toLowerCase();
-  if (s === 'and' || s === 'true') return 'and';
-  return 'or';
-}
-
 /** Normalise les IDs d'état côté serveur (évite chaînes / format legacy etat_id seul). */
 function sanitizeWorkflowTriggerConfig(type, config) {
   if (!config || typeof config !== 'object') return config || {};
@@ -144,7 +136,6 @@ router.get('/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) 
 router.post('/', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { nom, description, actif, priorite, triggers, actions } = req.body;
-    const combine_triggers = req.body.combine_triggers ?? req.body.combineTriggers;
 
     if (!nom) {
       return res.status(400).json({ success: false, message: 'Le nom est requis' });
@@ -161,10 +152,9 @@ router.post('/', authenticate, checkPermission(1, 2, 7, 11), async (req, res) =>
     const result = await transaction(async (connection) => {
       // Créer le workflow
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      const combine = normalizeCombineTriggers(combine_triggers);
       const [workflowResult] = await connection.execute(
         'INSERT INTO workflows (nom, description, actif, priorite, combine_triggers, created_by, date_creation) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [nom, description || null, actif !== undefined ? actif : 1, priorite || 0, combine, req.user.id, now]
+        [nom, description || null, actif !== undefined ? actif : 1, priorite || 0, 'or', req.user.id, now]
       );
       const workflowId = workflowResult.insertId;
 
@@ -216,7 +206,6 @@ router.put('/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) 
   try {
     const { id } = req.params;
     const { nom, description, actif, priorite, triggers, actions } = req.body;
-    const combine_triggers = req.body.combine_triggers ?? req.body.combineTriggers;
 
     const workflow = await queryOne('SELECT * FROM workflows WHERE id = ?', [id]);
     if (!workflow) {
@@ -225,17 +214,13 @@ router.put('/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) 
 
     await transaction(async (connection) => {
       // Mettre à jour le workflow
-      if (nom !== undefined || description !== undefined || actif !== undefined || priorite !== undefined || combine_triggers !== undefined) {
+      if (nom !== undefined || description !== undefined || actif !== undefined || priorite !== undefined) {
         const updates = [];
         const values = [];
         if (nom !== undefined) { updates.push('nom = ?'); values.push(nom); }
         if (description !== undefined) { updates.push('description = ?'); values.push(description); }
         if (actif !== undefined) { updates.push('actif = ?'); values.push(actif); }
         if (priorite !== undefined) { updates.push('priorite = ?'); values.push(priorite); }
-        if (combine_triggers !== undefined) {
-          updates.push('combine_triggers = ?');
-          values.push(normalizeCombineTriggers(combine_triggers));
-        }
         // Mettre à jour date_modif
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
         updates.push('date_modif = ?');
@@ -286,6 +271,12 @@ router.put('/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) 
           }
         }
       }
+
+      const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      await connection.execute(
+        'UPDATE workflows SET combine_triggers = ?, date_modif = ? WHERE id = ?',
+        ['or', stamp, id]
+      );
     });
 
     res.json({ success: true, message: 'Workflow mis à jour avec succès' });

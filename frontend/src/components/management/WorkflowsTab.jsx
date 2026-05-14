@@ -217,7 +217,6 @@ const WorkflowsTab = () => {
     description: '',
     actif: 1,
     priorite: 0,
-    combine_triggers: 'or',
     triggers: [{ type: 'fiche_created', config: {}, conditions: [] }],
     actions: [{ type: 'notification', config: { type: 'workflow', message: '', destination: '', link_page: '', link_page_manual: '' }, conditions: [], ordre: 0, delay_seconds: 0 }]
   });
@@ -326,7 +325,6 @@ const WorkflowsTab = () => {
           description: '',
           actif: 1,
           priorite: 0,
-          combine_triggers: 'or',
           triggers: [{ type: 'fiche_created', config: {}, conditions: [] }],
           actions: [{ type: 'notification', config: { type: 'workflow', message: '', destination: '', link_page: '', link_page_manual: '' }, conditions: [], ordre: 0, delay_seconds: 0 }]
         });
@@ -410,7 +408,6 @@ const WorkflowsTab = () => {
       description: workflow.description || '',
       actif: workflow.actif,
       priorite: workflow.priorite || 0,
-      combine_triggers: workflow.combine_triggers === 'and' ? 'and' : 'or',
       triggers: rawTriggers.map(normalizeTriggerConfigForForm),
       actions: workflow.actions || [{ type: 'notification', config: {}, conditions: [], ordre: 0, delay_seconds: 0 }]
     });
@@ -683,7 +680,6 @@ const WorkflowsTab = () => {
               description: '',
               actif: 1,
               priorite: 0,
-              combine_triggers: 'or',
               triggers: [{ type: 'fiche_created', config: {}, conditions: [] }],
               actions: [{ type: 'notification', config: { type: 'workflow', message: '', destination: '', link_page: '', link_page_manual: '' }, conditions: [], ordre: 0, delay_seconds: 0 }]
             });
@@ -757,22 +753,6 @@ const WorkflowsTab = () => {
                     min="0"
                   />
                 </div>
-              </div>
-
-              <div className="form-group">
-                <label>Combinaison des déclencheurs (même type d&apos;événement)</label>
-                <select
-                  value={formData.combine_triggers}
-                  onChange={(e) => setFormData({ ...formData, combine_triggers: e.target.value })}
-                >
-                  <option value="or">OU — au moins une ligne de déclencheur doit correspondre</option>
-                  <option value="and">ET — toutes les lignes de déclencheur doivent correspondre</option>
-                </select>
-                <p style={{ fontSize: '12px', color: '#555', marginTop: '6px', marginBottom: 0 }}>
-                  S&apos;applique lorsque plusieurs blocs « Déclencheur » partagent le même type (ex. plusieurs « État changé »).
-                  Les types d&apos;événements différents restent indépendants (chaque événement déclenche séparément).
-                  Les conditions avancées à l&apos;intérieur d&apos;un bloc restent en ET entre elles.
-                </p>
               </div>
 
               <div className="form-section">
