@@ -109,24 +109,27 @@ const TRIGGER_VARIABLES = {
   ],
   remarque_created: [
     '{remarque.id}', '{remarque.nature_remarque}', '{remarque.commentaire}', '{remarque.id_expediteur}', '{remarque.id_destinataire}',
-    '{remarque.id_fiche}', '{remarque.date_remarque}',
+    '{remarque.id_fiche}', '{remarque.date_remarque}', '{remarque.destinataire_pseudo}', '{remarque.agent_qualification_nom}',
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   alerte_ko_created: [
     '{alerte_ko.id}', '{alerte_ko.id_fiche}', '{alerte_ko.id_agent}', '{alerte_ko.id_qualite}', '{alerte_ko.type_alerte}',
     '{alerte_ko.num_alerte}', '{alerte_ko.date_alerte}', '{alerte_ko.commentaire}', '{alerte_ko.nom}', '{alerte_ko.prenom}', '{alerte_ko.tel}',
+    '{alerte_ko.agent_pseudo}', '{alerte_ko.agent_qualification_nom}',
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   alerte_controle_qualite_created: [
     '{alerte_ko.id}', '{alerte_ko.id_fiche}', '{alerte_ko.id_agent}', '{alerte_ko.id_qualite}', '{alerte_ko.type_alerte}',
     '{alerte_ko.num_alerte}', '{alerte_ko.date_alerte}', '{alerte_ko.commentaire}', '{alerte_ko.nom}', '{alerte_ko.prenom}', '{alerte_ko.tel}',
+    '{alerte_ko.agent_pseudo}', '{alerte_ko.agent_qualification_nom}',
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
   fiche_ko_created: [
-    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}', '{fiche.id_etat_final}', '{fiche.id_sous_etat}', '{fiche.ko}',
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}', '{fiche.agent_pseudo}', '{fiche.agent_qualification_nom}',
+    '{fiche.id_etat_final}', '{fiche.id_sous_etat}', '{fiche.ko}',
     '{fiche_ko.source}', '{fiche_ko.id_sous_etat}', '{fiche_ko.sous_etat_titre}', '{fiche_ko.commentaire_ko}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],

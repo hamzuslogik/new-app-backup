@@ -316,8 +316,12 @@ const Fiches = () => {
 
   // Mutation pour mettre une fiche en KO
   const koMutation = useMutation(
-    async ({ id, ko }) => {
-      const response = await api.patch(`/fiches/${id}/ko`, { ko });
+    async ({ id, ko, commentaire_qualite }) => {
+      const body = { ko };
+      if (ko && commentaire_qualite != null && String(commentaire_qualite).trim() !== '') {
+        body.commentaire_qualite = String(commentaire_qualite).trim();
+      }
+      const response = await api.patch(`/fiches/${id}/ko`, body);
       return response.data;
     },
     {
@@ -1107,11 +1111,22 @@ const Fiches = () => {
                                 <button
                                   className={`btn-ko ${fiche.ko ? 'active' : ''}`}
                                   onClick={() => {
-                                    if (fiche.hash) {
-                                      if (window.confirm(fiche.ko ? 'Retirer le KO de cette fiche ?' : 'Mettre cette fiche en KO ?')) {
-                                        koMutation.mutate({ id: fiche.hash, ko: !fiche.ko });
+                                    if (!fiche.hash) return;
+                                    if (fiche.ko) {
+                                      if (window.confirm('Retirer le KO de cette fiche ?')) {
+                                        koMutation.mutate({ id: fiche.hash, ko: false });
                                       }
+                                      return;
                                     }
+                                    if (!window.confirm('Mettre cette fiche en KO ?')) return;
+                                    const commentaire = window.prompt('Commentaire KO (obligatoire) :', '');
+                                    if (commentaire === null) return;
+                                    const c = String(commentaire).trim();
+                                    if (!c) {
+                                      toast.error('Le commentaire KO est obligatoire.');
+                                      return;
+                                    }
+                                    koMutation.mutate({ id: fiche.hash, ko: true, commentaire_qualite: c });
                                   }}
                                   title={fiche.ko ? 'Retirer KO' : 'Mettre en KO'}
                                 >

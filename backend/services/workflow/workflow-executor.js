@@ -2,12 +2,89 @@ const { query, queryOne } = require('../../config/database');
 const { getDefaultSMSProvider, sendSMSViaProvider } = require('../sms.service');
 
 /**
+ * Libellé affichage agent (qualification) : pseudo si présent, sinon « prénom nom ».
+ */
+function formatAgentQualificationDisplayName(u) {
+  if (!u) return '';
+  const p = u.pseudo != null && String(u.pseudo).trim() !== '' ? String(u.pseudo).trim() : '';
+  if (p) return p;
+  const parts = [u.prenom, u.nom].map((x) => (x != null ? String(x).trim() : '')).filter(Boolean);
+  return parts.join(' ') || '';
+}
+
+/**
+ * Ajoute pseudo / nom affichage pour l'agent qualification selon le déclencheur
+ * (remarque → destinataire ; alerte KO → id_agent fiche ; fiche KO → id_agent fiche).
+ */
+async function enrichWorkflowEventData(triggerType, eventData) {
+  if (!eventData || typeof eventData !== 'object') {
+    return eventData;
+  }
+
+  const loadUser = async (userId) => {
+    const id = userId != null && userId !== '' ? parseInt(userId, 10) : NaN;
+    if (!Number.isFinite(id) || id <= 0) return null;
+    return queryOne('SELECT id, pseudo, nom, prenom FROM utilisateurs WHERE id = ?', [id]);
+  };
+
+  try {
+    if (triggerType === 'remarque_created' && eventData.remarque && eventData.remarque.id_destinataire) {
+      const u = await loadUser(eventData.remarque.id_destinataire);
+      const nomAff = formatAgentQualificationDisplayName(u);
+      return {
+        ...eventData,
+        remarque: {
+          ...eventData.remarque,
+          destinataire_pseudo: u?.pseudo ?? null,
+          agent_qualification_nom: nomAff || null
+        }
+      };
+    }
+
+    if (
+      (triggerType === 'alerte_ko_created' || triggerType === 'alerte_controle_qualite_created') &&
+      eventData.alerte_ko &&
+      eventData.alerte_ko.id_agent
+    ) {
+      const u = await loadUser(eventData.alerte_ko.id_agent);
+      const nomAff = formatAgentQualificationDisplayName(u);
+      return {
+        ...eventData,
+        alerte_ko: {
+          ...eventData.alerte_ko,
+          agent_pseudo: u?.pseudo ?? null,
+          agent_qualification_nom: nomAff || null
+        }
+      };
+    }
+
+    if (triggerType === 'fiche_ko_created' && eventData.fiche && eventData.fiche.id_agent) {
+      const u = await loadUser(eventData.fiche.id_agent);
+      const nomAff = formatAgentQualificationDisplayName(u);
+      return {
+        ...eventData,
+        fiche: {
+          ...eventData.fiche,
+          agent_pseudo: u?.pseudo ?? null,
+          agent_qualification_nom: nomAff || null
+        }
+      };
+    }
+  } catch (e) {
+    console.error('[WORKFLOW] enrichWorkflowEventData:', e);
+  }
+
+  return eventData;
+}
+
+/**
  * Exécute un workflow pour un événement donné
  * @param {string} triggerType - Type d'événement (fiche_created, etat_changed, remarque_created, alerte_ko_created, alerte_controle_qualite_created, fiche_ko_created, decalage_refused, demande_decalage_annulee, demande_insertion_refusee, etc.)
  * @param {Object} eventData - Données de l'événement (fiche, user, etc.)
  * @returns {Promise<Array>} Liste des workflows exécutés
  */
-async function executeWorkflow(triggerType, eventData) {
+async function executeWorkflow(triggerType, eventDataIn) {
+  const eventData = await enrichWorkflowEventData(triggerType, eventDataIn);
   console.log('[WORKFLOW] ========== executeWorkflow DÉBUT ==========');
   console.log('[WORKFLOW] Trigger type:', triggerType);
   console.log('[WORKFLOW] Event data (résumé):', JSON.stringify({

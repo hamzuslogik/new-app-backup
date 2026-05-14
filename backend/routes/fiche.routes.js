@@ -6505,7 +6505,7 @@ router.patch('/:id/archive', authenticate, hashToIdMiddleware, async (req, res) 
 router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const { ko } = req.body;
+    const { ko, commentaire_qualite } = req.body;
 
     // Vérifier que la fiche existe
     const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
@@ -6528,14 +6528,61 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const oldKoVal = fiche.ko != null ? Number(fiche.ko) : 0;
     const newKoVal = ko ? 1 : 0;
-    await query(
-      `UPDATE fiches SET ko = ?, date_modif_time = ? WHERE id = ?`,
-      [newKoVal, now, id]
-    );
+    const oldCommentaireQualite = fiche.commentaire_qualite;
+
+    if (newKoVal === 1 && oldKoVal !== 1) {
+      const cq =
+        commentaire_qualite != null ? String(commentaire_qualite).trim() : '';
+      if (!cq) {
+        return res.status(400).json({
+          success: false,
+          message: 'Le commentaire KO est obligatoire pour mettre une fiche en KO.'
+        });
+      }
+      await query(
+        `UPDATE fiches SET ko = 1, commentaire_qualite = ?, date_modif_time = ? WHERE id = ?`,
+        [cq, now, id]
+      );
+      if (oldKoVal !== newKoVal) {
+        await logModification(
+          id,
+          req.user.id,
+          req.user.pseudo || 'Utilisateur',
+          'ko',
+          oldKoVal,
+          newKoVal
+        );
+      }
+      await logModification(
+        id,
+        req.user.id,
+        req.user.pseudo || 'Utilisateur',
+        'commentaire_qualite',
+        oldCommentaireQualite ?? null,
+        cq
+      );
+    } else {
+      await query(
+        `UPDATE fiches SET ko = ?, date_modif_time = ? WHERE id = ?`,
+        [newKoVal, now, id]
+      );
+      if (oldKoVal !== newKoVal) {
+        await logModification(
+          id,
+          req.user.id,
+          req.user.pseudo || 'Utilisateur',
+          'ko',
+          oldKoVal,
+          newKoVal
+        );
+      }
+    }
 
     logUserActivityEvent(req.user.id, ko ? 'fiche_ko_active' : 'fiche_ko_retire', { id_fiche: Number(id) });
 
     if (newKoVal === 1 && oldKoVal !== 1) {
+      const cqForWf =
+        commentaire_qualite != null ? String(commentaire_qualite).trim() : '';
       let ficheApresToggle = null;
       try {
         ficheApresToggle = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
@@ -6544,13 +6591,13 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
       }
       executeWorkflow('fiche_ko_created', {
         user: req.user,
-        fiche: ficheApresToggle || { ...fiche, ko: 1 },
+        fiche: ficheApresToggle || { ...fiche, ko: 1, commentaire_qualite: cqForWf },
         fiche_id: parseInt(id, 10),
         fiche_ko: {
           source: 'toggle_admin',
           id_sous_etat: null,
           sous_etat_titre: null,
-          commentaire_ko: null
+          commentaire_ko: cqForWf || null
         }
       }).catch((wfError) => {
         console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (fiche_ko_created / toggle KO):', wfError);
