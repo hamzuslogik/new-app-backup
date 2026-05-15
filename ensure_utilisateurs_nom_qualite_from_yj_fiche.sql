@@ -16,7 +16,7 @@
 --
 -- Reglages :
 --   @fonction_qualite : id dans la table fonctions (agent qualification / qualite).
---                       Par defaut 3 (voir commentaires create_table_alert_ko.sql).
+--                       Par defaut 8 (qualification qualite).
 --   @etat_inactif : toujours 0 — utilisateur cree mais INACTIF (pas de connexion / desactive).
 --                   Reactiver manuellement dans le CRM (passer etat a 1) si besoin.
 --
@@ -24,7 +24,7 @@
 
 USE `crm`;
 
-SET @fonction_qualite = 3;
+SET @fonction_qualite = 8;
 SET @etat_inactif = 0;
 
 SET SQL_SAFE_UPDATES = 0;

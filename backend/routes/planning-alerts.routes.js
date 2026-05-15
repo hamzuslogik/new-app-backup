@@ -3,7 +3,22 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
 
-const ALLOWED_MANAGERS = [1, 2, 7, 11, 13, 14];
+/** Édition des alertes planning : pas le superviseur qualification (2) ni les RE qualification. */
+const PLANNING_ALERT_EDIT_FUNCTIONS = [1, 7, 11, 13, 14];
+
+async function canEditPlanningAlerts(user) {
+  if (!user?.id) return false;
+  const f = Number(user.fonction);
+  if (!Number.isFinite(f)) return false;
+  if (f === 2) return false;
+  if (!PLANNING_ALERT_EDIT_FUNCTIONS.includes(f)) return false;
+  const sub = await queryOne(
+    `SELECT 1 AS ok FROM utilisateurs WHERE chef_equipe = ? AND fonction = 3 LIMIT 1`,
+    [user.id]
+  );
+  if (sub?.ok) return false;
+  return true;
+}
 const SLOT_HOURS = new Set(['09:00:00', '11:00:00', '13:00:00', '16:00:00', '18:00:00', '19:30:00']);
 const DAY_NAMES = new Set(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi']);
 
@@ -187,8 +202,7 @@ router.get('/', authenticate, async (req, res) => {
 
 router.post('/', authenticate, async (req, res) => {
   try {
-    const fonction = Number(req.user?.fonction);
-    if (!ALLOWED_MANAGERS.includes(fonction)) {
+    if (!(await canEditPlanningAlerts(req.user))) {
       return res.status(403).json({ success: false, message: 'Accès refusé' });
     }
 
@@ -244,8 +258,7 @@ router.post('/', authenticate, async (req, res) => {
 
 router.put('/:id', authenticate, async (req, res) => {
   try {
-    const fonction = Number(req.user?.fonction);
-    if (!ALLOWED_MANAGERS.includes(fonction)) {
+    if (!(await canEditPlanningAlerts(req.user))) {
       return res.status(403).json({ success: false, message: 'Accès refusé' });
     }
 
@@ -317,8 +330,7 @@ router.put('/:id', authenticate, async (req, res) => {
 
 router.delete('/:id', authenticate, async (req, res) => {
   try {
-    const fonction = Number(req.user?.fonction);
-    if (!ALLOWED_MANAGERS.includes(fonction)) {
+    if (!(await canEditPlanningAlerts(req.user))) {
       return res.status(403).json({ success: false, message: 'Accès refusé' });
     }
     await ensurePlanningAlertsTable();

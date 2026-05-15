@@ -338,7 +338,12 @@ const Sidebar = ({ collapsed }) => {
       icon: FaBell,
       permission: null,
       visible: true,
-      customCheck: (item, user) => [1, 2, 7, 11, 13, 14].includes(Number(user?.fonction)),
+      // Pas pour superviseur qualification (2) ni RE qualification (chef d'équipe agents qualif.)
+      customCheck: (item, user, _hasPermission, isREQualif) => {
+        const f = Number(user?.fonction);
+        if (f === 2 || isREQualif) return false;
+        return [1, 7, 11, 13, 14].includes(f);
+      },
     },
     {
       path: '/validation',

@@ -28,7 +28,7 @@ import KPIs from './pages/KPIs';
 import StatistiquesV2 from './pages/StatistiquesV2';
 import ControleQualite from './pages/ControleQualite';
 import Alertes from './pages/Alertes';
-import AlertePlanning from './pages/AlertePlanning';
+import AlertePlanningGate from './components/AlertePlanningGate';
 import Remarques from './pages/Remarques';
 import AuditRDV from './pages/AuditRDV';
 import ListeCompletudes from './pages/ListeCompletudes';
@@ -97,7 +97,7 @@ function App() {
           <Route path="statistiques-v2" element={<ProtectedRoute permission="statistiques_v2_view"><StatistiquesV2 /></ProtectedRoute>} />
           <Route path="controle-qualite" element={<ProtectedRoute permission="controle_qualite_view"><ControleQualite /></ProtectedRoute>} />
           <Route path="alertes" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[3, 2, 12]}><Alertes /></ProtectedRoute>} />
-          <Route path="alerte-planning" element={<ProtectedRoute permission={null} allowFunctions={[1, 2, 7, 11, 13, 14]}><AlertePlanning /></ProtectedRoute>} />
+          <Route path="alerte-planning" element={<AlertePlanningGate />} />
           <Route path="remarques" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[2, 12]}><Remarques /></ProtectedRoute>} />
           <Route path="audit-rdv" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[4, 13]}><AuditRDV /></ProtectedRoute>} />
           <Route path="liste-completudes" element={<ProtectedRoute permission={null} allowFunctions={[4, 13, 14]}><ListeCompletudes /></ProtectedRoute>} />
