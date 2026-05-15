@@ -84,9 +84,6 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Onglet Stat KO : uniquement les fiches avec ko = 1
     if (ko === '1' || ko === 1) {
       conditions.push('ko = 1');
-    } else if (name_stat === 'AGENT') {
-      // Onglet Agent : exclure les fiches KO, compter uniquement les non-KO
-      conditions.push('(ko = 0 OR ko IS NULL)');
     }
 
     const additionalConditions = conditions.length > 0 ? ' AND ' + conditions.join(' AND ') : '';
@@ -102,6 +99,9 @@ router.get('/all-stat', authenticate, async (req, res) => {
     const etatsMap = {};
     const etatsTaux = {};
     const etatsColor = {};
+    const KO_STAT_COLUMN_ID = 'ko';
+    const KO_STAT_COLOR = '#dc3545';
+
     etats.forEach(etat => {
       etatsMap[etat.id] = etat.abbreviation || etat.titre;
       etatsColor[etat.id] = etat.color || '#cccccc';
@@ -120,6 +120,28 @@ router.get('/all-stat', authenticate, async (req, res) => {
           break;
       }
     });
+
+    // Colonne KO : fiches avec ko=1 (pas dans la colonne de leur id_etat_final)
+    const koEtatInDb = etats.find(
+      (e) => String(e.abbreviation || '').trim().toUpperCase() === 'KO'
+    );
+    const koColumnKey = koEtatInDb ? koEtatInDb.id : KO_STAT_COLUMN_ID;
+    if (!koEtatInDb) {
+      etatsTaux[KO_STAT_COLUMN_ID] = -1;
+    }
+    const etatsWithKo = koEtatInDb
+      ? [...etats]
+      : [
+          ...etats,
+          {
+            id: KO_STAT_COLUMN_ID,
+            titre: 'KO',
+            abbreviation: 'KO',
+            color: KO_STAT_COLOR,
+            taux: 'NEGATIVE',
+            ordre: 99999
+          }
+        ];
 
     // Valider le champ de date pour éviter les injections SQL
     // Note: date_appel_time n'existe pas dans le schéma, on utilise date_appel (bigint) si nécessaire
@@ -160,17 +182,20 @@ router.get('/all-stat', authenticate, async (req, res) => {
     );
     const total = totalResult.total || 0;
 
-    // Récupérer les statistiques groupées
+    // Récupérer les statistiques groupées (ko=1 → colonne KO, sinon id_etat_final)
     const stats = await query(
-      `SELECT id_etat_final, \`${groupByField}\`, COUNT(id_etat_final) AS stats
+      `SELECT
+         CASE WHEN (ko = 1) THEN ? ELSE CAST(id_etat_final AS CHAR) END AS etat_key,
+         \`${groupByField}\`,
+         COUNT(*) AS stats
        FROM fiches
-       WHERE (archive = 0 OR archive IS NULL) 
-       AND active = 1 
-       AND \`${dateFieldForQuery}\` >= ? 
+       WHERE (archive = 0 OR archive IS NULL)
+       AND active = 1
+       AND \`${dateFieldForQuery}\` >= ?
        AND \`${dateFieldForQuery}\` <= ?${additionalConditions}
-       GROUP BY \`${groupByField}\`, id_etat_final
-       ORDER BY id_etat_final ASC`,
-      queryParams
+       GROUP BY etat_key, \`${groupByField}\`
+       ORDER BY etat_key ASC`,
+      [String(koColumnKey), ...queryParams]
     );
 
     // Organiser les données par utilisateur/centre
@@ -190,9 +215,9 @@ router.get('/all-stat', authenticate, async (req, res) => {
         };
       }
 
-      const etatId = stat.id_etat_final;
+      const etatId = stat.etat_key;
       const count = stat.stats;
-      const taux = etatsTaux[etatId] || 0;
+      const taux = etatsTaux[etatId] ?? (String(etatId) === String(koColumnKey) ? -1 : 0);
 
       // Stocker le nombre par état
       dataByEntity[entityId][etatId] = count;
@@ -246,11 +271,11 @@ router.get('/all-stat', authenticate, async (req, res) => {
       name_stat: (name_stat === 'STAT_KO') ? 'AGENT' : name_stat,
       stat_type: statType,
       total: total,
-      etats: etats.map(e => ({
+      etats: etatsWithKo.map(e => ({
         id: e.id,
         abbreviation: e.abbreviation || e.titre,
-        color: e.color || '#cccccc',
-        taux: etatsTaux[e.id] || 0
+        color: e.color || (String(e.id) === String(koColumnKey) ? KO_STAT_COLOR : '#cccccc'),
+        taux: etatsTaux[e.id] ?? (String(e.id) === String(koColumnKey) ? -1 : 0)
       })),
       data: []
     };
@@ -269,8 +294,8 @@ router.get('/all-stat', authenticate, async (req, res) => {
         }
       };
 
-      // Ajouter les stats par état
-      etats.forEach(etat => {
+      // Ajouter les stats par état (incl. colonne KO)
+      etatsWithKo.forEach(etat => {
         entityData.stats[etat.id] = dataByEntity[entityId][etat.id] || 0;
       });
 
