@@ -91,7 +91,7 @@ const Statistiques = () => {
       stat: statType,
       date_debut: filters.date_debut,
       date_fin: filters.date_fin,
-      date: filters.date,
+      date: activeTab === 'agent' ? 'date_insert_time' : filters.date,
       produit: filters.produit
     };
 
@@ -124,6 +124,13 @@ const Statistiques = () => {
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
+
+  // Onglet AGENT : statistiques par date de saisie (insertion), pas par qualification
+  useEffect(() => {
+    if (activeTab === 'agent') {
+      setFilters(prev => (prev.date === 'date_insert_time' ? prev : { ...prev, date: 'date_insert_time' }));
+    }
+  }, [activeTab]);
 
   const renderFilterForm = () => {
     return (

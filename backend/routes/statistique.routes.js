@@ -47,8 +47,10 @@ router.get('/all-stat', authenticate, async (req, res) => {
       id_agent
     } = req.query;
 
-    // Valeurs par défaut
-    const champ_date = date || 'date_modif_time';
+    // Valeurs par défaut (AGENT = date de saisie / insertion)
+    const champ_date = name_stat === 'AGENT'
+      ? (date || 'date_insert_time')
+      : (date || 'date_modif_time');
     const startDate = date_debut || getTodayLocal();
     const endDate = date_fin || getTodayLocal();
     const statType = stat || 'net';
@@ -122,7 +124,10 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Valider le champ de date pour éviter les injections SQL
     // Note: date_appel_time n'existe pas dans le schéma, on utilise date_appel (bigint) si nécessaire
     const allowedDateFields = ['date_insert_time', 'date_modif_time', 'date_rdv_time'];
-    const safeDateField = allowedDateFields.includes(champ_date) ? champ_date : 'date_modif_time';
+    const defaultDateField = name_stat === 'AGENT' ? 'date_insert_time' : 'date_modif_time';
+    const safeDateField = allowedDateFields.includes(champ_date) ? champ_date : defaultDateField;
+    // Onglet AGENT : toujours filtrer sur la date d'insertion (saisie)
+    const dateFieldForQuery = name_stat === 'AGENT' ? 'date_insert_time' : safeDateField;
 
     // Valider le champ de groupement
     const allowedGroupFields = ['id_centre', 'id_confirmateur', 'id_commercial', 'id_agent'];
@@ -149,8 +154,8 @@ router.get('/all-stat', authenticate, async (req, res) => {
        FROM fiches
        WHERE (archive = 0 OR archive IS NULL) 
        AND active = 1 
-       AND \`${safeDateField}\` >= ? 
-       AND \`${safeDateField}\` <= ?${additionalConditions}`,
+       AND \`${dateFieldForQuery}\` >= ? 
+       AND \`${dateFieldForQuery}\` <= ?${additionalConditions}`,
       queryParams
     );
     const total = totalResult.total || 0;
@@ -161,8 +166,8 @@ router.get('/all-stat', authenticate, async (req, res) => {
        FROM fiches
        WHERE (archive = 0 OR archive IS NULL) 
        AND active = 1 
-       AND \`${safeDateField}\` >= ? 
-       AND \`${safeDateField}\` <= ?${additionalConditions}
+       AND \`${dateFieldForQuery}\` >= ? 
+       AND \`${dateFieldForQuery}\` <= ?${additionalConditions}
        GROUP BY \`${groupByField}\`, id_etat_final
        ORDER BY id_etat_final ASC`,
       queryParams
