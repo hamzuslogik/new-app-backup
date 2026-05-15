@@ -1224,13 +1224,6 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
   console.log('[STAT] /kpi-qualification - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month, id_rp, id_superviseur, id_agent } = req.query; // filtres optionnels (backoffice/admin)
-    
-    // Récupérer les IDs des états groupe 0 pour exclure
-    const etatsGroupe0 = await query(`
-      SELECT id FROM etats
-      WHERE (groupe = '0' OR groupe = 0)
-    `);
-    const idsGroupe0 = etatsGroupe0.map(e => e.id);
 
     // Périmètre qualification:
     // - RP (12): ses équipes uniquement
@@ -1365,7 +1358,16 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         : '';
       const scopedAgentParams = hasScopedAgents && scopedAgentIds.length > 0 ? scopedAgentIds : [];
 
-      // Meilleur agent (fiches validées uniquement - phase 1, 2, 3)
+      // Fiches validées (KPI) : hors poubelle, KO, HC (hors cible), états groupe 0
+      const fichesValideesWhere = `
+        AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
+        AND (f.hc = 0 OR f.hc IS NULL)
+        AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
+      `;
+      const fichesValideesParams = [startDate, endDate, ...scopedAgentParams];
+
+      // Meilleur agent : même périmètre que les fiches validées
       const bestAgentQuery = `
         SELECT 
           u.id,
@@ -1376,27 +1378,21 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
           COUNT(DISTINCT f.id) as count_validated
         FROM fiches f
         INNER JOIN utilisateurs u ON f.id_agent = u.id
-        INNER JOIN etats e ON f.id_etat_final = e.id
+        LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE u.fonction = 3
         AND u.etat > 0
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         ${scopedAgentClauseU}
-        AND (f.archive = 0 OR f.archive IS NULL)
-        ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
-        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        ${fichesValideesWhere}
         GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_validated DESC
         LIMIT 1
       `;
       
-      const bestAgentParams = idsGroupe0.length > 0 
-        ? [startDate, endDate, ...scopedAgentParams, ...idsGroupe0]
-        : [startDate, endDate, ...scopedAgentParams];
-      
-      const bestAgent = await queryOne(bestAgentQuery, bestAgentParams);
+      const bestAgent = await queryOne(bestAgentQuery, fichesValideesParams);
 
-      // Meilleure équipe (superviseur avec ses agents)
+      // Meilleure équipe : même périmètre que les fiches validées
       const bestTeamQuery = `
         SELECT 
           s.id as superviseur_id,
@@ -1408,25 +1404,22 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         FROM fiches f
         INNER JOIN utilisateurs a ON f.id_agent = a.id
         INNER JOIN utilisateurs s ON a.chef_equipe = s.id
-        INNER JOIN etats e ON f.id_etat_final = e.id
+        LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE a.fonction = 3
         AND a.etat > 0
         AND s.etat > 0
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         ${scopedAgentClauseA}
-        AND (f.archive = 0 OR f.archive IS NULL)
-        ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
-        AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+        ${fichesValideesWhere}
         GROUP BY s.id, s.pseudo, s.nom, s.prenom
         ORDER BY count_validated DESC
         LIMIT 1
       `;
       
-      const bestTeam = await queryOne(bestTeamQuery, bestAgentParams);
+      const bestTeam = await queryOne(bestTeamQuery, fichesValideesParams);
 
-      // Fiches validées : hors groupe 0 ET KO=0
-      // Utiliser LEFT JOIN et exclure explicitement les états groupe 0
+      // Total fiches validées (taux conversion / transformation)
       const fichesValideesQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
@@ -1434,11 +1427,9 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         WHERE f.date_insert_time >= ?
         AND f.date_insert_time <= ?
         ${scopedAgentClauseF}
-        AND (f.archive = 0 OR f.archive IS NULL)
-        AND (f.ko = 0 OR f.ko IS NULL)
-        AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
+        ${fichesValideesWhere}
       `;
-      const fichesValidees = await queryOne(fichesValideesQuery, [startDate, endDate, ...scopedAgentParams]);
+      const fichesValidees = await queryOne(fichesValideesQuery, fichesValideesParams);
 
       // Fiches produites : saisies par un agent qualif. (F3) avec id_agent renseigné — exclut import en masse (id_agent NULL/0)
       const fichesProduiteQuery = `

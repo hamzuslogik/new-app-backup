@@ -423,7 +423,7 @@ const KPIQualification = () => {
             </p>
             <p className="info-text">
               <strong>Définitions :</strong> fiches validées = fiches en date de création sur la période, hors
-              archive, KO = 0, avec un état hors groupe 0. Fiches produites = fiches insérées sur la période avec un{' '}
+              poubelle (archive), KO, hors cible (HC) et états groupe 0 (qualification). Fiches produites = fiches insérées sur la période avec un{' '}
               <strong>id_agent renseigné</strong> (saisies par un agent qualification, fonction 3) — les fiches
               d’<strong>importation en masse</strong> sans agent ne sont <strong>pas</strong> comptabilisées —, hors
               archive et hors état doublon (61). Le pourcentage est validées ÷ produites × 100 (ou{' '}
