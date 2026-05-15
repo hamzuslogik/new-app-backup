@@ -1,10 +1,5 @@
 import { useEffect } from 'react';
 
-/**
- * Force une largeur « desktop » pour les tableaux larges tout en évitant de mettre
- * overflow-x sur html/body (sinon double scroll, sticky header décalé, bande blanche au-dessus).
- * La zone de scroll horizontal est confinée à #root.
- */
 const useForceDesktopViewport = (pageClassName = 'desktop-forced-page', width = 1400) => {
   useEffect(() => {
     const originalViewport = document.querySelector('meta[name="viewport"]');
@@ -21,12 +16,14 @@ const useForceDesktopViewport = (pageClassName = 'desktop-forced-page', width = 
     document.body.classList.add(pageClassName);
     document.documentElement.classList.add(pageClassName);
 
-    const root = document.getElementById('root');
-    if (root) {
-      root.dataset.forceDesktopWidth = String(width);
-      root.style.minWidth = `${width}px`;
-      root.style.overflowX = 'auto';
-    }
+    document.documentElement.style.minWidth = `${width}px`;
+    document.documentElement.style.width = 'auto';
+    document.documentElement.style.maxWidth = 'none';
+    document.documentElement.style.overflowX = 'auto';
+    document.body.style.minWidth = `${width}px`;
+    document.body.style.width = 'auto';
+    document.body.style.maxWidth = 'none';
+    document.body.style.overflowX = 'auto';
 
     return () => {
       if (originalViewport && originalContent) {
@@ -38,15 +35,16 @@ const useForceDesktopViewport = (pageClassName = 'desktop-forced-page', width = 
       document.body.classList.remove(pageClassName);
       document.documentElement.classList.remove(pageClassName);
 
-      const r = document.getElementById('root');
-      if (r) {
-        delete r.dataset.forceDesktopWidth;
-        r.style.minWidth = '';
-        r.style.overflowX = '';
-      }
+      document.documentElement.style.minWidth = '';
+      document.documentElement.style.width = '';
+      document.documentElement.style.maxWidth = '';
+      document.documentElement.style.overflowX = '';
+      document.body.style.minWidth = '';
+      document.body.style.width = '';
+      document.body.style.maxWidth = '';
+      document.body.style.overflowX = '';
     };
   }, [pageClassName, width]);
 };
 
 export default useForceDesktopViewport;
-
