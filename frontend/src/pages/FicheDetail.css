@@ -347,12 +347,63 @@
   order: 1000;
 }
 
-.fiche-completude-form .form-group {
+.fiche-completude-list .fiche-completude-item {
   margin-bottom: 12px;
 }
 
-.fiche-completude-form .form-actions {
-  margin-top: 8px;
+.fiche-completude-hint {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.fiche-completude-item-header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.fiche-completude-meta {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.fiche-completude-statut--en_attente {
+  color: #fbbf24 !important;
+  -webkit-text-fill-color: #fbbf24 !important;
+}
+
+.fiche-completude-statut--traitee {
+  color: #4ade80 !important;
+  -webkit-text-fill-color: #4ade80 !important;
+}
+
+.fiche-completude-statut--non_traitee {
+  color: #f87171 !important;
+  -webkit-text-fill-color: #f87171 !important;
+}
+
+.fiche-completude-item--en_attente {
+  border-left: 4px solid #fbbf24 !important;
+}
+
+.fiche-completude-item--traitee {
+  border-left: 4px solid #4ade80 !important;
+}
+
+.fiche-completude-item--non_traitee {
+  border-left: 4px solid #f87171 !important;
+}
+
+.fiche-completude-line {
+  margin: 0 0 6px;
+}
+
+.fiche-completude-line--multiline {
+  white-space: pre-wrap;
+  margin-bottom: 8px;
 }
 
 .fiche-section {
@@ -2694,6 +2745,8 @@
 }
 
 .decalage-form .btn-confirm,
+.decalage-form .btn-cancel,
+.fiche-completude-section .btn-cancel,
 .etat-change-section .btn-confirm,
 .compte-rendu-section .btn-confirm {
   background-color: #4a4d52 !important;
@@ -2703,6 +2756,8 @@
 }
 
 .decalage-form .btn-confirm:hover:not(:disabled),
+.decalage-form .btn-cancel:hover:not(:disabled),
+.fiche-completude-section .btn-cancel:hover:not(:disabled),
 .etat-change-section .btn-confirm:hover:not(:disabled),
 .compte-rendu-section .btn-confirm:hover:not(:disabled) {
   background-color: #5a5e64 !important;
