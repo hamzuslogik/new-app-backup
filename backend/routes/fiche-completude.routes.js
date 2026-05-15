@@ -1,10 +1,48 @@
 /**
  * Routes complétude fiche — montées sur le routeur /api/fiches (avant GET /:id).
+ * Création : Qualité Confirmation (4).
+ * Consultation / traitement : confirmateur 1 de la fiche, RE (14), RP (13).
  */
 const FONCTION_QUALITE_CONFIRMATION = 4;
+const FONCTION_RP_CONFIRMATION = 13;
+const FONCTION_RE_CONFIRMATION = 14;
 
 function isQualiteConfirmation(fonction) {
   return Number(fonction) === FONCTION_QUALITE_CONFIRMATION;
+}
+
+function isREConfirmation(fonction) {
+  return Number(fonction) === FONCTION_RE_CONFIRMATION;
+}
+
+function isRPConfirmation(fonction) {
+  return Number(fonction) === FONCTION_RP_CONFIRMATION;
+}
+
+function isConfirmateur1OfFiche(userId, fiche) {
+  if (!fiche || userId == null) return false;
+  return Number(fiche.id_confirmateur) === Number(userId);
+}
+
+function canViewCompletude(user, fiche) {
+  if (!user) return false;
+  const fn = Number(user.fonction);
+  if (isQualiteConfirmation(fn)) return true;
+  if (isREConfirmation(fn) || isRPConfirmation(fn)) return true;
+  if (isConfirmateur1OfFiche(user.id, fiche)) return true;
+  return false;
+}
+
+function canCreateCompletude(user) {
+  return user && isQualiteConfirmation(user.fonction);
+}
+
+function canTreatCompletude(user, fiche) {
+  if (!user || !fiche) return false;
+  const fn = Number(user.fonction);
+  if (isREConfirmation(fn) || isRPConfirmation(fn)) return true;
+  if (isConfirmateur1OfFiche(user.id, fiche)) return true;
+  return false;
 }
 
 function statutLabel(statut) {
@@ -19,14 +57,26 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
     return id && !Number.isNaN(id) && id > 0 ? id : null;
   };
 
+  const loadFicheForCompletude = async (idFiche) => {
+    return queryOne(
+      'SELECT id, id_confirmateur FROM fiches WHERE id = ?',
+      [idFiche]
+    );
+  };
+
   router.get('/:hash/completude', authenticate, hashToIdMiddleware, async (req, res) => {
     try {
       const idFiche = ficheIdFromReq(req);
       if (!idFiche) {
         return res.status(400).json({ success: false, message: 'Identifiant de fiche invalide' });
       }
-      if (!isQualiteConfirmation(req.user.fonction)) {
-        return res.status(403).json({ success: false, message: 'Accès réservé à la Qualité Confirmation' });
+
+      const fiche = await loadFicheForCompletude(idFiche);
+      if (!fiche) {
+        return res.status(404).json({ success: false, message: 'Fiche non trouvée' });
+      }
+      if (!canViewCompletude(req.user, fiche)) {
+        return res.status(403).json({ success: false, message: 'Accès non autorisé' });
       }
 
       let rows;
@@ -44,7 +94,14 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
         );
       } catch (err) {
         if (err.code === 'ER_NO_SUCH_TABLE') {
-          return res.json({ success: true, data: [] });
+          return res.json({
+            success: true,
+            data: [],
+            permissions: {
+              can_create: canCreateCompletude(req.user),
+              can_treat: canTreatCompletude(req.user, fiche)
+            }
+          });
         }
         throw err;
       }
@@ -54,7 +111,11 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
         data: (rows || []).map((r) => ({
           ...r,
           statut_label: statutLabel(r.statut)
-        }))
+        })),
+        permissions: {
+          can_create: canCreateCompletude(req.user),
+          can_treat: canTreatCompletude(req.user, fiche)
+        }
       });
     } catch (error) {
       console.error('GET fiche completude:', error);
@@ -68,7 +129,7 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
       if (!idFiche) {
         return res.status(400).json({ success: false, message: 'Identifiant de fiche invalide' });
       }
-      if (!isQualiteConfirmation(req.user.fonction)) {
+      if (!canCreateCompletude(req.user)) {
         return res.status(403).json({ success: false, message: 'Accès réservé à la Qualité Confirmation' });
       }
 
@@ -81,7 +142,7 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
         return res.status(400).json({ success: false, message: 'Les complétudes sont requises' });
       }
 
-      const fiche = await queryOne('SELECT id FROM fiches WHERE id = ?', [idFiche]);
+      const fiche = await loadFicheForCompletude(idFiche);
       if (!fiche) {
         return res.status(404).json({ success: false, message: 'Fiche non trouvée' });
       }
@@ -129,24 +190,35 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
       if (!idFiche || !completudeId || Number.isNaN(completudeId)) {
         return res.status(400).json({ success: false, message: 'Identifiants invalides' });
       }
-      if (!isQualiteConfirmation(req.user.fonction)) {
-        return res.status(403).json({ success: false, message: 'Accès réservé à la Qualité Confirmation' });
+
+      const fiche = await loadFicheForCompletude(idFiche);
+      if (!fiche) {
+        return res.status(404).json({ success: false, message: 'Fiche non trouvée' });
+      }
+      if (!canTreatCompletude(req.user, fiche)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Seul le confirmateur 1 de la fiche, le RE ou le RP peut marquer la complétude comme traitée'
+        });
       }
 
       const statut = String(req.body.statut || '').trim();
-      if (statut !== 'traitee' && statut !== 'non_traitee') {
+      if (statut !== 'traitee') {
         return res.status(400).json({
           success: false,
-          message: 'Statut invalide (traitee ou non_traitee attendu)'
+          message: 'Statut invalide (traitee attendu)'
         });
       }
 
       const row = await queryOne(
-        'SELECT id FROM fiche_completude WHERE id = ? AND id_fiche = ?',
+        'SELECT id, statut FROM fiche_completude WHERE id = ? AND id_fiche = ?',
         [completudeId, idFiche]
       );
       if (!row) {
         return res.status(404).json({ success: false, message: 'Complétude introuvable' });
+      }
+      if (row.statut !== 'en_attente') {
+        return res.status(400).json({ success: false, message: 'Cette complétude a déjà été traitée' });
       }
 
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -156,9 +228,9 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
 
       await query(
         `UPDATE fiche_completude
-         SET statut = ?, id_traite_par = ?, reponse_traitement = ?, date_traitement = ?
+         SET statut = 'traitee', id_traite_par = ?, reponse_traitement = ?, date_traitement = ?
          WHERE id = ? AND id_fiche = ?`,
-        [statut, req.user.id, reponse, now, completudeId, idFiche]
+        [req.user.id, reponse, now, completudeId, idFiche]
       );
 
       const updated = await queryOne(
@@ -174,7 +246,7 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
 
       res.json({
         success: true,
-        message: `Complétude marquée : ${statutLabel(statut)}`,
+        message: 'Complétude marquée comme traitée',
         data: updated ? { ...updated, statut_label: statutLabel(updated.statut) } : null
       });
     } catch (error) {
@@ -190,4 +262,11 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
   });
 }
 
-module.exports = { registerFicheCompletudeRoutes, isQualiteConfirmation, statutLabel };
+module.exports = {
+  registerFicheCompletudeRoutes,
+  isQualiteConfirmation,
+  canViewCompletude,
+  canCreateCompletude,
+  canTreatCompletude,
+  statutLabel
+};

@@ -490,6 +490,8 @@ const FicheDetail = ({
   const userFonction = user?.fonction != null ? Number(user.fonction) : null;
   const isQualiteQualif = userFonction === 2 || userFonction === 8 || userFonction === 12;
   const isQualiteConfirmation = userFonction === 4;
+  const isREConfirmation = userFonction === 14;
+  const isRPConfirmation = userFonction === 13;
   /** Session partenaire : libellé fonction ou centre (ex. centre PARTENAIRE, titre « Partenaire »). */
   const isPartenaireProfil =
     (typeof user?.fonction_titre === 'string' && /partenaire/i.test(user.fonction_titre)) ||
@@ -939,6 +941,13 @@ const FicheDetail = ({
       refetchOnReconnect: isModal // Rafraîchir quand la connexion est rétablie (modal uniquement)
     }
   );
+
+  const isFicheConfirmateur1 =
+    user?.id != null &&
+    ficheData?.id_confirmateur != null &&
+    Number(user.id) === Number(ficheData.id_confirmateur);
+  const showCompletudeSection =
+    isQualiteConfirmation || isFicheConfirmateur1 || isREConfirmation || isRPConfirmation;
 
   const { data: modificaData = [] } = useQuery(
     ['modifica', hash],
@@ -7647,7 +7656,9 @@ const FicheDetail = ({
 
         <FicheCompletudeSection
           ficheHash={hash}
-          enabled={isModal && isQualiteConfirmation}
+          enabled={showCompletudeSection}
+          canCreate={isQualiteConfirmation}
+          canTreat={isFicheConfirmateur1 || isREConfirmation || isRPConfirmation}
         />
       </div>
         </>

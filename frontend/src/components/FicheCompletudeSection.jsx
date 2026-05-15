@@ -10,10 +10,11 @@ const STATUT_LABELS = {
 };
 
 /**
- * Section Complétude — modal détail fiche, Qualité Confirmation (fonction 4) uniquement.
- * Même rendu visuel que la section « Demande de décalage » (.decalage-form).
+ * Complétude fiche :
+ * - Qualité Confirmation (4) : création uniquement
+ * - Confirmateur 1, RE (14), RP (13) : consultation + bouton « Traité »
  */
-const FicheCompletudeSection = ({ ficheHash, enabled }) => {
+const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTreat = false }) => {
   const queryClient = useQueryClient();
   const [motif, setMotif] = useState('');
   const [completes, setCompletes] = useState('');
@@ -22,14 +23,22 @@ const FicheCompletudeSection = ({ ficheHash, enabled }) => {
 
   const queryKey = ['fiche-completude', ficheHash];
 
-  const { data: list = [], isLoading } = useQuery(
+  const { data, isLoading } = useQuery(
     queryKey,
     async () => {
       const res = await api.get(`/fiches/${ficheHash}/completude`);
-      return res.data.data || [];
+      return {
+        list: res.data.data || [],
+        permissions: res.data.permissions || {}
+      };
     },
     { enabled: enabled && !!ficheHash }
   );
+
+  const list = data?.list || [];
+  const permissions = data?.permissions || {};
+  const allowCreate = canCreate && (permissions.can_create !== false);
+  const allowTreat = canTreat && (permissions.can_treat !== false);
 
   const createMutation = useMutation(
     async (payload) => {
@@ -50,21 +59,21 @@ const FicheCompletudeSection = ({ ficheHash, enabled }) => {
     }
   );
 
-  const statutMutation = useMutation(
-    async ({ id, statut, reponse_traitement }) => {
+  const traiterMutation = useMutation(
+    async ({ id, reponse_traitement }) => {
       const res = await api.patch(`/fiches/${ficheHash}/completude/${id}`, {
-        statut,
+        statut: 'traitee',
         reponse_traitement
       });
       return res.data;
     },
     {
       onSuccess: (data) => {
-        toast.success(data.message || 'Statut mis à jour');
+        toast.success(data.message || 'Complétude marquée comme traitée');
         queryClient.invalidateQueries(queryKey);
       },
       onError: (err) => {
-        toast.error(err.response?.data?.message || 'Erreur lors de la mise à jour');
+        toast.error(err.response?.data?.message || 'Erreur lors du traitement');
       }
     }
   );
@@ -82,76 +91,87 @@ const FicheCompletudeSection = ({ ficheHash, enabled }) => {
 
   if (!enabled) return null;
 
+  const showCreateBlock = allowCreate;
+  const showList = list.length > 0 || !allowCreate;
+  const showEmptyForViewer = !allowCreate && !isLoading && list.length === 0;
+
+  if (showEmptyForViewer) return null;
+
   return (
     <div className="fiche-section decalage-form fiche-completude-section" style={{ marginTop: '24px' }}>
       <h2 className="section-title">Complétude</h2>
 
       <div className="decalage-new-form">
-        {showForm ? (
-          <form className="fiche-completude-form" onSubmit={handleCreate}>
-            <div className="form-group">
-              <label htmlFor="completude-motif">Motif</label>
-              <input
-                id="completude-motif"
-                type="text"
-                className="form-control"
-                value={motif}
-                onChange={(e) => setMotif(e.target.value)}
-                placeholder="Motif de la demande de complétude"
-                maxLength={500}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="completude-completes">Complétudes</label>
-              <textarea
-                id="completude-completes"
-                className="form-control"
-                rows={4}
-                value={completes}
-                onChange={(e) => setCompletes(e.target.value)}
-                placeholder="Détail des éléments à compléter"
-                required
-              />
-            </div>
-            <div className="form-actions">
-              <button
-                type="submit"
-                className="btn-confirm"
-                disabled={createMutation.isLoading}
-              >
-                {createMutation.isLoading ? 'Création…' : 'Créer'}
-              </button>
+        {showCreateBlock && (
+          <>
+            {showForm ? (
+              <form className="fiche-completude-form" onSubmit={handleCreate}>
+                <div className="form-group">
+                  <label htmlFor="completude-motif">Motif</label>
+                  <input
+                    id="completude-motif"
+                    type="text"
+                    className="form-control"
+                    value={motif}
+                    onChange={(e) => setMotif(e.target.value)}
+                    placeholder="Motif de la demande de complétude"
+                    maxLength={500}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="completude-completes">Complétudes</label>
+                  <textarea
+                    id="completude-completes"
+                    className="form-control"
+                    rows={4}
+                    value={completes}
+                    onChange={(e) => setCompletes(e.target.value)}
+                    placeholder="Détail des éléments à compléter"
+                    required
+                  />
+                </div>
+                <div className="form-actions">
+                  <button
+                    type="submit"
+                    className="btn-confirm"
+                    disabled={createMutation.isLoading}
+                  >
+                    {createMutation.isLoading ? 'Création…' : 'Créer'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={handleCancelForm}
+                    disabled={createMutation.isLoading}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </form>
+            ) : (
               <button
                 type="button"
-                className="btn-cancel"
-                onClick={handleCancelForm}
-                disabled={createMutation.isLoading}
+                className="btn-confirm"
+                style={{ marginBottom: showList && list.length > 0 ? '16px' : 0 }}
+                onClick={() => setShowForm(true)}
               >
-                Annuler
+                Nouvelle complétude
               </button>
-            </div>
-          </form>
-        ) : (
-          <button
-            type="button"
-            className="btn-confirm"
-            style={{ marginBottom: '16px' }}
-            onClick={() => setShowForm(true)}
-          >
-            Nouvelle complétude
-          </button>
+            )}
+          </>
         )}
 
         {isLoading ? (
           <p className="fiche-completude-hint">Chargement des complétudes…</p>
-        ) : list.length === 0 ? (
+        ) : showList && list.length === 0 && allowCreate ? (
           <p className="fiche-completude-hint">Aucune complétude enregistrée pour cette fiche.</p>
-        ) : (
+        ) : list.length > 0 ? (
           <div className="fiche-completude-list">
             {list.map((item) => {
               const isPending = item.statut === 'en_attente';
               const statutClass = item.statut ? `fiche-completude-item--${item.statut}` : '';
+              const showTreatActions = allowTreat && isPending;
               return (
                 <div
                   key={item.id}
@@ -180,12 +200,12 @@ const FicheCompletudeSection = ({ ficheHash, enabled }) => {
                       {item.traite_par_pseudo ? ` (${item.traite_par_pseudo})` : ''}
                     </p>
                   )}
-                  {isPending && (
+                  {showTreatActions && (
                     <>
                       <textarea
                         className="form-control"
                         rows={2}
-                        placeholder="Réponse optionnelle au traitement"
+                        placeholder="Réponse optionnelle"
                         value={reponseById[item.id] || ''}
                         onChange={(e) =>
                           setReponseById((prev) => ({ ...prev, [item.id]: e.target.value }))
@@ -196,30 +216,15 @@ const FicheCompletudeSection = ({ ficheHash, enabled }) => {
                         <button
                           type="button"
                           className="btn-confirm"
-                          disabled={statutMutation.isLoading}
+                          disabled={traiterMutation.isLoading}
                           onClick={() =>
-                            statutMutation.mutate({
+                            traiterMutation.mutate({
                               id: item.id,
-                              statut: 'traitee',
                               reponse_traitement: reponseById[item.id] || ''
                             })
                           }
                         >
-                          Traitée
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-cancel"
-                          disabled={statutMutation.isLoading}
-                          onClick={() =>
-                            statutMutation.mutate({
-                              id: item.id,
-                              statut: 'non_traitee',
-                              reponse_traitement: reponseById[item.id] || ''
-                            })
-                          }
-                        >
-                          Non traitée
+                          {traiterMutation.isLoading ? 'Traitement…' : 'Traité'}
                         </button>
                       </div>
                     </>
@@ -228,7 +233,7 @@ const FicheCompletudeSection = ({ ficheHash, enabled }) => {
               );
             })}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
