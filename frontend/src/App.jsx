@@ -31,6 +31,7 @@ import Alertes from './pages/Alertes';
 import AlertePlanning from './pages/AlertePlanning';
 import Remarques from './pages/Remarques';
 import AuditRDV from './pages/AuditRDV';
+import ListeCompletudes from './pages/ListeCompletudes';
 import CompteRendu from './pages/CompteRendu';
 import CompteRenduPending from './pages/CompteRenduPending';
 import Phase3 from './pages/Phase3';
@@ -99,6 +100,7 @@ function App() {
           <Route path="alerte-planning" element={<ProtectedRoute permission={null} allowFunctions={[1, 2, 7, 11, 13, 14]}><AlertePlanning /></ProtectedRoute>} />
           <Route path="remarques" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[2, 12]}><Remarques /></ProtectedRoute>} />
           <Route path="audit-rdv" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[4, 13]}><AuditRDV /></ProtectedRoute>} />
+          <Route path="liste-completudes" element={<ProtectedRoute permission={null} allowFunctions={[4, 13, 14]}><ListeCompletudes /></ProtectedRoute>} />
           <Route path="compte-rendu" element={<ProtectedRoute permission="compte_rendu_view"><CompteRendu /></ProtectedRoute>} />
           <Route path="compte-rendu-pending" element={<ProtectedRoute permission={null} customCheck={(item, user) => [1, 2, 5, 7, 13].includes(Number(user?.fonction))}><CompteRenduPending /></ProtectedRoute>} />
           <Route path="phase3" element={<ProtectedRoute permission="phase3_view"><Phase3 /></ProtectedRoute>} />

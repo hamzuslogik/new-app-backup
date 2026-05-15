@@ -185,6 +185,7 @@ const Permissions = () => {
     { path: '/kpis', name: 'KPIs', permission: 'kpis_view' },
     { path: '/statistiques-v2', name: 'Statistiques V2', permission: 'statistiques_v2_view' },
     { path: '/controle-qualite', name: 'Contrôle Qualité', permission: 'controle_qualite_view' },
+    { path: '/liste-completudes', name: 'Liste des complétudes', permission: null, allowFunctions: [4, 13, 14] },
     { path: '/audit-rdv', name: 'Audit RDV', permission: 'controle_qualite_view', allowFunctions: [4, 13] },
     { path: '/compte-rendu', name: 'Compte Rendu', permission: 'compte_rendu_view' },
     { path: '/compte-rendu-pending', name: 'Compte Rendu Pending', permission: null, allowFunctions: [1, 2, 5, 7, 13] },

@@ -28,6 +28,7 @@ import {
   FaRobot,
   FaBullhorn,
   FaUser,
+  FaListAlt,
 } from 'react-icons/fa';
 import './Sidebar.css';
 
@@ -246,6 +247,14 @@ const Sidebar = ({ collapsed }) => {
       icon: FaUserCheck,
       permission: 'controle_qualite_view',
       visible: true,
+    },
+    {
+      path: '/liste-completudes',
+      label: 'Liste des complétudes',
+      icon: FaListAlt,
+      permission: null,
+      visible: true,
+      customCheck: (item, user) => [4, 13, 14].includes(Number(user?.fonction)),
     },
     {
       path: '/alertes',

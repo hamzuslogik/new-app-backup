@@ -51,7 +51,110 @@ function statutLabel(statut) {
   return 'En attente';
 }
 
-function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddleware, query, queryOne }) {
+function canAccessListeCompletudes(fonction) {
+  return isQualiteConfirmation(fonction) || isREConfirmation(fonction) || isRPConfirmation(fonction);
+}
+
+const FONCTION_CONFIRMATEUR = 6;
+
+/** Périmètre fiches (confirmateur 1) pour RE / RP / filtre QC. */
+async function buildFicheScopeForListe(query, queryOne, user, { id_confirmateur, id_re }) {
+  const fn = Number(user.fonction);
+  const conditions = [];
+  const params = [];
+
+  if (isQualiteConfirmation(fn)) {
+    if (id_confirmateur) {
+      const cid = parseInt(id_confirmateur, 10);
+      if (!Number.isNaN(cid) && cid > 0) {
+        conditions.push('f.id_confirmateur = ?');
+        params.push(cid);
+      }
+    }
+    return { conditions, params };
+  }
+
+  if (isREConfirmation(fn)) {
+    if (id_confirmateur && id_confirmateur !== 'all') {
+      const confCheck = await queryOne(
+        `SELECT id FROM utilisateurs WHERE id = ? AND chef_equipe = ? AND fonction = ?
+         AND (etat > 0 OR etat IS NULL)`,
+        [id_confirmateur, user.id, FONCTION_CONFIRMATEUR]
+      );
+      if (!confCheck) {
+        return { conditions: ['1 = 0'], params: [] };
+      }
+      conditions.push('f.id_confirmateur = ?');
+      params.push(parseInt(id_confirmateur, 10));
+    } else {
+      const confs = await query(
+        `SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = ?
+         AND (etat > 0 OR etat IS NULL)`,
+        [user.id, FONCTION_CONFIRMATEUR]
+      );
+      const confIds = (confs || []).map((c) => c.id);
+      if (confIds.length === 0) {
+        return { conditions: ['1 = 0'], params: [] };
+      }
+      const ph = confIds.map(() => '?').join(',');
+      conditions.push(`f.id_confirmateur IN (${ph})`);
+      params.push(...confIds);
+    }
+    return { conditions, params };
+  }
+
+  if (isRPConfirmation(fn)) {
+    let reIds = [];
+    if (id_re && id_re !== 'all') {
+      const reCheck = await queryOne(
+        `SELECT id FROM utilisateurs WHERE id = ? AND chef_equipe = ? AND fonction = ?
+         AND (etat > 0 OR etat IS NULL)`,
+        [id_re, user.id, FONCTION_RE_CONFIRMATION]
+      );
+      if (!reCheck) {
+        return { conditions: ['1 = 0'], params: [] };
+      }
+      reIds = [parseInt(id_re, 10)];
+    } else {
+      const reList = await query(
+        `SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = ?
+         AND (etat > 0 OR etat IS NULL)`,
+        [user.id, FONCTION_RE_CONFIRMATION]
+      );
+      reIds = (reList || []).map((r) => r.id);
+    }
+    if (reIds.length === 0) {
+      return { conditions: ['1 = 0'], params: [] };
+    }
+    const phRE = reIds.map(() => '?').join(',');
+    const confs = await query(
+      `SELECT id FROM utilisateurs WHERE chef_equipe IN (${phRE}) AND fonction = ?
+       AND (etat > 0 OR etat IS NULL)`,
+      [...reIds, FONCTION_CONFIRMATEUR]
+    );
+    const confIds = (confs || []).map((c) => c.id);
+    if (confIds.length === 0) {
+      return { conditions: ['1 = 0'], params: [] };
+    }
+    if (id_confirmateur && id_confirmateur !== 'all') {
+      const cid = parseInt(id_confirmateur, 10);
+      if (!confIds.includes(cid)) {
+        return { conditions: ['1 = 0'], params: [] };
+      }
+      conditions.push('f.id_confirmateur = ?');
+      params.push(cid);
+    } else {
+      const phC = confIds.map(() => '?').join(',');
+      conditions.push(`f.id_confirmateur IN (${phC})`);
+      params.push(...confIds);
+    }
+    return { conditions, params };
+  }
+
+  return { conditions: ['1 = 0'], params: [] };
+}
+
+function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddleware, query, queryOne, encodeFicheId }) {
   const ficheIdFromReq = (req) => {
     const id = req.params.id ? parseInt(req.params.id, 10) : null;
     return id && !Number.isNaN(id) && id > 0 ? id : null;
@@ -63,6 +166,135 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
       [idFiche]
     );
   };
+
+  router.get('/liste-completudes', authenticate, async (req, res) => {
+    try {
+      if (!canAccessListeCompletudes(req.user.fonction)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Accès réservé à la Qualité Confirmation, au RE et au RP'
+        });
+      }
+
+      const {
+        page = 1,
+        limit = 50,
+        statut,
+        date_debut,
+        date_fin,
+        id_confirmateur,
+        id_re,
+        search
+      } = req.query;
+
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const limitNum = Math.min(200, Math.max(1, parseInt(limit, 10) || 50));
+      const offset = (pageNum - 1) * limitNum;
+
+      const whereParts = ['1 = 1'];
+      const params = [];
+
+      const scope = await buildFicheScopeForListe(query, queryOne, req.user, {
+        id_confirmateur,
+        id_re
+      });
+      whereParts.push(...scope.conditions);
+      params.push(...scope.params);
+
+      if (statut && ['en_attente', 'traitee', 'non_traitee'].includes(String(statut))) {
+        whereParts.push('c.statut = ?');
+        params.push(statut);
+      }
+
+      if (date_debut && /^\d{4}-\d{2}-\d{2}$/.test(String(date_debut))) {
+        whereParts.push('c.date_creation >= ?');
+        params.push(`${date_debut} 00:00:00`);
+      }
+      if (date_fin && /^\d{4}-\d{2}-\d{2}$/.test(String(date_fin))) {
+        whereParts.push('c.date_creation <= ?');
+        params.push(`${date_fin} 23:59:59`);
+      }
+
+      const searchTrim = String(search || '').trim();
+      if (searchTrim) {
+        const like = `%${searchTrim}%`;
+        whereParts.push('(f.nom LIKE ? OR f.prenom LIKE ? OR f.tel LIKE ? OR f.gsm1 LIKE ? OR c.motif LIKE ?)');
+        params.push(like, like, like, like, like);
+      }
+
+      const whereSql = whereParts.join(' AND ');
+      const fromJoin = `
+        FROM fiche_completude c
+        INNER JOIN fiches f ON f.id = c.id_fiche
+        LEFT JOIN utilisateurs u_create ON c.id_created_by = u_create.id
+        LEFT JOIN utilisateurs u_trait ON c.id_traite_par = u_trait.id
+        LEFT JOIN utilisateurs u_conf ON f.id_confirmateur = u_conf.id
+        WHERE ${whereSql}`;
+
+      let total = 0;
+      let rows = [];
+      try {
+        const totalRow = await queryOne(`SELECT COUNT(*) AS total ${fromJoin}`, params);
+        total = totalRow?.total || 0;
+        rows = await query(
+          `SELECT c.*,
+            f.id AS fiche_id,
+            f.nom AS fiche_nom,
+            f.prenom AS fiche_prenom,
+            f.tel AS fiche_tel,
+            f.id_confirmateur,
+            u_create.pseudo AS created_by_pseudo,
+            u_trait.pseudo AS traite_par_pseudo,
+            u_conf.pseudo AS confirmateur_pseudo
+           ${fromJoin}
+           ORDER BY c.date_creation DESC
+           LIMIT ? OFFSET ?`,
+          [...params, limitNum, offset]
+        );
+      } catch (err) {
+        if (err.code === 'ER_NO_SUCH_TABLE') {
+          return res.json({
+            success: true,
+            data: [],
+            pagination: { page: pageNum, limit: limitNum, total: 0, pages: 1 },
+            permissions: { can_treat: isREConfirmation(req.user.fonction) || isRPConfirmation(req.user.fonction) }
+          });
+        }
+        throw err;
+      }
+
+      const fn = Number(req.user.fonction);
+      const userCanTreatRole = isREConfirmation(fn) || isRPConfirmation(fn);
+
+      res.json({
+        success: true,
+        data: (rows || []).map((r) => {
+          const ficheRef = { id_confirmateur: r.id_confirmateur };
+          const canTreatRow =
+            r.statut === 'en_attente' &&
+            (userCanTreatRole || isConfirmateur1OfFiche(req.user.id, ficheRef));
+          return {
+            ...r,
+            hash: encodeFicheId ? encodeFicheId(r.fiche_id) : r.fiche_id,
+            statut_label: statutLabel(r.statut),
+            can_treat: canTreatRow
+          };
+        }),
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum) || 1
+        },
+        permissions: {
+          can_treat: userCanTreatRole
+        }
+      });
+    } catch (error) {
+      console.error('GET liste-completudes:', error);
+      res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
+    }
+  });
 
   router.get('/:hash/completude', authenticate, hashToIdMiddleware, async (req, res) => {
     try {
@@ -268,5 +500,6 @@ module.exports = {
   canViewCompletude,
   canCreateCompletude,
   canTreatCompletude,
+  canAccessListeCompletudes,
   statutLabel
 };

@@ -3584,7 +3584,7 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
 });
 
 const { registerFicheCompletudeRoutes } = require('./fiche-completude.routes');
-registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddleware, query, queryOne });
+registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddleware, query, queryOne, encodeFicheId });
 
 // Récupérer une fiche par ID
 router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
