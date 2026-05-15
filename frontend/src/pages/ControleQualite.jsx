@@ -325,6 +325,18 @@ const ControleQualite = () => {
     return etat?.color || '#cccccc';
   };
 
+  const getQualiteAgentLabel = (fiche) => {
+    if (fiche.qualite_assignee_pseudo) return fiche.qualite_assignee_pseudo;
+    if (fiche.qualite_user_pseudo) return fiche.qualite_user_pseudo;
+    return '-';
+  };
+
+  const getEtatSubmenuItemStyle = (etat) => ({
+    backgroundColor: getEtatColor(etat),
+    color: '#ffffff',
+    fontWeight: 600
+  });
+
   // Vérifier si un état est groupe 0
   const isEtatGroupe0 = (id_etat_final) => {
     if (!id_etat_final || !allEtatsData) return false;
@@ -742,7 +754,8 @@ const ControleQualite = () => {
                   <th>Téléphone</th>
                   <th>CP</th>
                   <th>Agent</th>
-                  <th>Commentaire qualité</th>
+                  <th>Agent qualité</th>
+                  <th className="commentaire-qualite-col">Commentaire qualité</th>
                   <th>État actuel</th>
                   <th className="actions-col">Actions</th>
                 </tr>
@@ -760,7 +773,10 @@ const ControleQualite = () => {
                     <td>{fiche.tel || '-'}</td>
                     <td>{fiche.cp || '-'}</td>
                     <td>{fiche.agent_pseudo || '-'}</td>
-                    <td>
+                    <td className="agent-qualite-cell" title={getQualiteAgentLabel(fiche) !== '-' ? `Agent qualité : ${getQualiteAgentLabel(fiche)}` : undefined}>
+                      {getQualiteAgentLabel(fiche)}
+                    </td>
+                    <td className="commentaire-qualite-col">
                       <div className="comment-quick-edit-container">
                         <div className="comment-quick-actions">
                           {(() => {
@@ -892,7 +908,7 @@ const ControleQualite = () => {
                   key={etat.id}
                   type="button"
                   className="cq-fiche-context-menu-item cq-context-submenu-item"
-                  style={{ borderLeft: `4px solid ${etat.color || '#ccc'}` }}
+                  style={getEtatSubmenuItemStyle(etat)}
                   disabled={updateEtatMutation.isLoading || isFicheLockedForUser(contextMenu.fiche)}
                   onClick={() => handleEtatFromContextMenu(String(etat.id))}
                 >

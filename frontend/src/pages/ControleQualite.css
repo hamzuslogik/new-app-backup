@@ -204,14 +204,30 @@
   vertical-align: middle;
 }
 
-/* Colonne Actions : garder les boutons dans la largeur de colonne */
-/* Colonne Actions dédiée (prioritaire, évite les overrides responsive génériques) */
+/* Colonne Actions : largeur des deux boutons Détails + Valider uniquement */
 .fiches-table th.actions-col,
 .fiches-table td.actions-col {
-  width: 380px !important;
-  min-width: 380px !important;
-  max-width: 380px !important;
+  width: 1%;
+  min-width: 0;
+  max-width: none;
+  white-space: nowrap;
+  text-align: center;
+  padding-left: 8px;
+  padding-right: 8px;
   box-sizing: border-box;
+}
+
+/* Colonne Commentaire qualité : priorité d'espace horizontal */
+.fiches-table th.commentaire-qualite-col,
+.fiches-table td.commentaire-qualite-col {
+  width: 32%;
+  min-width: 360px;
+}
+
+.fiches-table td.commentaire-qualite-col .comment-quick-edit-container {
+  min-width: 0;
+  max-width: none;
+  width: 100%;
 }
 
 .produit-indicator {
@@ -486,8 +502,9 @@
   display: flex;
   flex-direction: column;
   gap: 4.8px;
-  min-width: 250px;
-  max-width: 350px;
+  min-width: 0;
+  max-width: none;
+  width: 100%;
 }
 
 .comment-quick-actions {
@@ -1163,6 +1180,8 @@
   flex-wrap: nowrap;
   justify-content: center;
   gap: 8px;
+  width: max-content;
+  margin: 0 auto;
 }
 
 .cq-fiche-context-menu {
@@ -1232,6 +1251,17 @@
 }
 
 .cq-context-submenu-item {
+  white-space: nowrap;
+  margin: 2px 4px;
+  border-radius: 4px;
+}
+
+.cq-context-submenu .cq-fiche-context-menu-item:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.agent-qualite-cell {
+  font-weight: 600;
   white-space: nowrap;
 }
 
