@@ -15,6 +15,26 @@ import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 // ID de l'état KO et HC
 const ETAT_KO_ID = 54;
 const ETAT_HC_ID = 55;
+const PAGE_SIZE_MULTI_DAY = 50;
+
+const isSingleDayDateRange = (dateDebut, dateFin) =>
+  Boolean(dateDebut && dateFin && dateDebut === dateFin);
+
+const buildControleQualiteParams = (filters) => {
+  const params = { ...filters };
+  Object.keys(params).forEach((key) => {
+    if (params[key] === '' || params[key] === null) delete params[key];
+  });
+  if (isSingleDayDateRange(params.date_debut, params.date_fin)) {
+    params.page = 1;
+    params.all = '1';
+    delete params.limit;
+  } else {
+    delete params.all;
+    params.limit = PAGE_SIZE_MULTI_DAY;
+  }
+  return params;
+};
 
 const ControleQualite = () => {
   useForceDesktopViewport('controle-qualite-page');
@@ -25,7 +45,6 @@ const ControleQualite = () => {
   const [contextMenu, setContextMenu] = useState(null);
   const [filters, setFilters] = useState({
     page: 1,
-    limit: 50,
     id_agent: '',
     id_etat_final: '',
     date_debut: new Date().toISOString().split('T')[0], // Date du jour par défaut
@@ -127,10 +146,7 @@ const ControleQualite = () => {
     ['controle-qualite', filters],
     async () => {
       try {
-        const params = { ...filters };
-        Object.keys(params).forEach(key => {
-          if (params[key] === '' || params[key] === null) delete params[key];
-        });
+        const params = buildControleQualiteParams(filters);
         const res = await api.get('/fiches/controle-qualite', { params });
         console.log('Réponse contrôle qualité:', res.data);
         // Vérifier la structure de la réponse
@@ -295,7 +311,15 @@ const ControleQualite = () => {
   );
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+      ...(key !== 'page' ? { page: 1 } : {})
+    }));
+  };
+
+  const handlePageChange = (newPage) => {
+    setFilters((prev) => ({ ...prev, page: newPage }));
   };
 
   const handleEtatChange = (hash, newEtatId) => {
@@ -411,7 +435,9 @@ const ControleQualite = () => {
   };
 
   const fiches = fichesData?.data || [];
-  const pagination = fichesData?.pagination || { page: 1, limit: 50, total: 0, pages: 1 };
+  const pagination = fichesData?.pagination || { page: 1, limit: PAGE_SIZE_MULTI_DAY, total: 0, pages: 1 };
+  const singleDayRange = isSingleDayDateRange(filters.date_debut, filters.date_fin);
+  const showPagination = !singleDayRange && pagination.pages > 1;
   const agents = agentsData || [];
   const etats = etatsData || [];
   const allEtats = allEtatsData || [];
@@ -729,7 +755,7 @@ const ControleQualite = () => {
       <div className="results-info">
         <p>
           Total: <strong>{pagination.total}</strong> fiches
-          {pagination.pages > 1 && (
+          {showPagination && (
             <> | Page <strong>{pagination.page}</strong> sur <strong>{pagination.pages}</strong></>
           )}
         </p>
@@ -886,11 +912,12 @@ const ControleQualite = () => {
             </table>
           </div>
 
-          {pagination.pages > 1 && (
+          {showPagination && (
             <div className="pagination">
               <button
-                onClick={() => handleFilterChange('page', pagination.page - 1)}
-                disabled={pagination.page === 1}
+                type="button"
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page <= 1}
               >
                 Précédent
               </button>
@@ -898,7 +925,8 @@ const ControleQualite = () => {
                 Page {pagination.page} sur {pagination.pages}
               </span>
               <button
-                onClick={() => handleFilterChange('page', pagination.page + 1)}
+                type="button"
+                onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={pagination.page >= pagination.pages}
               >
                 Suivant

@@ -2275,6 +2275,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
     const {
       page = 1,
       limit = 50,
+      all,
       id_agent,
       id_etat_final,
       date_debut,
@@ -2282,8 +2283,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
     } = req.query;
 
     // Note: Les filtres id_centre et produit ont été retirés selon les spécifications
-
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const fetchAll = all === '1' || all === 'true' || all === true;
 
     // Fiches visibles : qualification (groupe 0), validées (En-Attente), KO, HC, poubelle (archive)
     let whereConditions = [
@@ -2367,6 +2367,11 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
 
     const total = totalResult?.total || 0;
 
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const pageSize = Math.max(1, parseInt(limit, 10) || 50);
+    const effectiveLimit = fetchAll ? Math.max(total, 1) : pageSize;
+    const offset = fetchAll ? 0 : (pageNum - 1) * pageSize;
+
     // Récupérer les fiches avec le dernier utilisateur qualité qui a modifié le commentaire + nb d'alertes KO
     let fiches;
     try {
@@ -2432,7 +2437,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
          WHERE ${whereClause}
          ORDER BY fiche.date_appel_time DESC
          LIMIT ? OFFSET ?`,
-        [...params, parseInt(limit), offset]
+        [...params, effectiveLimit, offset]
       );
     } catch (err) {
       if (err.code === 'ER_NO_SUCH_TABLE' && err.message && err.message.includes('alert_ko')) {
@@ -2498,7 +2503,7 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
            WHERE ${whereClause}
            ORDER BY fiche.date_appel_time DESC
            LIMIT ? OFFSET ?`,
-          [...params, parseInt(limit), offset]
+          [...params, effectiveLimit, offset]
         );
         fiches = fiches.map(f => ({ ...f, nb_alertes: 0 }));
       } else {
@@ -2516,10 +2521,10 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
       success: true,
       data: fichesWithHash,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: fetchAll ? 1 : pageNum,
+        limit: fetchAll ? total : pageSize,
         total,
-        pages: Math.ceil(total / parseInt(limit))
+        pages: fetchAll ? 1 : Math.max(1, Math.ceil(total / pageSize))
       }
     });
   } catch (error) {
