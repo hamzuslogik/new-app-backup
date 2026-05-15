@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaSearch, FaChevronDown, FaChevronUp, FaCheckCircle, FaFilter, FaUserCheck, FaCheck, FaComment, FaTimes, FaSave, FaBan, FaBell, FaCommentDots } from 'react-icons/fa';
+import { FaChevronDown, FaChevronUp, FaCheckCircle, FaFilter, FaUserCheck, FaTimes, FaBan, FaBell, FaCommentDots } from 'react-icons/fa';
+import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import RemarquesContent from '../components/RemarquesContent';
@@ -19,8 +19,10 @@ const ETAT_HC_ID = 55;
 const ControleQualite = () => {
   useForceDesktopViewport('controle-qualite-page');
   const { user } = useAuth();
+  const { openFicheDetail } = useFicheDetailModal();
   const queryClient = useQueryClient();
   const [showFilters, setShowFilters] = useState(true);
+  const [contextMenu, setContextMenu] = useState(null);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 50,
@@ -319,18 +321,6 @@ const ControleQualite = () => {
     handleEtatChange(fiche.hash, newEtatId);
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const getEtatColor = (etat) => {
     return etat?.color || '#cccccc';
   };
@@ -505,6 +495,84 @@ const ControleQualite = () => {
     });
   };
 
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+    const close = (ev) => {
+      if (ev.target.closest?.('.cq-fiche-context-menu')) return;
+      setContextMenu(null);
+    };
+    const onKey = (ev) => {
+      if (ev.key === 'Escape') setContextMenu(null);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [contextMenu]);
+
+  const openRowContextMenu = (e, fiche) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, fiche });
+  };
+
+  const getContextMenuStyle = () => {
+    if (!contextMenu || typeof window === 'undefined') {
+      return { position: 'fixed', zIndex: 10050 };
+    }
+    const MENU_WIDTH = 240;
+    const menuHeight = 320;
+    const pad = 8;
+    const spaceBelow = window.innerHeight - contextMenu.y;
+    const openUpward = spaceBelow < menuHeight + pad && contextMenu.y > spaceBelow;
+    const top = openUpward
+      ? Math.max(pad, contextMenu.y - menuHeight)
+      : Math.min(contextMenu.y, Math.max(pad, window.innerHeight - menuHeight - pad));
+    const left = Math.min(
+      Math.max(pad, contextMenu.x),
+      Math.max(pad, window.innerWidth - MENU_WIDTH - pad)
+    );
+    return { position: 'fixed', top, left, zIndex: 10050 };
+  };
+
+  const closeContextMenu = () => setContextMenu(null);
+
+  const openDetailsFromMenu = () => {
+    if (contextMenu?.fiche?.hash) openFicheDetail(contextMenu.fiche.hash);
+    closeContextMenu();
+  };
+
+  const handleEtatFromContextMenu = (etatId) => {
+    if (!contextMenu?.fiche) return;
+    const fiche = contextMenu.fiche;
+    closeContextMenu();
+    if (isFicheLockedForUser(fiche)) {
+      toast.warning(getLockMessage(fiche));
+      return;
+    }
+    handleNouvelEtatSelect(fiche, etatId);
+  };
+
+  const openAlertFromMenu = () => {
+    if (!contextMenu?.fiche) return;
+    const fiche = contextMenu.fiche;
+    closeContextMenu();
+    if (isFicheLockedForUser(fiche)) {
+      toast.warning(getLockMessage(fiche));
+      return;
+    }
+    openAlertModal(fiche);
+  };
+
+  const openRemarqueFromMenu = () => {
+    if (!contextMenu?.fiche) return;
+    setRemarquesFicheContext(contextMenu.fiche);
+    setRemarquesModalOpen(true);
+    closeContextMenu();
+  };
+
   const handleAlertModalSubmit = () => {
     const nbAlertes = alertesKoData?.nb_alertes ?? 0;
     const typeAlerte = alertModal.typeAlerte || 'PERSO';
@@ -673,14 +741,9 @@ const ControleQualite = () => {
                   <th>Prénom</th>
                   <th>Téléphone</th>
                   <th>CP</th>
-                  <th>Ville</th>
                   <th>Agent</th>
-                  <th>Date Insertion</th>
-                  <th>État Actuel</th>
-                  <th>Nouvel État</th>
-                  <th>Commentaire agent</th>
-                  <th>Commentaire Qualité</th>
-                  <th>Utilisateur Qualité</th>
+                  <th>Commentaire qualité</th>
+                  <th>État actuel</th>
                   <th className="actions-col">Actions</th>
                 </tr>
               </thead>
@@ -689,41 +752,14 @@ const ControleQualite = () => {
                   <tr
                     key={fiche.hash}
                     className={isFicheLockedForUser(fiche) ? 'fiche-row-locked' : ''}
+                    onContextMenu={(e) => openRowContextMenu(e, fiche)}
+                    title="Clic droit : menu d'actions"
                   >
                     <td>{fiche.nom || '-'}</td>
                     <td>{fiche.prenom || '-'}</td>
                     <td>{fiche.tel || '-'}</td>
                     <td>{fiche.cp || '-'}</td>
-                    <td>{fiche.ville || '-'}</td>
                     <td>{fiche.agent_pseudo || '-'}</td>
-                    <td>{formatDate(fiche.date_insert_time)}</td>
-                    <td>
-                      <span 
-                        className="etat-badge"
-                        style={{ backgroundColor: getEtatActuelColor(fiche) }}
-                      >
-                        {getEtatActuelLabel(fiche)}
-                      </span>
-                    </td>
-                    <td>
-                      <select
-                        value={isEtatGroupe0(fiche.id_etat_final) ? (fiche.id_etat_final || '') : ''}
-                        onChange={(e) => handleNouvelEtatSelect(fiche, e.target.value)}
-                        className="etat-select"
-                        disabled={updateEtatMutation.isLoading || isFicheLockedForUser(fiche)}
-                        title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : undefined}
-                      >
-                        <option value="">{isEtatGroupe0(fiche.id_etat_final) ? '-- Sélectionner --' : 'Validé'}</option>
-                        {etatsPhase0.map(etat => (
-                            <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
-                              {etat.titre}
-                            </option>
-                          ))}
-                      </select>
-                    </td>
-                    <td className="comment-agent-cell">
-                      <span className="comment-agent-text">{fiche.commentaire || '-'}</span>
-                    </td>
                     <td>
                       <div className="comment-quick-edit-container">
                         <div className="comment-quick-actions">
@@ -740,7 +776,7 @@ const ControleQualite = () => {
                                   disabled={updateCommentaireQualiteMutation.isLoading}
                                   title="Enregistrer (Ctrl+Enter)"
                                 >
-                                  <FaSave />
+                                  OK
                                 </button>
                                 <button
                                   className="btn-cancel-comment-quick"
@@ -774,7 +810,7 @@ const ControleQualite = () => {
                           }}
                           onKeyDown={(e) => handleKeyDown(e, fiche.hash)}
                           className="comment-textarea-quick"
-                          placeholder="Commentaire qualité... (Ctrl+Enter pour sauvegarder)"
+                          placeholder="Commentaire qualité… (Ctrl+Enter)"
                           rows={2}
                           readOnly={isFicheLockedForUser(fiche)}
                           title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : undefined}
@@ -785,78 +821,29 @@ const ControleQualite = () => {
                       {isFicheLockedForUser(fiche) && (
                         <span className="fiche-locked-badge" title={getLockMessage(fiche)}>Verrouillée</span>
                       )}
-                      {fiche.qualite_assignee_pseudo ? (
-                        <span className="qualite-user-name" title={`Utilisateur qualité assigné: ${fiche.qualite_assignee_pseudo}`}>
-                          {fiche.qualite_assignee_pseudo}
-                          {fiche.qualite_assignee_nom && fiche.qualite_assignee_prenom && (
-                            <span className="qualite-user-full-name">
-                              {' '}({fiche.qualite_assignee_prenom} {fiche.qualite_assignee_nom})
-                            </span>
-                          )}
-                        </span>
-                      ) : fiche.qualite_user_pseudo ? (
-                        <span className="qualite-user-name" title={`Dernier modificateur: ${fiche.qualite_user_pseudo}`}>
-                          {fiche.qualite_user_pseudo}
-                          {fiche.qualite_user_nom && fiche.qualite_user_prenom && (
-                            <span className="qualite-user-full-name">
-                              {' '}({fiche.qualite_user_prenom} {fiche.qualite_user_nom})
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        <span className="qualite-user-name no-user">-</span>
-                      )}
+                      <span
+                        className="etat-badge"
+                        style={{ backgroundColor: getEtatActuelColor(fiche) }}
+                      >
+                        {getEtatActuelLabel(fiche)}
+                      </span>
                     </td>
                     <td className="actions-col">
-                      <div className="action-buttons">
+                      <div className="action-buttons action-buttons-minimal">
+                        <FicheDetailLink
+                          ficheHash={fiche.hash}
+                          className="btn-detail-icon"
+                          title="Détails fiche"
+                        />
                         <button
+                          type="button"
                           className="btn-validate-icon"
                           onClick={() => validateQualiteMutation.mutate(fiche.hash)}
                           disabled={validateQualiteMutation.isLoading || isFicheLockedForUser(fiche)}
-                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : "Valider et passer en En-Attente"}
+                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : 'Valider et passer en En-Attente'}
                         >
                           <FaCheckCircle />
                         </button>
-                        <button
-                          className="btn-validate-ko"
-                          onClick={() => openKoModal(fiche)}
-                          disabled={validateQualiteKoMutation.isLoading || isFicheLockedForUser(fiche)}
-                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : "Valider (KO) : En-Attente, fiche non comptabilisée pour l'agent"}
-                        >
-                          <FaBan /> KO
-                        </button>
-                        <button
-                          className="btn-validate-hc"
-                          onClick={() => openHcModal(fiche)}
-                          disabled={validateQualiteHcMutation.isLoading || isFicheLockedForUser(fiche)}
-                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : "Valider (HC) : état HC, fiche hors cible"}
-                        >
-                          HC
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-alerte-ko"
-                          onClick={() => openAlertModal(fiche)}
-                          disabled={sendAlerteKoMutation.isLoading || (fiche.nb_alertes ?? 0) >= 1 || isFicheLockedForUser(fiche)}
-                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : ((fiche.nb_alertes ?? 0) >= 1 ? 'Une alerte a déjà été envoyée pour cette fiche' : "Envoyer une alerte à l'agent qui a inséré la fiche (3 alertes avant KO)")}
-                        >
-                          <FaBell /> Alerte
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-remarques-fiche"
-                          onClick={() => { setRemarquesFicheContext(fiche); setRemarquesModalOpen(true); }}
-                          title="Envoyer une remarque concernant cette fiche à l'agent qualification"
-                        >
-                          <FaCommentDots />
-                        </button>
-                        <FicheDetailLink 
-                          ficheHash={fiche.hash}
-                          className="btn-detail-icon"
-                          title="Voir les détails"
-                        >
-                          <FaSearch />
-                        </FicheDetailLink>
                       </div>
                     </td>
                   </tr>
@@ -885,6 +872,51 @@ const ControleQualite = () => {
             </div>
           )}
         </>
+      )}
+
+      {contextMenu && (
+        <div
+          className="cq-fiche-context-menu"
+          style={getContextMenuStyle()}
+          role="menu"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button type="button" className="cq-fiche-context-menu-item" onClick={openDetailsFromMenu}>
+            Détails
+          </button>
+          <div className="cq-context-menu-etat-group">
+            <span className="cq-context-menu-etat-label">Changer état</span>
+            <div className="cq-context-submenu">
+              {etatsPhase0.map((etat) => (
+                <button
+                  key={etat.id}
+                  type="button"
+                  className="cq-fiche-context-menu-item cq-context-submenu-item"
+                  style={{ borderLeft: `4px solid ${etat.color || '#ccc'}` }}
+                  disabled={updateEtatMutation.isLoading || isFicheLockedForUser(contextMenu.fiche)}
+                  onClick={() => handleEtatFromContextMenu(String(etat.id))}
+                >
+                  {etat.titre}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="cq-fiche-context-menu-item"
+            disabled={
+              sendAlerteKoMutation.isLoading ||
+              (contextMenu.fiche.nb_alertes ?? 0) >= 1 ||
+              isFicheLockedForUser(contextMenu.fiche)
+            }
+            onClick={openAlertFromMenu}
+          >
+            Envoyer alerte
+          </button>
+          <button type="button" className="cq-fiche-context-menu-item" onClick={openRemarqueFromMenu}>
+            Envoyer remarque
+          </button>
+        </div>
       )}
 
       {/* Modal KO */}
