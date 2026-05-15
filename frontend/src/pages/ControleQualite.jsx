@@ -756,7 +756,7 @@ const ControleQualite = () => {
                   <th>Agent</th>
                   <th>Agent qualité</th>
                   <th className="commentaire-qualite-col">Commentaire qualité</th>
-                  <th>État actuel</th>
+                  <th className="etat-actuel-col">État actuel</th>
                   <th className="actions-col">Actions</th>
                 </tr>
               </thead>
@@ -827,19 +827,20 @@ const ControleQualite = () => {
                           onKeyDown={(e) => handleKeyDown(e, fiche.hash)}
                           className="comment-textarea-quick"
                           placeholder="Commentaire qualité… (Ctrl+Enter)"
-                          rows={2}
+                          rows={3}
                           readOnly={isFicheLockedForUser(fiche)}
                           title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : undefined}
                         />
                       </div>
                     </td>
-                    <td>
+                    <td className="etat-actuel-col">
                       {isFicheLockedForUser(fiche) && (
                         <span className="fiche-locked-badge" title={getLockMessage(fiche)}>Verrouillée</span>
                       )}
                       <span
-                        className="etat-badge"
+                        className="etat-badge etat-badge-compact"
                         style={{ backgroundColor: getEtatActuelColor(fiche) }}
+                        title={getEtatActuelLabel(fiche)}
                       >
                         {getEtatActuelLabel(fiche)}
                       </span>

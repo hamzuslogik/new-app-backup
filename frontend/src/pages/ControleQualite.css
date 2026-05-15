@@ -220,14 +220,51 @@
 /* Colonne Commentaire qualité : priorité d'espace horizontal */
 .fiches-table th.commentaire-qualite-col,
 .fiches-table td.commentaire-qualite-col {
-  width: 32%;
-  min-width: 360px;
+  width: 48%;
+  min-width: 480px;
 }
 
 .fiches-table td.commentaire-qualite-col .comment-quick-edit-container {
   min-width: 0;
   max-width: none;
   width: 100%;
+}
+
+.fiches-table td.commentaire-qualite-col .comment-textarea-quick {
+  min-height: 72px;
+  max-height: 220px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Colonne État actuel : compacte */
+.fiches-table th.etat-actuel-col,
+.fiches-table td.etat-actuel-col {
+  width: 1%;
+  min-width: 0;
+  max-width: 130px;
+  white-space: nowrap;
+  padding-left: 6px;
+  padding-right: 6px;
+  text-align: center;
+}
+
+.fiches-table td.etat-actuel-col .etat-badge-compact {
+  display: inline-block;
+  max-width: 118px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  font-size: 9.5px;
+  padding: 3px 5px;
+}
+
+.fiches-table td.etat-actuel-col .fiche-locked-badge {
+  display: block;
+  margin: 0 auto 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .produit-indicator {
