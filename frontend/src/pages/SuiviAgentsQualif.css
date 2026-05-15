@@ -476,6 +476,10 @@
 .suivi-agents-qualif .suivi-table thead tr,
 .suivi-agents-qualif .suivi-table thead tr th,
 .suivi-agents-qualif .suivi-table thead tr th *,
+.suivi-agents-qualif .suivi-table th.ko-col-header {
+  color: #dc3545;
+}
+
 .suivi-agents-qualif .suivi-table th {
   color: #333333 !important;
   background-color: #ffffff !important;

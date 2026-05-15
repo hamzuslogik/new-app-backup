@@ -895,6 +895,7 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
           FROM fiches f
           INNER JOIN etats e ON f.id_etat_final = e.id
           WHERE ${fichesConditions.join(' AND ')}
+          AND (f.ko = 0 OR f.ko IS NULL)
           AND (e.groupe = '0' OR e.groupe = 0)
           GROUP BY f.id_etat_final
         `, fichesParams);
@@ -906,7 +907,16 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
           }
         });
 
-        // Compter les fiches validées (hors groupe 0, donc phase 1, 2 ou 3)
+        // Fiches KO (ko = 1) sur la période
+        const koResult = await queryOne(`
+          SELECT COUNT(*) as count
+          FROM fiches f
+          WHERE ${fichesConditions.join(' AND ')}
+          AND f.ko = 1
+        `, fichesParams);
+        const koCount = koResult?.count || 0;
+
+        // Fiches validées : hors groupe 0, hors KO
         const idsGroupe0 = etatsGroupe0.map(e => e.id);
         let validatedCount = 0;
         if (idsGroupe0.length > 0) {
@@ -915,6 +925,7 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
             FROM fiches f
             INNER JOIN etats e ON f.id_etat_final = e.id
             WHERE ${fichesConditions.join(' AND ')}
+            AND (f.ko = 0 OR f.ko IS NULL)
             AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})
             AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
           `, [...fichesParams, ...idsGroupe0]);
@@ -942,6 +953,7 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
             centre_nom: agent.centre_nom
           },
           stats: Object.values(statsByEtat),
+          ko: koCount,
           validated: validatedCount,
           total: totalFiches?.total || 0
         };

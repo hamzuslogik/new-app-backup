@@ -2643,7 +2643,6 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
     // Construire les conditions
     let whereConditions = [
       'fiche.archive = 0',
-      'fiche.ko = 0',
       'fiche.active = 1',
       `fiche.id_agent IN (${agentIds.map(() => '?').join(',')})`
     ];
@@ -2706,11 +2705,13 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       if (etatArray.length > 0) {
         const etatIds = [];
         let hasValidated = false;
+        let hasKo = false;
         
-        // Séparer les IDs d'états et "validated"
         etatArray.forEach(etat => {
           if (etat === 'validated') {
             hasValidated = true;
+          } else if (etat === 'ko') {
+            hasKo = true;
           } else {
             const parsedId = parseInt(etat);
             if (!isNaN(parsedId)) {
@@ -2719,25 +2720,28 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
           }
         });
         
-        // Construire la condition
         const conditions = [];
         
-        // Si des IDs d'états sont sélectionnés
         if (etatIds.length > 0) {
           conditions.push(`fiche.id_etat_final IN (${etatIds.map(() => '?').join(',')})`);
           params.push(...etatIds);
         }
         
-        // Si "validated" est sélectionné
+        if (hasKo) {
+          conditions.push('fiche.ko = 1');
+        }
+        
         if (hasValidated) {
           const etatsGroupe0 = await query(`
             SELECT id FROM etats WHERE (groupe = '0' OR groupe = 0)
           `);
           const idsGroupe0 = etatsGroupe0.map(e => e.id);
+          const validatedParts = ['(fiche.ko = 0 OR fiche.ko IS NULL)'];
           if (idsGroupe0.length > 0) {
-            conditions.push(`fiche.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})`);
+            validatedParts.push(`fiche.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})`);
             params.push(...idsGroupe0);
           }
+          conditions.push(`(${validatedParts.join(' AND ')})`);
         }
         
         // Si plusieurs conditions, utiliser OR
@@ -2747,15 +2751,17 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
           whereConditions.push(conditions[0]);
         }
       } else if (id_etat_final === 'validated') {
-        // Pour "validated", exclure les états du groupe 0
         const etatsGroupe0 = await query(`
           SELECT id FROM etats WHERE (groupe = '0' OR groupe = 0)
         `);
         const idsGroupe0 = etatsGroupe0.map(e => e.id);
+        whereConditions.push('(fiche.ko = 0 OR fiche.ko IS NULL)');
         if (idsGroupe0.length > 0) {
           whereConditions.push(`fiche.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})`);
           params.push(...idsGroupe0);
         }
+      } else if (id_etat_final === 'ko') {
+        whereConditions.push('fiche.ko = 1');
       } else {
         // Filtre par état spécifique
         const parsedId = parseInt(id_etat_final);
@@ -2811,6 +2817,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         fiche.date_insert_time,
         fiche.date_modif_time,
         fiche.commentaire_qualite,
+        fiche.ko,
         agent.pseudo as agent_pseudo,
         agent.nom as agent_nom,
         agent.prenom as agent_prenom,

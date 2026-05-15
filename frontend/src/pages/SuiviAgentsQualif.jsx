@@ -216,17 +216,20 @@ const SuiviAgentsQualif = () => {
         const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
         const ficheIdEtat = String(fiche.id_etat_final);
         
-        // Vérifier si "validated" est sélectionné et si la fiche est validée (hors groupe 0)
+        // Vérifier si "validated" est sélectionné et si la fiche est validée (hors groupe 0, hors KO)
         const isValidatedSelected = filters.id_etat_final.includes('validated');
-        const isFicheValidated = !isGroupe0;
+        const isFicheKo = fiche.ko === 1 || fiche.ko === '1';
+        const isFicheValidated = !isGroupe0 && !isFicheKo;
+        const isKoSelected = filters.id_etat_final.includes('ko');
         
         // Vérifier si l'état de la fiche est dans la liste sélectionnée
         const isEtatSelected = filters.id_etat_final.includes(ficheIdEtat);
         
         // La fiche correspond si :
+        // - "ko" est sélectionné ET la fiche est KO, OU
         // - "validated" est sélectionné ET la fiche est validée, OU
         // - l'état de la fiche est dans la liste sélectionnée
-        return (isValidatedSelected && isFicheValidated) || isEtatSelected;
+        return (isKoSelected && isFicheKo) || (isValidatedSelected && isFicheValidated) || isEtatSelected;
       });
     }
     
@@ -322,29 +325,23 @@ const SuiviAgentsQualif = () => {
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Agent + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['KO', 'Validé']);
       
-      // Créer les colonnes
       const columns = [
         { key: 'agent', label: 'Agent' },
         ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
       ];
       
-      // Créer les lignes (une par agent)
       const statsData = stats.agents.map(agentStat => {
         const agentName = agentStat.agent.pseudo || 'N/A';
-        
         const row = { agent: agentName };
-        
-        // Ajouter les valeurs pour chaque état
         stats.etats.forEach(etat => {
+          const stat = agentStat.stats.find(s => s.id === etat.id);
           const label = etat.titre || etat.abbreviation;
-          row[`etat_${label}`] = agentStat.stats[etat.id]?.count || 0;
+          row[`etat_${label}`] = stat?.count || 0;
         });
-        
-        // Ajouter la valeur "Validé"
-        row['etat_Validé'] = agentStat.stats['validated']?.count || 0;
-        
+        row['etat_KO'] = agentStat.ko || 0;
+        row['etat_Validé'] = agentStat.validated || 0;
         return row;
       });
       
@@ -371,32 +368,23 @@ const SuiviAgentsQualif = () => {
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Agent + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
-      
-      // Créer les colonnes
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['KO', 'Validé']);
       const columns = [
         { key: 'agent', label: 'Agent' },
         ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
       ];
-      
-      // Créer les lignes (une par agent)
       const statsData = stats.agents.map(agentStat => {
         const agentName = agentStat.agent.pseudo || 'N/A';
-        
         const row = { agent: agentName };
-        
-        // Ajouter les valeurs pour chaque état
         stats.etats.forEach(etat => {
+          const stat = agentStat.stats.find(s => s.id === etat.id);
           const label = etat.titre || etat.abbreviation;
-          row[`etat_${label}`] = agentStat.stats[etat.id]?.count || 0;
+          row[`etat_${label}`] = stat?.count || 0;
         });
-        
-        // Ajouter la valeur "Validé"
-        row['etat_Validé'] = agentStat.stats['validated']?.count || 0;
-        
+        row['etat_KO'] = agentStat.ko || 0;
+        row['etat_Validé'] = agentStat.validated || 0;
         return row;
       });
-      
       exportToExcel(statsData, columns, 'suivi-agents-qualif-stats');
     } else {
       alert('Aucune donnée à exporter');
@@ -425,32 +413,23 @@ const SuiviAgentsQualif = () => {
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Agent + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
-      
-      // Créer les colonnes
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['KO', 'Validé']);
       const columns = [
         { key: 'agent', label: 'Agent' },
         ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
       ];
-      
-      // Créer les lignes (une par agent)
       const statsData = stats.agents.map(agentStat => {
         const agentName = agentStat.agent.pseudo || 'N/A';
-        
         const row = { agent: agentName };
-        
-        // Ajouter les valeurs pour chaque état
         stats.etats.forEach(etat => {
+          const stat = agentStat.stats.find(s => s.id === etat.id);
           const label = etat.titre || etat.abbreviation;
-          row[`etat_${label}`] = agentStat.stats[etat.id]?.count || 0;
+          row[`etat_${label}`] = stat?.count || 0;
         });
-        
-        // Ajouter la valeur "Validé"
-        row['etat_Validé'] = agentStat.stats['validated']?.count || 0;
-        
+        row['etat_KO'] = agentStat.ko || 0;
+        row['etat_Validé'] = agentStat.validated || 0;
         return row;
       });
-      
       exportToPDF(statsData, columns, 'suivi-agents-qualif-stats', 'Suivi Agents Qualification - Statistiques');
     } else {
       alert('Aucune donnée à exporter');
@@ -571,6 +550,13 @@ const SuiviAgentsQualif = () => {
                             </span>
                           );
                         }
+                        if (etatId === 'ko') {
+                          return (
+                            <span key={idx} className="multi-select-badge ko">
+                              KO
+                            </span>
+                          );
+                        }
                         const etat = etatsData?.find(e => String(e.id) === etatId);
                         return etat ? (
                           <span key={idx} className="multi-select-badge">
@@ -606,16 +592,30 @@ const SuiviAgentsQualif = () => {
                     <label className="multi-select-option">
                       <input
                         type="checkbox"
+                        checked={filters.id_etat_final && filters.id_etat_final.includes('ko')}
+                        onChange={(e) => {
+                          const currentEtats = filters.id_etat_final || [];
+                          const newEtats = e.target.checked
+                            ? [...currentEtats, 'ko']
+                            : currentEtats.filter(id => id !== 'ko');
+                          handleFilterChange('id_etat_final', newEtats);
+                        }}
+                      />
+                      <span style={{ color: '#dc3545' }}>KO</span>
+                    </label>
+                    <label className="multi-select-option">
+                      <input
+                        type="checkbox"
                         checked={filters.id_etat_final && filters.id_etat_final.includes('validated')}
                         onChange={(e) => {
                           const currentEtats = filters.id_etat_final || [];
                           const newEtats = e.target.checked
                             ? [...currentEtats, 'validated']
-                            : currentEtats.filter(e => e !== 'validated');
+                            : currentEtats.filter(id => id !== 'validated');
                           handleFilterChange('id_etat_final', newEtats);
                         }}
                       />
-                      <span>Validée (hors groupe 0)</span>
+                      <span>Validée (hors groupe 0, hors KO)</span>
                     </label>
                     {etatsData?.filter(e => e.groupe === '0' || e.groupe === 0).map(etat => (
                       <label key={etat.id} className="multi-select-option">
@@ -713,9 +713,19 @@ const SuiviAgentsQualif = () => {
                       <td>
                         <span 
                           className="etat-badge"
-                          style={{ backgroundColor: (fiche.etat_groupe === '0' || fiche.etat_groupe === 0) ? (fiche.etat_color || '#ccc') : '#4CAF50' }}
+                          style={{
+                            backgroundColor: (fiche.ko === 1 || fiche.ko === '1')
+                              ? '#dc3545'
+                              : (fiche.etat_groupe === '0' || fiche.etat_groupe === 0)
+                                ? (fiche.etat_color || '#ccc')
+                                : '#4CAF50'
+                          }}
                         >
-                          {(fiche.etat_groupe === '0' || fiche.etat_groupe === 0) ? (fiche.etat_titre || '-') : 'Validé'}
+                          {(fiche.ko === 1 || fiche.ko === '1')
+                            ? 'KO'
+                            : (fiche.etat_groupe === '0' || fiche.etat_groupe === 0)
+                              ? (fiche.etat_titre || '-')
+                              : 'Validé'}
                         </span>
                       </td>
                       {canSeeCommentaireQualite && (
@@ -810,6 +820,7 @@ const SuiviAgentsQualif = () => {
                         {etat.abbreviation || etat.titre}
                       </th>
                     ))}
+                    <th rowSpan="2" className="ko-col-header">KO</th>
                     <th rowSpan="2">Validé</th>
                     <th rowSpan="2">Total</th>
                   </tr>
@@ -848,6 +859,15 @@ const SuiviAgentsQualif = () => {
                           </td>
                         );
                       })}
+                      <td
+                        className="ko-cell"
+                        style={{
+                          backgroundColor: (agentStat.ko || 0) > 0 ? '#dc354520' : 'transparent',
+                          color: (agentStat.ko || 0) > 0 ? '#333' : '#999'
+                        }}
+                      >
+                        {agentStat.ko || 0}
+                      </td>
                       <td 
                         className="validated-cell"
                         style={{ 
@@ -877,6 +897,11 @@ const SuiviAgentsQualif = () => {
                         </td>
                       );
                     })}
+                    <td className="total-cell">
+                      <strong>
+                        {stats.agents.reduce((sum, agentStat) => sum + (agentStat.ko || 0), 0)}
+                      </strong>
+                    </td>
                     <td className="total-cell">
                       <strong>
                         {stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0)}
