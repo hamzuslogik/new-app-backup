@@ -344,25 +344,39 @@ const ControleQualite = () => {
     return etat && (etat.groupe === '0' || etat.groupe === 0);
   };
 
+  const isFicheEtatHc = (fiche) => Number(fiche.id_etat_final) === ETAT_HC_ID;
+
   // Obtenir le libellé à afficher pour l'état actuel
   // "Validée" / "Validée (KO)" uniquement si l'état n'est pas dans le groupe 0
   const getEtatActuelLabel = (fiche) => {
-    if (isEtatGroupe0(fiche.id_etat_final)) {
-      return fiche.etat_titre || '-';
+    if (fiche.archive === 1 || fiche.archive === '1') {
+      return 'POUBELLE';
     }
     if (fiche.ko === 1 || fiche.ko === '1') {
       return 'VALIDÉ (KO)';
+    }
+    if (isFicheEtatHc(fiche)) {
+      return fiche.etat_titre || 'HC';
+    }
+    if (isEtatGroupe0(fiche.id_etat_final)) {
+      return fiche.etat_titre || '-';
     }
     return 'Validé';
   };
 
   // Obtenir la couleur pour l'état actuel
   const getEtatActuelColor = (fiche) => {
-    if (isEtatGroupe0(fiche.id_etat_final)) {
-      return getEtatColor(fiche);
+    if (fiche.archive === 1 || fiche.archive === '1') {
+      return '#6c757d';
     }
     if (fiche.ko === 1 || fiche.ko === '1') {
       return '#dc3545';
+    }
+    if (isFicheEtatHc(fiche)) {
+      return getEtatColor(fiche);
+    }
+    if (isEtatGroupe0(fiche.id_etat_final)) {
+      return getEtatColor(fiche);
     }
     return '#28a745';
   };
@@ -764,7 +778,10 @@ const ControleQualite = () => {
                 {fiches.map((fiche) => (
                   <tr
                     key={fiche.hash}
-                    className={isFicheLockedForUser(fiche) ? 'fiche-row-locked' : ''}
+                    className={[
+                      isFicheLockedForUser(fiche) ? 'fiche-row-locked' : '',
+                      (fiche.archive === 1 || fiche.archive === '1') ? 'fiche-row-archive' : ''
+                    ].filter(Boolean).join(' ')}
                     onContextMenu={(e) => openRowContextMenu(e, fiche)}
                     title="Clic droit : menu d'actions"
                   >

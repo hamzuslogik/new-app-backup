@@ -186,6 +186,14 @@
   background: #fff3d4;
 }
 
+.fiches-table tbody tr.fiche-row-archive {
+  background: #f1f3f5;
+}
+
+.fiches-table tbody tr.fiche-row-archive:hover {
+  background: #e9ecef;
+}
+
 .fiche-locked-badge {
   display: inline-block;
   margin-right: 6px;

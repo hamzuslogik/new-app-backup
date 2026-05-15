@@ -2285,16 +2285,18 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    // Construire les conditions
+    // Fiches visibles : qualification (groupe 0), validées (En-Attente), KO, HC, poubelle (archive)
     let whereConditions = [
-      '(fiche.archive = 0 OR fiche.archive IS NULL)',
       'fiche.id_agent IS NOT NULL',
-      // Filtrer les états du groupe 0 (états utilisés par la qualité) OU l'état "En-Attente" (ID 1)
-      // L'état "En-Attente" est inclus pour permettre de voir les fiches validées
-      `EXISTS (
-        SELECT 1 FROM etats e 
-        WHERE e.id = fiche.id_etat_final 
-        AND ((e.groupe = '0' OR e.groupe = 0) OR e.id = 1)
+      `(
+        EXISTS (
+          SELECT 1 FROM etats e
+          WHERE e.id = fiche.id_etat_final
+          AND ((e.groupe = '0' OR e.groupe = 0) OR e.id = 1)
+        )
+        OR fiche.ko = 1
+        OR fiche.archive = 1
+        OR fiche.id_etat_final IN (54, 55)
       )`
     ];
     let params = [];
@@ -2387,6 +2389,8 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
           fiche.commentaire_commercial,
           fiche.commentaire,
           fiche.ko,
+          fiche.hc,
+          fiche.archive,
           agent.pseudo as agent_pseudo,
           agent.nom as agent_nom,
           agent.prenom as agent_prenom,
@@ -2452,6 +2456,8 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
             fiche.commentaire_commercial,
             fiche.commentaire,
             fiche.ko,
+            fiche.hc,
+            fiche.archive,
             agent.pseudo as agent_pseudo,
             agent.nom as agent_nom,
             agent.prenom as agent_prenom,
