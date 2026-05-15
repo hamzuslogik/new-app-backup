@@ -14,6 +14,7 @@ import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
 import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, format, addMonths } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
 import './FicheDetail.css';
+import FicheCompletudeSection from '../components/FicheCompletudeSection';
 
 /** Mode de chauffage (VARCHAR en base) : affichage tel quel. */
 function modeChauffageAffiche(confProp, modeProp) {
@@ -488,6 +489,7 @@ const FicheDetail = ({
   // Vérifier si l'utilisateur est qualité qualification (fonction 2, 8, 12)
   const userFonction = user?.fonction != null ? Number(user.fonction) : null;
   const isQualiteQualif = userFonction === 2 || userFonction === 8 || userFonction === 12;
+  const isQualiteConfirmation = userFonction === 4;
   /** Session partenaire : libellé fonction ou centre (ex. centre PARTENAIRE, titre « Partenaire »). */
   const isPartenaireProfil =
     (typeof user?.fonction_titre === 'string' && /partenaire/i.test(user.fonction_titre)) ||
@@ -7642,6 +7644,11 @@ const FicheDetail = ({
             </div>
           </div>
         )}
+
+        <FicheCompletudeSection
+          ficheHash={hash}
+          enabled={isModal && isQualiteConfirmation}
+        />
       </div>
         </>
       )}

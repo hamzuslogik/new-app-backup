@@ -343,6 +343,18 @@
   order: 999;
 }
 
+.fiche-sections > .fiche-completude-section {
+  order: 1000;
+}
+
+.fiche-completude-form .form-group {
+  margin-bottom: 12px;
+}
+
+.fiche-completude-form .form-actions {
+  margin-top: 8px;
+}
+
 .fiche-section {
   background: white;
   border-radius: 7px;
