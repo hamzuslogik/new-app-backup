@@ -63,8 +63,6 @@ function canAccessListeCompletudes(fonction) {
   return isQualiteConfirmation(fonction) || isREConfirmation(fonction) || isRPConfirmation(fonction);
 }
 
-const FONCTION_CONFIRMATEUR = 6;
-
 /** Périmètre fiches (confirmateur 1) pour RE / RP / filtre QC. */
 async function buildFicheScopeForListe(query, queryOne, user, { id_confirmateur, id_re }) {
   const fn = Number(user.fonction);
