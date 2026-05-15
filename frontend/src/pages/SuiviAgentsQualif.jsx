@@ -9,36 +9,50 @@ import SystemMessageBanner from '../components/SystemMessageBanner';
 import './SuiviAgentsQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
-const VALIDATED_COLOR = '#4CAF50';
-const TOTAL_COLOR = '#607d8b';
+const VALIDATED_COLOR = '#2e7d32';
+const TOTAL_COLOR = '#455a64';
 
-const getEtatContrastColor = (etat) => {
-  const id = Number(etat?.id);
-  if (id === 1) return '#000000';
-  const hex = (etat?.color || '#cccccc').replace('#', '');
-  if (hex.length !== 6) return '#ffffff';
+const normalizeHex = (hex) => {
+  const h = String(hex || '').replace('#', '').trim();
+  if (h.length === 6) return `#${h}`;
+  if (h.length === 3) {
+    return `#${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`;
+  }
+  return '#9e9e9e';
+};
+
+const darkenHex = (hex, amount = 0.18) => {
+  const full = normalizeHex(hex).replace('#', '');
+  const r = Math.max(0, Math.round(parseInt(full.slice(0, 2), 16) * (1 - amount)));
+  const g = Math.max(0, Math.round(parseInt(full.slice(2, 4), 16) * (1 - amount)));
+  const b = Math.max(0, Math.round(parseInt(full.slice(4, 6), 16) * (1 - amount)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+};
+
+const getEtatContrastColor = (bgHex) => {
+  const hex = normalizeHex(bgHex).replace('#', '');
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.62 ? '#000000' : '#ffffff';
+  return luminance > 0.58 ? '#000000' : '#ffffff';
 };
 
 const getEtatHeaderStyle = (etat) => {
-  const bg = etat?.color || '#cccccc';
+  const bg = darkenHex(etat?.color || '#9e9e9e', 0.14);
   return {
     backgroundColor: bg,
-    color: getEtatContrastColor(etat),
+    color: getEtatContrastColor(bg),
     fontWeight: 700,
     textAlign: 'center'
   };
 };
 
 const getEtatCellStyle = (etat, count) => {
-  const bg = etat?.color || '#cccccc';
+  const bg = normalizeHex(etat?.color || '#9e9e9e');
   return {
-    backgroundColor: count > 0 ? `${bg}28` : `${bg}12`,
-    color: count > 0 ? '#222' : '#888',
+    backgroundColor: count > 0 ? `${bg}55` : `${bg}30`,
+    color: count > 0 ? '#1a1a1a' : '#666',
     fontWeight: 700,
     textAlign: 'center'
   };
@@ -915,7 +929,7 @@ const SuiviAgentsQualif = () => {
                       <td
                         className="validated-col-cell"
                         style={{
-                          backgroundColor: (agentStat.validated || 0) > 0 ? `${VALIDATED_COLOR}28` : `${VALIDATED_COLOR}12`,
+                          backgroundColor: (agentStat.validated || 0) > 0 ? `${VALIDATED_COLOR}55` : `${VALIDATED_COLOR}30`,
                           color: (agentStat.validated || 0) > 0 ? '#222' : '#888',
                           fontWeight: 700,
                           textAlign: 'center'
@@ -926,7 +940,7 @@ const SuiviAgentsQualif = () => {
                       <td
                         className="total-col-cell"
                         style={{
-                          backgroundColor: '#eceff1',
+                          backgroundColor: '#cfd8dc',
                           fontWeight: 700,
                           textAlign: 'center'
                         }}
@@ -957,7 +971,7 @@ const SuiviAgentsQualif = () => {
                     <td
                       className="validated-col-cell"
                       style={{
-                        backgroundColor: `${VALIDATED_COLOR}28`,
+                        backgroundColor: `${VALIDATED_COLOR}55`,
                         fontWeight: 700,
                         textAlign: 'center'
                       }}
