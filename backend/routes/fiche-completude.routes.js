@@ -4,6 +4,7 @@
  * Consultation / traitement : confirmateur 1 de la fiche, RE (14), RP (13).
  */
 const FONCTION_QUALITE_CONFIRMATION = 4;
+const FONCTION_CONFIRMATEUR = 6;
 const FONCTION_RP_CONFIRMATION = 13;
 const FONCTION_RE_CONFIRMATION = 14;
 
@@ -19,9 +20,16 @@ function isRPConfirmation(fonction) {
   return Number(fonction) === FONCTION_RP_CONFIRMATION;
 }
 
+function getConfirmateur1IdFromFiche(fiche) {
+  if (!fiche || fiche.id_confirmateur == null) return null;
+  const id = Number(fiche.id_confirmateur);
+  return id > 0 ? id : null;
+}
+
 function isConfirmateur1OfFiche(userId, fiche) {
   if (!fiche || userId == null) return false;
-  return Number(fiche.id_confirmateur) === Number(userId);
+  const conf1 = getConfirmateur1IdFromFiche(fiche);
+  return conf1 != null && Number(conf1) === Number(userId);
 }
 
 function canViewCompletude(user, fiche) {
@@ -29,7 +37,7 @@ function canViewCompletude(user, fiche) {
   const fn = Number(user.fonction);
   if (isQualiteConfirmation(fn)) return true;
   if (isREConfirmation(fn) || isRPConfirmation(fn)) return true;
-  if (isConfirmateur1OfFiche(user.id, fiche)) return true;
+  if (fn === FONCTION_CONFIRMATEUR && isConfirmateur1OfFiche(user.id, fiche)) return true;
   return false;
 }
 
@@ -41,7 +49,7 @@ function canTreatCompletude(user, fiche) {
   if (!user || !fiche) return false;
   const fn = Number(user.fonction);
   if (isREConfirmation(fn) || isRPConfirmation(fn)) return true;
-  if (isConfirmateur1OfFiche(user.id, fiche)) return true;
+  if (fn === FONCTION_CONFIRMATEUR && isConfirmateur1OfFiche(user.id, fiche)) return true;
   return false;
 }
 

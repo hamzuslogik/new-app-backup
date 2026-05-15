@@ -38,7 +38,10 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
   const list = data?.list || [];
   const permissions = data?.permissions || {};
   const allowCreate = canCreate && (permissions.can_create !== false);
-  const allowTreat = canTreat && (permissions.can_treat !== false);
+  /** canTreat côté page (RE/RP/confirmateur) ; permissions API en renfort si présentes */
+  const allowTreat =
+    Boolean(canTreat) &&
+    (permissions.can_treat === undefined || permissions.can_treat === true);
 
   const createMutation = useMutation(
     async (payload) => {

@@ -942,12 +942,19 @@ const FicheDetail = ({
     }
   );
 
+  const ficheConfirmateur1Id =
+    ficheData?.id_confirmateur != null && Number(ficheData.id_confirmateur) > 0
+      ? Number(ficheData.id_confirmateur)
+      : null;
   const isFicheConfirmateur1 =
-    user?.id != null &&
-    ficheData?.id_confirmateur != null &&
-    Number(user.id) === Number(ficheData.id_confirmateur);
+    user?.id != null && ficheConfirmateur1Id != null && Number(user.id) === ficheConfirmateur1Id;
   const showCompletudeSection =
-    isQualiteConfirmation || isFicheConfirmateur1 || isREConfirmation || isRPConfirmation;
+    isQualiteConfirmation ||
+    isREConfirmation ||
+    isRPConfirmation ||
+    (isConfirmateurSession && isFicheConfirmateur1);
+  const canTreatCompletudeDetail =
+    isREConfirmation || isRPConfirmation || (isConfirmateurSession && isFicheConfirmateur1);
 
   const { data: modificaData = [] } = useQuery(
     ['modifica', hash],
@@ -7658,7 +7665,7 @@ const FicheDetail = ({
           ficheHash={hash}
           enabled={showCompletudeSection}
           canCreate={isQualiteConfirmation}
-          canTreat={isFicheConfirmateur1 || isREConfirmation || isRPConfirmation}
+          canTreat={canTreatCompletudeDetail}
         />
       </div>
         </>
