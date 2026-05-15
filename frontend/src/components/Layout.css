@@ -1,6 +1,8 @@
 .app {
   display: flex;
+  flex: 1;
   min-height: 100vh;
+  width: 100%;
   background-color: var(--light-bg);
   overflow-x: auto; /* Permettre le scroll horizontal si nécessaire */
   min-width: 0; /* Permettre au flex de réduire la largeur si nécessaire */
