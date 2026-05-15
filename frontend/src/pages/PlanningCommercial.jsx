@@ -171,6 +171,24 @@ const PlanningCommercial = () => {
   // Pour les commerciaux : pré-sélectionner l'état CONFIRMER (7) par défaut
   const etatParDefaut = isCommercial ? '7' : '';
 
+  const formatDateFr = (yyyyMmDd) => {
+    if (!yyyyMmDd || typeof yyyyMmDd !== 'string') return '';
+    const [y, m, d] = yyyyMmDd.split('-');
+    if (!y || !m || !d) return yyyyMmDd;
+    return `${d}/${m}/${y}`;
+  };
+
+  /** Plage de dates selon l'onglet actif, ou les filtres si recherche manuelle (activeTab null). */
+  const getTabDateRange = () => {
+    if (activeTab) return getDateRange(activeTab);
+    return {
+      date_debut: filters.date_debut,
+      date_fin: filters.date_fin,
+      time_debut: filters.time_debut || '00:00:00',
+      time_fin: filters.time_fin || '23:59:59'
+    };
+  };
+
   // Construire les paramètres de requête
   const getQueryParams = () => {
     if (filters.fiche_search) {
@@ -196,14 +214,12 @@ const PlanningCommercial = () => {
       return searchParams;
     }
     
-    // Utiliser les dates de l'onglet actif si pas de recherche personnalisée
-    const dateRange = getDateRange(activeTab || 'today');
+    const dateRange = getTabDateRange();
     
-    // Par défaut : selon l'onglet actif
     const defaultParams = {
       page: filters.page || 1,
       limit: filters.limit || 100,
-      date_champ: 'date_rdv_time',
+      date_champ: filters.date_champ || 'date_rdv_time',
       date_debut: dateRange.date_debut,
       date_fin: dateRange.date_fin,
       time_debut: dateRange.time_debut,
@@ -220,7 +236,7 @@ const PlanningCommercial = () => {
 
   // Récupérer les RDV des commerciaux avec mise à jour automatique
   const { data, isLoading, error, refetch } = useQuery(
-    ['planning-commercial', filters],
+    ['planning-commercial', activeTab, filters],
     async () => {
       const params = getQueryParams();
       Object.keys(params).forEach(key => {
@@ -355,6 +371,11 @@ const PlanningCommercial = () => {
 
   const fiches = data?.data || [];
   const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
+  const tabDateRange = !filters.fiche_search ? getTabDateRange() : null;
+  const periodLabel =
+    tabDateRange?.date_debut && tabDateRange?.date_fin
+      ? `${formatDateFr(tabDateRange.date_debut)} → ${formatDateFr(tabDateRange.date_fin)}`
+      : null;
 
   return (
     <div className="planning-commercial">
@@ -702,6 +723,9 @@ const PlanningCommercial = () => {
                         ? 'RDV confirmés de la semaine prochaine'
                         : 'RDV confirmés des commerciaux'}
           </h2>
+          {periodLabel && (activeTab === 'week' || activeTab === 'nextWeek') && (
+            <p className="results-period-label">{periodLabel}</p>
+          )}
           <div className="results-header-right">
             <div className="limit-selector">
               <label htmlFor="limit-select">Afficher :</label>
