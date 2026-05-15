@@ -9,8 +9,9 @@ import SystemMessageBanner from '../components/SystemMessageBanner';
 import './SuiviAgentsQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
-const VALIDATED_COLOR = '#2e7d32';
-const TOTAL_COLOR = '#455a64';
+const VALIDATED_COLOR = '#1b5e20';
+const TOTAL_COLOR = '#37474f';
+const TOTAL_CELL_BG = '#90a4ae';
 
 const normalizeHex = (hex) => {
   const h = String(hex || '').replace('#', '').trim();
@@ -39,7 +40,7 @@ const getEtatContrastColor = (bgHex) => {
 };
 
 const getEtatHeaderStyle = (etat) => {
-  const bg = darkenHex(etat?.color || '#9e9e9e', 0.14);
+  const bg = darkenHex(etat?.color || '#9e9e9e', 0.28);
   return {
     backgroundColor: bg,
     color: getEtatContrastColor(bg),
@@ -51,8 +52,8 @@ const getEtatHeaderStyle = (etat) => {
 const getEtatCellStyle = (etat, count) => {
   const bg = normalizeHex(etat?.color || '#9e9e9e');
   return {
-    backgroundColor: count > 0 ? `${bg}55` : `${bg}30`,
-    color: count > 0 ? '#1a1a1a' : '#666',
+    backgroundColor: count > 0 ? `${bg}88` : `${bg}48`,
+    color: count > 0 ? '#111' : '#555',
     fontWeight: 700,
     textAlign: 'center'
   };
@@ -929,7 +930,7 @@ const SuiviAgentsQualif = () => {
                       <td
                         className="validated-col-cell"
                         style={{
-                          backgroundColor: (agentStat.validated || 0) > 0 ? `${VALIDATED_COLOR}55` : `${VALIDATED_COLOR}30`,
+                          backgroundColor: (agentStat.validated || 0) > 0 ? `${VALIDATED_COLOR}88` : `${VALIDATED_COLOR}48`,
                           color: (agentStat.validated || 0) > 0 ? '#222' : '#888',
                           fontWeight: 700,
                           textAlign: 'center'
@@ -940,7 +941,7 @@ const SuiviAgentsQualif = () => {
                       <td
                         className="total-col-cell"
                         style={{
-                          backgroundColor: '#cfd8dc',
+                          backgroundColor: TOTAL_CELL_BG,
                           fontWeight: 700,
                           textAlign: 'center'
                         }}
@@ -971,7 +972,7 @@ const SuiviAgentsQualif = () => {
                     <td
                       className="validated-col-cell"
                       style={{
-                        backgroundColor: `${VALIDATED_COLOR}55`,
+                        backgroundColor: `${VALIDATED_COLOR}88`,
                         fontWeight: 700,
                         textAlign: 'center'
                       }}
