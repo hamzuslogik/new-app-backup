@@ -325,13 +325,11 @@ const SuiviAgentsQualif = () => {
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Agent + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['KO', 'Validé']);
-      
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
       const columns = [
         { key: 'agent', label: 'Agent' },
         ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
       ];
-      
       const statsData = stats.agents.map(agentStat => {
         const agentName = agentStat.agent.pseudo || 'N/A';
         const row = { agent: agentName };
@@ -340,11 +338,9 @@ const SuiviAgentsQualif = () => {
           const label = etat.titre || etat.abbreviation;
           row[`etat_${label}`] = stat?.count || 0;
         });
-        row['etat_KO'] = agentStat.ko || 0;
         row['etat_Validé'] = agentStat.validated || 0;
         return row;
       });
-      
       exportToCSV(statsData, columns, 'suivi-agents-qualif-stats');
     } else {
       alert('Aucune donnée à exporter');
@@ -368,7 +364,7 @@ const SuiviAgentsQualif = () => {
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Agent + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['KO', 'Validé']);
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
       const columns = [
         { key: 'agent', label: 'Agent' },
         ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
@@ -381,7 +377,6 @@ const SuiviAgentsQualif = () => {
           const label = etat.titre || etat.abbreviation;
           row[`etat_${label}`] = stat?.count || 0;
         });
-        row['etat_KO'] = agentStat.ko || 0;
         row['etat_Validé'] = agentStat.validated || 0;
         return row;
       });
@@ -413,7 +408,7 @@ const SuiviAgentsQualif = () => {
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Agent + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['KO', 'Validé']);
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
       const columns = [
         { key: 'agent', label: 'Agent' },
         ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
@@ -426,7 +421,6 @@ const SuiviAgentsQualif = () => {
           const label = etat.titre || etat.abbreviation;
           row[`etat_${label}`] = stat?.count || 0;
         });
-        row['etat_KO'] = agentStat.ko || 0;
         row['etat_Validé'] = agentStat.validated || 0;
         return row;
       });
@@ -820,7 +814,6 @@ const SuiviAgentsQualif = () => {
                         {etat.abbreviation || etat.titre}
                       </th>
                     ))}
-                    <th rowSpan="2" className="ko-col-header">KO</th>
                     <th rowSpan="2">Validé</th>
                     <th rowSpan="2">Total</th>
                   </tr>
@@ -859,15 +852,6 @@ const SuiviAgentsQualif = () => {
                           </td>
                         );
                       })}
-                      <td
-                        className="ko-cell"
-                        style={{
-                          backgroundColor: (agentStat.ko || 0) > 0 ? '#dc354520' : 'transparent',
-                          color: (agentStat.ko || 0) > 0 ? '#333' : '#999'
-                        }}
-                      >
-                        {agentStat.ko || 0}
-                      </td>
                       <td 
                         className="validated-cell"
                         style={{ 
@@ -897,11 +881,6 @@ const SuiviAgentsQualif = () => {
                         </td>
                       );
                     })}
-                    <td className="total-cell">
-                      <strong>
-                        {stats.agents.reduce((sum, agentStat) => sum + (agentStat.ko || 0), 0)}
-                      </strong>
-                    </td>
                     <td className="total-cell">
                       <strong>
                         {stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0)}

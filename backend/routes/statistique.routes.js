@@ -863,6 +863,12 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
       ORDER BY ordre ASC
     `);
 
+    const koEtatGroupe0 = etatsGroupe0.find(
+      (e) => String(e.abbreviation || '').trim().toUpperCase() === 'KO'
+        || String(e.titre || '').trim().toUpperCase() === 'KO'
+    ) || etatsGroupe0.find((e) => Number(e.id) === 54);
+    const koEtatId = koEtatGroupe0?.id ?? null;
+
     // Récupérer les statistiques pour chaque agent
     const agentsStats = await Promise.all(
       agents.map(async (agent) => {
@@ -888,33 +894,42 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
         ];
         const fichesParams = [agent.id, startDate, endDate];
 
-        const fichesStats = await query(`
-          SELECT 
-            f.id_etat_final,
-            COUNT(*) as count
-          FROM fiches f
-          INNER JOIN etats e ON f.id_etat_final = e.id
-          WHERE ${fichesConditions.join(' AND ')}
-          AND (f.ko = 0 OR f.ko IS NULL)
-          AND (e.groupe = '0' OR e.groupe = 0)
-          GROUP BY f.id_etat_final
-        `, fichesParams);
+        // Répartition groupe 0 : fiches ko=1 → colonne état KO existante
+        const fichesStatsParams = koEtatId != null
+          ? [koEtatId, ...fichesParams]
+          : fichesParams;
+        const fichesStats = koEtatId != null
+          ? await query(`
+            SELECT
+              CASE WHEN (f.ko = 1) THEN ? ELSE f.id_etat_final END AS etat_key,
+              COUNT(*) AS count
+            FROM fiches f
+            LEFT JOIN etats e ON f.id_etat_final = e.id
+            WHERE ${fichesConditions.join(' AND ')}
+            AND (
+              f.ko = 1
+              OR ((f.ko = 0 OR f.ko IS NULL) AND (e.groupe = '0' OR e.groupe = 0))
+            )
+            GROUP BY etat_key
+          `, fichesStatsParams)
+          : await query(`
+            SELECT
+              f.id_etat_final AS etat_key,
+              COUNT(*) AS count
+            FROM fiches f
+            INNER JOIN etats e ON f.id_etat_final = e.id
+            WHERE ${fichesConditions.join(' AND ')}
+            AND (f.ko = 0 OR f.ko IS NULL)
+            AND (e.groupe = '0' OR e.groupe = 0)
+            GROUP BY f.id_etat_final
+          `, fichesParams);
 
-        // Remplir les stats par état
-        fichesStats.forEach(stat => {
-          if (statsByEtat[stat.id_etat_final]) {
-            statsByEtat[stat.id_etat_final].count = stat.count || 0;
+        fichesStats.forEach((stat) => {
+          const key = stat.etat_key;
+          if (statsByEtat[key]) {
+            statsByEtat[key].count = stat.count || 0;
           }
         });
-
-        // Fiches KO (ko = 1) sur la période
-        const koResult = await queryOne(`
-          SELECT COUNT(*) as count
-          FROM fiches f
-          WHERE ${fichesConditions.join(' AND ')}
-          AND f.ko = 1
-        `, fichesParams);
-        const koCount = koResult?.count || 0;
 
         // Fiches validées : hors groupe 0, hors KO
         const idsGroupe0 = etatsGroupe0.map(e => e.id);
@@ -953,7 +968,6 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
             centre_nom: agent.centre_nom
           },
           stats: Object.values(statsByEtat),
-          ko: koCount,
           validated: validatedCount,
           total: totalFiches?.total || 0
         };
