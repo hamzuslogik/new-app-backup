@@ -9,6 +9,41 @@ import SystemMessageBanner from '../components/SystemMessageBanner';
 import './SuiviAgentsQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
+const VALIDATED_COLOR = '#4CAF50';
+const TOTAL_COLOR = '#607d8b';
+
+const getEtatContrastColor = (etat) => {
+  const id = Number(etat?.id);
+  if (id === 1) return '#000000';
+  const hex = (etat?.color || '#cccccc').replace('#', '');
+  if (hex.length !== 6) return '#ffffff';
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.62 ? '#000000' : '#ffffff';
+};
+
+const getEtatHeaderStyle = (etat) => {
+  const bg = etat?.color || '#cccccc';
+  return {
+    backgroundColor: bg,
+    color: getEtatContrastColor(etat),
+    fontWeight: 700,
+    textAlign: 'center'
+  };
+};
+
+const getEtatCellStyle = (etat, count) => {
+  const bg = etat?.color || '#cccccc';
+  return {
+    backgroundColor: count > 0 ? `${bg}28` : `${bg}12`,
+    color: count > 0 ? '#222' : '#888',
+    fontWeight: 700,
+    textAlign: 'center'
+  };
+};
+
 const SuiviAgentsQualif = () => {
   useForceDesktopViewport('suivi-agents-qualif-page');
   const { user } = useAuth();
@@ -808,20 +843,47 @@ const SuiviAgentsQualif = () => {
               <table className="suivi-table">
                 <thead>
                   <tr>
-                    <th rowSpan="2">Agent</th>
+                    <th rowSpan="2" className="agent-col-header">Agent</th>
                     {stats.etats && stats.etats.length > 0 && stats.etats.map(etat => (
-                      <th key={etat.id} title={etat.titre}>
+                      <th
+                        key={etat.id}
+                        className="etat-col-header"
+                        title={etat.titre}
+                        style={getEtatHeaderStyle(etat)}
+                      >
                         {etat.abbreviation || etat.titre}
                       </th>
                     ))}
-                    <th rowSpan="2">Validé</th>
-                    <th rowSpan="2">Total</th>
+                    <th
+                      rowSpan="2"
+                      className="validated-col-header"
+                      style={{
+                        backgroundColor: VALIDATED_COLOR,
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        textAlign: 'center'
+                      }}
+                    >
+                      Validé
+                    </th>
+                    <th
+                      rowSpan="2"
+                      className="total-col-header"
+                      style={{
+                        backgroundColor: TOTAL_COLOR,
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        textAlign: 'center'
+                      }}
+                    >
+                      Total
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {stats.agents.map((agentStat, index) => (
                     <tr key={agentStat.agent.id || index}>
-                      <td>
+                      <td className="agent-col-cell">
                         <div className="agent-cell">
                           {agentStat.agent.photo ? (
                             <img 
@@ -841,55 +903,72 @@ const SuiviAgentsQualif = () => {
                         const stat = agentStat.stats.find(s => s.id === etat.id);
                         const count = stat?.count || 0;
                         return (
-                          <td 
+                          <td
                             key={etat.id}
-                            style={{ 
-                              backgroundColor: count > 0 ? `${etat.color}20` : 'transparent',
-                              color: count > 0 ? '#333' : '#999'
-                            }}
+                            className="etat-col-cell"
+                            style={getEtatCellStyle(etat, count)}
                           >
                             {count}
                           </td>
                         );
                       })}
-                      <td 
-                        className="validated-cell"
-                        style={{ 
-                          backgroundColor: (agentStat.validated || 0) > 0 ? '#4CAF5020' : 'transparent',
-                          color: (agentStat.validated || 0) > 0 ? '#333' : '#999'
+                      <td
+                        className="validated-col-cell"
+                        style={{
+                          backgroundColor: (agentStat.validated || 0) > 0 ? `${VALIDATED_COLOR}28` : `${VALIDATED_COLOR}12`,
+                          color: (agentStat.validated || 0) > 0 ? '#222' : '#888',
+                          fontWeight: 700,
+                          textAlign: 'center'
                         }}
                       >
                         {agentStat.validated || 0}
                       </td>
-                      <td className="total-cell">
-                        <strong>{agentStat.total || 0}</strong>
+                      <td
+                        className="total-col-cell"
+                        style={{
+                          backgroundColor: '#eceff1',
+                          fontWeight: 700,
+                          textAlign: 'center'
+                        }}
+                      >
+                        {agentStat.total || 0}
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="totals-row">
-                    <td><strong>Totaux</strong></td>
+                    <td className="agent-col-cell"><strong>Totaux</strong></td>
                     {stats.etats && stats.etats.map(etat => {
                       const total = stats.agents.reduce((sum, agentStat) => {
                         const stat = agentStat.stats.find(s => s.id === etat.id);
                         return sum + (stat?.count || 0);
                       }, 0);
                       return (
-                        <td key={etat.id} className="total-cell">
-                          <strong>{total}</strong>
+                        <td
+                          key={etat.id}
+                          className="etat-col-cell totals-etat-cell"
+                          style={getEtatCellStyle(etat, total)}
+                        >
+                          {total}
                         </td>
                       );
                     })}
-                    <td className="total-cell">
-                      <strong>
-                        {stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0)}
-                      </strong>
+                    <td
+                      className="validated-col-cell"
+                      style={{
+                        backgroundColor: `${VALIDATED_COLOR}28`,
+                        fontWeight: 700,
+                        textAlign: 'center'
+                      }}
+                    >
+                      {stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0)}
                     </td>
-                    <td className="total-cell">
-                      <strong>
-                        {stats.agents.reduce((sum, agentStat) => sum + (agentStat.total || 0), 0)}
-                      </strong>
+                    <td
+                      className="total-col-cell"
+                      style={{ fontWeight: 700, textAlign: 'center' }}
+                    >
+                      {stats.agents.reduce((sum, agentStat) => sum + (agentStat.total || 0), 0)}
                     </td>
                   </tr>
                 </tfoot>
