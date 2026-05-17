@@ -28,15 +28,6 @@
   gap: 8px;
 }
 
-.unread-badge {
-  background: #dc3545;
-  color: white;
-  padding: 4px 9.6px;
-  border-radius: 12px;
-  font-size: 11.9px;
-  font-weight: 600;
-}
-
 .header-actions {
   display: flex;
   align-items: center;

@@ -259,9 +259,6 @@ const Notifications = () => {
           <h1>
             <FaBell /> Notifications
           </h1>
-          {unreadCount > 0 && (
-            <span className="unread-badge">{unreadCount} non lue(s)</span>
-          )}
         </div>
         <div className="header-actions">
           <div className="filter-group">
