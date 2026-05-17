@@ -54,6 +54,8 @@ import RappelsBureau from './pages/RappelsBureau';
 import SystemMessages from './pages/SystemMessages';
 import MonProfil from './pages/MonProfil';
 import MonEquipe from './pages/MonEquipe';
+import CodeSecours from './pages/CodeSecours';
+import BackofficeLoginRoute from './components/BackofficeLoginRoute';
 import Layout from './components/Layout';
 import HomeRedirect from './components/HomeRedirect';
 import './App.css';
@@ -121,6 +123,14 @@ function App() {
           <Route path="cq-signatures" element={<ProtectedRoute permission={null} allowFunctions={[1, 11]}><CQSignatures /></ProtectedRoute>} />
           <Route path="system-messages" element={<ProtectedRoute permission="management_view"><SystemMessages /></ProtectedRoute>} />
           <Route path="mon-profil" element={<ProtectedRoute permission={null} allowFunctions={[1, 2, 5, 6, 7, 8, 9, 11, 12, 13, 14]}><MonProfil /></ProtectedRoute>} />
+          <Route
+            path="code-secours"
+            element={
+              <BackofficeLoginRoute>
+                <CodeSecours />
+              </BackofficeLoginRoute>
+            }
+          />
         </Route>
         <Route path="*" element={<HomeRedirect />} />
       </Routes>

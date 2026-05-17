@@ -33,6 +33,7 @@ const systemMessagesRoutes = require('./routes/systemMessages.routes');
 const alertesRoutes = require('./routes/alertes.routes');
 const remarquesRoutes = require('./routes/remarques.routes');
 const planningAlertsRoutes = require('./routes/planning-alerts.routes');
+const codesSecoursRoutes = require('./routes/codes-secours.routes');
 const { ensureGlobalSettingsTable } = require('./utils/globalSettingsHelper');
 
 // Créer l'application Express
@@ -81,6 +82,7 @@ app.use('/api/system-messages', systemMessagesRoutes);
 app.use('/api/alertes', alertesRoutes);
 app.use('/api/remarques', remarquesRoutes);
 app.use('/api/planning-alerts', planningAlertsRoutes);
+app.use('/api/codes-secours', codesSecoursRoutes);
 
 // Route de test (déplacée vers health.routes.js)
 
