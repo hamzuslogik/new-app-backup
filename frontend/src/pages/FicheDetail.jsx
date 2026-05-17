@@ -949,6 +949,35 @@ const FicheDetail = ({
     isConfirmateurSession;
   const canTreatCompletudeDetail =
     isREConfirmation || isRPConfirmation || isConfirmateurSession;
+  const showCompletudeTabBadge =
+    isConfirmateurSession || isREConfirmation || isRPConfirmation;
+
+  const { data: completudeIndicatorList = [] } = useQuery(
+    ['fiche-completude-indicator', hash],
+    async () => {
+      const res = await api.get(`/fiches/${hash}/completude`);
+      return res.data.data || [];
+    },
+    {
+      enabled: !!hash && showCompletudeTabBadge,
+      refetchInterval: isModal ? 5000 : false,
+      refetchOnWindowFocus: isModal
+    }
+  );
+
+  const hasCompletudeTabAlert = useMemo(() => {
+    const list = Array.isArray(completudeIndicatorList) ? completudeIndicatorList : [];
+    return list.some((item) => item.statut === 'en_attente');
+  }, [completudeIndicatorList]);
+
+  const scrollToCompletudeSection = () => {
+    setActiveTab('fiches');
+    window.setTimeout(() => {
+      document
+        .querySelector('.fiche-completude-section')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
 
   const { data: modificaData = [] } = useQuery(
     ['modifica', hash],
@@ -2943,6 +2972,17 @@ const FicheDetail = ({
             onClick={() => setActiveTab('pdf')}
           >
             <FaFilePdf /> PDF
+          </button>
+        )}
+        {showCompletudeTabBadge && hasCompletudeTabAlert && (
+          <button
+            type="button"
+            className="fiche-tab-completude-alert"
+            onClick={scrollToCompletudeSection}
+            title="Complétude en attente — cliquer pour afficher"
+          >
+            <FaInfoCircle aria-hidden />
+            <span>Complétude</span>
           </button>
         )}
       </div>

@@ -53,6 +53,7 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
         setCompletes('');
         setShowForm(false);
         queryClient.invalidateQueries(queryKey);
+        queryClient.invalidateQueries(['fiche-completude-indicator', ficheHash]);
       },
       onError: (err) => {
         toast.error(err.response?.data?.message || 'Erreur lors de la création');
@@ -71,6 +72,7 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
       onSuccess: (data) => {
         toast.success(data.message || 'Complétude marquée comme traitée');
         queryClient.invalidateQueries(queryKey);
+        queryClient.invalidateQueries(['fiche-completude-indicator', ficheHash]);
       },
       onError: (err) => {
         toast.error(err.response?.data?.message || 'Erreur lors du traitement');
