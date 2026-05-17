@@ -1,7 +1,7 @@
 /**
  * Routes complétude fiche — montées sur le routeur /api/fiches (avant GET /:id).
  * Création : Qualité Confirmation (4).
- * Consultation / traitement : confirmateur 1 de la fiche, RE (14), RP (13).
+ * Consultation / traitement : tous les confirmateurs (6), RE (14), RP (13).
  */
 const FONCTION_QUALITE_CONFIRMATION = 4;
 const FONCTION_CONFIRMATEUR = 6;
@@ -32,12 +32,16 @@ function isConfirmateur1OfFiche(userId, fiche) {
   return conf1 != null && Number(conf1) === Number(userId);
 }
 
+function isConfirmateur(fonction) {
+  return Number(fonction) === FONCTION_CONFIRMATEUR;
+}
+
 function canViewCompletude(user, fiche) {
   if (!user) return false;
   const fn = Number(user.fonction);
   if (isQualiteConfirmation(fn)) return true;
   if (isREConfirmation(fn) || isRPConfirmation(fn)) return true;
-  if (fn === FONCTION_CONFIRMATEUR && isConfirmateur1OfFiche(user.id, fiche)) return true;
+  if (isConfirmateur(fn)) return true;
   return false;
 }
 
@@ -49,7 +53,7 @@ function canTreatCompletude(user, fiche) {
   if (!user || !fiche) return false;
   const fn = Number(user.fonction);
   if (isREConfirmation(fn) || isRPConfirmation(fn)) return true;
-  if (fn === FONCTION_CONFIRMATEUR && isConfirmateur1OfFiche(user.id, fiche)) return true;
+  if (isConfirmateur(fn)) return true;
   return false;
 }
 
@@ -436,7 +440,7 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
       if (!canTreatCompletude(req.user, fiche)) {
         return res.status(403).json({
           success: false,
-          message: 'Seul le confirmateur 1 de la fiche, le RE ou le RP peut marquer la complétude comme traitée'
+          message: 'Seuls les confirmateurs, le RE ou le RP peuvent marquer la complétude comme traitée'
         });
       }
 

@@ -12,15 +12,13 @@ const STATUT_LABELS = {
 /**
  * Complétude fiche :
  * - Qualité Confirmation (4) : création uniquement
- * - Confirmateur 1, RE (14), RP (13) : consultation + bouton « Traité »
+ * - Tous les confirmateurs (6), RE (14), RP (13) : consultation + bouton « Traité »
  */
 const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTreat = false }) => {
   const queryClient = useQueryClient();
   const [motif, setMotif] = useState('');
   const [completes, setCompletes] = useState('');
   const [showForm, setShowForm] = useState(true);
-  const [reponseById, setReponseById] = useState({});
-
   const queryKey = ['fiche-completude', ficheHash];
 
   const { data, isLoading } = useQuery(
@@ -63,10 +61,9 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
   );
 
   const traiterMutation = useMutation(
-    async ({ id, reponse_traitement }) => {
+    async ({ id }) => {
       const res = await api.patch(`/fiches/${ficheHash}/completude/${id}`, {
-        statut: 'traitee',
-        reponse_traitement
+        statut: 'traitee'
       });
       return res.data;
     },
@@ -204,33 +201,16 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
                     </p>
                   )}
                   {showTreatActions && (
-                    <>
-                      <textarea
-                        className="form-control"
-                        rows={2}
-                        placeholder="Réponse optionnelle"
-                        value={reponseById[item.id] || ''}
-                        onChange={(e) =>
-                          setReponseById((prev) => ({ ...prev, [item.id]: e.target.value }))
-                        }
-                        style={{ marginBottom: '8px' }}
-                      />
-                      <div className="form-actions" style={{ marginTop: 0 }}>
-                        <button
-                          type="button"
-                          className="btn-confirm"
-                          disabled={traiterMutation.isLoading}
-                          onClick={() =>
-                            traiterMutation.mutate({
-                              id: item.id,
-                              reponse_traitement: reponseById[item.id] || ''
-                            })
-                          }
-                        >
-                          {traiterMutation.isLoading ? 'Traitement…' : 'Traité'}
-                        </button>
-                      </div>
-                    </>
+                    <div className="form-actions" style={{ marginTop: '8px' }}>
+                      <button
+                        type="button"
+                        className="btn-confirm"
+                        disabled={traiterMutation.isLoading}
+                        onClick={() => traiterMutation.mutate({ id: item.id })}
+                      >
+                        {traiterMutation.isLoading ? 'Traitement…' : 'Traité'}
+                      </button>
+                    </div>
                   )}
                 </div>
               );

@@ -942,19 +942,13 @@ const FicheDetail = ({
     }
   );
 
-  const ficheConfirmateur1Id =
-    ficheData?.id_confirmateur != null && Number(ficheData.id_confirmateur) > 0
-      ? Number(ficheData.id_confirmateur)
-      : null;
-  const isFicheConfirmateur1 =
-    user?.id != null && ficheConfirmateur1Id != null && Number(user.id) === ficheConfirmateur1Id;
   const showCompletudeSection =
     isQualiteConfirmation ||
     isREConfirmation ||
     isRPConfirmation ||
-    (isConfirmateurSession && isFicheConfirmateur1);
+    isConfirmateurSession;
   const canTreatCompletudeDetail =
-    isREConfirmation || isRPConfirmation || (isConfirmateurSession && isFicheConfirmateur1);
+    isREConfirmation || isRPConfirmation || isConfirmateurSession;
 
   const { data: modificaData = [] } = useQuery(
     ['modifica', hash],
