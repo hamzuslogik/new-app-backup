@@ -17,7 +17,6 @@ const StatistiquesRDV = () => {
     async () => {
       try {
         const res = await api.get('/statistiques/dashboard');
-        console.log('Statistiques RDV reçues:', res.data);
         if (res.data && res.data.success && res.data.data) {
           return res.data.data;
         }
@@ -70,8 +69,6 @@ const StatistiquesRDV = () => {
     rdvTodayAnnuler: 0,
     rdvUpcoming: 0
   };
-
-  console.log('Stats affichées:', stats);
 
   return (
     <div className="statistiques-rdv-page">

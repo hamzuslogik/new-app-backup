@@ -29,7 +29,6 @@ function getLastDayOfMonthLocal() {
 
 // Récupérer les statistiques par type (centre, confirmateur, commercial, agent)
 router.get('/all-stat', authenticate, async (req, res) => {
-  console.log('[STAT] /all-stat - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       name_stat,      // CENTRE, CONFIRMATEUR, COMMERCIAL, AGENT, STAT_KO
@@ -316,7 +315,6 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Trier par nom
     result.data.sort((a, b) => a.name.localeCompare(b.name));
 
-    console.log('[STAT] /all-stat - Succès - total:', result.total, 'entités:', result.data.length);
     res.json({
       success: true,
       data: result
@@ -336,7 +334,6 @@ router.get('/all-stat', authenticate, async (req, res) => {
 // - Administrateurs (fonction 1, 2, 7) : voient toutes les fiches
 // - Utilisateurs fonction 9 : voient uniquement les fiches de leurs centres assignés
 router.get('/fiches-par-centre', authenticate, checkPermissionCode('statistiques_fiches_view'), async (req, res) => {
-  console.log('[STAT] /fiches-par-centre - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       date_debut, 
@@ -500,7 +497,6 @@ router.get('/fiches-par-centre', authenticate, checkPermissionCode('statistiques
 // GET /api/statistiques/fiches-detaillees
 // Récupérer les fiches détaillées par centre avec les mêmes filtres
 router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques_fiches_view'), async (req, res) => {
-  console.log('[STAT] /fiches-detaillees - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       date_debut, 
@@ -627,7 +623,6 @@ router.get('/fiches-detaillees', authenticate, checkPermissionCode('statistiques
 // GET /api/statistiques/dashboard
 // Récupérer les statistiques pour le Dashboard
 router.get('/dashboard', authenticate, async (req, res) => {
-  console.log('[STAT] /dashboard - Requête reçue - user:', req.user?.id);
   try {
     const today = new Date();
     const year = today.getFullYear();
@@ -725,7 +720,6 @@ router.get('/dashboard', authenticate, async (req, res) => {
 
 // Suivi des agents qualification
 router.get('/agents-qualif', authenticate, async (req, res) => {
-  console.log('[STAT] /agents-qualif - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       date_debut, 
@@ -1001,7 +995,6 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
 
 // Récupérer la production par superviseur pour un RP Qualification
 router.get('/production-qualif', authenticate, async (req, res) => {
-  console.log('[STAT] /production-qualif - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       date_debut, 
@@ -1247,7 +1240,6 @@ router.get('/production-qualif', authenticate, async (req, res) => {
 
 // Récupérer les KPI qualification (meilleurs agents et équipes)
 router.get('/kpi-qualification', authenticate, async (req, res) => {
-  console.log('[STAT] /kpi-qualification - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month, id_rp, id_superviseur, id_agent } = req.query; // filtres optionnels (backoffice/admin)
 
@@ -1491,9 +1483,6 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       const nbConfirmees = fichesConfirmees?.count || 0;
       const tauxTransformation = nbValidees > 0 ? ((nbConfirmees / nbValidees) * 100).toFixed(1) : 0;
       
-      console.log(`[KPI-QUALIF] Période ${period.key}: startDate=${startDate}, endDate=${endDate}`);
-      console.log(`[KPI-QUALIF] Fiches validées: ${nbValidees}, Fiches produites: ${nbProduites}, Taux conversion: ${tauxConversion}%`);
-      console.log(`[KPI-QUALIF] Fiches confirmées: ${nbConfirmees}, Taux transformation: ${tauxTransformation}%`);
 
       kpiData[period.key] = {
         period: period.label,
@@ -1550,7 +1539,6 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
 
 // Récupérer les KPIs (Top 3 agents, Top 3 équipes, Taux de conversion, Évolution) - centre CALL_JWS uniquement
 router.get('/kpis', authenticate, async (req, res) => {
-  console.log('[STAT] /kpis - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
     
@@ -1566,7 +1554,6 @@ router.get('/kpis', authenticate, async (req, res) => {
       ? `AND f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})` 
       : '';
     const useCentreFilter = callJwsCentreIds.length > 0;
-    console.log('[STAT] /kpis - Centre CALL_JWS trouvé:', callJwsCentreIds.length, 'IDs:', callJwsCentreIds);
     
     // Récupérer les IDs des états groupe 0 pour exclure
     const etatsGroupe0 = await query(`
@@ -1672,7 +1659,6 @@ router.get('/kpis', authenticate, async (req, res) => {
         LIMIT 3
       `;
       const top3Agents = await query(top3AgentsQuery, [startDate, endDate]);
-      console.log('[STAT] /kpis - Top 3 Agents:', top3Agents?.length || 0, 'period:', period.key);
 
       // 2. Top 3 Équipes (fiches validées = hors groupe 0 ET KO=0)
       const top3TeamsQuery = `
@@ -1700,7 +1686,6 @@ router.get('/kpis', authenticate, async (req, res) => {
         LIMIT 3
       `;
       const top3Teams = await query(top3TeamsQuery, [startDate, endDate]);
-      console.log('[STAT] /kpis - Top 3 Teams:', top3Teams?.length || 0, 'period:', period.key);
 
       // 3. Total fiches validées (période actuelle)
       // Fiches validées = hors groupe 0 ET KO=0 - SANS filtre par centre
@@ -1716,7 +1701,6 @@ router.get('/kpis', authenticate, async (req, res) => {
       `;
       const validatedResult = await queryOne(validatedQuery, [startDate, endDate]);
       const validatedCount = validatedResult?.count || 0;
-      console.log('[STAT] /kpis - Fiches validées count:', validatedCount, 'period:', period.key);
 
       // 4. Total fiches créées (période actuelle)
       const totalQuery = `
@@ -1746,7 +1730,6 @@ router.get('/kpis', authenticate, async (req, res) => {
       `;
       const totalQualifResult = await queryOne(totalQualifQuery, [startDate, endDate]);
       const totalQualifCount = totalQualifResult?.count || 0;
-      console.log('[STAT] /kpis - Fiches produites (qualif) count:', totalQualifCount, 'period:', period.key);
 
       // 4c. Fiches confirmées (existent dans la table confirmations) - par date de confirmation
       const confirmedQuery = `
@@ -1759,7 +1742,6 @@ router.get('/kpis', authenticate, async (req, res) => {
       `;
       const confirmedResult = await queryOne(confirmedQuery, [startDate, endDate]);
       const confirmedCount = confirmedResult?.count || 0;
-      console.log('[STAT] /kpis - Fiches confirmées count:', confirmedCount, 'period:', period.key);
 
       // 5. Total fiches validées (période précédente) - SANS filtre par centre
       const previousValidatedResult = await queryOne(validatedQuery, [previousStartDate, previousEndDate]);
@@ -1781,14 +1763,12 @@ router.get('/kpis', authenticate, async (req, res) => {
       const conversionRate = totalQualifCount > 0 ? (validatedCount / totalQualifCount) * 100 : 0;
       const previousConversionRate = previousTotalQualifCount > 0 ? (previousValidatedCount / previousTotalQualifCount) * 100 : 0;
       const conversionRateChange = conversionRate - previousConversionRate;
-      console.log('[STAT] /kpis - Taux conversion:', { validatedCount, totalQualifCount, conversionRate });
 
       // Calculer le taux de transformation
       // Taux de transformation = fiches confirmées (table confirmations) / fiches validées
       const transformationRate = validatedCount > 0 ? (confirmedCount / validatedCount) * 100 : 0;
       const previousTransformationRate = previousValidatedCount > 0 ? (previousConfirmedCount / previousValidatedCount) * 100 : 0;
       const transformationRateChange = transformationRate - previousTransformationRate;
-      console.log('[STAT] /kpis - Taux transformation:', { confirmedCount, validatedCount, transformationRate });
 
       // Calculer l'évolution
       const evolutionChange = previousValidatedCount > 0 
@@ -1856,7 +1836,6 @@ router.get('/kpis', authenticate, async (req, res) => {
 
 // Récupérer les KPIs Confirmation (Top 3 confirmateurs confirmations/signatures, Taux, Évolution) - centre CALL_JWS uniquement
 router.get('/kpis-confirmation', authenticate, async (req, res) => {
-  console.log('[STAT] /kpis-confirmation - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
     
@@ -2149,7 +2128,6 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
 
 // Récupérer les KPIs par centre
 router.get('/kpis-centres', authenticate, async (req, res) => {
-  console.log('[STAT] /kpis-centres - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
     
@@ -2402,7 +2380,6 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
 
 // Récupérer les KPIs pour le centre call_jws
 router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
-  console.log('[STAT] /kpis-confirmation-jws - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
     
@@ -2620,7 +2597,6 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
 // Même périmètre centre CALL_JWS que /kpis lorsque le centre existe.
 // =====================================================
 router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
-  console.log('[STAT] /kpis-porte-ouverte - user:', req.user?.id, 'params:', req.query);
   try {
     const { month, id_centre, date_debut, date_fin, centre_scope } = req.query;
 
@@ -2890,7 +2866,6 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
 
 // Statistiques des agents pour un superviseur
 router.get('/superviseur/:id', authenticate, async (req, res) => {
-  console.log('[STAT] /superviseur/:id - Requête reçue - user:', req.user?.id, 'superviseur_id:', req.params.id, 'params:', req.query);
   try {
     const { id } = req.params;
     const { 
@@ -3127,7 +3102,6 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
 // Récupérer les statistiques par agent qualité (qui ont audité des fiches)
 // Se base sur le champ id_qualite dans la table fiches et date_insert_time pour la date
 router.get('/agents-qualite', authenticate, async (req, res) => {
-  console.log('[STAT] /agents-qualite - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
     const { 
       date_debut, 
@@ -3176,7 +3150,6 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
     agentsQualiteQuery += ' ORDER BY u.pseudo ASC';
 
     const agentsQualite = await query(agentsQualiteQuery, agentsParams);
-    console.log('[STAT] /agents-qualite - Agents trouvés:', agentsQualite?.length || 0);
 
     // Pour chaque agent qualité, calculer les statistiques
     // Récupérer tous les états pour les statistiques
@@ -3275,7 +3248,6 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
           LIMIT 100
         `;
         const fichesAuditees = await query(fichesAuditeesQuery, [agent.id, startDate, endDate]);
-        console.log(`[STAT] /agents-qualite - Agent ${agent.pseudo}: ${fichesAuditees?.length || 0} fiches auditées`);
 
         return {
           agent: {
@@ -3327,7 +3299,6 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
 router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
   try {
     if (Number(req.user?.fonction) !== 3) {
-      console.log('[STAT] /agent-qualification-kpis - Refus: utilisateur non agent qualification (fonction=', req.user?.fonction, ')');
       return res.status(403).json({
         success: false,
         message: 'Réservé aux agents qualification (fonction 3).'
@@ -3341,7 +3312,6 @@ router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
     const startDate = `${startDateStr} 00:00:00`;
     const endDate = `${endDateStr} 23:59:59`;
 
-    console.log('[STAT] /agent-qualification-kpis - Requête:', { agentId, date_debut, date_fin, startDateStr, endDateStr });
 
     const baseConditions = [
       'f.id_agent = ?',
@@ -3359,7 +3329,6 @@ router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
     `;
     const fichesProduitesRow = await queryOne(fichesProduitesQuery, baseParams);
     const fichesProduites = fichesProduitesRow?.count ?? 0;
-    console.log('[STAT] /agent-qualification-kpis - Fiches produites:', { raw: fichesProduitesRow, count: fichesProduites, type: typeof fichesProduites });
 
     const nbHcQuery = `
       SELECT COUNT(DISTINCT f.id) AS count
@@ -3388,7 +3357,6 @@ router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
       taux_hc: Number(tauxHc),
       taux_ko: Number(tauxKo)
     };
-    console.log('[STAT] /agent-qualification-kpis - Réponse:', payload);
 
     res.json({
       success: true,

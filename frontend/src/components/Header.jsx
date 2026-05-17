@@ -288,7 +288,6 @@ const Header = () => {
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
-            console.log('Menu toggle clicked, current state:', sidebarCollapsed);
             toggleSidebar();
           }}
         >

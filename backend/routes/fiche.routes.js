@@ -658,7 +658,6 @@ const logModification = async (idFiche, userId, userPseudo, field, oldValue, new
     );
     
     if (!tableExists || tableExists.count === 0) {
-      console.log('Table modifica n\'existe pas, impossible d\'enregistrer la modification');
       return;
     }
     
@@ -671,7 +670,6 @@ const logModification = async (idFiche, userId, userPseudo, field, oldValue, new
          AND TABLE_NAME = 'modifica'`
       );
       modificaStructureCache = columns.map(col => col.COLUMN_NAME);
-      console.log('Structure de modifica détectée:', modificaStructureCache);
     }
     
     const hasNewStructure = modificaStructureCache.includes('type') && 
@@ -688,7 +686,6 @@ const logModification = async (idFiche, userId, userPseudo, field, oldValue, new
     // Ne logger que si les valeurs sont différentes
     if (oldValStr !== newValStr) {
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      console.log(`Enregistrement modification: fiche=${idFiche}, user=${userId}, champ=${field}, ancien=${oldValStr}, nouveau=${newValStr}`);
       
       if (hasNewStructure) {
         // Utiliser la nouvelle structure
@@ -698,7 +695,6 @@ const logModification = async (idFiche, userId, userPseudo, field, oldValue, new
            VALUES (?, ?, ?, ?, ?, ?)`,
           [idFiche, userId, field, oldValStr, newValStr, now]
         );
-        console.log('Modification enregistrée avec succès dans modifica (nouvelle structure)');
       } else if (hasOldStructure) {
         // Utiliser l'ancienne structure
         const dateCol = modificaStructureCache.includes('date') ? 'date' : 'date_modif_time';
@@ -707,12 +703,10 @@ const logModification = async (idFiche, userId, userPseudo, field, oldValue, new
            VALUES (?, ?, ?, ?, ?, ?)`,
           [idFiche, userId, field, oldValStr, newValStr, now]
         );
-        console.log('Modification enregistrée avec succès dans modifica (ancienne structure)');
       } else {
         console.error('Structure de la table modifica non reconnue. Colonnes:', modificaStructureCache);
       }
     } else {
-      console.log(`Pas de modification détectée pour le champ ${field} (ancien=${oldValStr}, nouveau=${newValStr})`);
     }
   } catch (error) {
     // Ne pas bloquer la mise à jour si l'enregistrement du log échoue
@@ -724,9 +718,6 @@ const logModification = async (idFiche, userId, userPseudo, field, oldValue, new
 router.get('/', authenticate, async (req, res) => {
   const requestStartTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
-  console.log(`[FICHES-${requestId}] === Début GET /fiches ===`);
-  console.log(`[FICHES-${requestId}] User: id=${req.user?.id}, fonction=${req.user?.fonction}, pseudo=${req.user?.pseudo || req.user?.login || 'N/A'}`);
-  console.log(`[FICHES-${requestId}] Query params:`, JSON.stringify(req.query));
   
   try {
     const {
@@ -903,18 +894,11 @@ router.get('/', authenticate, async (req, res) => {
                           req.query.tel || req.query.cp || req.query.produit || 
                           req.query.id_etat_final || req.query.id_commercial || 
                           req.query.id_confirmateur || req.query.id_re || req.query.id_centre;
-    console.log(`[FICHES-${requestId}] isActiveSearch=${!!isActiveSearch} (fiche_search=${!!req.query.fiche_search}, affectation=${!!req.query.affectation}, suivi=${!!req.query.suivi}, critere=${!!req.query.critere})`);
 
     /** Confirmateur : recherche par critère ou tel → résultats globaux, sans filtre « dernier histo / moi » */
     const hasCritereOuTelSearch =
       (critere !== undefined && critere !== null && String(critere).trim() !== '') ||
       (tel !== undefined && tel !== null && String(tel).trim() !== '');
-
-    if (req.user.fonction === 6 && req.query.fiche_search) {
-      console.log(
-        `[FICHES-${requestId}] CONF6_FILTRE: fiche_search=1 isActiveSearch=${!!isActiveSearch} date_champ=${date_champ ?? '(vide)'} date_debut=${date_debut ?? ''} date_fin=${date_fin ?? ''} time_debut=${time_debut ?? ''} time_fin=${time_fin ?? ''} include_confirmateur_2(raw)=${JSON.stringify(include_confirmateur_2)} includeConfSlots=${includeConfSlots} hasCritereOuTelSearch=${hasCritereOuTelSearch}`
-      );
-    }
 
     if (!isActiveSearch) {
       if (req.user.fonction === 5) {
@@ -925,7 +909,6 @@ router.get('/', authenticate, async (req, res) => {
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, 7, req.user.id);
       } else if (req.user.fonction === 3) {
         // Agents Qualification : Fiches créées aujourd'hui, assignées à l'agent (id_agent uniquement)
-        console.log(`[FICHES-${requestId}] Filtre Agent Qualif: date_insert_time ${y_m_d} 00:00:00 -> 23:59:59, id_agent=${req.user.id}`);
         whereConditions.push('fiche.date_insert_time >= ? AND fiche.date_insert_time <= ?');
         whereConditions.push('fiche.id_agent = ?');
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`, req.user.id);
@@ -943,7 +926,6 @@ router.get('/', authenticate, async (req, res) => {
       // Filtres par fonction quand recherche active
       if (req.user.fonction === 3) {
         // Agents Qualification : Filtrer par id_agent pour limiter aux fiches de l'agent
-        console.log(`[FICHES-${requestId}] Filtre Agent Qualif (recherche active): id_agent=${req.user.id}`);
         whereConditions.push('fiche.id_agent = ?');
         params.push(req.user.id);
       } else if (req.user.fonction === 5 && !affectation) {
@@ -964,7 +946,6 @@ router.get('/', authenticate, async (req, res) => {
       !!(req.query.tel || req.query.critere || qNarrow(nom) || qNarrow(prenom));
     const shouldApplyPermissionFilter = !(req.user.fonction === 3 && !req.query.fiche_search && !req.query.affectation && !req.query.suivi)
       && !hasRechercheParCritereConfirmateur;
-    console.log(`[FICHES-${requestId}] shouldApplyPermissionFilter=${shouldApplyPermissionFilter}`);
 
     if (shouldApplyPermissionFilter) {
       // Utiliser la fonction mise en cache pour récupérer les groupes autorisés
@@ -1306,9 +1287,6 @@ router.get('/', authenticate, async (req, res) => {
             );
             histoJoinForFichesHisto = j.joinSql;
             histoParamsForFichesHisto = j.params;
-            console.log(
-              `[FICHES-${requestId}] CONF6 date_champ=fiches_histo → JOIN dernière ligne histo = conf ${histoTargetUserId} (multiSlot=${includeHistoMultiSlot}) [${startDatetime}] — [${endDatetime}]`
-            );
           } else {
             const j = fichesHistoLastInRangeJoin(
               startDatetime,
@@ -1318,12 +1296,7 @@ router.get('/', authenticate, async (req, res) => {
             );
             histoJoinForFichesHisto = j.joinSql;
             histoParamsForFichesHisto = j.params;
-            console.log(
-              `[FICHES-${requestId}] date_champ=fiches_histo → JOIN histo dans plage = conf ${histoTargetUserId} (multiSlot=${includeHistoMultiSlot}) [${startDatetime}] — [${endDatetime}]`
-            );
           }
-        } else if (date_champ === 'fiches_histo' && req.user.fonction === 6 && hasCritereOuTelSearch) {
-          console.log(`[FICHES-${requestId}] Confirmateur: critère/tel — pas de JOIN fiches_histo (recherche globale)`);
         } else if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
           // Fiches confirmées : basé sur fiches_histo (id_etat=7, date_creation dans la plage)
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
@@ -1403,7 +1376,6 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('fiche.date_insert_time != ""');
         whereConditions.push('fiche.date_insert_time >= ? AND fiche.date_insert_time <= ?');
         params.push(`${y_m_d} 00:00:00`, `${y_m_d} 23:59:59`);
-        console.log(`[FICHES-${requestId}] Filtre par défaut: fiches créées aujourd'hui (date_insert_time)`);
       }
     }
 
@@ -1416,23 +1388,13 @@ router.get('/', authenticate, async (req, res) => {
           '(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)'
         );
         params.push(req.user.id, req.user.id, req.user.id);
-        console.log(
-          `[FICHES-${requestId}] Confirmateur: périmètre fiches id_confirmateur / _2 / _3 = ${req.user.id}`
-        );
       } else {
         whereConditions.push('fiche.id_confirmateur = ?');
         params.push(req.user.id);
-        console.log(
-          `[FICHES-${requestId}] Confirmateur: périmètre fiches id_confirmateur = ${req.user.id}`
-        );
       }
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-
-    // Log de la clause WHERE et des paramètres pour debugging
-    console.log(`[FICHES-${requestId}] WHERE clause: ${whereClause}`);
-    console.log(`[FICHES-${requestId}] WHERE params (${params.length}):`, JSON.stringify(params));
 
     // Configurer GROUP_CONCAT pour éviter les troncatures
     await query('SET SESSION group_concat_max_len = 1000000');
@@ -1446,16 +1408,9 @@ router.get('/', authenticate, async (req, res) => {
     // Log des requêtes SQL exécutées pour agent qualification (fonction 3)
     if (req.user.fonction === 3) {
       const countSql = `SELECT COUNT(DISTINCT fiche.id) as total FROM fiches fiche ${histoJoinForFichesHisto} ${qualifJoinForCount} ${whereClause}`;
-      console.log(`[FICHES-${requestId}] [AGENT_QUALIF] COUNT SQL:`, countSql);
-      console.log(`[FICHES-${requestId}] [AGENT_QUALIF] COUNT params:`, JSON.stringify(countParams));
     }
     if (req.user.fonction === 6 && isActiveSearch) {
       const countSqlPreview = `SELECT COUNT(DISTINCT fiche.id) as total FROM fiches fiche ${histoJoinForFichesHisto} ${qualifJoinForCount} ${whereClause}`;
-      console.log(`[FICHES-${requestId}] CONF6_COUNT_SQL:`, countSqlPreview);
-      console.log(`[FICHES-${requestId}] CONF6_COUNT_PARAMS (${countParams.length}):`, JSON.stringify(countParams));
-      console.log(
-        `[FICHES-${requestId}] CONF6_JOINS: histoJoin=${histoJoinForFichesHisto ? 'oui' : 'non'} qualifJoin=${qualifJoinForCount ? 'oui' : 'non'}`
-      );
     }
 
     // Compter le total
@@ -1466,7 +1421,6 @@ router.get('/', authenticate, async (req, res) => {
     );
     const total = countResult.total;
     const countDuration = Date.now() - countStartTime;
-    console.log(`[FICHES-${requestId}] COUNT query: ${countDuration}ms → total=${total} fiches`);
 
     if (req.user.fonction === 6 && isActiveSearch && Number(total) === 0) {
       try {
@@ -1478,9 +1432,6 @@ router.get('/', authenticate, async (req, res) => {
         const d2 = await queryOne(
           `SELECT COUNT(*) as c FROM fiches fiche WHERE ${baseArchive} AND (fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)`,
           [req.user.id, req.user.id, req.user.id]
-        );
-        console.log(
-          `[FICHES-${requestId}] CONF6_DIAG (total=0): fiches avec id_confirmateur=${req.user.id} → ${d1.c} | avec id en conf1/2/3 → ${d2.c} (repère: absence d’assignation vs filtres date/état/permissions)`
         );
       } catch (e) {
         console.warn(`[FICHES-${requestId}] CONF6_DIAG erreur:`, e?.message || e);
@@ -1531,14 +1482,8 @@ router.get('/', authenticate, async (req, res) => {
        ORDER BY fiche.date_rdv_time ASC
        LIMIT ? OFFSET ?`;
     const selectParams = histoJoinForFichesHisto ? [...histoParamsForFichesHisto, ...params, parseInt(limit), offset] : [...params, parseInt(limit), offset];
-    if (req.user.fonction === 3) {
-      console.log(`[FICHES-${requestId}] [AGENT_QUALIF] SELECT SQL:`, selectQuery);
-      console.log(`[FICHES-${requestId}] [AGENT_QUALIF] SELECT params:`, JSON.stringify(selectParams));
-    }
-    console.log(`[FICHES-${requestId}] SELECT query - limit=${limit}, offset=${offset}, page=${page}`);
     const fiches = await query(selectQuery, selectParams);
     const selectDuration = Date.now() - selectStartTime;
-    console.log(`[FICHES-${requestId}] SELECT query: ${selectDuration}ms → ${fiches.length} fiches`);
 
     await attachIdEtatHistoToFiches(fiches);
 
@@ -1649,11 +1594,8 @@ router.get('/', authenticate, async (req, res) => {
       id: undefined
     }));
     const hashDuration = Date.now() - hashStartTime;
-    console.log(`[FICHES-${requestId}] Hash encoding: ${hashDuration}ms`);
 
     const totalDuration = Date.now() - requestStartTime;
-    console.log(`[FICHES-${requestId}] === FIN GET /fiches: ${total} total, ${fiches.length} retournées, ${totalDuration}ms ===`);
-    console.log(`[FICHES-${requestId}] Perf: COUNT ${countDuration}ms | SELECT ${selectDuration}ms | HASH ${hashDuration}ms | TOTAL ${totalDuration}ms`);
 
     res.json({
       success: true,
@@ -1860,7 +1802,6 @@ router.get('/planning-commercial/diagnostic/:tel', authenticate, async (req, res
 // Planning Commercial - Récupérer les RDV affectés aux commerciaux
 // IMPORTANT: Cette route doit être AVANT la route /:id sinon Express va matcher "planning-commercial" comme un ID
 router.get('/planning-commercial', authenticate, async (req, res) => {
-  const logId = `[PLANNING-COMM-${Date.now()}]`;
   try {
     const {
       page = 1,
@@ -1876,8 +1817,6 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
       cp
     } = req.query;
 
-    console.log(`${logId} User: id=${req.user.id}, fonction=${req.user.fonction}, pseudo=${req.user.pseudo || ''}`);
-    console.log(`${logId} Query: date_debut=${date_debut}, date_fin=${date_fin}, time_debut=${time_debut}, time_fin=${time_fin}, id_commercial=${id_commercial}, page=${page}, limit=${limit}`);
 
     let whereConditions = [
       'fiche.archive = 0',
@@ -1940,7 +1879,6 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
       whereConditions.push('fiche.date_rdv_time <= ?');
       params.push(dateEnd);
     }
-    console.log(`${logId} Plage date_rdv_time: ${dateStart || '(non défini)'} -> ${dateEnd || '(non défini)'}`);
 
     // Filtrer par centre
     if (id_centre) {
@@ -1957,8 +1895,6 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
     }
 
     const whereClause = whereConditions.join(' AND ');
-    console.log(`${logId} WHERE: ${whereClause}`);
-    console.log(`${logId} Params: ${JSON.stringify(params)}`);
 
     // Compter le total
     const countResult = await queryOne(
@@ -1968,7 +1904,6 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
       params
     );
     const total = countResult?.total || 0;
-    console.log(`${logId} Total fiches trouvées: ${total}`);
 
     // Calculer la pagination
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -2034,16 +1969,7 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
       [...params, parseInt(limit), offset]
     );
 
-    if (fiches.length > 0) {
-      console.log(`${logId} Fiches retournées (${fiches.length}):`, fiches.slice(0, 5).map(f => ({
-        id: f.id,
-        date_rdv_time: f.date_rdv_time,
-        id_commercial: f.id_commercial,
-        id_commercial_2: f.id_commercial_2,
-        nom: f.nom,
-        prenom: f.prenom
-      })));
-    } else if (total === 0 && (date_debut || date_fin)) {
+    if (total === 0 && (date_debut || date_fin)) {
       // Diagnostic : existe-t-il des fiches état 7 avec un commercial dans la plage, sans les critères archive/ko/active ?
       const commercialId = id_commercial || (req.user.fonction === 5 ? req.user.id : null);
       if (commercialId) {
@@ -2059,7 +1985,6 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
                AND date_rdv_time >= ? AND date_rdv_time <= ?`,
             [commercialId, commercialId, diagStart, diagEnd]
           );
-          console.log(`${logId} DIAG: Fiches état 7 + commercial ${commercialId} dans la plage (sans filtre archive/ko/active): ${diag.length}`, diag.slice(0, 3).map(f => ({ id: f.id, date_rdv_time: f.date_rdv_time, archive: f.archive, ko: f.ko, active: f.active })));
         }
       }
     }
@@ -2555,12 +2480,10 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
 
     let agentIds = [];
 
-    console.log('Route /agents-sous-responsabilite appelée pour fonction:', req.user.fonction);
 
     // Vérifier si l'utilisateur est un RP Qualification (fonction 12)
     // Si oui, récupérer les agents de tous les superviseurs assignés au RP
     if (req.user.fonction === 12) {
-      console.log('RP Qualification détecté, ID:', req.user.id);
       // Récupérer les superviseurs assignés au RP connecté
       const superviseursAssignes = await query(
         `SELECT id FROM utilisateurs 
@@ -2574,7 +2497,6 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         [req.user.id]
       );
 
-      console.log('Superviseurs assignés:', superviseursAssignes?.length || 0);
 
       if (!superviseursAssignes || superviseursAssignes.length === 0) {
         // Si aucun superviseur assigné, retourner un résultat vide
@@ -2624,7 +2546,6 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         );
         
         agentIds = (agentsSousResponsabilite || []).map(a => a.id);
-        console.log('Agents sous responsabilité:', agentIds.length);
       }
     } else {
       // RE Qualification : récupérer les agents directement sous la responsabilité du superviseur connecté
@@ -2895,7 +2816,6 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
     // Confirmateurs (fonction 6) : ne voient que les fiches où ils sont assignés
     //   (id_confirmateur, id_confirmateur_2 ou id_confirmateur_3).
     // RE Confirmation (14), Admins (1, 2, 7), Backoffice (11) : voient tout.
-    console.log(`[Validation RDV] User fonction: ${req.user.fonction}, User ID: ${req.user.id}`);
     if (Number(req.user.fonction) === 6) {
       whereConditions.push('(f.id_confirmateur = ? OR f.id_confirmateur_2 = ? OR f.id_confirmateur_3 = ?)');
       params.push(req.user.id, req.user.id, req.user.id);
@@ -2945,17 +2865,13 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
     if (dateDebut && dateDebut.trim() !== '') {
       whereConditions.push('f.date_rdv_time >= ?');
       params.push(`${dateDebut} 00:00:00`);
-      console.log(`[Validation RDV] Date début: ${dateDebut} 00:00:00`);
     }
     if (dateFin && dateFin.trim() !== '') {
       whereConditions.push('f.date_rdv_time <= ?');
       params.push(`${dateFin} 23:59:59`);
-      console.log(`[Validation RDV] Date fin: ${dateFin} 23:59:59`);
     }
 
     const whereClause = whereConditions.join(' AND ');
-    console.log(`[Validation RDV] WHERE clause: ${whereClause}`);
-    console.log(`[Validation RDV] Params:`, params);
 
     const fiches = await query(
       `SELECT 
@@ -2979,18 +2895,6 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
       LIMIT 1000`,
       params
     );
-
-    console.log(`[Validation RDV] Nombre de fiches trouvées: ${fiches.length}`);
-    if (fiches.length > 0) {
-      console.log(`[Validation RDV] Première fiche:`, {
-        id: fiches[0].id,
-        date_rdv_time: fiches[0].date_rdv_time,
-        id_confirmateur: fiches[0].id_confirmateur,
-        id_confirmateur_2: fiches[0].id_confirmateur_2,
-        id_confirmateur_3: fiches[0].id_confirmateur_3,
-        valider: fiches[0].valider
-      });
-    }
 
     // Calculer les stats globales
     const stats = {
@@ -3076,7 +2980,6 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
 // =====================================================
 router.get('/mes-rappels', authenticate, async (req, res) => {
   const requestId = Math.random().toString(36).slice(2, 8);
-  const startTime = Date.now();
   try {
     const FONCTION_CONFIRMATEUR = 6;
     const FONCTION_RE_CONFIRMATION = 14;
@@ -3198,7 +3101,6 @@ router.get('/mes-rappels', authenticate, async (req, res) => {
        LIMIT 5000`,
       params
     );
-    console.log(`[MES_RAPPELS-${requestId}] SELECT ${Date.now() - selectStart}ms → ${fiches.length} fiches (etat=${etatId}, date=${date_rappel}, fonction=${fonction})`);
 
     // Une seule requête pour récupérer la dernière ligne fiches_histo de chaque fiche :
     //   - current_state_from_compte_rendu (from_compte_rendu de la dernière ligne)
@@ -3235,7 +3137,6 @@ router.get('/mes-rappels', authenticate, async (req, res) => {
       id: undefined,
     }));
 
-    console.log(`[MES_RAPPELS-${requestId}] total ${Date.now() - startTime}ms`);
     return res.json({ success: true, data });
   } catch (error) {
     console.error(`[MES_RAPPELS-${requestId}] erreur:`, error);
@@ -3275,7 +3176,6 @@ router.get('/demandes-insertion', authenticate, checkPermissionCode('demandes_in
       params.push(date_fin);
     }
     
-    console.log('[DEMANDES-INSERTION] Récupération des demandes avec filtre:', { statut, whereClause, params });
     
     const demandes = await query(
       `SELECT 
@@ -3299,16 +3199,6 @@ router.get('/demandes-insertion', authenticate, checkPermissionCode('demandes_in
       ORDER BY di.date_demande DESC`,
       params
     );
-    
-    console.log('[DEMANDES-INSERTION] Nombre de demandes trouvées:', demandes.length);
-    if (demandes.length > 0) {
-      console.log('[DEMANDES-INSERTION] Première demande:', {
-        id: demandes[0].id,
-        statut: demandes[0].statut,
-        agent_pseudo: demandes[0].agent_pseudo,
-        fiche_nom: demandes[0].fiche_nom
-      });
-    }
     
     res.json({
       success: true,
@@ -3617,7 +3507,6 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       });
     }
 
-    console.log(`Recherche de la fiche avec ID: ${ficheId}`);
     
     // Récupérer la fiche de base (même si archivée ou inactive)
     const fiche = await queryOne(
@@ -3625,18 +3514,10 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       [ficheId]
     );
 
-    console.log(`Résultat de la requête:`, fiche ? 'Fiche trouvée' : 'Fiche non trouvée');
-    
-    if (fiche) {
-      console.log(`Fiche trouvée - Archive: ${fiche.archive}, Active: ${fiche.active}, KO: ${fiche.ko}`);
-    }
-
     if (!fiche) {
       // Vérifier si des fiches existent dans la table
       const count = await queryOne('SELECT COUNT(*) as total FROM fiches');
       const allIds = await query('SELECT id FROM fiches ORDER BY id LIMIT 10');
-      console.log(`Nombre total de fiches dans la base: ${count?.total || 0}`);
-      console.log(`IDs disponibles (10 premiers):`, allIds.map(f => f.id));
       
       return res.status(404).json({
         success: false,
@@ -3666,46 +3547,46 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         const cq_e = await queryOne('SELECT titre FROM cq_etat WHERE id = ?', [fiche.cq_etat]);
         if (cq_e) cq_etat = cq_e.titre;
       }
-    } catch (e) { console.log('Erreur cq_etat:', e.message); }
+    } catch (_) { }
 
     try {
       if (fiche.cq_dossier) {
         const cq_d = await queryOne('SELECT titre FROM cq_dossier WHERE id = ?', [fiche.cq_dossier]);
         if (cq_d) cq_dossier = cq_d.titre;
       }
-    } catch (e) { console.log('Erreur cq_dossier:', e.message); }
+    } catch (_) { }
 
     try {
       if (fiche.ph3_installateur) {
         const inst = await queryOne('SELECT nom FROM installateurs WHERE id = ?', [fiche.ph3_installateur]);
         if (inst) installeur = inst.nom;
       }
-    } catch (e) { console.log('Erreur installateurs:', e.message); }
+    } catch (_) { }
 
     try {
       if (fiche.id_agent) {
         agent = await queryOne('SELECT pseudo, color FROM utilisateurs WHERE id = ?', [fiche.id_agent]);
       }
-    } catch (e) { console.log('Erreur agent:', e.message); }
+    } catch (_) { }
 
     try {
       if (fiche.id_centre) {
         const cent = await queryOne('SELECT titre FROM centres WHERE id = ?', [fiche.id_centre]);
         if (cent) centre = { titre: cent.titre };
       }
-    } catch (e) { console.log('Erreur centre:', e.message); }
+    } catch (_) { }
 
     try {
       if (fiche.id_commercial) {
         commercial = await queryOne('SELECT pseudo, color FROM utilisateurs WHERE id = ?', [fiche.id_commercial]);
       }
-    } catch (e) { console.log('Erreur commercial:', e.message); }
+    } catch (_) { }
 
     try {
       if (fiche.id_confirmateur) {
         confirmateur = await queryOne('SELECT pseudo, color FROM utilisateurs WHERE id = ?', [fiche.id_confirmateur]);
       }
-    } catch (e) { console.log('Erreur confirmateur:', e.message); }
+    } catch (_) { }
 
     let confirmateur2 = null;
     let confirmateur3 = null;
@@ -3714,33 +3595,26 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       if (fiche.id_confirmateur_2) {
         confirmateur2 = await queryOne('SELECT pseudo, color FROM utilisateurs WHERE id = ?', [fiche.id_confirmateur_2]);
       }
-    } catch (e) { console.log('Erreur confirmateur2:', e.message); }
+    } catch (_) { }
 
     try {
       if (fiche.id_confirmateur_3) {
         confirmateur3 = await queryOne('SELECT pseudo, color FROM utilisateurs WHERE id = ?', [fiche.id_confirmateur_3]);
       }
-    } catch (e) { console.log('Erreur confirmateur3:', e.message); }
+    } catch (_) { }
 
     let qualite_user = null;
     try {
       if (fiche.id_qualite) {
         qualite_user = await queryOne('SELECT pseudo, color FROM utilisateurs WHERE id = ?', [fiche.id_qualite]);
       }
-    } catch (e) { console.log('Erreur id_qualite:', e.message); }
+    } catch (_) { }
 
     try {
       if (fiche.id_etat_final) {
         etat = await queryOne('SELECT titre, color, groupe FROM etats WHERE id = ?', [fiche.id_etat_final]);
-        // Log pour déboguer le problème d'affichage du titre d'état
-        if (etat) {
-          console.log(`État récupéré pour fiche ID ${ficheId}: id_etat_final=${fiche.id_etat_final}, titre=${etat.titre}, groupe=${etat.groupe}`);
-        } else {
-          console.log(`Aucun état trouvé pour id_etat_final=${fiche.id_etat_final} (fiche ID ${ficheId})`);
-        }
       }
-    } catch (e) { 
-      console.log('Erreur etat:', e.message);
+    } catch (e) {
       console.error('Erreur lors de la récupération de l\'état:', e);
     }
 
@@ -3748,9 +3622,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       if (fiche.id_sous_etat) {
         sousEtat = await queryOne('SELECT titre FROM sous_etat WHERE id = ?', [fiche.id_sous_etat]);
       }
-    } catch (e) {
-      console.log('Erreur sous_etat:', e.message);
-    }
+    } catch (_) { }
 
     // Récupérer la qualification si id_qualif existe
     let qualification = null;
@@ -3778,7 +3650,6 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           }
         }
       } catch (e) { 
-        console.log('Erreur qualification:', e.message);
         // Si id_qualif est une string (code direct), l'utiliser
         if (typeof fiche.id_qualif === 'string') {
           qualification_code = fiche.id_qualif;
@@ -3794,7 +3665,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           produit.color = fiche.produit === 1 ? '#0000CD' : '#FFE441'; // PAC = bleu, PV = jaune
         }
       }
-    } catch (e) { console.log('Erreur produit:', e.message); }
+    } catch (_) { }
 
     const hasEtatChangedByCompteRendu = !!(await queryOne(
       'SELECT 1 FROM compte_rendu_pending WHERE id_fiche = ? AND statut = ? LIMIT 1',
@@ -3830,9 +3701,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           confirmateurs_from_histo.push(cid);
         }
       }
-    } catch (e) {
-      console.log('confirmateurs_from_histo:', e.message);
-    }
+    } catch (_) { }
 
     // Récupérer "Validé par qui" pour fiches confirmées et validées (dernière validation avec valider=1)
     let validateur_pseudo = null;
@@ -3858,7 +3727,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           if (lastValid && lastValid.conf_rdv_avec) validation_conf_rdv_avec = lastValid.conf_rdv_avec;
           if (lastValid && lastValid.conf_presence_couple) validation_conf_presence_couple = lastValid.conf_presence_couple;
         }
-      } catch (e) { console.log('Erreur validateur:', e.message); }
+      } catch (_) { }
     }
 
     // Formate un DATETIME MySQL (objet Date local côté mysql2) en chaîne "YYYY-MM-DDTHH:mm:ss"
@@ -4057,9 +3926,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
               return histo;
             });
           }
-        } catch (e) {
-          console.log('Enrichissement commentaire CR (compte_rendu_pending) ignoré:', e.message);
-        }
+        } catch (_) { }
       }
     } catch (error) {
       console.error('Erreur lors de la récupération de l\'historique:', error.message);
@@ -4291,7 +4158,6 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
           `UPDATE fiches SET id_qualite = ? WHERE id = ?`,
           [user.id, id]
         );
-        console.log(`id_qualite attribué à l'utilisateur ${user.id} (${user.pseudo}) pour la fiche ${id}`);
       }
       
       // Mettre à jour automatiquement date_appel_time lors du changement d'état
@@ -4336,7 +4202,6 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
             null
           );
           
-          console.log(`Date RDV supprimée pour la fiche ${id} : passage de l'état CONFIRMER (7) à l'état ${newEtatId} (groupe 2)`);
         }
       }
     }
@@ -4657,7 +4522,6 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       // Créer la demande d'insertion
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
       
-      console.log('[DEMANDE INSERTION] Création de la demande - agent:', agentId, 'fiche:', existingFiche.id);
       const demandeResult = await query(
         `INSERT INTO demandes_insertion 
          (id_agent, id_fiche_existante, donnees_fiche, date_demande, statut)
@@ -4665,7 +4529,6 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
         [agentId, existingFiche.id, JSON.stringify(ficheData), now]
       );
       
-      console.log('[DEMANDE INSERTION] Demande créée avec ID:', demandeResult.insertId);
       
       // Récupérer les informations de la fiche existante pour le message
       const ficheExistanteInfo = await queryOne(
@@ -4802,7 +4665,6 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
         placeholders.push('?');
       } else if (!validColumns.includes(key)) {
         // Log les colonnes ignorées pour le débogage
-        console.log(`Colonne ignorée (n'existe pas dans le schéma): ${key}`);
       }
     }
 
@@ -4925,7 +4787,6 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
         `UPDATE fiches SET id_qualite = ? WHERE id = ?`,
         [req.user.id, id]
       );
-      console.log(`id_qualite assigné à l'utilisateur ${req.user.id} (${req.user.pseudo}) pour la fiche ${id}`);
     }
 
     // Mettre à jour l'état et date_appel_time automatiquement lors du changement d'état
@@ -5090,7 +4951,6 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
         `UPDATE fiches SET id_qualite = ? WHERE id = ?`,
         [req.user.id, id]
       );
-      console.log(`id_qualite assigné à l'utilisateur ${req.user.id} (${req.user.pseudo}) pour la fiche ${id}`);
     }
 
     // Mettre à jour l'état vers "En-Attente" et date_appel_time automatiquement lors du changement d'état
@@ -5908,9 +5768,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             // Pas d'historique confirmation pour cette fiche => première confirmation, confirmateur connecté = confirmateur 1
             current = [null, null, null];
           }
-        } catch (e) {
-          console.log('confirmateurs_from_histo (PUT):', e.message);
-        }
+        } catch (_) { }
 
         const already = current.includes(uid);
         if (!already) {
@@ -6069,7 +5927,6 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
 
         if (newEtat && (newEtat.groupe === 2 || newEtat.groupe === '2')) {
           ficheData.date_rdv_time = null;
-          console.log(`Date RDV sera supprimée pour la fiche ${id} : passage de l'état CONFIRMER (7) à l'état ${newEtatId} (groupe 2)`);
         }
       }
 
@@ -6174,7 +6031,6 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       if (value !== undefined && key !== 'id' && allowedFields.includes(key)) {
         // Autoriser date_appel_time uniquement pour NRP (2) ; sinon conserver l'ancien comportement.
         if (key === 'date_appel_time' && effectiveNewEtatId !== 2) {
-          console.log(`date_appel_time ignorée pour la fiche ${id} : remplie automatiquement lors du changement d'état`);
           continue; // Ne pas inclure ce champ dans la mise à jour
         }
         fields.push(`\`${key}\` = ?`);
@@ -6290,7 +6146,6 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           
           // Ne créer le compte rendu que si l'état appartient à la Phase 3 (groupe = 3)
           if (!etatInfo || (etatInfo.groupe !== '3' && etatInfo.groupe !== 3)) {
-            console.log(`Compte rendu non enregistré : l'état ${etatFiche} n'appartient pas à la Phase 3 (groupe: ${etatInfo?.groupe || 'inconnu'})`);
             // Ne pas bloquer la mise à jour, juste ne pas créer de compte rendu
           } else {
             // Récupérer la qualification (id_qualif) de la fiche
@@ -6321,7 +6176,6 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
                   }
                 }
               } catch (e) {
-                console.log('Erreur lors de la récupération de la qualification:', e.message);
                 // Si id_qualif est une string (code direct), l'utiliser
                 if (typeof qualificationId === 'string') {
                   qualificationCode = qualificationId;
@@ -6702,7 +6556,6 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
       });
     }
 
-    console.log(`[SMS] Utilisation du fournisseur: ${provider.nom} (ID: ${provider.id || 'défaut'})`);
 
     // Récupérer les données de la fiche pour les variables Octopush et le remplacement des variables
     // La colonne s'appelle 'civ' et non 'civilite'
@@ -6719,14 +6572,6 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
     // Remplacer les variables dans le message si nécessaire
     let processedMessage = message.trim();
     
-    console.log('[SMS Route] Message original:', processedMessage.substring(0, 100));
-    console.log('[SMS Route] Fiche data:', {
-      hasFiche: !!fiche,
-      hasDateRdv: !!fiche?.date_rdv_time,
-      dateRdvValue: fiche?.date_rdv_time,
-      nom: fiche?.nom,
-      prenom: fiche?.prenom
-    });
     
     if (fiche) {
       // Remplacer {{prenom}}, {{nom}}, {{civ}}
@@ -6765,7 +6610,6 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
             });
             const heureRdvStr = dateRdv.toTimeString().slice(0, 5);
             
-            console.log('[SMS Route] Date RDV formatée:', { dateRdvStr, heureRdvStr });
             
             processedMessage = processedMessage
               .replace(/\{\{date_rdv\}\}/g, dateRdvStr)
@@ -6779,7 +6623,6 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
             .replace(/\{\{heure_rdv\}\}/g, '');
         }
       } else {
-        console.log('[SMS Route] Pas de date_rdv_time dans la fiche');
         // Si pas de date_rdv_time, remplacer par des chaînes vides
         processedMessage = processedMessage
           .replace(/\{\{date_rdv\}\}/g, '')
@@ -6787,13 +6630,6 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
       }
     }
     
-    console.log('[SMS Route] Message après remplacement des variables:', processedMessage.substring(0, 150));
-    console.log('[SMS Route] Variables restantes:', {
-      hasDateRdv: /\{\{date_rdv\}\}/.test(processedMessage),
-      hasHeureRdv: /\{\{heure_rdv\}\}/.test(processedMessage),
-      hasPrenom: /\{\{prenom\}\}/.test(processedMessage),
-      hasNom: /\{\{nom\}\}/.test(processedMessage)
-    });
 
     // Envoyer le SMS via le fournisseur
     let smsResult;
@@ -6882,7 +6718,6 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
 router.get('/:id/modifica', authenticate, hashToIdMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('Récupération des modifications pour la fiche:', id);
     
     // Vérifier d'abord si la table modifica existe
     const tableExists = await queryOne(
@@ -6893,7 +6728,6 @@ router.get('/:id/modifica', authenticate, hashToIdMiddleware, async (req, res) =
     );
     
     if (!tableExists || tableExists.count === 0) {
-      console.log('Table modifica n\'existe pas');
       return res.json({ success: true, data: [] });
     }
     
@@ -6916,7 +6750,6 @@ router.get('/:id/modifica', authenticate, hashToIdMiddleware, async (req, res) =
     }
     
     const columnNames = columns.map(col => col.COLUMN_NAME);
-    console.log('Colonnes de la table modifica:', columnNames);
     
     // Déterminer quelle structure utiliser
     const hasNewStructure = columnNames.includes('type') && columnNames.includes('ancien_valeur') && columnNames.includes('nouvelle_valeur');
@@ -6977,8 +6810,6 @@ router.get('/:id/modifica', authenticate, hashToIdMiddleware, async (req, res) =
       });
     }
     
-    console.log('Modifications trouvées:', modificaList.length);
-    console.log('Première modification (exemple):', modificaList[0]);
 
     // Enrichir : résoudre les IDs (utilisateurs, centre, état, produit) en libellés lisibles
     try {

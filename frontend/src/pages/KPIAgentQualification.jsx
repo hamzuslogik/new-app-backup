@@ -19,14 +19,11 @@ const KPIAgentQualification = () => {
   const { data: kpiData, isLoading, error } = useQuery(
     ['agent-qualification-kpis', filters.date_debut, filters.date_fin],
     async () => {
-      console.log('[KPI Mes indicateurs] Appel API avec params:', { date_debut: filters.date_debut, date_fin: filters.date_fin });
       const res = await api.get('/statistiques/agent-qualification-kpis', {
         params: { date_debut: filters.date_debut, date_fin: filters.date_fin }
       });
-      console.log('[KPI Mes indicateurs] Réponse API res.data:', res.data);
       const raw = res.data?.data ?? res.data;
       const payload = raw && typeof raw === 'object' ? raw : {};
-      console.log('[KPI Mes indicateurs] Payload extrait pour affichage:', payload);
       return payload;
     },
     { enabled: Number(user?.fonction) === 3 && !!filters.date_debut && !!filters.date_fin }
@@ -65,16 +62,6 @@ const KPIAgentQualification = () => {
   const nbKo = Number(data.nb_ko ?? data.nbKo) || 0;
   const tauxHc = Number(data.taux_hc ?? data.tauxHc) || 0;
   const tauxKo = Number(data.taux_ko ?? data.tauxKo) || 0;
-
-  console.log('[KPI Mes indicateurs] Données affichées:', {
-    dataKeys: Object.keys(data),
-    period,
-    fichesProduites,
-    nbHc,
-    nbKo,
-    tauxHc,
-    tauxKo
-  });
 
   return (
     <div className="kpi-agent-qualif-page">

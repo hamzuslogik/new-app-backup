@@ -145,8 +145,6 @@ const PlanningDep = () => {
     ['planning-week', week, year, dep],
     async () => {
       const res = await api.get('/planning/week', { params: { w: week, y: year, dp: dep || '01' } });
-      console.log('[PlanningDep] Planning reçu:', res.data);
-      console.log('[PlanningDep] Planning data:', res.data?.data);
       return res.data;
     },
     { 
@@ -168,47 +166,6 @@ const PlanningDep = () => {
     }
   );
   const availability = availabilityData?.data || {};
-  
-  // Debug: afficher la structure du planning et compter les RDV
-  useEffect(() => {
-    if (planning && Object.keys(planning).length > 0) {
-      console.log('[PlanningDep] Planning structuré:', planning);
-      console.log('[PlanningDep] Nombre de dates dans planning:', Object.keys(planning).length);
-      
-      // Afficher les TimeKeys pour chaque créneau
-      TIME_SLOTS.forEach(slot => {
-        const timeKey = hourToTimeKey(slot.hour);
-        console.log(`[PlanningDep] TimeKey pour ${slot.hour}: ${timeKey}`);
-      });
-      
-      let totalRdvs = 0;
-      Object.keys(planning).forEach(date => {
-        const dateData = planning[date];
-        if (dateData?.time) {
-          const timeKeys = Object.keys(dateData.time);
-          console.log(`[PlanningDep] Date ${date} - TimeKeys disponibles:`, timeKeys);
-          
-          timeKeys.forEach(timeKey => {
-            const rdvs = dateData.time[timeKey]?.planning || [];
-            totalRdvs += rdvs.length;
-            if (rdvs.length > 0) {
-              // Trouver le créneau correspondant
-              const slot = TIME_SLOTS.find(s => {
-                const sTimeKey = hourToTimeKey(s.hour);
-                return sTimeKey === parseInt(timeKey);
-              });
-              const slotHour = slot ? slot.hour : 'inconnu';
-              console.log(`[PlanningDep] RDV trouvés pour ${date} à timeKey ${timeKey}: ${rdvs.length}`, rdvs);
-              console.log(`[PlanningDep] Créneau correspondant: ${slotHour}`);
-            }
-          });
-        }
-      });
-      console.log(`[PlanningDep] Total RDV dans le planning: ${totalRdvs}`);
-    } else {
-      console.log('[PlanningDep] Planning vide ou non défini');
-    }
-  }, [planning]);
 
   const getAvailabilityColor = (rdvCount, availability) => {
     if (availability === 0) return 'rgba(34, 45, 50, 0.8)';
@@ -584,7 +541,6 @@ const PlanningView = ({ planning, availability, days, timeSlots, getAvailability
                       const matchingKey = availableKeys.find(k => parseInt(k) === timeKey);
                       if (matchingKey) {
                         dayPlanning = planning[day.date].time[matchingKey];
-                        console.log(`[PlanningDep] Clé trouvée par correspondance - Date: ${day.date}, TimeKey recherché: ${timeKey}, Clé trouvée: ${matchingKey}`);
                       }
                     }
                     
@@ -595,46 +551,6 @@ const PlanningView = ({ planning, availability, days, timeSlots, getAvailability
                       ? availabilityFromPlanning
                       : ((availabilityFromEndpoint !== null && availabilityFromEndpoint !== undefined) ? availabilityFromEndpoint : null);
                     
-                    // Debug: afficher les informations de débogage pour chaque cellule
-                    if (rdvs.length > 0) {
-                      console.log(`[PlanningDep] RDV trouvés pour ${day.date} à ${slot.hour} (timeKey: ${timeKey}): ${rdvs.length}`, rdvs);
-                    }
-                    
-                    // Debug spécifique pour identifier le problème
-                    if (planning[day.date]?.time) {
-                      const directAccess = planning[day.date].time[timeKey];
-                      const stringAccess = planning[day.date].time[String(timeKey)];
-                      const allKeys = Object.keys(planning[day.date].time);
-                      const matchingKey = allKeys.find(k => parseInt(k) === timeKey);
-                      
-                      if (rdvs.length === 0 && (directAccess || stringAccess || matchingKey)) {
-                        console.log(`[PlanningDep] DEBUG cellule spécifique:`, {
-                          date: day.date,
-                          slot: slot.hour,
-                          timeKey: timeKey,
-                          timeKeyType: typeof timeKey,
-                          directAccess: directAccess,
-                          stringAccess: stringAccess,
-                          matchingKey: matchingKey,
-                          matchingKeyData: matchingKey ? planning[day.date].time[matchingKey] : null,
-                          allKeys: allKeys,
-                          dayPlanning: dayPlanning
-                        });
-                        
-                        // Vérifier si les RDV existent dans le planning mais ne sont pas accessibles
-                        if (matchingKey && planning[day.date].time[matchingKey]?.planning?.length > 0) {
-                          console.log(`[PlanningDep] PROBLÈME: RDV devrait être présent mais rdvs.length = ${rdvs.length}`, {
-                            matchingKeyData: planning[day.date].time[matchingKey],
-                            dayPlanning: dayPlanning
-                          });
-                        }
-                      }
-                    }
-                    
-                    if (!dayPlanning && planning[day.date]) {
-                      const availableKeys = Object.keys(planning[day.date].time || {});
-                      console.log(`[PlanningDep] Pas de dayPlanning pour TimeKey ${timeKey} (type: ${typeof timeKey}) - Date: ${day.date}, Clés disponibles:`, availableKeys.map(k => ({ key: k, type: typeof k, parsed: parseInt(k) })));
-                    }
                     const hasPlanning = availabilityValue !== null && availabilityValue !== undefined;
                     const isBlocked = availabilityValue === 0;
                     const displayAvailability = hasPlanning ? availabilityValue : '-';

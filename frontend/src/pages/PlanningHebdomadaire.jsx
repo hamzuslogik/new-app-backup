@@ -170,22 +170,18 @@ const PlanningHebdomadaire = () => {
     async () => {
       try {
         const res = await api.get(`/planning/hebdomadaire?year=${year}&week=${week}`);
-        console.log('Réponse planning hebdomadaire:', res.data);
         if (res.data) {
           // Gérer différentes structures de réponse
           if (res.data.success && res.data.data) {
             const data = Array.isArray(res.data.data) ? res.data.data : [];
-            console.log('Données disponibilités (groupées):', data);
             return data;
           }
           // Si la réponse est directement un tableau
           if (Array.isArray(res.data)) {
-            console.log('Données disponibilités (array direct):', res.data);
             return res.data;
           }
           // Si la réponse contient directement les données
           if (res.data.data && Array.isArray(res.data.data)) {
-            console.log('Données disponibilités (res.data.data):', res.data.data);
             return res.data.data;
           }
         }

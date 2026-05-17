@@ -72,7 +72,6 @@ export const SidebarProvider = ({ children }) => {
       const width = window.innerWidth;
       const mobile = width <= 768;
       const tablet = width > 768 && width <= 1024;
-      console.log('Sidebar toggle:', { prevCollapsed, newState, mobile, tablet });
       // Si on ouvre manuellement, désactiver l'auto-hide et marquer comme toggle manuel
       if (newState === false) {
         setAutoHideEnabled(false);

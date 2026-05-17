@@ -59,12 +59,7 @@ const Validation = () => {
       params.date_debut = filters.date_debut || '';
       params.date_fin = filters.date_fin || '';
       
-      console.log('[Validation] Paramètres envoyés:', params);
-      console.log('[Validation] Filtres:', filters);
-      console.log('[Validation] User:', user);
-      
       const res = await api.get('/fiches/validation-rdv', { params });
-      console.log('[Validation] Réponse reçue:', res.data);
       return res.data.data;
     },
     {

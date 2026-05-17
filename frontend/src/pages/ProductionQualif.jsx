@@ -144,7 +144,6 @@ const ProductionQualif = () => {
       
       try {
         const res = await api.get('/fiches/agents-sous-responsabilite', { params });
-        console.log('Réponse fiches:', res.data);
         return res.data;
       } catch (error) {
         console.error('Erreur lors de la récupération des fiches:', error);

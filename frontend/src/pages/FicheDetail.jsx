@@ -1179,7 +1179,6 @@ const FicheDetail = ({
   // Mutation pour créer/mettre à jour un décalage
   const decalageMutation = useMutation(
     async (data) => {
-      console.log('Envoi de la requête de création de décalage:', data);
       const res = await api.post('/decalages', data);
       return res.data;
     },
@@ -1304,16 +1303,6 @@ const FicheDetail = ({
       const secs = String(date.getSeconds()).padStart(2, '0');
       dateNouvelle = `${year}-${month}-${day} ${hours}:${mins}:${secs}`;
     }
-
-    // Log pour diagnostic
-    console.log('Création de décalage avec les données:', {
-      id_fiche: idFicheNum,
-      destination: parseInt(destination, 10),
-      message: decalageFormData.message.trim(),
-      date_prevu: dateRdvOriginale,
-      date_nouvelle: dateNouvelle,
-      decalage_minutes: decalageFormData.select_minutes
-    });
 
     decalageMutation.mutate({
       id_fiche: idFicheNum,
@@ -3266,14 +3255,6 @@ const FicheDetail = ({
                     // Toujours utiliser la date de la fiche en priorité, sinon celle du formulaire
                     const dateRdvOriginale = ficheData?.date_rdv_time || decalageFormData.date_prevu || '';
                     
-                    console.log('Décalage sélectionné:', {
-                      minutes,
-                      dateRdvOriginale,
-                      ficheDataDateRdv: ficheData?.date_rdv_time,
-                      decalageFormDataDatePrevu: decalageFormData.date_prevu,
-                      selectValue: e.target.value
-                    });
-                    
                     if (minutes > 0 && dateRdvOriginale) {
                       try {
                         const formattedNewDate = addMinutesToDateTimeString(dateRdvOriginale, minutes);
@@ -3282,8 +3263,6 @@ const FicheDetail = ({
                           alert('Erreur : la date de rendez-vous originale est invalide.');
                           return;
                         }
-
-                        console.log('Nouvelle date formatée:', formattedNewDate);
                         
                         // Utiliser la forme fonctionnelle de setState pour garantir la cohérence
                         setDecalageFormData(prev => ({
@@ -8013,7 +7992,6 @@ const ModificaTab = ({ ficheHash }) => {
     ['modifica', ficheHash],
     async () => {
       const res = await api.get(`/fiches/${ficheHash}/modifica`);
-      console.log('Modifica response:', res.data);
       if (res.data.success) {
         return res.data.data || [];
       } else {
@@ -8056,8 +8034,6 @@ const ModificaTab = ({ ficheHash }) => {
       </div>
     );
   }
-
-  console.log('Modifica data:', modificaData);
 
   return (
     <div className="modifica-tab">
@@ -8189,14 +8165,11 @@ const PlanningTab = ({
   // Mutation pour modifier la disponibilité (définie après les queries pour accéder aux refetch)
   const updateAvailabilityMutation = useMutation(
     async ({ week, year, dep, date, hour, value, type }) => {
-      console.log('Mutation called with:', { week, year, dep, date, hour, value, type });
       const res = await api.put('/planning/availability', { week, year, dep, date, hour, value, type });
-      console.log('Mutation response:', res.data);
       return res.data;
     },
     {
-      onSuccess: (data) => {
-        console.log('Availability updated successfully:', data);
+      onSuccess: () => {
         queryClient.invalidateQueries(['planning-modal']);
         queryClient.invalidateQueries(['availability-modal']);
         queryClient.invalidateQueries(['planning-hebdomadaire', planningYear, planningWeek]);
@@ -8235,8 +8208,6 @@ const PlanningTab = ({
       alert('Valeur invalide');
       return;
     }
-    
-    console.log('handleUpdateAvailability called:', { date, hour, hourFormatted, value: numValue, type });
     
     updateAvailabilityMutation.mutate({
       week: planningWeek,
@@ -8463,22 +8434,9 @@ const SMSTab = ({ ficheHash, ficheData }) => {
   // Fonction pour remplacer les variables dans le message
   const replaceVariables = React.useCallback((message) => {
     if (!message || !ficheData) {
-      console.log('[SMS Frontend] replaceVariables: message ou ficheData manquant', { 
-        hasMessage: !!message, 
-        hasFicheData: !!ficheData 
-      });
       return message;
     }
     
-    console.log('[SMS Frontend] replaceVariables: Données ficheData', {
-      hasDateRdv: !!ficheData.date_rdv_time,
-      dateRdvValue: ficheData.date_rdv_time,
-      nom: ficheData.nom,
-      prenom: ficheData.prenom,
-      civ: ficheData.civ
-    });
-    
-    let dateRdv = null;
     let dateRdvStr = '';
     let heureRdvStr = '';
     
@@ -8500,10 +8458,6 @@ const SMSTab = ({ ficheHash, ficheData }) => {
       } catch (error) {
         console.error('[SMS Frontend] Erreur lors du formatage de date_rdv_time:', error, ficheData.date_rdv_time);
       }
-    } else {
-      console.log('[SMS Frontend] Pas de date_rdv_time dans ficheData', {
-        ficheDataKeys: ficheData ? Object.keys(ficheData) : 'ficheData is null'
-      });
     }
     
     const processedMessage = message
@@ -8512,12 +8466,6 @@ const SMSTab = ({ ficheHash, ficheData }) => {
       .replace(/\{\{date_rdv\}\}/g, dateRdvStr)
       .replace(/\{\{heure_rdv\}\}/g, heureRdvStr)
       .replace(/\{\{civ\}\}/g, ficheData.civ || '');
-    
-    console.log('[SMS Frontend] Variables restantes après remplacement:', {
-      hasDateRdv: /\{\{date_rdv\}\}/.test(processedMessage),
-      hasHeureRdv: /\{\{heure_rdv\}\}/.test(processedMessage),
-      messagePreview: processedMessage.substring(0, 150)
-    });
     
     return processedMessage;
   }, [ficheData]);
@@ -9398,9 +9346,7 @@ const CreateRdvModal = ({
     async () => {
       try {
         const res = await api.get('/management/produits');
-        console.log('Produits API response:', res.data);
         const produitsData = res.data?.data || res.data || [];
-        console.log('Produits data:', produitsData);
         return produitsData;
       } catch (error) {
         console.error('Erreur lors de la récupération des produits:', error);
@@ -9413,13 +9359,6 @@ const CreateRdvModal = ({
       retry: 2,
     }
   );
-  
-  // Debug: afficher les produits dans la console
-  useEffect(() => {
-    console.log('Produits dans le modal:', produits);
-    console.log('isLoadingProduits:', isLoadingProduits);
-    console.log('produitsError:', produitsError);
-  }, [produits, isLoadingProduits, produitsError]);
 
   useEffect(() => {
     setShowRdvConfFields(false);

@@ -97,12 +97,10 @@ const Planning = () => {
       try {
         // Utiliser la route planning/departements qui correspond exactement à la requête PHP
         const res = await api.get('/planning/departements');
-        console.log('Réponse départements:', res.data);
         
         // Vérifier la structure de la réponse
         if (res.data && res.data.success && res.data.data) {
           const deps = res.data.data;
-          console.log('Départements formatés:', deps);
           return deps;
         }
         
@@ -182,8 +180,6 @@ const Planning = () => {
     ['planning-availability', week, year, dep],
     async () => {
       const res = await api.get('/planning/availability', { params: { w: week, y: year, dp: dep || '01' } });
-      console.log('Réponse disponibilité complète:', res.data);
-      console.log('Données de disponibilité:', res.data?.data);
       return res.data;
     },
     { 
@@ -435,16 +431,6 @@ const Planning = () => {
   const availability = availabilityData?.data || {};
   const weekStart = planningData?.weekStart;
   const weekEnd = planningData?.weekEnd;
-  
-  // Debug: afficher la structure des disponibilités
-  if (viewMode === 'availability' && availabilityData) {
-    console.log('Disponibilités pour affichage:', availability);
-    console.log('Première date disponible:', Object.keys(availability)[0]);
-    if (Object.keys(availability).length > 0) {
-      const firstDate = Object.keys(availability)[0];
-      console.log('Créneaux pour', firstDate, ':', availability[firstDate]);
-    }
-  }
 
   // Obtenir les jours de la semaine
   // Toujours recalculer les jours de la même manière que le backend
@@ -809,16 +795,6 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
   useEffect(() => {
     setLocalAvailabilityOverrides({});
   }, [availability]);
-  
-  // Debug: afficher la structure des disponibilités reçues
-  console.log('AvailabilityView - availability reçu:', availability);
-  console.log('AvailabilityView - planning reçu:', planning);
-  console.log('AvailabilityView - jours:', days);
-  console.log('AvailabilityView - créneaux:', timeSlots);
-  if (availability && Object.keys(availability).length > 0) {
-    const firstDate = Object.keys(availability)[0];
-    console.log('AvailabilityView - première date:', firstDate, 'données:', availability[firstDate]);
-  }
 
   const handleCellClick = (date, hour) => {
     if (!canEdit) return;

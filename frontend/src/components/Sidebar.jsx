@@ -453,11 +453,6 @@ const Sidebar = ({ collapsed }) => {
     },
   ];
 
-  // Debug: vérifier l'état de la sidebar
-  React.useEffect(() => {
-    console.log('Sidebar rendered with collapsed:', collapsed);
-  }, [collapsed]);
-
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <Link to={homePage} className="sidebar-logo-container" onClick={goHomePage}>

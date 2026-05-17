@@ -141,7 +141,6 @@ const DashboardAdmin = () => {
 
   const { data: etatsData, isLoading: isLoadingEtats, error: etatsError } = useQuery('etats', async () => {
     const res = await api.get('/management/etats');
-    console.log('États récupérés:', res.data.data);
     return res.data.data;
   });
 
@@ -257,8 +256,6 @@ const DashboardAdmin = () => {
     'dashboard-stats',
     async () => {
       const res = await api.get('/statistiques/dashboard');
-      console.log('Statistiques Dashboard reçues:', res.data.data);
-      console.log('Confirmateurs:', res.data.data?.confirmateurs);
       return res.data.data;
     },
     {
@@ -270,22 +267,8 @@ const DashboardAdmin = () => {
   const { data, isLoading, isFetching, error, refetch } = useQuery(
     ['fiches', filters, activeTab, quickSearch],
     async () => {
-      console.time('[PERF] Requête API fiches - Total');
-      console.log('[PERF] Début chargement fiches - Paramètres:', { filters, activeTab, quickSearch });
-      
       const params = getQueryParams();
-      console.log('[PERF] Paramètres de requête générés:', params);
-      
-      const requestStartTime = performance.now();
       const response = await api.get('/fiches', { params });
-      const requestEndTime = performance.now();
-      const requestDuration = requestEndTime - requestStartTime;
-      
-      console.log(`[PERF] Requête API terminée en ${requestDuration.toFixed(2)}ms`);
-      console.log(`[PERF] Nombre de fiches reçues: ${response.data?.data?.length || 0}`);
-      console.log(`[PERF] Pagination:`, response.data?.pagination);
-      
-      console.timeEnd('[PERF] Requête API fiches - Total');
       return response.data;
     },
     { keepPreviousData: true }
@@ -304,14 +287,6 @@ const DashboardAdmin = () => {
   const etatsPhase2 = etats.filter(e => String(e.groupe) === '2' || e.groupe === 2);
   const etatsPhase3 = etats.filter(e => String(e.groupe) === '3' || e.groupe === 3);
 
-  // Debug: afficher les états et leurs groupes
-  if (etats.length > 0) {
-    console.log('États chargés:', etats.length);
-    console.log('États Phase 1:', etatsPhase1.length, etatsPhase1.map(e => ({ id: e.id, titre: e.titre, groupe: e.groupe })));
-    console.log('États Phase 2:', etatsPhase2.length, etatsPhase2.map(e => ({ id: e.id, titre: e.titre, groupe: e.groupe })));
-    console.log('États Phase 3:', etatsPhase3.length, etatsPhase3.map(e => ({ id: e.id, titre: e.titre, groupe: e.groupe })));
-  }
-  
   if (etatsError) {
     console.error('Erreur lors du chargement des états:', etatsError);
   }
@@ -476,14 +451,6 @@ const DashboardAdmin = () => {
   // Déclarer fichesData avant les early returns pour pouvoir l'utiliser dans les hooks
   const fichesData = data?.data || [];
   const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
-  
-  // Log performance après chargement des données
-  useEffect(() => {
-    if (fichesData.length > 0) {
-      console.log(`[PERF] Fiches chargées en mémoire: ${fichesData.length}`);
-      console.log(`[PERF] Pagination actuelle: page ${pagination.page}/${pagination.pages}, total: ${pagination.total}`);
-    }
-  }, [fichesData.length, pagination.page, pagination.pages, pagination.total]);
 
   // Masquer automatiquement le sidebar quand il y a des données dans le tableau (sur desktop uniquement)
   // IMPORTANT: Ce useEffect doit être appelé AVANT tous les early returns pour respecter les règles des hooks React
@@ -497,21 +464,6 @@ const DashboardAdmin = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fichesData.length, isDesktop]);
-
-  // Log performance total du traitement - IMPORTANT: Avant les early returns
-  // Cette variable sera utilisée dans le useEffect, mais elle doit être déclarée avant
-  // Les calculs seront faits après les early returns
-  const [processedFichesCount, setProcessedFichesCount] = useState(0);
-  
-  useEffect(() => {
-    if (processedFichesCount > 0) {
-      console.log(`[PERF] === RÉSUMÉ PERFORMANCE ===`);
-      console.log(`[PERF] Fiches après traitement: ${processedFichesCount}`);
-      console.log(`[PERF] Recherche rapide active: ${quickSearch.trim() !== '' ? 'Oui (' + quickSearch + ')' : 'Non'}`);
-      console.log(`[PERF] Tri actif: ${sortConfig.key ? sortConfig.key + ' (' + sortConfig.direction + ')' : 'Non'}`);
-      console.log(`[PERF] ========================`);
-    }
-  }, [processedFichesCount, quickSearch, sortConfig.key, sortConfig.direction]);
 
   if (isLoading && !data) {
     return (
@@ -603,8 +555,6 @@ const DashboardAdmin = () => {
   };
 
   // Fonction pour trier les fiches
-  // Performance: Mesure du temps de tri
-  const sortStartTime = performance.now();
   const sortedFiches = [...fichesData].sort((a, b) => {
     if (!sortConfig.key) return 0;
 
@@ -619,14 +569,8 @@ const DashboardAdmin = () => {
     }
     return 0;
   });
-  const sortEndTime = performance.now();
-  if (fichesData.length > 0 && sortConfig.key) {
-    console.log(`[PERF] Tri de ${fichesData.length} fiches par "${sortConfig.key}" (${sortConfig.direction}) effectué en ${(sortEndTime - sortStartTime).toFixed(2)}ms`);
-  }
 
   // Filtrer les fiches selon la recherche rapide
-  // Performance: Filtrage des fiches
-  const filterStartTime = performance.now();
   const filteredFiches = quickSearch.trim() === '' 
     ? sortedFiches 
     : sortedFiches.filter(fiche => {
@@ -655,11 +599,6 @@ const DashboardAdmin = () => {
           field.toString().toLowerCase().includes(searchLower)
         );
       });
-  const filterEndTime = performance.now();
-  if (quickSearch.trim() !== '' && sortedFiches.length > 0) {
-    console.log(`[PERF] Filtrage de ${sortedFiches.length} fiches avec "${quickSearch}" effectué en ${(filterEndTime - filterStartTime).toFixed(2)}ms`);
-    console.log(`[PERF] Résultats après filtrage: ${filteredFiches.length} fiches (${((filteredFiches.length / sortedFiches.length) * 100).toFixed(1)}%)`);
-  }
 
   const fiches = filteredFiches;
 

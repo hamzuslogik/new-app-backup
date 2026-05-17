@@ -148,7 +148,6 @@ const ControleQualite = () => {
       try {
         const params = buildControleQualiteParams(filters);
         const res = await api.get('/fiches/controle-qualite', { params });
-        console.log('Réponse contrôle qualité:', res.data);
         // Vérifier la structure de la réponse
         if (res.data && res.data.success) {
           return res.data;
@@ -156,12 +155,6 @@ const ControleQualite = () => {
           throw new Error(res.data?.message || 'Format de réponse inattendu');
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des fiches contrôle qualité:', error);
-        console.error('Détails de l\'erreur:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status
-        });
         throw error;
       }
     },
