@@ -9,10 +9,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getNotificationClickPath } from '../utils/notificationNavigation';
 import './Notifications.css';
-import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Notifications = () => {
-  useForceDesktopViewport('notifications-page');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'
