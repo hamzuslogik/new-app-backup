@@ -2925,6 +2925,7 @@ const FicheDetail = ({
 
       {/* Onglets */}
       <div className="fiche-tabs">
+        <div className="fiche-tabs-items">
         <button
           className={`fiche-tab ${activeTab === 'fiches' ? 'active' : ''}`}
           onClick={() => setActiveTab('fiches')}
@@ -2974,6 +2975,7 @@ const FicheDetail = ({
             <FaFilePdf /> PDF
           </button>
         )}
+        </div>
         {showCompletudeTabBadge && hasCompletudeTabAlert && (
           <button
             type="button"
@@ -2981,8 +2983,10 @@ const FicheDetail = ({
             onClick={scrollToCompletudeSection}
             title="Complétude en attente — cliquer pour afficher"
           >
-            <FaInfoCircle aria-hidden />
-            <span>Complétude</span>
+            <span className="fiche-tab-completude-alert-inner">
+              <FaInfoCircle aria-hidden />
+              <span>Complétude</span>
+            </span>
           </button>
         )}
       </div>

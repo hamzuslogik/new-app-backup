@@ -3232,6 +3232,31 @@ button.stat-card.stat-card-clickable {
   border-bottom: 2px solid var(--etat-color, #3498db) !important;
 }
 
+.fiche-detail-modal-content .fiche-tabs {
+  flex-wrap: nowrap !important;
+}
+
+.fiche-detail-modal-content .fiche-tabs-items {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fiche-detail-modal-content .fiche-tab-completude-alert {
+  margin-left: auto !important;
+  flex-shrink: 0;
+  transition: none !important;
+}
+
+.fiche-detail-modal-content .fiche-tab-completude-alert-inner {
+  animation: fiche-completude-tab-blink 0.7s steps(1, end) infinite !important;
+  padding: 4px 10px !important;
+  font-size: 13px !important;
+}
+
 /* Réduire les espacements du header dans le modal */
 .fiche-detail-modal-content .fiche-detail-header {
   margin-bottom: 8px !important;

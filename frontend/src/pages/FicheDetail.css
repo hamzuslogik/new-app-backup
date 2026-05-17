@@ -1412,6 +1412,19 @@
     gap: 4px;
   }
 
+  .fiche-tabs-items {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .fiche-tab-completude-alert {
+    margin-left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+
   .fiche-tab {
     padding: 8px 12px;
     font-size: 14px;
@@ -1515,44 +1528,66 @@
 /* Styles pour les onglets */
 .fiche-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
   margin-bottom: 16px;
   border-bottom: 2px solid #e0e0e0;
 }
 
-.fiche-tab-completude-alert {
-  display: inline-flex;
+.fiche-tabs-items {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fiche-tab-completude-alert {
+  flex-shrink: 0;
   margin-left: auto;
-  padding: 6px 12px;
+  padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
+  transition: none !important;
+}
+
+.fiche-tab-completude-alert:hover .fiche-tab-completude-alert-inner {
+  filter: brightness(0.95);
+}
+
+.fiche-tab-completude-alert-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 700;
-  color: #b45309;
-  animation: fiche-completude-tab-blink 1.15s ease-in-out infinite;
+  color: #dc2626;
+  background-color: #fef08a;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.45);
+  animation: fiche-completude-tab-blink 0.7s steps(1, end) infinite;
+  will-change: color, background-color, box-shadow;
 }
 
-.fiche-tab-completude-alert:hover {
-  color: #92400e;
-}
-
-.fiche-tab-completude-alert svg {
-  font-size: 1.05em;
+.fiche-tab-completude-alert-inner svg {
+  font-size: 1.1em;
   flex-shrink: 0;
 }
 
 @keyframes fiche-completude-tab-blink {
-  0%,
-  100% {
-    opacity: 1;
+  0% {
+    color: #dc2626;
+    background-color: #fef08a;
+    box-shadow: 0 0 12px rgba(220, 38, 38, 0.75);
   }
   50% {
-    opacity: 0.3;
+    color: #ffffff;
+    background-color: #ea580c;
+    box-shadow: 0 0 16px rgba(234, 88, 12, 0.95);
   }
 }
 
