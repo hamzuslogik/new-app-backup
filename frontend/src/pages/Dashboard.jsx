@@ -648,6 +648,8 @@ const Dashboard = () => {
     s => Number(s.id_etat) === Number(filters.id_etat_final)
   );
   const showSousEtatFilter = filters.id_etat_final && sousEtatsForSelectedEtat.length > 0;
+  const showSourceFilter =
+    Number(filters.id_etat_final) === 8 || Number(filters.id_etat_final) === 9;
 
   if (etatsError) {
     console.error('Erreur lors du chargement des états:', etatsError);
@@ -1671,7 +1673,36 @@ const Dashboard = () => {
                   )}
                 </div>
 
-                {/* Champ de date (placé sous État final) */}
+                {/* Sous-état (avant les champs date si l'état sélectionné en a) */}
+                {showSousEtatFilter && (
+                  <div className="form-group">
+                    <label>Sous-état</label>
+                    <select
+                      value={filters.id_sous_etat || ''}
+                      onChange={(e) => handleFilterChange('id_sous_etat', e.target.value)}
+                    >
+                      <option value="">Tout</option>
+                      {sousEtatsForSelectedEtat.map(se => (
+                        <option key={se.id} value={se.id}>{se.titre}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {showSourceFilter && (
+                  <div className="form-group">
+                    <label>Source</label>
+                    <select
+                      value={filters.annuler_repro_type || ''}
+                      onChange={(e) => handleFilterChange('annuler_repro_type', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      <option value="compte_rendu">COMPTE RENDU</option>
+                      <option value="repro_confirmateurs">REPRO CONFIRMATEURS</option>
+                    </select>
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label>Champ de date</label>
                   <select
@@ -1689,37 +1720,6 @@ const Dashboard = () => {
                     <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                   </select>
                 </div>
-
-                {/* Sous-état (affiché uniquement si l'état sélectionné a des sous-états) */}
-                {showSousEtatFilter && (
-                  <div className="form-group">
-                    <label>Sous-état</label>
-                    <select
-                      value={filters.id_sous_etat || ''}
-                      onChange={(e) => handleFilterChange('id_sous_etat', e.target.value)}
-                    >
-                      <option value="">Tout</option>
-                      {sousEtatsForSelectedEtat.map(se => (
-                        <option key={se.id} value={se.id}>{se.titre}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Affiner Annuler à reprogrammer / Honoré à suivre : COMPTE RENDU ou REPRO CONFIRMATEURS */}
-                {(Number(filters.id_etat_final) === 8 || Number(filters.id_etat_final) === 9) && (
-                  <div className="form-group">
-                    <label>Source</label>
-                    <select
-                      value={filters.annuler_repro_type || ''}
-                      onChange={(e) => handleFilterChange('annuler_repro_type', e.target.value)}
-                    >
-                      <option value="">Tous</option>
-                      <option value="compte_rendu">COMPTE RENDU</option>
-                      <option value="repro_confirmateurs">REPRO CONFIRMATEURS</option>
-                    </select>
-                  </div>
-                )}
 
                 {/* Date début / fin: affichées uniquement si un champ de date est sélectionné */}
                 {filters.date_champ && (
@@ -2502,7 +2502,36 @@ const Dashboard = () => {
                   )}
                 </div>
 
-                {/* Champ de date (placé sous État final) */}
+                {/* Sous-état (avant les champs date si l'état sélectionné en a) */}
+                {showSousEtatFilter && (
+                  <div className="form-group">
+                    <label>Sous-état</label>
+                    <select
+                      value={filters.id_sous_etat || ''}
+                      onChange={(e) => handleFilterChange('id_sous_etat', e.target.value)}
+                    >
+                      <option value="">Tout</option>
+                      {sousEtatsForSelectedEtat.map(se => (
+                        <option key={se.id} value={se.id}>{se.titre}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {showSourceFilter && (
+                  <div className="form-group">
+                    <label>Source</label>
+                    <select
+                      value={filters.annuler_repro_type || ''}
+                      onChange={(e) => handleFilterChange('annuler_repro_type', e.target.value)}
+                    >
+                      <option value="">Tous</option>
+                      <option value="compte_rendu">COMPTE RENDU</option>
+                      <option value="repro_confirmateurs">REPRO CONFIRMATEURS</option>
+                    </select>
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label>Champ de date</label>
                   <select
@@ -2520,35 +2549,6 @@ const Dashboard = () => {
                     <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                   </select>
                 </div>
-
-                {showSousEtatFilter && (
-                  <div className="form-group">
-                    <label>Sous-état</label>
-                    <select
-                      value={filters.id_sous_etat || ''}
-                      onChange={(e) => handleFilterChange('id_sous_etat', e.target.value)}
-                    >
-                      <option value="">Tout</option>
-                      {sousEtatsForSelectedEtat.map(se => (
-                        <option key={se.id} value={se.id}>{se.titre}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {(Number(filters.id_etat_final) === 8 || Number(filters.id_etat_final) === 9) && (
-                  <div className="form-group">
-                    <label>Source</label>
-                    <select
-                      value={filters.annuler_repro_type || ''}
-                      onChange={(e) => handleFilterChange('annuler_repro_type', e.target.value)}
-                    >
-                      <option value="">Tous</option>
-                      <option value="compte_rendu">COMPTE RENDU</option>
-                      <option value="repro_confirmateurs">REPRO CONFIRMATEURS</option>
-                    </select>
-                  </div>
-                )}
 
                 {user?.fonction === 6 && (
                   <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

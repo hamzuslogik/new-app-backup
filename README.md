@@ -23,7 +23,7 @@ nouvelle_application/
 
 - Node.js (v16 ou supérieur)
 - npm ou yarn
-- MySQL (base de données sur 151.80.58.72)
+- MySQL (serveur accessible depuis votre environnement)
 
 ## Installation
 
@@ -31,7 +31,7 @@ nouvelle_application/
 
 1. Naviguer dans le dossier backend :
 ```bash
-cd nouvelle_application/backend
+cd backend
 ```
 
 2. Installer les dépendances :
@@ -39,10 +39,9 @@ cd nouvelle_application/backend
 npm install
 ```
 
-3. Configurer les variables d'environnement :
+3. Créer le fichier `backend/.env` à partir du modèle ci-dessous (ne jamais committer `.env`) :
 ```bash
-cp .env.example .env
-# Éditer .env avec vos configurations
+# Exemple : copier le bloc « Configuration » de ce README dans backend/.env
 ```
 
 4. Démarrer le serveur :
@@ -60,7 +59,7 @@ Le serveur backend sera accessible sur `http://localhost:5000`
 
 1. Naviguer dans le dossier frontend :
 ```bash
-cd nouvelle_application/frontend
+cd frontend
 ```
 
 2. Installer les dépendances :
@@ -77,14 +76,29 @@ L'application frontend sera accessible sur `http://localhost:3000`
 
 ## Configuration de la base de données
 
-La configuration de la base de données se trouve dans `backend/.env` :
+Créer `backend/.env` (fichier local, **non versionné**) avec vos valeurs :
 
 ```env
-DB_HOST=151.80.58.72
-DB_USER=hamzus
-DB_PASSWORD=hamzusLogiKk
+# Base de données
+DB_HOST=votre-hote-mysql
+DB_USER=votre-utilisateur
+DB_PASSWORD=votre-mot-de-passe
 DB_NAME=crm
+
+# Sécurité (obligatoire en production — valeurs longues et aléatoires)
+JWT_SECRET=changez-moi-secret-jwt-long-et-aleatoire
+FICHE_HASH_SECRET=changez-moi-secret-hash-fiche
+
+# Application
+PORT=5000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:3000
+
+# Derrière nginx / reverse proxy (pour IP client et anti-brute-force)
+# TRUST_PROXY=1
 ```
+
+Variables optionnelles : `JWT_EXPIRE`, `ENABLE_WORKFLOW_SCHEDULER`, etc. (voir `backend/server.js` et la doc d’exploitation interne).
 
 ## API Endpoints
 
@@ -123,7 +137,7 @@ DB_NAME=crm
 - **Express.js** - Framework web Node.js
 - **MySQL2** - Client MySQL avec support des promesses
 - **JWT** - Authentification par tokens
-- **bcryptjs** - Hashage des mots de passe
+- **bcryptjs** - Hashage (codes de secours ; mots de passe utilisateurs : SHA-256 — voir `AMELIORATIONS.md`)
 - **dotenv** - Gestion des variables d'environnement
 - **CORS** - Gestion des requêtes cross-origin
 
