@@ -1,0 +1,54 @@
+/* Affichage desktop forcé (hook useForceDesktopViewport / même logique que Dashboard) */
+html[data-desktop-viewport],
+body[data-desktop-viewport] {
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow-x: auto !important;
+  margin: 0 !important;
+}
+
+body[data-desktop-viewport] .content-wrapper {
+  min-width: 1400px;
+}
+
+body[data-desktop-viewport] .content-wrapper > * {
+  min-width: 1400px;
+  max-width: none;
+}
+
+@media (max-width: 768px) {
+  html[data-desktop-viewport],
+  body[data-desktop-viewport] {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow-x: auto !important;
+  }
+
+  body[data-desktop-viewport] .content-wrapper,
+  body[data-desktop-viewport] .content-wrapper > * {
+    min-width: 1400px !important;
+    max-width: none !important;
+  }
+
+  body[data-desktop-viewport] .page-header {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+
+  body[data-desktop-viewport] .header-actions {
+    width: auto !important;
+    justify-content: flex-end !important;
+  }
+}
+
+@media (max-width: 480px) {
+  html[data-desktop-viewport],
+  body[data-desktop-viewport] {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow-x: auto !important;
+  }
+}

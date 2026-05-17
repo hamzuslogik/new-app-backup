@@ -1,13 +1,3 @@
-/* Désactiver la responsivité mobile — forcer largeur minimale 1400px (comme Dashboard) */
-html.notifications-page,
-body.notifications-page {
-  min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
-  overflow-x: auto !important;
-  margin: 0 !important;
-}
-
 .notifications {
   padding: 16px;
   min-width: 1400px;
@@ -17,86 +7,21 @@ body.notifications-page {
   overflow-x: visible;
 }
 
-.notifications-page .notifications {
-  min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
-  margin: 0 !important;
+body[data-desktop-viewport] .notification-header {
+  flex-direction: row;
+  align-items: center;
 }
 
-.notifications-page .notifications-list {
-  min-width: 0;
-  width: 100%;
+body[data-desktop-viewport] .notification-actions {
+  flex-direction: row;
+  width: auto;
 }
 
-@media (max-width: 768px) {
-  html.notifications-page,
-  body.notifications-page {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-    overflow-x: auto !important;
-  }
-
-  html.notifications-page .notifications,
-  body.notifications-page .notifications {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-  }
-
-  html.notifications-page .page-header,
-  body.notifications-page .page-header {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  html.notifications-page .header-actions,
-  body.notifications-page .header-actions {
-    width: auto;
-    justify-content: flex-end;
-  }
-
-  html.notifications-page .notification-header,
-  body.notifications-page .notification-header {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  html.notifications-page .notification-actions,
-  body.notifications-page .notification-actions {
-    flex-direction: row;
-    width: auto;
-  }
-
-  html.notifications-page .btn-accept,
-  html.notifications-page .btn-refuse,
-  html.notifications-page .btn-view,
-  html.notifications-page .btn-mark-read,
-  body.notifications-page .btn-accept,
-  body.notifications-page .btn-refuse,
-  body.notifications-page .btn-view,
-  body.notifications-page .btn-mark-read {
-    width: auto;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  html.notifications-page,
-  body.notifications-page {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-    overflow-x: auto !important;
-  }
-
-  html.notifications-page .notifications,
-  body.notifications-page .notifications {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-  }
+body[data-desktop-viewport] .btn-accept,
+body[data-desktop-viewport] .btn-refuse,
+body[data-desktop-viewport] .btn-view,
+body[data-desktop-viewport] .btn-mark-read {
+  width: auto;
 }
 
 .page-header {
@@ -217,6 +142,8 @@ body.notifications-page {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  width: 100%;
   min-height: calc(100vh - 200px);
   max-height: calc(100vh - 120px);
   overflow-y: auto;

@@ -1,6 +1,7 @@
 /* Import des améliorations de thème - doit être en premier */
 @import './styles/theme-improvements.css';
 @import './styles/responsive.css';
+@import './styles/desktop-viewport.css';
 
 /* Variables CSS pour le thème */
 :root {

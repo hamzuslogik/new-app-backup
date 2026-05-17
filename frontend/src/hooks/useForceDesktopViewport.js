@@ -1,6 +1,13 @@
 import { useEffect } from 'react';
 
-const useForceDesktopViewport = (pageClassName = 'desktop-forced-page', width = 1400) => {
+const DEFAULT_WIDTH = 1400;
+
+/**
+ * Force l'affichage desktop sur mobile (même méthode que Dashboard).
+ * Utilise data-desktop-viewport sur html/body — pas de classe sur body pour éviter
+ * les conflits avec le conteneur racine de la page (.xxx-page).
+ */
+const useForceDesktopViewport = (_pageClassName, width = DEFAULT_WIDTH) => {
   useEffect(() => {
     const originalViewport = document.querySelector('meta[name="viewport"]');
     const originalContent = originalViewport?.getAttribute('content') || '';
@@ -13,8 +20,8 @@ const useForceDesktopViewport = (pageClassName = 'desktop-forced-page', width = 
     }
     viewport.setAttribute('content', `width=${width}`);
 
-    document.body.classList.add(pageClassName);
-    document.documentElement.classList.add(pageClassName);
+    document.documentElement.dataset.desktopViewport = String(width);
+    document.body.dataset.desktopViewport = String(width);
 
     document.documentElement.style.minWidth = `${width}px`;
     document.documentElement.style.width = 'auto';
@@ -32,8 +39,8 @@ const useForceDesktopViewport = (pageClassName = 'desktop-forced-page', width = 
         viewport.setAttribute('content', 'width=device-width, initial-scale=1');
       }
 
-      document.body.classList.remove(pageClassName);
-      document.documentElement.classList.remove(pageClassName);
+      delete document.documentElement.dataset.desktopViewport;
+      delete document.body.dataset.desktopViewport;
 
       document.documentElement.style.minWidth = '';
       document.documentElement.style.width = '';
@@ -44,7 +51,7 @@ const useForceDesktopViewport = (pageClassName = 'desktop-forced-page', width = 
       document.body.style.maxWidth = '';
       document.body.style.overflowX = '';
     };
-  }, [pageClassName, width]);
+  }, [width]);
 };
 
 export default useForceDesktopViewport;

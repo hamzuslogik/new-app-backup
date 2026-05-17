@@ -9,59 +9,15 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getNotificationClickPath } from '../utils/notificationNavigation';
 import './Notifications.css';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Notifications = () => {
+  useForceDesktopViewport('notifications-page');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'
   const notificationsListRef = useRef(null);
   const markedOnScrollRef = useRef(new Set());
-
-  // Forcer le viewport à 1400px pour désactiver la responsivité mobile (même méthode que Dashboard)
-  useEffect(() => {
-    const originalViewport = document.querySelector('meta[name="viewport"]');
-    const originalContent = originalViewport?.getAttribute('content') || '';
-
-    let viewport = document.querySelector('meta[name="viewport"]');
-    if (!viewport) {
-      viewport = document.createElement('meta');
-      viewport.setAttribute('name', 'viewport');
-      document.head.appendChild(viewport);
-    }
-    viewport.setAttribute('content', 'width=1400');
-
-    document.body.classList.add('notifications-page');
-    document.documentElement.classList.add('notifications-page');
-
-    document.documentElement.style.minWidth = '1400px';
-    document.documentElement.style.width = 'auto';
-    document.documentElement.style.maxWidth = 'none';
-    document.documentElement.style.overflowX = 'auto';
-    document.body.style.minWidth = '1400px';
-    document.body.style.width = 'auto';
-    document.body.style.maxWidth = 'none';
-    document.body.style.overflowX = 'auto';
-
-    return () => {
-      if (originalViewport && originalContent) {
-        originalViewport.setAttribute('content', originalContent);
-      } else if (viewport) {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1');
-      }
-
-      document.body.classList.remove('notifications-page');
-      document.documentElement.classList.remove('notifications-page');
-
-      document.documentElement.style.minWidth = '';
-      document.documentElement.style.width = '';
-      document.documentElement.style.maxWidth = '';
-      document.documentElement.style.overflowX = '';
-      document.body.style.minWidth = '';
-      document.body.style.width = '';
-      document.body.style.maxWidth = '';
-      document.body.style.overflowX = '';
-    };
-  }, []);
 
   const notificationsQueryOpts = {
     staleTime: 0,
