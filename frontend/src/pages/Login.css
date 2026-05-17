@@ -85,6 +85,27 @@
   cursor: not-allowed;
 }
 
+.backup-code-section {
+  padding: 12px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+}
+
+.backup-code-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #92400e;
+}
+
+.backup-code-input {
+  text-align: center;
+  letter-spacing: 0.35em;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+}
+
 .login-footer {
   margin-top: 24px;
   text-align: center;

@@ -1,45 +1,17 @@
 const express = require('express');
 const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
 const { query, queryOne } = require('../config/database');
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireBackofficeLogin } = require('../middleware/backofficeLogin.middleware');
+const {
+  ensureCodesSecoursTable,
+  generateFourDigitCodes,
+  hashBackupCode
+} = require('../utils/codesSecoursHelper');
 
 const router = express.Router();
 
 const CODES_PER_LOT = 10;
-const BCRYPT_ROUNDS = 10;
-
-async function ensureCodesSecoursTable() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS codes_secours (
-      id INT NOT NULL AUTO_INCREMENT,
-      code_hash VARCHAR(255) NOT NULL,
-      lot_id VARCHAR(36) NOT NULL,
-      utilise TINYINT(1) NOT NULL DEFAULT 0,
-      date_utilisation DATETIME NULL,
-      id_genere_par INT NOT NULL,
-      date_creation DATETIME NOT NULL,
-      PRIMARY KEY (id),
-      KEY idx_codes_secours_lot (lot_id),
-      KEY idx_codes_secours_utilise (utilise)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `);
-}
-
-function generateFourDigitCodes(count) {
-  const codes = new Set();
-  let guard = 0;
-  while (codes.size < count && guard < count * 200) {
-    guard += 1;
-    const n = crypto.randomInt(0, 10000);
-    codes.add(String(n).padStart(4, '0'));
-  }
-  if (codes.size < count) {
-    throw new Error('Impossible de générer des codes uniques');
-  }
-  return [...codes];
-}
 
 /** GET statut du lot actuel (sans révéler les codes) */
 router.get('/status', authenticate, requireBackofficeLogin, async (req, res) => {
@@ -103,7 +75,7 @@ router.post('/generate', authenticate, requireBackofficeLogin, async (req, res) 
     await query('DELETE FROM codes_secours');
 
     for (const code of plainCodes) {
-      const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
+      const codeHash = await hashBackupCode(code);
       await query(
         `INSERT INTO codes_secours (code_hash, lot_id, utilise, date_utilisation, id_genere_par, date_creation)
          VALUES (?, ?, 0, NULL, ?, ?)`,

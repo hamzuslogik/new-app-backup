@@ -9,6 +9,8 @@ import './Login.css';
 const Login = () => {
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [backupCode, setBackupCode] = useState('');
+  const [needsBackupCode, setNeedsBackupCode] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login: loginUser } = useAuth();
   const navigate = useNavigate();
@@ -21,52 +23,90 @@ const Login = () => {
     }
   }, []);
 
+  const navigateAfterLogin = async () => {
+    const savedUser = JSON.parse(localStorage.getItem('user'));
+
+    let fonctionData = null;
+    if (savedUser && savedUser.fonction) {
+      try {
+        const res = await api.get('/management/fonctions');
+        fonctionData = res.data.data?.find((f) => f.id === savedUser.fonction) || null;
+      } catch (error) {
+        console.error('Erreur lors de la récupération de la fonction:', error);
+      }
+    }
+
+    let agentsSousResponsabilite = [];
+    if (
+      savedUser &&
+      savedUser.fonction !== 3 &&
+      savedUser.fonction !== 4 &&
+      savedUser.fonction !== 5 &&
+      savedUser.fonction !== 12
+    ) {
+      try {
+        const res = await api.get('/management/utilisateurs');
+        agentsSousResponsabilite =
+          res.data.data?.filter((u) => u.chef_equipe === savedUser.id && u.fonction === 3) || [];
+      } catch (error) {
+        console.error('Erreur lors de la récupération des agents:', error);
+      }
+    }
+
+    const homePage = getHomePage(savedUser, fonctionData, agentsSousResponsabilite);
+    navigate(homePage);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!login || !password) {
       toast.error('Veuillez remplir tous les champs');
       return;
     }
 
+    if (needsBackupCode) {
+      const digits = backupCode.replace(/\D/g, '');
+      if (digits.length !== 4) {
+        toast.error('Le code de secours doit comporter 4 chiffres');
+        return;
+      }
+    }
+
     setLoading(true);
-    const result = await loginUser(login, password);
+    const codeToSend = needsBackupCode ? backupCode.replace(/\D/g, '').padStart(4, '0') : null;
+    const result = await loginUser(login, password, codeToSend);
     setLoading(false);
 
     if (result.success) {
       toast.success('Connexion réussie');
-      
-      // Récupérer l'utilisateur connecté pour déterminer la page d'accueil
-      const savedUser = JSON.parse(localStorage.getItem('user'));
-      
-      // Récupérer les données de la fonction (avec page_accueil)
-      let fonctionData = null;
-      if (savedUser && savedUser.fonction) {
-        try {
-          const res = await api.get('/management/fonctions');
-          fonctionData = res.data.data?.find(f => f.id === savedUser.fonction) || null;
-        } catch (error) {
-          console.error('Erreur lors de la récupération de la fonction:', error);
-        }
-      }
-      
-      // Pour RE Qualification, vérifier s'il a des agents sous sa responsabilité
-      let agentsSousResponsabilite = [];
-      if (savedUser && savedUser.fonction !== 3 && savedUser.fonction !== 4 && savedUser.fonction !== 5 && savedUser.fonction !== 12) {
-        try {
-          const res = await api.get('/management/utilisateurs');
-          agentsSousResponsabilite = res.data.data?.filter(u => u.chef_equipe === savedUser.id && u.fonction === 3) || [];
-        } catch (error) {
-          console.error('Erreur lors de la récupération des agents:', error);
-        }
-      }
-      
-      // Déterminer la page d'accueil selon la fonction (avec page_accueil depuis la base de données)
-      const homePage = getHomePage(savedUser, fonctionData, agentsSousResponsabilite);
-      navigate(homePage);
-    } else {
-      toast.error(result.message || 'Erreur de connexion');
+      setNeedsBackupCode(false);
+      setBackupCode('');
+      await navigateAfterLogin();
+      return;
     }
+
+    if (result.requiresBackupCode) {
+      setNeedsBackupCode(true);
+      if (result.code === 'CODE_SECOURS_INVALIDE') {
+        toast.error(result.message || 'Code de secours invalide ou déjà utilisé');
+      } else {
+        toast.warning(
+          result.message ||
+            'Adresse IP non autorisée. Saisissez un code de secours pour vous connecter.'
+        );
+      }
+      return;
+    }
+
+    setNeedsBackupCode(false);
+    setBackupCode('');
+    toast.error(result.message || 'Erreur de connexion');
+  };
+
+  const handleBackupCodeChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setBackupCode(digits);
   };
 
   return (
@@ -85,6 +125,7 @@ const Login = () => {
               onChange={(e) => setLogin(e.target.value)}
               required
               autoComplete="username"
+              disabled={loading}
             />
           </div>
           <div className="form-group">
@@ -95,10 +136,40 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
+              disabled={loading}
             />
           </div>
+
+          {needsBackupCode && (
+            <div className="backup-code-section">
+              <p className="backup-code-hint">
+                Votre adresse IP n&apos;est pas autorisée pour votre fonction. Entrez un code de
+                secours à 4 chiffres (usage unique).
+              </p>
+              <div className="form-group">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  placeholder="Code secours (4 chiffres)"
+                  value={backupCode}
+                  onChange={handleBackupCodeChange}
+                  required
+                  autoComplete="one-time-code"
+                  className="backup-code-input"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          )}
+
           <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Connexion...' : "S'identifier"}
+            {loading
+              ? 'Connexion...'
+              : needsBackupCode
+                ? 'Valider avec le code secours'
+                : "S'identifier"}
           </button>
         </form>
         <div className="login-footer">
@@ -110,4 +181,3 @@ const Login = () => {
 };
 
 export default Login;
-

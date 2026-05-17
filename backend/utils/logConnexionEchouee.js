@@ -6,6 +6,7 @@ const RAISON = {
   LOGIN_INCONNU: 'login_inconnu',
   MOT_DE_PASSE_INCORRECT: 'mot_de_passe_incorrect',
   IP_NON_AUTORISEE: 'ip_non_autorisee',
+  CODE_SECOURS_INVALIDE: 'code_secours_invalide',
   COMPTE_OU_FONCTION_CENTRE_DESACTIVE: 'compte_ou_fonction_centre_desactive'
 };
 

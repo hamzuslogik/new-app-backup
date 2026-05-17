@@ -70,9 +70,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (login, password) => {
+  const login = async (login, password, codeSecours = null) => {
     try {
-      const response = await api.post('/auth/login', { login, password });
+      const payload = { login, password };
+      if (codeSecours != null && String(codeSecours).trim() !== '') {
+        payload.code_secours = codeSecours;
+      }
+      const response = await api.post('/auth/login', payload);
       if (response.data.success) {
         const { token, user } = response.data;
         localStorage.setItem('token', token);
@@ -84,11 +88,19 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('permissions', JSON.stringify(perms));
         return { success: true };
       }
-      return { success: false, message: response.data.message };
-    } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || 'Erreur de connexion',
+        message: response.data.message,
+        requiresBackupCode: response.data.requiresBackupCode === true,
+        code: response.data.code
+      };
+    } catch (error) {
+      const data = error.response?.data;
+      return {
+        success: false,
+        message: data?.message || 'Erreur de connexion',
+        requiresBackupCode: data?.requiresBackupCode === true,
+        code: data?.code
       };
     }
   };

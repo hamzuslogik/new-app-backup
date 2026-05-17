@@ -16,16 +16,68 @@ const {
   getBruteForceWhitelistRules
 } = require('../utils/globalSettingsHelper');
 const { touchUserActivity } = require('../utils/userActivitySession');
+const {
+  normalizeBackupCodeInput,
+  verifyAndConsumeBackupCode
+} = require('../utils/codesSecoursHelper');
 
 // Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
 const hashPassword = (password) => {
   return crypto.createHash('sha256').update(password).digest('hex');
 };
 
+async function sendLoginSuccess(res, user, req, { bypassIpCheck = false } = {}) {
+  const securitySettings = await getSecuritySettings();
+  const clientIp = getNormalizedClientIpForRateLimit(req);
+
+  let expiresIn = securitySettings.sessionLifetime;
+  try {
+    jwt.sign({ _check: 1 }, process.env.JWT_SECRET, { expiresIn });
+  } catch {
+    expiresIn = process.env.JWT_EXPIRE || '24h';
+  }
+
+  const tokenPayload = { userId: user.id };
+  if (bypassIpCheck) {
+    tokenPayload.bypass_ip_check = true;
+  }
+  const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn });
+
+  console.log(
+    `[auth/login] connexion réussie userId=${user.id} login=${user.login} ip=${clientIp || '—'} expiresIn=${expiresIn}${bypassIpCheck ? ' (code secours)' : ''}`
+  );
+
+  try {
+    await touchUserActivity(user.id);
+  } catch (e) {
+    console.error('[auth/login] touchUserActivity:', e.message);
+  }
+
+  res.json({
+    success: true,
+    message: bypassIpCheck
+      ? 'Connexion réussie avec code de secours'
+      : 'Connexion réussie',
+    token,
+    expiresIn,
+    user: {
+      id: user.id,
+      login: user.login,
+      pseudo: user.pseudo,
+      fonction: user.fonction,
+      fonction_titre: user.fonction_titre,
+      centre: user.centre,
+      centre_titre: user.centre_titre,
+      photo: user.photo,
+      genre: user.genre
+    }
+  });
+}
+
 // Connexion
 router.post('/login', async (req, res) => {
   try {
-    const { login, password } = req.body;
+    const { login, password, code_secours: codeSecoursRaw } = req.body;
 
     if (!login || !password) {
       return res.status(400).json({
@@ -138,57 +190,47 @@ router.post('/login', async (req, res) => {
         ])
       ).map((r) => r.ip_rule);
     }
-    if (!isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req)) {
-      await logConnexionEchouee({
-        login,
-        idUtilisateur: user.id,
-        req,
-        raison: RAISON.IP_NON_AUTORISEE
-      });
-      return res.status(403).json({
-        success: false,
-        message: 'Connexion non autorisée depuis cette adresse IP pour votre fonction.'
-      });
-    }
+    const ipAllowed = isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req);
 
-    let expiresIn = securitySettings.sessionLifetime;
-    try {
-      jwt.sign({ _check: 1 }, process.env.JWT_SECRET, { expiresIn });
-    } catch {
-      expiresIn = process.env.JWT_EXPIRE || '24h';
-    }
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn });
+    if (!ipAllowed) {
+      const codeSecours = normalizeBackupCodeInput(codeSecoursRaw);
 
-    console.log(
-      `[auth/login] connexion réussie userId=${user.id} login=${user.login} ip=${clientIp || '—'} expiresIn=${expiresIn}`
-    );
-
-    try {
-      await touchUserActivity(user.id);
-    } catch (e) {
-      console.error('[auth/login] touchUserActivity:', e.message);
-    }
-
-    // Retourner les informations utilisateur (sans le mot de passe)
-    const { mdp, ...userWithoutPassword } = user;
-
-    res.json({
-      success: true,
-      message: 'Connexion réussie',
-      token,
-      expiresIn,
-      user: {
-        id: user.id,
-        login: user.login,
-        pseudo: user.pseudo,
-        fonction: user.fonction,
-        fonction_titre: user.fonction_titre,
-        centre: user.centre,
-        centre_titre: user.centre_titre,
-        photo: user.photo,
-        genre: user.genre
+      if (!codeSecours) {
+        await logConnexionEchouee({
+          login,
+          idUtilisateur: user.id,
+          req,
+          raison: RAISON.IP_NON_AUTORISEE
+        });
+        return res.status(403).json({
+          success: false,
+          code: 'IP_NON_AUTORISEE',
+          requiresBackupCode: true,
+          message:
+            'Connexion non autorisée depuis cette adresse IP. Saisissez un code de secours valide pour continuer.'
+        });
       }
-    });
+
+      const consumed = await verifyAndConsumeBackupCode(codeSecours);
+      if (!consumed.ok) {
+        await logConnexionEchouee({
+          login,
+          idUtilisateur: user.id,
+          req,
+          raison: RAISON.CODE_SECOURS_INVALIDE
+        });
+        return res.status(403).json({
+          success: false,
+          code: 'CODE_SECOURS_INVALIDE',
+          requiresBackupCode: true,
+          message: 'Code de secours invalide ou déjà utilisé.'
+        });
+      }
+
+      return sendLoginSuccess(res, user, req, { bypassIpCheck: true });
+    }
+
+    return sendLoginSuccess(res, user, req);
   } catch (error) {
     console.error('Erreur de connexion:', error);
     res.status(500).json({

@@ -68,7 +68,10 @@ const authenticate = async (req, res, next) => {
         ])
       ).map((r) => r.ip_rule);
     }
-    if (!isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req)) {
+    const ipAllowed = isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req);
+    const bypassIpFromBackupCode = decoded?.bypass_ip_check === true;
+
+    if (!ipAllowed && !bypassIpFromBackupCode) {
       const ipMw = getNormalizedClientIpForRateLimit(req);
       console.warn(
         `[auth/middleware] refus HTTP 403 — IP ${ipMw || '—'} hors liste autorisée pour la fonction (userId=${user.id} login=${user.login})`
