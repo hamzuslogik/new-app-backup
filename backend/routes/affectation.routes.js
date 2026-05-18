@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
+const { syncAffectationRecord } = require('../utils/affectationSync');
 
 // Récupérer les fiches confirmées (état 7) non affectées pour affectation
 router.get('/fiches-confirmees', authenticate, async (req, res) => {
@@ -137,9 +138,11 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
 // Affecter des fiches à un commercial
 router.post('/affecter', authenticate, async (req, res) => {
   try {
-    const { fiches_ids, id_commercial } = req.body;
+    const { fiches_ids, id_commercial, allow_any_etat } = req.body;
     const userId = req.user.id;
     const dateModifTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const canAssignAnyEtat =
+      allow_any_etat === true && [1, 11, 13, 14].includes(Number(req.user.fonction));
 
     if (!fiches_ids || !Array.isArray(fiches_ids) || fiches_ids.length === 0) {
       return res.status(400).json({
@@ -173,47 +176,34 @@ router.post('/affecter', authenticate, async (req, res) => {
 
     for (const ficheId of fiches_ids) {
       try {
-        // Vérifier que la fiche existe et est confirmée (état 7)
         const fiche = await queryOne(
-          'SELECT id, id_commercial FROM fiches WHERE id = ? AND id_etat_final = 7',
+          'SELECT id, id_commercial, id_etat_final, date_rdv_time FROM fiches WHERE id = ?',
           [parseInt(ficheId)]
         );
 
         if (!fiche) {
-          errors.push({ fiche_id: ficheId, error: 'Fiche non trouvée ou non confirmée' });
+          errors.push({ fiche_id: ficheId, error: 'Fiche non trouvée' });
+          continue;
+        }
+
+        if (!canAssignAnyEtat && Number(fiche.id_etat_final) !== 7) {
+          errors.push({ fiche_id: ficheId, error: 'Seules les fiches à l\'état Confirmer (7) peuvent être affectées' });
           continue;
         }
 
         const ancienCommercial = fiche.id_commercial || 0;
+        const commercialId = parseInt(id_commercial, 10);
 
-        // Mettre à jour la fiche
         await query(
-          'UPDATE fiches SET id_commercial = ? WHERE id = ?',
-          [parseInt(id_commercial), parseInt(ficheId)]
+          'UPDATE fiches SET id_commercial = ?, date_modif_time = ? WHERE id = ?',
+          [commercialId, dateModifTime, parseInt(ficheId)]
         );
 
-        // Mettre à jour ou créer l'affectation
-        const affectation = await queryOne(
-          'SELECT id, id_commercial FROM affectations WHERE id_fiche = ?',
-          [parseInt(ficheId)]
-        );
-
-        if (affectation) {
-          await query(
-            `UPDATE affectations 
-             SET id_commercial = ?, 
-                 date_modif = UNIX_TIMESTAMP(), 
-                 date_modif_time = ? 
-             WHERE id = ?`,
-            [parseInt(id_commercial), dateModifTime, affectation.id]
-          );
-        } else {
-          await query(
-            `INSERT INTO affectations (id_fiche, id_commercial, date_modif, date_modif_time) 
-             VALUES (?, ?, UNIX_TIMESTAMP(), ?)`,
-            [parseInt(ficheId), parseInt(id_commercial), dateModifTime]
-          );
-        }
+        const dateRdv =
+          fiche.date_rdv_time != null && String(fiche.date_rdv_time).trim() !== ''
+            ? fiche.date_rdv_time
+            : null;
+        await syncAffectationRecord(ficheId, commercialId, dateModifTime, dateRdv);
 
         // Enregistrer dans modifica
         try {
@@ -288,28 +278,12 @@ router.post('/desaffecter', authenticate, async (req, res) => {
 
         const ancienCommercial = fiche.id_commercial || 0;
 
-        // Retirer l'affectation de la fiche
         await query(
-          'UPDATE fiches SET id_commercial = 0 WHERE id = ?',
-          [parseInt(ficheId)]
+          'UPDATE fiches SET id_commercial = 0, id_commercial_2 = NULL, date_modif_time = ? WHERE id = ?',
+          [dateModifTime, parseInt(ficheId)]
         );
 
-        // Mettre à jour l'affectation
-        const affectation = await queryOne(
-          'SELECT id FROM affectations WHERE id_fiche = ?',
-          [parseInt(ficheId)]
-        );
-
-        if (affectation) {
-          await query(
-            `UPDATE affectations 
-             SET id_commercial = 0, 
-                 date_modif = UNIX_TIMESTAMP(), 
-                 date_modif_time = ? 
-             WHERE id = ?`,
-            [dateModifTime, affectation.id]
-          );
-        }
+        await syncAffectationRecord(ficheId, 0, dateModifTime);
 
         // Enregistrer dans modifica
         try {

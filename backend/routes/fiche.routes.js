@@ -7,6 +7,7 @@ const { triggerWorkflowOnFicheCreated, triggerWorkflowOnFicheUpdated, triggerWor
 const { query, queryOne } = require('../config/database');
 const { logUserActivityEvent } = require('../utils/userActivitySession');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
+const { syncAffectationRecord } = require('../utils/affectationSync');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -4353,12 +4354,41 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     const dbField = fieldToDb[field] || field;
     const dbOldValue = fieldToDb[field] ? (fiche[dbField] ?? oldValue) : oldValue;
 
+    const idUserFields = new Set(['id_commercial', 'id_commercial_2', 'id_agent', 'id_centre', 'id_confirmateur', 'id_confirmateur_2', 'id_confirmateur_3']);
+    let dbValue = value;
+    if (idUserFields.has(dbField)) {
+      if (value === null || value === undefined || value === '') {
+        dbValue = dbField === 'id_commercial' ? 0 : null;
+      } else {
+        const parsed = parseInt(value, 10);
+        dbValue = Number.isFinite(parsed) ? parsed : null;
+      }
+    } else {
+      dbValue = value || null;
+    }
+
     // Mettre à jour le champ
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     await query(
       `UPDATE fiches SET \`${dbField}\` = ?, date_modif_time = ? WHERE id = ?`,
-      [value || null, now, id]
+      [dbValue, now, id]
     );
+
+    if (dbField === 'id_commercial') {
+      try {
+        await syncAffectationRecord(id, dbValue, now);
+      } catch (syncErr) {
+        console.error('Erreur sync affectations (patch field):', syncErr);
+      }
+    }
+
+    if (dbField === 'date_rdv_time' && fiche.id_commercial != null && Number(fiche.id_commercial) > 0) {
+      try {
+        await syncAffectationRecord(id, fiche.id_commercial, now, dbValue);
+      } catch (syncErr) {
+        console.error('Erreur sync affectations date_rdv_time (patch field):', syncErr);
+      }
+    }
 
     // Synchroniser fiches_histo pour la dernière entrée correspondant à l'état actuel
     // afin que l'affichage « État actuel » reflète immédiatement la nouvelle valeur
@@ -4390,7 +4420,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       req.user.pseudo || 'Utilisateur',
       field,
       dbOldValue,
-      value || null
+      dbValue
     );
 
     // Enregistrer l'audit dans controle_qualite lorsque seul le commentaire qualité est modifié (page Contrôle Qualité)

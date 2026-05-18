@@ -685,6 +685,42 @@ const FicheDetail = ({
   // État pour l'onglet Affectation (un seul commercial)
   const [affectationCommercial, setAffectationCommercial] = useState('');
   const [affectationSaving, setAffectationSaving] = useState(false);
+
+  const saveAffectationFromTab = async () => {
+    const ficheId = ficheData?.id != null ? Number(ficheData.id) : null;
+    if (!ficheId) {
+      alert('Fiche non chargée. Réessayez dans quelques instants.');
+      return;
+    }
+    setAffectationSaving(true);
+    try {
+      if (!affectationCommercial) {
+        const res = await api.post('/affectations/desaffecter', { fiches_ids: [ficheId] });
+        const errs = res.data?.data?.erreurs;
+        if (errs?.length) {
+          throw new Error(errs.map((e) => e.error || 'Erreur').join('\n'));
+        }
+      } else {
+        const res = await api.post('/affectations/affecter', {
+          fiches_ids: [ficheId],
+          id_commercial: parseInt(affectationCommercial, 10),
+          allow_any_etat: true,
+        });
+        const errs = res.data?.data?.erreurs;
+        if (errs?.length) {
+          throw new Error(errs.map((e) => e.error || 'Erreur').join('\n'));
+        }
+      }
+      queryClient.invalidateQueries(['fiche', hash]);
+      queryClient.invalidateQueries(['fiches']);
+      queryClient.invalidateQueries(['modifica', hash]);
+      alert('Affectation enregistrée.');
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Erreur lors de l\'enregistrement de l\'affectation');
+    } finally {
+      setAffectationSaving(false);
+    }
+  };
   
   // États pour le formulaire de validation
   const [confRdvAvecValue, setConfRdvAvecValue] = useState('');
@@ -7723,16 +7759,7 @@ const FicheDetail = ({
                 type="button"
                 className="btn-save"
                 disabled={affectationSaving}
-                onClick={async () => {
-                  if (!hash) return;
-                  setAffectationSaving(true);
-                  try {
-                    await updateFieldMutation.mutateAsync({ field: 'id_commercial', value: affectationCommercial || null });
-                    await updateFieldMutation.mutateAsync({ field: 'id_commercial_2', value: null });
-                  } finally {
-                    setAffectationSaving(false);
-                  }
-                }}
+                onClick={saveAffectationFromTab}
               >
                 {affectationSaving ? 'Enregistrement...' : 'Enregistrer l\'affectation'}
               </button>
