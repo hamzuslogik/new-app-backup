@@ -436,7 +436,8 @@
 }
 
 .fiches-table .col-agent {
-  width: 9%;
+  width: 6%;
+  min-width: 72px;
 }
 
 .fiches-table .col-nom {
@@ -445,8 +446,8 @@
 }
 
 .fiches-table .col-prenom {
-  width: 14%;
-  min-width: 130px;
+  width: 17%;
+  min-width: 160px;
 }
 
 .fiches-table .col-tel {
@@ -462,12 +463,13 @@
 }
 
 .fiches-table .col-comment {
-  width: 28%;
-  min-width: 240px;
+  width: 32%;
+  min-width: 280px;
 }
 
 .fiches-table .col-actions {
-  width: 5%;
+  width: 3%;
+  min-width: 44px;
   white-space: nowrap;
 }
 
