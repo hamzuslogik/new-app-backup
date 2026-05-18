@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -6,9 +6,6 @@ import {
   FaTrophy, 
   FaUsers, 
   FaChartLine, 
-  FaCalendarDay, 
-  FaCalendarWeek, 
-  FaCalendarAlt,
   FaArrowUp,
   FaArrowDown,
   FaMinus,
@@ -16,95 +13,144 @@ import {
   FaDoorOpen
 } from 'react-icons/fa';
 import './KPIs.css';
+import KpisDateFilter from '../components/KpisDateFilter';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const KPIs = () => {
   useForceDesktopViewport('kpis-page');
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('qualification'); // qualification, confirmation, confirmation-jws, porte-ouverte
-  const [selectedPeriod, setSelectedPeriod] = useState('jour'); // jour, semaine, mois
-  const [selectedMonth, setSelectedMonth] = useState(''); // Format: YYYY-MM
   const [selectedPorteOuverteCentre, setSelectedPorteOuverteCentre] = useState('');
   const [selectedPorteOuverteEtat, setSelectedPorteOuverteEtat] = useState('');
-  const getTodayStr = () => new Date().toISOString().split('T')[0];
+
+  const getTodayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
   const getFirstOfMonthStr = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
   };
-  const [porteOuverteDateDebut, setPorteOuverteDateDebut] = useState(getFirstOfMonthStr());
-  const [porteOuverteDateFin, setPorteOuverteDateFin] = useState(getTodayStr());
 
-  // Générer la liste des mois (12 derniers mois)
-  const getAvailableMonths = () => {
-    const months = [];
-    const today = new Date();
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const monthStr = `${year}-${month}`;
-      const monthLabel = date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
-      months.push({ value: monthStr, label: monthLabel });
-    }
-    return months;
+  const getDefaultDateFilters = () => ({
+    date_champ: 'date_insert_time',
+    date_debut: getFirstOfMonthStr(),
+    date_fin: getTodayStr(),
+    time_debut: '00:00:00',
+    time_fin: '23:59:59',
+  });
+
+  const [dateFilters, setDateFilters] = useState(getDefaultDateFilters);
+  const [appliedFilters, setAppliedFilters] = useState(getDefaultDateFilters);
+
+  const buildKpiParams = (filters = appliedFilters) => {
+    const params = {
+      date_champ: filters.date_champ,
+      date_debut: filters.date_debut,
+      date_fin: filters.date_fin,
+      time_debut: filters.time_debut,
+      time_fin: filters.time_fin,
+    };
+    return params;
   };
 
-  // Initialiser le mois en cours si on est sur la période "mois"
-  useEffect(() => {
-    if (selectedPeriod === 'mois' && !selectedMonth) {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      setSelectedMonth(`${year}-${month}`);
-    }
-  }, [selectedPeriod, selectedMonth]);
+  const filterToDatetimeLocalValue = (dateValue, timeValue, defaultTime = '00:00:00') => {
+    const d = String(dateValue || '').trim();
+    if (!d) return '';
+    const tRaw = String(timeValue || defaultTime || '').trim();
+    const hhmm = tRaw.length >= 5 ? tRaw.slice(0, 5) : String(defaultTime || '00:00:00').slice(0, 5);
+    return `${d}T${hhmm}`;
+  };
 
-  // Récupérer les KPI Qualification
+  const handleDatetimeLocalChange = (bound, e) => {
+    const v = e.target.value;
+    if (!v) {
+      setDateFilters((prev) => ({
+        ...prev,
+        ...(bound === 'debut' ? { date_debut: '', time_debut: '' } : { date_fin: '', time_fin: '' }),
+      }));
+      return;
+    }
+    const [datePart, timePart] = v.split('T');
+    const hhmm = timePart && timePart.length >= 5 ? timePart.slice(0, 5) : bound === 'debut' ? '00:00' : '23:59';
+    setDateFilters((prev) => ({
+      ...prev,
+      ...(bound === 'debut'
+        ? { date_debut: datePart || '', time_debut: `${hhmm}:00` }
+        : { date_fin: datePart || '', time_fin: `${hhmm}:00` }),
+    }));
+  };
+
+  const applyNowToDatetimeBound = (bound) => {
+    const now = new Date();
+    const dateStr = getTodayStr();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+    setDateFilters((prev) => ({
+      ...prev,
+      ...(bound === 'debut' ? { date_debut: dateStr, time_debut: timeStr } : { date_fin: dateStr, time_fin: timeStr }),
+    }));
+  };
+
+  const handleDateChampChange = (value) => {
+    setDateFilters((prev) => {
+      const next = { ...prev, date_champ: value };
+      if (value && (!prev.date_debut || !prev.date_fin)) {
+        next.date_debut = getTodayStr();
+        next.date_fin = getTodayStr();
+        next.time_debut = '00:00:00';
+        next.time_fin = '23:59:59';
+      }
+      if (!value) {
+        next.date_debut = '';
+        next.date_fin = '';
+        next.time_debut = '';
+        next.time_fin = '';
+      }
+      return next;
+    });
+  };
+
+  const handleApplyDateFilters = () => {
+    if (!dateFilters.date_champ || !dateFilters.date_debut || !dateFilters.date_fin) return;
+    setAppliedFilters({ ...dateFilters });
+  };
+
+  const handleResetDateFilters = () => {
+    const defaults = getDefaultDateFilters();
+    setDateFilters(defaults);
+    setAppliedFilters(defaults);
+  };
+
+  const dateFiltersReady =
+    !!appliedFilters.date_champ && !!appliedFilters.date_debut && !!appliedFilters.date_fin;
+
+  const kpiQueryKey = ['kpis-filters', appliedFilters, activeTab];
+
   const { data: kpiData, isLoading: isLoadingQualif, error: errorQualif } = useQuery(
-    ['kpis', selectedPeriod, selectedMonth],
+    [...kpiQueryKey, 'qualification'],
     async () => {
-      const params = {};
-      if (selectedPeriod === 'mois' && selectedMonth) {
-        params.month = selectedMonth;
-      }
-      const res = await api.get('/statistiques/kpis', { params });
+      const res = await api.get('/statistiques/kpis', { params: buildKpiParams() });
       return res.data.data;
     },
-    {
-      enabled: (selectedPeriod !== 'mois' || !!selectedMonth) && activeTab === 'qualification'
-    }
+    { enabled: dateFiltersReady && activeTab === 'qualification' }
   );
 
-  // Récupérer les KPI Confirmation
   const { data: confirmationData, isLoading: isLoadingConf, error: errorConf } = useQuery(
-    ['kpis-confirmation', selectedPeriod, selectedMonth],
+    [...kpiQueryKey, 'confirmation'],
     async () => {
-      const params = {};
-      if (selectedPeriod === 'mois' && selectedMonth) {
-        params.month = selectedMonth;
-      }
-      const res = await api.get('/statistiques/kpis-confirmation', { params });
+      const res = await api.get('/statistiques/kpis-confirmation', { params: buildKpiParams() });
       return res.data.data;
     },
-    {
-      enabled: (selectedPeriod !== 'mois' || !!selectedMonth) && activeTab === 'confirmation'
-    }
+    { enabled: dateFiltersReady && activeTab === 'confirmation' }
   );
 
-  // Récupérer les KPI Confirmation JWS (centre CALL_JWS uniquement)
   const { data: confirmationJwsData, isLoading: isLoadingConfJws, error: errorConfJws } = useQuery(
-    ['kpis-confirmation-jws', selectedPeriod, selectedMonth],
+    [...kpiQueryKey, 'confirmation-jws'],
     async () => {
-      const params = {};
-      if (selectedPeriod === 'mois' && selectedMonth) {
-        params.month = selectedMonth;
-      }
-      const res = await api.get('/statistiques/kpis-confirmation-jws', { params });
+      const res = await api.get('/statistiques/kpis-confirmation-jws', { params: buildKpiParams() });
       return res.data.data;
     },
-    {
-      enabled: (selectedPeriod !== 'mois' || !!selectedMonth) && activeTab === 'confirmation-jws'
-    }
+    { enabled: dateFiltersReady && activeTab === 'confirmation-jws' }
   );
 
   const PORTE_OUVERTE_ALL_JWS = '__ALL_JWS__';
@@ -119,12 +165,9 @@ const KPIs = () => {
   );
 
   const { data: porteOuverteData, isLoading: isLoadingPorteOuverte, error: errorPorteOuverte } = useQuery(
-    ['kpis-porte-ouverte', selectedPeriod, selectedMonth, selectedPorteOuverteCentre, porteOuverteDateDebut, porteOuverteDateFin],
+    [...kpiQueryKey, 'porte-ouverte', selectedPorteOuverteCentre],
     async () => {
-      const params = {};
-      if (selectedPeriod === 'mois' && selectedMonth) {
-        params.month = selectedMonth;
-      }
+      const params = buildKpiParams();
       if (selectedPorteOuverteCentre) {
         if (selectedPorteOuverteCentre === PORTE_OUVERTE_ALL_JWS) {
           params.centre_scope = 'all_jws';
@@ -132,18 +175,10 @@ const KPIs = () => {
           params.id_centre = selectedPorteOuverteCentre;
         }
       }
-      if (porteOuverteDateDebut) {
-        params.date_debut = porteOuverteDateDebut;
-      }
-      if (porteOuverteDateFin) {
-        params.date_fin = porteOuverteDateFin;
-      }
       const res = await api.get('/statistiques/kpis-porte-ouverte', { params });
       return res.data.data;
     },
-    {
-      enabled: (selectedPeriod !== 'mois' || !!selectedMonth) && activeTab === 'porte-ouverte'
-    }
+    { enabled: dateFiltersReady && activeTab === 'porte-ouverte' }
   );
 
   const isLoading = activeTab === 'qualification' ? isLoadingQualif : 
@@ -155,19 +190,13 @@ const KPIs = () => {
                 activeTab === 'porte-ouverte' ? errorPorteOuverte :
                 errorConfJws;
 
-  const periods = [
-    { key: 'jour', label: 'Aujourd\'hui', icon: FaCalendarDay },
-    { key: 'semaine', label: 'Cette semaine', icon: FaCalendarWeek },
-    { key: 'mois', label: 'Ce mois', icon: FaCalendarAlt }
-  ];
-
-  const currentData = activeTab === 'qualification' 
-    ? kpiData?.[selectedPeriod] 
+  const currentData = activeTab === 'qualification'
+    ? kpiData?.range
     : activeTab === 'confirmation'
-    ? confirmationData?.[selectedPeriod]
+    ? confirmationData?.range
     : activeTab === 'porte-ouverte'
-    ? (porteOuverteData?.custom || porteOuverteData?.[selectedPeriod])
-    : confirmationJwsData?.[selectedPeriod];
+    ? porteOuverteData?.range
+    : confirmationJwsData?.range;
   const filteredPorteOuverteDetails = activeTab === 'porte-ouverte'
     ? (currentData?.details || []).filter((row) => {
         if (!selectedPorteOuverteEtat) return true;
@@ -247,106 +276,47 @@ const KPIs = () => {
             Porte ouverte
           </button>
         </div>
-        <div className="header-controls">
-          {activeTab !== 'porte-ouverte' && (
-            <div className="period-selector">
-              {periods.map(period => {
-                const Icon = period.icon;
-                return (
-                  <button
-                    key={period.key}
-                    className={`period-btn ${selectedPeriod === period.key ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedPeriod(period.key);
-                      if (period.key !== 'mois') {
-                        setSelectedMonth('');
-                      } else if (!selectedMonth) {
-                        const today = new Date();
-                        const year = today.getFullYear();
-                        const month = String(today.getMonth() + 1).padStart(2, '0');
-                        setSelectedMonth(`${year}-${month}`);
-                      }
-                    }}
-                  >
-                    <Icon /> {period.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {activeTab !== 'porte-ouverte' && selectedPeriod === 'mois' && (
-            <div className="month-selector">
-              <label htmlFor="month-select">Mois :</label>
-              <select
-                id="month-select"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="month-select"
-              >
-                <option value="">Sélectionner un mois</option>
-                {getAvailableMonths().map(month => (
-                  <option key={month.value} value={month.value}>
-                    {month.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {activeTab === 'porte-ouverte' && (
-            <>
-            <div className="month-selector">
-              <label htmlFor="porte-ouverte-date-debut">Date début :</label>
-              <input
-                id="porte-ouverte-date-debut"
-                type="date"
-                className="month-select"
-                value={porteOuverteDateDebut}
-                onChange={(e) => setPorteOuverteDateDebut(e.target.value)}
-              />
-            </div>
-            <div className="month-selector">
-              <label htmlFor="porte-ouverte-date-fin">Date fin :</label>
-              <input
-                id="porte-ouverte-date-fin"
-                type="date"
-                className="month-select"
-                value={porteOuverteDateFin}
-                onChange={(e) => setPorteOuverteDateFin(e.target.value)}
-              />
-            </div>
-            <div className="month-selector">
-              <label htmlFor="porte-ouverte-centre-select">Centre :</label>
-              <select
-                id="porte-ouverte-centre-select"
-                value={selectedPorteOuverteCentre}
-                onChange={(e) => setSelectedPorteOuverteCentre(e.target.value)}
-                className="month-select"
-              >
-                <option value="">Tous les centres</option>
-                <option value={PORTE_OUVERTE_ALL_JWS}>Tous les centres JWS</option>
-                {(centresData || []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.titre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            </>
-          )}
-        </div>
+        <KpisDateFilter
+          dateFilters={dateFilters}
+          onDateChampChange={handleDateChampChange}
+          onDatetimeChange={handleDatetimeLocalChange}
+          onApplyNow={applyNowToDatetimeBound}
+          onApply={handleApplyDateFilters}
+          onReset={handleResetDateFilters}
+          extraControls={
+            activeTab === 'porte-ouverte' ? (
+              <div className="month-selector porte-ouverte-centre-filter">
+                <label htmlFor="porte-ouverte-centre-select">Centre :</label>
+                <select
+                  id="porte-ouverte-centre-select"
+                  value={selectedPorteOuverteCentre}
+                  onChange={(e) => setSelectedPorteOuverteCentre(e.target.value)}
+                  className="month-select"
+                >
+                  <option value="">Tous les centres</option>
+                  <option value={PORTE_OUVERTE_ALL_JWS}>Tous les centres JWS</option>
+                  {(centresData || []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.titre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null
+          }
+        />
       </div>
-
       {activeTab === 'qualification' && currentData && (
         <div className="kpis-content">
           {/* Section Métriques Globales */}
           <div className="kpi-section">
             <h2 className="section-title">Métriques Globales</h2>
             <div className="kpi-cards metrics">
-              {/* Taux de Conversion */}
+              {/* Taux de Conformité */}
               <div className="kpi-card conversion-rate">
                 <div className="kpi-card-header">
                   <FaPercentage className="kpi-icon" />
-                  <h3>Taux de Conversion</h3>
+                  <h3>Taux de Conformité</h3>
                 </div>
                 <div className="kpi-card-body">
                   <div className="kpi-value-large">
@@ -379,12 +349,12 @@ const KPIs = () => {
                 </div>
               </div>
 
-              {/* Taux de Transformation des Agents Qualification */}
+              {/* Taux de Conversion */}
               {currentData.transformation_rate !== undefined && (
                 <div className="kpi-card transformation-rate">
                   <div className="kpi-card-header">
                     <FaPercentage className="kpi-icon" />
-                    <h3>Taux de Transformation</h3>
+                    <h3>Taux de Conversion</h3>
                   </div>
                   <div className="kpi-card-body">
                     <div className="kpi-value-large">
@@ -537,7 +507,7 @@ const KPIs = () => {
               Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
             </p>
             <p className="info-text">
-              Taux de conversion = Fiches validées / Fiches produites. Validées = fiches hors groupe 0 et KO=0. Produites = fiches créées par agents qualification, hors poubelle et doublon.
+              Taux de conformité = Fiches validées / Fiches produites. Taux de conversion = Fiches confirmées / Fiches validées. Validées = fiches hors groupe 0 et KO=0. Produites = fiches créées par agents qualification, hors poubelle et doublon.
             </p>
           </div>
         </div>

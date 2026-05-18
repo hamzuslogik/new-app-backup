@@ -53,6 +53,77 @@ function capMonthEndToToday(monthParam, monthEnd) {
   }
   return monthEnd;
 }
+
+function resolveKpiDateChamp(queryDateChamp) {
+  return queryDateChamp === 'date_rdv_time' ? 'f.date_rdv_time' : 'f.date_insert_time';
+}
+
+function resolveKpiDateRangeFromQuery(req) {
+  const { date_debut, date_fin, time_debut, time_fin } = req.query || {};
+  const todayStr = getTodayLocal();
+  let start =
+    typeof date_debut === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date_debut)
+      ? date_debut
+      : getFirstOfMonthLocal();
+  let end =
+    typeof date_fin === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date_fin) ? date_fin : todayStr;
+  if (start > end) {
+    const tmp = start;
+    start = end;
+    end = tmp;
+  }
+  const timeDebut =
+    time_debut && /^\d{2}:\d{2}/.test(String(time_debut)) ? String(time_debut).slice(0, 8) : '00:00:00';
+  const timeFin =
+    time_fin && /^\d{2}:\d{2}/.test(String(time_fin)) ? String(time_fin).slice(0, 8) : '23:59:59';
+  return {
+    start,
+    end,
+    timeDebut,
+    timeFin,
+    startDateTime: `${start} ${timeDebut}`,
+    endDateTime: `${end} ${timeFin}`,
+    dateChamp: resolveKpiDateChamp(req.query?.date_champ),
+    dateChampKey: req.query?.date_champ === 'date_rdv_time' ? 'date_rdv_time' : 'date_insert_time',
+  };
+}
+
+/** Période précédente de même durée (fin = veille du début actuel). */
+function getPreviousPeriodComparisonRange(startDateStr, endDateStr) {
+  const start = new Date(`${startDateStr}T12:00:00`);
+  const end = new Date(`${endDateStr}T12:00:00`);
+  const previousEnd = new Date(start);
+  previousEnd.setDate(previousEnd.getDate() - 1);
+  const dayCount = Math.max(1, Math.round((end - start) / 86400000) + 1);
+  const previousStart = new Date(previousEnd);
+  previousStart.setDate(previousStart.getDate() - (dayCount - 1));
+  return {
+    previousStart: formatDateLocal(previousStart),
+    previousEnd: formatDateLocal(previousEnd),
+  };
+}
+
+/** Filtre date fiches confirmées (état 7) selon champ KPI. */
+function buildKpiConfirmationEtat7DateClause(dateChampKey) {
+  if (dateChampKey === 'date_rdv_time') {
+    return {
+      sql: 'AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?',
+      params: (startDateTime, endDateTime) => [startDateTime, endDateTime],
+    };
+  }
+  return {
+    sql: `AND (
+      (f.date_confirmation IS NOT NULL AND f.date_confirmation >= ? AND f.date_confirmation <= ?)
+      OR (f.date_confirmation IS NULL AND f.date_modif_time >= ? AND f.date_modif_time <= ?)
+    )`,
+    params: (startDateTime, endDateTime, startTs, endTs) => [
+      startTs,
+      endTs,
+      startDateTime,
+      endDateTime,
+    ],
+  };
+}
 function getLastDayOfMonthLocal() {
   const d = new Date();
   const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
@@ -1649,8 +1720,9 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
 // Récupérer les KPIs (Top 3 agents, Top 3 équipes, Taux de conversion, Évolution) - centre CALL_JWS uniquement
 router.get('/kpis', authenticate, async (req, res) => {
   try {
-    const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
-    
+    const dateRange = resolveKpiDateRangeFromQuery(req);
+    const dateChamp = dateRange.dateChamp;
+
     // Centre CALL_JWS (optionnel - si pas trouvé, on prend tous les centres)
     const callJwsCentres = await query(`
       SELECT id FROM centres
@@ -1671,88 +1743,27 @@ router.get('/kpis', authenticate, async (req, res) => {
     `);
     const idsGroupe0 = etatsGroupe0.map(e => e.id);
 
-    // Dates pour jour, semaine, mois
-    const today = new Date();
-    const todayStr = getTodayLocal();
-    
-    // Semaine (lundi à dimanche)
-    const dayOfWeek = today.getDay();
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const monday = new Date(today.getFullYear(), today.getMonth(), diff);
-    const weekStart = monday.toISOString().split('T')[0];
-    const weekEnd = todayStr;
-    
-    // Mois - utiliser le mois sélectionné ou le mois en cours (plafonné à aujourd'hui si mois en cours)
-    let monthStart, monthEnd;
-    if (month && /^\d{4}-\d{2}$/.test(month)) {
-      const [year, monthNum] = month.split('-').map(Number);
-      monthStart = new Date(year, monthNum - 1, 1).toISOString().split('T')[0];
-      const lastDay = new Date(year, monthNum, 0).getDate();
-      monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
-    } else {
-      monthStart = getFirstOfMonthLocal();
-      monthEnd = todayStr;
-    }
-    monthEnd = capMonthEndToToday(month, monthEnd);
+    const periodStart = dateRange.start;
+    const periodEnd = dateRange.end;
+    const startDate = dateRange.startDateTime;
+    const endDate = dateRange.endDateTime;
+    const { previousStart, previousEnd } = getPreviousPeriodComparisonRange(periodStart, periodEnd);
+    const previousStartDate = `${previousStart} ${dateRange.timeDebut}`;
+    const previousEndDate = `${previousEnd} ${dateRange.timeFin}`;
 
-    const kpiData = {
-      jour: {},
-      semaine: {},
-      mois: {}
-    };
+    const centreParams = useCentreFilter ? callJwsCentreIds : [];
 
-    // Pour chaque période (jour, semaine, mois)
-    const periods = [
-      { key: 'jour', start: todayStr, end: todayStr, label: 'Aujourd\'hui' },
-      { key: 'semaine', start: weekStart, end: weekEnd, label: 'Cette semaine' },
-      { key: 'mois', start: monthStart, end: monthEnd, label: 'Ce mois' }
-    ];
-
-    for (const period of periods) {
-      const startDate = `${period.start} 00:00:00`;
-      const endDate = `${period.end} 23:59:59`;
-
-      // Calculer les dates de la période précédente pour l'évolution
-      let previousStart, previousEnd;
-      if (period.key === 'jour') {
-        // Jour précédent
-        const yesterday = new Date(period.start);
-        yesterday.setDate(yesterday.getDate() - 1);
-        previousStart = previousEnd = yesterday.toISOString().split('T')[0];
-      } else if (period.key === 'semaine') {
-        // Semaine précédente
-        const prevMonday = new Date(monday);
-        prevMonday.setDate(prevMonday.getDate() - 7);
-        const prevSunday = new Date(prevMonday);
-        prevSunday.setDate(prevSunday.getDate() + 6);
-        previousStart = prevMonday.toISOString().split('T')[0];
-        previousEnd = prevSunday.toISOString().split('T')[0];
-      } else {
-        // Mois précédent : même plage jour pour jour (ex. 1–18 mai → 1–18 avril)
-        ({ previousStart, previousEnd } = getPreviousMonthComparisonRange(period.start, period.end));
-      }
-
-      const previousStartDate = `${previousStart} 00:00:00`;
-      const previousEndDate = `${previousEnd} 23:59:59`;
-
-      const centreParams = useCentreFilter ? callJwsCentreIds : [];
-      const baseParams = idsGroupe0.length > 0 
-        ? [startDate, endDate, ...idsGroupe0, ...centreParams]
-        : [startDate, endDate, ...centreParams];
-
-      // Périmètre : fiches insérées par un agent qualification (F3), id_agent renseigné (hors import masse)
-      const qualifAgentInsertWhere = `
+    const qualifAgentInsertWhere = `
         AND f.id_agent IS NOT NULL
         AND f.id_agent > 0
       `;
-      const fichesValideesWhere = `
+    const fichesValideesWhere = `
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.ko = 0 OR f.ko IS NULL)
         AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
       `;
 
-      // 1. Top 3 Agents (fiches validées = hors groupe 0 ET KO=0, insérées par agent qualif.)
-      const top3AgentsQuery = `
+    const top3AgentsQuery = `
         SELECT 
           u.id,
           u.pseudo,
@@ -1765,18 +1776,17 @@ router.get('/kpis', authenticate, async (req, res) => {
         LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE u.fonction = 3
         AND u.etat > 0
-        AND f.date_insert_time >= ?
-        AND f.date_insert_time <= ?
+        AND ${dateChamp} >= ?
+        AND ${dateChamp} <= ?
         ${qualifAgentInsertWhere}
         ${fichesValideesWhere}
         GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_validated DESC
         LIMIT 3
       `;
-      const top3Agents = await query(top3AgentsQuery, [startDate, endDate]);
+    const top3Agents = await query(top3AgentsQuery, [startDate, endDate]);
 
-      // 2. Top 3 Équipes (fiches validées = hors groupe 0 ET KO=0, insérées par agent qualif.)
-      const top3TeamsQuery = `
+    const top3TeamsQuery = `
         SELECT 
           s.id as superviseur_id,
           s.pseudo as superviseur_pseudo,
@@ -1791,113 +1801,102 @@ router.get('/kpis', authenticate, async (req, res) => {
         WHERE a.fonction = 3
         AND a.etat > 0
         AND s.etat > 0
-        AND f.date_insert_time >= ?
-        AND f.date_insert_time <= ?
+        AND ${dateChamp} >= ?
+        AND ${dateChamp} <= ?
         ${qualifAgentInsertWhere}
         ${fichesValideesWhere}
         GROUP BY s.id, s.pseudo, s.nom, s.prenom
         ORDER BY count_validated DESC
         LIMIT 3
       `;
-      const top3Teams = await query(top3TeamsQuery, [startDate, endDate]);
+    const top3Teams = await query(top3TeamsQuery, [startDate, endDate]);
 
-      // 3. Total fiches validées (période actuelle) — agents qualification uniquement
-      const validatedQuery = `
+    const validatedQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
         INNER JOIN utilisateurs u ON f.id_agent = u.id
         LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE u.fonction = 3
-        AND f.date_insert_time >= ?
-        AND f.date_insert_time <= ?
+        AND ${dateChamp} >= ?
+        AND ${dateChamp} <= ?
         ${qualifAgentInsertWhere}
         ${fichesValideesWhere}
       `;
-      const validatedResult = await queryOne(validatedQuery, [startDate, endDate]);
-      const validatedCount = validatedResult?.count || 0;
+    const validatedResult = await queryOne(validatedQuery, [startDate, endDate]);
+    const validatedCount = validatedResult?.count || 0;
 
-      // 4. Total fiches créées (période actuelle)
-      const totalQuery = `
+    const totalQuery = `
         SELECT COUNT(*) as count
         FROM fiches f
-        WHERE f.date_insert_time >= ?
-        AND f.date_insert_time <= ?
+        WHERE ${dateChamp} >= ?
+        AND ${dateChamp} <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
         ${centreCondition}
       `;
-      const totalResult = await queryOne(totalQuery, [startDate, endDate, ...centreParams]);
-      const totalCount = totalResult?.count || 0;
+    const totalResult = await queryOne(totalQuery, [startDate, endDate, ...centreParams]);
+    const totalCount = totalResult?.count || 0;
 
-      // 4b. Total fiches générées par agents qualification (période actuelle)
-      // id_agent renseigné = exclut import en masse (NULL/0). Exclure archive et doublon (61) — SANS filtre par centre
-      const totalQualifQuery = `
+    const totalQualifQuery = `
         SELECT COUNT(*) as count
         FROM fiches f
         INNER JOIN utilisateurs u ON f.id_agent = u.id
         WHERE u.fonction = 3
         AND f.id_agent IS NOT NULL
         AND f.id_agent > 0
-        AND f.date_insert_time >= ?
-        AND f.date_insert_time <= ?
+        AND ${dateChamp} >= ?
+        AND ${dateChamp} <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.id_etat_final != 61 OR f.id_etat_final IS NULL)
       `;
-      const totalQualifResult = await queryOne(totalQualifQuery, [startDate, endDate]);
-      const totalQualifCount = totalQualifResult?.count || 0;
+    const totalQualifResult = await queryOne(totalQualifQuery, [startDate, endDate]);
+    const totalQualifCount = totalQualifResult?.count || 0;
 
-      // 4c. Fiches confirmées (table confirmations) — fiches insérées par agent qualification uniquement
-      const confirmedQuery = `
+    const confirmedQuery = `
         SELECT COUNT(DISTINCT c.id_fiche) as count
         FROM confirmations c
         INNER JOIN fiches f ON c.id_fiche = f.id
         INNER JOIN utilisateurs u ON f.id_agent = u.id
         WHERE u.fonction = 3
-        AND c.date_creation >= ?
-        AND c.date_creation <= ?
+        AND ${dateChamp} >= ?
+        AND ${dateChamp} <= ?
         ${qualifAgentInsertWhere}
         AND (f.archive = 0 OR f.archive IS NULL)
       `;
-      const confirmedResult = await queryOne(confirmedQuery, [startDate, endDate]);
-      const confirmedCount = confirmedResult?.count || 0;
+    const confirmedResult = await queryOne(confirmedQuery, [startDate, endDate]);
+    const confirmedCount = confirmedResult?.count || 0;
 
-      // 5. Total fiches validées (période précédente) - SANS filtre par centre
-      const previousValidatedResult = await queryOne(validatedQuery, [previousStartDate, previousEndDate]);
-      const previousValidatedCount = previousValidatedResult?.count || 0;
+    const previousValidatedResult = await queryOne(validatedQuery, [previousStartDate, previousEndDate]);
+    const previousValidatedCount = previousValidatedResult?.count || 0;
 
-      // 6. Total fiches créées (période précédente)
-      const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...centreParams]);
-      const previousTotalCount = previousTotalResult?.count || 0;
+    const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...centreParams]);
+    const previousTotalCount = previousTotalResult?.count || 0;
 
-      // 6b. Total fiches générées par agents qualification (période précédente) - SANS filtre par centre
-      const previousTotalQualifResult = await queryOne(totalQualifQuery, [previousStartDate, previousEndDate]);
-      const previousTotalQualifCount = previousTotalQualifResult?.count || 0;
+    const previousTotalQualifResult = await queryOne(totalQualifQuery, [previousStartDate, previousEndDate]);
+    const previousTotalQualifCount = previousTotalQualifResult?.count || 0;
 
-      // 6c. Fiches confirmées (période précédente) - table confirmations
-      const previousConfirmedResult = await queryOne(confirmedQuery, [previousStartDate, previousEndDate]);
-      const previousConfirmedCount = previousConfirmedResult?.count || 0;
+    const previousConfirmedResult = await queryOne(confirmedQuery, [previousStartDate, previousEndDate]);
+    const previousConfirmedCount = previousConfirmedResult?.count || 0;
 
-      // Calculer le taux de conversion (Fiches validées / Fiches produites par agents qualification)
-      const conversionRate = totalQualifCount > 0 ? (validatedCount / totalQualifCount) * 100 : 0;
-      const previousConversionRate = previousTotalQualifCount > 0 ? (previousValidatedCount / previousTotalQualifCount) * 100 : 0;
-      const conversionRateChange = conversionRate - previousConversionRate;
+    const conversionRate = totalQualifCount > 0 ? (validatedCount / totalQualifCount) * 100 : 0;
+    const previousConversionRate = previousTotalQualifCount > 0 ? (previousValidatedCount / previousTotalQualifCount) * 100 : 0;
+    const conversionRateChange = conversionRate - previousConversionRate;
 
-      // Calculer le taux de transformation
-      // Taux de transformation = fiches confirmées (table confirmations) / fiches validées
-      const transformationRate = validatedCount > 0 ? (confirmedCount / validatedCount) * 100 : 0;
-      const previousTransformationRate = previousValidatedCount > 0 ? (previousConfirmedCount / previousValidatedCount) * 100 : 0;
-      const transformationRateChange = transformationRate - previousTransformationRate;
+    const transformationRate = validatedCount > 0 ? (confirmedCount / validatedCount) * 100 : 0;
+    const previousTransformationRate = previousValidatedCount > 0 ? (previousConfirmedCount / previousValidatedCount) * 100 : 0;
+    const transformationRateChange = transformationRate - previousTransformationRate;
 
-      // Calculer l'évolution
-      const evolutionChange = previousValidatedCount > 0 
-        ? ((validatedCount - previousValidatedCount) / previousValidatedCount) * 100 
-        : (validatedCount > 0 ? 100 : 0);
-      
-      const evolutionTrend = evolutionChange > 0 ? 'up' : (evolutionChange < 0 ? 'down' : 'stable');
+    const evolutionChange = previousValidatedCount > 0
+      ? ((validatedCount - previousValidatedCount) / previousValidatedCount) * 100
+      : (validatedCount > 0 ? 100 : 0);
 
-      kpiData[period.key] = {
-        period: period.label,
-        date_start: period.start,
-        date_end: period.end,
+    const evolutionTrend = evolutionChange > 0 ? 'up' : (evolutionChange < 0 ? 'down' : 'stable');
+
+    const kpiData = {
+      range: {
+        period: 'Période sélectionnée',
+        date_start: periodStart,
+        date_end: periodEnd,
+        date_champ: dateRange.dateChampKey,
         conversion_rate: conversionRate,
         conversion_rate_change: conversionRateChange,
         conversion_validated: validatedCount,
@@ -1906,36 +1905,36 @@ router.get('/kpis', authenticate, async (req, res) => {
         transformation_rate_change: transformationRateChange,
         transformation_count: confirmedCount,
         transformation_total: validatedCount,
-        top3_agents: top3Agents.map(agent => ({
+        top3_agents: top3Agents.map((agent) => ({
           id: agent.id,
           pseudo: agent.pseudo,
           nom: agent.nom,
           prenom: agent.prenom,
           photo: agent.photo,
-          count: agent.count_validated || 0
+          count: agent.count_validated || 0,
         })),
-        top3_teams: top3Teams.map(team => ({
+        top3_teams: top3Teams.map((team) => ({
           superviseur: {
             id: team.superviseur_id,
             pseudo: team.superviseur_pseudo,
             nom: team.superviseur_nom,
-            prenom: team.superviseur_prenom
+            prenom: team.superviseur_prenom,
           },
           count: team.count_validated || 0,
-          nb_agents: team.nb_agents || 0
+          nb_agents: team.nb_agents || 0,
         })),
         evolution: {
           current: validatedCount,
           previous: previousValidatedCount,
           change: evolutionChange,
-          trend: evolutionTrend
-        }
-      };
-    }
+          trend: evolutionTrend,
+        },
+      },
+    };
 
     res.json({
       success: true,
-      data: kpiData
+      data: kpiData,
     });
   } catch (error) {
     console.error('[STAT] /kpis - Erreur:', error.message);
@@ -1954,8 +1953,23 @@ router.get('/kpis', authenticate, async (req, res) => {
 // Récupérer les KPIs Confirmation (Top 3 confirmateurs confirmations/signatures, Taux, Évolution) - centre CALL_JWS uniquement
 router.get('/kpis-confirmation', authenticate, async (req, res) => {
   try {
-    const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
-    
+    const dateRange = resolveKpiDateRangeFromQuery(req);
+    const dateChamp = dateRange.dateChamp;
+    const emptyRangePayload = {
+      range: {
+        period: 'Période sélectionnée',
+        date_start: dateRange.start,
+        date_end: dateRange.end,
+        date_champ: dateRange.dateChampKey,
+        top3_confirmations: [],
+        top3_signatures: [],
+        confirmation_rate: 0,
+        signature_rate: 0,
+        confirmation_rate_change: 0,
+        signature_rate_change: 0,
+      },
+    };
+
     // Centre CALL_JWS uniquement
     const callJwsCentres = await query(`
       SELECT id FROM centres
@@ -1964,89 +1978,30 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
     `);
     const callJwsCentreIds = (callJwsCentres || []).map(c => c.id);
     if (callJwsCentreIds.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          jour: { period: 'Aujourd\'hui', date_start: '', date_end: '', top3_confirmations: [], top3_signatures: [], confirmation_rate: 0, signature_rate: 0 },
-          semaine: { period: 'Cette semaine', date_start: '', date_end: '', top3_confirmations: [], top3_signatures: [], confirmation_rate: 0, signature_rate: 0 },
-          mois: { period: 'Ce mois', date_start: '', date_end: '', top3_confirmations: [], top3_signatures: [], confirmation_rate: 0, signature_rate: 0 }
-        }
-      });
+      return res.json({ success: true, data: emptyRangePayload });
     }
     const centreCondition = `AND f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})`;
     const centreParams = callJwsCentreIds;
-    
-    // Dates pour jour, semaine, mois
-    const today = new Date();
-    const todayStr = getTodayLocal();
-    
-    // Semaine (lundi à dimanche)
-    const dayOfWeek = today.getDay();
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const monday = new Date(today.getFullYear(), today.getMonth(), diff);
-    const weekStart = monday.toISOString().split('T')[0];
-    const weekEnd = todayStr;
-    
-    // Mois - utiliser le mois sélectionné ou le mois en cours (plafonné à aujourd'hui si mois en cours)
-    let monthStart, monthEnd;
-    if (month && /^\d{4}-\d{2}$/.test(month)) {
-      const [year, monthNum] = month.split('-').map(Number);
-      monthStart = new Date(year, monthNum - 1, 1).toISOString().split('T')[0];
-      const lastDay = new Date(year, monthNum, 0).getDate();
-      monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
-    } else {
-      monthStart = getFirstOfMonthLocal();
-      monthEnd = todayStr;
-    }
-    monthEnd = capMonthEndToToday(month, monthEnd);
 
-    const kpiData = {
-      jour: {},
-      semaine: {},
-      mois: {}
-    };
+    const periodStart = dateRange.start;
+    const periodEnd = dateRange.end;
+    const startDate = dateRange.startDateTime;
+    const endDate = dateRange.endDateTime;
+    const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
+    const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
+    const { previousStart, previousEnd } = getPreviousPeriodComparisonRange(periodStart, periodEnd);
+    const previousStartDate = `${previousStart} ${dateRange.timeDebut}`;
+    const previousEndDate = `${previousEnd} ${dateRange.timeFin}`;
+    const previousStartTimestamp = Math.floor(new Date(previousStartDate).getTime() / 1000);
+    const previousEndTimestamp = Math.floor(new Date(previousEndDate).getTime() / 1000);
 
-    // Pour chaque période (jour, semaine, mois)
-    const periods = [
-      { key: 'jour', start: todayStr, end: todayStr, label: 'Aujourd\'hui' },
-      { key: 'semaine', start: weekStart, end: weekEnd, label: 'Cette semaine' },
-      { key: 'mois', start: monthStart, end: monthEnd, label: 'Ce mois' }
-    ];
+    const etat7Date = buildKpiConfirmationEtat7DateClause(dateRange.dateChampKey);
+    const signatureDateSql =
+      dateRange.dateChampKey === 'date_rdv_time'
+        ? 'AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?'
+        : 'AND s.date_heure >= ? AND s.date_heure <= ?';
 
-    for (const period of periods) {
-      const startDate = `${period.start} 00:00:00`;
-      const endDate = `${period.end} 23:59:59`;
-      
-      // Convertir les dates en timestamps Unix pour date_confirmation (bigint)
-      const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
-      const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
-
-      // Calculer les dates de la période précédente pour l'évolution
-      let previousStart, previousEnd;
-      if (period.key === 'jour') {
-        const yesterday = new Date(period.start);
-        yesterday.setDate(yesterday.getDate() - 1);
-        previousStart = previousEnd = yesterday.toISOString().split('T')[0];
-      } else if (period.key === 'semaine') {
-        const prevMonday = new Date(monday);
-        prevMonday.setDate(prevMonday.getDate() - 7);
-        const prevSunday = new Date(prevMonday);
-        prevSunday.setDate(prevSunday.getDate() + 6);
-        previousStart = prevMonday.toISOString().split('T')[0];
-        previousEnd = prevSunday.toISOString().split('T')[0];
-      } else {
-        ({ previousStart, previousEnd } = getPreviousMonthComparisonRange(period.start, period.end));
-      }
-
-      const previousStartDate = `${previousStart} 00:00:00`;
-      const previousEndDate = `${previousEnd} 23:59:59`;
-      
-      // Convertir les dates précédentes en timestamps Unix pour date_confirmation (bigint)
-      const previousStartTimestamp = Math.floor(new Date(previousStartDate).getTime() / 1000);
-      const previousEndTimestamp = Math.floor(new Date(previousEndDate).getTime() / 1000);
-
-      // 1. Top 3 Confirmateurs - Confirmations (état 7)
-      const top3ConfirmationsQuery = `
+    const top3ConfirmationsQuery = `
         SELECT 
           u.id,
           u.pseudo,
@@ -2059,21 +2014,19 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         WHERE u.fonction = 6
         AND u.etat > 0
         AND f.id_etat_final = 7
-        AND (
-          (f.date_confirmation IS NOT NULL AND f.date_confirmation >= ? AND f.date_confirmation <= ?)
-          OR 
-          (f.date_confirmation IS NULL AND f.date_modif_time >= ? AND f.date_modif_time <= ?)
-        )
+        ${etat7Date.sql}
         AND (f.archive = 0 OR f.archive IS NULL)
         ${centreCondition}
         GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_confirmations DESC
         LIMIT 3
       `;
-      const top3Confirmations = await query(top3ConfirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate, ...centreParams]);
+    const top3Confirmations = await query(
+      top3ConfirmationsQuery,
+      [...etat7Date.params(startDate, endDate, startTimestamp, endTimestamp), ...centreParams]
+    );
 
-      // 2. Top 3 Confirmateurs - Signatures : table signature (rapide, indexée)
-      const top3SignaturesQuery = `
+    const top3SignaturesQuery = `
         SELECT 
           s.confirmateur as id,
           u.pseudo,
@@ -2085,146 +2038,141 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
         INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
         WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-        AND s.date_heure >= ?
-        AND s.date_heure <= ?
+        ${signatureDateSql}
         GROUP BY s.confirmateur, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_signatures DESC
         LIMIT 3
       `;
-      const top3SignaturesRows = await query(top3SignaturesQuery, [...centreParams, startDate, endDate]);
-      const top3Signatures = (top3SignaturesRows || []).map(conf => ({
-        id: conf.id,
-        pseudo: conf.pseudo,
-        nom: conf.nom,
-        prenom: conf.prenom,
-        photo: conf.photo,
-        count_signatures: parseFloat(conf.count_signatures || 0)
-      }));
+    const top3SignaturesRows = await query(top3SignaturesQuery, [...centreParams, startDate, endDate]);
+    const top3Signatures = (top3SignaturesRows || []).map((conf) => ({
+      id: conf.id,
+      pseudo: conf.pseudo,
+      nom: conf.nom,
+      prenom: conf.prenom,
+      photo: conf.photo,
+      count_signatures: parseFloat(conf.count_signatures || 0),
+    }));
 
-      // Total signatures (score) période actuelle - table signature
-      const signaturesTotalResult = await queryOne(
-        `SELECT COALESCE(SUM(s.ajoute), 0) as total
+    const signaturesTotalResult = await queryOne(
+      `SELECT COALESCE(SUM(s.ajoute), 0) as total
          FROM signature s
          INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
          WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-         AND s.date_heure >= ? AND s.date_heure <= ?`,
-        [...centreParams, startDate, endDate]
-      );
-      const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
+         ${signatureDateSql}`,
+      [...centreParams, startDate, endDate]
+    );
+    const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
 
-      // 3. Total confirmations (période actuelle)
-      const confirmationsQuery = `
+    const confirmationsQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
         WHERE f.id_etat_final = 7
-        AND (
-          (f.date_confirmation IS NOT NULL AND f.date_confirmation >= ? AND f.date_confirmation <= ?)
-          OR 
-          (f.date_confirmation IS NULL AND f.date_modif_time >= ? AND f.date_modif_time <= ?)
-        )
+        ${etat7Date.sql}
         AND (f.archive = 0 OR f.archive IS NULL)
         ${centreCondition}
       `;
-      const confirmationsResult = await queryOne(confirmationsQuery, [startTimestamp, endTimestamp, startDate, endDate, ...centreParams]);
-      const confirmationsCount = confirmationsResult?.count || 0;
+    const confirmationsResult = await queryOne(
+      confirmationsQuery,
+      [...etat7Date.params(startDate, endDate, startTimestamp, endTimestamp), ...centreParams]
+    );
+    const confirmationsCount = confirmationsResult?.count || 0;
 
-      // 5. Total fiches créées (période actuelle) - pour le dénominateur du taux de conversion
-      const totalQuery = `
+    const totalQuery = `
         SELECT COUNT(*) as count
         FROM fiches f
-        WHERE f.date_insert_time >= ?
-        AND f.date_insert_time <= ?
+        WHERE ${dateChamp} >= ?
+        AND ${dateChamp} <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
         ${centreCondition}
       `;
-      const totalResult = await queryOne(totalQuery, [startDate, endDate, ...centreParams]);
-      const totalCount = totalResult?.count || 0;
+    const totalResult = await queryOne(totalQuery, [startDate, endDate, ...centreParams]);
+    const totalCount = totalResult?.count || 0;
 
-      // 6. Totaux période précédente
-      const previousConfirmationsResult = await queryOne(confirmationsQuery, [previousStartTimestamp, previousEndTimestamp, previousStartDate, previousEndDate, ...centreParams]);
-      const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
+    const previousConfirmationsResult = await queryOne(
+      confirmationsQuery,
+      [...etat7Date.params(previousStartDate, previousEndDate, previousStartTimestamp, previousEndTimestamp), ...centreParams]
+    );
+    const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
 
-      // Signatures période précédente - table signature
-      const previousSignaturesTotalResult = await queryOne(
-        `SELECT COALESCE(SUM(s.ajoute), 0) as total
+    const previousSignaturesTotalResult = await queryOne(
+      `SELECT COALESCE(SUM(s.ajoute), 0) as total
          FROM signature s
          INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
          WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-         AND s.date_heure >= ? AND s.date_heure <= ?`,
-        [...centreParams, previousStartDate, previousEndDate]
-      );
-      const previousSignaturesCount = parseFloat(previousSignaturesTotalResult?.total || 0);
+         ${signatureDateSql}`,
+      [...centreParams, previousStartDate, previousEndDate]
+    );
+    const previousSignaturesCount = parseFloat(previousSignaturesTotalResult?.total || 0);
 
-      const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...centreParams]);
-      const previousTotalCount = previousTotalResult?.count || 0;
+    const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...centreParams]);
+    const previousTotalCount = previousTotalResult?.count || 0;
 
-      // Calculer les taux
-      // Taux de conversion = confirmations (comptées par date de confirmation) / total fiches créées
-      const confirmationRate = totalCount > 0 ? (confirmationsCount / totalCount) * 100 : 0;
-      
-      // Taux de conversion en signature = signatures (comptées par date de dernière confirmation) / confirmations
-      const signatureRate = confirmationsCount > 0 ? (signaturesCount / confirmationsCount) * 100 : 0;
-      
-      const previousConfirmationRate = previousTotalCount > 0 ? (previousConfirmationsCount / previousTotalCount) * 100 : 0;
-      const previousSignatureRate = previousConfirmationsCount > 0 ? (previousSignaturesCount / previousConfirmationsCount) * 100 : 0;
-      
-      const confirmationRateChange = confirmationRate - previousConfirmationRate;
-      const signatureRateChange = signatureRate - previousSignatureRate;
+    const confirmationRate = totalCount > 0 ? (confirmationsCount / totalCount) * 100 : 0;
+    const signatureRate = confirmationsCount > 0 ? (signaturesCount / confirmationsCount) * 100 : 0;
+    const previousConfirmationRate = previousTotalCount > 0 ? (previousConfirmationsCount / previousTotalCount) * 100 : 0;
+    const previousSignatureRate =
+      previousConfirmationsCount > 0 ? (previousSignaturesCount / previousConfirmationsCount) * 100 : 0;
+    const confirmationRateChange = confirmationRate - previousConfirmationRate;
+    const signatureRateChange = signatureRate - previousSignatureRate;
 
-      // Calculer l'évolution
-      const confirmationEvolutionChange = previousConfirmationsCount > 0 
-        ? ((confirmationsCount - previousConfirmationsCount) / previousConfirmationsCount) * 100 
-        : (confirmationsCount > 0 ? 100 : 0);
-      
-      const signatureEvolutionChange = previousSignaturesCount > 0 
-        ? ((signaturesCount - previousSignaturesCount) / previousSignaturesCount) * 100 
-        : (signaturesCount > 0 ? 100 : 0);
-      
-      const confirmationTrend = confirmationEvolutionChange > 0 ? 'up' : (confirmationEvolutionChange < 0 ? 'down' : 'stable');
-      const signatureTrend = signatureEvolutionChange > 0 ? 'up' : (signatureEvolutionChange < 0 ? 'down' : 'stable');
-
-      kpiData[period.key] = {
-        period: period.label,
-        date_start: period.start,
-        date_end: period.end,
-        confirmation_rate: confirmationRate,
-        confirmation_rate_change: confirmationRateChange,
-        signature_rate: signatureRate,
-        signature_rate_change: signatureRateChange,
-        top3_confirmations: top3Confirmations.map(conf => ({
-          id: conf.id,
-          pseudo: conf.pseudo,
-          nom: conf.nom,
-          prenom: conf.prenom,
-          photo: conf.photo,
-          count: Math.round(conf.count_confirmations || 0)
-        })),
-        top3_signatures: top3Signatures.map(conf => ({
-          id: conf.id,
-          pseudo: conf.pseudo,
-          nom: conf.nom,
-          prenom: conf.prenom,
-          photo: conf.photo,
-          count: parseFloat((conf.count_signatures || 0).toFixed(2))
-        })),
-        confirmation_evolution: {
-          current: confirmationsCount,
-          previous: previousConfirmationsCount,
-          change: confirmationEvolutionChange,
-          trend: confirmationTrend
-        },
-        signature_evolution: {
-          current: parseFloat(signaturesCount.toFixed(2)),
-          previous: parseFloat(previousSignaturesCount.toFixed(2)),
-          change: signatureEvolutionChange,
-          trend: signatureTrend
-        }
-      };
-    }
+    const confirmationEvolutionChange =
+      previousConfirmationsCount > 0
+        ? ((confirmationsCount - previousConfirmationsCount) / previousConfirmationsCount) * 100
+        : confirmationsCount > 0
+          ? 100
+          : 0;
+    const signatureEvolutionChange =
+      previousSignaturesCount > 0
+        ? ((signaturesCount - previousSignaturesCount) / previousSignaturesCount) * 100
+        : signaturesCount > 0
+          ? 100
+          : 0;
+    const confirmationTrend =
+      confirmationEvolutionChange > 0 ? 'up' : confirmationEvolutionChange < 0 ? 'down' : 'stable';
+    const signatureTrend = signatureEvolutionChange > 0 ? 'up' : signatureEvolutionChange < 0 ? 'down' : 'stable';
 
     res.json({
       success: true,
-      data: kpiData
+      data: {
+        range: {
+          period: 'Période sélectionnée',
+          date_start: periodStart,
+          date_end: periodEnd,
+          date_champ: dateRange.dateChampKey,
+          confirmation_rate: confirmationRate,
+          confirmation_rate_change: confirmationRateChange,
+          signature_rate: signatureRate,
+          signature_rate_change: signatureRateChange,
+          top3_confirmations: top3Confirmations.map((conf) => ({
+            id: conf.id,
+            pseudo: conf.pseudo,
+            nom: conf.nom,
+            prenom: conf.prenom,
+            photo: conf.photo,
+            count: Math.round(conf.count_confirmations || 0),
+          })),
+          top3_signatures: top3Signatures.map((conf) => ({
+            id: conf.id,
+            pseudo: conf.pseudo,
+            nom: conf.nom,
+            prenom: conf.prenom,
+            photo: conf.photo,
+            count: parseFloat((conf.count_signatures || 0).toFixed(2)),
+          })),
+          confirmation_evolution: {
+            current: confirmationsCount,
+            previous: previousConfirmationsCount,
+            change: confirmationEvolutionChange,
+            trend: confirmationTrend,
+          },
+          signature_evolution: {
+            current: parseFloat(signaturesCount.toFixed(2)),
+            previous: parseFloat(previousSignaturesCount.toFixed(2)),
+            change: signatureEvolutionChange,
+            trend: signatureTrend,
+          },
+        },
+      },
     });
   } catch (error) {
     console.error('[STAT] /kpis-confirmation - Erreur:', error.message);
@@ -2495,7 +2443,8 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
 // Récupérer les KPIs pour le centre call_jws
 router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
   try {
-    const { month } = req.query; // Format: YYYY-MM (ex: 2025-01)
+    const dateRange = resolveKpiDateRangeFromQuery(req);
+    const dateChamp = dateRange.dateChamp;
     
     // Récupérer l'ID du centre call_jws (tous les centres qui commencent par Call_JWS ou CALL_JWS)
     const jwsCentres = await query(`
@@ -2510,10 +2459,8 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
       return res.json({
         success: true,
         data: {
-          jour: { period: 'Aujourd\'hui', centres: [] },
-          semaine: { period: 'Cette semaine', centres: [] },
-          mois: { period: 'Ce mois', centres: [] }
-        }
+          range: { period: 'Période sélectionnée', date_start: dateRange.start, date_end: dateRange.end, centres: [] },
+        },
       });
     }
     
@@ -2526,64 +2473,21 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
     `);
     const idsGroupe0 = etatsGroupe0.map(e => e.id);
 
-    // Dates pour jour, semaine, mois
-    const today = new Date();
-    const todayStr = getTodayLocal();
-    
-    // Semaine (lundi à dimanche)
-    const dayOfWeek = today.getDay();
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const monday = new Date(today.getFullYear(), today.getMonth(), diff);
-    const weekStart = monday.toISOString().split('T')[0];
-    const weekEnd = todayStr;
-    
-    // Mois - utiliser le mois sélectionné ou le mois en cours
-    let monthStart, monthEnd;
-    if (month && /^\d{4}-\d{2}$/.test(month)) {
-      const [year, monthNum] = month.split('-').map(Number);
-      monthStart = new Date(year, monthNum - 1, 1).toISOString().split('T')[0];
-      const lastDay = new Date(year, monthNum, 0).getDate();
-      monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
-    } else {
-      monthStart = getFirstOfMonthLocal();
-      monthEnd = todayStr;
-    }
+    const startDate = dateRange.startDateTime;
+    const endDate = dateRange.endDateTime;
+    const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
+    const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
+    const etat7Date = buildKpiConfirmationEtat7DateClause(dateRange.dateChampKey);
 
-    const kpiData = {
-      jour: {},
-      semaine: {},
-      mois: {}
-    };
+    const centresKPIs = [];
 
-    // Pour chaque période (jour, semaine, mois)
-    const periods = [
-      { key: 'jour', start: todayStr, end: todayStr, label: 'Aujourd\'hui' },
-      { key: 'semaine', start: weekStart, end: weekEnd, label: 'Cette semaine' },
-      { key: 'mois', start: monthStart, end: monthEnd, label: 'Ce mois' }
-    ];
-
-    for (const period of periods) {
-      const startDate = `${period.start} 00:00:00`;
-      const endDate = `${period.end} 23:59:59`;
-      
-      // Convertir les dates en timestamps Unix pour date_confirmation (bigint)
-      const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
-      const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
-
-      const baseParams = idsGroupe0.length > 0 
-        ? [startDate, endDate, ...idsGroupe0, ...jwsCentreIds]
-        : [startDate, endDate, ...jwsCentreIds];
-
-      const centresKPIs = [];
-
-      for (const centre of jwsCentres) {
-        // Total fiches créées pour ce centre
+    for (const centre of jwsCentres) {
         const totalQuery = `
           SELECT COUNT(*) as count
           FROM fiches f
           WHERE f.id_centre = ?
-          AND f.date_insert_time >= ?
-          AND f.date_insert_time <= ?
+          AND ${dateChamp} >= ?
+          AND ${dateChamp} <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
         `;
         const totalResult = await queryOne(totalQuery, [centre.id, startDate, endDate]);
@@ -2599,8 +2503,8 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
           FROM fiches f
           INNER JOIN etats e ON f.id_etat_final = e.id
           WHERE f.id_centre = ?
-          AND f.date_insert_time >= ?
-          AND f.date_insert_time <= ?
+          AND ${dateChamp} >= ?
+          AND ${dateChamp} <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
           ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
           AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
@@ -2608,30 +2512,26 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
         const validatedResult = await queryOne(validatedQuery, validatedParams);
         const validatedCount = validatedResult?.count || 0;
 
-        // Fiches confirmées (état 7) - par date de confirmation
-        // date_confirmation est un bigint (timestamp Unix)
         const confirmedQuery = `
           SELECT COUNT(DISTINCT f.id) as count
           FROM fiches f
           WHERE f.id_centre = ?
-          AND (
-            (f.date_confirmation IS NOT NULL AND f.date_confirmation >= ? AND f.date_confirmation <= ?)
-            OR 
-            (f.date_confirmation IS NULL AND f.date_modif_time >= ? AND f.date_modif_time <= ?)
-          )
+          ${etat7Date.sql}
           AND f.id_etat_final = 7
           AND (f.archive = 0 OR f.archive IS NULL)
         `;
-        const confirmedResult = await queryOne(confirmedQuery, [centre.id, startTimestamp, endTimestamp, startDate, endDate]);
+        const confirmedResult = await queryOne(
+          confirmedQuery,
+          [centre.id, ...etat7Date.params(startDate, endDate, startTimestamp, endTimestamp)]
+        );
         const confirmedCount = confirmedResult?.count || 0;
 
-        // Fiches signées (états 13, 16, 44, 45, mais PAS 38 = retracter 2 fois) - par date d'insertion
         const signedQuery = `
           SELECT COUNT(DISTINCT f.id) as count
           FROM fiches f
           WHERE f.id_centre = ?
-          AND f.date_insert_time >= ?
-          AND f.date_insert_time <= ?
+          AND ${dateChamp} >= ?
+          AND ${dateChamp} <= ?
           AND f.id_etat_final IN (13, 16, 44, 45)
           AND f.id_etat_final != 38
           AND (f.archive = 0 OR f.archive IS NULL)
@@ -2660,8 +2560,8 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
           INNER JOIN utilisateurs u ON f.id_agent = u.id
           INNER JOIN etats e ON f.id_etat_final = e.id
           WHERE f.id_centre = ?
-          AND f.date_insert_time >= ?
-          AND f.date_insert_time <= ?
+          AND ${dateChamp} >= ?
+          AND ${dateChamp} <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
           ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
           AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
@@ -2684,17 +2584,19 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
         });
       }
 
-      kpiData[period.key] = {
-        period: period.label,
-        date_start: period.start,
-        date_end: period.end,
-        centres: centresKPIs
-      };
-    }
+    const kpiData = {
+      range: {
+        period: 'Période sélectionnée',
+        date_start: dateRange.start,
+        date_end: dateRange.end,
+        date_champ: dateRange.dateChampKey,
+        centres: centresKPIs,
+      },
+    };
 
     res.json({
       success: true,
-      data: kpiData
+      data: kpiData,
     });
   } catch (error) {
     console.error('[STAT] /kpis-confirmation-jws - Erreur:', error.message);
@@ -2712,7 +2614,9 @@ router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
 // =====================================================
 router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
   try {
-    const { month, id_centre, date_debut, date_fin, centre_scope } = req.query;
+    const { id_centre, centre_scope } = req.query;
+    const dateRange = resolveKpiDateRangeFromQuery(req);
+    const dateChamp = dateRange.dateChamp;
 
     const callJwsCentres = await query(`
       SELECT id FROM centres
@@ -2733,47 +2637,16 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
         : '';
     const useCentreFilter = centreIdsToUse.length > 0;
 
-    const today = new Date();
-    const todayStr = getTodayLocal();
+    const kpiData = {};
 
-    const dayOfWeek = today.getDay();
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const monday = new Date(today.getFullYear(), today.getMonth(), diff);
-    const weekStart = monday.toISOString().split('T')[0];
-    const weekEnd = todayStr;
-
-    let monthStart;
-    let monthEnd;
-    if (month && /^\d{4}-\d{2}$/.test(month)) {
-      const [year, monthNum] = month.split('-').map(Number);
-      monthStart = new Date(year, monthNum - 1, 1).toISOString().split('T')[0];
-      const lastDay = new Date(year, monthNum, 0).getDate();
-      monthEnd = new Date(year, monthNum - 1, lastDay).toISOString().split('T')[0];
-    } else {
-      monthStart = getFirstOfMonthLocal();
-      monthEnd = todayStr;
-    }
-    monthEnd = capMonthEndToToday(month, monthEnd);
-
-    const kpiData = {
-      jour: {},
-      semaine: {},
-      mois: {},
-    };
-
-    const periods = [
-      { key: 'jour', start: todayStr, end: todayStr, label: "Aujourd'hui" },
-      { key: 'semaine', start: weekStart, end: weekEnd, label: 'Cette semaine' },
-      { key: 'mois', start: monthStart, end: monthEnd, label: 'Ce mois' },
+    const effectivePeriods = [
+      {
+        key: 'range',
+        start: dateRange.start,
+        end: dateRange.end,
+        label: 'Période sélectionnée',
+      },
     ];
-    const hasCustomRange =
-      typeof date_debut === 'string' &&
-      typeof date_fin === 'string' &&
-      /^\d{4}-\d{2}-\d{2}$/.test(date_debut) &&
-      /^\d{4}-\d{2}-\d{2}$/.test(date_fin);
-    const effectivePeriods = hasCustomRange
-      ? [{ key: 'custom', start: date_debut, end: date_fin, label: 'Période personnalisée' }]
-      : periods;
 
     const baseParams = (startDt, endDt) => {
       const p = [`${startDt} 00:00:00`, `${endDt} 23:59:59`];
@@ -2781,26 +2654,28 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
       return p;
     };
 
-    const runPorteOuverteForPeriod = async (startDate, endDate, previousStart, previousEnd) => {
-      const startDatetime = `${startDate} 00:00:00`;
-      const endDatetime = `${endDate} 23:59:59`;
-      const prevStartDt = `${previousStart} 00:00:00`;
-      const prevEndDt = `${previousEnd} 23:59:59`;
+    const runPorteOuverteForPeriod = async (startDateTime, endDateTime, previousStart, previousEnd) => {
+      const startDatetime = startDateTime;
+      const endDatetime = endDateTime;
+      const prevStartDt = `${previousStart} ${dateRange.timeDebut}`;
+      const prevEndDt = `${previousEnd} ${dateRange.timeFin}`;
 
-      // NB : on filtre désormais par date de visite (f.date_rdv_time) au lieu de
-      // la date d'approbation du compte rendu.
       const totalSql = `
         SELECT
           COUNT(*) AS total_lignes,
           COUNT(DISTINCT po.id_fiche) AS total_fiches
         FROM porte_ouverte po
         INNER JOIN fiches f ON f.id = po.id_fiche
-        WHERE f.date_rdv_time >= ?
-          AND f.date_rdv_time <= ?
+        WHERE ${dateChamp} >= ?
+          AND ${dateChamp} <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
           ${centreCondition}
       `;
-      const totalRow = await queryOne(totalSql, baseParams(startDate, endDate));
+      const totalRow = await queryOne(totalSql, [
+        startDatetime,
+        endDatetime,
+        ...(useCentreFilter ? centreIdsToUse : []),
+      ]);
 
       const byEtatSql = `
         SELECT
@@ -2810,14 +2685,18 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
         FROM porte_ouverte po
         INNER JOIN fiches f ON f.id = po.id_fiche
         LEFT JOIN etats e ON e.id = po.id_etat_final
-        WHERE f.date_rdv_time >= ?
-          AND f.date_rdv_time <= ?
+        WHERE ${dateChamp} >= ?
+          AND ${dateChamp} <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
           ${centreCondition}
         GROUP BY po.id_etat_final, e.titre
         ORDER BY count DESC, etat_titre ASC
       `;
-      const byEtatRows = await query(byEtatSql, baseParams(startDate, endDate));
+      const byEtatRows = await query(byEtatSql, [
+        startDatetime,
+        endDatetime,
+        ...(useCentreFilter ? centreIdsToUse : []),
+      ]);
 
       const detailsSql = `
         SELECT
@@ -2842,18 +2721,22 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
         LEFT JOIN etats e ON e.id = po.id_etat_final
         LEFT JOIN utilisateurs uc ON uc.id = po.id_commercial
         LEFT JOIN utilisateurs ua ON ua.id = po.id_approbateur
-        WHERE f.date_rdv_time >= ?
-          AND f.date_rdv_time <= ?
+        WHERE ${dateChamp} >= ?
+          AND ${dateChamp} <= ?
           AND (f.archive = 0 OR f.archive IS NULL)
           ${centreCondition}
-        ORDER BY f.date_rdv_time DESC, po.id DESC
+        ORDER BY ${dateChamp} DESC, po.id DESC
         LIMIT 500
       `;
-      const detailRows = await query(detailsSql, baseParams(startDate, endDate));
+      const detailRows = await query(detailsSql, [
+        startDatetime,
+        endDatetime,
+        ...(useCentreFilter ? centreIdsToUse : []),
+      ]);
 
       const prevTotalRow = await queryOne(totalSql, [
-        `${previousStart} 00:00:00`,
-        `${previousEnd} 23:59:59`,
+        prevStartDt,
+        prevEndDt,
         ...(useCentreFilter ? centreIdsToUse : []),
       ]);
 
@@ -2900,26 +2783,11 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
     };
 
     for (const period of effectivePeriods) {
-      let previousStart;
-      let previousEnd;
-      if (period.key === 'jour' || period.key === 'custom') {
-        const yesterday = new Date(period.start);
-        yesterday.setDate(yesterday.getDate() - 1);
-        previousStart = previousEnd = yesterday.toISOString().split('T')[0];
-      } else if (period.key === 'semaine') {
-        const prevMonday = new Date(monday);
-        prevMonday.setDate(prevMonday.getDate() - 7);
-        const prevSunday = new Date(prevMonday);
-        prevSunday.setDate(prevSunday.getDate() + 6);
-        previousStart = prevMonday.toISOString().split('T')[0];
-        previousEnd = prevSunday.toISOString().split('T')[0];
-      } else {
-        ({ previousStart, previousEnd } = getPreviousMonthComparisonRange(period.start, period.end));
-      }
+      const { previousStart, previousEnd } = getPreviousPeriodComparisonRange(period.start, period.end);
 
       const payload = await runPorteOuverteForPeriod(
-        period.start,
-        period.end,
+        dateRange.startDateTime,
+        dateRange.endDateTime,
         previousStart,
         previousEnd
       );
@@ -2927,6 +2795,7 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
         period: period.label,
         date_start: period.start,
         date_end: period.end,
+        date_champ: dateRange.dateChampKey,
         id_centre: hasSelectedCentre ? parsedCentreId : null,
         centre_scope: hasSelectedCentre
           ? (selectedCentreIsJws ? 'selected_jws' : 'selected_non_jws')
