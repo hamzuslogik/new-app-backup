@@ -394,8 +394,53 @@
   border-collapse: collapse;
 }
 
-.fiches-table.fiches-table--wrap {
+.production-qualif table.fiches-table.fiches-table--wrap {
   table-layout: fixed;
+  width: 100%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap col.colw-date {
+  width: 7%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap col.colw-agent {
+  width: 5%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap col.colw-nom {
+  width: 12%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap col.colw-prenom {
+  width: 17%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap col.colw-tel {
+  width: 9%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap col.colw-cp {
+  width: 5%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap col.colw-etat {
+  width: 8%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap col.colw-comment {
+  width: 36%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap col.colw-actions {
+  width: 3%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap.fiches-table--no-comment col.colw-nom {
+  width: 16%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap.fiches-table--no-comment col.colw-prenom {
+  width: 22%;
 }
 
 .fiches-table thead {
@@ -414,63 +459,21 @@
   font-size: 11.9px;
   color: #ffffff !important;
   background: #9cbfc8 !important;
-  white-space: nowrap;
 }
 
-.fiches-table.fiches-table--wrap th {
+.production-qualif table.fiches-table.fiches-table--wrap th,
+.production-qualif table.fiches-table.fiches-table--wrap td {
   white-space: normal;
   word-wrap: break-word;
   overflow-wrap: anywhere;
   vertical-align: top;
+  max-width: 0;
 }
 
-.fiches-table.fiches-table--wrap td {
-  white-space: normal;
-  word-wrap: break-word;
-  overflow-wrap: anywhere;
-  vertical-align: top;
-}
-
-.fiches-table .col-date {
-  width: 7%;
-}
-
-.fiches-table .col-agent {
-  width: 6%;
-  min-width: 72px;
-}
-
-.fiches-table .col-nom {
-  width: 14%;
-  min-width: 130px;
-}
-
-.fiches-table .col-prenom {
-  width: 17%;
-  min-width: 160px;
-}
-
-.fiches-table .col-tel {
-  width: 10%;
-}
-
-.fiches-table .col-cp {
-  width: 6%;
-}
-
-.fiches-table .col-etat {
-  width: 9%;
-}
-
-.fiches-table .col-comment {
-  width: 32%;
-  min-width: 280px;
-}
-
-.fiches-table .col-actions {
-  width: 3%;
-  min-width: 44px;
+.production-qualif table.fiches-table.fiches-table--wrap .col-actions,
+.production-qualif table.fiches-table.fiches-table--wrap .colw-actions {
   white-space: nowrap;
+  max-width: none;
 }
 
 .fiches-table tbody tr {

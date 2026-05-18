@@ -762,7 +762,20 @@ const ProductionQualif = () => {
                   <p>Total: {fichesData?.data?.length || fichesData?.pagination?.total || 0} fiche{(fichesData?.data?.length || fichesData?.pagination?.total || 0) > 1 ? 's' : ''}</p>
                 )}
               </div>
-              <table className="fiches-table fiches-table--wrap">
+              <table
+                className={`fiches-table fiches-table--wrap${canSeeCommentaireQualite ? '' : ' fiches-table--no-comment'}`}
+              >
+                <colgroup>
+                  <col className="colw-date" />
+                  <col className="colw-agent" />
+                  <col className="colw-nom" />
+                  <col className="colw-prenom" />
+                  <col className="colw-tel" />
+                  <col className="colw-cp" />
+                  <col className="colw-etat" />
+                  {canSeeCommentaireQualite && <col className="colw-comment" />}
+                  <col className="colw-actions" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th className="col-date">Date création</th>
