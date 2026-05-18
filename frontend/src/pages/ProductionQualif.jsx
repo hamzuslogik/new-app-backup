@@ -12,6 +12,22 @@ import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './ProductionQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
+const ID_ETAT_HC = 55;
+
+const getFicheEtatDisplay = (fiche) => {
+  if (fiche.ko === 1 || fiche.ko === '1') {
+    return { label: 'KO', color: '#dc3545' };
+  }
+  if (Number(fiche.id_etat_final) === ID_ETAT_HC) {
+    return { label: fiche.etat_titre || 'HC', color: fiche.etat_color || '#ff9800' };
+  }
+  const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
+  if (isGroupe0) {
+    return { label: fiche.etat_titre || '-', color: fiche.etat_color || '#ccc' };
+  }
+  return { label: 'Validée', color: '#4CAF50' };
+};
+
 const ProductionQualif = () => {
   useForceDesktopViewport('production-qualif-page');
   const { user } = useAuth();
@@ -198,21 +214,25 @@ const ProductionQualif = () => {
     
     // Filtrer par états multiples
     if (filters.id_etat_final && filters.id_etat_final.length > 0) {
-      filtered = filtered.filter(fiche => {
+      filtered = filtered.filter((fiche) => {
         const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
         const ficheIdEtat = String(fiche.id_etat_final);
-        
-        // Vérifier si "validated" est sélectionné et si la fiche est validée (hors groupe 0)
+        const isFicheKo = fiche.ko === 1 || fiche.ko === '1';
+        const isFicheHc = Number(fiche.id_etat_final) === ID_ETAT_HC;
+
         const isValidatedSelected = filters.id_etat_final.includes('validated');
-        const isFicheValidated = !isGroupe0;
-        
-        // Vérifier si l'état de la fiche est dans la liste sélectionnée
+        const isKoSelected = filters.id_etat_final.includes('ko');
+        const isHcSelected = filters.id_etat_final.includes('hc');
+        const isFicheValidated = !isGroupe0 && !isFicheKo;
+
         const isEtatSelected = filters.id_etat_final.includes(ficheIdEtat);
-        
-        // La fiche correspond si :
-        // - "validated" est sélectionné ET la fiche est validée, OU
-        // - l'état de la fiche est dans la liste sélectionnée
-        return (isValidatedSelected && isFicheValidated) || isEtatSelected;
+
+        return (
+          (isValidatedSelected && isFicheValidated)
+          || (isKoSelected && isFicheKo)
+          || (isHcSelected && isFicheHc)
+          || (isEtatSelected && !isFicheKo)
+        );
       });
     }
     
@@ -273,8 +293,7 @@ const ProductionQualif = () => {
               : superviseur.pseudo || '-')
           : '-';
         
-        const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
-        const displayEtat = isGroupe0 ? (fiche.etat_titre || '-') : 'Validée';
+        const { label: displayEtat } = getFicheEtatDisplay(fiche);
         
         return {
           ...fiche,
@@ -345,8 +364,7 @@ const ProductionQualif = () => {
               : superviseur.pseudo || '-')
           : '-';
         
-        const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
-        const displayEtat = isGroupe0 ? (fiche.etat_titre || '-') : 'Validée';
+        const { label: displayEtat } = getFicheEtatDisplay(fiche);
         
         return {
           ...fiche,
@@ -417,8 +435,7 @@ const ProductionQualif = () => {
               : superviseur.pseudo || '-')
           : '-';
         
-        const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
-        const displayEtat = isGroupe0 ? (fiche.etat_titre || '-') : 'Validée';
+        const { label: displayEtat } = getFicheEtatDisplay(fiche);
         
         return {
           ...fiche,
@@ -586,6 +603,20 @@ const ProductionQualif = () => {
                             </span>
                           );
                         }
+                        if (etatId === 'ko') {
+                          return (
+                            <span key={idx} className="multi-select-badge ko">
+                              KO
+                            </span>
+                          );
+                        }
+                        if (etatId === 'hc') {
+                          return (
+                            <span key={idx} className="multi-select-badge hc">
+                              HC
+                            </span>
+                          );
+                        }
                         const etat = etats.find(e => String(e.id) === etatId);
                         return etat ? (
                           <span key={idx} className="multi-select-badge">
@@ -629,7 +660,33 @@ const ProductionQualif = () => {
                           handleFilterChange('id_etat_final', newEtats);
                         }}
                       />
-                      <span>Validée (hors groupe 0)</span>
+                      <span>Validée (hors groupe 0, hors KO)</span>
+                    </label>
+                    <label className="multi-select-option">
+                      <input
+                        type="checkbox"
+                        checked={filters.id_etat_final.includes('ko')}
+                        onChange={(e) => {
+                          const newEtats = e.target.checked
+                            ? [...filters.id_etat_final, 'ko']
+                            : filters.id_etat_final.filter((id) => id !== 'ko');
+                          handleFilterChange('id_etat_final', newEtats);
+                        }}
+                      />
+                      <span style={{ color: '#dc3545' }}>KO</span>
+                    </label>
+                    <label className="multi-select-option">
+                      <input
+                        type="checkbox"
+                        checked={filters.id_etat_final.includes('hc')}
+                        onChange={(e) => {
+                          const newEtats = e.target.checked
+                            ? [...filters.id_etat_final, 'hc']
+                            : filters.id_etat_final.filter((id) => id !== 'hc');
+                          handleFilterChange('id_etat_final', newEtats);
+                        }}
+                      />
+                      <span style={{ color: '#ff9800' }}>HC (hors cible)</span>
                     </label>
                     {etats.filter(e => e.groupe === '0' || e.groupe === 0).map(etat => (
                       <label key={etat.id} className="multi-select-option">
@@ -755,11 +812,9 @@ const ProductionQualif = () => {
                         <td>{fiche.cp || '-'}</td>
                         <td>
                           {(() => {
-                            const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
-                            const displayEtat = isGroupe0 ? (fiche.etat_titre || '-') : 'Validée';
-                            const displayColor = isGroupe0 ? (fiche.etat_color || '#ccc') : '#4CAF50';
+                            const { label: displayEtat, color: displayColor } = getFicheEtatDisplay(fiche);
                             return (
-                              <span 
+                              <span
                                 className="etat-badge"
                                 style={{ backgroundColor: displayColor }}
                               >

@@ -1069,6 +1069,21 @@ router.get('/production-qualif', authenticate, async (req, res) => {
     `);
 
     const idsGroupe0 = etatsGroupe0.map(e => e.id);
+    const ID_ETAT_HC = 55;
+    const koEtatGroupe0 = etatsGroupe0.find(
+      (e) => String(e.abbreviation || '').trim().toUpperCase() === 'KO'
+        || String(e.titre || '').trim().toUpperCase() === 'KO'
+    ) || etatsGroupe0.find((e) => Number(e.id) === 54);
+    const koEtatId = koEtatGroupe0?.id ?? null;
+
+    let etatsListe = [...etatsGroupe0];
+    if (!etatsListe.some((e) => Number(e.id) === ID_ETAT_HC)) {
+      const hcEtatRow = await queryOne(
+        'SELECT id, titre, color, abbreviation, ordre FROM etats WHERE id = ?',
+        [ID_ETAT_HC]
+      );
+      if (hcEtatRow) etatsListe.push(hcEtatRow);
+    }
 
     // Périmètre qualification: RP (12) et superviseur qualif (2) voient uniquement leurs agents.
     // Les autres profils gardent la vue globale.
@@ -1128,62 +1143,86 @@ router.get('/production-qualif', authenticate, async (req, res) => {
         }
 
         const stats = {};
-
-        // Stats par état groupe 0
-        for (const etat of etatsGroupe0) {
-          const conditions = [
-            `f.id_agent IN (${agentIds.map(() => '?').join(',')})`,
-            `f.date_insert_time >= ?`,
-            `f.date_insert_time <= ?`,
-            `f.id_etat_final = ?`,
-            `(f.archive = 0 OR f.archive IS NULL)`,
-            `f.date_insert_time IS NOT NULL`
-          ];
-          const params = [...agentIds, startDate, endDate, etat.id];
-
-          if (id_etat_final && parseInt(id_etat_final) !== etat.id) {
-            continue; // Skip si filtre par état et ce n'est pas le bon
-          }
-
-          const count = await queryOne(
-            `SELECT COUNT(*) as count
-             FROM fiches f
-             WHERE ${conditions.join(' AND ')}`,
-            params
-          );
-
+        etatsListe.forEach((etat) => {
           stats[etat.id] = {
             id: etat.id,
             titre: etat.titre,
             abbreviation: etat.abbreviation || etat.titre,
-            count: count?.count || 0
+            count: 0
           };
+        });
+
+        const fichesConditions = [
+          `f.id_agent IN (${agentIds.map(() => '?').join(',')})`,
+          'f.date_insert_time >= ?',
+          'f.date_insert_time <= ?',
+          '(f.archive = 0 OR f.archive IS NULL)',
+          'f.date_insert_time IS NOT NULL'
+        ];
+        const fichesParams = [...agentIds, startDate, endDate];
+
+        if (koEtatId != null) {
+          const fichesStatsRows = await query(
+            `SELECT
+              CASE WHEN (f.ko = 1) THEN ? ELSE f.id_etat_final END AS etat_key,
+              COUNT(*) AS count
+            FROM fiches f
+            LEFT JOIN etats e ON f.id_etat_final = e.id
+            WHERE ${fichesConditions.join(' AND ')}
+            AND (
+              f.ko = 1
+              OR (
+                (f.ko = 0 OR f.ko IS NULL)
+                AND ((e.groupe = '0' OR e.groupe = 0) OR f.id_etat_final = ?)
+              )
+            )
+            GROUP BY etat_key`,
+            [koEtatId, ...fichesParams, ID_ETAT_HC]
+          );
+          (fichesStatsRows || []).forEach((row) => {
+            const key = row.etat_key;
+            if (stats[key]) {
+              stats[key].count = Number(row.count) || 0;
+            }
+          });
+        } else {
+          const fichesStatsRows = await query(
+            `SELECT f.id_etat_final AS etat_key, COUNT(*) AS count
+             FROM fiches f
+             INNER JOIN etats e ON f.id_etat_final = e.id
+             WHERE ${fichesConditions.join(' AND ')}
+             AND (f.ko = 0 OR f.ko IS NULL)
+             AND ((e.groupe = '0' OR e.groupe = 0) OR f.id_etat_final = ?)
+             GROUP BY f.id_etat_final`,
+            [...fichesParams, ID_ETAT_HC]
+          );
+          (fichesStatsRows || []).forEach((row) => {
+            const key = row.etat_key;
+            if (stats[key]) {
+              stats[key].count = Number(row.count) || 0;
+            }
+          });
         }
 
-        // Stats pour les états hors groupe 0 (Validé)
-        if (!id_etat_final || (id_etat_final === 'validated')) {
-          const conditions = [
-            `f.id_agent IN (${agentIds.map(() => '?').join(',')})`,
-            `f.date_insert_time >= ?`,
-            `f.date_insert_time <= ?`,
-            `(f.archive = 0 OR f.archive IS NULL)`,
-            `f.date_insert_time IS NOT NULL`
-          ];
-          const params = [...agentIds, startDate, endDate];
-
-          if (idsGroupe0.length > 0) {
-            conditions.push(`f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})`);
-            params.push(...idsGroupe0);
+        if (!id_etat_final || id_etat_final === 'validated') {
+          const validatedConditions = [...fichesConditions, '(f.ko = 0 OR f.ko IS NULL)'];
+          const validatedParams = [...fichesParams];
+          const idsEtatsQualif = etatsListe.map((e) => e.id);
+          if (idsEtatsQualif.length > 0) {
+            validatedConditions.push(
+              `f.id_etat_final NOT IN (${idsEtatsQualif.map(() => '?').join(',')})`
+            );
+            validatedParams.push(...idsEtatsQualif);
           }
 
           const validatedCount = await queryOne(
-            `SELECT COUNT(*) as count
+            `SELECT COUNT(*) AS count
              FROM fiches f
-             WHERE ${conditions.join(' AND ')}`,
-            params
+             WHERE ${validatedConditions.join(' AND ')}`,
+            validatedParams
           );
 
-          stats['validated'] = {
+          stats.validated = {
             id: 'validated',
             titre: 'Validé',
             abbreviation: 'VALIDÉ',
@@ -1217,7 +1256,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
       success: true,
       data: {
         superviseurs: superviseursStats,
-        etats: etatsGroupe0,
+        etats: etatsListe,
         period: {
           date_debut: startDateStr,
           date_fin: endDateStr

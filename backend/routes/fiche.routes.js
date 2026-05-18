@@ -2704,12 +2704,16 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         const etatIds = [];
         let hasValidated = false;
         let hasKo = false;
+        let hasHc = false;
+        const ID_ETAT_HC = 55;
         
         etatArray.forEach(etat => {
           if (etat === 'validated') {
             hasValidated = true;
           } else if (etat === 'ko') {
             hasKo = true;
+          } else if (etat === 'hc') {
+            hasHc = true;
           } else {
             const parsedId = parseInt(etat);
             if (!isNaN(parsedId)) {
@@ -2727,6 +2731,12 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         
         if (hasKo) {
           conditions.push('fiche.ko = 1');
+        }
+
+        if (hasHc) {
+          conditions.push('fiche.id_etat_final = ?');
+          conditions.push('(fiche.ko = 0 OR fiche.ko IS NULL)');
+          params.push(ID_ETAT_HC);
         }
         
         if (hasValidated) {
@@ -2760,6 +2770,10 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         }
       } else if (id_etat_final === 'ko') {
         whereConditions.push('fiche.ko = 1');
+      } else if (id_etat_final === 'hc') {
+        whereConditions.push('fiche.id_etat_final = ?');
+        whereConditions.push('(fiche.ko = 0 OR fiche.ko IS NULL)');
+        params.push(55);
       } else {
         // Filtre par état spécifique
         const parsedId = parseInt(id_etat_final);
