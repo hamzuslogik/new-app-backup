@@ -1943,6 +1943,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       });
     }
     const centreCondition = `AND f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})`;
+    const centreParams = callJwsCentreIds;
     
     // Dates pour jour, semaine, mois
     const today = new Date();
