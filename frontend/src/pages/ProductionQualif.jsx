@@ -296,10 +296,8 @@ const ProductionQualif = () => {
       });
       
       const columns = [
-        { key: 'id', label: 'ID' },
         { key: 'date_insert_time', label: 'Date création' },
         { key: 'agent_pseudo', label: 'Agent' },
-        { key: 'superviseur_name', label: 'Superviseur' },
         { key: 'nom', label: 'Nom' },
         { key: 'prenom', label: 'Prénom' },
         { key: 'tel', label: 'Téléphone' },
@@ -367,10 +365,8 @@ const ProductionQualif = () => {
       });
       
       const columns = [
-        { key: 'id', label: 'ID' },
         { key: 'date_insert_time', label: 'Date création' },
         { key: 'agent_pseudo', label: 'Agent' },
-        { key: 'superviseur_name', label: 'Superviseur' },
         { key: 'nom', label: 'Nom' },
         { key: 'prenom', label: 'Prénom' },
         { key: 'tel', label: 'Téléphone' },
@@ -439,10 +435,8 @@ const ProductionQualif = () => {
       });
       
       const columns = [
-        { key: 'id', label: 'ID' },
         { key: 'date_insert_time', label: 'Date création' },
         { key: 'agent_pseudo', label: 'Agent' },
-        { key: 'superviseur_name', label: 'Superviseur' },
         { key: 'nom', label: 'Nom' },
         { key: 'prenom', label: 'Prénom' },
         { key: 'tel', label: 'Téléphone' },
@@ -768,44 +762,30 @@ const ProductionQualif = () => {
                   <p>Total: {fichesData?.data?.length || fichesData?.pagination?.total || 0} fiche{(fichesData?.data?.length || fichesData?.pagination?.total || 0) > 1 ? 's' : ''}</p>
                 )}
               </div>
-              <table className="fiches-table">
+              <table className="fiches-table fiches-table--wrap">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Date création</th>
-                    <th>Agent</th>
-                    <th>Superviseur</th>
-                    <th>Nom</th>
-                    <th>Prénom</th>
-                    <th>Téléphone</th>
-                    <th>CP</th>
-                    <th>État</th>
-                    {canSeeCommentaireQualite && <th>Commentaire Qualité</th>}
-                    <th className="noprint">Actions</th>
+                    <th className="col-date">Date création</th>
+                    <th className="col-agent">Agent</th>
+                    <th className="col-nom">Nom</th>
+                    <th className="col-prenom">Prénom</th>
+                    <th className="col-tel">Téléphone</th>
+                    <th className="col-cp">CP</th>
+                    <th className="col-etat">État</th>
+                    {canSeeCommentaireQualite && <th className="col-comment">Commentaire Qualité</th>}
+                    <th className="col-actions noprint">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {fiches.map(fiche => {
-                    // Trouver le superviseur de l'agent
-                    const agent = agentsData?.find(a => a.id === fiche.id_agent);
-                    const superviseur = superviseurs.find(s => s.id === agent?.chef_equipe);
-                    return (
-                      <tr key={fiche.id}>
-                        <td>{fiche.id}</td>
-                        <td>{fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : '-'}</td>
-                        <td>{fiche.agent_pseudo || '-'}</td>
-                        <td>
-                          {superviseur 
-                            ? (superviseur.nom && superviseur.prenom 
-                                ? `${superviseur.nom} ${superviseur.prenom}`
-                                : superviseur.pseudo || '-')
-                            : '-'}
-                        </td>
-                        <td>{fiche.nom || '-'}</td>
-                        <td>{fiche.prenom || '-'}</td>
-                        <td>{fiche.tel || '-'}</td>
-                        <td>{fiche.cp || '-'}</td>
-                        <td>
+                  {fiches.map((fiche) => (
+                      <tr key={fiche.id || fiche.hash}>
+                        <td className="col-date">{fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : '-'}</td>
+                        <td className="col-agent">{fiche.agent_pseudo || '-'}</td>
+                        <td className="col-nom">{fiche.nom || '-'}</td>
+                        <td className="col-prenom">{fiche.prenom || '-'}</td>
+                        <td className="col-tel">{fiche.tel || '-'}</td>
+                        <td className="col-cp">{fiche.cp || '-'}</td>
+                        <td className="col-etat">
                           {(() => {
                             const { label: displayEtat, color: displayColor } = getFicheEtatDisplay(fiche);
                             return (
@@ -819,7 +799,7 @@ const ProductionQualif = () => {
                           })()}
                         </td>
                         {canSeeCommentaireQualite && (
-                          <td style={{ maxWidth: '300px' }}>
+                          <td className="col-comment">
                             <div className="comment-quick-edit-container">
                               {canEditCommentaireQualite ? (
                                 <>
@@ -883,7 +863,7 @@ const ProductionQualif = () => {
                             </div>
                           </td>
                         )}
-                        <td className="noprint">
+                        <td className="col-actions noprint">
                           {isRPQualif ? (
                             <span 
                               className="btn-detail disabled" 
@@ -911,8 +891,7 @@ const ProductionQualif = () => {
                           )}
                         </td>
                       </tr>
-                    );
-                  })}
+                  ))}
                 </tbody>
               </table>
             </div>

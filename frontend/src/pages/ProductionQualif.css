@@ -392,7 +392,10 @@
 .fiches-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1200px;
+}
+
+.fiches-table.fiches-table--wrap {
+  table-layout: fixed;
 }
 
 .fiches-table thead {
@@ -411,6 +414,60 @@
   font-size: 11.9px;
   color: #ffffff !important;
   background: #9cbfc8 !important;
+  white-space: nowrap;
+}
+
+.fiches-table.fiches-table--wrap th {
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.fiches-table.fiches-table--wrap td {
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.fiches-table .col-date {
+  width: 7%;
+}
+
+.fiches-table .col-agent {
+  width: 9%;
+}
+
+.fiches-table .col-nom {
+  width: 14%;
+  min-width: 130px;
+}
+
+.fiches-table .col-prenom {
+  width: 14%;
+  min-width: 130px;
+}
+
+.fiches-table .col-tel {
+  width: 10%;
+}
+
+.fiches-table .col-cp {
+  width: 6%;
+}
+
+.fiches-table .col-etat {
+  width: 9%;
+}
+
+.fiches-table .col-comment {
+  width: 28%;
+  min-width: 240px;
+}
+
+.fiches-table .col-actions {
+  width: 5%;
   white-space: nowrap;
 }
 
@@ -436,6 +493,10 @@
   color: white;
   font-size: 10.2px;
   font-weight: 600;
+  max-width: 100%;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
 .btn-detail {
@@ -867,12 +928,14 @@
 }
 
 /* Styles pour la modification rapide du commentaire qualité */
-.comment-readonly {
+.production-qualif .fiches-table .comment-readonly {
   padding: 8px;
   background: #f8f9fa;
   border: 1px solid #dee2e6;
   border-radius: 4px;
-  min-height: 60px;
+  min-height: 56px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .comment-readonly-text {
@@ -889,12 +952,13 @@
 }
 
 /* Styles pour la modification rapide du commentaire qualité */
-.comment-quick-edit-container {
+.production-qualif .fiches-table .comment-quick-edit-container {
   display: flex;
   flex-direction: column;
   gap: 4.8px;
-  min-width: 250px;
-  max-width: 350px;
+  min-width: 0;
+  max-width: none;
+  width: 100%;
 }
 
 .comment-quick-actions {
@@ -910,16 +974,20 @@
   display: none;
 }
 
-.comment-textarea-quick {
+.production-qualif .fiches-table .comment-textarea-quick {
   padding: 4.8px 6.4px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 11px;
   font-family: inherit;
   resize: vertical;
-  min-height: 50px;
-  max-height: 120px;
+  min-height: 56px;
+  max-height: none;
   width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
