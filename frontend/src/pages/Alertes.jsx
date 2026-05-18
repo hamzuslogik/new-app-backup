@@ -11,8 +11,9 @@ const Alertes = () => {
   useForceDesktopViewport('alertes-page');
   const { user } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
-  // Masquer la colonne "Id qualité" (Envoyée par) pour la session Agent qualification (fonction 3)
-  const hideIdQualite = Number(user?.fonction) === 3;
+  // Session Agent qualification (fonction 3)
+  const isAgentQualif = Number(user?.fonction) === 3;
+  const hideIdQualite = isAgentQualif;
   const [filters, setFilters] = useState({
     page: 1,
     limit: 50,
@@ -66,6 +67,7 @@ const Alertes = () => {
 
   const alertes = data?.data || [];
   const pagination = data?.pagination || { page: 1, limit: 50, total: 0, pages: 1 };
+  const alertesStats = data?.stats || null;
   const agents = agentsData || [];
 
   return (
@@ -114,6 +116,19 @@ const Alertes = () => {
                 onChange={(e) => handleFilterChange('date_fin', e.target.value)}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {isAgentQualif && alertesStats && (
+        <div className="alertes-summary-cards">
+          <div className="alertes-summary-card alertes-summary-card--perso">
+            <h3>Alerte perso</h3>
+            <span className="alertes-summary-count">{alertesStats.perso}</span>
+          </div>
+          <div className="alertes-summary-card alertes-summary-card--technique">
+            <h3>Alerte technique</h3>
+            <span className="alertes-summary-count">{alertesStats.technique}</span>
           </div>
         </div>
       )}

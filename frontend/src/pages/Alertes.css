@@ -71,6 +71,53 @@
   font-size: 13px;
 }
 
+.page-alertes .alertes-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.page-alertes .alertes-summary-card {
+  background: #fff;
+  border: 2px solid #e5e7eb;
+  border-left: 4px solid;
+  border-radius: 8px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.page-alertes .alertes-summary-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+}
+
+.page-alertes .alertes-summary-count {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.page-alertes .alertes-summary-card--perso {
+  border-left-color: #6f42c1;
+}
+
+.page-alertes .alertes-summary-card--perso .alertes-summary-count {
+  color: #6f42c1;
+}
+
+.page-alertes .alertes-summary-card--technique {
+  border-left-color: #0d6efd;
+}
+
+.page-alertes .alertes-summary-card--technique .alertes-summary-count {
+  color: #0d6efd;
+}
+
 .page-alertes .results-info {
   margin-bottom: 12px;
   font-size: 14px;

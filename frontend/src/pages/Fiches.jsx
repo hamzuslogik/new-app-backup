@@ -236,7 +236,9 @@ const Fiches = () => {
     { enabled: isAgentQualif }
   );
 
-  const statsMoisEtats = statsMoisResponse?.data || [];
+  const statsMoisEtatsAll = statsMoisResponse?.data || [];
+  const statsMoisValidated = statsMoisEtatsAll.find((s) => s.etat_id === 'validated');
+  const statsMoisEtats = statsMoisEtatsAll.filter((s) => s.etat_id !== 'validated');
   const statsMoisSummary = statsMoisResponse?.summary || null;
   const statsMoisPodium = statsMoisResponse?.podium || [];
   const podiumMaxCount =
@@ -609,6 +611,14 @@ const Fiches = () => {
                   <h3>HC</h3>
                 </div>
                 <div className="production-card-count">{statsMoisSummary.hc}</div>
+              </div>
+              <div className="production-card production-card--validated validated">
+                <div className="production-card-header">
+                  <h3>Validé</h3>
+                </div>
+                <div className="production-card-count">
+                  {statsMoisValidated?.count ?? 0}
+                </div>
               </div>
             </div>
           )}

@@ -200,10 +200,37 @@ router.get('/', authenticate, async (req, res) => {
       fiche_hash: encodeFicheId(r.id_fiche) || null
     }));
 
+    let stats = null;
+    if (fonction === 3) {
+      try {
+        const persoRow = await queryOne(
+          `SELECT COUNT(*) AS total FROM alert_ko a WHERE ${whereClause} AND a.type_alerte = 'PERSO'`,
+          params
+        );
+        const techRow = await queryOne(
+          `SELECT COUNT(*) AS total FROM alert_ko a WHERE ${whereClause} AND a.type_alerte = 'TECHNIQUE'`,
+          params
+        );
+        stats = {
+          perso: Number(persoRow?.total) || 0,
+          technique: Number(techRow?.total) || 0
+        };
+      } catch (statsErr) {
+        if (statsErr.code === 'ER_BAD_FIELD_ERROR' && statsErr.message?.includes('type_alerte')) {
+          stats = { perso: Number(total) || 0, technique: 0 };
+        } else if (statsErr.code !== 'ER_NO_SUCH_TABLE') {
+          throw statsErr;
+        } else {
+          stats = { perso: 0, technique: 0 };
+        }
+      }
+    }
+
     res.json({
       success: true,
       data,
-      pagination: { page, limit, total, pages }
+      pagination: { page, limit, total, pages },
+      ...(stats ? { stats } : {})
     });
   } catch (error) {
     console.error('Erreur GET /alertes:', error);
