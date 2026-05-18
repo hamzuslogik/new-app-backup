@@ -93,14 +93,6 @@ const KPIAgentQualification = () => {
         </p>
       )}
 
-      <div className="kpi-agent-qualif-intro">
-        <p>
-          Fiches produites = fiches créées par vous sur la période, hors poubelle et doublon.
-          <br />
-          Taux HC = nombre de fiches HC / fiches produites. Taux KO = nombre de fiches KO / fiches produites.
-        </p>
-      </div>
-
       <div className="kpi-agent-qualif-cards">
         <div className="kpi-card kpi-card-base">
           <div className="kpi-card-label">Fiches produites</div>

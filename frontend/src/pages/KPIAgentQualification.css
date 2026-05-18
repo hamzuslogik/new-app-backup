@@ -58,16 +58,6 @@
   font-size: 14px;
 }
 
-.kpi-agent-qualif-intro {
-  background: #f0f8f9;
-  border: 1px solid #9cbfc8;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 24px;
-  font-size: 13px;
-  color: #333;
-}
-
 .kpi-agent-qualif-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
