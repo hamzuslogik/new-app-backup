@@ -49,6 +49,11 @@ const Validation = () => {
     date_fin: defaultDates.date_fin
   });
 
+  // Confirmateur (6), Qualité Confirmation (4), RE Confirmation (14), admins / backoffice
+  const canLoadValidation =
+    !!user &&
+    [1, 2, 4, 6, 7, 11, 14].includes(Number(user.fonction));
+
   // Récupérer les RDV validés/non validés
   const { data: validationData, isLoading, error } = useQuery(
     ['validation-rdv', filters],
@@ -63,7 +68,7 @@ const Validation = () => {
       return res.data.data;
     },
     {
-      enabled: !!user && (user.fonction === 6 || user.fonction === 14 || [1, 2, 7, 11].includes(user.fonction))
+      enabled: canLoadValidation
     }
   );
 

@@ -1709,7 +1709,18 @@ router.get('/kpis', authenticate, async (req, res) => {
         ? [startDate, endDate, ...idsGroupe0, ...centreParams]
         : [startDate, endDate, ...centreParams];
 
-      // 1. Top 3 Agents (fiches validées = hors groupe 0 ET KO=0)
+      // Périmètre : fiches insérées par un agent qualification (F3), id_agent renseigné (hors import masse)
+      const qualifAgentInsertWhere = `
+        AND f.id_agent IS NOT NULL
+        AND f.id_agent > 0
+      `;
+      const fichesValideesWhere = `
+        AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
+        AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
+      `;
+
+      // 1. Top 3 Agents (fiches validées = hors groupe 0 ET KO=0, insérées par agent qualif.)
       const top3AgentsQuery = `
         SELECT 
           u.id,
@@ -1725,16 +1736,15 @@ router.get('/kpis', authenticate, async (req, res) => {
         AND u.etat > 0
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
-        AND (f.archive = 0 OR f.archive IS NULL)
-        AND (f.ko = 0 OR f.ko IS NULL)
-        AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
+        ${qualifAgentInsertWhere}
+        ${fichesValideesWhere}
         GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_validated DESC
         LIMIT 3
       `;
       const top3Agents = await query(top3AgentsQuery, [startDate, endDate]);
 
-      // 2. Top 3 Équipes (fiches validées = hors groupe 0 ET KO=0)
+      // 2. Top 3 Équipes (fiches validées = hors groupe 0 ET KO=0, insérées par agent qualif.)
       const top3TeamsQuery = `
         SELECT 
           s.id as superviseur_id,
@@ -1752,26 +1762,25 @@ router.get('/kpis', authenticate, async (req, res) => {
         AND s.etat > 0
         AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
-        AND (f.archive = 0 OR f.archive IS NULL)
-        AND (f.ko = 0 OR f.ko IS NULL)
-        AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
+        ${qualifAgentInsertWhere}
+        ${fichesValideesWhere}
         GROUP BY s.id, s.pseudo, s.nom, s.prenom
         ORDER BY count_validated DESC
         LIMIT 3
       `;
       const top3Teams = await query(top3TeamsQuery, [startDate, endDate]);
 
-      // 3. Total fiches validées (période actuelle)
-      // Fiches validées = hors groupe 0 ET KO=0 - SANS filtre par centre
+      // 3. Total fiches validées (période actuelle) — agents qualification uniquement
       const validatedQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
+        INNER JOIN utilisateurs u ON f.id_agent = u.id
         LEFT JOIN etats e ON f.id_etat_final = e.id
-        WHERE f.date_insert_time >= ?
+        WHERE u.fonction = 3
+        AND f.date_insert_time >= ?
         AND f.date_insert_time <= ?
-        AND (f.archive = 0 OR f.archive IS NULL)
-        AND (f.ko = 0 OR f.ko IS NULL)
-        AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
+        ${qualifAgentInsertWhere}
+        ${fichesValideesWhere}
       `;
       const validatedResult = await queryOne(validatedQuery, [startDate, endDate]);
       const validatedCount = validatedResult?.count || 0;
@@ -1805,13 +1814,16 @@ router.get('/kpis', authenticate, async (req, res) => {
       const totalQualifResult = await queryOne(totalQualifQuery, [startDate, endDate]);
       const totalQualifCount = totalQualifResult?.count || 0;
 
-      // 4c. Fiches confirmées (existent dans la table confirmations) - par date de confirmation
+      // 4c. Fiches confirmées (table confirmations) — fiches insérées par agent qualification uniquement
       const confirmedQuery = `
         SELECT COUNT(DISTINCT c.id_fiche) as count
         FROM confirmations c
         INNER JOIN fiches f ON c.id_fiche = f.id
-        WHERE c.date_creation >= ?
+        INNER JOIN utilisateurs u ON f.id_agent = u.id
+        WHERE u.fonction = 3
+        AND c.date_creation >= ?
         AND c.date_creation <= ?
+        ${qualifAgentInsertWhere}
         AND (f.archive = 0 OR f.archive IS NULL)
       `;
       const confirmedResult = await queryOne(confirmedQuery, [startDate, endDate]);
