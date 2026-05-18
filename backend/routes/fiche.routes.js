@@ -2545,11 +2545,12 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     let agentIds = [];
-
+    const fonction = Number(req.user?.fonction);
+    const isBackofficeOrAdmin = fonction === 11 || fonction === 1;
 
     // Vérifier si l'utilisateur est un RP Qualification (fonction 12)
     // Si oui, récupérer les agents de tous les superviseurs assignés au RP
-    if (req.user.fonction === 12) {
+    if (fonction === 12) {
       // Récupérer les superviseurs assignés au RP connecté
       const superviseursAssignes = await query(
         `SELECT id FROM utilisateurs 
@@ -2613,8 +2614,23 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         
         agentIds = (agentsSousResponsabilite || []).map(a => a.id);
       }
-    } else {
-      // RE Qualification : récupérer les agents directement sous la responsabilité du superviseur connecté
+    } else if (isBackofficeOrAdmin) {
+      if (id_superviseur) {
+        const superviseurId = parseInt(id_superviseur, 10);
+        const agentsSousResponsabilite = await query(
+          `SELECT id FROM utilisateurs
+           WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
+          [superviseurId]
+        );
+        agentIds = (agentsSousResponsabilite || []).map((a) => a.id);
+      } else {
+        const allAgents = await query(
+          `SELECT id FROM utilisateurs WHERE fonction = 3 AND etat > 0`
+        );
+        agentIds = (allAgents || []).map((a) => a.id);
+      }
+    } else if (fonction === 2) {
+      // RE Qualification : agents sous la responsabilité du superviseur connecté
       const agentsSousResponsabilite = await query(
         `SELECT id FROM utilisateurs 
          WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
@@ -2646,9 +2662,9 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
     ];
     let params = [...agentIds];
 
-    // Pour RP Qualification (fonction 12), inclure tous les états (groupe 0 + "Validé" = tous les états)
-    // Pour les autres (RE Qualification), filtrer groupe 0 + EN-ATTENTE + fiches validées (groupe 1, 2 ou 3)
-    if (req.user.fonction === 12) {
+    // Pour RP / backoffice / admin : inclure tous les états (groupe 0 + validé)
+    // Pour RE Qualification : filtrer groupe 0 + EN-ATTENTE + fiches validées (groupe 1, 2 ou 3)
+    if (fonction === 12 || isBackofficeOrAdmin) {
       // Pour RP Qualification : inclure tous les états (pas de filtre sur les états)
       // Le filtre par état se fera côté frontend si nécessaire
     } else {

@@ -1011,9 +1011,66 @@ router.get('/production-qualif', authenticate, async (req, res) => {
     const startDate = `${startDateStr} 00:00:00`;
     const endDate = `${endDateStr} 23:59:59`;
 
-    // Vérifier si l'utilisateur est un RP Qualification (fonction 12)
-    // Si ce n'est pas un RP Qualification, retourner une liste vide
-    if (req.user.fonction !== 12) {
+    const fonction = Number(req.user?.fonction);
+    const isBackofficeOrAdmin = fonction === 11 || fonction === 1;
+
+    const superviseurExistsClause = `
+      AND EXISTS (
+        SELECT 1 FROM utilisateurs agents
+        WHERE agents.chef_equipe = u.id
+        AND agents.fonction = 3
+        AND agents.etat > 0
+      )
+    `;
+
+    let superviseursQuery;
+    let superviseursParams = [];
+
+    if (fonction === 12) {
+      // RP Qualification : superviseurs assignés via id_rp_qualif
+      superviseursQuery = `
+        SELECT DISTINCT
+          u.id,
+          u.pseudo,
+          u.nom,
+          u.prenom
+        FROM utilisateurs u
+        LEFT JOIN fonctions f ON u.fonction = f.id
+        WHERE u.id_rp_qualif = ?
+        AND u.etat > 0
+        AND (f.etat > 0 OR f.etat IS NULL)
+        ${superviseurExistsClause}
+      `;
+      superviseursParams = [req.user.id];
+    } else if (fonction === 2) {
+      // RE Qualification : sa propre ligne de stats
+      superviseursQuery = `
+        SELECT DISTINCT
+          u.id,
+          u.pseudo,
+          u.nom,
+          u.prenom
+        FROM utilisateurs u
+        WHERE u.id = ?
+        AND u.etat > 0
+        ${superviseurExistsClause}
+      `;
+      superviseursParams = [req.user.id];
+    } else if (isBackofficeOrAdmin) {
+      // Backoffice / Admin : tous les superviseurs ayant des agents qualification
+      superviseursQuery = `
+        SELECT DISTINCT
+          u.id,
+          u.pseudo,
+          u.nom,
+          u.prenom
+        FROM utilisateurs u
+        LEFT JOIN fonctions f ON u.fonction = f.id
+        WHERE u.etat > 0
+        AND (f.etat > 0 OR f.etat IS NULL)
+        ${superviseurExistsClause}
+      `;
+    } else {
       return res.json({
         success: true,
         data: {
@@ -1027,33 +1084,9 @@ router.get('/production-qualif', authenticate, async (req, res) => {
       });
     }
 
-    // Récupérer les superviseurs assignés au RP connecté
-    // Un superviseur (RE Qualification) est un utilisateur qui a des agents sous sa responsabilité
-    // et qui est assigné au RP via le champ id_rp_qualif
-    let superviseursQuery = `
-      SELECT DISTINCT
-        u.id,
-        u.pseudo,
-        u.nom,
-        u.prenom
-      FROM utilisateurs u
-      LEFT JOIN fonctions f ON u.fonction = f.id
-      WHERE u.id_rp_qualif = ?
-      AND u.etat > 0
-      AND (f.etat > 0 OR f.etat IS NULL)
-      AND EXISTS (
-        SELECT 1 FROM utilisateurs agents
-        WHERE agents.chef_equipe = u.id
-        AND agents.fonction = 3
-        AND agents.etat > 0
-      )
-    `;
-
-    const superviseursParams = [req.user.id];
-
     if (id_superviseur) {
       superviseursQuery += ' AND u.id = ?';
-      superviseursParams.push(parseInt(id_superviseur));
+      superviseursParams.push(parseInt(id_superviseur, 10));
     }
 
     superviseursQuery += ' ORDER BY u.pseudo ASC';

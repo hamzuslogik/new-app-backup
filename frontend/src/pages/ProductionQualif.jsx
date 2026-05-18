@@ -51,24 +51,17 @@ const ProductionQualif = () => {
   // Vérifier si l'utilisateur est un RP Qualification (fonction 12) ou Superviseur Qualification (fonction 2)
   const isRPQualif = user?.fonction === 12;
   const isSuperviseurQualif = user?.fonction === 2;
-  const canSeeCommentaireQualite = isRPQualif || isSuperviseurQualif;
-  
-  // Vérifier si l'utilisateur est un Administrateur (fonction 1)
   const isAdmin = user?.fonction === 1;
+  const isBackofficeOrAdmin = user?.fonction === 11 || isAdmin;
+  const canViewStats = isRPQualif || isSuperviseurQualif || isBackofficeOrAdmin;
+  const canViewFiches = isRPQualif || isSuperviseurQualif || isBackofficeOrAdmin;
+  const canSeeCommentaireQualite = isRPQualif || isSuperviseurQualif || isBackofficeOrAdmin;
   
   // Vérifier si l'utilisateur peut modifier/créer des commentaires qualité
   // Seul Admin (fonction 1) peut modifier
   const canEditCommentaireQualite = isAdmin;
 
-  // Les superviseurs qualification (fonction 2) n'ont pas de stats via /production-qualif
-  // On les bascule automatiquement sur la vue "Fiches".
-  useEffect(() => {
-    if (isSuperviseurQualif && viewMode !== 'fiches') {
-      setViewMode('fiches');
-    }
-  }, [isSuperviseurQualif, viewMode]);
-
-  // Récupérer les superviseurs assignés au RP Qualification
+  // Récupérer les superviseurs (périmètre selon le rôle)
   const { data: superviseursData } = useQuery(
     'superviseurs-assignes-rp-production',
     async () => {
@@ -123,7 +116,7 @@ const ProductionQualif = () => {
       const res = await api.get('/statistiques/production-qualif', { params });
       return res.data.data;
     },
-    { enabled: viewMode === 'stats' }
+    { enabled: viewMode === 'stats' && canViewStats }
   );
 
   // Récupérer les agents pour le filtre (si nécessaire)
@@ -166,8 +159,8 @@ const ProductionQualif = () => {
         throw error;
       }
     },
-    { 
-      enabled: viewMode === 'fiches' && (isRPQualif || isSuperviseurQualif),
+    {
+      enabled: viewMode === 'fiches' && canViewFiches,
       retry: 1
     }
   );
@@ -508,9 +501,9 @@ const ProductionQualif = () => {
       <div className="production-header noprint">
         <h1><FaChartBar /> Production Qualification</h1>
         <div className="header-actions">
-          {(isRPQualif || isSuperviseurQualif) && (
+          {(canViewStats || canViewFiches) && (
             <div className="view-mode-toggle noprint">
-              {isRPQualif && (
+              {canViewStats && (
                 <button
                   className={`mode-btn ${viewMode === 'stats' ? 'active' : ''}`}
                   onClick={() => setViewMode('stats')}
@@ -518,12 +511,14 @@ const ProductionQualif = () => {
                   <FaChartBar /> Statistiques
                 </button>
               )}
-              <button
-                className={`mode-btn ${viewMode === 'fiches' ? 'active' : ''}`}
-                onClick={() => setViewMode('fiches')}
-              >
-                <FaList /> Fiches
-              </button>
+              {canViewFiches && (
+                <button
+                  className={`mode-btn ${viewMode === 'fiches' ? 'active' : ''}`}
+                  onClick={() => setViewMode('fiches')}
+                >
+                  <FaList /> Fiches
+                </button>
+              )}
             </div>
           )}
           <button 
@@ -729,7 +724,7 @@ const ProductionQualif = () => {
       )}
 
       {/* Recherche rapide pour les fiches */}
-      {(isRPQualif || isSuperviseurQualif) && viewMode === 'fiches' && (
+      {canViewFiches && viewMode === 'fiches' && (
         <div className="quick-search-container noprint">
           <FaSearch />
           <input
@@ -743,8 +738,8 @@ const ProductionQualif = () => {
       )}
 
       <div className="production-content">
-        {viewMode === 'fiches' && (isRPQualif || isSuperviseurQualif) ? (
-          // Vue fiches pour RP Qualification
+        {viewMode === 'fiches' && canViewFiches ? (
+          // Vue fiches
           loadingFiches ? (
             <div className="loading noprint">Chargement des fiches...</div>
           ) : fichesError ? (
