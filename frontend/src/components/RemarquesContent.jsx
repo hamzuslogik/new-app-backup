@@ -71,7 +71,7 @@ const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => 
       if (res.data?.success) return res.data;
       throw new Error(res.data?.message || 'Erreur');
     },
-    { onError: (err) => toast.error(err.response?.data?.message || err.message) }
+    { enabled: !inModal, onError: (err) => toast.error(err.response?.data?.message || err.message) }
   );
 
   const sendMutation = useMutation(
@@ -187,6 +187,7 @@ const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => 
         </form>
       )}
 
+      {!inModal && (
       <div className="remarques-list-section">
         <div className="remarques-list-header">
           <h4>Liste des remarques</h4>
@@ -288,6 +289,7 @@ const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => 
           </>
         )}
       </div>
+      )}
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { FaBell, FaFilter } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Alertes.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 
 const Alertes = () => {
   useForceDesktopViewport('alertes-page');
@@ -17,8 +18,8 @@ const Alertes = () => {
   const [filters, setFilters] = useState({
     page: 1,
     limit: 50,
-    date_debut: '',
-    date_fin: '',
+    date_debut: getFirstOfMonthLocal(),
+    date_fin: getTodayLocal(),
     id_agent: ''
   });
 
