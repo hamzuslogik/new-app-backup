@@ -227,7 +227,7 @@ const Fiches = () => {
   };
 
   // Récupérer les stats du mois pour agent qualification
-  const { data: statsMois } = useQuery(
+  const { data: statsMoisResponse } = useQuery(
     ['fiches-stats-mois'],
     async () => {
       const res = await api.get('/fiches/stats/mois');
@@ -235,6 +235,14 @@ const Fiches = () => {
     },
     { enabled: isAgentQualif }
   );
+
+  const statsMoisEtats = statsMoisResponse?.data || [];
+  const statsMoisSummary = statsMoisResponse?.summary || null;
+  const statsMoisPodium = statsMoisResponse?.podium || [];
+  const podiumMaxCount =
+    statsMoisPodium.length > 0
+      ? Math.max(...statsMoisPodium.map((a) => Number(a.count) || 0), 1)
+      : 1;
 
   // Récupérer les fiches : chargement auto agent qualif / superviseur qualif / backoffice (jour courant) ; sinon au clic Recherche
   const { data, isLoading, error, refetch } = useQuery(
@@ -263,6 +271,9 @@ const Fiches = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('fiches');
+        if (isAgentQualif) {
+          queryClient.invalidateQueries(['fiches-stats-mois']);
+        }
         setShowCreateModal(false);
         toast.success('Fiche créée avec succès');
       },
@@ -328,6 +339,9 @@ const Fiches = () => {
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries('fiches');
         toast.success(variables.ko ? 'Fiche mise en KO avec succès' : 'Fiche retirée du KO avec succès');
+        if (isAgentQualif) {
+          queryClient.invalidateQueries(['fiches-stats-mois']);
+        }
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de la mise en KO de la fiche');
@@ -572,14 +586,39 @@ const Fiches = () => {
       </div>
 
       {/* Cards de production du mois pour Agent Qualification */}
-      {isAgentQualif && statsMois && (
+      {isAgentQualif && statsMoisResponse && (
         <div className="production-cards-container">
           <h2>Production du mois</h2>
-          <div className="production-cards">
-            {statsMois.data?.map((stat) => (
+
+          {statsMoisSummary && (
+            <div className="production-summary-cards">
+              <div className="production-card production-card--total">
+                <div className="production-card-header">
+                  <h3>Total production</h3>
+                </div>
+                <div className="production-card-count">{statsMoisSummary.total_production}</div>
+              </div>
+              <div className="production-card production-card--ko">
+                <div className="production-card-header">
+                  <h3>KO</h3>
+                </div>
+                <div className="production-card-count">{statsMoisSummary.ko}</div>
+              </div>
+              <div className="production-card production-card--hc">
+                <div className="production-card-header">
+                  <h3>HC</h3>
+                </div>
+                <div className="production-card-count">{statsMoisSummary.hc}</div>
+              </div>
+            </div>
+          )}
+
+          {statsMoisEtats.length > 0 && (
+            <div className="production-cards">
+            {statsMoisEtats.map((stat) => (
               <div 
                 key={stat.etat_id} 
-                className="production-card"
+                className={`production-card${stat.etat_id === 'validated' ? ' validated' : ''}`}
                 style={{ borderLeftColor: stat.etat_color }}
               >
                 <div className="production-card-header">
@@ -590,6 +629,50 @@ const Fiches = () => {
                 </div>
               </div>
             ))}
+            </div>
+          )}
+
+          <div className="qualif-podium">
+            <h3 className="qualif-podium-title">Top 3 agents qualification</h3>
+            {statsMoisPodium.length === 0 ? (
+              <p className="qualif-podium-empty">Aucune production sur le mois en cours.</p>
+            ) : (
+              <div className="qualif-podium-list">
+                {statsMoisPodium.map((agent) => {
+                  const count = Number(agent.count) || 0;
+                  const barWidth = Math.round((count / podiumMaxCount) * 100);
+                  const medal = agent.rank === 1 ? '🥇' : agent.rank === 2 ? '🥈' : '🥉';
+                  return (
+                    <div key={agent.agent_id || agent.rank} className="qualif-podium-row">
+                      <div className="qualif-podium-rank">
+                        <span className="qualif-podium-medal" aria-hidden>
+                          {medal}
+                        </span>
+                        <span className="qualif-podium-rank-num">#{agent.rank}</span>
+                      </div>
+                      <div className="qualif-podium-agent">
+                        {agent.photo ? (
+                          <img src={agent.photo} alt="" className="qualif-podium-avatar" />
+                        ) : (
+                          <div className="qualif-podium-avatar placeholder">
+                            {(agent.pseudo || '?').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="qualif-podium-pseudo">{agent.pseudo}</span>
+                      </div>
+                      <div className="qualif-podium-bar-wrap">
+                        <div
+                          className="qualif-podium-bar-fill"
+                          style={{ width: `${barWidth}%` }}
+                          title={`${count} fiche${count > 1 ? 's' : ''}`}
+                        />
+                      </div>
+                      <span className="qualif-podium-count">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

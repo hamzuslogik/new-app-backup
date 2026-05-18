@@ -1637,6 +1637,7 @@ router.get('/stats/mois', authenticate, async (req, res) => {
        FROM fiches f
        INNER JOIN etats e ON f.id_etat_final = e.id AND (e.groupe = '0' OR e.groupe = 0)
        WHERE f.active = 1 AND (f.archive = 0 OR f.archive IS NULL)
+         AND (f.ko = 0 OR f.ko IS NULL)
          AND f.date_insert_time >= ? AND f.date_insert_time <= ?
          AND f.id_agent = ?
        GROUP BY e.id, e.titre, e.color
@@ -1644,12 +1645,13 @@ router.get('/stats/mois', authenticate, async (req, res) => {
       [startDate, endDate, req.user.id]
     );
 
-    // Comptage "Validé" : états hors groupe 0
+    // Comptage "Validé" : états hors groupe 0 (hors fiches KO)
     const validatedResult = await queryOne(
       `SELECT COUNT(f.id) as count
        FROM fiches f
        INNER JOIN etats e ON f.id_etat_final = e.id AND (e.groupe != '0' AND e.groupe != 0)
        WHERE f.active = 1 AND (f.archive = 0 OR f.archive IS NULL)
+         AND (f.ko = 0 OR f.ko IS NULL)
          AND f.date_insert_time >= ? AND f.date_insert_time <= ?
          AND f.id_agent = ?`,
       [startDate, endDate, req.user.id]
@@ -1673,7 +1675,71 @@ router.get('/stats/mois', authenticate, async (req, res) => {
       });
     }
 
-    res.json({ success: true, data });
+    const agentId = req.user.id;
+    const productionBaseWhere = `
+      f.active = 1
+      AND (f.archive = 0 OR f.archive IS NULL)
+      AND (f.id_etat_final != 61 OR f.id_etat_final IS NULL)
+      AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+    `;
+
+    const totalProductionRow = await queryOne(
+      `SELECT COUNT(f.id) AS count
+       FROM fiches f
+       WHERE ${productionBaseWhere}
+         AND f.id_agent = ?`,
+      [startDate, endDate, agentId]
+    );
+
+    const koRow = await queryOne(
+      `SELECT COUNT(f.id) AS count
+       FROM fiches f
+       WHERE ${productionBaseWhere}
+         AND f.id_agent = ?
+         AND f.ko = 1`,
+      [startDate, endDate, agentId]
+    );
+
+    const ID_ETAT_HC = 55;
+    const hcRow = await queryOne(
+      `SELECT COUNT(f.id) AS count
+       FROM fiches f
+       WHERE ${productionBaseWhere}
+         AND f.id_agent = ?
+         AND f.id_etat_final = ?`,
+      [startDate, endDate, agentId, ID_ETAT_HC]
+    );
+
+    const podiumRows = await query(
+      `SELECT u.id AS agent_id, u.pseudo, u.photo, COUNT(f.id) AS count
+       FROM fiches f
+       INNER JOIN utilisateurs u ON f.id_agent = u.id AND u.fonction = 3 AND (u.etat > 0 OR u.etat IS NULL)
+       WHERE ${productionBaseWhere}
+         AND f.id_agent IS NOT NULL AND f.id_agent > 0
+       GROUP BY u.id, u.pseudo, u.photo
+       ORDER BY count DESC, u.pseudo ASC
+       LIMIT 3`,
+      [startDate, endDate]
+    );
+
+    const podium = (podiumRows || []).map((row, index) => ({
+      rank: index + 1,
+      agent_id: row.agent_id,
+      pseudo: row.pseudo || 'N/A',
+      photo: row.photo || null,
+      count: Number(row.count) || 0
+    }));
+
+    res.json({
+      success: true,
+      data,
+      summary: {
+        total_production: Number(totalProductionRow?.count) || 0,
+        ko: Number(koRow?.count) || 0,
+        hc: Number(hcRow?.count) || 0
+      },
+      podium
+    });
   } catch (error) {
     console.error('Erreur GET /fiches/stats/mois:', error);
     res.status(500).json({ success: false, message: 'Erreur lors du chargement des stats du mois' });

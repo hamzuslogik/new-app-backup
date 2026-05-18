@@ -3330,12 +3330,13 @@ router.get('/agent-qualification-kpis', authenticate, async (req, res) => {
     const fichesProduitesRow = await queryOne(fichesProduitesQuery, baseParams);
     const fichesProduites = fichesProduitesRow?.count ?? 0;
 
+    const ID_ETAT_HC = 55;
     const nbHcQuery = `
       SELECT COUNT(DISTINCT f.id) AS count
       FROM fiches f
-      WHERE ${baseConditions.join(' AND ')} AND (f.hc = 1)
+      WHERE ${baseConditions.join(' AND ')} AND f.id_etat_final = ?
     `;
-    const nbHcRow = await queryOne(nbHcQuery, baseParams);
+    const nbHcRow = await queryOne(nbHcQuery, [...baseParams, ID_ETAT_HC]);
     const nbHc = nbHcRow?.count ?? 0;
 
     const nbKoQuery = `
