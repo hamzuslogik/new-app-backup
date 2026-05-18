@@ -1415,11 +1415,12 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         : '';
       const scopedAgentParams = hasScopedAgents && scopedAgentIds.length > 0 ? scopedAgentIds : [];
 
-      // Fiches validées (KPI) : hors poubelle, KO, HC (hors cible), états groupe 0
+      // Fiches validées (KPI) : hors poubelle, hors KO (ko=1), hors HC (état 55), hors états groupe 0
+      const ID_ETAT_HC = 55;
       const fichesValideesWhere = `
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.ko = 0 OR f.ko IS NULL)
-        AND (f.hc = 0 OR f.hc IS NULL)
+        AND (f.id_etat_final != ${ID_ETAT_HC} OR f.id_etat_final IS NULL)
         AND (e.groupe IS NULL OR (e.groupe != '0' AND e.groupe != 0))
       `;
       const fichesValideesParams = [startDate, endDate, ...scopedAgentParams];
@@ -1508,7 +1509,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       const nbProduites = fichesProduites?.count || 0;
       const tauxConversion = nbProduites > 0 ? ((nbValidees / nbProduites) * 100).toFixed(1) : 0;
 
-      // Fiches confirmées (table confirmations) - par date de confirmation
+      // Fiches confirmées (table confirmations) - par date de confirmation, hors KO
       const fichesConfirmeesQuery = `
         SELECT COUNT(DISTINCT c.id_fiche) as count
         FROM confirmations c
@@ -1517,6 +1518,7 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         AND c.date_creation <= ?
         ${scopedAgentClauseF}
         AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
       `;
       const fichesConfirmees = await queryOne(fichesConfirmeesQuery, [startDate, endDate, ...scopedAgentParams]);
       const nbConfirmees = fichesConfirmees?.count || 0;
