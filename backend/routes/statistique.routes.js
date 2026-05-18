@@ -18,6 +18,41 @@ function getTodayLocal() {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+function formatDateLocal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+/** Mois précédent pour comparaison : du 1er jusqu'au même jour que la fin de période (aujourd'hui si mois en cours). */
+function getPreviousMonthComparisonRange(periodStartStr, periodEndStr) {
+  const todayStr = getTodayLocal();
+  const isCurrentMonth = periodStartStr.slice(0, 7) === todayStr.slice(0, 7);
+  const endRef = new Date(`${(isCurrentMonth ? todayStr : periodEndStr)}T12:00:00`);
+  const start = new Date(`${periodStartStr}T12:00:00`);
+  const previousStart = new Date(start.getFullYear(), start.getMonth() - 1, 1);
+  const lastDayPrev = new Date(endRef.getFullYear(), endRef.getMonth(), 0).getDate();
+  const previousEnd = new Date(
+    endRef.getFullYear(),
+    endRef.getMonth() - 1,
+    Math.min(endRef.getDate(), lastDayPrev)
+  );
+  return {
+    previousStart: formatDateLocal(previousStart),
+    previousEnd: formatDateLocal(previousEnd),
+  };
+}
+/** Fin de période « mois » : aujourd'hui si le mois sélectionné est le mois en cours. */
+function capMonthEndToToday(monthParam, monthEnd) {
+  const todayStr = getTodayLocal();
+  if (monthParam && monthParam === todayStr.slice(0, 7)) {
+    return todayStr;
+  }
+  if (!monthParam) {
+    return todayStr;
+  }
+  return monthEnd;
+}
 function getLastDayOfMonthLocal() {
   const d = new Date();
   const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
@@ -1647,7 +1682,7 @@ router.get('/kpis', authenticate, async (req, res) => {
     const weekStart = monday.toISOString().split('T')[0];
     const weekEnd = todayStr;
     
-    // Mois - utiliser le mois sélectionné ou le mois en cours
+    // Mois - utiliser le mois sélectionné ou le mois en cours (plafonné à aujourd'hui si mois en cours)
     let monthStart, monthEnd;
     if (month && /^\d{4}-\d{2}$/.test(month)) {
       const [year, monthNum] = month.split('-').map(Number);
@@ -1658,6 +1693,7 @@ router.get('/kpis', authenticate, async (req, res) => {
       monthStart = getFirstOfMonthLocal();
       monthEnd = todayStr;
     }
+    monthEnd = capMonthEndToToday(month, monthEnd);
 
     const kpiData = {
       jour: {},
@@ -1692,13 +1728,8 @@ router.get('/kpis', authenticate, async (req, res) => {
         previousStart = prevMonday.toISOString().split('T')[0];
         previousEnd = prevSunday.toISOString().split('T')[0];
       } else {
-        // Mois précédent
-        const prevMonth = new Date(monthStart);
-        prevMonth.setMonth(prevMonth.getMonth() - 1);
-        const prevMonthStart = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), 1).toISOString().split('T')[0];
-        const prevMonthEnd = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0).toISOString().split('T')[0];
-        previousStart = prevMonthStart;
-        previousEnd = prevMonthEnd;
+        // Mois précédent : même plage jour pour jour (ex. 1–18 mai → 1–18 avril)
+        ({ previousStart, previousEnd } = getPreviousMonthComparisonRange(period.start, period.end));
       }
 
       const previousStartDate = `${previousStart} 00:00:00`;
@@ -1956,7 +1987,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
     const weekStart = monday.toISOString().split('T')[0];
     const weekEnd = todayStr;
     
-    // Mois - utiliser le mois sélectionné ou le mois en cours
+    // Mois - utiliser le mois sélectionné ou le mois en cours (plafonné à aujourd'hui si mois en cours)
     let monthStart, monthEnd;
     if (month && /^\d{4}-\d{2}$/.test(month)) {
       const [year, monthNum] = month.split('-').map(Number);
@@ -1967,6 +1998,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
       monthStart = getFirstOfMonthLocal();
       monthEnd = todayStr;
     }
+    monthEnd = capMonthEndToToday(month, monthEnd);
 
     const kpiData = {
       jour: {},
@@ -2003,12 +2035,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         previousStart = prevMonday.toISOString().split('T')[0];
         previousEnd = prevSunday.toISOString().split('T')[0];
       } else {
-        const prevMonth = new Date(monthStart);
-        prevMonth.setMonth(prevMonth.getMonth() - 1);
-        const prevMonthStart = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), 1).toISOString().split('T')[0];
-        const prevMonthEnd = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0).toISOString().split('T')[0];
-        previousStart = prevMonthStart;
-        previousEnd = prevMonthEnd;
+        ({ previousStart, previousEnd } = getPreviousMonthComparisonRange(period.start, period.end));
       }
 
       const previousStartDate = `${previousStart} 00:00:00`;
@@ -2726,6 +2753,7 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
       monthStart = getFirstOfMonthLocal();
       monthEnd = todayStr;
     }
+    monthEnd = capMonthEndToToday(month, monthEnd);
 
     const kpiData = {
       jour: {},
@@ -2886,14 +2914,7 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
         previousStart = prevMonday.toISOString().split('T')[0];
         previousEnd = prevSunday.toISOString().split('T')[0];
       } else {
-        const prevMonth = new Date(monthStart);
-        prevMonth.setMonth(prevMonth.getMonth() - 1);
-        previousStart = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), 1)
-          .toISOString()
-          .split('T')[0];
-        previousEnd = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0)
-          .toISOString()
-          .split('T')[0];
+        ({ previousStart, previousEnd } = getPreviousMonthComparisonRange(period.start, period.end));
       }
 
       const payload = await runPorteOuverteForPeriod(
