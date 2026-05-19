@@ -273,13 +273,25 @@ const Fiches = () => {
       return response.data;
     },
     {
-      onSuccess: () => {
+      onSuccess: (data) => {
         queryClient.invalidateQueries('fiches');
         if (isAgentQualif) {
           queryClient.invalidateQueries(['fiches-stats-mois']);
         }
         setShowCreateModal(false);
-        toast.success('Fiche créée avec succès');
+        if (data?.data?.autoApproved) {
+          toast.success(
+            data.message ||
+              `Fiche acceptée automatiquement (${data.data.regleLibelle || 'règle'})`
+          );
+        } else if (data?.data?.demandeCreated) {
+          toast.info(
+            data.message ||
+              'Une demande d\'insertion a été créée (doublon téléphone).'
+          );
+        } else {
+          toast.success('Fiche créée avec succès');
+        }
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de la création de la fiche');

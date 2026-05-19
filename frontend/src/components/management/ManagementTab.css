@@ -625,3 +625,48 @@
   opacity: 0.35;
 }
 
+.regles-autorisation-tab .tab-description {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #555;
+  max-width: 720px;
+}
+
+.regles-autorisation-form-panel {
+  max-width: 640px;
+}
+
+.regles-autorisation-tab .centres-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.regles-autorisation-tab .centre-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.regles-autorisation-tab .badge-success {
+  color: #28a745;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.regles-autorisation-tab .badge-muted {
+  color: #6c757d;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+

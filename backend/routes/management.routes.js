@@ -2672,4 +2672,183 @@ router.put('/global-settings/phone-url-search-enabled', authenticate, checkPermi
   }
 });
 
+// =====================================================
+// RÈGLES D'AUTORISATION (doublons fiches)
+// =====================================================
+
+async function loadReglesAutorisationWithCentres() {
+  const rules = await query(
+    `SELECT * FROM regles_autorisation ORDER BY priorite DESC, id ASC`
+  );
+  let centreRows = [];
+  try {
+    centreRows = await query(
+      `SELECT rac.id_regle, rac.id_centre, c.titre AS centre_titre
+       FROM regles_autorisation_centres rac
+       LEFT JOIN centres c ON c.id = rac.id_centre`
+    );
+  } catch (e) {
+    if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
+  }
+  const byRule = {};
+  for (const row of centreRows) {
+    if (!byRule[row.id_regle]) byRule[row.id_regle] = [];
+    byRule[row.id_regle].push({
+      id_centre: row.id_centre,
+      centre_titre: row.centre_titre,
+    });
+  }
+  return (rules || []).map((r) => ({
+    ...r,
+    centres: byRule[r.id] || [],
+    centre_ids: (byRule[r.id] || []).map((c) => c.id_centre),
+  }));
+}
+
+async function syncRegleAutorisationCentres(idRegle, centreIds) {
+  await query('DELETE FROM regles_autorisation_centres WHERE id_regle = ?', [idRegle]);
+  const ids = Array.isArray(centreIds)
+    ? [...new Set(centreIds.map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n) && n > 0))]
+    : [];
+  for (const idCentre of ids) {
+    await query(
+      'INSERT INTO regles_autorisation_centres (id_regle, id_centre) VALUES (?, ?)',
+      [idRegle, idCentre]
+    );
+  }
+}
+
+router.get('/regles-autorisation', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const data = await loadReglesAutorisationWithCentres();
+    res.json({ success: true, data });
+  } catch (error) {
+    if (error.code === 'ER_NO_SUCH_TABLE') {
+      return res.json({ success: true, data: [] });
+    }
+    console.error('Erreur regles-autorisation GET:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+router.post('/regles-autorisation', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const {
+      libelle,
+      actif = 1,
+      id_etat_final,
+      date_insert_debut,
+      date_insert_fin,
+      date_appel_debut,
+      date_appel_fin,
+      priorite = 0,
+      centre_ids,
+    } = req.body;
+
+    if (!libelle || !String(libelle).trim()) {
+      return res.status(400).json({ success: false, message: 'Le libellé est requis' });
+    }
+
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const etatVal =
+      id_etat_final != null && id_etat_final !== '' ? parseInt(id_etat_final, 10) : null;
+
+    const result = await query(
+      `INSERT INTO regles_autorisation (
+        libelle, actif, id_etat_final,
+        date_insert_debut, date_insert_fin, date_appel_debut, date_appel_fin,
+        priorite, date_creation, date_modif_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        String(libelle).trim(),
+        actif ? 1 : 0,
+        Number.isFinite(etatVal) ? etatVal : null,
+        date_insert_debut || null,
+        date_insert_fin || null,
+        date_appel_debut || null,
+        date_appel_fin || null,
+        parseInt(priorite, 10) || 0,
+        now,
+        now,
+      ]
+    );
+
+    await syncRegleAutorisationCentres(result.insertId, centre_ids);
+    res.status(201).json({
+      success: true,
+      message: 'Règle créée avec succès',
+      data: { id: result.insertId },
+    });
+  } catch (error) {
+    console.error('Erreur regles-autorisation POST:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la création' });
+  }
+});
+
+router.put('/regles-autorisation/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      libelle,
+      actif,
+      id_etat_final,
+      date_insert_debut,
+      date_insert_fin,
+      date_appel_debut,
+      date_appel_fin,
+      priorite,
+      centre_ids,
+    } = req.body;
+
+    if (!libelle || !String(libelle).trim()) {
+      return res.status(400).json({ success: false, message: 'Le libellé est requis' });
+    }
+
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const etatVal =
+      id_etat_final != null && id_etat_final !== '' ? parseInt(id_etat_final, 10) : null;
+
+    await query(
+      `UPDATE regles_autorisation SET
+        libelle = ?, actif = ?, id_etat_final = ?,
+        date_insert_debut = ?, date_insert_fin = ?,
+        date_appel_debut = ?, date_appel_fin = ?,
+        priorite = ?, date_modif_time = ?
+       WHERE id = ?`,
+      [
+        String(libelle).trim(),
+        actif ? 1 : 0,
+        Number.isFinite(etatVal) ? etatVal : null,
+        date_insert_debut || null,
+        date_insert_fin || null,
+        date_appel_debut || null,
+        date_appel_fin || null,
+        priorite != null ? parseInt(priorite, 10) || 0 : 0,
+        now,
+        id,
+      ]
+    );
+
+    if (centre_ids !== undefined) {
+      await syncRegleAutorisationCentres(id, centre_ids);
+    }
+
+    res.json({ success: true, message: 'Règle mise à jour avec succès' });
+  } catch (error) {
+    console.error('Erreur regles-autorisation PUT:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la mise à jour' });
+  }
+});
+
+router.delete('/regles-autorisation/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query('DELETE FROM regles_autorisation WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Règle supprimée avec succès' });
+  } catch (error) {
+    console.error('Erreur regles-autorisation DELETE:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la suppression' });
+  }
+});
+
 module.exports = router;

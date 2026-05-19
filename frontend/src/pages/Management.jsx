@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave, FaFileExport, FaPhone, FaLock } from 'react-icons/fa';
+import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave, FaFileExport, FaPhone, FaLock, FaShieldAlt } from 'react-icons/fa';
+import ReglesAutorisationTab from '../components/management/ReglesAutorisationTab';
 import CentresTab from '../components/management/CentresTab';
 import FinancementTab from '../components/management/FinancementTab';
 import UtilisateursTab from '../components/management/UtilisateursTab';
@@ -53,6 +54,7 @@ const Management = () => {
     { id: 'installateurs', label: 'Installateurs', icon: FaTools },
     { id: 'fournisseurs-sms', label: 'Fournisseurs SMS', icon: FaSms },
     { id: 'sms-categories', label: 'Catégories SMS', icon: FaEnvelope },
+    { id: 'regles-autorisation', label: 'Règles autorisation', icon: FaShieldAlt },
     { id: 'workflows', label: 'Workflows', icon: FaProjectDiagram },
     { id: 'fiches-extraction', label: 'Extraction fiches', icon: FaFileExport },
     { id: 'fiches-hash-tel', label: 'Hash depuis tel', icon: FaPhone },
@@ -97,6 +99,8 @@ const Management = () => {
         return <FournisseursSMSTab />;
       case 'sms-categories':
         return <SMSCategoriesTab />;
+      case 'regles-autorisation':
+        return <ReglesAutorisationTab />;
       case 'workflows':
         return <WorkflowsTab />;
       case 'fiches-extraction':

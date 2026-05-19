@@ -14,6 +14,8 @@ const {
   insertFicheKoRecord,
   deleteFicheKoRecordsByFicheId,
 } = require('../utils/fichesKo');
+const { findMatchingAutorisationRule } = require('../utils/reglesAutorisation');
+const { approveInsertionFromDonnees } = require('../utils/demandeInsertionApprove');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -3372,130 +3374,29 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
     // Si approuvée, archiver la fiche existante et insérer la nouvelle fiche
     if (statut === 'APPROUVEE') {
       try {
-        // Archiver la fiche existante
-        await query(
-          `UPDATE fiches SET archive = 1, date_modif_time = ? WHERE id = ?`,
-          [now, demande.id_fiche_existante]
-        );
-        
         const donneesFiche = JSON.parse(demande.donnees_fiche);
-        
-        // Normaliser le téléphone
-        if (donneesFiche.tel && !donneesFiche.tel.startsWith('0')) {
-          donneesFiche.tel = '0' + donneesFiche.tel;
-        }
-        if (!donneesFiche.gsm1 || donneesFiche.gsm1 === '0') {
-          donneesFiche.gsm1 = donneesFiche.tel;
-        }
-        if (!donneesFiche.gsm2 || donneesFiche.gsm2 === '0') {
-          donneesFiche.gsm2 = donneesFiche.tel;
-        }
-        
-        // Ajouter les champs par défaut
-        donneesFiche.date_insert_time = now;
-        donneesFiche.date_modif_time = now;
-        donneesFiche.date_insert = Math.floor(Date.now() / 1000);
-        if (!donneesFiche.id_agent) {
-          donneesFiche.id_agent = demande.id_agent;
-        }
-        donneesFiche.active = 1;
-        donneesFiche.archive = 0;
-        donneesFiche.ko = 0;
-        donneesFiche.hc = 0;
-        donneesFiche.valider = 0;
-        if (!donneesFiche.id_etat_final) {
-          donneesFiche.id_etat_final = 1;
-        }
-        if (!donneesFiche.id_centre && req.user.centre) {
-          donneesFiche.id_centre = req.user.centre;
-        }
-        
-        // Liste des colonnes valides
-        const validColumns = [
-          'civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville', 'etude',
-          'consommation_chauffage', 'surface_habitable', 'annee_systeme_chauffage', 'surface_chauffee',
-          'proprietaire_maison', 'nb_pieces', 'nb_pans', 'age_maison', 'orientation_toiture', 'produit',
-          'site_classe', 'zones_ombres',
-          'nb_chemines', 'mode_chauffage', 'complement_chauffage', 'consommation_electricite', 'age_mr', 'age_madame',
-          'revenu_foyer', 'credit_foyer', 'situation_conjugale', 'entretien', 'nb_enfants', 'profession_mr',
-          'profession_madame', 'type_contrat_mr', 'type_contrat_madame', 'commentaire', 'id_agent', 'id_centre', 'id_insert', 'id_confirmateur',
-          'id_confirmateur_2', 'id_confirmateur_3', 'id_qualite', 'id_qualif', 'id_commercial',
-          'id_commercial_2', 'id_etat_final', 'id_sous_etat', 'date_appel', 'date_insert', 'date_insert_time',
-          'date_audit', 'date_confirmation', 'date_qualif', 'date_rdv', 'date_rdv_time',
-          'date_affect', 'date_sign', 'date_sign_time', 'date_modif_time', 'archive', 'ko', 'hc',
-          'active', 'valider', 'conf_commentaire_produit', 'conf_consommations',
-          'conf_profession_monsieur', 'conf_profession_madame', 'conf_presence_couple',
-          'conf_produit', 'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
-'conf_consommation_electricite', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
-      'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
-      'conf_type_contrat_mr', 'conf_type_contrat_madame',
-      'cq_etat', 'cq_dossier',
-      'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
-          'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
-          'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
-          'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'pseudo'
-        ];
-        
-        // Filtrer les colonnes valides
-        const fields = [];
-        const values = [];
-        const placeholders = [];
-        
-        for (const [key, value] of Object.entries(donneesFiche)) {
-          if (validColumns.includes(key) && value !== undefined && value !== null && value !== '') {
-            fields.push(key);
-            values.push(value);
-            placeholders.push('?');
-          }
-        }
-        
-        if (fields.length === 0) {
-          throw new Error('Aucun champ valide à insérer');
-        }
-        
-        const sql = `INSERT INTO fiches (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`;
-        const result = await query(sql, values);
-        const insertId = result.insertId;
-        
-        // Calculer et stocker le hash
-        let nouvelleFicheHash = null;
-        if (insertId) {
-          nouvelleFicheHash = encodeFicheId(insertId);
-          await query('UPDATE fiches SET hash = ? WHERE id = ?', [nouvelleFicheHash, insertId]);
-        }
-        
-        // Créer l'entrée dans l'historique + champs conf_* si état 7
         const histoConf = getHistoConfirmateur(req, null);
-        const histoSousEtat = donneesFiche.id_sous_etat != null ? donneesFiche.id_sous_etat : null;
-        const histoEtatId = donneesFiche.id_etat_final || 1;
-        const isEtat7 = parseInt(histoEtatId) === 7;
-        const { cols: confCols, vals: confVals } = isEtat7 ? getConfFieldsForHisto(donneesFiche, {}) : { cols: [], vals: [] };
-        let histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
-        const dateRdvHisto = donneesFiche.date_rdv_time || null;
-        let histoValues = [insertId, histoEtatId, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
-        if (Object.prototype.hasOwnProperty.call(donneesFiche, 'complement_chauffage')) {
-          histoCols.push('complement_chauffage');
-          histoValues.push(donneesFiche.complement_chauffage === '' || donneesFiche.complement_chauffage == null ? null : donneesFiche.complement_chauffage);
-        }
-        const histoPlaceholders = histoCols.map(() => '?').join(', ');
-        await query(
-          `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
-          histoValues
-        );
-        
-        // Notifications statiques supprimées : déclenchement du workflow dédié
-        // (les anciens INSERT manuels dans `notifications` ont été remplacés par le trigger `demande_insertion_approved`).
+        const { insertId, hash: nouvelleFicheHash, donneesFiche: donneesApres } =
+          await approveInsertionFromDonnees({
+            donneesFiche,
+            existingFicheId: demande.id_fiche_existante,
+            id_agent: demande.id_agent,
+            id_centre_fallback: req.user.centre || null,
+            histoConfirmateurId: histoConf,
+            now,
+          });
+
         executeWorkflow('demande_insertion_approved', {
           user: req.user,
           fiche: {
             id: insertId,
             hash: nouvelleFicheHash,
-            nom: donneesFiche.nom || null,
-            prenom: donneesFiche.prenom || null,
-            tel: donneesFiche.tel || null,
-            id_agent: donneesFiche.id_agent || demande.id_agent || null,
-            id_centre: donneesFiche.id_centre || null,
-            id_etat_final: donneesFiche.id_etat_final || null,
+            nom: donneesApres.nom || null,
+            prenom: donneesApres.prenom || null,
+            tel: donneesApres.tel || null,
+            id_agent: donneesApres.id_agent || demande.id_agent || null,
+            id_centre: donneesApres.id_centre || null,
+            id_etat_final: donneesApres.id_etat_final || null,
           },
           demande_insertion: {
             id: parseInt(id, 10),
@@ -4629,7 +4530,9 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       const placeholders = allVariations.map(() => '?').join(',');
       
       existingFiche = await queryOne(
-        `SELECT id, date_insert_time, date_modif_time FROM fiches 
+        `SELECT id, id_etat_final, id_centre, date_insert_time, date_appel, date_appel_time,
+                date_modif_time, nom, prenom, tel, hash
+         FROM fiches 
          WHERE (
            tel IN (${placeholders})
            OR gsm1 IN (${placeholders})
@@ -4641,9 +4544,86 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       );
     }
     
-    // Si une fiche existante est trouvée, créer une demande d'insertion (plusieurs demandes possibles pour le même numéro)
+    // Si une fiche existante est trouvée, vérifier les règles d'autorisation automatique
     if (existingFiche) {
       const agentId = ficheData.id_agent || req.user.id;
+      const matchedRule = await findMatchingAutorisationRule(existingFiche);
+
+      if (matchedRule) {
+        const nowAuto = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const commentaireAuto = `Acceptation automatique — règle #${matchedRule.id} : ${matchedRule.libelle}`;
+
+        try {
+          const { insertId, hash, donneesFiche: donneesApres } = await approveInsertionFromDonnees({
+            donneesFiche: ficheData,
+            existingFicheId: existingFiche.id,
+            id_agent: agentId,
+            id_centre_fallback: req.user.centre || null,
+            histoConfirmateurId: req.user.id,
+            now: nowAuto,
+          });
+
+          await query(
+            `INSERT INTO demandes_insertion 
+             (id_agent, id_fiche_existante, donnees_fiche, date_demande, statut, date_traitement, id_traitant, commentaire)
+             VALUES (?, ?, ?, ?, 'APPROUVEE', ?, NULL, ?)`,
+            [
+              agentId,
+              existingFiche.id,
+              JSON.stringify(ficheData),
+              nowAuto,
+              nowAuto,
+              commentaireAuto,
+            ]
+          );
+
+          executeWorkflow('demande_insertion_approved', {
+            user: req.user,
+            fiche: {
+              id: insertId,
+              hash,
+              nom: donneesApres.nom || null,
+              prenom: donneesApres.prenom || null,
+              tel: donneesApres.tel || null,
+              id_agent: donneesApres.id_agent || agentId,
+              id_centre: donneesApres.id_centre || null,
+              id_etat_final: donneesApres.id_etat_final || null,
+            },
+            demande_insertion: {
+              id_fiche_existante: existingFiche.id,
+              id_nouvelle_fiche: insertId,
+              hash_nouvelle_fiche: hash,
+              id_agent: agentId,
+              commentaire: commentaireAuto,
+              auto_regle_id: matchedRule.id,
+              auto_regle_libelle: matchedRule.libelle,
+              date_traitement: nowAuto,
+            },
+          }).catch((wfError) => {
+            console.error('[WORKFLOW] demande_insertion_approved (auto):', wfError);
+          });
+
+          return res.status(201).json({
+            success: true,
+            message: `Fiche acceptée automatiquement (${matchedRule.libelle}).`,
+            data: {
+              id: insertId,
+              hash,
+              autoApproved: true,
+              regleId: matchedRule.id,
+              regleLibelle: matchedRule.libelle,
+              existingFicheId: existingFiche.id,
+            },
+          });
+        } catch (autoErr) {
+          console.error('Erreur autorisation automatique:', autoErr);
+          return res.status(500).json({
+            success: false,
+            message: 'Erreur lors de l\'acceptation automatique de la fiche',
+            error: autoErr.message,
+          });
+        }
+      }
       
       // Récupérer les informations de l'agent pour le message
       const agentInfo = await queryOne(
