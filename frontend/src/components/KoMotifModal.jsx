@@ -1,6 +1,9 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { FaBan, FaTimes } from 'react-icons/fa';
 import { KO_MOTIFS } from '../constants/koMotifs';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import './KoMotifModal.css';
 
 /**
  * Modal de passage en KO : motif obligatoire (liste statique), commentaire complémentaire optionnel.
@@ -17,10 +20,12 @@ const KoMotifModal = ({
   onSubmit,
   onClose,
 }) => {
+  useModalScrollLock(isOpen);
+
   if (!isOpen) return null;
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
+  const modalContent = (
+    <div className="modal-overlay ko-motif-modal-overlay" onClick={onClose}>
       <div className="modal-content ko-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3><FaBan /> {title}</h3>
@@ -74,6 +79,8 @@ const KoMotifModal = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default KoMotifModal;

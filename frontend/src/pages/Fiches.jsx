@@ -1206,16 +1206,20 @@ const Fiches = () => {
                               )}
                               {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 11 || user?.fonction === 12 || user?.fonction === 13) && (
                                 <button
+                                  type="button"
                                   className={`btn-ko ${fiche.ko ? 'active' : ''}`}
-                                  onClick={() => {
-                                    if (!fiche.hash) return;
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!fiche.hash) {
+                                      toast.error('Identifiant fiche manquant');
+                                      return;
+                                    }
                                     if (fiche.ko) {
                                       if (window.confirm('Retirer le KO de cette fiche ?')) {
                                         koMutation.mutate({ id: fiche.hash, ko: false });
                                       }
                                       return;
                                     }
-                                    if (!window.confirm('Mettre cette fiche en KO ?')) return;
                                     setKoModal({
                                       isOpen: true,
                                       ficheHash: fiche.hash,
