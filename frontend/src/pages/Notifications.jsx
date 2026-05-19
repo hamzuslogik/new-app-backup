@@ -7,13 +7,18 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
-import { getNotificationClickPath } from '../utils/notificationNavigation';
+import {
+  getNotificationClickPath,
+  navigateFromNotification,
+} from '../utils/notificationNavigation';
+import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import './Notifications.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const Notifications = () => {
   useForceDesktopViewport('notifications-page');
   const navigate = useNavigate();
+  const { openFicheDetail } = useFicheDetailModal();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'
   const notificationsListRef = useRef(null);
@@ -151,31 +156,16 @@ const Notifications = () => {
     if (notification.lu === 0) {
       markAsReadMutation.mutate(notification.id);
     }
-    const path = getNotificationClickPath(notification);
-    if (path) {
-      navigate(path);
-      return;
-    }
-    if (notification.fiche_id && notification.hash) {
-      navigate(`/fiches/${notification.hash}`);
-    }
+    navigateFromNotification(notification, { navigate, openFicheDetail });
   };
 
   const handleCardClick = (e, notification) => {
     if (e.target.closest('button')) return;
-    const path = getNotificationClickPath(notification);
-    if (path) {
+    const handled = navigateFromNotification(notification, { navigate, openFicheDetail });
+    if (handled) {
       if (notification.lu === 0) {
         markAsReadMutation.mutate(notification.id);
       }
-      navigate(path);
-      return;
-    }
-    if (notification.fiche_id && notification.hash) {
-      if (notification.lu === 0) {
-        markAsReadMutation.mutate(notification.id);
-      }
-      navigate(`/fiches/${notification.hash}`);
       return;
     }
     if (notification.lu === 0) {

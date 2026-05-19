@@ -8,7 +8,8 @@ import api from '../config/api';
 import useLocalStorage from '../hooks/useLocalStorage';
 import useUserHomePage from '../hooks/useUserHomePage';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
-import { getNotificationClickPath } from '../utils/notificationNavigation';
+import { navigateFromNotification } from '../utils/notificationNavigation';
+import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import './Header.css';
 
 const Header = () => {
@@ -17,6 +18,7 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const homePage = useUserHomePage();
+  const { openFicheDetail } = useFicheDetailModal();
 
   /** Sur /dashboard sans query : même effet que le logo sidebar — RDV du jour (Dashboard.jsx). */
   const goHomePage = (e) => {
@@ -168,23 +170,15 @@ const Header = () => {
     navigate('/login');
   };
 
-  const navigateFromNotificationItem = (notification) => {
+  const handleNavigateFromNotificationItem = (notification) => {
     if (notification.lu === 0) {
       markAsReadMutation.mutate(notification.id);
     }
-    const path = getNotificationClickPath(notification);
-    if (path) {
-      navigate(path);
-      setShowNotifications(false);
-      return;
-    }
-    if (notification.hash && notification.fiche_id) {
-      navigate(`/fiches/${notification.hash}`);
-      setShowNotifications(false);
-      return;
-    }
+    const handled = navigateFromNotification(notification, { navigate, openFicheDetail });
     setShowNotifications(false);
-    navigate('/notifications');
+    if (!handled) {
+      navigate('/notifications');
+    }
   };
 
   const notificationsAll = notificationsData || [];
@@ -391,7 +385,7 @@ const Header = () => {
                           onClick={(e) => {
                             if (e.target.closest('button')) return;
                             if (canAction) return;
-                            navigateFromNotificationItem(notification);
+                            handleNavigateFromNotificationItem(notification);
                           }}
                           style={{ cursor: 'pointer' }}
                         >
