@@ -2676,6 +2676,7 @@ router.put('/global-settings/phone-url-search-enabled', authenticate, checkPermi
 // RÈGLES D'AUTORISATION (doublons fiches)
 // =====================================================
 const { parseDateCritereFields } = require('../utils/reglesAutorisation');
+const { ensureReglesAutorisationSchema } = require('../utils/ensureReglesAutorisationSchema');
 
 async function loadReglesAutorisationWithCentres() {
   const rules = await query(
@@ -2721,6 +2722,7 @@ async function syncRegleAutorisationCentres(idRegle, centreIds) {
 
 router.get('/regles-autorisation', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
+    await ensureReglesAutorisationSchema();
     const data = await loadReglesAutorisationWithCentres();
     res.json({ success: true, data });
   } catch (error) {
@@ -2734,6 +2736,15 @@ router.get('/regles-autorisation', authenticate, checkPermission(1, 2, 7, 11), a
 
 router.post('/regles-autorisation', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
+    const schemaOk = await ensureReglesAutorisationSchema();
+    if (!schemaOk) {
+      return res.status(503).json({
+        success: false,
+        message:
+          'Table regles_autorisation absente. Exécutez backend/scripts/create-regles-autorisation-table.sql sur la base.',
+      });
+    }
+
     const {
       libelle,
       actif = 1,
@@ -2796,6 +2807,7 @@ router.post('/regles-autorisation', authenticate, checkPermission(1, 2, 7, 11), 
 
 router.put('/regles-autorisation/:id', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
+    await ensureReglesAutorisationSchema();
     const { id } = req.params;
     const {
       libelle,

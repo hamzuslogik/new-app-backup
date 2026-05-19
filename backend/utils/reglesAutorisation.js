@@ -1,4 +1,5 @@
 const { query } = require('../config/database');
+const { ensureReglesAutorisationSchema } = require('./ensureReglesAutorisationSchema');
 
 const VALID_OPERATEURS = ['<', '>', '<=', '>='];
 const VALID_UNITES = ['jour', 'mois', 'annee'];
@@ -158,6 +159,8 @@ function ruleMatchesFiche(rule, centreIds, existingFiche) {
 }
 
 async function findMatchingAutorisationRule(existingFiche) {
+  await ensureReglesAutorisationSchema();
+
   let rules;
   try {
     rules = await query(
