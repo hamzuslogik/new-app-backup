@@ -13,6 +13,7 @@ import { getEffectiveEtatColor, getEffectiveEtatTitle } from '../utils/etatSigne
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
+import KoMotifModal from '../components/KoMotifModal';
 import './Fiches.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -28,6 +29,7 @@ const Fiches = () => {
   const isBackoffice = user?.fonction === 11;
   const [showFilters, setShowFilters] = useState(!isAgentQualif); // Masquer pour agent qualif
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [koModal, setKoModal] = useState({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' });
   const [editingFiche, setEditingFiche] = useState(null);
   const [quickSearch, setQuickSearch] = useState(''); // Recherche rapide
   const debouncedQuickSearch = useDebouncedValue(quickSearch, 250);
@@ -329,10 +331,11 @@ const Fiches = () => {
 
   // Mutation pour mettre une fiche en KO
   const koMutation = useMutation(
-    async ({ id, ko, commentaire_qualite }) => {
+    async ({ id, ko, motif_ko, commentaire_complement }) => {
       const body = { ko };
-      if (ko && commentaire_qualite != null && String(commentaire_qualite).trim() !== '') {
-        body.commentaire_qualite = String(commentaire_qualite).trim();
+      if (ko) {
+        body.motif_ko = motif_ko;
+        if (commentaire_complement) body.commentaire_complement = commentaire_complement;
       }
       const response = await api.patch(`/fiches/${id}/ko`, body);
       return response.data;
@@ -341,6 +344,7 @@ const Fiches = () => {
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries('fiches');
         toast.success(variables.ko ? 'Fiche mise en KO avec succès' : 'Fiche retirée du KO avec succès');
+        setKoModal({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' });
         if (isAgentQualif) {
           queryClient.invalidateQueries(['fiches-stats-mois']);
         }
@@ -1212,14 +1216,12 @@ const Fiches = () => {
                                       return;
                                     }
                                     if (!window.confirm('Mettre cette fiche en KO ?')) return;
-                                    const commentaire = window.prompt('Commentaire KO (obligatoire) :', '');
-                                    if (commentaire === null) return;
-                                    const c = String(commentaire).trim();
-                                    if (!c) {
-                                      toast.error('Le commentaire KO est obligatoire.');
-                                      return;
-                                    }
-                                    koMutation.mutate({ id: fiche.hash, ko: true, commentaire_qualite: c });
+                                    setKoModal({
+                                      isOpen: true,
+                                      ficheHash: fiche.hash,
+                                      motifKo: '',
+                                      commentaireComplement: '',
+                                    });
                                   }}
                                   title={fiche.ko ? 'Retirer KO' : 'Mettre en KO'}
                                 >
@@ -1313,6 +1315,26 @@ const Fiches = () => {
           isLoading={updateMutation.isLoading}
         />
       )}
+      <KoMotifModal
+        isOpen={koModal.isOpen}
+        title="Mettre en KO"
+        submitLabel={koMutation.isLoading ? 'Enregistrement…' : 'Confirmer KO'}
+        isLoading={koMutation.isLoading}
+        motifKo={koModal.motifKo}
+        commentaireComplement={koModal.commentaireComplement}
+        onMotifChange={(v) => setKoModal((m) => ({ ...m, motifKo: v }))}
+        onCommentaireChange={(v) => setKoModal((m) => ({ ...m, commentaireComplement: v }))}
+        onSubmit={() => {
+          if (!koModal.motifKo || !koModal.ficheHash) return;
+          koMutation.mutate({
+            id: koModal.ficheHash,
+            ko: true,
+            motif_ko: koModal.motifKo,
+            commentaire_complement: koModal.commentaireComplement,
+          });
+        }}
+        onClose={() => setKoModal({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' })}
+      />
       <ScrollToTopButton />
     </div>
   );

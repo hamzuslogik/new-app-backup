@@ -8,6 +8,11 @@ const { query, queryOne } = require('../config/database');
 const { logUserActivityEvent } = require('../utils/userActivitySession');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 const { syncAffectationRecord } = require('../utils/affectationSync');
+const {
+  buildCommentaireQualiteFromKo,
+  isValidKoMotif,
+  insertFicheKoRecord,
+} = require('../utils/fichesKo');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -4895,6 +4900,13 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
       });
     }
 
+    if (parseInt(id_etat_final, 10) === 54) {
+      return res.status(400).json({
+        success: false,
+        message: 'L\'état KO (54) n\'est pas un état final. Utilisez l\'action « Mettre en KO » avec un motif.',
+      });
+    }
+
     if (etat.groupe !== '0' && etat.groupe !== 0) {
       return res.status(400).json({
         success: false,
@@ -5156,16 +5168,42 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
       });
     }
     
-    // Récupérer le sous-état et le commentaire depuis le body
-    const { id_sous_etat, commentaire_ko } = req.body;
-    
-    // Vérifier que le sous-état est fourni
-    if (!id_sous_etat) {
+    const { motif_ko, commentaire_complement, id_sous_etat, commentaire_ko } = req.body;
+    const motifKo =
+      motif_ko != null && String(motif_ko).trim() !== ''
+        ? String(motif_ko).trim()
+        : id_sous_etat
+          ? null
+          : null;
+
+    if (!isValidKoMotif(motifKo) && id_sous_etat) {
+      const legacySe = await queryOne('SELECT titre FROM sous_etat WHERE id = ? AND id_etat = 54', [
+        parseInt(id_sous_etat, 10),
+      ]);
+      if (legacySe?.titre && isValidKoMotif(legacySe.titre)) {
+        req._legacyMotifKo = legacySe.titre;
+      }
+    }
+
+    const resolvedMotif = isValidKoMotif(motifKo)
+      ? motifKo
+      : req._legacyMotifKo || null;
+
+    if (!resolvedMotif) {
       return res.status(400).json({
         success: false,
-        message: 'Le sous-état KO est obligatoire'
+        message: 'Le motif KO est obligatoire',
       });
     }
+
+    const commentaireQualite = buildCommentaireQualiteFromKo(
+      resolvedMotif,
+      commentaire_complement != null
+        ? commentaire_complement
+        : commentaire_ko && !isValidKoMotif(commentaire_ko)
+          ? commentaire_ko
+          : ''
+    );
     
     const hasControleQualitePermission = await hasPermission(req.user.fonction, 'controle_qualite_view');
     if (!hasControleQualitePermission) {
@@ -5190,21 +5228,6 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
       });
     }
     
-    // Vérifier que le sous-état existe et appartient à l'état KO (id 54)
-    const sousEtat = await queryOne('SELECT id, titre, id_etat FROM sous_etat WHERE id = ?', [id_sous_etat]);
-    if (!sousEtat) {
-      return res.status(400).json({
-        success: false,
-        message: 'Sous-état non trouvé'
-      });
-    }
-    if (sousEtat.id_etat !== 54) {
-      return res.status(400).json({
-        success: false,
-        message: 'Le sous-état sélectionné n\'appartient pas à l\'état KO'
-      });
-    }
-    
     const etatEnAttente = await queryOne(
       'SELECT id, titre FROM etats WHERE id = 1 OR (titre = ? OR titre = ? OR titre = ?) LIMIT 1',
       ['EN-ATTENTE', 'En-Attente', 'EN ATTENTE']
@@ -5224,18 +5247,36 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
       await query('UPDATE fiches SET id_qualite = ? WHERE id = ?', [req.user.id, id]);
     }
     
-    // Mettre à jour la fiche avec l'état, le sous-état KO et le commentaire
     await query(
-      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = ?, ko = 1, commentaire_qualite = ?, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
-      [newEtatId, id_sous_etat, commentaire_ko || null, now, now, id]
+      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = NULL, ko = 1, commentaire_qualite = ?, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
+      [newEtatId, commentaireQualite, now, now, id]
     );
-    
+
+    const ficheInfosKo = await queryOne(
+      'SELECT id_agent, id_centre, date_insert_time FROM fiches WHERE id = ?',
+      [id]
+    );
+    await insertFicheKoRecord({
+      id_fiche: id,
+      motif_ko: resolvedMotif,
+      commentaire_qualite: commentaireQualite,
+      commentaire_complement:
+        commentaire_complement != null ? String(commentaire_complement).trim() : null,
+      id_qualite: req.user.id,
+      id_agent: ficheInfosKo?.id_agent ?? null,
+      id_centre: ficheInfosKo?.id_centre ?? null,
+      id_etat_final_avant: oldEtatId,
+      id_etat_final_apres: newEtatId,
+      source: 'validation_qualite',
+      date_ko: now,
+    });
+
     if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
       const histoConf = getHistoConfirmateur(req, fiche);
       const dateRdvHistoKo = fiche.date_rdv_time || null;
       await query(
         'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, newEtatId, histoConf, id_sous_etat, dateRdvHistoKo, now]
+        [id, newEtatId, histoConf, null, dateRdvHistoKo, now]
       );
       await logModification(
         id,
@@ -5249,22 +5290,20 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     
     // Logger les modifications
     await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'ko', null, 1);
-    if (oldSousEtatId !== id_sous_etat) {
-      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'id_sous_etat', oldSousEtatId, id_sous_etat);
+    if (oldSousEtatId) {
+      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'id_sous_etat', oldSousEtatId, null);
     }
-    if (commentaire_ko) {
-      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'commentaire_qualite', null, commentaire_ko);
+    if (commentaireQualite) {
+      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'commentaire_qualite', null, commentaireQualite);
     }
 
-    // Enregistrer l'audit dans controle_qualite
-    const ficheInfosKo = await queryOne('SELECT id_agent, id_centre, date_insert_time FROM fiches WHERE id = ?', [id]);
     if (ficheInfosKo) {
       await insertControleQualiteAudit({
         id_fiche: id,
         id_qualite: req.user.id,
         id_etat: newEtatId,
-        id_sous_etat: id_sous_etat,
-        commentaire: commentaire_ko || null,
+        id_sous_etat: null,
+        commentaire: commentaireQualite,
         ko: 1,
         hc: 0,
         id_etat_precedent: oldEtatId,
@@ -5284,13 +5323,12 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     }
     executeWorkflow('fiche_ko_created', {
       user: req.user,
-      fiche: ficheApresKo || { id, id_etat_final: newEtatId, id_sous_etat: id_sous_etat, ko: 1 },
+      fiche: ficheApresKo || { id, id_etat_final: newEtatId, ko: 1 },
       fiche_id: id,
       fiche_ko: {
         source: 'validation_qualite',
-        id_sous_etat: id_sous_etat,
-        sous_etat_titre: sousEtat.titre,
-        commentaire_ko: commentaire_ko || null
+        motif_ko: resolvedMotif,
+        commentaire_ko: commentaireQualite,
       }
     }).catch((wfError) => {
       console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (fiche_ko_created / validation qualité):', wfError);
@@ -5302,12 +5340,11 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
       data: {
         id,
         id_etat_final: newEtatId,
-        id_sous_etat: id_sous_etat,
-        sous_etat_titre: sousEtat.titre,
+        motif_ko: resolvedMotif,
         ko: 1,
         old_etat: oldEtatId,
         etat_titre: etatEnAttente.titre,
-        commentaire_ko: commentaire_ko || null
+        commentaire_qualite: commentaireQualite,
       }
     });
   } catch (error) {
@@ -6506,7 +6543,7 @@ router.patch('/:id/archive', authenticate, hashToIdMiddleware, async (req, res) 
 router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const { ko, commentaire_qualite } = req.body;
+    const { ko, motif_ko, commentaire_complement, commentaire_qualite } = req.body;
 
     // Vérifier que la fiche existe
     const fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
@@ -6530,20 +6567,39 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
     const oldKoVal = fiche.ko != null ? Number(fiche.ko) : 0;
     const newKoVal = ko ? 1 : 0;
     const oldCommentaireQualite = fiche.commentaire_qualite;
+    let resolvedMotif = null;
+    let cqApplied = null;
 
     if (newKoVal === 1 && oldKoVal !== 1) {
-      const cq =
-        commentaire_qualite != null ? String(commentaire_qualite).trim() : '';
-      if (!cq) {
+      resolvedMotif = isValidKoMotif(motif_ko) ? String(motif_ko).trim() : null;
+      if (!resolvedMotif && commentaire_qualite && isValidKoMotif(commentaire_qualite)) {
+        resolvedMotif = String(commentaire_qualite).trim();
+      }
+      if (!resolvedMotif) {
         return res.status(400).json({
           success: false,
-          message: 'Le commentaire KO est obligatoire pour mettre une fiche en KO.'
+          message: 'Le motif KO est obligatoire pour mettre une fiche en KO.',
         });
       }
+      cqApplied = buildCommentaireQualiteFromKo(resolvedMotif, commentaire_complement);
       await query(
         `UPDATE fiches SET ko = 1, commentaire_qualite = ?, date_modif_time = ? WHERE id = ?`,
-        [cq, now, id]
+        [cqApplied, now, id]
       );
+      await insertFicheKoRecord({
+        id_fiche: id,
+        motif_ko: resolvedMotif,
+        commentaire_qualite: cqApplied,
+        commentaire_complement:
+          commentaire_complement != null ? String(commentaire_complement).trim() : null,
+        id_qualite: req.user.id,
+        id_agent: fiche.id_agent ?? null,
+        id_centre: fiche.id_centre ?? null,
+        id_etat_final_avant: fiche.id_etat_final ?? null,
+        id_etat_final_apres: fiche.id_etat_final ?? null,
+        source: 'toggle_admin',
+        date_ko: now,
+      });
       if (oldKoVal !== newKoVal) {
         await logModification(
           id,
@@ -6560,7 +6616,7 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
         req.user.pseudo || 'Utilisateur',
         'commentaire_qualite',
         oldCommentaireQualite ?? null,
-        cq
+        cqApplied
       );
     } else {
       await query(
@@ -6581,9 +6637,8 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
 
     logUserActivityEvent(req.user.id, ko ? 'fiche_ko_active' : 'fiche_ko_retire', { id_fiche: Number(id) });
 
-    if (newKoVal === 1 && oldKoVal !== 1) {
-      const cqForWf =
-        commentaire_qualite != null ? String(commentaire_qualite).trim() : '';
+    if (newKoVal === 1 && oldKoVal !== 1 && resolvedMotif) {
+      const cqForWf = cqApplied || buildCommentaireQualiteFromKo(resolvedMotif, commentaire_complement);
       let ficheApresToggle = null;
       try {
         ficheApresToggle = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
@@ -6596,9 +6651,8 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
         fiche_id: parseInt(id, 10),
         fiche_ko: {
           source: 'toggle_admin',
-          id_sous_etat: null,
-          sous_etat_titre: null,
-          commentaire_ko: cqForWf || null
+          motif_ko: resolvedMotif,
+          commentaire_ko: cqForWf || null,
         }
       }).catch((wfError) => {
         console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (fiche_ko_created / toggle KO):', wfError);

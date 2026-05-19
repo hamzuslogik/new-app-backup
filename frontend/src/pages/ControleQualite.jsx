@@ -7,6 +7,7 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import RemarquesContent from '../components/RemarquesContent';
+import KoMotifModal from '../components/KoMotifModal';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import './ControleQualite.css';
@@ -60,8 +61,8 @@ const ControleQualite = () => {
   const [koModal, setKoModal] = useState({
     isOpen: false,
     ficheHash: null,
-    sousEtatId: '',
-    commentaire: ''
+    motifKo: '',
+    commentaireComplement: '',
   });
   
   // État pour le modal HC
@@ -117,12 +118,6 @@ const ControleQualite = () => {
   });
   const confirmateurs = confirmateursData || [];
   const showHistoConfirmateurDropdown = [1, 7, 13, 14].includes(Number(user?.fonction));
-
-  // Récupérer les sous-états pour l'état KO (id 54)
-  const { data: sousEtatsKoData } = useQuery('sous-etats-ko', async () => {
-    const res = await api.get(`/management/sous-etat/${ETAT_KO_ID}`);
-    return res.data.data || [];
-  });
 
   // Récupérer les sous-états pour l'état HC (id 55)
   const { data: sousEtatsHcData } = useQuery('sous-etats-hc', async () => {
@@ -212,10 +207,10 @@ const ControleQualite = () => {
 
   // Mutation pour valider en KO : En-Attente + ko = 1 (fiche utilisée mais non comptabilisée pour l'agent)
   const validateQualiteKoMutation = useMutation(
-    async ({ hash, id_sous_etat, commentaire_ko }) => {
+    async ({ hash, motif_ko, commentaire_complement }) => {
       const res = await api.put(`/fiches/${hash}/valider-qualite-ko`, {
-        id_sous_etat,
-        commentaire_ko
+        motif_ko,
+        commentaire_complement: commentaire_complement || null,
       });
       return res.data;
     },
@@ -225,7 +220,7 @@ const ControleQualite = () => {
         refetch();
         toast.success('Fiche validée (KO) : En-Attente, non comptabilisée pour l\'agent');
         // Fermer le modal
-        setKoModal({ isOpen: false, ficheHash: null, sousEtatId: '', commentaire: '' });
+        setKoModal({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' });
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de la validation KO');
@@ -324,11 +319,11 @@ const ControleQualite = () => {
     });
   };
 
-  // Quand on choisit KO ou HC dans la liste déroulante : ouvrir le modal au lieu de changer l'état directement
+  // Quand on choisit HC dans la liste : ouvrir le modal HC (le KO n'est pas un état final)
   const handleNouvelEtatSelect = (fiche, newEtatId) => {
     const id = newEtatId ? parseInt(newEtatId, 10) : null;
     if (id === ETAT_KO_ID) {
-      openKoModal(fiche);
+      toast.info('Utilisez « Mettre en KO » pour enregistrer un motif (ko = 1).');
       return;
     }
     if (id === ETAT_HC_ID) {
@@ -434,9 +429,9 @@ const ControleQualite = () => {
   const agents = agentsData || [];
   const etats = etatsData || [];
   const allEtats = allEtatsData || [];
-  const sousEtatsKo = sousEtatsKoData || [];
   const sousEtatsHc = sousEtatsHcData || [];
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(allEtats);
+  const etatsPhase0SansKo = etatsPhase0.filter((e) => Number(e.id) !== ETAT_KO_ID);
 
   // IDs des états pour lesquels tout agent qualité peut modifier (Debrief, À vérifier)
   const etatsQualiteOuverts = React.useMemo(() => {
@@ -470,25 +465,40 @@ const ControleQualite = () => {
     setKoModal({
       isOpen: true,
       ficheHash: fiche.hash,
-      sousEtatId: fiche.id_sous_etat ? String(fiche.id_sous_etat) : '',
-      commentaire: fiche.commentaire_qualite || ''
+      motifKo: '',
+      commentaireComplement: '',
     });
   };
 
   const closeKoModal = () => {
-    setKoModal({ isOpen: false, ficheHash: null, sousEtatId: '', commentaire: '' });
+    setKoModal({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' });
   };
 
   const handleKoModalSubmit = () => {
-    if (!koModal.sousEtatId) {
-      toast.warning('Veuillez sélectionner un sous-état KO');
+    if (!koModal.motifKo) {
+      toast.warning('Veuillez sélectionner un motif KO');
       return;
     }
     validateQualiteKoMutation.mutate({
       hash: koModal.ficheHash,
-      id_sous_etat: parseInt(koModal.sousEtatId),
-      commentaire_ko: koModal.commentaire
+      motif_ko: koModal.motifKo,
+      commentaire_complement: koModal.commentaireComplement,
     });
+  };
+
+  const openKoFromMenu = () => {
+    if (!contextMenu?.fiche) return;
+    const fiche = contextMenu.fiche;
+    closeContextMenu();
+    if (isFicheLockedForUser(fiche)) {
+      toast.warning(getLockMessage(fiche));
+      return;
+    }
+    if (fiche.ko === 1 || fiche.ko === '1') {
+      toast.info('Cette fiche est déjà en KO.');
+      return;
+    }
+    openKoModal(fiche);
   };
 
   // Fonctions pour gérer le modal HC
@@ -942,7 +952,7 @@ const ControleQualite = () => {
           <div className="cq-context-menu-etat-group">
             <span className="cq-context-menu-etat-label">Changer état</span>
             <div className="cq-context-submenu">
-              {etatsPhase0.map((etat) => (
+              {etatsPhase0SansKo.map((etat) => (
                 <button
                   key={etat.id}
                   type="button"
@@ -956,6 +966,19 @@ const ControleQualite = () => {
               ))}
             </div>
           </div>
+          <button
+            type="button"
+            className="cq-fiche-context-menu-item"
+            disabled={
+              validateQualiteKoMutation.isLoading ||
+              contextMenu.fiche.ko === 1 ||
+              contextMenu.fiche.ko === '1' ||
+              isFicheLockedForUser(contextMenu.fiche)
+            }
+            onClick={openKoFromMenu}
+          >
+            Mettre en KO
+          </button>
           <button
             type="button"
             className="cq-fiche-context-menu-item"
@@ -974,56 +997,18 @@ const ControleQualite = () => {
         </div>
       )}
 
-      {/* Modal KO */}
-      {koModal.isOpen && (
-        <div className="modal-overlay" onClick={closeKoModal}>
-          <div className="modal-content ko-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3><FaBan /> Validation KO</h3>
-              <button className="modal-close-btn" onClick={closeKoModal}>
-                <FaTimes />
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Sous-état KO <span className="required">*</span></label>
-                <select
-                  value={koModal.sousEtatId}
-                  onChange={(e) => setKoModal({ ...koModal, sousEtatId: e.target.value })}
-                  className="ko-sous-etat-select"
-                >
-                  <option value="">-- Sélectionner un sous-état --</option>
-                  {sousEtatsKo.map(se => (
-                    <option key={se.id} value={se.id}>{se.titre}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Commentaire</label>
-                <textarea
-                  value={koModal.commentaire}
-                  onChange={(e) => setKoModal({ ...koModal, commentaire: e.target.value })}
-                  className="ko-commentaire-textarea"
-                  placeholder="Commentaire sur la raison du KO..."
-                  rows={4}
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn-cancel" onClick={closeKoModal}>
-                Annuler
-              </button>
-              <button
-                className="btn-confirm-ko"
-                onClick={handleKoModalSubmit}
-                disabled={validateQualiteKoMutation.isLoading || !koModal.sousEtatId}
-              >
-                {validateQualiteKoMutation.isLoading ? 'Validation...' : 'Valider KO'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <KoMotifModal
+        isOpen={koModal.isOpen}
+        title="Validation KO"
+        submitLabel={validateQualiteKoMutation.isLoading ? 'Validation…' : 'Valider KO'}
+        isLoading={validateQualiteKoMutation.isLoading}
+        motifKo={koModal.motifKo}
+        commentaireComplement={koModal.commentaireComplement}
+        onMotifChange={(v) => setKoModal((m) => ({ ...m, motifKo: v }))}
+        onCommentaireChange={(v) => setKoModal((m) => ({ ...m, commentaireComplement: v }))}
+        onSubmit={handleKoModalSubmit}
+        onClose={closeKoModal}
+      />
 
       {/* Modal HC */}
       {hcModal.isOpen && (
