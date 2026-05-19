@@ -125,6 +125,20 @@ const TRIGGER_VARIABLES = {
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
+  completude_created: [
+    '{completude.id}', '{completude.id_fiche}', '{completude.motif}', '{completude.completes}',
+    '{completude.statut}', '{completude.id_created_by}', '{completude.created_by_pseudo}', '{completude.date_creation}',
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_confirmateur}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
+  completude_accepted: [
+    '{completude.id}', '{completude.id_fiche}', '{completude.motif}', '{completude.completes}',
+    '{completude.statut}', '{completude.id_created_by}', '{completude.created_by_pseudo}',
+    '{completude.id_traite_par}', '{completude.traite_par_pseudo}', '{completude.reponse_traitement}',
+    '{completude.date_creation}', '{completude.date_traitement}',
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_confirmateur}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
   alerte_ko_created: [
     '{alerte_ko.id}', '{alerte_ko.id_fiche}', '{alerte_ko.id_agent}', '{alerte_ko.id_qualite}', '{alerte_ko.type_alerte}',
     '{alerte_ko.num_alerte}', '{alerte_ko.date_alerte}', '{alerte_ko.commentaire}', '{alerte_ko.nom}', '{alerte_ko.prenom}', '{alerte_ko.tel}',
@@ -206,7 +220,9 @@ const DYNAMIC_RECIPIENT_OPTIONS = [
   { value: '{remarque.id_expediteur}', label: 'Expéditeur de la remarque ({remarque.id_expediteur})' },
   { value: '{alerte_ko.id_agent}', label: "Agent destinataire de l'alerte qualité / notification ({alerte_ko.id_agent})" },
   { value: '{decalage.expediteur}', label: 'Expéditeur du décalage ({decalage.expediteur})' },
-  { value: '{decalage.destination}', label: 'Confirmateur (destination du décalage) ({decalage.destination})' }
+  { value: '{decalage.destination}', label: 'Confirmateur (destination du décalage) ({decalage.destination})' },
+  { value: '{completude.id_created_by}', label: 'Créateur de la complétude ({completude.id_created_by})' },
+  { value: '{completude.id_traite_par}', label: 'Traitant de la complétude ({completude.id_traite_par})' }
 ];
 
 const WorkflowsTab = () => {
@@ -767,6 +783,8 @@ const WorkflowsTab = () => {
                         <option value="decalage_refused">Décalage refusé</option>
                         <option value="demande_decalage_annulee">Demande de décalage annulée</option>
                         <option value="remarque_created">Remarque créée</option>
+                        <option value="completude_created">Complétude créée</option>
+                        <option value="completude_accepted">Complétude acceptée</option>
                         <option value="alerte_ko_created">Alerte qualité (sans KO fiche ; aussi depuis Contrôle Qualité)</option>
                         <option value="alerte_controle_qualite_created">Alerte qualité — uniquement depuis Contrôle Qualité</option>
                         <option value="fiche_ko_created">Fiche mise en KO (ko = 1, validation qualité ou bascule KO)</option>

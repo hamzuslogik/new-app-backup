@@ -320,7 +320,7 @@ function doesWorkflowTriggerRowFire(trigger, triggerType, eventData) {
 
 /**
  * Exécute un workflow pour un événement donné
- * @param {string} triggerType - Type d'événement (fiche_created, etat_changed, remarque_created, alerte_ko_created, alerte_controle_qualite_created, fiche_ko_created, decalage_refused, demande_decalage_annulee, demande_insertion_refusee, etc.)
+ * @param {string} triggerType - Type d'événement (fiche_created, etat_changed, remarque_created, completude_created, completude_accepted, alerte_ko_created, alerte_controle_qualite_created, fiche_ko_created, decalage_refused, demande_decalage_annulee, demande_insertion_refusee, etc.)
  * @param {Object} eventData - Données de l'événement (fiche, user, etc.)
  * @returns {Promise<Array>} Liste des workflows exécutés
  */

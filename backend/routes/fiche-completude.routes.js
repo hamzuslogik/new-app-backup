@@ -3,6 +3,8 @@
  * Création : Qualité Confirmation (4).
  * Consultation / traitement : tous les confirmateurs (6), RE (14), RP (13).
  */
+const { executeWorkflow } = require('../services/workflow/workflow-executor');
+
 const FONCTION_QUALITE_CONFIRMATION = 4;
 const FONCTION_CONFIRMATEUR = 6;
 const FONCTION_RP_CONFIRMATION = 13;
@@ -175,6 +177,32 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
       'SELECT id, id_confirmateur FROM fiches WHERE id = ?',
       [idFiche]
     );
+  };
+
+  const loadFicheForWorkflow = async (idFiche) => {
+    try {
+      return await queryOne('SELECT * FROM fiches WHERE id = ?', [idFiche]);
+    } catch {
+      return null;
+    }
+  };
+
+  const buildCompletudeWorkflowPayload = (row) => {
+    if (!row) return null;
+    return {
+      id: row.id,
+      id_fiche: row.id_fiche,
+      motif: row.motif,
+      completes: row.completes,
+      statut: row.statut,
+      id_created_by: row.id_created_by,
+      created_by_pseudo: row.created_by_pseudo ?? null,
+      id_traite_par: row.id_traite_par ?? null,
+      traite_par_pseudo: row.traite_par_pseudo ?? null,
+      reponse_traitement: row.reponse_traitement ?? null,
+      date_creation: row.date_creation,
+      date_traitement: row.date_traitement ?? null,
+    };
   };
 
   router.get('/liste-completudes', authenticate, async (req, res) => {
@@ -413,6 +441,17 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
         message: 'Complétude enregistrée',
         data: created ? { ...created, statut_label: statutLabel(created.statut) } : null
       });
+
+      if (created) {
+        const ficheWorkflow = await loadFicheForWorkflow(idFiche);
+        executeWorkflow('completude_created', {
+          fiche: ficheWorkflow || undefined,
+          user: req.user,
+          completude: buildCompletudeWorkflowPayload(created),
+        }).catch((wfError) => {
+          console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (completude_created):', wfError);
+        });
+      }
     } catch (error) {
       if (error.code === 'ER_NO_SUCH_TABLE') {
         return res.status(503).json({
@@ -491,6 +530,17 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
         message: 'Complétude marquée comme traitée',
         data: updated ? { ...updated, statut_label: statutLabel(updated.statut) } : null
       });
+
+      if (updated) {
+        const ficheWorkflow = await loadFicheForWorkflow(idFiche);
+        executeWorkflow('completude_accepted', {
+          fiche: ficheWorkflow || undefined,
+          user: req.user,
+          completude: buildCompletudeWorkflowPayload(updated),
+        }).catch((wfError) => {
+          console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (completude_accepted):', wfError);
+        });
+      }
     } catch (error) {
       if (error.code === 'ER_NO_SUCH_TABLE') {
         return res.status(503).json({
