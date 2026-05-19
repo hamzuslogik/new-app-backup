@@ -14,8 +14,8 @@ const {
   insertFicheKoRecord,
   deleteFicheKoRecordsByFicheId,
 } = require('../utils/fichesKo');
-const { findMatchingAutorisationRule } = require('../utils/reglesAutorisation');
 const { approveInsertionFromDonnees } = require('../utils/demandeInsertionApprove');
+const { handleDuplicateFicheWithAutorisation } = require('../utils/demandeInsertionAuto');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -4544,141 +4544,23 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       );
     }
     
-    // Si une fiche existante est trouvée, vérifier les règles d'autorisation automatique
+    // Doublon : consulter regles_autorisation → acceptation directe ou demande EN_ATTENTE
     if (existingFiche) {
-      const agentId = ficheData.id_agent || req.user.id;
-      const matchedRule = await findMatchingAutorisationRule(existingFiche);
-
-      if (matchedRule) {
-        const nowAuto = new Date().toISOString().slice(0, 19).replace('T', ' ');
-        const commentaireAuto = `Acceptation automatique — règle #${matchedRule.id} : ${matchedRule.libelle}`;
-
-        try {
-          const { insertId, hash, donneesFiche: donneesApres } = await approveInsertionFromDonnees({
-            donneesFiche: ficheData,
-            existingFicheId: existingFiche.id,
-            id_agent: agentId,
-            id_centre_fallback: req.user.centre || null,
-            histoConfirmateurId: req.user.id,
-            now: nowAuto,
-          });
-
-          await query(
-            `INSERT INTO demandes_insertion 
-             (id_agent, id_fiche_existante, donnees_fiche, date_demande, statut, date_traitement, id_traitant, commentaire)
-             VALUES (?, ?, ?, ?, 'APPROUVEE', ?, NULL, ?)`,
-            [
-              agentId,
-              existingFiche.id,
-              JSON.stringify(ficheData),
-              nowAuto,
-              nowAuto,
-              commentaireAuto,
-            ]
-          );
-
-          executeWorkflow('demande_insertion_approved', {
-            user: req.user,
-            fiche: {
-              id: insertId,
-              hash,
-              nom: donneesApres.nom || null,
-              prenom: donneesApres.prenom || null,
-              tel: donneesApres.tel || null,
-              id_agent: donneesApres.id_agent || agentId,
-              id_centre: donneesApres.id_centre || null,
-              id_etat_final: donneesApres.id_etat_final || null,
-            },
-            demande_insertion: {
-              id_fiche_existante: existingFiche.id,
-              id_nouvelle_fiche: insertId,
-              hash_nouvelle_fiche: hash,
-              id_agent: agentId,
-              commentaire: commentaireAuto,
-              auto_regle_id: matchedRule.id,
-              auto_regle_libelle: matchedRule.libelle,
-              date_traitement: nowAuto,
-            },
-          }).catch((wfError) => {
-            console.error('[WORKFLOW] demande_insertion_approved (auto):', wfError);
-          });
-
-          return res.status(201).json({
-            success: true,
-            message: `Fiche acceptée automatiquement (${matchedRule.libelle}).`,
-            data: {
-              id: insertId,
-              hash,
-              autoApproved: true,
-              regleId: matchedRule.id,
-              regleLibelle: matchedRule.libelle,
-              existingFicheId: existingFiche.id,
-            },
-          });
-        } catch (autoErr) {
-          console.error('Erreur autorisation automatique:', autoErr);
-          return res.status(500).json({
-            success: false,
-            message: 'Erreur lors de l\'acceptation automatique de la fiche',
-            error: autoErr.message,
-          });
-        }
+      try {
+        const result = await handleDuplicateFicheWithAutorisation({
+          existingFiche,
+          ficheData,
+          req,
+        });
+        return res.status(result.statusCode).json(result.body);
+      } catch (dupErr) {
+        console.error('Erreur traitement doublon / autorisation:', dupErr);
+        return res.status(500).json({
+          success: false,
+          message: 'Erreur lors du traitement du doublon téléphone',
+          error: dupErr.message,
+        });
       }
-      
-      // Récupérer les informations de l'agent pour le message
-      const agentInfo = await queryOne(
-        `SELECT pseudo FROM utilisateurs WHERE id = ?`,
-        [agentId]
-      );
-      
-      // Créer la demande d'insertion
-      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      
-      const demandeResult = await query(
-        `INSERT INTO demandes_insertion 
-         (id_agent, id_fiche_existante, donnees_fiche, date_demande, statut)
-         VALUES (?, ?, ?, ?, 'EN_ATTENTE')`,
-        [agentId, existingFiche.id, JSON.stringify(ficheData), now]
-      );
-      
-      
-      // Récupérer les informations de la fiche existante pour le message
-      const ficheExistanteInfo = await queryOne(
-        `SELECT nom, prenom, tel, hash FROM fiches WHERE id = ?`,
-        [existingFiche.id]
-      );
-      
-      // Notifications manuelles supprimées : déclenchement workflow dédié
-      executeWorkflow('demande_insertion_created', {
-        user: req.user,
-        fiche: {
-          id: existingFiche.id,
-          hash: ficheExistanteInfo?.hash || encodeFicheId(existingFiche.id),
-          nom: ficheExistanteInfo?.nom || null,
-          prenom: ficheExistanteInfo?.prenom || null,
-          tel: ficheExistanteInfo?.tel || null,
-        },
-        demande_insertion: {
-          id: demandeResult.insertId,
-          id_fiche_existante: existingFiche.id,
-          id_agent: agentId,
-          agent_pseudo: agentInfo?.pseudo || null,
-          donnees_fiche: ficheData,
-          date_demande: now,
-        },
-      }).catch((wfError) => {
-        console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (demande_insertion_created):', wfError);
-      });
-      
-      return res.status(200).json({
-        success: true,
-        message: 'Une fiche existe déjà avec ce numéro de téléphone. Une demande d\'insertion a été créée.',
-        data: {
-          demandeId: demandeResult.insertId,
-          existingFicheId: existingFiche.id,
-          demandeCreated: true
-        }
-      });
     }
 
     // Normaliser le code postal (tous les codes postaux doivent être 5 chiffres)

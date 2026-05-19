@@ -119,7 +119,7 @@ function parseDateCritereFields(body, prefix) {
   return { operateur, valeur: v, unite };
 }
 
-function ruleMatchesFiche(rule, centreIds, existingFiche) {
+function ruleMatchesFiche(rule, centreIds, existingFiche, options = {}) {
   if (!rule.actif || rule.actif === 0 || rule.actif === '0') return false;
 
   if (rule.id_etat_final != null && rule.id_etat_final !== '') {
@@ -127,8 +127,14 @@ function ruleMatchesFiche(rule, centreIds, existingFiche) {
   }
 
   if (centreIds.length > 0) {
-    const ficheCentre = existingFiche.id_centre != null ? Number(existingFiche.id_centre) : null;
-    if (!ficheCentre || !centreIds.includes(ficheCentre)) return false;
+    const centresFiche = [
+      existingFiche.id_centre,
+      options.newIdCentre,
+    ]
+      .filter((c) => c != null && c !== '')
+      .map((c) => Number(c))
+      .filter((c) => Number.isFinite(c));
+    if (!centresFiche.some((c) => centreIds.includes(c))) return false;
   }
 
   const insertDate = existingFiche.date_insert_time || existingFiche.date_insert;
@@ -158,7 +164,7 @@ function ruleMatchesFiche(rule, centreIds, existingFiche) {
   return true;
 }
 
-async function findMatchingAutorisationRule(existingFiche) {
+async function findMatchingAutorisationRule(existingFiche, options = {}) {
   await ensureReglesAutorisationSchema();
 
   let rules;
@@ -192,7 +198,7 @@ async function findMatchingAutorisationRule(existingFiche) {
 
   for (const rule of rules) {
     const centreIds = centresByRule[rule.id] || [];
-    if (ruleMatchesFiche(rule, centreIds, existingFiche)) {
+    if (ruleMatchesFiche(rule, centreIds, existingFiche, options)) {
       return { ...rule, centre_ids: centreIds };
     }
   }
