@@ -791,6 +791,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $responseData = @json_decode($response, true);
         
+        // Acceptation automatique (règle regles_autorisation, doublon téléphone)
+        if (isset($responseData['success']) && $responseData['success'] &&
+            !empty($responseData['data']['autoApproved'])) {
+            $message = $responseData['message'] ?? 'Fiche acceptee automatiquement (regle d\'autorisation).';
+            if (!empty($responseData['data']['id'])) {
+                $message .= ' ID: ' . $responseData['data']['id'];
+            }
+            writeLog('AUTO APPROBATION: ' . $message);
+            $_SESSION['success_message'] = $message;
+            header('Location: ' . $_SERVER['PHP_SELF'] . '?reload=1');
+            exit;
+        }
+
         // Vérifier si une demande d'insertion existe déjà (pas de création)
         if (isset($responseData['success']) && $responseData['success'] && 
             isset($responseData['data']['existingDemande']) && $responseData['data']['existingDemande']) {

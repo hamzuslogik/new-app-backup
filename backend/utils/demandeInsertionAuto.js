@@ -2,6 +2,11 @@ const { query, queryOne } = require('../config/database');
 const { findMatchingAutorisationRule } = require('./reglesAutorisation');
 const { approveInsertionFromDonnees, encodeFicheId } = require('./demandeInsertionApprove');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
+const {
+  logReglesAutorisation,
+  logReglesAutorisationError,
+  snapshotFicheForLog,
+} = require('./reglesAutorisationLogger');
 
 /**
  * Doublon téléphone : consulte regles_autorisation puis accepte directement ou crée EN_ATTENTE.
@@ -19,11 +24,27 @@ async function handleDuplicateFicheWithAutorisation({
         ? Number(req.user.centre)
         : null;
 
+  logReglesAutorisation('Doublon detecte — debut traitement', {
+    source: 'POST /fiches',
+    user_id: req.user?.id,
+    user_pseudo: req.user?.pseudo,
+    agent_id: agentId,
+    tel_nouveau: ficheData.tel,
+    fiche_existante: snapshotFicheForLog(existingFiche),
+    id_centre_nouveau: Number.isFinite(newIdCentre) ? newIdCentre : null,
+  });
+
   const matchedRule = await findMatchingAutorisationRule(existingFiche, {
     newIdCentre: Number.isFinite(newIdCentre) ? newIdCentre : null,
   });
 
   if (matchedRule) {
+    logReglesAutorisation('AUTO-APPROBATION — regle appliquee', {
+      regle_id: matchedRule.id,
+      regle_libelle: matchedRule.libelle,
+      id_fiche_existante: existingFiche.id,
+    });
+
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const commentaireAuto = `Acceptation automatique — règle #${matchedRule.id} : ${matchedRule.libelle}`;
 
@@ -36,12 +57,22 @@ async function handleDuplicateFicheWithAutorisation({
       now,
     });
 
+    logReglesAutorisation('AUTO-APPROBATION — nouvelle fiche inseree', {
+      id_nouvelle_fiche: insertId,
+      hash,
+      id_fiche_archivee: existingFiche.id,
+    });
+
     const demandeResult = await query(
       `INSERT INTO demandes_insertion 
        (id_agent, id_fiche_existante, donnees_fiche, date_demande, statut, date_traitement, id_traitant, commentaire)
        VALUES (?, ?, ?, ?, 'APPROUVEE', ?, NULL, ?)`,
       [agentId, existingFiche.id, JSON.stringify(ficheData), now, now, commentaireAuto]
     );
+
+    logReglesAutorisation('AUTO-APPROBATION — demande tracee APPROUVEE', {
+      demande_id: demandeResult.insertId,
+    });
 
     executeWorkflow('demande_insertion_approved', {
       user: req.user,
@@ -67,7 +98,7 @@ async function handleDuplicateFicheWithAutorisation({
         date_traitement: now,
       },
     }).catch((wfError) => {
-      console.error('[WORKFLOW] demande_insertion_approved (auto):', wfError);
+      logReglesAutorisationError('Workflow demande_insertion_approved (auto)', wfError);
     });
 
     return {
@@ -89,6 +120,11 @@ async function handleDuplicateFicheWithAutorisation({
     };
   }
 
+  logReglesAutorisation('EN_ATTENTE — aucune regle applicable, creation demande', {
+    id_fiche_existante: existingFiche.id,
+    agent_id: agentId,
+  });
+
   const agentInfo = await queryOne(`SELECT pseudo FROM utilisateurs WHERE id = ?`, [agentId]);
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
@@ -98,6 +134,11 @@ async function handleDuplicateFicheWithAutorisation({
      VALUES (?, ?, ?, ?, 'EN_ATTENTE')`,
     [agentId, existingFiche.id, JSON.stringify(ficheData), now]
   );
+
+  logReglesAutorisation('EN_ATTENTE — demande creee', {
+    demande_id: demandeResult.insertId,
+    id_fiche_existante: existingFiche.id,
+  });
 
   const ficheExistanteInfo = await queryOne(
     `SELECT nom, prenom, tel, hash FROM fiches WHERE id = ?`,
@@ -122,7 +163,7 @@ async function handleDuplicateFicheWithAutorisation({
       date_demande: now,
     },
   }).catch((wfError) => {
-    console.error('[WORKFLOW] demande_insertion_created:', wfError);
+    logReglesAutorisationError('Workflow demande_insertion_created', wfError);
   });
 
   return {

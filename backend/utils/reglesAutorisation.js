@@ -1,5 +1,11 @@
 const { query } = require('../config/database');
 const { ensureReglesAutorisationSchema } = require('./ensureReglesAutorisationSchema');
+const {
+  logReglesAutorisation,
+  logReglesAutorisationWarn,
+  snapshotFicheForLog,
+  snapshotRuleForLog,
+} = require('./reglesAutorisationLogger');
 
 const VALID_OPERATEURS = ['<', '>', '<=', '>='];
 const VALID_UNITES = ['jour', 'mois', 'annee'];
@@ -87,6 +93,59 @@ function matchesRelativeDateCriterion(ficheDateValue, operateur, valeur, unite) 
   }
 }
 
+/** Retourne null si la règle correspond, sinon la raison du rejet (pour logs). */
+function getRuleMismatchReason(rule, centreIds, existingFiche, options = {}) {
+  if (!rule.actif || rule.actif === 0 || rule.actif === '0') {
+    return 'regle inactive';
+  }
+
+  if (rule.id_etat_final != null && rule.id_etat_final !== '') {
+    if (Number(existingFiche.id_etat_final) !== Number(rule.id_etat_final)) {
+      return `etat: fiche=${existingFiche.id_etat_final} regle=${rule.id_etat_final}`;
+    }
+  }
+
+  if (centreIds.length > 0) {
+    const centresFiche = [existingFiche.id_centre, options.newIdCentre]
+      .filter((c) => c != null && c !== '')
+      .map((c) => Number(c))
+      .filter((c) => Number.isFinite(c));
+    if (!centresFiche.some((c) => centreIds.includes(c))) {
+      return `centre: fiche=${centresFiche.join(',') || 'aucun'} regle=[${centreIds.join(',')}]`;
+    }
+  }
+
+  const insertDate = existingFiche.date_insert_time || existingFiche.date_insert;
+  if (rule.date_insert_operateur) {
+    const ageInsert = getAgeInUnit(insertDate, rule.date_insert_unite);
+    const ok = matchesRelativeDateCriterion(
+      insertDate,
+      rule.date_insert_operateur,
+      rule.date_insert_valeur,
+      rule.date_insert_unite
+    );
+    if (!ok) {
+      return `date_insert: age=${ageInsert ?? 'null'} critere=${rule.date_insert_operateur} ${rule.date_insert_valeur} ${rule.date_insert_unite} raw=${insertDate ?? 'null'}`;
+    }
+  }
+
+  const appelDate = existingFiche.date_appel_time || existingFiche.date_appel;
+  if (rule.date_appel_operateur) {
+    const ageAppel = getAgeInUnit(appelDate, rule.date_appel_unite);
+    const ok = matchesRelativeDateCriterion(
+      appelDate,
+      rule.date_appel_operateur,
+      rule.date_appel_valeur,
+      rule.date_appel_unite
+    );
+    if (!ok) {
+      return `date_appel: age=${ageAppel ?? 'null'} critere=${rule.date_appel_operateur} ${rule.date_appel_valeur} ${rule.date_appel_unite} raw=${appelDate ?? 'null'}`;
+    }
+  }
+
+  return null;
+}
+
 function normalizeUnite(unite) {
   if (unite == null || unite === '') return null;
   const u = String(unite).toLowerCase().trim();
@@ -120,52 +179,20 @@ function parseDateCritereFields(body, prefix) {
 }
 
 function ruleMatchesFiche(rule, centreIds, existingFiche, options = {}) {
-  if (!rule.actif || rule.actif === 0 || rule.actif === '0') return false;
-
-  if (rule.id_etat_final != null && rule.id_etat_final !== '') {
-    if (Number(existingFiche.id_etat_final) !== Number(rule.id_etat_final)) return false;
-  }
-
-  if (centreIds.length > 0) {
-    const centresFiche = [
-      existingFiche.id_centre,
-      options.newIdCentre,
-    ]
-      .filter((c) => c != null && c !== '')
-      .map((c) => Number(c))
-      .filter((c) => Number.isFinite(c));
-    if (!centresFiche.some((c) => centreIds.includes(c))) return false;
-  }
-
-  const insertDate = existingFiche.date_insert_time || existingFiche.date_insert;
-  if (
-    !matchesRelativeDateCriterion(
-      insertDate,
-      rule.date_insert_operateur,
-      rule.date_insert_valeur,
-      rule.date_insert_unite
-    )
-  ) {
-    return false;
-  }
-
-  const appelDate = existingFiche.date_appel_time || existingFiche.date_appel;
-  if (
-    !matchesRelativeDateCriterion(
-      appelDate,
-      rule.date_appel_operateur,
-      rule.date_appel_valeur,
-      rule.date_appel_unite
-    )
-  ) {
-    return false;
-  }
-
-  return true;
+  return getRuleMismatchReason(rule, centreIds, existingFiche, options) === null;
 }
 
 async function findMatchingAutorisationRule(existingFiche, options = {}) {
-  await ensureReglesAutorisationSchema();
+  logReglesAutorisation('Recherche regle — fiche existante', {
+    fiche: snapshotFicheForLog(existingFiche),
+    newIdCentre: options.newIdCentre ?? null,
+  });
+
+  const schemaOk = await ensureReglesAutorisationSchema();
+  if (!schemaOk) {
+    logReglesAutorisationWarn('Table regles_autorisation absente ou schema non pret');
+    return null;
+  }
 
   let rules;
   try {
@@ -176,13 +203,18 @@ async function findMatchingAutorisationRule(existingFiche, options = {}) {
     );
   } catch (err) {
     if (err.code === 'ER_NO_SUCH_TABLE') {
-      console.warn('[regles_autorisation] Table absente — exécutez create-regles-autorisation-table.sql');
+      logReglesAutorisationWarn('Table absente — exécutez create-regles-autorisation-table.sql');
       return null;
     }
     throw err;
   }
 
-  if (!rules || rules.length === 0) return null;
+  if (!rules || rules.length === 0) {
+    logReglesAutorisation('Aucune regle active en base');
+    return null;
+  }
+
+  logReglesAutorisation(`${rules.length} regle(s) active(s) a evaluer`);
 
   let centresByRule = {};
   try {
@@ -198,15 +230,24 @@ async function findMatchingAutorisationRule(existingFiche, options = {}) {
 
   for (const rule of rules) {
     const centreIds = centresByRule[rule.id] || [];
-    if (ruleMatchesFiche(rule, centreIds, existingFiche, options)) {
+    const mismatch = getRuleMismatchReason(rule, centreIds, existingFiche, options);
+    if (mismatch === null) {
+      logReglesAutorisation('Regle correspondante trouvee', snapshotRuleForLog(rule, centreIds));
       return { ...rule, centre_ids: centreIds };
     }
+    logReglesAutorisation('Regle non retenue', {
+      rule: snapshotRuleForLog(rule, centreIds),
+      raison: mismatch,
+    });
   }
+
+  logReglesAutorisation('Aucune regle ne correspond a la fiche existante');
   return null;
 }
 
 module.exports = {
   findMatchingAutorisationRule,
+  getRuleMismatchReason,
   parseFicheDatetime,
   getAgeInUnit,
   matchesRelativeDateCriterion,

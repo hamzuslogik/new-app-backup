@@ -1,4 +1,5 @@
 const { query } = require('../config/database');
+const { logReglesAutorisation, logReglesAutorisationWarn } = require('./reglesAutorisationLogger');
 
 let schemaReady = false;
 let schemaCheckPromise = null;
@@ -38,15 +39,15 @@ async function ensureReglesAutorisationSchema() {
         await query(
           `ALTER TABLE regles_autorisation ADD COLUMN \`${col.name}\` ${col.def}`
         );
-        console.log(`[regles_autorisation] Colonne ajoutée : ${col.name}`);
+        logReglesAutorisation(`Migration schema — colonne ajoutee: ${col.name}`);
       }
 
       schemaReady = true;
       return true;
     } catch (err) {
       if (err.code === 'ER_NO_SUCH_TABLE') {
-        console.warn(
-          '[regles_autorisation] Table absente — exécutez backend/scripts/create-regles-autorisation-table.sql'
+        logReglesAutorisationWarn(
+          'Table absente — exécutez backend/scripts/create-regles-autorisation-table.sql'
         );
         return false;
       }
@@ -54,7 +55,7 @@ async function ensureReglesAutorisationSchema() {
         schemaReady = true;
         return true;
       }
-      console.error('[regles_autorisation] Migration schéma échouée:', err.message);
+      logReglesAutorisationWarn('Migration schema echouee', { error: err.message });
       throw err;
     } finally {
       schemaCheckPromise = null;
