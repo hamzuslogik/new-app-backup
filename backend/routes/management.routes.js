@@ -2675,6 +2675,7 @@ router.put('/global-settings/phone-url-search-enabled', authenticate, checkPermi
 // =====================================================
 // RÈGLES D'AUTORISATION (doublons fiches)
 // =====================================================
+const { parseDateCritereFields } = require('../utils/reglesAutorisation');
 
 async function loadReglesAutorisationWithCentres() {
   const rules = await query(
@@ -2737,16 +2738,21 @@ router.post('/regles-autorisation', authenticate, checkPermission(1, 2, 7, 11), 
       libelle,
       actif = 1,
       id_etat_final,
-      date_insert_debut,
-      date_insert_fin,
-      date_appel_debut,
-      date_appel_fin,
       priorite = 0,
       centre_ids,
     } = req.body;
 
     if (!libelle || !String(libelle).trim()) {
       return res.status(400).json({ success: false, message: 'Le libellé est requis' });
+    }
+
+    const dateInsert = parseDateCritereFields(req.body, 'date_insert');
+    if (dateInsert.error) {
+      return res.status(400).json({ success: false, message: dateInsert.error });
+    }
+    const dateAppel = parseDateCritereFields(req.body, 'date_appel');
+    if (dateAppel.error) {
+      return res.status(400).json({ success: false, message: dateAppel.error });
     }
 
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -2756,17 +2762,20 @@ router.post('/regles-autorisation', authenticate, checkPermission(1, 2, 7, 11), 
     const result = await query(
       `INSERT INTO regles_autorisation (
         libelle, actif, id_etat_final,
-        date_insert_debut, date_insert_fin, date_appel_debut, date_appel_fin,
+        date_insert_operateur, date_insert_valeur, date_insert_unite,
+        date_appel_operateur, date_appel_valeur, date_appel_unite,
         priorite, date_creation, date_modif_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         String(libelle).trim(),
         actif ? 1 : 0,
         Number.isFinite(etatVal) ? etatVal : null,
-        date_insert_debut || null,
-        date_insert_fin || null,
-        date_appel_debut || null,
-        date_appel_fin || null,
+        dateInsert.operateur,
+        dateInsert.valeur,
+        dateInsert.unite,
+        dateAppel.operateur,
+        dateAppel.valeur,
+        dateAppel.unite,
         parseInt(priorite, 10) || 0,
         now,
         now,
@@ -2792,16 +2801,21 @@ router.put('/regles-autorisation/:id', authenticate, checkPermission(1, 2, 7, 11
       libelle,
       actif,
       id_etat_final,
-      date_insert_debut,
-      date_insert_fin,
-      date_appel_debut,
-      date_appel_fin,
       priorite,
       centre_ids,
     } = req.body;
 
     if (!libelle || !String(libelle).trim()) {
       return res.status(400).json({ success: false, message: 'Le libellé est requis' });
+    }
+
+    const dateInsert = parseDateCritereFields(req.body, 'date_insert');
+    if (dateInsert.error) {
+      return res.status(400).json({ success: false, message: dateInsert.error });
+    }
+    const dateAppel = parseDateCritereFields(req.body, 'date_appel');
+    if (dateAppel.error) {
+      return res.status(400).json({ success: false, message: dateAppel.error });
     }
 
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -2811,18 +2825,20 @@ router.put('/regles-autorisation/:id', authenticate, checkPermission(1, 2, 7, 11
     await query(
       `UPDATE regles_autorisation SET
         libelle = ?, actif = ?, id_etat_final = ?,
-        date_insert_debut = ?, date_insert_fin = ?,
-        date_appel_debut = ?, date_appel_fin = ?,
+        date_insert_operateur = ?, date_insert_valeur = ?, date_insert_unite = ?,
+        date_appel_operateur = ?, date_appel_valeur = ?, date_appel_unite = ?,
         priorite = ?, date_modif_time = ?
        WHERE id = ?`,
       [
         String(libelle).trim(),
         actif ? 1 : 0,
         Number.isFinite(etatVal) ? etatVal : null,
-        date_insert_debut || null,
-        date_insert_fin || null,
-        date_appel_debut || null,
-        date_appel_fin || null,
+        dateInsert.operateur,
+        dateInsert.valeur,
+        dateInsert.unite,
+        dateAppel.operateur,
+        dateAppel.valeur,
+        dateAppel.unite,
         priorite != null ? parseInt(priorite, 10) || 0 : 0,
         now,
         id,

@@ -8,17 +8,91 @@ import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import './ManagementTab.css';
 
+const OPERATEURS = [
+  { value: '', label: '— (aucun)' },
+  { value: '<', label: '<' },
+  { value: '<=', label: '<=' },
+  { value: '>', label: '>' },
+  { value: '>=', label: '>=' },
+];
+
+const UNITES = [
+  { value: '', label: '—' },
+  { value: 'jour', label: 'Jours' },
+  { value: 'mois', label: 'Mois' },
+  { value: 'annee', label: 'Années' },
+];
+
+const UNITE_LABELS = { jour: 'jours', mois: 'mois', annee: 'années' };
+
+const emptyDateCritere = { operateur: '', valeur: '', unite: '' };
+
 const emptyForm = {
   libelle: '',
   actif: 1,
   id_etat_final: '',
-  date_insert_debut: '',
-  date_insert_fin: '',
-  date_appel_debut: '',
-  date_appel_fin: '',
+  date_insert: { ...emptyDateCritere },
+  date_appel: { ...emptyDateCritere },
   priorite: 0,
   centre_ids: [],
 };
+
+function formatDateCritere(rule, prefix) {
+  const op = rule[`${prefix}_operateur`];
+  const val = rule[`${prefix}_valeur`];
+  const unite = rule[`${prefix}_unite`];
+  if (!op || val == null || val === '' || !unite) return '—';
+  const u = UNITE_LABELS[unite] || unite;
+  return `${op} ${val} ${u}`;
+}
+
+function DateCritereRow({ label, hint, value, onChange }) {
+  const set = (field, v) => onChange({ ...value, [field]: v });
+  const hasCritere = value.operateur && value.valeur !== '' && value.unite;
+
+  return (
+    <div className="form-group date-critere-row">
+      <label>{label}</label>
+      {hint && <p className="date-critere-hint">{hint}</p>}
+      <div className="date-critere-fields">
+        <select
+          value={value.operateur}
+          onChange={(e) => set('operateur', e.target.value)}
+          title="Opérateur"
+        >
+          {OPERATEURS.map((o) => (
+            <option key={o.value || 'none'} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min={0}
+          step={1}
+          placeholder="1, 2, 3…"
+          value={value.valeur}
+          onChange={(e) => set('valeur', e.target.value)}
+          disabled={!value.operateur}
+        />
+        <select
+          value={value.unite}
+          onChange={(e) => set('unite', e.target.value)}
+          disabled={!value.operateur}
+          title="Unité"
+        >
+          {UNITES.map((u) => (
+            <option key={u.value || 'none'} value={u.value}>{u.label}</option>
+          ))}
+        </select>
+      </div>
+      {hasCritere && (
+        <span className="date-critere-preview">
+          Ex. : fiche avec {label.toLowerCase()} il y a {value.operateur} {value.valeur}{' '}
+          {UNITE_LABELS[value.unite] || value.unite}
+        </span>
+      )}
+    </div>
+  );
+}
 
 const ReglesAutorisationTab = () => {
   const [showForm, setShowForm] = useState(false);
@@ -109,16 +183,20 @@ const ReglesAutorisationTab = () => {
     }
   );
 
+  const readDateCritereFromRule = (rule, prefix) => ({
+    operateur: rule[`${prefix}_operateur`] || '',
+    valeur: rule[`${prefix}_valeur`] != null ? String(rule[`${prefix}_valeur`]) : '',
+    unite: rule[`${prefix}_unite`] || '',
+  });
+
   const handleEdit = (rule) => {
     setEditingId(rule.id);
     setFormData({
       libelle: rule.libelle || '',
       actif: rule.actif ? 1 : 0,
       id_etat_final: rule.id_etat_final != null ? String(rule.id_etat_final) : '',
-      date_insert_debut: rule.date_insert_debut ? String(rule.date_insert_debut).slice(0, 10) : '',
-      date_insert_fin: rule.date_insert_fin ? String(rule.date_insert_fin).slice(0, 10) : '',
-      date_appel_debut: rule.date_appel_debut ? String(rule.date_appel_debut).slice(0, 10) : '',
-      date_appel_fin: rule.date_appel_fin ? String(rule.date_appel_fin).slice(0, 10) : '',
+      date_insert: readDateCritereFromRule(rule, 'date_insert'),
+      date_appel: readDateCritereFromRule(rule, 'date_appel'),
       priorite: rule.priorite ?? 0,
       centre_ids: rule.centre_ids || [],
     });
@@ -138,33 +216,56 @@ const ReglesAutorisationTab = () => {
     });
   };
 
-  const buildPayload = () => ({
-    libelle: formData.libelle,
-    actif: formData.actif ? 1 : 0,
-    id_etat_final: formData.id_etat_final || null,
-    date_insert_debut: formData.date_insert_debut || null,
-    date_insert_fin: formData.date_insert_fin || null,
-    date_appel_debut: formData.date_appel_debut || null,
-    date_appel_fin: formData.date_appel_fin || null,
-    priorite: parseInt(formData.priorite, 10) || 0,
-    centre_ids: formData.centre_ids,
-  });
+  const appendDateCritereToPayload = (payload, prefix, critere) => {
+    if (critere.operateur && critere.valeur !== '' && critere.unite) {
+      payload[`${prefix}_operateur`] = critere.operateur;
+      payload[`${prefix}_valeur`] = parseInt(critere.valeur, 10);
+      payload[`${prefix}_unite`] = critere.unite;
+    } else {
+      payload[`${prefix}_operateur`] = null;
+      payload[`${prefix}_valeur`] = null;
+      payload[`${prefix}_unite`] = null;
+    }
+  };
+
+  const buildPayload = () => {
+    const payload = {
+      libelle: formData.libelle,
+      actif: formData.actif ? 1 : 0,
+      id_etat_final: formData.id_etat_final || null,
+      priorite: parseInt(formData.priorite, 10) || 0,
+      centre_ids: formData.centre_ids,
+    };
+    appendDateCritereToPayload(payload, 'date_insert', formData.date_insert);
+    appendDateCritereToPayload(payload, 'date_appel', formData.date_appel);
+    return payload;
+  };
+
+  const validateDateCriteres = () => {
+    for (const [key, label] of [
+      ['date_insert', 'Date insertion'],
+      ['date_appel', 'Date appel'],
+    ]) {
+      const c = formData[key];
+      const partial = !!(c.operateur || c.valeur !== '' || c.unite);
+      const complete = !!(c.operateur && c.valeur !== '' && c.unite);
+      if (partial && !complete) {
+        toast.error(`${label} : renseignez opérateur, valeur et unité, ou laissez tout vide.`);
+        return false;
+      }
+    }
+    return true;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validateDateCriteres()) return;
     const payload = buildPayload();
     if (editingId) {
       updateMutation.mutate({ id: editingId, payload });
     } else {
       createMutation.mutate(payload);
     }
-  };
-
-  const formatRange = (debut, fin) => {
-    if (!debut && !fin) return '—';
-    if (debut && fin) return `${debut} → ${fin}`;
-    if (debut) return `≥ ${debut}`;
-    return `≤ ${fin}`;
   };
 
   const getEtatTitre = (id) => {
@@ -181,8 +282,9 @@ const ReglesAutorisationTab = () => {
         <div>
           <h2>Règles d&apos;autorisation automatique</h2>
           <p className="tab-description">
-            Lors de la création d&apos;une fiche en doublon, si la fiche existante correspond à une règle active,
-            elle est acceptée automatiquement (archive l&apos;ancienne, insère la nouvelle).
+            Lors d&apos;un doublon téléphone, si la fiche existante correspond (état, centre, âge des dates),
+            la nouvelle fiche est acceptée automatiquement. Les dates se comparent à aujourd&apos;hui :
+            ex. <strong>&lt; 3 mois</strong> = insérée ou appelée il y a moins de 3 mois.
           </p>
         </div>
         <button
@@ -257,43 +359,19 @@ const ReglesAutorisationTab = () => {
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Date insertion — début</label>
-                  <input
-                    type="date"
-                    value={formData.date_insert_debut}
-                    onChange={(e) => setFormData({ ...formData, date_insert_debut: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Date insertion — fin</label>
-                  <input
-                    type="date"
-                    value={formData.date_insert_fin}
-                    onChange={(e) => setFormData({ ...formData, date_insert_fin: e.target.value })}
-                  />
-                </div>
-              </div>
+              <DateCritereRow
+                label="Date insertion"
+                hint="Âge depuis date_insert_time de la fiche existante (par rapport à aujourd'hui)."
+                value={formData.date_insert}
+                onChange={(date_insert) => setFormData({ ...formData, date_insert })}
+              />
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Date appel — début</label>
-                  <input
-                    type="date"
-                    value={formData.date_appel_debut}
-                    onChange={(e) => setFormData({ ...formData, date_appel_debut: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Date appel — fin</label>
-                  <input
-                    type="date"
-                    value={formData.date_appel_fin}
-                    onChange={(e) => setFormData({ ...formData, date_appel_fin: e.target.value })}
-                  />
-                </div>
-              </div>
+              <DateCritereRow
+                label="Date appel"
+                hint="Âge depuis date_appel_time ou date_appel de la fiche existante."
+                value={formData.date_appel}
+                onChange={(date_appel) => setFormData({ ...formData, date_appel })}
+              />
 
               <div className="form-group">
                 <label>Centres (vide = tous les centres)</label>
@@ -364,8 +442,8 @@ const ReglesAutorisationTab = () => {
                       ? 'Tous'
                       : rule.centres.map((c) => c.centre_titre || c.id_centre).join(', ')}
                   </td>
-                  <td>{formatRange(rule.date_insert_debut, rule.date_insert_fin)}</td>
-                  <td>{formatRange(rule.date_appel_debut, rule.date_appel_fin)}</td>
+                  <td>{formatDateCritere(rule, 'date_insert')}</td>
+                  <td>{formatDateCritere(rule, 'date_appel')}</td>
                   <td>
                     {rule.actif ? (
                       <span className="badge badge-success"><FaCheckCircle /> Oui</span>

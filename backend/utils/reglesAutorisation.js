@@ -1,37 +1,121 @@
 const { query } = require('../config/database');
 
+const VALID_OPERATEURS = ['<', '>', '<=', '>='];
+const VALID_UNITES = ['jour', 'mois', 'annee'];
+
 /**
- * Normalise une date fiche (datetime, date string ou timestamp unix) en YYYY-MM-DD.
+ * Parse une date fiche en objet Date (datetime, YYYY-MM-DD ou timestamp unix).
  */
-function toDateOnly(value) {
+function parseFicheDatetime(value) {
   if (value == null || value === '') return null;
-  if (value instanceof Date) {
-    const y = value.getFullYear();
-    const m = String(value.getMonth() + 1).padStart(2, '0');
-    const d = String(value.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
   const s = String(value).trim();
   if (/^\d{10,13}$/.test(s)) {
     const ms = s.length === 13 ? parseInt(s, 10) : parseInt(s, 10) * 1000;
     const dt = new Date(ms);
-    if (!Number.isNaN(dt.getTime())) {
-      const y = dt.getFullYear();
-      const m = String(dt.getMonth() + 1).padStart(2, '0');
-      const d = String(dt.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    }
+    return Number.isNaN(dt.getTime()) ? null : dt;
   }
-  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
-  return m ? m[1] : null;
+  const iso = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (iso) {
+    const dt = new Date(iso[1] + 'T00:00:00');
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+  const dt = new Date(s);
+  return Number.isNaN(dt.getTime()) ? null : dt;
 }
 
-function dateInRange(dateOnly, debut, fin) {
-  if (!debut && !fin) return true;
-  if (!dateOnly) return false;
-  if (debut && dateOnly < debut) return false;
-  if (fin && dateOnly > fin) return false;
-  return true;
+/**
+ * Âge écoulé depuis la date fiche jusqu'à aujourd'hui, dans l'unité demandée.
+ */
+function getAgeInUnit(ficheDate, unite) {
+  const d = parseFicheDatetime(ficheDate);
+  if (!d) return null;
+  const now = new Date();
+  const u = String(unite || '').toLowerCase();
+
+  if (u === 'jour' || u === 'jours') {
+    const startNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startD = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return Math.floor((startNow - startD) / (24 * 60 * 60 * 1000));
+  }
+
+  if (u === 'mois') {
+    let months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+    if (now.getDate() < d.getDate()) months -= 1;
+    return months;
+  }
+
+  if (u === 'annee' || u === 'annees' || u === 'année' || u === 'années') {
+    let years = now.getFullYear() - d.getFullYear();
+    if (
+      now.getMonth() < d.getMonth() ||
+      (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())
+    ) {
+      years -= 1;
+    }
+    return years;
+  }
+
+  return null;
+}
+
+/**
+ * Critère relatif : ex. operateur "<", valeur 3, unite "mois"
+ * → la fiche doit avoir une date d'âge < 3 mois par rapport à aujourd'hui.
+ */
+function matchesRelativeDateCriterion(ficheDateValue, operateur, valeur, unite) {
+  if (!operateur || valeur == null || valeur === '' || !unite) return true;
+
+  const age = getAgeInUnit(ficheDateValue, unite);
+  if (age == null) return false;
+
+  const v = Number(valeur);
+  if (!Number.isFinite(v)) return false;
+
+  switch (operateur) {
+    case '<':
+      return age < v;
+    case '<=':
+      return age <= v;
+    case '>':
+      return age > v;
+    case '>=':
+      return age >= v;
+    default:
+      return false;
+  }
+}
+
+function normalizeUnite(unite) {
+  if (unite == null || unite === '') return null;
+  const u = String(unite).toLowerCase().trim();
+  if (u === 'jours') return 'jour';
+  if (u === 'années' || u === 'annee' || u === 'années') return 'annee';
+  if (VALID_UNITES.includes(u)) return u;
+  return null;
+}
+
+function parseDateCritereFields(body, prefix) {
+  const operateur = body[`${prefix}_operateur`];
+  const valeur = body[`${prefix}_valeur`];
+  const unite = normalizeUnite(body[`${prefix}_unite`]);
+
+  if (!operateur && (valeur == null || valeur === '') && !unite) {
+    return { operateur: null, valeur: null, unite: null };
+  }
+
+  if (!VALID_OPERATEURS.includes(operateur)) {
+    return { error: `Opérateur ${prefix} invalide (<, >, <=, >=)` };
+  }
+  const v = parseInt(valeur, 10);
+  if (!Number.isFinite(v) || v < 0) {
+    return { error: `Valeur ${prefix} invalide (entier ≥ 0)` };
+  }
+  if (!unite) {
+    return { error: `Unité ${prefix} invalide (jour, mois, annee)` };
+  }
+
+  return { operateur, valeur: v, unite };
 }
 
 function ruleMatchesFiche(rule, centreIds, existingFiche) {
@@ -46,19 +130,33 @@ function ruleMatchesFiche(rule, centreIds, existingFiche) {
     if (!ficheCentre || !centreIds.includes(ficheCentre)) return false;
   }
 
-  const insertDate = toDateOnly(existingFiche.date_insert_time);
-  if (!dateInRange(insertDate, rule.date_insert_debut, rule.date_insert_fin)) return false;
+  const insertDate = existingFiche.date_insert_time || existingFiche.date_insert;
+  if (
+    !matchesRelativeDateCriterion(
+      insertDate,
+      rule.date_insert_operateur,
+      rule.date_insert_valeur,
+      rule.date_insert_unite
+    )
+  ) {
+    return false;
+  }
 
-  const appelDate =
-    toDateOnly(existingFiche.date_appel_time) || toDateOnly(existingFiche.date_appel);
-  if (!dateInRange(appelDate, rule.date_appel_debut, rule.date_appel_fin)) return false;
+  const appelDate = existingFiche.date_appel_time || existingFiche.date_appel;
+  if (
+    !matchesRelativeDateCriterion(
+      appelDate,
+      rule.date_appel_operateur,
+      rule.date_appel_valeur,
+      rule.date_appel_unite
+    )
+  ) {
+    return false;
+  }
 
   return true;
 }
 
-/**
- * Charge les règles actives avec leurs centres et retourne la première qui correspond (priorité décroissante).
- */
 async function findMatchingAutorisationRule(existingFiche) {
   let rules;
   try {
@@ -79,9 +177,7 @@ async function findMatchingAutorisationRule(existingFiche) {
 
   let centresByRule = {};
   try {
-    const rows = await query(
-      'SELECT id_regle, id_centre FROM regles_autorisation_centres'
-    );
+    const rows = await query('SELECT id_regle, id_centre FROM regles_autorisation_centres');
     for (const row of rows || []) {
       const rid = Number(row.id_regle);
       if (!centresByRule[rid]) centresByRule[rid] = [];
@@ -102,7 +198,11 @@ async function findMatchingAutorisationRule(existingFiche) {
 
 module.exports = {
   findMatchingAutorisationRule,
-  toDateOnly,
-  dateInRange,
-  ruleMatchesFiche,
+  parseFicheDatetime,
+  getAgeInUnit,
+  matchesRelativeDateCriterion,
+  parseDateCritereFields,
+  normalizeUnite,
+  VALID_OPERATEURS,
+  VALID_UNITES,
 };
