@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaChevronDown, FaChevronUp, FaCheckCircle, FaFilter, FaUserCheck, FaTimes, FaBan, FaBell, FaCommentDots } from 'react-icons/fa';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
+import { useSidebar } from '../contexts/SidebarContext';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import RemarquesContent from '../components/RemarquesContent';
@@ -41,7 +42,18 @@ const ControleQualite = () => {
   useForceDesktopViewport('controle-qualite-page');
   const { user } = useAuth();
   const { openFicheDetail } = useFicheDetailModal();
+  const { setAutoHide, closeSidebar, isDesktop } = useSidebar();
   const queryClient = useQueryClient();
+
+  // Sidebar réduit par défaut sur cette page (plus d'espace pour le tableau)
+  useEffect(() => {
+    if (isDesktop) {
+      setAutoHide(true);
+    } else {
+      closeSidebar();
+    }
+    return () => setAutoHide(false);
+  }, [isDesktop, setAutoHide, closeSidebar]);
   const [showFilters, setShowFilters] = useState(true);
   const [contextMenu, setContextMenu] = useState(null);
   const [filters, setFilters] = useState({
