@@ -12,6 +12,7 @@ const {
   buildCommentaireQualiteFromKo,
   isValidKoMotif,
   insertFicheKoRecord,
+  deleteFicheKoRecordsByFicheId,
 } = require('../utils/fichesKo');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
@@ -6623,6 +6624,9 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
         `UPDATE fiches SET ko = ?, date_modif_time = ? WHERE id = ?`,
         [newKoVal, now, id]
       );
+      if (newKoVal === 0 && oldKoVal === 1) {
+        await deleteFicheKoRecordsByFicheId(id);
+      }
       if (oldKoVal !== newKoVal) {
         await logModification(
           id,

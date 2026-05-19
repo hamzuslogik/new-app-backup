@@ -55,8 +55,28 @@ async function insertFicheKoRecord({
   }
 }
 
+/**
+ * Supprime les enregistrements fiches_ko d'une fiche (annulation du KO).
+ */
+async function deleteFicheKoRecordsByFicheId(id_fiche) {
+  const idFiche = parseInt(id_fiche, 10);
+  if (!idFiche) return 0;
+
+  try {
+    const result = await query('DELETE FROM fiches_ko WHERE id_fiche = ?', [idFiche]);
+    return result.affectedRows ?? 0;
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      console.warn('[fiches_ko] Table absente — exécutez create-fiches-ko-table.sql');
+      return 0;
+    }
+    throw err;
+  }
+}
+
 module.exports = {
   insertFicheKoRecord,
+  deleteFicheKoRecordsByFicheId,
   buildCommentaireQualiteFromKo,
   isValidKoMotif,
   normalizeKoMotif,
