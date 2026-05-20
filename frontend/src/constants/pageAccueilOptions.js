@@ -32,6 +32,7 @@ export const PAGE_ACCUEIL_OPTIONS = [
   { value: '/audit-rdv', label: 'Audit Rendez-vous' },
   { value: '/stats-agents-qualite', label: 'Stats Agents Qualité' },
   { value: '/compte-rendu', label: 'Compte Rendu' },
+  { value: '/tracking', label: 'Tracking' },
   { value: '/compte-rendu-pending', label: 'Compte rendu — En attente' },
   { value: '/phase3', label: 'Phase 3' },
   { value: '/messages', label: 'Messages' },

@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaEdit, FaEye, FaClipboardList, FaCheck, FaTimes, FaClock, FaCheckCircle, FaTimesCircle, FaSearch } from 'react-icons/fa';
+import { FaEdit, FaEye, FaClipboardList, FaCheck, FaTimes, FaClock, FaCheckCircle, FaTimesCircle, FaSearch, FaRoute } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import EditCompteRenduModal from '../components/EditCompteRenduModal';
+import TrackingModal from '../components/TrackingModal';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './CompteRendu.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { isCompteRenduSignerEtat } from '../utils/compteRenduSigner';
 import { getDateRappelAffichage } from '../utils/compteRenduDateRappel';
+import { canManageTrackingFromCompteRendu } from '../utils/trackingAccess';
 
 const getTodayISO = () => new Date().toISOString().split('T')[0];
 
@@ -24,9 +26,10 @@ const CompteRendu = () => {
   const [commentaireAdmin, setCommentaireAdmin] = useState('');
   const [selectedCompteRendu, setSelectedCompteRendu] = useState(null);
   const [editingCompteRendu, setEditingCompteRendu] = useState(null);
-  
+  const [trackingCompteRenduId, setTrackingCompteRenduId] = useState(null);
+
   // Bloquer le scroll du body quand un modal est ouvert
-  useModalScrollLock(!!selectedCompteRendu || !!editingCompteRendu);
+  useModalScrollLock(!!selectedCompteRendu || !!editingCompteRendu || !!trackingCompteRenduId);
 
   // Récupérer les données de référence
   const { data: confirmateursData } = useQuery('confirmateurs', async () => {
@@ -169,6 +172,7 @@ const CompteRendu = () => {
   const isBackoffice = Number(user.fonction) === 11; // Backoffice = fonction 11
   const isRPConfirmation = Number(user.fonction) === 13; // RP Confirmation = fonction 13
   const canApprove = isAdmin || isBackoffice || isRPConfirmation; // Admins, backoffice et RP Confirmation peuvent approuver / modifier
+  const canManageTracking = canManageTrackingFromCompteRendu(user);
 
   const getCardColorByEtat = (cr) => {
     const etat = etats.find((e) => Number(e.id) === Number(cr.id_etat_final));
@@ -382,7 +386,17 @@ const CompteRendu = () => {
                       </div>
                     </div>
                     <div className="cr-actions">
-                      <FicheDetailLink ficheHash={cr.fiche_hash} ficheId={cr.id_fiche} className="btn-icon" title="Voir fiche">
+                      {canManageTracking && (
+                        <button
+                          type="button"
+                          className="btn-icon btn-tracking"
+                          title="Tracking RDV"
+                          onClick={() => setTrackingCompteRenduId(cr.id)}
+                        >
+                          <FaRoute />
+                        </button>
+                      )}
+                      <FicheDetailLink ficheHash={cr.fiche_hash} ficheId={cr.id_fiche} className="btn-icon" title="Détails fiche">
                         <FaSearch />
                       </FicheDetailLink>
                       {canApprove && (
@@ -565,6 +579,13 @@ const CompteRendu = () => {
           }}
           isLoading={updatePendingMutation.isLoading}
           readOnly={editingCompteRendu.statut === 'approved'}
+        />
+      )}
+
+      {trackingCompteRenduId && (
+        <TrackingModal
+          compteRenduId={trackingCompteRenduId}
+          onClose={() => setTrackingCompteRenduId(null)}
         />
       )}
     </div>

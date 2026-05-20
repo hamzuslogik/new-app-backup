@@ -327,6 +327,13 @@
 .compte-rendu-card .cr-actions .btn-icon.btn-danger {
   background: #dc3545;
 }
+.compte-rendu-card .cr-actions .btn-icon.btn-tracking {
+  background: #0ea5e9;
+  color: #fff;
+}
+.compte-rendu-card .cr-actions .btn-icon.btn-tracking svg {
+  color: #fff !important;
+}
 
 /* Icônes blanches dans boutons Approuver et Rejeter */
 .compte-rendu-card .cr-actions .btn-icon.btn-success,

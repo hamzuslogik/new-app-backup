@@ -34,6 +34,8 @@ import AuditRDV from './pages/AuditRDV';
 import ListeCompletudes from './pages/ListeCompletudes';
 import CompteRendu from './pages/CompteRendu';
 import CompteRenduPending from './pages/CompteRenduPending';
+import Tracking from './pages/Tracking';
+import { canAccessTrackingPage } from './utils/trackingAccess';
 import Phase3 from './pages/Phase3';
 import Permissions from './pages/Permissions';
 import ImportMasse from './pages/ImportMasse';
@@ -104,6 +106,18 @@ function App() {
           <Route path="audit-rdv" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[4, 13]}><AuditRDV /></ProtectedRoute>} />
           <Route path="liste-completudes" element={<ProtectedRoute permission={null} allowFunctions={[4, 13, 14]}><ListeCompletudes /></ProtectedRoute>} />
           <Route path="compte-rendu" element={<ProtectedRoute permission="compte_rendu_view"><CompteRendu /></ProtectedRoute>} />
+          <Route
+            path="tracking"
+            element={
+              <ProtectedRoute
+                permission={null}
+                allowFunctions={[11]}
+                customCheck={(_item, u) => canAccessTrackingPage(u)}
+              >
+                <Tracking />
+              </ProtectedRoute>
+            }
+          />
           <Route path="compte-rendu-pending" element={<ProtectedRoute permission={null} customCheck={(item, user) => [1, 2, 5, 7, 13].includes(Number(user?.fonction))}><CompteRenduPending /></ProtectedRoute>} />
           <Route path="phase3" element={<ProtectedRoute permission="phase3_view"><Phase3 /></ProtectedRoute>} />
           <Route path="permissions" element={<ProtectedRoute permission="config_permissions" excludeFunctions={[8]}><Permissions /></ProtectedRoute>} />

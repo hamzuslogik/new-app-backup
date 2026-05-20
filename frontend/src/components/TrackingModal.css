@@ -1,0 +1,149 @@
+.tracking-modal-overlay {
+  z-index: 10060;
+}
+
+.tracking-modal {
+  max-width: 640px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.tracking-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tracking-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tracking-readonly-block {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.tracking-readonly-block h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.tracking-readonly-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tracking-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.tracking-readonly-grid p,
+.tracking-readonly-block p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.tracking-cr-comment {
+  white-space: pre-wrap;
+  margin-top: 6px !important;
+}
+
+.tracking-form .form-group {
+  margin-bottom: 14px;
+}
+
+.tracking-form label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.tracking-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.tracking-rappel-options {
+  display: flex;
+  gap: 20px;
+}
+
+.tracking-rappel-options label {
+  font-weight: normal;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.tracking-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.tracking-form-actions .btn-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tracking-form-actions .btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tracking-form-actions .btn-cancel {
+  padding: 8px 16px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tracking-modal-loading,
+.tracking-modal-error {
+  padding: 24px;
+  text-align: center;
+  color: #64748b;
+}
+
+@media (max-width: 600px) {
+  .tracking-readonly-grid {
+    grid-template-columns: 1fr;
+  }
+}
