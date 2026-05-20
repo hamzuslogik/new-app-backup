@@ -13,6 +13,27 @@ function nowSql() {
   return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
+async function fetchTrackingHisto(idTracking) {
+  try {
+    const rows = await query(
+      `SELECT h.*, u.pseudo AS user_pseudo
+       FROM tracking_histo h
+       LEFT JOIN utilisateurs u ON u.id = h.id_user
+       WHERE h.id_tracking = ?
+       ORDER BY h.date_histo DESC`,
+      [idTracking]
+    );
+    return (rows || []).map((h) => ({
+      ...h,
+      rappel_client: h.rappel_client === 1 || h.rappel_client === '1',
+      action_label: h.action === 'create' ? 'Création' : 'Modification',
+    }));
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') return [];
+    throw err;
+  }
+}
+
 async function insertTrackingHisto(connOrQuery, trackingRow, action, userId) {
   const q = connOrQuery;
   await q(
@@ -187,6 +208,11 @@ router.get('/context/compte-rendu/:idCr', authenticate, async (req, res) => {
       if (err.code !== 'ER_NO_SUCH_TABLE') throw err;
     }
 
+    let historique = [];
+    if (tracking?.id) {
+      historique = await fetchTrackingHisto(tracking.id);
+    }
+
     res.json({
       success: true,
       data: {
@@ -218,10 +244,38 @@ router.get('/context/compte-rendu/:idCr', authenticate, async (req, res) => {
               rappel_client: tracking.rappel_client === 1 || tracking.rappel_client === '1',
             }
           : null,
+        historique,
       },
     });
   } catch (error) {
     console.error('GET /tracking/context:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * Historique des modifications d'un tracking (page liste / détail).
+ */
+router.get('/:id/histo', authenticate, async (req, res) => {
+  try {
+    if (!canAccessTrackingPage(req.user) && !canManageTrackingFromCompteRendu(req.user)) {
+      return res.status(403).json({ success: false, message: 'Accès non autorisé' });
+    }
+
+    const idTracking = parseInt(req.params.id, 10);
+    if (!idTracking || Number.isNaN(idTracking)) {
+      return res.status(400).json({ success: false, message: 'ID tracking invalide' });
+    }
+
+    const row = await queryOne('SELECT id FROM tracking WHERE id = ?', [idTracking]);
+    if (!row) {
+      return res.status(404).json({ success: false, message: 'Tracking introuvable' });
+    }
+
+    const historique = await fetchTrackingHisto(idTracking);
+    res.json({ success: true, data: historique });
+  } catch (error) {
+    console.error('GET /tracking/:id/histo:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

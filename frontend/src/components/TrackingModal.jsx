@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import api from '../config/api';
-import { FaTimes, FaRoute, FaSave } from 'react-icons/fa';
+import { FaTimes, FaRoute, FaSave, FaHistory } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './TrackingModal.css';
 
@@ -45,7 +45,6 @@ const TrackingModal = ({ compteRenduId, onClose }) => {
         queryClient.invalidateQueries(['tracking-context', compteRenduId]);
         queryClient.invalidateQueries(['tracking-list']);
         toast.success(res?.message || 'Tracking enregistré');
-        onClose();
       },
       onError: (err) => {
         toast.error(err.response?.data?.message || err.message || 'Erreur');
@@ -65,6 +64,7 @@ const TrackingModal = ({ compteRenduId, onClose }) => {
   const fiche = data?.fiche;
   const cr = data?.compte_rendu;
   const isEdit = !!data?.tracking;
+  const historique = data?.historique || [];
 
   const formatDate = (d) => {
     if (!d) return '—';
@@ -127,6 +127,44 @@ const TrackingModal = ({ compteRenduId, onClose }) => {
               <span className="tracking-label">Compte rendu (commentaire commercial)</span>
               <p className="tracking-cr-comment">{cr?.commentaire?.trim() || '—'}</p>
             </div>
+
+            {historique.length > 0 && (
+              <div className="tracking-histo-block">
+                <h3>
+                  <FaHistory /> Historique des modifications ({historique.length})
+                </h3>
+                <ul className="tracking-histo-list">
+                  {historique.map((entry) => (
+                    <li key={entry.id} className={`tracking-histo-item action-${entry.action}`}>
+                      <div className="tracking-histo-item-head">
+                        <span className={`tracking-histo-badge ${entry.action}`}>
+                          {entry.action_label || (entry.action === 'create' ? 'Création' : 'Modification')}
+                        </span>
+                        <span className="tracking-histo-date">{formatDate(entry.date_histo)}</span>
+                        <span className="tracking-histo-user">{entry.user_pseudo || '—'}</span>
+                      </div>
+                      <div className="tracking-histo-fields">
+                        <p>
+                          <strong>Rappel client :</strong> {entry.rappel_client ? 'Oui' : 'Non'}
+                        </p>
+                        {entry.commentaire_client && (
+                          <p>
+                            <strong>Commentaire client :</strong>{' '}
+                            <span className="tracking-histo-text">{entry.commentaire_client}</span>
+                          </p>
+                        )}
+                        {entry.constat && (
+                          <p>
+                            <strong>Constat :</strong>{' '}
+                            <span className="tracking-histo-text">{entry.constat}</span>
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <form className="tracking-form" onSubmit={handleSubmit}>
               <div className="form-group">
