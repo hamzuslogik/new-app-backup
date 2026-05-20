@@ -111,7 +111,7 @@ function App() {
             element={
               <ProtectedRoute
                 permission={null}
-                allowFunctions={[11]}
+                allowFunctions={[1, 7, 13]}
                 customCheck={(_item, u) => canAccessTrackingPage(u)}
               >
                 <Tracking />

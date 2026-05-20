@@ -23,6 +23,7 @@ import {
   FaCheck,
   FaExclamationTriangle,
   FaBell,
+  FaRoute,
   FaSearch,
   FaSignature,
   FaRobot,
@@ -30,6 +31,7 @@ import {
   FaUser,
   FaListAlt,
 } from 'react-icons/fa';
+import { showTrackingInSidebar } from '../utils/trackingAccess';
 import './Sidebar.css';
 
 const Sidebar = ({ collapsed }) => {
@@ -303,6 +305,14 @@ const Sidebar = ({ collapsed }) => {
       icon: FaClipboardList,
       permission: 'compte_rendu_view',
       visible: true,
+    },
+    {
+      path: '/tracking',
+      label: 'Tracking',
+      icon: FaRoute,
+      permission: null,
+      visible: true,
+      customCheck: (_item, user) => showTrackingInSidebar(user),
     },
     {
       path: '/phase3',

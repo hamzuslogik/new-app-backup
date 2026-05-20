@@ -57,7 +57,7 @@ const LIST_SELECT = `
 `;
 
 /**
- * Liste des trackings (backoffice uniquement).
+ * Liste des trackings (admin / RP confirmation — pas backoffice).
  */
 router.get('/', authenticate, async (req, res) => {
   try {
