@@ -171,9 +171,6 @@ const CompteRendu = () => {
   const etats = etatsData || [];
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } =
     getEtatsGroupedByPhase(etats);
-  const etatsForFilter = [...etatsPhase0, ...etatsPhase1, ...etatsPhase2, ...etatsPhase3];
-  const etatsForFilterFallback = etatsForFilter.length > 0 ? etatsForFilter : etats;
-
   const compteRendusPending = comptesRendusPendingData || [];
   const isAdmin = [1, 2, 7].includes(Number(user.fonction));
   const isBackoffice = Number(user.fonction) === 11; // Backoffice = fonction 11
@@ -382,7 +379,10 @@ const CompteRendu = () => {
                       ))}
                     </optgroup>
                   )}
-                  {etatsForFilter.length === 0 &&
+                  {etatsPhase0.length === 0 &&
+                    etatsPhase1.length === 0 &&
+                    etatsPhase2.length === 0 &&
+                    etatsPhase3.length === 0 &&
                     etats.map((etat) => (
                       <option
                         key={etat.id}
@@ -394,36 +394,6 @@ const CompteRendu = () => {
                     ))}
                 </select>
               </div>
-            </div>
-            <div className="cr-etat-filters" role="group" aria-label="Filtrer par état">
-              <button
-                type="button"
-                className={`cr-etat-pill ${!filterEtat ? 'active' : ''}`}
-                onClick={() => setFilterEtat('')}
-              >
-                Tous
-              </button>
-              {etatsForFilterFallback.map((etat) => {
-                const color = etat.color || '#6c757d';
-                const isActive = filterEtat === String(etat.id);
-                return (
-                  <button
-                    key={etat.id}
-                    type="button"
-                    className={`cr-etat-pill ${isActive ? 'active' : ''}`}
-                    title={etat.titre}
-                    style={{
-                      borderColor: color,
-                      background: hexToRgba(color, isActive ? 0.38 : 0.14),
-                      color: isActive ? '#111827' : '#374151',
-                    }}
-                    onClick={() => setFilterEtat(isActive ? '' : String(etat.id))}
-                  >
-                    <span className="cr-etat-pill-dot" style={{ backgroundColor: color }} />
-                    {etat.titre}
-                  </button>
-                );
-              })}
             </div>
             {canApprove && (
               <div className="statut-filters">

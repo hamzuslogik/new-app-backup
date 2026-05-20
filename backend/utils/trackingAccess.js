@@ -1,28 +1,27 @@
 const TRACKING_BLOCKED_USER_IDS = [3896];
-const TRACKING_ALLOWED_FUNCTIONS = [1, 7, 13];
+const TRACKING_FONCTION_BACKOFFICE = 11;
 
 function isTrackingBlockedUser(user) {
   if (!user?.id) return false;
   return TRACKING_BLOCKED_USER_IDS.includes(Number(user.id));
 }
 
-function hasTrackingAllowedFunction(user) {
-  if (!user?.fonction) return false;
-  return TRACKING_ALLOWED_FUNCTIONS.includes(Number(user.fonction));
+function isBackofficeTrackingUser(user) {
+  if (!user || isTrackingBlockedUser(user)) return false;
+  return Number(user.fonction) === TRACKING_FONCTION_BACKOFFICE;
 }
 
 function canAccessTrackingPage(user) {
-  if (!user || isTrackingBlockedUser(user)) return false;
-  return hasTrackingAllowedFunction(user);
+  return isBackofficeTrackingUser(user);
 }
 
 function canManageTrackingFromCompteRendu(user) {
-  return canAccessTrackingPage(user);
+  return isBackofficeTrackingUser(user);
 }
 
 module.exports = {
   TRACKING_BLOCKED_USER_IDS,
-  TRACKING_ALLOWED_FUNCTIONS,
+  TRACKING_FONCTION_BACKOFFICE,
   isTrackingBlockedUser,
   canAccessTrackingPage,
   canManageTrackingFromCompteRendu,

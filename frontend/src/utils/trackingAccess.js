@@ -1,30 +1,29 @@
 /** Utilisateurs exclus du module tracking (liste, sidebar, modal). */
 export const TRACKING_BLOCKED_USER_IDS = [3896];
 
-/** Fonctions autorisées (admin + RP confirmation) — pas le backoffice (11). */
-export const TRACKING_ALLOWED_FUNCTIONS = [1, 7, 13];
+/** Tracking réservé à la session backoffice uniquement. */
+export const TRACKING_FONCTION_BACKOFFICE = 11;
 
 export function isTrackingBlockedUser(user) {
   if (!user?.id) return false;
   return TRACKING_BLOCKED_USER_IDS.includes(Number(user.id));
 }
 
-function hasTrackingAllowedFunction(user) {
-  if (!user?.fonction) return false;
-  return TRACKING_ALLOWED_FUNCTIONS.includes(Number(user.fonction));
+function isBackofficeTrackingUser(user) {
+  if (!user || isTrackingBlockedUser(user)) return false;
+  return Number(user.fonction) === TRACKING_FONCTION_BACKOFFICE;
 }
 
 /** Page liste /tracking + entrée sidebar. */
 export function canAccessTrackingPage(user) {
-  if (!user || isTrackingBlockedUser(user)) return false;
-  return hasTrackingAllowedFunction(user);
+  return isBackofficeTrackingUser(user);
 }
 
 export function showTrackingInSidebar(user) {
   return canAccessTrackingPage(user);
 }
 
-/** Bouton / modal tracking sur Compte rendu. */
+/** Bouton / modal tracking sur Compte rendu (tous statuts CR). */
 export function canManageTrackingFromCompteRendu(user) {
-  return canAccessTrackingPage(user);
+  return isBackofficeTrackingUser(user);
 }
