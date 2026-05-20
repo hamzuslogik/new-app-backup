@@ -131,7 +131,8 @@ const Tracking = () => {
               <thead>
                 <tr>
                   <th>Date création</th>
-                  <th>Date RDV</th>
+                  <th>Date RDV tracking</th>
+                  <th>Compte rendu</th>
                   <th>Client</th>
                   <th>Téléphone</th>
                   <th>Commercial</th>
@@ -147,7 +148,8 @@ const Tracking = () => {
                 {rows.map((row) => (
                   <tr key={row.id}>
                     <td>{formatDate(row.date_creation)}</td>
-                    <td>{formatDate(row.date_rdv || row.fiche_date_rdv_time)}</td>
+                    <td>{formatDate(row.date_rdv)}</td>
+                    <td>{row.compte_rendu_id ? `n°${row.compte_rendu_id}` : '—'}</td>
                     <td>
                       {row.fiche_nom} {row.fiche_prenom}
                     </td>

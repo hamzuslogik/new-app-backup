@@ -336,6 +336,10 @@
   background: #0ea5e9;
   color: #fff;
 }
+
+.compte-rendu-card .cr-actions .btn-icon.btn-tracking.has-tracking {
+  box-shadow: 0 0 0 2px #0369a1;
+}
 .compte-rendu-card .cr-actions .btn-icon.btn-tracking svg {
   color: #fff !important;
 }

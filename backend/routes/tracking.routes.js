@@ -13,6 +13,29 @@ function nowSql() {
   return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
+async function fetchOtherTrackingsOnFiche(idFiche, idCompteRenduCourant) {
+  try {
+    const rows = await query(
+      `SELECT t.id, t.id_compte_rendu, t.date_rdv, t.date_creation, t.rappel_client, t.constat,
+              cr.statut AS cr_statut, cr.date_creation AS cr_date_creation,
+              u.pseudo AS editor_pseudo
+       FROM tracking t
+       LEFT JOIN compte_rendu_pending cr ON cr.id = t.id_compte_rendu
+       LEFT JOIN utilisateurs u ON u.id = t.id_user
+       WHERE t.id_fiche = ? AND (t.id_compte_rendu IS NULL OR t.id_compte_rendu != ?)
+       ORDER BY t.date_creation DESC`,
+      [idFiche, idCompteRenduCourant]
+    );
+    return (rows || []).map((r) => ({
+      ...r,
+      rappel_client: r.rappel_client === 1 || r.rappel_client === '1',
+    }));
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') return [];
+    throw err;
+  }
+}
+
 async function fetchTrackingHisto(idTracking) {
   try {
     const rows = await query(
@@ -62,8 +85,10 @@ const LIST_SELECT = `
     f.prenom AS fiche_prenom,
     f.tel AS fiche_tel,
     f.date_rdv_time AS fiche_date_rdv_time,
-    cr.commentaire AS compte_rendu_commentaire,
+    cr.id AS compte_rendu_id,
+    cr.date_creation AS compte_rendu_date_creation,
     cr.statut AS compte_rendu_statut,
+    cr.commentaire AS compte_rendu_commentaire,
     u_com.pseudo AS commercial_pseudo,
     u_conf.pseudo AS confirmateur_pseudo,
     e.titre AS etat_titre,
@@ -213,6 +238,8 @@ router.get('/context/compte-rendu/:idCr', authenticate, async (req, res) => {
       historique = await fetchTrackingHisto(tracking.id);
     }
 
+    const autresTrackingsFiche = await fetchOtherTrackingsOnFiche(cr.id_fiche, idCr);
+
     res.json({
       success: true,
       data: {
@@ -221,6 +248,7 @@ router.get('/context/compte-rendu/:idCr', authenticate, async (req, res) => {
           id_fiche: cr.id_fiche,
           commentaire: cr.commentaire,
           statut: cr.statut,
+          date_creation: cr.date_creation,
           commercial_pseudo: cr.commercial_pseudo,
           id_commercial: cr.id_commercial,
         },
@@ -245,6 +273,9 @@ router.get('/context/compte-rendu/:idCr', authenticate, async (req, res) => {
             }
           : null,
         historique,
+        autres_trackings_fiche: autresTrackingsFiche,
+        /** true = nouveau tracking pour ce CR ; false = mise à jour du tracking lié à ce CR uniquement */
+        is_new_for_compte_rendu: !tracking,
       },
     });
   } catch (error) {
@@ -325,12 +356,18 @@ router.put('/compte-rendu/:idCr', authenticate, async (req, res) => {
     }
 
     if (existing) {
+      if (Number(existing.id_compte_rendu) !== idCr) {
+        return res.status(409).json({
+          success: false,
+          message: 'Ce tracking est lié à un autre compte rendu',
+        });
+      }
+      // Ne pas modifier date_rdv : conserve le RDV au moment de la création de ce tracking
       await query(
         `UPDATE tracking SET
-          date_modif = ?, id_user = ?, rappel_client = ?, commentaire_client = ?, constat = ?,
-          date_rdv = ?
-         WHERE id = ?`,
-        [now, req.user.id, rappel_client, commentaire_client, constat, cr.date_rdv_time || null, existing.id]
+          date_modif = ?, id_user = ?, rappel_client = ?, commentaire_client = ?, constat = ?
+         WHERE id = ? AND id_compte_rendu = ?`,
+        [now, req.user.id, rappel_client, commentaire_client, constat, existing.id, idCr]
       );
       const updated = await queryOne('SELECT * FROM tracking WHERE id = ?', [existing.id]);
       await insertTrackingHisto(query, updated, 'update', req.user.id);

@@ -4,7 +4,7 @@ USE `crm`;
 CREATE TABLE IF NOT EXISTS `tracking` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `id_fiche` int(11) NOT NULL,
-  `id_compte_rendu` int(11) DEFAULT NULL COMMENT 'Compte rendu lié (création depuis page CR)',
+  `id_compte_rendu` int(11) DEFAULT NULL COMMENT 'Compte rendu lié — un tracking par CR ; plusieurs trackings possibles par fiche',
   `date_rdv` datetime DEFAULT NULL COMMENT 'Date RDV de la fiche au moment du tracking',
   `date_creation` datetime NOT NULL,
   `date_modif` datetime DEFAULT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS `tracking` (
   CONSTRAINT `fk_tracking_compte_rendu` FOREIGN KEY (`id_compte_rendu`) REFERENCES `compte_rendu_pending` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_tracking_user` FOREIGN KEY (`id_user`) REFERENCES `utilisateurs` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  COMMENT='Suivi backoffice des RDV (depuis compte rendu)';
+  COMMENT='Suivi backoffice : 1 ligne par compte rendu, N lignes par fiche si plusieurs CR/RDV';
 
 CREATE TABLE IF NOT EXISTS `tracking_histo` (
   `id` int(11) NOT NULL AUTO_INCREMENT,

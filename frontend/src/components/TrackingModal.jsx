@@ -63,8 +63,15 @@ const TrackingModal = ({ compteRenduId, onClose }) => {
 
   const fiche = data?.fiche;
   const cr = data?.compte_rendu;
-  const isEdit = !!data?.tracking;
+  const tracking = data?.tracking;
+  const isEdit = !!tracking;
   const historique = data?.historique || [];
+  const autresTrackings = data?.autres_trackings_fiche || [];
+  const dateRdvTracking = tracking?.date_rdv ?? fiche?.date_rdv_time;
+  const ficheRdvDifferente =
+    tracking?.date_rdv &&
+    fiche?.date_rdv_time &&
+    new Date(tracking.date_rdv).getTime() !== new Date(fiche.date_rdv_time).getTime();
 
   const formatDate = (d) => {
     if (!d) return '—';
@@ -82,7 +89,7 @@ const TrackingModal = ({ compteRenduId, onClose }) => {
       <div className="modal-content tracking-modal" onClick={(e) => e.stopPropagation()}>
         <div className="tracking-modal-header">
           <h2>
-            <FaRoute /> Tracking RDV {isEdit ? '(modification)' : '(création)'}
+            <FaRoute /> Tracking RDV {isEdit ? '(ce compte rendu)' : '(nouveau — ce compte rendu)'}
           </h2>
           <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Fermer">
             <FaTimes />
@@ -104,9 +111,41 @@ const TrackingModal = ({ compteRenduId, onClose }) => {
                 {fiche?.cp ? ` · ${fiche.cp} ${fiche.ville || ''}` : ''}
               </p>
               <p>
-                <span className="tracking-label">Date RDV :</span> {formatDate(fiche?.date_rdv_time)}
+                <span className="tracking-label">Compte rendu n°</span> {cr?.id || '—'}
+                {cr?.date_creation ? ` · créé le ${formatDate(cr.date_creation)}` : ''}
               </p>
+              <p>
+                <span className="tracking-label">Date RDV {isEdit ? 'du tracking' : ' (sera enregistrée)'} :</span>{' '}
+                {formatDate(dateRdvTracking)}
+              </p>
+              {ficheRdvDifferente && (
+                <p className="tracking-rdv-hint">
+                  RDV actuel sur la fiche : {formatDate(fiche.date_rdv_time)} (non modifié sur les anciens trackings)
+                </p>
+              )}
             </div>
+
+            {!isEdit && autresTrackings.length > 0 && (
+              <div className="tracking-other-cr-notice">
+                Cette fiche a déjà {autresTrackings.length} tracking{autresTrackings.length > 1 ? 's' : ''} sur
+                d&apos;autres comptes rendus. Un <strong>nouveau tracking</strong> sera créé pour ce compte rendu
+                (n° {cr?.id}) sans modifier les précédents.
+              </div>
+            )}
+
+            {autresTrackings.length > 0 && (
+              <div className="tracking-other-list-block">
+                <span className="tracking-label">Autres trackings sur cette fiche</span>
+                <ul className="tracking-other-list">
+                  {autresTrackings.map((t) => (
+                    <li key={t.id}>
+                      CR n°{t.id_compte_rendu || '—'} · RDV {formatDate(t.date_rdv)} ·{' '}
+                      {t.cr_statut || '—'} · {formatDate(t.date_creation)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="tracking-readonly-grid">
               <div>

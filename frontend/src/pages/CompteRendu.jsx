@@ -469,8 +469,12 @@ const CompteRendu = () => {
                       {canManageTracking && (
                         <button
                           type="button"
-                          className="btn-icon btn-tracking"
-                          title="Tracking RDV"
+                          className={`btn-icon btn-tracking ${cr.tracking_id ? 'has-tracking' : ''}`}
+                          title={
+                            cr.tracking_id
+                              ? 'Tracking RDV (modifier — lié à ce compte rendu)'
+                              : 'Tracking RDV (créer — nouveau pour ce compte rendu)'
+                          }
                           onClick={() => setTrackingCompteRenduId(cr.id)}
                         >
                           <FaRoute />
