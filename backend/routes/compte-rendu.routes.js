@@ -227,9 +227,9 @@ router.get('/', authenticate, async (req, res) => {
       });
     }
 
-    const { statut, id_fiche, date, id_commercial } = req.query;
+    const { statut, id_fiche, date, id_commercial, id_etat_final } = req.query;
 
-    console.log('[COMPTE-RENDU] GET /compte-rendu - User:', user.id, 'Fonction:', user.fonction, 'Query:', { statut, id_fiche, date, id_commercial });
+    console.log('[COMPTE-RENDU] GET /compte-rendu - User:', user.id, 'Fonction:', user.fonction, 'Query:', { statut, id_fiche, date, id_commercial, id_etat_final });
 
     let whereConditions = [];
     let params = [];
@@ -260,6 +260,14 @@ router.get('/', authenticate, async (req, res) => {
     if (date) {
       whereConditions.push('DATE(cr.date_creation) = ?');
       params.push(date);
+    }
+
+    if (id_etat_final) {
+      const idEtat = parseInt(id_etat_final, 10);
+      if (!Number.isNaN(idEtat)) {
+        whereConditions.push('cr.id_etat_final = ?');
+        params.push(idEtat);
+      }
     }
 
     const whereClause = whereConditions.length > 0 

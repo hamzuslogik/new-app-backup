@@ -13,6 +13,7 @@ import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { isCompteRenduSignerEtat } from '../utils/compteRenduSigner';
 import { getDateRappelAffichage } from '../utils/compteRenduDateRappel';
 import { canManageTrackingFromCompteRendu } from '../utils/trackingAccess';
+import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 
 const getTodayISO = () => new Date().toISOString().split('T')[0];
 
@@ -23,6 +24,7 @@ const CompteRendu = () => {
   const [selectedStatutPending, setSelectedStatutPending] = useState(user.fonction === 5 ? 'pending' : 'all');
   const [filterDate, setFilterDate] = useState(getTodayISO);
   const [filterCommercial, setFilterCommercial] = useState('');
+  const [filterEtat, setFilterEtat] = useState('');
   const [commentaireAdmin, setCommentaireAdmin] = useState('');
   const [selectedCompteRendu, setSelectedCompteRendu] = useState(null);
   const [editingCompteRendu, setEditingCompteRendu] = useState(null);
@@ -58,11 +60,12 @@ const CompteRendu = () => {
 
   // Récupérer les comptes rendus en attente
   const { data: comptesRendusPendingData, isLoading: isLoadingPending } = useQuery(
-    ['compte-rendu-pending', selectedStatutPending, filterDate, filterCommercial],
+    ['compte-rendu-pending', selectedStatutPending, filterDate, filterCommercial, filterEtat],
     async () => {
       const params = { date: filterDate };
       if (selectedStatutPending !== 'all') params.statut = selectedStatutPending;
       if (filterCommercial) params.id_commercial = filterCommercial;
+      if (filterEtat) params.id_etat_final = filterEtat;
       const res = await api.get('/compte-rendu', { params });
       return res.data.data || [];
     }
@@ -166,6 +169,10 @@ const CompteRendu = () => {
   const centres = centresData || [];
   const installateurs = installateursData || [];
   const etats = etatsData || [];
+  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } =
+    getEtatsGroupedByPhase(etats);
+  const etatsForFilter = [...etatsPhase0, ...etatsPhase1, ...etatsPhase2, ...etatsPhase3];
+  const etatsForFilterFallback = etatsForFilter.length > 0 ? etatsForFilter : etats;
 
   const compteRendusPending = comptesRendusPendingData || [];
   const isAdmin = [1, 2, 7].includes(Number(user.fonction));
@@ -314,6 +321,109 @@ const CompteRendu = () => {
                   </select>
                 </div>
               )}
+              <div className="filter-group filter-group-etat">
+                <label htmlFor="filter-etat">État :</label>
+                <select
+                  id="filter-etat"
+                  value={filterEtat}
+                  onChange={(e) => setFilterEtat(e.target.value)}
+                  className="filter-select filter-select-etat"
+                >
+                  <option value="">Tous</option>
+                  {etatsPhase0.length > 0 && (
+                    <optgroup label="PHASE 0">
+                      {etatsPhase0.map((etat) => (
+                        <option
+                          key={etat.id}
+                          value={etat.id}
+                          style={{ backgroundColor: etat.color || '#cccccc' }}
+                        >
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase1.length > 0 && (
+                    <optgroup label="PHASE 1">
+                      {etatsPhase1.map((etat) => (
+                        <option
+                          key={etat.id}
+                          value={etat.id}
+                          style={{ backgroundColor: etat.color || '#cccccc' }}
+                        >
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase2.length > 0 && (
+                    <optgroup label="PHASE 2">
+                      {etatsPhase2.map((etat) => (
+                        <option
+                          key={etat.id}
+                          value={etat.id}
+                          style={{ backgroundColor: etat.color || '#cccccc' }}
+                        >
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsPhase3.length > 0 && (
+                    <optgroup label="PHASE 3">
+                      {etatsPhase3.map((etat) => (
+                        <option
+                          key={etat.id}
+                          value={etat.id}
+                          style={{ backgroundColor: etat.color || '#cccccc' }}
+                        >
+                          {etat.titre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {etatsForFilter.length === 0 &&
+                    etats.map((etat) => (
+                      <option
+                        key={etat.id}
+                        value={etat.id}
+                        style={{ backgroundColor: etat.color || '#cccccc' }}
+                      >
+                        {etat.titre}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+            <div className="cr-etat-filters" role="group" aria-label="Filtrer par état">
+              <button
+                type="button"
+                className={`cr-etat-pill ${!filterEtat ? 'active' : ''}`}
+                onClick={() => setFilterEtat('')}
+              >
+                Tous
+              </button>
+              {etatsForFilterFallback.map((etat) => {
+                const color = etat.color || '#6c757d';
+                const isActive = filterEtat === String(etat.id);
+                return (
+                  <button
+                    key={etat.id}
+                    type="button"
+                    className={`cr-etat-pill ${isActive ? 'active' : ''}`}
+                    title={etat.titre}
+                    style={{
+                      borderColor: color,
+                      background: hexToRgba(color, isActive ? 0.38 : 0.14),
+                      color: isActive ? '#111827' : '#374151',
+                    }}
+                    onClick={() => setFilterEtat(isActive ? '' : String(etat.id))}
+                  >
+                    <span className="cr-etat-pill-dot" style={{ backgroundColor: color }} />
+                    {etat.titre}
+                  </button>
+                );
+              })}
             </div>
             {canApprove && (
               <div className="statut-filters">
