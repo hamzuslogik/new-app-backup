@@ -6,17 +6,17 @@ function isTrackingBlockedUser(user) {
   return TRACKING_BLOCKED_USER_IDS.includes(Number(user.id));
 }
 
-function isBackofficeTrackingUser(user) {
-  if (!user || isTrackingBlockedUser(user)) return false;
-  return Number(user.fonction) === TRACKING_FONCTION_BACKOFFICE;
+function isBackofficeFonction(user) {
+  return Number(user?.fonction) === TRACKING_FONCTION_BACKOFFICE;
 }
 
 function canAccessTrackingPage(user) {
-  return isBackofficeTrackingUser(user);
+  if (!user || !isBackofficeFonction(user) || isTrackingBlockedUser(user)) return false;
+  return true;
 }
 
 function canManageTrackingFromCompteRendu(user) {
-  return isBackofficeTrackingUser(user);
+  return !!user && isBackofficeFonction(user);
 }
 
 module.exports = {
