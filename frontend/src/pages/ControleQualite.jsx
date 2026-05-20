@@ -584,42 +584,29 @@ const ControleQualite = () => {
   const openRowContextMenu = (e, fiche) => {
     e.preventDefault();
     e.stopPropagation();
-    const row = e.currentTarget;
-    const rect = row.getBoundingClientRect();
     setContextMenu({
       fiche,
-      anchorRect: {
-        top: rect.top,
-        left: rect.left,
-        right: rect.right,
-        bottom: rect.bottom,
-        height: rect.height,
-      },
+      x: e.clientX,
+      y: e.clientY,
     });
   };
 
   const getContextMenuStyle = () => {
-    if (!contextMenu?.anchorRect || typeof window === 'undefined') {
+    if (!contextMenu || typeof window === 'undefined') {
       return { position: 'fixed', zIndex: 10050 };
     }
     const MENU_WIDTH = 240;
     const menuHeight = 320;
     const pad = 8;
-    const { top: rowTop, left: rowLeft, right: rowRight, height: rowHeight } = contextMenu.anchorRect;
-
-    // Ancré sur la ligne : bord gauche de la ligne, aligné verticalement sur la ligne
-    let left = rowLeft + 4;
-    if (left + MENU_WIDTH > window.innerWidth - pad) {
-      left = Math.max(pad, rowRight - MENU_WIDTH - 4);
-    }
-    left = Math.min(Math.max(pad, left), Math.max(pad, window.innerWidth - MENU_WIDTH - pad));
-
-    const spaceBelow = window.innerHeight - rowTop;
-    const openUpward = spaceBelow < menuHeight + pad && rowTop > spaceBelow;
+    const spaceBelow = window.innerHeight - contextMenu.y;
+    const openUpward = spaceBelow < menuHeight + pad && contextMenu.y > spaceBelow;
     const top = openUpward
-      ? Math.max(pad, rowTop + rowHeight - menuHeight)
-      : Math.min(rowTop, Math.max(pad, window.innerHeight - menuHeight - pad));
-
+      ? Math.max(pad, contextMenu.y - menuHeight)
+      : Math.min(contextMenu.y, Math.max(pad, window.innerHeight - menuHeight - pad));
+    const left = Math.min(
+      Math.max(pad, contextMenu.x),
+      Math.max(pad, window.innerWidth - MENU_WIDTH - pad)
+    );
     return { position: 'fixed', top, left, zIndex: 10050 };
   };
 
