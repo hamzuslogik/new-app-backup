@@ -45,7 +45,7 @@ const ControleQualite = () => {
   const { setAutoHide, closeSidebar, isDesktop } = useSidebar();
   const queryClient = useQueryClient();
 
-  // Sidebar réduit par défaut sur cette page (plus d'espace pour le tableau)
+  // Sidebar réduit par défaut à l'arrivée sur la page (l'utilisateur peut le rouvrir via le menu)
   useEffect(() => {
     if (isDesktop) {
       setAutoHide(true);
@@ -53,7 +53,9 @@ const ControleQualite = () => {
       closeSidebar();
     }
     return () => setAutoHide(false);
-  }, [isDesktop, setAutoHide, closeSidebar]);
+    // setAutoHide / closeSidebar : refs stables ; ne pas ré-exécuter au toggle (évite de re-bloquer le menu)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDesktop]);
   const [showFilters, setShowFilters] = useState(true);
   const [contextMenu, setContextMenu] = useState(null);
   const [filters, setFilters] = useState({
@@ -582,25 +584,42 @@ const ControleQualite = () => {
   const openRowContextMenu = (e, fiche) => {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY, fiche });
+    const row = e.currentTarget;
+    const rect = row.getBoundingClientRect();
+    setContextMenu({
+      fiche,
+      anchorRect: {
+        top: rect.top,
+        left: rect.left,
+        right: rect.right,
+        bottom: rect.bottom,
+        height: rect.height,
+      },
+    });
   };
 
   const getContextMenuStyle = () => {
-    if (!contextMenu || typeof window === 'undefined') {
+    if (!contextMenu?.anchorRect || typeof window === 'undefined') {
       return { position: 'fixed', zIndex: 10050 };
     }
     const MENU_WIDTH = 240;
     const menuHeight = 320;
     const pad = 8;
-    const spaceBelow = window.innerHeight - contextMenu.y;
-    const openUpward = spaceBelow < menuHeight + pad && contextMenu.y > spaceBelow;
+    const { top: rowTop, left: rowLeft, right: rowRight, height: rowHeight } = contextMenu.anchorRect;
+
+    // Ancré sur la ligne : bord gauche de la ligne, aligné verticalement sur la ligne
+    let left = rowLeft + 4;
+    if (left + MENU_WIDTH > window.innerWidth - pad) {
+      left = Math.max(pad, rowRight - MENU_WIDTH - 4);
+    }
+    left = Math.min(Math.max(pad, left), Math.max(pad, window.innerWidth - MENU_WIDTH - pad));
+
+    const spaceBelow = window.innerHeight - rowTop;
+    const openUpward = spaceBelow < menuHeight + pad && rowTop > spaceBelow;
     const top = openUpward
-      ? Math.max(pad, contextMenu.y - menuHeight)
-      : Math.min(contextMenu.y, Math.max(pad, window.innerHeight - menuHeight - pad));
-    const left = Math.min(
-      Math.max(pad, contextMenu.x),
-      Math.max(pad, window.innerWidth - MENU_WIDTH - pad)
-    );
+      ? Math.max(pad, rowTop + rowHeight - menuHeight)
+      : Math.min(rowTop, Math.max(pad, window.innerHeight - menuHeight - pad));
+
     return { position: 'fixed', top, left, zIndex: 10050 };
   };
 
@@ -821,10 +840,11 @@ const ControleQualite = () => {
                     key={fiche.hash}
                     className={[
                       isFicheLockedForUser(fiche) ? 'fiche-row-locked' : '',
-                      (fiche.archive === 1 || fiche.archive === '1') ? 'fiche-row-archive' : ''
+                      (fiche.archive === 1 || fiche.archive === '1') ? 'fiche-row-archive' : '',
+                      contextMenu?.fiche?.hash === fiche.hash ? 'cq-row-context-active' : '',
                     ].filter(Boolean).join(' ')}
                     onContextMenu={(e) => openRowContextMenu(e, fiche)}
-                    title="Clic droit : menu d'actions"
+                    title="Clic droit : menu d'actions sur cette ligne"
                   >
                     <td>{fiche.nom || '-'}</td>
                     <td>{fiche.prenom || '-'}</td>
@@ -958,6 +978,10 @@ const ControleQualite = () => {
           role="menu"
           onClick={(e) => e.stopPropagation()}
         >
+          <div className="cq-context-menu-row-label" title="Ligne sélectionnée">
+            {[contextMenu.fiche.nom, contextMenu.fiche.prenom].filter(Boolean).join(' ') || 'Fiche'}
+            {contextMenu.fiche.tel ? ` · ${contextMenu.fiche.tel}` : ''}
+          </div>
           <button type="button" className="cq-fiche-context-menu-item" onClick={openDetailsFromMenu}>
             Détails
           </button>

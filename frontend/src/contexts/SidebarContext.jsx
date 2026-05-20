@@ -108,15 +108,13 @@ export const SidebarProvider = ({ children }) => {
     if (!isDesktop) {
       return; // Ignorer l'auto-hide sur mobile/tablet
     }
-    
+
     setAutoHideEnabled(enabled);
-    if (enabled && isDesktop) {
+    if (enabled) {
       setSidebarCollapsed(true); // Masquer automatiquement sur desktop uniquement
-    } else if (!enabled && isDesktop && !sidebarCollapsed) {
-      // Si auto-hide est désactivé et qu'on n'a pas fermé manuellement, réafficher
-      setSidebarCollapsed(false);
     }
-  }, [isDesktop, sidebarCollapsed]);
+    // Ne pas forcer la réouverture ici : toggleSidebar / openSidebar gèrent l'état utilisateur
+  }, [isDesktop]);
 
   return (
     <SidebarContext.Provider

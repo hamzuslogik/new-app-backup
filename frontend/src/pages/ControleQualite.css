@@ -1238,6 +1238,18 @@
   padding: 6px 0;
 }
 
+.cq-context-menu-row-label {
+  padding: 8px 14px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e40af;
+  background: #eff6ff;
+  border-bottom: 1px solid #dbeafe;
+  cursor: default;
+  user-select: none;
+  line-height: 1.35;
+}
+
 .cq-fiche-context-menu-item {
   display: block;
   width: 100%;
@@ -1308,6 +1320,16 @@
 .agent-qualite-cell {
   font-weight: 600;
   white-space: nowrap;
+}
+
+.fiches-table tbody tr.cq-row-context-active {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+  background-color: #eff6ff !important;
+}
+
+.fiches-table tbody tr.cq-row-context-active td {
+  background-color: inherit;
 }
 
 .fiches-table tbody tr {
