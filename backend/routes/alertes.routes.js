@@ -6,6 +6,13 @@ const { query, queryOne } = require('../config/database');
 const ficheRoutes = require('./fiche.routes');
 const encodeFicheId = ficheRoutes.encodeFicheId;
 
+/** Session agent qualité qualification (fonction 8 ou CQ hors admin/RE/RP/agent qualif). */
+function isQualiteQualificationAgent(fonction, hasControleQualite, isAdmin) {
+  if (isAdmin) return false;
+  if (Number(fonction) === 8) return true;
+  return Boolean(hasControleQualite && ![2, 3, 12].includes(Number(fonction)));
+}
+
 /**
  * Liste des agents que l'utilisateur peut filtrer sur la page Alertes (même périmètre que les alertes).
  */
@@ -14,10 +21,29 @@ router.get('/agents', authenticate, async (req, res) => {
     const user = req.user;
     const fonction = Number(user?.fonction);
     const hasControleQualite = await hasPermission(fonction, 'controle_qualite_view');
+    const isAdmin = [1, 7].includes(fonction);
+    const isQualiteQualif = isQualiteQualificationAgent(fonction, hasControleQualite, isAdmin);
 
-    let agentIds = null;
+    if (isQualiteQualif) {
+      try {
+        const agents = await query(
+          `SELECT DISTINCT u.id, u.pseudo
+           FROM alert_ko a
+           INNER JOIN utilisateurs u ON a.id_agent = u.id
+           WHERE a.id_qualite = ?
+           ORDER BY u.pseudo ASC`,
+          [user.id]
+        );
+        return res.json({ success: true, data: agents || [] });
+      } catch (err) {
+        if (err.code === 'ER_NO_SUCH_TABLE') {
+          return res.json({ success: true, data: [] });
+        }
+        throw err;
+      }
+    }
 
-    if (hasControleQualite) {
+    if (hasControleQualite && !isQualiteQualif) {
       const agents = await query(
         'SELECT id, pseudo FROM utilisateurs WHERE fonction = 3 AND (etat > 0 OR etat IS NULL) ORDER BY pseudo ASC'
       );
@@ -60,18 +86,23 @@ router.get('/agents', authenticate, async (req, res) => {
  * - Agent qualification (fonction 3) : ses alertes (id_agent = user.id)
  * - RE qualification (fonction 2) : alertes des agents de son équipe (id_agent IN (agents où chef_equipe = user.id))
  * - RP qualification (fonction 12) : alertes des agents par RE (id_agent IN (agents sous les RE dont id_rp_qualif = user.id))
- * - Contrôle qualité (permission controle_qualite_view) : toutes les alertes
+ * - Qualité qualification (fonction 8, etc.) : alertes qu'il a envoyées (id_qualite = user.id)
+ * - Contrôle qualité / admin : toutes les alertes
  */
 router.get('/', authenticate, async (req, res) => {
   try {
     const user = req.user;
     const fonction = Number(user?.fonction);
     const hasControleQualite = await hasPermission(fonction, 'controle_qualite_view');
+    const isAdmin = [1, 7].includes(fonction);
+    const isQualiteQualif = isQualiteQualificationAgent(fonction, hasControleQualite, isAdmin);
 
     let agentIds = null; // null = tous les agents (contrôle qualité)
+    let qualiteScopeId = null; // qualité qualification : ses envois uniquement
 
-    if (hasControleQualite) {
-      // Contrôle qualité : voir toutes les alertes
+    if (isQualiteQualif) {
+      qualiteScopeId = user.id;
+    } else if (hasControleQualite || isAdmin) {
       agentIds = null;
     } else if (fonction === 3) {
       // Agent qualification : uniquement ses alertes
@@ -112,6 +143,11 @@ router.get('/', authenticate, async (req, res) => {
 
     let whereClause = '1=1';
     const params = [];
+
+    if (qualiteScopeId != null) {
+      whereClause += ' AND a.id_qualite = ?';
+      params.push(qualiteScopeId);
+    }
 
     if (agentIds !== null) {
       if (agentIds.length === 0) {

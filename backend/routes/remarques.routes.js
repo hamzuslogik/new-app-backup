@@ -13,12 +13,20 @@ const NATURES_REMARQUE = [
   'Autres'
 ];
 
+/** Session agent qualité qualification (fonction 8 ou CQ hors admin/RE/RP/agent qualif). */
+function isQualiteQualificationAgent(fonction, hasControleQualite, isAdmin) {
+  if (isAdmin) return false;
+  if (Number(fonction) === 8) return true;
+  return Boolean(hasControleQualite && ![2, 3, 12].includes(Number(fonction)));
+}
+
 /**
  * Liste des remarques avec filtrage par rôle :
  * - Agent qualification (fonction 3) : uniquement les remarques qui lui sont adressées (id_destinataire = user.id)
  * - RE qualification (fonction 2) : remarques adressées aux agents de son équipe
  * - RP qualification (fonction 12) : remarques adressées aux agents sous sa responsabilité (via RE)
- * - Admin / Qualité (controle_qualite_view) : toutes les remarques avec filtres optionnels
+ * - Qualité qualification (fonction 8, etc.) : uniquement les remarques qu'il a envoyées (id_expediteur = user.id)
+ * - Admin / supervision CQ : toutes les remarques avec filtres optionnels
  */
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -26,10 +34,14 @@ router.get('/', authenticate, async (req, res) => {
     const fonction = Number(user?.fonction);
     const hasControleQualite = await hasPermission(fonction, 'controle_qualite_view');
     const isAdmin = [1, 7].includes(fonction); // Admin, Resp ADV : voient tout
+    const isQualiteQualif = isQualiteQualificationAgent(fonction, hasControleQualite, isAdmin);
 
     let destinataireIds = null; // null = tous (qualité / admin)
+    let expediteurScopeId = null; // qualité qualification : ses envois uniquement
 
-    if (hasControleQualite || isAdmin) {
+    if (isQualiteQualif) {
+      expediteurScopeId = user.id;
+    } else if (hasControleQualite || isAdmin) {
       destinataireIds = null;
     } else if (fonction === 3) {
       destinataireIds = [user.id];
@@ -72,6 +84,11 @@ router.get('/', authenticate, async (req, res) => {
     let whereClause = '1=1';
     const params = [];
 
+    if (expediteurScopeId != null) {
+      whereClause += ' AND r.id_expediteur = ?';
+      params.push(expediteurScopeId);
+    }
+
     if (destinataireIds !== null) {
       if (destinataireIds.length === 0) {
         return res.json({
@@ -88,7 +105,7 @@ router.get('/', authenticate, async (req, res) => {
       whereClause += ' AND r.id_destinataire = ?';
       params.push(id_destinataire);
     }
-    if (id_expediteur) {
+    if (id_expediteur && expediteurScopeId == null) {
       whereClause += ' AND r.id_expediteur = ?';
       params.push(id_expediteur);
     }

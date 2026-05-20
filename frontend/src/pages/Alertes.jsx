@@ -10,11 +10,17 @@ import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 
 const Alertes = () => {
   useForceDesktopViewport('alertes-page');
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [showFilters, setShowFilters] = useState(true);
-  // Session Agent qualification (fonction 3)
-  const isAgentQualif = Number(user?.fonction) === 3;
-  const hideIdQualite = isAgentQualif;
+  const fonction = Number(user?.fonction);
+  const isAdmin = [1, 7].includes(fonction);
+  const hasControleQualite = hasPermission('controle_qualite_view');
+  // Agent qualification (fonction 3) : alertes reçues
+  const isAgentQualif = fonction === 3;
+  // Agent qualité qualification (fonction 8, etc.) : alertes qu'il a envoyées
+  const isQualiteQualifSession =
+    fonction === 8 || (hasControleQualite && !isAdmin && ![2, 3, 12].includes(fonction));
+  const hideIdQualite = isAgentQualif || isQualiteQualifSession;
   const [filters, setFilters] = useState({
     page: 1,
     limit: 50,
@@ -135,6 +141,9 @@ const Alertes = () => {
       )}
 
       <div className="results-info">
+        {isQualiteQualifSession && (
+          <p className="alertes-scope-hint">Affichage de vos alertes envoyées uniquement.</p>
+        )}
         <p>
           Total : <strong>{pagination.total}</strong> alerte{pagination.total !== 1 ? 's' : ''}
           {pagination.pages > 1 && (

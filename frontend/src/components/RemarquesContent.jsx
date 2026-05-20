@@ -20,6 +20,8 @@ const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => 
   const fonction = Number(user?.fonction);
   const isAdmin = [1, 7].includes(fonction);
   const canSend = hasPermission('controle_qualite_view') || isAdmin;
+  const isQualiteQualifSession =
+    fonction === 8 || (canSend && !isAdmin && ![2, 3, 12].includes(fonction));
 
   // Contexte fiche : pré-remplir destinataire (agent de la fiche) et lier la remarque à la fiche
   const initialDestinataire = ficheContext?.id_agent ? String(ficheContext.id_agent) : '';
@@ -190,7 +192,7 @@ const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => 
       {!inModal && (
       <div className="remarques-list-section">
         <div className="remarques-list-header">
-          <h4>Liste des remarques</h4>
+          <h4>{isQualiteQualifSession ? 'Mes remarques envoyées' : 'Liste des remarques'}</h4>
           {canSend && (
             <button
               type="button"
