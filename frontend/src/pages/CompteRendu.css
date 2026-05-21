@@ -333,15 +333,20 @@
   background: #dc3545;
 }
 .compte-rendu-card .cr-actions .btn-icon.btn-tracking {
-  background: #0ea5e9;
-  color: #fff;
+  background: #f8fafc;
+  border: 1px solid #0ea5e9;
+  padding: 5px;
 }
 
 .compte-rendu-card .cr-actions .btn-icon.btn-tracking.has-tracking {
   box-shadow: 0 0 0 2px #0369a1;
+  background: #eff6ff;
 }
-.compte-rendu-card .cr-actions .btn-icon.btn-tracking svg {
-  color: #fff !important;
+
+.compte-rendu-card .cr-actions .btn-icon.btn-tracking .btn-tracking-icon {
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 /* Icônes blanches dans boutons Approuver et Rejeter */
