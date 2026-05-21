@@ -8,6 +8,7 @@ const { query, queryOne } = require('../config/database');
 const { logUserActivityEvent } = require('../utils/userActivitySession');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 const { syncAffectationRecord } = require('../utils/affectationSync');
+const { triggerRdvAffecteFromFicheChange } = require('../utils/rdvAffecteWorkflow');
 const {
   buildCommentaireQualiteFromKo,
   isValidKoMotif,
@@ -4329,6 +4330,15 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       dbOldValue,
       dbValue
     );
+
+    if (dbField === 'id_commercial' || dbField === 'id_commercial_2') {
+      const updatedFiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
+      if (updatedFiche) {
+        triggerRdvAffecteFromFicheChange(fiche, updatedFiche, req.user, 'fiche_patch').catch((wfErr) => {
+          console.error('[WORKFLOW] rdv_affecte (patch):', wfErr);
+        });
+      }
+    }
 
     // Enregistrer l'audit dans controle_qualite lorsque seul le commentaire qualité est modifié (page Contrôle Qualité)
     if (field === 'commentaire_qualite') {

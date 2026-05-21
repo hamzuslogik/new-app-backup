@@ -33,6 +33,13 @@ const TRIGGER_VARIABLES = {
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.date_rdv_time}',
     '{old_date_rdv_time}', '{new_date_rdv_time}', '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
+  rdv_affecte: [
+    '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.date_rdv_time}',
+    '{fiche.id_commercial}', '{fiche.commercial_pseudo}', '{fiche.id_commercial_2}', '{fiche.commercial_2_pseudo}',
+    '{old_id_commercial}', '{new_id_commercial}', '{old_commercial_pseudo}', '{new_commercial_pseudo}',
+    '{commercial_slot}', '{affectation_source}',
+    '{date_rdv_time}', '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
   rdv_validated: [
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.valider}',
     '{old_valider}', '{new_valider}', '{conf_rdv_avec}', '{conf_presence_couple}',
@@ -770,6 +777,7 @@ const WorkflowsTab = () => {
                         <option value="fiche_updated">Fiche modifiée</option>
                         <option value="etat_changed">État changé</option>
                         <option value="rdv_created">RDV créé</option>
+                        <option value="rdv_affecte">RDV affecté (commercial)</option>
                         <option value="rdv_validated">RDV validé</option>
                         <option value="compte_rendu_created">Compte rendu créé</option>
                         <option value="compte_rendu_approved">Compte rendu approuvé</option>

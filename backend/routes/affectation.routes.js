@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
 const { syncAffectationRecord } = require('../utils/affectationSync');
+const { triggerRdvAffecteAfterAffectation } = require('../utils/rdvAffecteWorkflow');
 
 // Récupérer les fiches confirmées (état 7) non affectées pour affectation
 router.get('/fiches-confirmees', authenticate, async (req, res) => {
@@ -216,6 +217,15 @@ router.post('/affecter', authenticate, async (req, res) => {
           console.error('Erreur lors de l\'enregistrement dans modifica:', modifError);
           // Ne pas bloquer l'affectation si modifica échoue
         }
+
+        triggerRdvAffecteAfterAffectation(
+          parseInt(ficheId, 10),
+          ancienCommercial,
+          commercialId,
+          req.user
+        ).catch((wfErr) => {
+          console.error(`[WORKFLOW] rdv_affecte fiche ${ficheId}:`, wfErr);
+        });
 
         results.push({
           fiche_id: ficheId,

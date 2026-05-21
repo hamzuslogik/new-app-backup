@@ -1,4 +1,5 @@
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
+const { triggerRdvAffecteFromFicheChange } = require('../utils/rdvAffecteWorkflow');
 
 /**
  * Middleware pour déclencher les workflows après une création de fiche
@@ -92,6 +93,10 @@ const triggerWorkflowOnFicheUpdated = async (req, res, next) => {
               console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (rdv_created):', error);
             });
           }
+
+          triggerRdvAffecteFromFicheChange(oldFiche, fiche, req.user, 'fiche_update').catch((error) => {
+            console.error('[WORKFLOW] Erreur rdv_affecte (fiche_update):', error);
+          });
           
           // Vérifier si l'état a changé (ancien état = fiche AVANT mise à jour, pas le body qui contient le nouveau)
           const oldEtat = oldFiche?.id_etat_final ?? req.body.old_etat;
