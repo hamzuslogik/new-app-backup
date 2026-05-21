@@ -3,7 +3,10 @@ const router = express.Router();
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
 const { syncAffectationRecord } = require('../utils/affectationSync');
-const { triggerRdvAffecteAfterAffectation } = require('../utils/rdvAffecteWorkflow');
+const {
+  triggerRdvAffecteAfterAffectation,
+  triggerRdvDesaffecteAfterDesaffectation,
+} = require('../utils/rdvAffecteWorkflow');
 
 // Récupérer les fiches confirmées (état 7) non affectées pour affectation
 router.get('/fiches-confirmees', authenticate, async (req, res) => {
@@ -277,7 +280,7 @@ router.post('/desaffecter', authenticate, async (req, res) => {
       try {
         // Vérifier que la fiche existe
         const fiche = await queryOne(
-          'SELECT id, id_commercial FROM fiches WHERE id = ?',
+          'SELECT id, id_commercial, id_commercial_2, date_rdv_time FROM fiches WHERE id = ?',
           [parseInt(ficheId)]
         );
 
@@ -287,6 +290,7 @@ router.post('/desaffecter', authenticate, async (req, res) => {
         }
 
         const ancienCommercial = fiche.id_commercial || 0;
+        const ancienCommercial2 = fiche.id_commercial_2;
 
         await query(
           'UPDATE fiches SET id_commercial = 0, id_commercial_2 = NULL, date_modif_time = ? WHERE id = ?',
@@ -294,6 +298,15 @@ router.post('/desaffecter', authenticate, async (req, res) => {
         );
 
         await syncAffectationRecord(ficheId, 0, dateModifTime);
+
+        triggerRdvDesaffecteAfterDesaffectation(
+          parseInt(ficheId, 10),
+          ancienCommercial,
+          ancienCommercial2,
+          req.user
+        ).catch((wfErr) => {
+          console.error(`[WORKFLOW] rdv_desaffecte fiche ${ficheId}:`, wfErr);
+        });
 
         // Enregistrer dans modifica
         try {

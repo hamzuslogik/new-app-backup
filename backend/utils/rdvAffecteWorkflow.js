@@ -34,15 +34,19 @@ async function loadFicheEnriched(ficheId) {
   );
 }
 
+function slotField(slot) {
+  return slot === 'secondaire' ? 'id_commercial_2' : 'id_commercial';
+}
+
 /**
- * Déclenche rdv_affecte si un commercial est affecté (nouveau ou changé) et que la fiche a une date RDV.
+ * Affectation ou désaffectation commercial sur une fiche avec date RDV.
  */
-async function fireRdvAffecte({ ficheId, oldFiche, newFiche, user, slot = 'principal', source = 'unknown' }) {
-  const field = slot === 'secondaire' ? 'id_commercial_2' : 'id_commercial';
+async function fireRdvCommercialChange({ ficheId, oldFiche, newFiche, user, slot = 'principal', source = 'unknown' }) {
+  const field = slotField(slot);
   const oldId = normCommercialId(oldFiche?.[field]);
   const newId = normCommercialId(newFiche?.[field]);
 
-  if (!newId || newId === oldId) return;
+  if (oldId === newId) return;
 
   const dateRdv = newFiche?.date_rdv_time ?? oldFiche?.date_rdv_time;
   if (!hasDateRdv(dateRdv)) return;
@@ -51,9 +55,9 @@ async function fireRdvAffecte({ ficheId, oldFiche, newFiche, user, slot = 'princ
   if (!fiche) return;
 
   const oldPseudo = oldId ? await loadCommercialPseudo(oldId) : null;
-  const newPseudo = await loadCommercialPseudo(newId);
+  const newPseudo = newId ? await loadCommercialPseudo(newId) : null;
 
-  await executeWorkflow('rdv_affecte', {
+  const basePayload = {
     fiche,
     user,
     commercial_slot: slot,
@@ -63,15 +67,31 @@ async function fireRdvAffecte({ ficheId, oldFiche, newFiche, user, slot = 'princ
     old_commercial_pseudo: oldPseudo,
     new_commercial_pseudo: newPseudo,
     date_rdv_time: fiche.date_rdv_time,
-  }).catch((err) => {
-    console.error('[WORKFLOW] Erreur rdv_affecte:', err);
-  });
+  };
+
+  if (oldId && !newId) {
+    await executeWorkflow('rdv_desaffecte', basePayload).catch((err) => {
+      console.error('[WORKFLOW] Erreur rdv_desaffecte:', err);
+    });
+    return;
+  }
+
+  if (newId) {
+    await executeWorkflow('rdv_affecte', basePayload).catch((err) => {
+      console.error('[WORKFLOW] Erreur rdv_affecte:', err);
+    });
+  }
+}
+
+/** @deprecated alias — utilise fireRdvCommercialChange */
+async function fireRdvAffecte(params) {
+  return fireRdvCommercialChange(params);
 }
 
 /**
- * Compare ancienne / nouvelle fiche (PUT, patch champ, etc.).
+ * Compare ancienne / nouvelle fiche (PUT, patch champ, etc.) — affectation et désaffectation.
  */
-async function triggerRdvAffecteFromFicheChange(oldFiche, newFiche, user, source = 'fiche_update') {
+async function triggerRdvCommercialFromFicheChange(oldFiche, newFiche, user, source = 'fiche_update') {
   if (!oldFiche && !newFiche) return;
   const ficheId = newFiche?.id ?? oldFiche?.id;
   if (!ficheId) return;
@@ -82,8 +102,14 @@ async function triggerRdvAffecteFromFicheChange(oldFiche, newFiche, user, source
   }
   if (!newRow) return;
 
-  await fireRdvAffecte({ ficheId, oldFiche: oldFiche || {}, newFiche: newRow, user, slot: 'principal', source });
-  await fireRdvAffecte({ ficheId, oldFiche: oldFiche || {}, newFiche: newRow, user, slot: 'secondaire', source });
+  const old = oldFiche || {};
+  await fireRdvCommercialChange({ ficheId, oldFiche: old, newFiche: newRow, user, slot: 'principal', source });
+  await fireRdvCommercialChange({ ficheId, oldFiche: old, newFiche: newRow, user, slot: 'secondaire', source });
+}
+
+/** Alias rétrocompat */
+async function triggerRdvAffecteFromFicheChange(oldFiche, newFiche, user, source = 'fiche_update') {
+  return triggerRdvCommercialFromFicheChange(oldFiche, newFiche, user, source);
 }
 
 /** Après POST /affectations/affecter */
@@ -92,10 +118,32 @@ async function triggerRdvAffecteAfterAffectation(ficheId, ancienCommercial, newC
   if (!fiche) return;
   const oldFiche = { ...fiche, id_commercial: ancienCommercial || 0 };
   const newFiche = { ...fiche, id_commercial: newCommercialId };
-  await fireRdvAffecte({ ficheId, oldFiche, newFiche, user, slot: 'principal', source: 'affectation' });
+  await fireRdvCommercialChange({ ficheId, oldFiche, newFiche, user, slot: 'principal', source: 'affectation' });
+}
+
+/** Après POST /affectations/desaffecter */
+async function triggerRdvDesaffecteAfterDesaffectation(ficheId, ancienCommercial, ancienCommercial2, user) {
+  const fiche = await loadFicheEnriched(ficheId);
+  if (!fiche) return;
+
+  const oldFiche = {
+    ...fiche,
+    id_commercial: ancienCommercial || 0,
+    id_commercial_2: ancienCommercial2 ?? null,
+  };
+  const newFiche = { ...fiche, id_commercial: 0, id_commercial_2: null };
+
+  if (normCommercialId(ancienCommercial)) {
+    await fireRdvCommercialChange({ ficheId, oldFiche, newFiche, user, slot: 'principal', source: 'affectation' });
+  }
+  if (normCommercialId(ancienCommercial2)) {
+    await fireRdvCommercialChange({ ficheId, oldFiche, newFiche, user, slot: 'secondaire', source: 'affectation' });
+  }
 }
 
 module.exports = {
+  triggerRdvCommercialFromFicheChange,
   triggerRdvAffecteFromFicheChange,
   triggerRdvAffecteAfterAffectation,
+  triggerRdvDesaffecteAfterDesaffectation,
 };
