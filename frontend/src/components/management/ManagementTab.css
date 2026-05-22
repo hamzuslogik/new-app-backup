@@ -707,3 +707,44 @@
   color: #0d6efd;
 }
 
+.fiches-ko-import-tab .ko-import-help {
+  color: #555;
+  font-size: 13px;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.fiches-ko-import-tab .ko-import-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 12px;
+  font-size: 13px;
+  align-items: center;
+}
+
+.fiches-ko-import-tab .ko-import-warn-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.fiches-ko-import-tab .ko-import-status-ok {
+  color: #198754;
+}
+
+.fiches-ko-import-tab .ko-import-status-warn {
+  color: #b8860b;
+}
+
+.fiches-ko-import-tab .ko-import-status-err {
+  color: #dc3545;
+}
+
+.fiches-ko-import-tab td.ko-import-status-ok span,
+.fiches-ko-import-tab td.ko-import-status-warn span,
+.fiches-ko-import-tab td.ko-import-status-err span {
+  margin-left: 6px;
+}
+

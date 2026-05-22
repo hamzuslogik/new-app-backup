@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave, FaFileExport, FaPhone, FaLock, FaShieldAlt } from 'react-icons/fa';
+import { FaBuilding, FaUsers, FaMapMarkerAlt, FaBox, FaUserTie, FaFlag, FaBriefcase, FaFileContract, FaCog, FaFire, FaTools, FaList, FaSms, FaProjectDiagram, FaEnvelope, FaMoneyBillWave, FaFileExport, FaPhone, FaLock, FaShieldAlt, FaBan } from 'react-icons/fa';
 import ReglesAutorisationTab from '../components/management/ReglesAutorisationTab';
 import CentresTab from '../components/management/CentresTab';
 import FinancementTab from '../components/management/FinancementTab';
@@ -18,6 +18,7 @@ import SMSCategoriesTab from '../components/management/SMSCategoriesTab';
 import WorkflowsTab from '../components/management/WorkflowsTab';
 import FichesExtractionTab from '../components/management/FichesExtractionTab';
 import FichesHashFromTelTab from '../components/management/FichesHashFromTelTab';
+import FichesKoImportTab from '../components/management/FichesKoImportTab';
 import GlobalSettingsTab from '../components/management/GlobalSettingsTab';
 import ConnexionsEchoueesTab from '../components/management/ConnexionsEchoueesTab';
 import GlobalSearch from '../components/management/GlobalSearch';
@@ -58,6 +59,7 @@ const Management = () => {
     { id: 'workflows', label: 'Workflows', icon: FaProjectDiagram },
     { id: 'fiches-extraction', label: 'Extraction fiches', icon: FaFileExport },
     { id: 'fiches-hash-tel', label: 'Hash depuis tel', icon: FaPhone },
+    { id: 'fiches-ko-import', label: 'Import fiches KO', icon: FaBan },
     { id: 'global-settings', label: 'Parametres globaux', icon: FaCog },
   ];
 
@@ -107,6 +109,8 @@ const Management = () => {
         return <FichesExtractionTab />;
       case 'fiches-hash-tel':
         return <FichesHashFromTelTab />;
+      case 'fiches-ko-import':
+        return <FichesKoImportTab />;
       case 'global-settings':
         return <GlobalSettingsTab />;
       default:

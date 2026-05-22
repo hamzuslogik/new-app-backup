@@ -19,6 +19,7 @@ const {
 } = require('../utils/globalSettingsHelper');
 
 const upload = multer({ storage: multer.memoryStorage() });
+const { previewKoImportFromBuffer, applyKoImportRows } = require('../utils/fichesKoImport');
 
 // Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
 const hashPassword = (password) => {
@@ -2493,6 +2494,75 @@ router.post('/fiches-hash-from-phones', authenticate, upload.single('file'), asy
     res.status(500).json({ success: false, message: 'Erreur serveur lors de la recherche hash/tel' });
   }
 });
+
+// =====================================================
+// IMPORT FICHES KO (Excel : agent pseudo → id_agent, ko=1, date insertion)
+// =====================================================
+
+router.post(
+  '/fiches-ko-import/preview',
+  authenticate,
+  checkPermission(1, 2, 7, 11),
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'Fichier requis' });
+      }
+      const ext = path.extname(req.file.originalname || '').toLowerCase();
+      if (ext !== '.xlsx' && ext !== '.xls' && ext !== '.csv') {
+        return res.status(400).json({
+          success: false,
+          message: 'Format accepté : .xlsx, .xls ou .csv',
+        });
+      }
+      const { rows, meta } = await previewKoImportFromBuffer(req.file.buffer);
+      return res.json({ success: true, data: rows, meta });
+    } catch (error) {
+      console.error('Erreur fiches-ko-import preview:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la lecture du fichier',
+        error: error.message,
+      });
+    }
+  }
+);
+
+router.post(
+  '/fiches-ko-import/apply',
+  authenticate,
+  checkPermission(1, 2, 7, 11),
+  async (req, res) => {
+    try {
+      const rows = req.body?.rows;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'Aucune ligne à appliquer' });
+      }
+      const applicable = rows.filter((r) => r.status === 'pret' || r.status === 'avertissement');
+      if (!applicable.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'Aucune ligne valide (statut prêt ou avertissement)',
+        });
+      }
+      const { results, meta } = await applyKoImportRows(applicable, req.user?.id);
+      return res.json({
+        success: true,
+        message: `${meta.success} fiche(s) mise(s) à jour`,
+        data: results,
+        meta,
+      });
+    } catch (error) {
+      console.error('Erreur fiches-ko-import apply:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur lors de l\'application des modifications',
+        error: error.message,
+      });
+    }
+  }
+);
 
 // =====================================================
 // PARAMETRES GLOBAUX
