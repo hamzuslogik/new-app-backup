@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useMutation } from 'react-query';
 import { toast } from 'react-toastify';
 import { FaFileUpload, FaCheck, FaTimesCircle, FaExclamationTriangle } from 'react-icons/fa';
@@ -6,25 +6,25 @@ import api from '../../config/api';
 import './ManagementTab.css';
 
 const statusClass = (status) => {
-  if (status === 'pret') return 'ko-import-status-ok';
+  if (status === 'applique' || status === 'pret') return 'ko-import-status-ok';
   if (status === 'avertissement') return 'ko-import-status-warn';
   return 'ko-import-status-err';
 };
 
 const formatDt = (v) => {
   if (!v) return '-';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return String(v);
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return String(v);
-  return d.toLocaleString('fr-FR');
+  return d.toLocaleDateString('fr-FR');
 };
 
 const FichesKoImportTab = () => {
   const [file, setFile] = useState(null);
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
-  const [applyIncludeWarnings, setApplyIncludeWarnings] = useState(true);
 
-  const previewMutation = useMutation(
+  const importMutation = useMutation(
     async () => {
       if (!file) throw new Error('Veuillez sélectionner un fichier Excel');
       const formData = new FormData();
@@ -38,46 +38,27 @@ const FichesKoImportTab = () => {
       onSuccess: (result) => {
         setRows(result?.data || []);
         setMeta(result?.meta || null);
-        toast.success(`${result?.meta?.total || 0} ligne(s) analysée(s)`);
+        const applied = result?.meta?.applique ?? 0;
+        const errors = result?.meta?.erreur ?? 0;
+        toast.success(
+          result?.message ||
+            `Import terminé : ${applied} fiche(s) mise(s) à jour${errors ? `, ${errors} erreur(s)` : ''}`
+        );
       },
       onError: (error) => {
-        toast.error(error.response?.data?.message || error.message || 'Erreur lecture fichier');
+        toast.error(error.response?.data?.message || error.message || 'Erreur import');
       },
     }
   );
 
-  const applyMutation = useMutation(
-    async (linesToApply) => {
-      const res = await api.post('/management/fiches-ko-import/apply', { rows: linesToApply });
-      return res.data;
-    },
-    {
-      onSuccess: (result) => {
-        toast.success(result?.message || 'Import terminé');
-        if (file) previewMutation.mutate();
-      },
-      onError: (error) => {
-        toast.error(error.response?.data?.message || error.message || 'Erreur application');
-      },
-    }
-  );
-
-  const applicableRows = useMemo(() => {
-    return rows.filter((r) => {
-      if (r.status === 'pret') return true;
-      if (r.status === 'avertissement' && applyIncludeWarnings) return true;
-      return false;
-    });
-  }, [rows, applyIncludeWarnings]);
-
-  const handleApply = () => {
-    if (!applicableRows.length) {
-      toast.warn('Aucune ligne prête à appliquer');
-      return;
-    }
-    const msg = `Appliquer ${applicableRows.length} fiche(s) ?\n\n• id_agent mis à jour (pseudo → id)\n• ko = 1\n• date_appel_time si fournie dans l'Excel`;
+  const handleImport = () => {
+    const msg =
+      'Importer le fichier et appliquer chaque correspondance trouvée ?\n\n' +
+      '• id_agent mis à jour (pseudo → id)\n' +
+      '• ko = 1\n' +
+      '• date_appel_time si fournie dans l\'Excel';
     if (!window.confirm(msg)) return;
-    applyMutation.mutate(applicableRows);
+    importMutation.mutate();
   };
 
   return (
@@ -89,8 +70,8 @@ const FichesKoImportTab = () => {
       <p className="ko-import-help">
         Format attendu (1ère ligne = en-têtes) : <strong>Telephone</strong> (sans 0 initial),{' '}
         <strong>Agent</strong> (pseudo qualification), <strong>date_appel</strong> (YYYY-MM-DD),{' '}
-        <strong>Etat</strong> (doit contenir « KO »). Seules les lignes avec Etat = KO sont traitées.
-        Le 0 est ajouté au numéro pour la recherche ; la fiche est ciblée par téléphone + date d&apos;appel.
+        <strong>Etat</strong> (doit contenir « KO »). Chaque ligne matchée est mise à jour{' '}
+        <strong>immédiatement</strong> à l&apos;import (id_agent + ko=1).
       </p>
 
       <div className="form-group">
@@ -110,39 +91,22 @@ const FichesKoImportTab = () => {
         <button
           type="button"
           className="btn-primary"
-          onClick={() => previewMutation.mutate()}
-          disabled={!file || previewMutation.isLoading}
+          onClick={handleImport}
+          disabled={!file || importMutation.isLoading}
         >
           <FaFileUpload />
-          {previewMutation.isLoading ? 'Analyse...' : 'Analyser le fichier'}
-        </button>
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={handleApply}
-          disabled={!applicableRows.length || applyMutation.isLoading}
-        >
-          <FaCheck />
-          {applyMutation.isLoading
-            ? 'Application...'
-            : `Appliquer (${applicableRows.length})`}
+          {importMutation.isLoading ? 'Import en cours...' : 'Importer et appliquer'}
         </button>
       </div>
 
       {meta && (
         <div className="ko-import-summary">
-          <span>Total : {meta.total}</span>
-          <span className="ko-import-status-ok">Prêt : {meta.pret}</span>
-          <span className="ko-import-status-warn">Avertissement : {meta.avertissement}</span>
-          <span className="ko-import-status-err">Erreur : {meta.erreur}</span>
-          <label className="ko-import-warn-toggle">
-            <input
-              type="checkbox"
-              checked={applyIncludeWarnings}
-              onChange={(e) => setApplyIncludeWarnings(e.target.checked)}
-            />
-            Inclure les lignes en avertissement (ex. date différente)
-          </label>
+          <span>Total lignes : {meta.total}</span>
+          <span className="ko-import-status-ok">Appliquées : {meta.applique ?? 0}</span>
+          <span className="ko-import-status-err">Erreurs : {meta.erreur ?? 0}</span>
+          {meta.ignore_non_ko > 0 && (
+            <span>Ignorées (Etat ≠ KO) : {meta.ignore_non_ko}</span>
+          )}
         </div>
       )}
 
@@ -166,8 +130,8 @@ const FichesKoImportTab = () => {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan="10" className="text-center">
-                  Chargez un fichier puis cliquez sur Analyser
+                <td colSpan="11" className="text-center">
+                  Chargez un fichier puis cliquez sur Importer et appliquer
                 </td>
               </tr>
             ) : (
@@ -184,7 +148,7 @@ const FichesKoImportTab = () => {
                   <td>{formatDt(row.date_appel_time_db)}</td>
                   <td>{row.ko_actuel === 1 ? '1' : '0'}</td>
                   <td className={statusClass(row.status)}>
-                    {row.status === 'pret' && <FaCheck title="Prêt" />}
+                    {row.status === 'applique' && <FaCheck title="Appliqué" />}
                     {row.status === 'avertissement' && <FaExclamationTriangle title="Avertissement" />}
                     {row.status === 'erreur' && <FaTimesCircle title="Erreur" />}
                     <span>{row.status_label}</span>
@@ -196,7 +160,7 @@ const FichesKoImportTab = () => {
         </table>
       </div>
       {rows.length > 500 && (
-        <small>Affichage limité aux 500 premières lignes. Exportez depuis Excel si besoin.</small>
+        <small>Affichage limité aux 500 premières lignes.</small>
       )}
     </div>
   );

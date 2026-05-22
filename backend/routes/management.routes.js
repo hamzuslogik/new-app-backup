@@ -19,7 +19,7 @@ const {
 } = require('../utils/globalSettingsHelper');
 
 const upload = multer({ storage: multer.memoryStorage() });
-const { previewKoImportFromBuffer, applyKoImportRows } = require('../utils/fichesKoImport');
+const { processKoImportFromBuffer, applyKoImportRows } = require('../utils/fichesKoImport');
 
 // Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
 const hashPassword = (password) => {
@@ -2523,9 +2523,19 @@ router.post(
           message: 'Format accepté : .xlsx, .xls ou .csv',
         });
       }
-      const { rows, meta } = await previewKoImportFromBuffer(req.file.buffer, { requestId });
-      console.log('[fiches-ko-import][route] preview terminé', { requestId, meta });
-      return res.json({ success: true, data: rows, meta });
+      const { rows, meta } = await processKoImportFromBuffer(req.file.buffer, req.user?.id, {
+        requestId,
+      });
+      console.log('[fiches-ko-import][route] import terminé (application directe)', {
+        requestId,
+        meta,
+      });
+      return res.json({
+        success: true,
+        message: `${meta.applique ?? 0} fiche(s) mise(s) à jour`,
+        data: rows,
+        meta,
+      });
     } catch (error) {
       console.error('[fiches-ko-import][route] Erreur preview:', requestId, error);
       return res.status(500).json({

@@ -402,187 +402,210 @@ function buildPreviewRow(parsed, fiche, agentResolved, match_note) {
   };
 }
 
-async function previewKoImportFromBuffer(buffer, options = {}) {
-  const requestId = options.requestId || 'preview';
-  logStep('preview', `=== Début analyse (${requestId}) ===`);
+function isMatchApplicableForApply(status) {
+  return status === 'pret' || status === 'avertissement';
+}
+
+/** Applique la mise à jour BDD pour une ligne matchée (id_fiche + id_agent résolus). */
+async function applyKoImportMatch(row, userId) {
+  const line = row.line ?? null;
+  const idFiche = parseInt(row.id_fiche, 10);
+  const idAgent = parseInt(row.id_agent_resolu, 10);
+
+  if (!idFiche || !idAgent) {
+    return { success: false, message: 'id_fiche ou id_agent manquant' };
+  }
+
+  const fiche = await queryOne(
+    `SELECT id, id_agent, ko, id_centre, id_etat_final, date_appel_time FROM fiches WHERE id = ?`,
+    [idFiche]
+  );
+  if (!fiche) {
+    return { success: false, message: 'Fiche introuvable' };
+  }
+
+  const dateAppelYmd = toDateYmd(row.date_appel_excel);
+  const dateAppel = ymdToMysqlMidnight(dateAppelYmd);
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const oldKo = fiche.ko != null ? Number(fiche.ko) : 0;
+  const oldAgent = fiche.id_agent != null ? Number(fiche.id_agent) : null;
+
+  logLine('apply', line, 'mise à jour directe fiche', {
+    id_fiche: idFiche,
+    id_agent_avant: oldAgent,
+    id_agent_apres: idAgent,
+    ko_avant: oldKo,
+    date_appel_ymd: dateAppelYmd,
+  });
+
+  if (dateAppel) {
+    await query(
+      'UPDATE fiches SET id_agent = ?, ko = 1, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
+      [idAgent, dateAppel, now, idFiche]
+    );
+  } else {
+    await query('UPDATE fiches SET id_agent = ?, ko = 1, date_modif_time = ? WHERE id = ?', [
+      idAgent,
+      now,
+      idFiche,
+    ]);
+  }
+
+  if (oldKo !== 1) {
+    await insertFicheKoRecord({
+      id_fiche: idFiche,
+      motif_ko: IMPORT_KO_MOTIF,
+      commentaire_qualite: IMPORT_KO_MOTIF,
+      commentaire_complement: `Import gestion KO (ligne ${line ?? '?'})`,
+      id_qualite: userId,
+      id_agent: idAgent,
+      id_centre: fiche.id_centre ?? null,
+      id_etat_final_avant: fiche.id_etat_final ?? null,
+      id_etat_final_apres: fiche.id_etat_final ?? null,
+      source: IMPORT_KO_SOURCE,
+      date_ko: dateAppel || now,
+    });
+  }
+
+  return {
+    success: true,
+    message: 'Mis à jour (id_agent + ko=1)',
+    id_agent_avant: oldAgent,
+    ko_avant: oldKo,
+    date_appel_appliquee_ymd: dateAppelYmd,
+    date_appel_appliquee: dateAppel,
+  };
+}
+
+/**
+ * Parse Excel, rapproche chaque ligne, applique immédiatement chaque match trouvé.
+ */
+async function processKoImportFromBuffer(buffer, userId, options = {}) {
+  const requestId = options.requestId || 'process';
+  logStep('process', `=== Début import + application directe (${requestId}) ===`);
 
   const parsedRows = parseKoExcelBuffer(buffer);
   const ignoredNonKo = parsedRows._ignoredNonKo ?? 0;
 
   if (!parsedRows.length) {
-    logStep('preview', 'Aucune ligne KO à traiter', { ignore_non_ko: ignoredNonKo });
+    logStep('process', 'Aucune ligne KO à traiter', { ignore_non_ko: ignoredNonKo });
     return {
       rows: [],
-      meta: { total: 0, pret: 0, erreur: 0, avertissement: 0, ignore_non_ko: ignoredNonKo },
+      meta: {
+        total: 0,
+        matchs: 0,
+        applique: 0,
+        erreur: 0,
+        ignore_non_ko: ignoredNonKo,
+      },
     };
   }
 
   const agentMap = await loadAgentPseudoMap();
-  logStep('preview', 'Étape 3 — rapprochement fiche + agent par ligne');
+  logStep('process', 'Étape 3 — match + application directe par ligne');
   const rows = [];
 
   for (const parsed of parsedRows) {
     if (!parsed.tel_excel && !parsed.agent_pseudo) {
-      logLine('preview', parsed.line, 'ligne ignorée (téléphone et agent vides)');
+      logLine('process', parsed.line, 'ligne ignorée (téléphone et agent vides)');
       continue;
     }
 
     const agentResolved = resolveAgentId(parsed.agent_pseudo, agentMap);
-    if (agentResolved.error) {
-      logLine('preview', parsed.line, 'agent non résolu', {
-        pseudo: parsed.agent_pseudo,
-        error: agentResolved.error,
+    const { fiche, match_note } = await findFicheForRow(parsed, { line: parsed.line });
+    const row = buildPreviewRow(parsed, fiche, agentResolved, match_note);
+
+    if (isMatchApplicableForApply(row.status)) {
+      logLine('process', parsed.line, 'match trouvé — application immédiate', {
+        id_fiche: row.id_fiche,
+        id_agent: row.id_agent_resolu,
+      });
+      const applyResult = await applyKoImportMatch(row, userId);
+      row.applied = applyResult.success;
+      row.apply_message = applyResult.message;
+      if (applyResult.success) {
+        row.status = 'applique';
+        row.status_label = applyResult.message;
+        row.ko_actuel = 1;
+        row.id_agent_actuel = row.id_agent_resolu;
+        if (applyResult.date_appel_appliquee) {
+          row.date_appel_time_db = applyResult.date_appel_appliquee;
+        }
+      } else {
+        row.status = 'erreur';
+        row.status_label = applyResult.message;
+      }
+      logLine('process', parsed.line, 'résultat application', {
+        applied: row.applied,
+        message: row.apply_message,
       });
     } else {
-      logLine('preview', parsed.line, 'agent résolu', {
-        pseudo: parsed.agent_pseudo,
-        id_agent: agentResolved.id,
+      row.applied = false;
+      row.apply_message = null;
+      logLine('process', parsed.line, 'pas de match applicable', {
+        status: row.status,
+        status_label: row.status_label,
       });
     }
 
-    const { fiche, match_note } = await findFicheForRow(parsed, { line: parsed.line });
-    const previewRow = buildPreviewRow(parsed, fiche, agentResolved, match_note);
-    rows.push(previewRow);
-    logLine('preview', parsed.line, 'résultat ligne', {
-      status: previewRow.status,
-      id_fiche: previewRow.id_fiche,
-      status_label: previewRow.status_label,
-    });
+    rows.push(row);
   }
 
   const meta = {
     total: rows.length,
-    pret: rows.filter((r) => r.status === 'pret').length,
-    avertissement: rows.filter((r) => r.status === 'avertissement').length,
+    matchs: rows.filter((r) => r.applied || r.apply_message != null).length,
+    applique: rows.filter((r) => r.status === 'applique').length,
     erreur: rows.filter((r) => r.status === 'erreur').length,
     ignore_non_ko: ignoredNonKo,
   };
 
-  logStep('preview', `=== Fin analyse (${requestId}) ===`, meta);
+  logStep('process', `=== Fin import (${requestId}) ===`, meta);
   return { rows, meta };
+}
+
+/** @deprecated Utiliser processKoImportFromBuffer — conservé pour compatibilité route /apply */
+async function previewKoImportFromBuffer(buffer, options = {}) {
+  return processKoImportFromBuffer(buffer, options.userId, options);
 }
 
 async function applyKoImportRows(rows, userId, options = {}) {
   const requestId = options.requestId || 'apply';
-  logStep('apply', `=== Début application (${requestId}) ===`, {
+  logStep('apply', `=== Début application batch (${requestId}) ===`, {
     user_id: userId,
     lignes_recues: rows?.length || 0,
   });
 
-  const agentMap = await loadAgentPseudoMap();
   const results = [];
-  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-
   for (const input of rows || []) {
-    const line = input.line ?? null;
-    const idFiche = parseInt(input.id_fiche, 10);
-    const idAgent =
-      input.id_agent_resolu != null
-        ? parseInt(input.id_agent_resolu, 10)
-        : resolveAgentId(input.agent_pseudo, agentMap).id;
-
-    logLine('apply', line, 'traitement', {
-      id_fiche: idFiche,
-      id_agent: idAgent,
-      agent_pseudo: input.agent_pseudo,
-      date_appel_excel: input.date_appel_excel,
-      status_import: input.status,
-    });
-
-    if (!idFiche || !idAgent) {
-      logLine('apply', line, 'échec — id_fiche ou id_agent manquant');
+    if (!isMatchApplicableForApply(input.status) && input.status !== 'applique') {
       results.push({
-        line,
-        id_fiche: idFiche || null,
+        line: input.line,
+        id_fiche: input.id_fiche,
         success: false,
-        message: 'id_fiche ou id_agent manquant',
+        message: 'Ligne non applicable',
       });
       continue;
     }
-
-    const fiche = await queryOne(
-      `SELECT id, id_agent, ko, id_centre, id_etat_final, date_appel_time FROM fiches WHERE id = ?`,
-      [idFiche]
-    );
-    if (!fiche) {
-      logLine('apply', line, 'échec — fiche introuvable en BDD', { id_fiche: idFiche });
-      results.push({ line, id_fiche: idFiche, success: false, message: 'Fiche introuvable' });
-      continue;
-    }
-
-    const dateAppel =
-      input.date_appel_excel != null && String(input.date_appel_excel).trim() !== ''
-        ? String(input.date_appel_excel).trim()
-        : null;
-
-    const oldKo = fiche.ko != null ? Number(fiche.ko) : 0;
-    const oldAgent = fiche.id_agent != null ? Number(fiche.id_agent) : null;
-
-    logLine('apply', line, 'mise à jour fiche', {
-      id_fiche: idFiche,
-      id_agent_avant: oldAgent,
-      id_agent_apres: idAgent,
-      ko_avant: oldKo,
-      date_appel_ymd: dateAppelYmd,
-      date_appel_time: dateAppel,
-    });
-
-    if (dateAppel) {
-      await query(
-        'UPDATE fiches SET id_agent = ?, ko = 1, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
-        [idAgent, dateAppel, now, idFiche]
-      );
-    } else {
-      await query('UPDATE fiches SET id_agent = ?, ko = 1, date_modif_time = ? WHERE id = ?', [
-        idAgent,
-        now,
-        idFiche,
-      ]);
-    }
-
-    if (oldKo !== 1) {
-      logLine('apply', line, 'insertion fiches_ko');
-      await insertFicheKoRecord({
-        id_fiche: idFiche,
-        motif_ko: IMPORT_KO_MOTIF,
-        commentaire_qualite: IMPORT_KO_MOTIF,
-        commentaire_complement: `Import gestion KO (ligne ${line ?? '?'})`,
-        id_qualite: userId,
-        id_agent: idAgent,
-        id_centre: fiche.id_centre ?? null,
-        id_etat_final_avant: fiche.id_etat_final ?? null,
-        id_etat_final_apres: fiche.id_etat_final ?? null,
-        source: IMPORT_KO_SOURCE,
-        date_ko: dateAppel || now,
-      });
-    } else {
-      logLine('apply', line, 'fiche déjà ko=1 — pas de nouvelle ligne fiches_ko');
-    }
-
-    logLine('apply', line, 'succès');
+    const applyResult = await applyKoImportMatch(input, userId);
     results.push({
-      line,
-      id_fiche: idFiche,
-      success: true,
-      id_agent: idAgent,
-      id_agent_avant: oldAgent,
-      ko_avant: oldKo,
-      date_appel_appliquee_ymd: dateAppelYmd,
-      date_appel_appliquee: dateAppel,
-      message: 'Mis à jour (id_agent + ko=1)',
+      line: input.line,
+      id_fiche: input.id_fiche,
+      ...applyResult,
     });
   }
 
   const ok = results.filter((r) => r.success).length;
   const meta = { total: results.length, success: ok, failed: results.length - ok };
-  logStep('apply', `=== Fin application (${requestId}) ===`, meta);
+  logStep('apply', `=== Fin application batch (${requestId}) ===`, meta);
   return { results, meta };
 }
 
 module.exports = {
   parseKoExcelBuffer,
+  processKoImportFromBuffer,
   previewKoImportFromBuffer,
   applyKoImportRows,
+  applyKoImportMatch,
   normalizeHeaderKey,
   HEADER_ALIASES,
 };
