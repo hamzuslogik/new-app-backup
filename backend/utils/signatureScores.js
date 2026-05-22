@@ -1,4 +1,4 @@
-const { query } = require('../config/database');
+const { query, queryOne } = require('../config/database');
 
 /** Score unitaire selon le nombre de confirmateurs sur une même signature (fiche + date). */
 function signatureScoreForCount(confirmateurCount) {
@@ -10,6 +10,36 @@ function signatureScoreForCount(confirmateurCount) {
 }
 
 const MAX_CONFIRMATEURS_PAR_SIGNATURE = 3;
+
+/**
+ * Date planning (RDV) à recopier sur une nouvelle ligne signature :
+ * ligne source → autre ligne du même événement → date_rdv_time de la fiche.
+ */
+async function resolveSignatureDatePlanning(signatureRow) {
+  if (!signatureRow) return null;
+  if (signatureRow.date_planning != null && signatureRow.date_planning !== '') {
+    return signatureRow.date_planning;
+  }
+
+  const idFiche = signatureRow.id_fiche;
+  const eventDateHeure = signatureRow.date_heure ?? null;
+  if (idFiche && eventDateHeure) {
+    const sibling = await queryOne(
+      `SELECT date_planning FROM signature
+       WHERE id_fiche = ? AND date_heure = ? AND date_planning IS NOT NULL
+       LIMIT 1`,
+      [idFiche, eventDateHeure]
+    );
+    if (sibling?.date_planning) return sibling.date_planning;
+  }
+
+  if (idFiche) {
+    const fiche = await queryOne('SELECT date_rdv_time FROM fiches WHERE id = ?', [idFiche]);
+    return fiche?.date_rdv_time ?? null;
+  }
+
+  return null;
+}
 
 /**
  * Met à jour `ajoute` pour toutes les lignes signature d'un même événement
@@ -58,5 +88,6 @@ async function redistributeSignatureScoresForFicheEvent(idFiche, dateHeure) {
 module.exports = {
   signatureScoreForCount,
   MAX_CONFIRMATEURS_PAR_SIGNATURE,
+  resolveSignatureDatePlanning,
   redistributeSignatureScoresForFicheEvent,
 };

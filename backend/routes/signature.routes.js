@@ -5,6 +5,7 @@ const { query, queryOne, transaction } = require('../config/database');
 const {
   signatureScoreForCount,
   MAX_CONFIRMATEURS_PAR_SIGNATURE,
+  resolveSignatureDatePlanning,
   redistributeSignatureScoresForFicheEvent,
 } = require('../utils/signatureScores');
 
@@ -862,10 +863,18 @@ router.post('/:id/confirmateurs', authenticate, async (req, res) => {
     }
 
     const insertDateHeure = eventDateHeure || new Date();
+    const datePlanning = await resolveSignatureDatePlanning(baseSig);
     await query(
-      `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-       VALUES (?, ?, ?, ?, ?)`,
-      [baseSig.id_fiche, confirmateurId, signatureScoreForCount(currentCount + 1), insertDateHeure, baseSig.tel || null]
+      `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        baseSig.id_fiche,
+        confirmateurId,
+        signatureScoreForCount(currentCount + 1),
+        insertDateHeure,
+        baseSig.tel || null,
+        datePlanning,
+      ]
     );
 
     const { count, score } = await redistributeSignatureScoresForFicheEvent(
@@ -947,16 +956,19 @@ router.post('/rejetees/:id/restaurer', authenticate, async (req, res) => {
       }
     }
 
+    const datePlanningRestore = await resolveSignatureDatePlanning(row);
+
     await transaction(async (connection) => {
       await connection.execute(
-        `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
           row.id_fiche || null,
           row.confirmateur || null,
           row.ajoute ?? 0,
           row.date_heure || new Date(),
-          row.tel || null
+          row.tel || null,
+          datePlanningRestore,
         ]
       );
 
