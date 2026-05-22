@@ -35,8 +35,9 @@ const KoMotifModal = ({
         </div>
         <div className="modal-body">
           <p className="ko-modal-hint">
-            Le motif est enregistré dans le commentaire qualité de la fiche. Le passage en KO active{' '}
-            <strong>ko = 1</strong> (ce n&apos;est pas un changement d&apos;état final).
+            Le motif et le commentaire complémentaire sont enregistrés uniquement dans l&apos;historique{' '}
+            <strong>fiches_ko</strong> (pas dans le commentaire qualité de la fiche). Le commentaire qualité du
+            tableau doit être renseigné avant validation. Le passage en KO active <strong>ko = 1</strong>.
           </p>
           <div className="form-group">
             <label>Motif KO <span className="required">*</span></label>

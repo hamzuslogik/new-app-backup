@@ -437,6 +437,28 @@ const ControleQualite = () => {
   };
 
   const fiches = fichesData?.data || [];
+
+  const MSG_COMMENTAIRE_QUALITE_REQUIS =
+    'Veuillez renseigner et enregistrer le commentaire qualité (colonne du tableau) avant de valider la fiche.';
+
+  const hasCommentaireQualiteRenseigne = (fiche) =>
+    String(fiche?.commentaire_qualite ?? '').trim().length > 0;
+
+  const getFicheByHash = (hash) => fiches.find((f) => f.hash === hash);
+
+  const requireCommentaireQualite = (fiche) => {
+    if (!fiche || !hasCommentaireQualiteRenseigne(fiche)) {
+      toast.warning(MSG_COMMENTAIRE_QUALITE_REQUIS);
+      return false;
+    }
+    return true;
+  };
+
+  const handleValidateQualite = (fiche) => {
+    if (!requireCommentaireQualite(fiche)) return;
+    validateQualiteMutation.mutate(fiche.hash);
+  };
+
   const pagination = fichesData?.pagination || { page: 1, limit: PAGE_SIZE_MULTI_DAY, total: 0, pages: 1 };
   const singleDayRange = isSingleDayDateRange(filters.date_debut, filters.date_fin);
   const showPagination = !singleDayRange && pagination.pages > 1;
@@ -493,6 +515,8 @@ const ControleQualite = () => {
       toast.warning('Veuillez sélectionner un motif KO');
       return;
     }
+    const ficheKo = getFicheByHash(koModal.ficheHash);
+    if (!requireCommentaireQualite(ficheKo)) return;
     validateQualiteKoMutation.mutate({
       hash: koModal.ficheHash,
       motif_ko: koModal.motifKo,
@@ -508,6 +532,7 @@ const ControleQualite = () => {
       toast.warning(getLockMessage(fiche));
       return;
     }
+    if (!requireCommentaireQualite(fiche)) return;
     if (fiche.ko === 1 || fiche.ko === '1') {
       toast.info('Cette fiche est déjà en KO.');
       return;
@@ -532,6 +557,12 @@ const ControleQualite = () => {
   const handleHcModalSubmit = () => {
     if (!hcModal.sousEtatId) {
       toast.warning('Veuillez sélectionner un sous-état HC');
+      return;
+    }
+    const ficheHc = getFicheByHash(hcModal.ficheHash);
+    const commentaireHcOk = String(hcModal.commentaire ?? '').trim().length > 0;
+    if (!hasCommentaireQualiteRenseigne(ficheHc) && !commentaireHcOk) {
+      toast.warning(MSG_COMMENTAIRE_QUALITE_REQUIS);
       return;
     }
     validateQualiteHcMutation.mutate({
@@ -919,9 +950,19 @@ const ControleQualite = () => {
                         <button
                           type="button"
                           className="btn-validate-icon"
-                          onClick={() => validateQualiteMutation.mutate(fiche.hash)}
-                          disabled={validateQualiteMutation.isLoading || isFicheLockedForUser(fiche)}
-                          title={isFicheLockedForUser(fiche) ? getLockMessage(fiche) : 'Valider et passer en En-Attente'}
+                          onClick={() => handleValidateQualite(fiche)}
+                          disabled={
+                            validateQualiteMutation.isLoading ||
+                            isFicheLockedForUser(fiche) ||
+                            !hasCommentaireQualiteRenseigne(fiche)
+                          }
+                          title={
+                            isFicheLockedForUser(fiche)
+                              ? getLockMessage(fiche)
+                              : !hasCommentaireQualiteRenseigne(fiche)
+                                ? MSG_COMMENTAIRE_QUALITE_REQUIS
+                                : 'Valider et passer en En-Attente'
+                          }
                         >
                           <FaCheckCircle />
                         </button>

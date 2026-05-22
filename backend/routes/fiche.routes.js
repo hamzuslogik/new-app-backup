@@ -65,6 +65,13 @@ function parseEtatId(v) {
   return Number.isFinite(n) ? n : NaN;
 }
 
+const MSG_COMMENTAIRE_QUALITE_REQUIS =
+  'Le commentaire qualité doit être renseigné sur la fiche avant validation.';
+
+function hasCommentaireQualiteOnFiche(fiche) {
+  return String(fiche?.commentaire_qualite ?? '').trim().length > 0;
+}
+
 /** Limite les clauses IN (...) sur les id_fiche après un SELECT massif — sinon ER_NET_PACKET_TOO_LARGE / max_allowed_packet */
 const FICHE_IDS_IN_CHUNK = 2000;
 
@@ -4927,11 +4934,21 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
     }
 
     // Vérifier que la fiche existe (id_sous_etat, date_rdv_time pour fiches_histo)
-    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time FROM fiches WHERE id = ?', [id]);
+    const fiche = await queryOne(
+      'SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time, commentaire_qualite FROM fiches WHERE id = ?',
+      [id]
+    );
     if (!fiche) {
       return res.status(404).json({
         success: false,
         message: 'Fiche non trouvée'
+      });
+    }
+
+    if (!hasCommentaireQualiteOnFiche(fiche)) {
+      return res.status(400).json({
+        success: false,
+        message: MSG_COMMENTAIRE_QUALITE_REQUIS,
       });
     }
 
@@ -5074,7 +5091,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
       });
     }
 
-    const commentaireQualite = buildCommentaireQualiteFromKo(
+    const commentaireKo = buildCommentaireQualiteFromKo(
       resolvedMotif,
       commentaire_complement != null
         ? commentaire_complement
@@ -5082,7 +5099,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
           ? commentaire_ko
           : ''
     );
-    
+
     const hasControleQualitePermission = await hasPermission(req.user.fonction, 'controle_qualite_view');
     if (!hasControleQualitePermission) {
       return res.status(403).json({
@@ -5090,11 +5107,21 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
         message: 'Vous n\'avez pas la permission de valider des fiches qualité'
       });
     }
-    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time FROM fiches WHERE id = ?', [id]);
+    const fiche = await queryOne(
+      'SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time, commentaire_qualite FROM fiches WHERE id = ?',
+      [id]
+    );
     if (!fiche) {
       return res.status(404).json({
         success: false,
         message: 'Fiche non trouvée'
+      });
+    }
+
+    if (!hasCommentaireQualiteOnFiche(fiche)) {
+      return res.status(400).json({
+        success: false,
+        message: MSG_COMMENTAIRE_QUALITE_REQUIS,
       });
     }
 
@@ -5126,8 +5153,8 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     }
     
     await query(
-      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = NULL, ko = 1, commentaire_qualite = ?, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
-      [newEtatId, commentaireQualite, now, now, id]
+      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = NULL, ko = 1, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
+      [newEtatId, now, now, id]
     );
 
     const ficheInfosKo = await queryOne(
@@ -5137,7 +5164,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     await insertFicheKoRecord({
       id_fiche: id,
       motif_ko: resolvedMotif,
-      commentaire_qualite: commentaireQualite,
+      commentaire_qualite: commentaireKo,
       commentaire_complement:
         commentaire_complement != null ? String(commentaire_complement).trim() : null,
       id_qualite: req.user.id,
@@ -5171,17 +5198,13 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     if (oldSousEtatId) {
       await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'id_sous_etat', oldSousEtatId, null);
     }
-    if (commentaireQualite) {
-      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'commentaire_qualite', null, commentaireQualite);
-    }
-
     if (ficheInfosKo) {
       await insertControleQualiteAudit({
         id_fiche: id,
         id_qualite: req.user.id,
         id_etat: newEtatId,
         id_sous_etat: null,
-        commentaire: commentaireQualite,
+        commentaire: commentaireKo,
         ko: 1,
         hc: 0,
         id_etat_precedent: oldEtatId,
@@ -5206,7 +5229,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
       fiche_ko: {
         source: 'validation_qualite',
         motif_ko: resolvedMotif,
-        commentaire_ko: commentaireQualite,
+        commentaire_ko: commentaireKo,
       }
     }).catch((wfError) => {
       console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (fiche_ko_created / validation qualité):', wfError);
@@ -5222,7 +5245,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
         ko: 1,
         old_etat: oldEtatId,
         etat_titre: etatEnAttente.titre,
-        commentaire_qualite: commentaireQualite,
+        commentaire_ko: commentaireKo,
       }
     });
   } catch (error) {
@@ -5264,11 +5287,22 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
         message: 'Vous n\'avez pas la permission de valider des fiches qualité'
       });
     }
-    const fiche = await queryOne('SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time FROM fiches WHERE id = ?', [id]);
+    const fiche = await queryOne(
+      'SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time, commentaire_qualite FROM fiches WHERE id = ?',
+      [id]
+    );
     if (!fiche) {
       return res.status(404).json({
         success: false,
         message: 'Fiche non trouvée'
+      });
+    }
+
+    const commentaireHcTrim = commentaire_hc != null ? String(commentaire_hc).trim() : '';
+    if (!hasCommentaireQualiteOnFiche(fiche) && !commentaireHcTrim) {
+      return res.status(400).json({
+        success: false,
+        message: MSG_COMMENTAIRE_QUALITE_REQUIS,
       });
     }
 
@@ -6444,9 +6478,8 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const oldKoVal = fiche.ko != null ? Number(fiche.ko) : 0;
     const newKoVal = ko ? 1 : 0;
-    const oldCommentaireQualite = fiche.commentaire_qualite;
     let resolvedMotif = null;
-    let cqApplied = null;
+    let commentaireKoToggle = null;
 
     if (newKoVal === 1 && oldKoVal !== 1) {
       resolvedMotif = isValidKoMotif(motif_ko) ? String(motif_ko).trim() : null;
@@ -6459,15 +6492,12 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
           message: 'Le motif KO est obligatoire pour mettre une fiche en KO.',
         });
       }
-      cqApplied = buildCommentaireQualiteFromKo(resolvedMotif, commentaire_complement);
-      await query(
-        `UPDATE fiches SET ko = 1, commentaire_qualite = ?, date_modif_time = ? WHERE id = ?`,
-        [cqApplied, now, id]
-      );
+      commentaireKoToggle = buildCommentaireQualiteFromKo(resolvedMotif, commentaire_complement);
+      await query(`UPDATE fiches SET ko = 1, date_modif_time = ? WHERE id = ?`, [now, id]);
       await insertFicheKoRecord({
         id_fiche: id,
         motif_ko: resolvedMotif,
-        commentaire_qualite: cqApplied,
+        commentaire_qualite: commentaireKoToggle,
         commentaire_complement:
           commentaire_complement != null ? String(commentaire_complement).trim() : null,
         id_qualite: req.user.id,
@@ -6488,14 +6518,6 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
           newKoVal
         );
       }
-      await logModification(
-        id,
-        req.user.id,
-        req.user.pseudo || 'Utilisateur',
-        'commentaire_qualite',
-        oldCommentaireQualite ?? null,
-        cqApplied
-      );
     } else {
       await query(
         `UPDATE fiches SET ko = ?, date_modif_time = ? WHERE id = ?`,
@@ -6519,7 +6541,8 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
     logUserActivityEvent(req.user.id, ko ? 'fiche_ko_active' : 'fiche_ko_retire', { id_fiche: Number(id) });
 
     if (newKoVal === 1 && oldKoVal !== 1 && resolvedMotif) {
-      const cqForWf = cqApplied || buildCommentaireQualiteFromKo(resolvedMotif, commentaire_complement);
+      const commentaireKoToggleWf =
+        commentaireKoToggle || buildCommentaireQualiteFromKo(resolvedMotif, commentaire_complement);
       let ficheApresToggle = null;
       try {
         ficheApresToggle = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
@@ -6528,12 +6551,12 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
       }
       executeWorkflow('fiche_ko_created', {
         user: req.user,
-        fiche: ficheApresToggle || { ...fiche, ko: 1, commentaire_qualite: cqForWf },
+        fiche: ficheApresToggle || { ...fiche, ko: 1 },
         fiche_id: parseInt(id, 10),
         fiche_ko: {
           source: 'toggle_admin',
           motif_ko: resolvedMotif,
-          commentaire_ko: cqForWf || null,
+          commentaire_ko: commentaireKoToggleWf || null,
         }
       }).catch((wfError) => {
         console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (fiche_ko_created / toggle KO):', wfError);
