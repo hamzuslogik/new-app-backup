@@ -530,14 +530,14 @@ const StatistiquesV2 = () => {
 
       {!isLoading && activeTab === 'qualification' && qualifAdvanced && (
         <div className="stats-content">
-          {/* Ratio par RE */}
+          {/* Fiches validées par RE */}
           {qualifAdvanced.ratio_by_re?.length > 0 && (
             <div className="section-card">
-              <h2 className="section-title">Ratio par équipe (RE)</h2>
+              <h2 className="section-title">Fiches validées par équipe (RE)</h2>
               <ResponsiveContainer width="100%" height={Math.max(300, qualifAdvanced.ratio_by_re.length * 36)}>
                 <BarChart data={qualifAdvanced.ratio_by_re} layout="vertical" margin={{ left: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
+                  <XAxis type="number" allowDecimals={false} />
                   <YAxis
                     type="category"
                     dataKey="re_pseudo"
@@ -553,33 +553,28 @@ const StatistiquesV2 = () => {
                     width={75}
                   />
                   <Tooltip
-                    formatter={(value, name) => {
-                      if (name === 'ratio') return [value, 'Ratio'];
-                      return [value, name];
-                    }}
+                    formatter={(value) => [value, 'Fiches validées']}
                     labelFormatter={(_, payload) => {
                       const p = payload?.[0]?.payload;
                       if (!p) return '';
-                      const label = formatRatioLabel(p, 're_id', 're_pseudo', 're_nom', 're_prenom');
-                      const jours = p.jours_travailles ?? qualifAdvanced.jours_travailles;
-                      return `${label} — ${p.fiches_produites} fiches, ${p.effectif} agents, ${jours} j`;
+                      return formatRatioLabel(p, 're_id', 're_pseudo', 're_nom', 're_prenom');
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="ratio" fill="#4a7a87" name="Ratio" />
+                  <Bar dataKey="fiches_validees" fill="#4a7a87" name="Fiches validées" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
 
-          {/* Ratio par RP */}
+          {/* Fiches validées par RP */}
           {qualifAdvanced.ratio_by_rp?.length > 0 && (
             <div className="section-card">
-              <h2 className="section-title">Ratio par plateau (RP)</h2>
+              <h2 className="section-title">Fiches validées par plateau (RP)</h2>
               <ResponsiveContainer width="100%" height={Math.max(280, qualifAdvanced.ratio_by_rp.length * 40)}>
                 <BarChart data={qualifAdvanced.ratio_by_rp} layout="vertical" margin={{ left: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
+                  <XAxis type="number" allowDecimals={false} />
                   <YAxis
                     type="category"
                     dataKey="rp_pseudo"
@@ -595,20 +590,15 @@ const StatistiquesV2 = () => {
                     width={75}
                   />
                   <Tooltip
-                    formatter={(value, name) => {
-                      if (name === 'ratio') return [value, 'Ratio'];
-                      return [value, name];
-                    }}
+                    formatter={(value) => [value, 'Fiches validées']}
                     labelFormatter={(_, payload) => {
                       const p = payload?.[0]?.payload;
                       if (!p) return '';
-                      const label = formatRatioLabel(p, 'rp_id', 'rp_pseudo', 'rp_nom', 'rp_prenom');
-                      const jours = p.jours_travailles ?? qualifAdvanced.jours_travailles;
-                      return `${label} — ${p.fiches_produites} fiches, ${p.effectif} agents, ${jours} j`;
+                      return formatRatioLabel(p, 'rp_id', 'rp_pseudo', 'rp_nom', 'rp_prenom');
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="ratio" fill="#9cbfc8" name="Ratio" />
+                  <Bar dataKey="fiches_validees" fill="#9cbfc8" name="Fiches validées" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
