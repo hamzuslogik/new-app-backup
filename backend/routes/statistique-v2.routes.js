@@ -8,136 +8,172 @@ const { query, queryOne } = require('../config/database');
 // STATISTIQUES V2 - Routes avancées avec nouvelles métriques
 // =====================================================
 
+/** Filtres communs onglet Qualification : fiches insérées par agents qualification (F3). */
+function buildQualifAdvancedFilters(queryParams) {
+  const { id_agent, id_equipe, id_centre, id_departement, id_rp } = queryParams;
+  const conditions = [
+    'f.date_insert_time >= ?',
+    'f.date_insert_time <= ?',
+    'f.id_agent IS NOT NULL',
+    'f.id_agent > 0',
+    '(f.archive = 0 OR f.archive IS NULL)',
+    '(f.id_etat_final != 61 OR f.id_etat_final IS NULL)',
+    'agent.fonction = 3',
+  ];
+  const params = [];
+
+  if (id_agent) {
+    conditions.push('f.id_agent = ?');
+    params.push(parseInt(id_agent, 10));
+  }
+  if (id_equipe) {
+    conditions.push('agent.chef_equipe = ?');
+    params.push(parseInt(id_equipe, 10));
+  }
+  if (id_rp) {
+    conditions.push('re.id_rp_qualif = ?');
+    params.push(parseInt(id_rp, 10));
+  }
+  if (id_centre) {
+    conditions.push('f.id_centre = ?');
+    params.push(parseInt(id_centre, 10));
+  }
+  if (id_departement) {
+    conditions.push('f.departement = ?');
+    params.push(id_departement);
+  }
+
+  const whereSql = conditions.join(' AND ');
+  const fromSql = `
+    FROM fiches f
+    INNER JOIN utilisateurs agent ON f.id_agent = agent.id
+    LEFT JOIN utilisateurs re ON agent.chef_equipe = re.id
+    LEFT JOIN etats e ON f.id_etat_final = e.id
+  `;
+
+  return { whereSql, fromSql, filterParams: params };
+}
+
+const SQL_FICHE_VALIDEE = `
+  (f.ko = 0 OR f.ko IS NULL)
+  AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
+`;
+
+const SQL_FICHE_REJET = `
+  (f.ko = 1 OR e.groupe = '0' OR e.groupe = 0)
+`;
+
 // GET /api/statistiques-v2/qualification-advanced
 // Métriques avancées pour l'onglet Qualification
 router.get('/qualification-advanced', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
   console.log('[STAT-V2] /qualification-advanced - Requête reçue - user:', req.user?.id, 'params:', req.query);
   try {
-    const { date_debut, date_fin, id_agent, id_equipe, id_centre, id_departement } = req.query;
-    
-    // Dates par défaut : ce mois
+    const { date_debut, date_fin } = req.query;
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    
+
     const dateDebut = date_debut || startOfMonth.toISOString().split('T')[0];
     const dateFin = date_fin || endOfMonth.toISOString().split('T')[0];
     const startDate = `${dateDebut} 00:00:00`;
     const endDate = `${dateFin} 23:59:59`;
 
-    // Construire les conditions de filtre
-    const conditions = [];
-    const params = [startDate, endDate];
-    
-    if (id_agent) {
-      conditions.push('f.id_agent = ?');
-      params.push(parseInt(id_agent));
-    }
-    if (id_centre) {
-      conditions.push('f.id_centre = ?');
-      params.push(parseInt(id_centre));
-    }
-    if (id_departement) {
-      conditions.push('f.departement = ?');
-      params.push(id_departement);
-    }
-    
-    const whereClause = conditions.length > 0 ? `AND ${conditions.join(' AND ')}` : '';
+    const { whereSql, fromSql, filterParams } = buildQualifAdvancedFilters(req.query);
+    const params = [startDate, endDate, ...filterParams];
 
-    // 1. Temps moyen de traitement (création → validation)
-    const avgProcessingTimeParams = [...params];
-    const avgProcessingTime = await queryOne(`
-      SELECT AVG(TIMESTAMPDIFF(HOUR, f.date_insert_time, 
-        COALESCE(
-          (SELECT MIN(fh.date_creation) FROM fiches_histo fh 
-           WHERE fh.id_fiche = f.id 
-           AND fh.id_etat IN (SELECT id FROM etats WHERE groupe IN ('1', '2', '3'))
-           LIMIT 1),
-          f.date_modif_time
-        )
-      )) as avg_hours
-      FROM fiches f
-      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
-      AND (f.archive = 0 OR f.archive IS NULL)
-      ${whereClause}
-    `, avgProcessingTimeParams);
-
-    // 2. Top 10 Agents (au lieu de Top 3)
+    // Top 10 agents qualification (fiches validées, sans temps de traitement)
     const top10Agents = await query(`
-      SELECT 
-        u.id,
-        u.pseudo,
-        u.nom,
-        u.prenom,
-        u.photo,
-        COUNT(DISTINCT f.id) as count_validated,
-        AVG(TIMESTAMPDIFF(HOUR, f.date_insert_time, f.date_modif_time)) as avg_processing_hours
-      FROM fiches f
-      INNER JOIN utilisateurs u ON f.id_agent = u.id
-      INNER JOIN etats e ON f.id_etat_final = e.id
-      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
-      AND (f.archive = 0 OR f.archive IS NULL)
-      AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
-      ${whereClause}
-      AND f.id_agent IS NOT NULL
-      GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
-      ORDER BY count_validated DESC
+      SELECT
+        agent.id,
+        agent.pseudo,
+        agent.nom,
+        agent.prenom,
+        agent.photo,
+        COUNT(DISTINCT CASE WHEN ${SQL_FICHE_VALIDEE} THEN f.id END) as count_validated,
+        COUNT(DISTINCT CASE WHEN f.ko = 1 THEN f.id END) as count_ko
+      ${fromSql}
+      WHERE ${whereSql}
+      GROUP BY agent.id, agent.pseudo, agent.nom, agent.prenom, agent.photo
+      HAVING count_validated > 0 OR count_ko > 0
+      ORDER BY count_validated DESC, count_ko DESC
       LIMIT 10
     `, params);
 
-    // 3. Taux de rejet/abandon par agent
+    // Taux de rejet par agent (groupe 0 + ko=1)
     const rejectionRates = await query(`
-      SELECT 
-        u.id,
-        u.pseudo,
-        COUNT(DISTINCT CASE WHEN e.groupe = '0' OR e.groupe = 0 THEN f.id END) as rejected_count,
+      SELECT
+        agent.id,
+        agent.pseudo,
+        COUNT(DISTINCT CASE WHEN ${SQL_FICHE_REJET} THEN f.id END) as rejected_count,
         COUNT(DISTINCT f.id) as total_count,
-        CASE 
-          WHEN COUNT(DISTINCT f.id) > 0 
-          THEN (COUNT(DISTINCT CASE WHEN e.groupe = '0' OR e.groupe = 0 THEN f.id END) / COUNT(DISTINCT f.id)) * 100
+        CASE
+          WHEN COUNT(DISTINCT f.id) > 0
+          THEN (COUNT(DISTINCT CASE WHEN ${SQL_FICHE_REJET} THEN f.id END) / COUNT(DISTINCT f.id)) * 100
           ELSE 0
         END as rejection_rate
-      FROM fiches f
-      INNER JOIN utilisateurs u ON f.id_agent = u.id
-      INNER JOIN etats e ON f.id_etat_final = e.id
-      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
-      AND (f.archive = 0 OR f.archive IS NULL)
-      ${whereClause}
-      AND f.id_agent IS NOT NULL
-      GROUP BY u.id, u.pseudo
+      ${fromSql}
+      WHERE ${whereSql}
+      GROUP BY agent.id, agent.pseudo
       HAVING total_count > 0
       ORDER BY rejection_rate DESC
     `, params);
 
-    // 4. Nombre moyen de fiches par agent/jour
-    const daysDiff = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) || 1;
-    const avgFichesPerAgentParams = [...params];
-    const totalFichesResult = await queryOne(`
-      SELECT COUNT(DISTINCT f.id) as total, COUNT(DISTINCT f.id_agent) as agents
-      FROM fiches f
-      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
-      AND (f.archive = 0 OR f.archive IS NULL)
-      AND f.id_agent IS NOT NULL
-      ${whereClause}
-    `, avgFichesPerAgentParams);
-    
-    const avgFichesPerAgent = {
-      avg_per_agent_per_day: totalFichesResult?.agents > 0 && daysDiff > 0
-        ? (totalFichesResult.total / totalFichesResult.agents / daysDiff)
-        : 0
-    };
+    // Ratio par équipe RE (chef_equipe des agents F3)
+    const ratioByRe = await query(`
+      SELECT
+        re.id as re_id,
+        re.pseudo as re_pseudo,
+        re.nom as re_nom,
+        re.prenom as re_prenom,
+        COUNT(DISTINCT f.id) as fiches_produites,
+        COUNT(DISTINCT CASE WHEN ${SQL_FICHE_VALIDEE} THEN f.id END) as fiches_validees,
+        COUNT(DISTINCT CASE WHEN f.ko = 1 THEN f.id END) as fiches_ko,
+        CASE
+          WHEN COUNT(DISTINCT f.id) > 0
+          THEN ROUND((COUNT(DISTINCT CASE WHEN ${SQL_FICHE_VALIDEE} THEN f.id END) / COUNT(DISTINCT f.id)) * 100, 1)
+          ELSE 0
+        END as ratio_pct
+      ${fromSql}
+      WHERE ${whereSql}
+        AND re.id IS NOT NULL
+      GROUP BY re.id, re.pseudo, re.nom, re.prenom
+      HAVING fiches_produites > 0
+      ORDER BY ratio_pct DESC, fiches_produites DESC
+    `, params);
 
-    // 5. Évolution temporelle (par jour)
+    // Ratio par plateau RP qualification (id_rp_qualif sur le RE)
+    const ratioByRp = await query(`
+      SELECT
+        rp.id as rp_id,
+        rp.pseudo as rp_pseudo,
+        rp.nom as rp_nom,
+        rp.prenom as rp_prenom,
+        COUNT(DISTINCT f.id) as fiches_produites,
+        COUNT(DISTINCT CASE WHEN ${SQL_FICHE_VALIDEE} THEN f.id END) as fiches_validees,
+        COUNT(DISTINCT CASE WHEN f.ko = 1 THEN f.id END) as fiches_ko,
+        CASE
+          WHEN COUNT(DISTINCT f.id) > 0
+          THEN ROUND((COUNT(DISTINCT CASE WHEN ${SQL_FICHE_VALIDEE} THEN f.id END) / COUNT(DISTINCT f.id)) * 100, 1)
+          ELSE 0
+        END as ratio_pct
+      ${fromSql}
+      INNER JOIN utilisateurs rp ON re.id_rp_qualif = rp.id AND rp.fonction = 12
+      WHERE ${whereSql}
+      GROUP BY rp.id, rp.pseudo, rp.nom, rp.prenom
+      HAVING fiches_produites > 0
+      ORDER BY ratio_pct DESC, fiches_produites DESC
+    `, params);
+
+    // Évolution quotidienne (total, validées, KO)
     const dailyEvolution = await query(`
-      SELECT 
+      SELECT
         DATE(f.date_insert_time) as date,
         COUNT(DISTINCT f.id) as total_fiches,
-        COUNT(DISTINCT CASE WHEN e.groupe IN ('1', '2', '3') THEN f.id END) as validated_fiches
-      FROM fiches f
-      LEFT JOIN etats e ON f.id_etat_final = e.id
-      WHERE f.date_insert_time >= ? AND f.date_insert_time <= ?
-      AND (f.archive = 0 OR f.archive IS NULL)
-      ${whereClause}
+        COUNT(DISTINCT CASE WHEN ${SQL_FICHE_VALIDEE} THEN f.id END) as validated_fiches,
+        COUNT(DISTINCT CASE WHEN f.ko = 1 THEN f.id END) as ko_fiches
+      ${fromSql}
+      WHERE ${whereSql}
       GROUP BY DATE(f.date_insert_time)
       ORDER BY date ASC
     `, params);
@@ -145,19 +181,31 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
     res.json({
       success: true,
       data: {
-        avg_processing_time_hours: parseFloat(avgProcessingTime?.avg_hours || 0),
         top10_agents: top10Agents || [],
         rejection_rates: rejectionRates || [],
-        avg_fiches_per_agent_per_day: parseFloat(avgFichesPerAgent?.avg_per_agent_per_day || 0),
-        daily_evolution: dailyEvolution || []
-      }
+        ratio_by_re: (ratioByRe || []).map((row) => ({
+          ...row,
+          ratio_pct: parseFloat(row.ratio_pct || 0),
+          fiches_produites: parseInt(row.fiches_produites || 0, 10),
+          fiches_validees: parseInt(row.fiches_validees || 0, 10),
+          fiches_ko: parseInt(row.fiches_ko || 0, 10),
+        })),
+        ratio_by_rp: (ratioByRp || []).map((row) => ({
+          ...row,
+          ratio_pct: parseFloat(row.ratio_pct || 0),
+          fiches_produites: parseInt(row.fiches_produites || 0, 10),
+          fiches_validees: parseInt(row.fiches_validees || 0, 10),
+          fiches_ko: parseInt(row.fiches_ko || 0, 10),
+        })),
+        daily_evolution: dailyEvolution || [],
+      },
     });
   } catch (error) {
     console.error('[STAT-V2] /qualification-advanced - Erreur:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',
-      error: error.message
+      error: error.message,
     });
   }
 });

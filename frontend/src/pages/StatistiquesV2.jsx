@@ -33,6 +33,7 @@ const StatistiquesV2 = () => {
   const [filters, setFilters] = useState({
     id_agent: '',
     id_equipe: '',
+    id_rp: '',
     id_centre: '',
     id_departement: '',
     id_confirmateur: ''
@@ -87,6 +88,16 @@ const StatistiquesV2 = () => {
   const { data: agentsData } = useQuery('agents-v2', async () => {
     const res = await api.get('/management/utilisateurs');
     return res.data.data?.filter(u => u.fonction === 3) || [];
+  });
+
+  const { data: superviseursData } = useQuery('superviseurs-qualif-v2', async () => {
+    const res = await api.get('/management/utilisateurs');
+    return res.data.data?.filter(u => u.fonction === 2) || [];
+  });
+
+  const { data: rpsQualifData } = useQuery('rps-qualif-v2', async () => {
+    const res = await api.get('/management/utilisateurs');
+    return res.data.data?.filter(u => u.fonction === 12) || [];
   });
 
   const { data: confirmateursData } = useQuery('confirmateurs-v2', async () => {
@@ -165,8 +176,12 @@ const StatistiquesV2 = () => {
     { enabled: activeTab === 'comparison' && !!comparisonPeriod.period1.start && !!comparisonPeriod.period2.start }
   );
 
-  // Récupérer les alertes de performance
+  // Alertes de performance (hors onglet Qualification)
   useEffect(() => {
+    if (activeTab === 'qualification') {
+      setAlerts([]);
+      return;
+    }
     const fetchAlerts = async () => {
       try {
         const params = {
@@ -276,8 +291,16 @@ const StatistiquesV2 = () => {
     return data.daily_evolution.map(item => ({
       date: new Date(item.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
       total: item.total_fiches || 0,
-      validated: item.validated_fiches || 0
+      validated: item.validated_fiches || 0,
+      ko: item.ko_fiches || 0
     }));
+  };
+
+  const formatRatioLabel = (row, idKey, pseudoKey, nomKey, prenomKey) => {
+    if (!row) return '';
+    if (row[pseudoKey]) return row[pseudoKey];
+    const nom = [row[nomKey], row[prenomKey]].filter(Boolean).join(' ').trim();
+    return nom || `#${row[idKey]}`;
   };
 
   const formatPercentage = (value) => {
@@ -399,6 +422,31 @@ const StatistiquesV2 = () => {
               ))}
             </select>
 
+            {activeTab === 'qualification' && (
+              <>
+                <select
+                  value={filters.id_rp}
+                  onChange={(e) => setFilters({ ...filters, id_rp: e.target.value, id_equipe: '' })}
+                  className="filter-select"
+                >
+                  <option value="">Tous les RP qualification</option>
+                  {rpsQualifData?.map((rp) => (
+                    <option key={rp.id} value={rp.id}>{rp.pseudo || `RP #${rp.id}`}</option>
+                  ))}
+                </select>
+                <select
+                  value={filters.id_equipe}
+                  onChange={(e) => setFilters({ ...filters, id_equipe: e.target.value })}
+                  className="filter-select"
+                >
+                  <option value="">Tous les RE</option>
+                  {superviseursData?.map((re) => (
+                    <option key={re.id} value={re.id}>{re.pseudo || `RE #${re.id}`}</option>
+                  ))}
+                </select>
+              </>
+            )}
+
             {activeTab !== 'qualification' && (
               <select
                 value={filters.id_confirmateur}
@@ -428,6 +476,7 @@ const StatistiquesV2 = () => {
               onClick={() => setFilters({
                 id_agent: '',
                 id_equipe: '',
+                id_rp: '',
                 id_centre: '',
                 id_departement: '',
                 id_confirmateur: ''
@@ -439,8 +488,8 @@ const StatistiquesV2 = () => {
         </div>
       </div>
 
-      {/* Alertes de performance */}
-      {showAlerts && alerts.length > 0 && (
+      {/* Alertes de performance (pas sur l'onglet Qualification) */}
+      {activeTab !== 'qualification' && showAlerts && alerts.length > 0 && (
         <div className="alerts-container">
           <div className="alerts-header">
             <FaBell className="alerts-icon" />
@@ -479,19 +528,92 @@ const StatistiquesV2 = () => {
 
       {!isLoading && activeTab === 'qualification' && qualifAdvanced && (
         <div className="stats-content">
-          {/* Métriques principales */}
-          <div className="metrics-grid">
-            <div className="metric-card">
-              <div className="metric-header">
-                <FaUsers className="metric-icon" />
-                <h3>Fiches par Agent/Jour</h3>
-              </div>
-              <div className="metric-value">
-                {qualifAdvanced.avg_fiches_per_agent_per_day?.toFixed(1) || 0}
-              </div>
-              <div className="metric-description">Moyenne sur la période</div>
+          {/* Ratio par RE */}
+          {qualifAdvanced.ratio_by_re?.length > 0 && (
+            <div className="section-card">
+              <h2 className="section-title">Ratio par équipe (RE qualification)</h2>
+              <p className="section-subtitle">
+                Fiches validées / fiches produites par les agents qualification de chaque RE (KO inclus dans les produites).
+              </p>
+              <ResponsiveContainer width="100%" height={Math.max(300, qualifAdvanced.ratio_by_re.length * 36)}>
+                <BarChart data={qualifAdvanced.ratio_by_re} layout="vertical" margin={{ left: 80 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" domain={[0, 100]} unit="%" />
+                  <YAxis
+                    type="category"
+                    dataKey="re_pseudo"
+                    tickFormatter={(_, idx) =>
+                      formatRatioLabel(
+                        qualifAdvanced.ratio_by_re[idx],
+                        're_id',
+                        're_pseudo',
+                        're_nom',
+                        're_prenom'
+                      )
+                    }
+                    width={75}
+                  />
+                  <Tooltip
+                    formatter={(value, name) => {
+                      if (name === 'ratio_pct') return [`${value}%`, 'Ratio'];
+                      return [value, name];
+                    }}
+                    labelFormatter={(_, payload) =>
+                      payload?.[0]?.payload
+                        ? formatRatioLabel(
+                            payload[0].payload,
+                            're_id',
+                            're_pseudo',
+                            're_nom',
+                            're_prenom'
+                          )
+                        : ''
+                    }
+                  />
+                  <Legend />
+                  <Bar dataKey="ratio_pct" fill="#4a7a87" name="Ratio (%)" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          </div>
+          )}
+
+          {/* Ratio par RP */}
+          {qualifAdvanced.ratio_by_rp?.length > 0 && (
+            <div className="section-card">
+              <h2 className="section-title">Ratio par plateau (RP qualification)</h2>
+              <p className="section-subtitle">
+                Agrégation par RP qualification (agents rattachés aux RE du plateau).
+              </p>
+              <ResponsiveContainer width="100%" height={Math.max(280, qualifAdvanced.ratio_by_rp.length * 40)}>
+                <BarChart data={qualifAdvanced.ratio_by_rp} layout="vertical" margin={{ left: 80 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" domain={[0, 100]} unit="%" />
+                  <YAxis
+                    type="category"
+                    dataKey="rp_pseudo"
+                    tickFormatter={(_, idx) =>
+                      formatRatioLabel(
+                        qualifAdvanced.ratio_by_rp[idx],
+                        'rp_id',
+                        'rp_pseudo',
+                        'rp_nom',
+                        'rp_prenom'
+                      )
+                    }
+                    width={75}
+                  />
+                  <Tooltip
+                    formatter={(value, name) => {
+                      if (name === 'ratio_pct') return [`${value}%`, 'Ratio'];
+                      return [value, name];
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="ratio_pct" fill="#9cbfc8" name="Ratio (%)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           {/* Top 10 Agents */}
           <div className="section-card">
@@ -514,10 +636,8 @@ const StatistiquesV2 = () => {
                       </div>
                       <div className="agent-stats">
                         <span>{agent.count_validated} fiches validées</span>
-                        {agent.avg_processing_hours && (
-                          <span className="avg-time">
-                            {parseFloat(agent.avg_processing_hours).toFixed(1)}h en moyenne
-                          </span>
+                        {(agent.count_ko > 0) && (
+                          <span className="avg-time">{agent.count_ko} KO</span>
                         )}
                       </div>
                     </div>
@@ -545,7 +665,7 @@ const StatistiquesV2 = () => {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="rejection_rate" fill="#dc3545" name="Taux de rejet (%)" cursor="pointer" />
+                  <Bar dataKey="rejection_rate" fill="#dc3545" name="Taux de rejet / KO (%)" cursor="pointer" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -586,6 +706,15 @@ const StatistiquesV2 = () => {
                     stroke="#82ca9d" 
                     fill="#82ca9d" 
                     name="Fiches validées"
+                    cursor="pointer"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="ko"
+                    stackId="3"
+                    stroke="#dc3545"
+                    fill="#dc3545"
+                    name="Fiches KO"
                     cursor="pointer"
                   />
                 </AreaChart>
