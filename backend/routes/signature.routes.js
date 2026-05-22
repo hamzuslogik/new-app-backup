@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { query, queryOne, transaction } = require('../config/database');
+const {
+  signatureScoreForCount,
+  MAX_CONFIRMATEURS_PAR_SIGNATURE,
+  redistributeSignatureScoresForFicheEvent,
+} = require('../utils/signatureScores');
 
 function getFirstOfMonthLocal() {
   const d = new Date();
@@ -725,6 +730,10 @@ router.post('/:id/rejeter', authenticate, async (req, res) => {
       await connection.execute('DELETE FROM signature WHERE id = ?', [signatureId]);
     });
 
+    if (sig.id_fiche) {
+      await redistributeSignatureScoresForFicheEvent(sig.id_fiche, sig.date_heure || null);
+    }
+
     return res.json({
       success: true,
       message: 'Signature rejetée et déplacée avec succès'
@@ -831,21 +840,46 @@ router.post('/:id/confirmateurs', authenticate, async (req, res) => {
       });
     }
 
+    const eventDateHeure = baseSig.date_heure || null;
+    let countRow;
+    if (eventDateHeure) {
+      countRow = await queryOne(
+        `SELECT COUNT(*) AS c FROM signature WHERE id_fiche = ? AND date_heure = ?`,
+        [baseSig.id_fiche, eventDateHeure]
+      );
+    } else {
+      countRow = await queryOne(
+        `SELECT COUNT(*) AS c FROM signature WHERE id_fiche = ? AND (date_heure IS NULL OR date_heure = "")`,
+        [baseSig.id_fiche]
+      );
+    }
+    const currentCount = Number(countRow?.c) || 0;
+    if (currentCount >= MAX_CONFIRMATEURS_PAR_SIGNATURE) {
+      return res.status(400).json({
+        success: false,
+        message: `Maximum ${MAX_CONFIRMATEURS_PAR_SIGNATURE} confirmateurs par signature`,
+      });
+    }
+
+    const insertDateHeure = eventDateHeure || new Date();
     await query(
       `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
        VALUES (?, ?, ?, ?, ?)`,
-      [
-        baseSig.id_fiche,
-        confirmateurId,
-        baseSig.ajoute ?? 0,
-        baseSig.date_heure || new Date(),
-        baseSig.tel || null
-      ]
+      [baseSig.id_fiche, confirmateurId, signatureScoreForCount(currentCount + 1), insertDateHeure, baseSig.tel || null]
+    );
+
+    const { count, score } = await redistributeSignatureScoresForFicheEvent(
+      baseSig.id_fiche,
+      eventDateHeure
     );
 
     return res.json({
       success: true,
-      message: 'Confirmateur ajouté avec succès'
+      message: 'Confirmateur ajouté avec succès',
+      data: {
+        confirmateurs: count,
+        score_par_confirmateur: score,
+      },
     });
   } catch (error) {
     console.error('Erreur ajout confirmateur signature:', error);
@@ -878,6 +912,41 @@ router.post('/rejetees/:id/restaurer', authenticate, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Signature rejetée introuvable' });
     }
 
+    if (row.id_fiche && row.confirmateur) {
+      const dup = await queryOne(
+        'SELECT id FROM signature WHERE id_fiche = ? AND confirmateur = ? LIMIT 1',
+        [row.id_fiche, row.confirmateur]
+      );
+      if (dup) {
+        return res.status(409).json({
+          success: false,
+          message: 'Ce confirmateur existe déjà sur cette fiche',
+        });
+      }
+    }
+
+    if (row.id_fiche) {
+      const eventDateHeure = row.date_heure || null;
+      let countRow;
+      if (eventDateHeure) {
+        countRow = await queryOne(
+          `SELECT COUNT(*) AS c FROM signature WHERE id_fiche = ? AND date_heure = ?`,
+          [row.id_fiche, eventDateHeure]
+        );
+      } else {
+        countRow = await queryOne(
+          `SELECT COUNT(*) AS c FROM signature WHERE id_fiche = ? AND (date_heure IS NULL OR date_heure = "")`,
+          [row.id_fiche]
+        );
+      }
+      if (Number(countRow?.c) >= MAX_CONFIRMATEURS_PAR_SIGNATURE) {
+        return res.status(400).json({
+          success: false,
+          message: `Maximum ${MAX_CONFIRMATEURS_PAR_SIGNATURE} confirmateurs par signature`,
+        });
+      }
+    }
+
     await transaction(async (connection) => {
       await connection.execute(
         `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel)
@@ -893,6 +962,10 @@ router.post('/rejetees/:id/restaurer', authenticate, async (req, res) => {
 
       await connection.execute('DELETE FROM signatures_rejetees WHERE id = ?', [rejectedId]);
     });
+
+    if (row.id_fiche) {
+      await redistributeSignatureScoresForFicheEvent(row.id_fiche, row.date_heure || null);
+    }
 
     return res.json({
       success: true,

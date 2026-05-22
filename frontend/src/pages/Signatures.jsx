@@ -9,6 +9,19 @@ import { useAuth } from '../contexts/AuthContext';
 import './Signatures.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
+const MAX_CONFIRMATEURS_PAR_SIGNATURE = 3;
+
+/** Nombre de lignes signature pour le même événement (fiche + date/heure). */
+function countConfirmateursOnSignatureEvent(signature, allSignatures) {
+  if (!signature?.id_fiche) return 1;
+  const refDate = signature.date_heure ?? null;
+  return allSignatures.filter((s) => {
+    if (s.id_fiche !== signature.id_fiche) return false;
+    const d = s.date_heure ?? null;
+    return d === refDate || (d == null && refDate == null);
+  }).length;
+}
+
 const Signatures = () => {
   useForceDesktopViewport('signatures-page');
   const queryClient = useQueryClient();
@@ -150,11 +163,21 @@ const Signatures = () => {
   );
 
   const addConfirmateurMutation = useMutation(
-    async ({ signatureId, idConfirmateur }) => api.post(`/signature/${signatureId}/confirmateurs`, { id_confirmateur: idConfirmateur }),
+    async ({ signatureId, idConfirmateur }) => {
+      const res = await api.post(`/signature/${signatureId}/confirmateurs`, { id_confirmateur: idConfirmateur });
+      return res.data;
+    },
     {
-      onSuccess: async () => {
+      onSuccess: async (data) => {
         await refreshAll();
         closeModal();
+        const n = data?.data?.confirmateurs;
+        const score = data?.data?.score_par_confirmateur;
+        if (n != null && score != null) {
+          window.alert(
+            `Confirmateur ajouté. Score réparti sur ${n} confirmateur(s) : ${Number(score).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} chacun.`
+          );
+        }
       },
       onError: (error) => {
         window.alert(error?.response?.data?.message || 'Erreur lors de l’ajout du confirmateur');
@@ -607,6 +630,12 @@ const Signatures = () => {
                               type="button"
                               className="btn-action-signature btn-action-add"
                               onClick={() => openModal('addConfirmateur', sig)}
+                              disabled={countConfirmateursOnSignatureEvent(sig, signatures) >= MAX_CONFIRMATEURS_PAR_SIGNATURE}
+                              title={
+                                countConfirmateursOnSignatureEvent(sig, signatures) >= MAX_CONFIRMATEURS_PAR_SIGNATURE
+                                  ? `Maximum ${MAX_CONFIRMATEURS_PAR_SIGNATURE} confirmateurs par signature`
+                                  : 'Répartir le score entre les confirmateurs (1 → 1, 2 → 0,5, 3 → 0,33)'
+                              }
                             >
                               Ajouter confirmateur
                             </button>
@@ -697,7 +726,19 @@ const Signatures = () => {
             </h3>
             <p className="signature-modal-context">
               Fiche: {modalState.signature?.id_fiche || '-'} | Confirmateur actuel: {modalState.signature?.confirmateur_pseudo || 'Inconnu'}
+              {modalState.mode === 'addConfirmateur' && modalState.signature && (
+                <>
+                  {' '}
+                  | Confirmateurs sur cette signature:{' '}
+                  {countConfirmateursOnSignatureEvent(modalState.signature, signatures)} / {MAX_CONFIRMATEURS_PAR_SIGNATURE}
+                </>
+              )}
             </p>
+            {modalState.mode === 'addConfirmateur' && (
+              <p className="signature-modal-hint">
+                Le score total (1 point) sera réparti : 2 confirmateurs → 0,5 chacun, 3 confirmateurs → 0,33 chacun.
+              </p>
+            )}
 
             {modalState.mode === 'reject' ? (
               <div className="signature-modal-field">
