@@ -18,15 +18,15 @@ const HEADER_ALIASES = {
     'agent_qual',
     'confirmateur',
   ],
-  date_insertion: [
+  date_appel: [
+    'date_appel',
+    'dateappel',
+    'date_appel_time',
     'date_insertion',
     'date_insert',
     'date_insert_time',
-    'date_inserttime',
-    'date_insertion_time',
-    'date',
-    'date_insert',
   ],
+  etat: ['etat', 'état', 'state', 'statut', 'status'],
 };
 
 function normalizeHeaderKey(key) {
@@ -39,11 +39,23 @@ function normalizeHeaderKey(key) {
     .replace(/^_+|_+$/g, '');
 }
 
+/** Téléphone Excel souvent sans 0 initial (ex. 612345678 → 0612345678). */
 function normalizePhone(value) {
   if (value === null || value === undefined) return '';
   let digits = String(value).replace(/\D/g, '');
   if (!digits) return '';
+  if (digits.startsWith('33') && digits.length >= 11) {
+    digits = `0${digits.slice(2)}`;
+  }
+  if (!digits.startsWith('0') && digits.length === 9 && /^[67]/.test(digits)) {
+    return `0${digits}`;
+  }
   return digits.startsWith('0') ? digits : `0${digits}`;
+}
+
+function isEtatKo(value) {
+  const s = String(value ?? '').trim().toUpperCase();
+  return s.includes('KO');
 }
 
 function pad2(n) {
@@ -132,17 +144,33 @@ function parseKoExcelBuffer(buffer) {
   const sheet = workbook.Sheets[sheetName];
   const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
-  return rawRows.map((raw, index) => {
+  const parsed = [];
+  let ignoredNonKo = 0;
+
+  for (let index = 0; index < rawRows.length; index++) {
+    const raw = rawRows[index];
     const m = mapRowFields(raw);
-    const idRaw = m.id_fiche != null && m.id_fiche !== '' ? parseInt(String(m.id_fiche).replace(/\D/g, ''), 10) : null;
-    return {
+
+    if (!isEtatKo(m.etat)) {
+      ignoredNonKo += 1;
+      continue;
+    }
+
+    const idRaw =
+      m.id_fiche != null && m.id_fiche !== '' ? parseInt(String(m.id_fiche).replace(/\D/g, ''), 10) : null;
+
+    parsed.push({
       line: index + 2,
       id_fiche_excel: Number.isFinite(idRaw) && idRaw > 0 ? idRaw : null,
       tel_excel: m.tel != null && String(m.tel).trim() !== '' ? String(m.tel).trim() : null,
       agent_pseudo: m.agent != null && String(m.agent).trim() !== '' ? String(m.agent).trim() : null,
-      date_insertion_excel: parseExcelDateValue(m.date_insertion),
-    };
-  });
+      date_appel_excel: parseExcelDateValue(m.date_appel),
+      etat_excel: m.etat != null ? String(m.etat).trim() : 'KO',
+    });
+  }
+
+  parsed._ignoredNonKo = ignoredNonKo;
+  return parsed;
 }
 
 async function loadAgentPseudoMap() {
@@ -170,33 +198,34 @@ function resolveAgentId(pseudo, agentMap) {
 const sqlTelNorm = (col) =>
   `RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(${col}, ''), ' ', ''), '.', ''), '-', ''), '/', ''), '(', ''), ')', ''), '+', ''), 10)`;
 
+const FICHE_SELECT =
+  'id, id_agent, ko, date_appel_time, date_insert_time, tel, id_centre, id_etat_final';
+
 async function findFicheForRow(row) {
-  const { id_fiche_excel, tel_excel, date_insertion_excel } = row;
+  const { id_fiche_excel, tel_excel, date_appel_excel } = row;
 
   if (id_fiche_excel) {
-    const fiche = await queryOne(
-      `SELECT id, id_agent, ko, date_insert_time, tel, id_centre, id_etat_final
-       FROM fiches WHERE id = ?`,
-      [id_fiche_excel]
-    );
+    const fiche = await queryOne(`SELECT ${FICHE_SELECT} FROM fiches WHERE id = ?`, [id_fiche_excel]);
     if (!fiche) return { fiche: null, match_note: 'Fiche introuvable (id)' };
-    const excelDay = datePartOnly(date_insertion_excel);
-    const dbDay = datePartOnly(fiche.date_insert_time);
+    const excelDay = datePartOnly(date_appel_excel);
+    const dbDay = datePartOnly(fiche.date_appel_time);
     let match_note = null;
     if (excelDay && dbDay && excelDay !== dbDay) {
-      match_note = `Date insertion Excel (${excelDay}) ≠ BDD (${dbDay})`;
+      match_note = `Date appel Excel (${excelDay}) ≠ BDD (${dbDay})`;
+    } else if (excelDay && !dbDay) {
+      match_note = `Date appel Excel (${excelDay}) — pas de date_appel_time en BDD`;
     }
     return { fiche, match_note };
   }
 
   const telNorm = normalizePhone(tel_excel);
   if (!telNorm || telNorm.length < 9) {
-    return { fiche: null, match_note: 'ID fiche ou téléphone requis' };
+    return { fiche: null, match_note: 'Téléphone invalide ou manquant' };
   }
 
   const last10 = telNorm.slice(-10);
   let candidates = await query(
-    `SELECT id, id_agent, ko, date_insert_time, tel, id_centre, id_etat_final
+    `SELECT ${FICHE_SELECT}
      FROM fiches
      WHERE ${sqlTelNorm('tel')} = ? OR ${sqlTelNorm('gsm1')} = ? OR ${sqlTelNorm('gsm2')} = ?`,
     [last10, last10, last10]
@@ -206,26 +235,26 @@ async function findFicheForRow(row) {
     return { fiche: null, match_note: 'Aucune fiche pour ce téléphone' };
   }
 
-  if (date_insertion_excel) {
-    const excelDay = datePartOnly(date_insertion_excel);
-    const byDate = candidates.filter((f) => datePartOnly(f.date_insert_time) === excelDay);
+  if (date_appel_excel) {
+    const excelDay = datePartOnly(date_appel_excel);
+    const byDate = candidates.filter((f) => datePartOnly(f.date_appel_time) === excelDay);
     if (byDate.length === 1) return { fiche: byDate[0], match_note: null };
     if (byDate.length > 1) {
       return {
         fiche: null,
-        match_note: `${byDate.length} fiches avec ce téléphone et cette date — précisez l'id fiche`,
+        match_note: `${byDate.length} fiches avec ce téléphone et date appel ${excelDay}`,
       };
     }
     return {
       fiche: null,
-      match_note: `Aucune fiche avec date insertion ${excelDay} (trouvé ${candidates.length} sans ce filtre)`,
+      match_note: `Aucune fiche avec date appel ${excelDay} (${candidates.length} fiche(s) sur ce numéro)`,
     };
   }
 
   if (candidates.length === 1) return { fiche: candidates[0], match_note: null };
   return {
     fiche: null,
-    match_note: `${candidates.length} fiches pour ce téléphone — ajoutez id fiche ou date insertion`,
+    match_note: `${candidates.length} fiches pour ce téléphone — renseignez date_appel`,
   };
 }
 
@@ -253,13 +282,14 @@ function buildPreviewRow(parsed, fiche, agentResolved, match_note) {
     id_fiche_excel: parsed.id_fiche_excel,
     tel_excel: parsed.tel_excel,
     agent_pseudo: parsed.agent_pseudo,
-    date_insertion_excel: parsed.date_insertion_excel,
+    etat_excel: parsed.etat_excel ?? null,
+    date_appel_excel: parsed.date_appel_excel,
     id_fiche: fiche?.id ?? null,
     id_agent_resolu,
     id_agent_actuel: fiche?.id_agent ?? null,
     agent_pseudo_trouve: hasAgent ? parsed.agent_pseudo : null,
     agent_erreur,
-    date_insert_time_db: fiche?.date_insert_time ?? null,
+    date_appel_time_db: fiche?.date_appel_time ?? null,
     ko_actuel: fiche?.ko != null ? Number(fiche.ko) : 0,
     status,
     status_label,
@@ -269,15 +299,20 @@ function buildPreviewRow(parsed, fiche, agentResolved, match_note) {
 
 async function previewKoImportFromBuffer(buffer) {
   const parsedRows = parseKoExcelBuffer(buffer);
+  const ignoredNonKo = parsedRows._ignoredNonKo ?? 0;
+
   if (!parsedRows.length) {
-    return { rows: [], meta: { total: 0, pret: 0, erreur: 0, avertissement: 0 } };
+    return {
+      rows: [],
+      meta: { total: 0, pret: 0, erreur: 0, avertissement: 0, ignore_non_ko: ignoredNonKo },
+    };
   }
 
   const agentMap = await loadAgentPseudoMap();
   const rows = [];
 
   for (const parsed of parsedRows) {
-    if (!parsed.id_fiche_excel && !parsed.tel_excel && !parsed.agent_pseudo) continue;
+    if (!parsed.tel_excel && !parsed.agent_pseudo) continue;
 
     const agentResolved = resolveAgentId(parsed.agent_pseudo, agentMap);
     const { fiche, match_note } = await findFicheForRow(parsed);
@@ -289,6 +324,7 @@ async function previewKoImportFromBuffer(buffer) {
     pret: rows.filter((r) => r.status === 'pret').length,
     avertissement: rows.filter((r) => r.status === 'avertissement').length,
     erreur: rows.filter((r) => r.status === 'erreur').length,
+    ignore_non_ko: ignoredNonKo,
   };
 
   return { rows, meta };
@@ -318,7 +354,7 @@ async function applyKoImportRows(rows, userId) {
     }
 
     const fiche = await queryOne(
-      'SELECT id, id_agent, ko, id_centre, id_etat_final, date_insert_time FROM fiches WHERE id = ?',
+      `SELECT id, id_agent, ko, id_centre, id_etat_final, date_appel_time FROM fiches WHERE id = ?`,
       [idFiche]
     );
     if (!fiche) {
@@ -326,18 +362,18 @@ async function applyKoImportRows(rows, userId) {
       continue;
     }
 
-    const dateInsertion =
-      input.date_insertion_excel != null && String(input.date_insertion_excel).trim() !== ''
-        ? String(input.date_insertion_excel).trim()
+    const dateAppel =
+      input.date_appel_excel != null && String(input.date_appel_excel).trim() !== ''
+        ? String(input.date_appel_excel).trim()
         : null;
 
     const oldKo = fiche.ko != null ? Number(fiche.ko) : 0;
     const oldAgent = fiche.id_agent != null ? Number(fiche.id_agent) : null;
 
-    if (dateInsertion) {
+    if (dateAppel) {
       await query(
-        'UPDATE fiches SET id_agent = ?, ko = 1, date_insert_time = ?, date_modif_time = ? WHERE id = ?',
-        [idAgent, dateInsertion, now, idFiche]
+        'UPDATE fiches SET id_agent = ?, ko = 1, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
+        [idAgent, dateAppel, now, idFiche]
       );
     } else {
       await query('UPDATE fiches SET id_agent = ?, ko = 1, date_modif_time = ? WHERE id = ?', [
@@ -359,7 +395,7 @@ async function applyKoImportRows(rows, userId) {
         id_etat_final_avant: fiche.id_etat_final ?? null,
         id_etat_final_apres: fiche.id_etat_final ?? null,
         source: IMPORT_KO_SOURCE,
-        date_ko: dateInsertion || now,
+        date_ko: dateAppel || now,
       });
     }
 
@@ -370,7 +406,7 @@ async function applyKoImportRows(rows, userId) {
       id_agent: idAgent,
       id_agent_avant: oldAgent,
       ko_avant: oldKo,
-      date_insertion_appliquee: dateInsertion,
+      date_appel_appliquee: dateAppel,
       message: 'Mis à jour (id_agent + ko=1)',
     });
   }

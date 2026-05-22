@@ -75,7 +75,7 @@ const FichesKoImportTab = () => {
       toast.warn('Aucune ligne prête à appliquer');
       return;
     }
-    const msg = `Appliquer ${applicableRows.length} fiche(s) ?\n\n• id_agent mis à jour (pseudo → id)\n• ko = 1\n• date_insert_time si fournie dans l'Excel`;
+    const msg = `Appliquer ${applicableRows.length} fiche(s) ?\n\n• id_agent mis à jour (pseudo → id)\n• ko = 1\n• date_appel_time si fournie dans l'Excel`;
     if (!window.confirm(msg)) return;
     applyMutation.mutate(applicableRows);
   };
@@ -87,10 +87,10 @@ const FichesKoImportTab = () => {
       </div>
 
       <p className="ko-import-help">
-        Fichier Excel avec colonnes reconnues automatiquement : <strong>id fiche</strong> ou{' '}
-        <strong>téléphone</strong>, <strong>agent / pseudo</strong> (qualification, fonction 3),{' '}
-        <strong>date insertion</strong> (optionnelle, pour cibler la fiche et mettre à jour{' '}
-        <code>date_insert_time</code>).
+        Format attendu (1ère ligne = en-têtes) : <strong>Telephone</strong> (sans 0 initial),{' '}
+        <strong>Agent</strong> (pseudo qualification), <strong>date_appel</strong> (YYYY-MM-DD),{' '}
+        <strong>Etat</strong> (doit contenir « KO »). Seules les lignes avec Etat = KO sont traitées.
+        Le 0 est ajouté au numéro pour la recherche ; la fiche est ciblée par téléphone + date d&apos;appel.
       </p>
 
       <div className="form-group">
@@ -156,8 +156,9 @@ const FichesKoImportTab = () => {
               <th>Agent (pseudo)</th>
               <th>Id agent cible</th>
               <th>Id agent actuel</th>
-              <th>Date insert. Excel</th>
-              <th>Date insert. BDD</th>
+              <th>Etat</th>
+              <th>Date appel Excel</th>
+              <th>Date appel BDD</th>
               <th>KO actuel</th>
               <th>Statut</th>
             </tr>
@@ -178,8 +179,9 @@ const FichesKoImportTab = () => {
                   <td>{row.agent_pseudo || '-'}</td>
                   <td>{row.id_agent_resolu ?? '-'}</td>
                   <td>{row.id_agent_actuel ?? '-'}</td>
-                  <td>{formatDt(row.date_insertion_excel)}</td>
-                  <td>{formatDt(row.date_insert_time_db)}</td>
+                  <td>{row.etat_excel || 'KO'}</td>
+                  <td>{formatDt(row.date_appel_excel)}</td>
+                  <td>{formatDt(row.date_appel_time_db)}</td>
                   <td>{row.ko_actuel === 1 ? '1' : '0'}</td>
                   <td className={statusClass(row.status)}>
                     {row.status === 'pret' && <FaCheck title="Prêt" />}
