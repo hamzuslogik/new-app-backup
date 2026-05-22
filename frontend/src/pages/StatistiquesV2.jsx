@@ -409,8 +409,10 @@ const StatistiquesV2 = () => {
 
         {/* Filtres avancés */}
         <div className="advanced-filters">
-          <FaFilter /> Filtres avancés
-          <div className="filters-grid">
+          <div className="advanced-filters-label">
+            <FaFilter /> Filtres avancés
+          </div>
+          <div className="filters-row">
             <select
               value={filters.id_agent}
               onChange={(e) => setFilters({ ...filters, id_agent: e.target.value })}
@@ -531,14 +533,14 @@ const StatistiquesV2 = () => {
           {/* Ratio par RE */}
           {qualifAdvanced.ratio_by_re?.length > 0 && (
             <div className="section-card">
-              <h2 className="section-title">Ratio par équipe (RE qualification)</h2>
+              <h2 className="section-title">Ratio production / effectif par RE</h2>
               <p className="section-subtitle">
-                Fiches validées / fiches produites par les agents qualification de chaque RE (KO inclus dans les produites).
+                Fiches produites sur la période ÷ effectif (agents qualification actifs rattachés au RE). KO inclus dans la production.
               </p>
               <ResponsiveContainer width="100%" height={Math.max(300, qualifAdvanced.ratio_by_re.length * 36)}>
                 <BarChart data={qualifAdvanced.ratio_by_re} layout="vertical" margin={{ left: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" domain={[0, 100]} unit="%" />
+                  <XAxis type="number" />
                   <YAxis
                     type="category"
                     dataKey="re_pseudo"
@@ -555,23 +557,18 @@ const StatistiquesV2 = () => {
                   />
                   <Tooltip
                     formatter={(value, name) => {
-                      if (name === 'ratio_pct') return [`${value}%`, 'Ratio'];
+                      if (name === 'ratio') return [value, 'Ratio (fiches/agent)'];
                       return [value, name];
                     }}
-                    labelFormatter={(_, payload) =>
-                      payload?.[0]?.payload
-                        ? formatRatioLabel(
-                            payload[0].payload,
-                            're_id',
-                            're_pseudo',
-                            're_nom',
-                            're_prenom'
-                          )
-                        : ''
-                    }
+                    labelFormatter={(_, payload) => {
+                      const p = payload?.[0]?.payload;
+                      if (!p) return '';
+                      const label = formatRatioLabel(p, 're_id', 're_pseudo', 're_nom', 're_prenom');
+                      return `${label} — ${p.fiches_produites} fiches / ${p.effectif} agents`;
+                    }}
                   />
                   <Legend />
-                  <Bar dataKey="ratio_pct" fill="#4a7a87" name="Ratio (%)" />
+                  <Bar dataKey="ratio" fill="#4a7a87" name="Production / effectif" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -580,14 +577,14 @@ const StatistiquesV2 = () => {
           {/* Ratio par RP */}
           {qualifAdvanced.ratio_by_rp?.length > 0 && (
             <div className="section-card">
-              <h2 className="section-title">Ratio par plateau (RP qualification)</h2>
+              <h2 className="section-title">Ratio production / effectif par RP (plateau)</h2>
               <p className="section-subtitle">
-                Agrégation par RP qualification (agents rattachés aux RE du plateau).
+                Fiches produites sur la période ÷ effectif total des agents qualification du plateau (tous RE du RP).
               </p>
               <ResponsiveContainer width="100%" height={Math.max(280, qualifAdvanced.ratio_by_rp.length * 40)}>
                 <BarChart data={qualifAdvanced.ratio_by_rp} layout="vertical" margin={{ left: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" domain={[0, 100]} unit="%" />
+                  <XAxis type="number" />
                   <YAxis
                     type="category"
                     dataKey="rp_pseudo"
@@ -604,12 +601,18 @@ const StatistiquesV2 = () => {
                   />
                   <Tooltip
                     formatter={(value, name) => {
-                      if (name === 'ratio_pct') return [`${value}%`, 'Ratio'];
+                      if (name === 'ratio') return [value, 'Ratio (fiches/agent)'];
                       return [value, name];
+                    }}
+                    labelFormatter={(_, payload) => {
+                      const p = payload?.[0]?.payload;
+                      if (!p) return '';
+                      const label = formatRatioLabel(p, 'rp_id', 'rp_pseudo', 'rp_nom', 'rp_prenom');
+                      return `${label} — ${p.fiches_produites} fiches / ${p.effectif} agents`;
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="ratio_pct" fill="#9cbfc8" name="Ratio (%)" />
+                  <Bar dataKey="ratio" fill="#9cbfc8" name="Production / effectif" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -651,6 +654,9 @@ const StatistiquesV2 = () => {
           {qualifAdvanced.rejection_rates && qualifAdvanced.rejection_rates.length > 0 && (
             <div className="section-card">
               <h2 className="section-title">Taux de Rejet par Agent</h2>
+              <p className="section-subtitle">
+                Barres orange : nombre de fiches KO. Barres rouges : taux de rejet (%), incluant KO et états groupe 0.
+              </p>
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart 
                   data={qualifAdvanced.rejection_rates}
@@ -662,10 +668,46 @@ const StatistiquesV2 = () => {
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="pseudo" />
-                  <YAxis />
-                  <Tooltip />
+                  <YAxis yAxisId="count" allowDecimals={false} label={{ value: 'Nombre KO', angle: -90, position: 'insideLeft' }} />
+                  <YAxis
+                    yAxisId="pct"
+                    orientation="right"
+                    domain={[0, 100]}
+                    unit="%"
+                    label={{ value: 'Taux rejet', angle: 90, position: 'insideRight' }}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.[0]?.payload) return null;
+                      const d = payload[0].payload;
+                      return (
+                        <div className="chart-tooltip-custom">
+                          <strong>{d.pseudo}</strong>
+                          <div>Nombre KO : {d.ko_count ?? 0}</div>
+                          <div>Groupe 0 : {d.groupe0_count ?? 0}</div>
+                          <div>Total rejet (KO + g.0) : {d.rejected_count ?? 0}</div>
+                          <div>Total fiches : {d.total_count ?? 0}</div>
+                          <div>Taux rejet : {Number(d.rejection_rate ?? 0).toFixed(1)} %</div>
+                        </div>
+                      );
+                    }}
+                  />
                   <Legend />
-                  <Bar dataKey="rejection_rate" fill="#dc3545" name="Taux de rejet / KO (%)" cursor="pointer" />
+                  <Bar
+                    yAxisId="count"
+                    dataKey="ko_count"
+                    fill="#fd7e14"
+                    name="Nombre KO"
+                    cursor="pointer"
+                  />
+                  <Bar
+                    yAxisId="pct"
+                    dataKey="rejection_rate"
+                    fill="#dc3545"
+                    name="Taux rejet (%)"
+                    cursor="pointer"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>

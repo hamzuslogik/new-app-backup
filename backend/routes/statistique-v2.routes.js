@@ -100,26 +100,28 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
       LIMIT 10
     `, params);
 
-    // Taux de rejet par agent (groupe 0 + ko=1)
+    // Taux de rejet par agent (groupe 0 + ko=1) + nombre de KO
     const rejectionRates = await query(`
       SELECT
         agent.id,
         agent.pseudo,
         COUNT(DISTINCT CASE WHEN ${SQL_FICHE_REJET} THEN f.id END) as rejected_count,
+        COUNT(DISTINCT CASE WHEN f.ko = 1 THEN f.id END) as ko_count,
+        COUNT(DISTINCT CASE WHEN (f.ko = 0 OR f.ko IS NULL) AND (e.groupe = '0' OR e.groupe = 0) THEN f.id END) as groupe0_count,
         COUNT(DISTINCT f.id) as total_count,
         CASE
           WHEN COUNT(DISTINCT f.id) > 0
-          THEN (COUNT(DISTINCT CASE WHEN ${SQL_FICHE_REJET} THEN f.id END) / COUNT(DISTINCT f.id)) * 100
+          THEN ROUND((COUNT(DISTINCT CASE WHEN ${SQL_FICHE_REJET} THEN f.id END) / COUNT(DISTINCT f.id)) * 100, 1)
           ELSE 0
         END as rejection_rate
       ${fromSql}
       WHERE ${whereSql}
       GROUP BY agent.id, agent.pseudo
       HAVING total_count > 0
-      ORDER BY rejection_rate DESC
+      ORDER BY ko_count DESC, rejection_rate DESC
     `, params);
 
-    // Ratio par équipe RE (chef_equipe des agents F3)
+    // Ratio production / effectif par équipe RE (fiches produites ÷ nb agents qualification actifs)
     const ratioByRe = await query(`
       SELECT
         re.id as re_id,
@@ -129,20 +131,42 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
         COUNT(DISTINCT f.id) as fiches_produites,
         COUNT(DISTINCT CASE WHEN ${SQL_FICHE_VALIDEE} THEN f.id END) as fiches_validees,
         COUNT(DISTINCT CASE WHEN f.ko = 1 THEN f.id END) as fiches_ko,
+        (
+          SELECT COUNT(*)
+          FROM utilisateurs ua
+          WHERE ua.fonction = 3
+            AND ua.chef_equipe = re.id
+            AND (ua.etat > 0 OR ua.etat IS NULL)
+        ) as effectif,
         CASE
-          WHEN COUNT(DISTINCT f.id) > 0
-          THEN ROUND((COUNT(DISTINCT CASE WHEN ${SQL_FICHE_VALIDEE} THEN f.id END) / COUNT(DISTINCT f.id)) * 100, 1)
+          WHEN (
+            SELECT COUNT(*)
+            FROM utilisateurs ua
+            WHERE ua.fonction = 3
+              AND ua.chef_equipe = re.id
+              AND (ua.etat > 0 OR ua.etat IS NULL)
+          ) > 0
+          THEN ROUND(
+            COUNT(DISTINCT f.id) / (
+              SELECT COUNT(*)
+              FROM utilisateurs ua
+              WHERE ua.fonction = 3
+                AND ua.chef_equipe = re.id
+                AND (ua.etat > 0 OR ua.etat IS NULL)
+            ),
+            2
+          )
           ELSE 0
-        END as ratio_pct
+        END as ratio
       ${fromSql}
       WHERE ${whereSql}
         AND re.id IS NOT NULL
       GROUP BY re.id, re.pseudo, re.nom, re.prenom
       HAVING fiches_produites > 0
-      ORDER BY ratio_pct DESC, fiches_produites DESC
+      ORDER BY ratio DESC, fiches_produites DESC
     `, params);
 
-    // Ratio par plateau RP qualification (id_rp_qualif sur le RE)
+    // Ratio production / effectif par plateau RP qualification
     const ratioByRp = await query(`
       SELECT
         rp.id as rp_id,
@@ -152,17 +176,45 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
         COUNT(DISTINCT f.id) as fiches_produites,
         COUNT(DISTINCT CASE WHEN ${SQL_FICHE_VALIDEE} THEN f.id END) as fiches_validees,
         COUNT(DISTINCT CASE WHEN f.ko = 1 THEN f.id END) as fiches_ko,
+        (
+          SELECT COUNT(*)
+          FROM utilisateurs ua
+          WHERE ua.fonction = 3
+            AND (ua.etat > 0 OR ua.etat IS NULL)
+            AND ua.chef_equipe IN (
+              SELECT r2.id FROM utilisateurs r2 WHERE r2.id_rp_qualif = rp.id
+            )
+        ) as effectif,
         CASE
-          WHEN COUNT(DISTINCT f.id) > 0
-          THEN ROUND((COUNT(DISTINCT CASE WHEN ${SQL_FICHE_VALIDEE} THEN f.id END) / COUNT(DISTINCT f.id)) * 100, 1)
+          WHEN (
+            SELECT COUNT(*)
+            FROM utilisateurs ua
+            WHERE ua.fonction = 3
+              AND (ua.etat > 0 OR ua.etat IS NULL)
+              AND ua.chef_equipe IN (
+                SELECT r2.id FROM utilisateurs r2 WHERE r2.id_rp_qualif = rp.id
+              )
+          ) > 0
+          THEN ROUND(
+            COUNT(DISTINCT f.id) / (
+              SELECT COUNT(*)
+              FROM utilisateurs ua
+              WHERE ua.fonction = 3
+                AND (ua.etat > 0 OR ua.etat IS NULL)
+                AND ua.chef_equipe IN (
+                  SELECT r2.id FROM utilisateurs r2 WHERE r2.id_rp_qualif = rp.id
+                )
+            ),
+            2
+          )
           ELSE 0
-        END as ratio_pct
+        END as ratio
       ${fromSql}
       INNER JOIN utilisateurs rp ON re.id_rp_qualif = rp.id AND rp.fonction = 12
       WHERE ${whereSql}
       GROUP BY rp.id, rp.pseudo, rp.nom, rp.prenom
       HAVING fiches_produites > 0
-      ORDER BY ratio_pct DESC, fiches_produites DESC
+      ORDER BY ratio DESC, fiches_produites DESC
     `, params);
 
     // Évolution quotidienne (total, validées, KO)
@@ -182,17 +234,26 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
       success: true,
       data: {
         top10_agents: top10Agents || [],
-        rejection_rates: rejectionRates || [],
+        rejection_rates: (rejectionRates || []).map((row) => ({
+          ...row,
+          rejection_rate: parseFloat(row.rejection_rate || 0),
+          ko_count: parseInt(row.ko_count || 0, 10),
+          rejected_count: parseInt(row.rejected_count || 0, 10),
+          groupe0_count: parseInt(row.groupe0_count || 0, 10),
+          total_count: parseInt(row.total_count || 0, 10),
+        })),
         ratio_by_re: (ratioByRe || []).map((row) => ({
           ...row,
-          ratio_pct: parseFloat(row.ratio_pct || 0),
+          ratio: parseFloat(row.ratio || 0),
+          effectif: parseInt(row.effectif || 0, 10),
           fiches_produites: parseInt(row.fiches_produites || 0, 10),
           fiches_validees: parseInt(row.fiches_validees || 0, 10),
           fiches_ko: parseInt(row.fiches_ko || 0, 10),
         })),
         ratio_by_rp: (ratioByRp || []).map((row) => ({
           ...row,
-          ratio_pct: parseFloat(row.ratio_pct || 0),
+          ratio: parseFloat(row.ratio || 0),
+          effectif: parseInt(row.effectif || 0, 10),
           fiches_produites: parseInt(row.fiches_produites || 0, 10),
           fiches_validees: parseInt(row.fiches_validees || 0, 10),
           fiches_ko: parseInt(row.fiches_ko || 0, 10),
