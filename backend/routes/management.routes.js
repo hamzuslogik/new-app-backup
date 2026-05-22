@@ -2505,7 +2505,14 @@ router.post(
   checkPermission(1, 2, 7, 11),
   upload.single('file'),
   async (req, res) => {
+    const requestId = `preview-${Date.now()}`;
     try {
+      console.log('[fiches-ko-import][route] POST preview', {
+        requestId,
+        user_id: req.user?.id,
+        fichier: req.file?.originalname,
+        taille_octets: req.file?.size,
+      });
       if (!req.file) {
         return res.status(400).json({ success: false, message: 'Fichier requis' });
       }
@@ -2516,10 +2523,11 @@ router.post(
           message: 'Format accepté : .xlsx, .xls ou .csv',
         });
       }
-      const { rows, meta } = await previewKoImportFromBuffer(req.file.buffer);
+      const { rows, meta } = await previewKoImportFromBuffer(req.file.buffer, { requestId });
+      console.log('[fiches-ko-import][route] preview terminé', { requestId, meta });
       return res.json({ success: true, data: rows, meta });
     } catch (error) {
-      console.error('Erreur fiches-ko-import preview:', error);
+      console.error('[fiches-ko-import][route] Erreur preview:', requestId, error);
       return res.status(500).json({
         success: false,
         message: 'Erreur lors de la lecture du fichier',
@@ -2534,19 +2542,36 @@ router.post(
   authenticate,
   checkPermission(1, 2, 7, 11),
   async (req, res) => {
+    const requestId = `apply-${Date.now()}`;
     try {
       const rows = req.body?.rows;
+      console.log('[fiches-ko-import][route] POST apply', {
+        requestId,
+        user_id: req.user?.id,
+        lignes_body: Array.isArray(rows) ? rows.length : 0,
+      });
       if (!Array.isArray(rows) || rows.length === 0) {
         return res.status(400).json({ success: false, message: 'Aucune ligne à appliquer' });
       }
       const applicable = rows.filter((r) => r.status === 'pret' || r.status === 'avertissement');
+      console.log('[fiches-ko-import][route] lignes applicables', {
+        requestId,
+        total: rows.length,
+        applicables: applicable.length,
+        par_statut: {
+          pret: rows.filter((r) => r.status === 'pret').length,
+          avertissement: rows.filter((r) => r.status === 'avertissement').length,
+          erreur: rows.filter((r) => r.status === 'erreur').length,
+        },
+      });
       if (!applicable.length) {
         return res.status(400).json({
           success: false,
           message: 'Aucune ligne valide (statut prêt ou avertissement)',
         });
       }
-      const { results, meta } = await applyKoImportRows(applicable, req.user?.id);
+      const { results, meta } = await applyKoImportRows(applicable, req.user?.id, { requestId });
+      console.log('[fiches-ko-import][route] apply terminé', { requestId, meta });
       return res.json({
         success: true,
         message: `${meta.success} fiche(s) mise(s) à jour`,
@@ -2554,7 +2579,7 @@ router.post(
         meta,
       });
     } catch (error) {
-      console.error('Erreur fiches-ko-import apply:', error);
+      console.error('[fiches-ko-import][route] Erreur apply:', requestId, error);
       return res.status(500).json({
         success: false,
         message: 'Erreur lors de l\'application des modifications',
