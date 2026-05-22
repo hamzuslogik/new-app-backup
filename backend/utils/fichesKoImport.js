@@ -80,65 +80,70 @@ function pad2(n) {
   return String(n).padStart(2, '0');
 }
 
-function toMysqlDateTime(date) {
-  if (!date || Number.isNaN(date.getTime())) return null;
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
-}
-
-function parseExcelDateValue(value) {
+/** Date calendaire uniquement : YYYY-MM-DD (année-mois-jour, sans heure). */
+function toDateYmd(value) {
   if (value == null || value === '') return null;
 
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return toMysqlDateTime(value);
-  }
-
-  if (typeof value === 'number' && value > 0) {
-    const parsed = XLSX.SSF?.parse_date_code?.(value);
-    if (parsed) {
-      const d = new Date(parsed.y, parsed.m - 1, parsed.d, parsed.H || 0, parsed.M || 0, parsed.S || 0);
-      return toMysqlDateTime(d);
-    }
+    return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
   }
 
   const s = String(value).trim();
   if (!s) return null;
 
-  const fr = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  const isoSlash = s.match(/^(\d{4})[\/\.](\d{1,2})[\/\.](\d{1,2})/);
+  if (isoSlash) {
+    return `${isoSlash[1]}-${pad2(parseInt(isoSlash[2], 10))}-${pad2(parseInt(isoSlash[3], 10))}`;
+  }
+
+  const fr = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
   if (fr) {
     let y = parseInt(fr[3], 10);
     if (y < 100) y += 2000;
-    const d = new Date(
-      y,
-      parseInt(fr[2], 10) - 1,
-      parseInt(fr[1], 10),
-      parseInt(fr[4] || '0', 10),
-      parseInt(fr[5] || '0', 10),
-      parseInt(fr[6] || '0', 10)
-    );
-    return toMysqlDateTime(d);
-  }
-
-  const iso = s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
-  if (iso) {
-    const d = new Date(
-      parseInt(iso[1], 10),
-      parseInt(iso[2], 10) - 1,
-      parseInt(iso[3], 10),
-      parseInt(iso[4] || '0', 10),
-      parseInt(iso[5] || '0', 10),
-      parseInt(iso[6] || '0', 10)
-    );
-    return toMysqlDateTime(d);
+    return `${y}-${pad2(parseInt(fr[2], 10))}-${pad2(parseInt(fr[1], 10))}`;
   }
 
   const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : toMysqlDateTime(d);
+  if (!Number.isNaN(d.getTime())) {
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+
+  return null;
 }
 
-function datePartOnly(mysqlDt) {
-  if (!mysqlDt) return null;
-  const s = String(mysqlDt);
-  return s.slice(0, 10);
+/** Parse une cellule Excel → YYYY-MM-DD uniquement. */
+function parseExcelDateToYmd(value) {
+  if (value == null || value === '') return null;
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return toDateYmd(value);
+  }
+
+  if (typeof value === 'number' && value > 0) {
+    const parsed = XLSX.SSF?.parse_date_code?.(value);
+    if (parsed) {
+      return `${parsed.y}-${pad2(parsed.m)}-${pad2(parsed.d)}`;
+    }
+  }
+
+  return toDateYmd(value);
+}
+
+/** Compare deux dates en ne tenant compte que du jour (YYYY-MM-DD). */
+function datesYmdEqual(a, b) {
+  const ya = toDateYmd(a);
+  const yb = toDateYmd(b);
+  if (!ya || !yb) return false;
+  return ya === yb;
+}
+
+/** date_appel_excel (YMD) → datetime MySQL à minuit pour UPDATE. */
+function ymdToMysqlMidnight(ymd) {
+  const day = toDateYmd(ymd);
+  return day ? `${day} 00:00:00` : null;
 }
 
 function mapRowFields(rawRow) {
@@ -195,7 +200,7 @@ function parseKoExcelBuffer(buffer) {
       id_fiche_excel: Number.isFinite(idRaw) && idRaw > 0 ? idRaw : null,
       tel_excel: m.tel != null && String(m.tel).trim() !== '' ? String(m.tel).trim() : null,
       agent_pseudo: m.agent != null && String(m.agent).trim() !== '' ? String(m.agent).trim() : null,
-      date_appel_excel: parseExcelDateValue(m.date_appel),
+      date_appel_excel: parseExcelDateToYmd(m.date_appel),
       etat_excel: m.etat != null ? String(m.etat).trim() : 'KO',
     });
   }
@@ -257,17 +262,18 @@ async function findFicheForRow(row, logCtx = {}) {
       logLine('match', line, 'fiche introuvable (id)');
       return { fiche: null, match_note: 'Fiche introuvable (id)' };
     }
-    const excelDay = datePartOnly(date_appel_excel);
-    const dbDay = datePartOnly(fiche.date_appel_time);
+    const excelDay = toDateYmd(date_appel_excel);
+    const dbDay = toDateYmd(fiche.date_appel_time);
     let match_note = null;
-    if (excelDay && dbDay && excelDay !== dbDay) {
+    if (excelDay && dbDay && !datesYmdEqual(excelDay, dbDay)) {
       match_note = `Date appel Excel (${excelDay}) ≠ BDD (${dbDay})`;
     } else if (excelDay && !dbDay) {
       match_note = `Date appel Excel (${excelDay}) — pas de date_appel_time en BDD`;
     }
     logLine('match', line, 'fiche trouvée par id', {
       id: fiche.id,
-      date_appel_time: fiche.date_appel_time,
+      date_appel_excel_ymd: excelDay,
+      date_appel_time_ymd: dbDay,
       match_note,
     });
     return { fiche, match_note };
@@ -285,31 +291,50 @@ async function findFicheForRow(row, logCtx = {}) {
   }
 
   const last10 = telNorm.slice(-10);
-  let candidates = await query(
-    `SELECT ${FICHE_SELECT}
-     FROM fiches
-     WHERE ${sqlTelNorm('tel')} = ? OR ${sqlTelNorm('gsm1')} = ? OR ${sqlTelNorm('gsm2')} = ?`,
-    [last10, last10, last10]
-  );
+  const excelDay = toDateYmd(date_appel_excel);
+  const telWhere = `(${sqlTelNorm('tel')} = ? OR ${sqlTelNorm('gsm1')} = ? OR ${sqlTelNorm('gsm2')} = ?)`;
+
+  let candidates;
+  if (excelDay) {
+    candidates = await query(
+      `SELECT ${FICHE_SELECT}
+       FROM fiches
+       WHERE ${telWhere}
+         AND date_appel_time IS NOT NULL
+         AND DATE(date_appel_time) = ?`,
+      [last10, last10, last10, excelDay]
+    );
+    logLine('match', line, 'recherche tel + DATE(date_appel_time)', { last10, excelDay });
+  } else {
+    candidates = await query(
+      `SELECT ${FICHE_SELECT} FROM fiches WHERE ${telWhere}`,
+      [last10, last10, last10]
+    );
+  }
 
   logLine('match', line, 'candidats téléphone', {
     last10,
+    date_appel_ymd: excelDay,
     count: candidates?.length || 0,
     ids: (candidates || []).slice(0, 5).map((f) => ({
       id: f.id,
-      date_appel: datePartOnly(f.date_appel_time),
+      date_appel_ymd: toDateYmd(f.date_appel_time),
     })),
   });
 
   if (!candidates?.length) {
-    logLine('match', line, 'aucune fiche pour ce téléphone');
-    return { fiche: null, match_note: 'Aucune fiche pour ce téléphone' };
+    logLine('match', line, excelDay ? 'aucune fiche pour ce téléphone à cette date' : 'aucune fiche pour ce téléphone');
+    return {
+      fiche: null,
+      match_note: excelDay
+        ? `Aucune fiche pour ce téléphone avec date appel ${excelDay}`
+        : 'Aucune fiche pour ce téléphone',
+    };
   }
 
-  if (date_appel_excel) {
-    const excelDay = datePartOnly(date_appel_excel);
-    const byDate = candidates.filter((f) => datePartOnly(f.date_appel_time) === excelDay);
-    logLine('match', line, 'filtre date_appel', { excelDay, matches: byDate.length });
+  if (excelDay) {
+    const byDate = candidates;
+    logLine('match', line, 'filtre date_appel (jour)', { excelDay, matches: byDate.length });
     if (byDate.length === 1) {
       logLine('match', line, 'fiche retenue', { id: byDate[0].id });
       return { fiche: byDate[0], match_note: null };
@@ -323,11 +348,6 @@ async function findFicheForRow(row, logCtx = {}) {
         match_note: `${byDate.length} fiches avec ce téléphone et date appel ${excelDay}`,
       };
     }
-    logLine('match', line, 'aucune fiche à la date appel', { excelDay });
-    return {
-      fiche: null,
-      match_note: `Aucune fiche avec date appel ${excelDay} (${candidates.length} fiche(s) sur ce numéro)`,
-    };
   }
 
   if (candidates.length === 1) {
@@ -503,7 +523,8 @@ async function applyKoImportRows(rows, userId, options = {}) {
       id_agent_avant: oldAgent,
       id_agent_apres: idAgent,
       ko_avant: oldKo,
-      date_appel: dateAppel,
+      date_appel_ymd: dateAppelYmd,
+      date_appel_time: dateAppel,
     });
 
     if (dateAppel) {
@@ -546,6 +567,7 @@ async function applyKoImportRows(rows, userId, options = {}) {
       id_agent: idAgent,
       id_agent_avant: oldAgent,
       ko_avant: oldKo,
+      date_appel_appliquee_ymd: dateAppelYmd,
       date_appel_appliquee: dateAppel,
       message: 'Mis à jour (id_agent + ko=1)',
     });
