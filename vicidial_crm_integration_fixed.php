@@ -807,11 +807,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Vérifier si une demande d'insertion existe déjà (pas de création)
         if (isset($responseData['success']) && $responseData['success'] && 
             isset($responseData['data']['existingDemande']) && $responseData['data']['existingDemande']) {
-            // Une demande d'insertion existe déjà pour aujourd'hui
-            $demandeId = $responseData['data']['demandeId'] ?? 'N/A';
-            $existingFicheId = $responseData['data']['existingFicheId'] ?? 'N/A';
-            $message = "Une demande d'insertion existe deja pour ce numero de telephone, cet agent et aujourd'hui (ID demande: {$demandeId}, ID fiche existante: {$existingFicheId}).";
-            writeLog("DEMANDE D'INSERTION EXISTANTE: " . $message);
+            $demandeId = $responseData['data']['demandeId'] ?? null;
+            $existingFicheId = $responseData['data']['existingFicheId'] ?? null;
+            $message = "Fiche existante, une demande d'insertion a ete envoyee au backoffice.";
+            writeLog("DEMANDE D'INSERTION EXISTANTE: " . $message . " (demandeId=" . ($demandeId ?? 'N/A') . ", existingFicheId=" . ($existingFicheId ?? 'N/A') . ")");
             // Rediriger pour éviter la resoumission - stocker comme notice (rouge)
             $_SESSION['notice_message'] = $message;
             header('Location: ' . $_SERVER['PHP_SELF'] . '?reload=1');
@@ -821,11 +820,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Vérifier si une demande d'insertion a été créée (fiche existante)
         if (isset($responseData['success']) && $responseData['success'] && 
             isset($responseData['data']['demandeCreated']) && $responseData['data']['demandeCreated']) {
-            // Une demande d'insertion a été créée car la fiche existe déjà
-            $demandeId = $responseData['data']['demandeId'] ?? 'N/A';
-            $existingFicheId = $responseData['data']['existingFicheId'] ?? 'N/A';
-            $message = "Une fiche existe deja avec ce numero de telephone. Une demande d'insertion a ete creee (ID demande: {$demandeId}, ID fiche existante: {$existingFicheId}).";
-            writeLog("DEMANDE D'INSERTION CREE: " . $message);
+            $demandeId = $responseData['data']['demandeId'] ?? null;
+            $existingFicheId = $responseData['data']['existingFicheId'] ?? null;
+            $message = "Fiche existante, une demande d'insertion a ete envoyee au backoffice.";
+            writeLog("DEMANDE D'INSERTION CREE: " . $message . " (demandeId=" . ($demandeId ?? 'N/A') . ", existingFicheId=" . ($existingFicheId ?? 'N/A') . ")");
             // Rediriger pour éviter la resoumission - stocker comme notice (rouge)
             $_SESSION['notice_message'] = $message;
             header('Location: ' . $_SERVER['PHP_SELF'] . '?reload=1');
@@ -833,7 +831,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($httpCode === 201) {
             // Fiche créée avec succès
             if (isset($responseData['success']) && $responseData['success']) {
-                $message = "Fiche creee avec succes! ID: " . ($responseData['data']['id'] ?? 'N/A');
+                $message = "Fiche inseree avec succes.";
                 writeLog("SUCCES: " . $message);
                 // Rediriger pour éviter la resoumission
                 $_SESSION['success_message'] = $message;

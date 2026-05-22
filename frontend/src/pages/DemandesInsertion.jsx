@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { FaEye, FaCheck, FaTimes, FaClock, FaFilter } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaClock, FaFilter } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import api from '../config/api';
-import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
+import FicheDetailLink from '../components/FicheDetailLink';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import './DemandesInsertion.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const DemandesInsertion = () => {
   useForceDesktopViewport('demandes-insertion-page');
-  const { openFicheDetail } = useFicheDetailModal();
   const queryClient = useQueryClient();
   const [statutFilter, setStatutFilter] = useState('');
 
@@ -73,15 +72,6 @@ const DemandesInsertion = () => {
     
     if (commentaire !== null) {
       traiterDemandeMutation.mutate({ id, statut, commentaire: commentaire || null });
-    }
-  };
-
-  const handleVoirFiche = (hash) => {
-    if (hash) {
-      openFicheDetail(hash);
-      // Ne pas naviguer : le modal s'ouvre et la page Demandes d'insertion reste en arrière-plan
-    } else {
-      toast.error('Hash de la fiche non disponible');
     }
   };
 
@@ -193,15 +183,6 @@ const DemandesInsertion = () => {
                       <div className="fiche-tel">
                         {demande.fiche_tel || demande.fiche_gsm1 || 'N/A'}
                       </div>
-                      {demande.fiche_hash && (
-                        <button
-                          className="btn-view-fiche"
-                          onClick={() => handleVoirFiche(demande.fiche_hash)}
-                          title="Voir la fiche"
-                        >
-                          <FaEye /> Voir
-                        </button>
-                      )}
                     </div>
                   </td>
                   <td>
@@ -253,36 +234,46 @@ const DemandesInsertion = () => {
                     )}
                   </td>
                   <td>
-                    {demande.statut === 'EN_ATTENTE' ? (
-                      <div className="action-buttons">
-                        <button
-                          className="btn-approve"
-                          onClick={() => handleTraiter(demande.id, 'APPROUVEE')}
-                          disabled={traiterDemandeMutation.isLoading}
-                          title="Approuver la demande"
+                    <div className="action-buttons">
+                      {demande.id_fiche_existante && (
+                        <FicheDetailLink
+                          ficheHash={demande.fiche_hash}
+                          ficheId={demande.id_fiche_existante}
+                          className="btn-link-fiche"
+                          title="Voir la fiche existante"
                         >
-                          <FaCheck /> Approuver
-                        </button>
-                        <button
-                          className="btn-reject"
-                          onClick={() => handleTraiter(demande.id, 'REJETEE')}
-                          disabled={traiterDemandeMutation.isLoading}
-                          title="Rejeter la demande"
-                        >
-                          <FaTimes /> Rejeter
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="commentaire">
-                        {demande.commentaire && (
+                          Détails
+                        </FicheDetailLink>
+                      )}
+                      {demande.statut === 'EN_ATTENTE' ? (
+                        <>
+                          <button
+                            className="btn-approve"
+                            onClick={() => handleTraiter(demande.id, 'APPROUVEE')}
+                            disabled={traiterDemandeMutation.isLoading}
+                            title="Approuver la demande"
+                          >
+                            <FaCheck /> Approuver
+                          </button>
+                          <button
+                            className="btn-reject"
+                            onClick={() => handleTraiter(demande.id, 'REJETEE')}
+                            disabled={traiterDemandeMutation.isLoading}
+                            title="Rejeter la demande"
+                          >
+                            <FaTimes /> Rejeter
+                          </button>
+                        </>
+                      ) : (
+                        demande.commentaire && (
                           <div className="commentaire-text" title={demande.commentaire}>
                             {demande.commentaire.length > 30
                               ? demande.commentaire.substring(0, 30) + '...'
                               : demande.commentaire}
                           </div>
-                        )}
-                      </div>
-                    )}
+                        )
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

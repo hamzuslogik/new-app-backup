@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaCommentDots, FaFilter, FaTimes, FaPaperPlane } from 'react-icons/fa';
+import { FaCommentDots, FaTimes, FaPaperPlane } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './RemarquesContent.css';
 
@@ -14,28 +14,17 @@ const NATURES_OPTIONS = [
   'Autres'
 ];
 
-const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => {
+/** Formulaire d'envoi de remarque (modal Contrôle qualité uniquement). La consultation se fait sur /remarques. */
+const RemarquesContent = ({ onClose, ficheContext = null }) => {
   const { user, hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const fonction = Number(user?.fonction);
   const isAdmin = [1, 7].includes(fonction);
   const canSend = hasPermission('controle_qualite_view') || isAdmin;
-  const isQualiteQualifSession =
-    fonction === 8 || (canSend && !isAdmin && ![2, 3, 12].includes(fonction));
 
-  // Contexte fiche : pré-remplir destinataire (agent de la fiche) et lier la remarque à la fiche
   const initialDestinataire = ficheContext?.id_agent ? String(ficheContext.id_agent) : '';
   const initialFicheId = ficheContext?.id ?? null;
 
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 50,
-    id_destinataire: '',
-    id_expediteur: '',
-    date_debut: '',
-    date_fin: ''
-  });
-  const [showFilters, setShowFilters] = useState(!inModal && !ficheContext);
   const [form, setForm] = useState({
     nature_remarque: '',
     id_destinataire: initialDestinataire,
@@ -62,20 +51,6 @@ const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => 
     { enabled: canSend, staleTime: 60000 }
   );
 
-  const { data: listData, isLoading, refetch } = useQuery(
-    ['remarques', filters],
-    async () => {
-      const params = { ...filters };
-      Object.keys(params).forEach((k) => {
-        if (params[k] === '' || params[k] == null) delete params[k];
-      });
-      const res = await api.get('/remarques', { params });
-      if (res.data?.success) return res.data;
-      throw new Error(res.data?.message || 'Erreur');
-    },
-    { enabled: !inModal, onError: (err) => toast.error(err.response?.data?.message || err.message) }
-  );
-
   const sendMutation = useMutation(
     async (body) => {
       const res = await api.post('/remarques', body);
@@ -86,15 +61,11 @@ const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => 
         queryClient.invalidateQueries(['remarques']);
         toast.success('Remarque envoyée.');
         setForm((prev) => ({ ...prev, nature_remarque: '', commentaire: '' }));
-        if (ficheContext && onClose) onClose();
+        if (onClose) onClose();
       },
       onError: (err) => toast.error(err.response?.data?.message || err.message)
     }
   );
-
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -111,24 +82,11 @@ const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => 
     sendMutation.mutate(body);
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('fr-FR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const remarques = listData?.data || [];
-  const pagination = listData?.pagination || { page: 1, limit: 50, total: 0, pages: 1 };
   const agents = agentsData || [];
 
   return (
-    <div className={`remarques-content ${inModal ? 'remarques-content--modal' : ''}`}>
-      {inModal && onClose && (
+    <div className="remarques-content remarques-content--modal">
+      {onClose && (
         <div className="remarques-modal-header">
           <h3><FaCommentDots /> Remarques</h3>
           <button type="button" className="modal-close-btn" onClick={onClose}><FaTimes /></button>
@@ -144,7 +102,7 @@ const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => 
         </div>
       )}
 
-      {canSend && (
+      {canSend ? (
         <form className="remarques-form" onSubmit={handleSubmit}>
           <div className="remarques-form-grid">
             <div className="form-group">
@@ -186,111 +144,12 @@ const RemarquesContent = ({ inModal = false, onClose, ficheContext = null }) => 
           <button type="submit" className="btn-send-remarque" disabled={sendMutation.isLoading}>
             <FaPaperPlane /> {sendMutation.isLoading ? 'Envoi...' : 'Envoyer la remarque'}
           </button>
+          <p className="remarques-modal-hint">
+            Pour consulter les remarques de votre équipe, utilisez la page <strong>Remarques</strong> du menu.
+          </p>
         </form>
-      )}
-
-      {!inModal && (
-      <div className="remarques-list-section">
-        <div className="remarques-list-header">
-          <h4>{isQualiteQualifSession ? 'Mes remarques envoyées' : 'Liste des remarques'}</h4>
-          {canSend && (
-            <button
-              type="button"
-              className="filter-toggle-btn"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
-            </button>
-          )}
-        </div>
-
-        {canSend && showFilters && (
-          <div className="remarques-filters">
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Destinataire</label>
-                <select
-                  value={filters.id_destinataire}
-                  onChange={(e) => handleFilterChange('id_destinataire', e.target.value)}
-                >
-                  <option value="">Tous</option>
-                  {agents.map((a) => (
-                    <option key={a.id} value={a.id}>{a.pseudo}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Date début</label>
-                <input
-                  type="date"
-                  value={filters.date_debut}
-                  onChange={(e) => handleFilterChange('date_debut', e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label>Date fin</label>
-                <input
-                  type="date"
-                  value={filters.date_fin}
-                  onChange={(e) => handleFilterChange('date_fin', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="remarques-loading">Chargement des remarques...</div>
-        ) : remarques.length === 0 ? (
-          <div className="remarques-empty">Aucune remarque.</div>
-        ) : (
-          <>
-            <div className="remarques-table-wrap">
-              <table className="remarques-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Nature</th>
-                    <th>Expéditeur</th>
-                    <th>Destinataire</th>
-                    <th>Commentaire</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {remarques.map((r) => (
-                    <tr key={r.id}>
-                      <td>{formatDate(r.date_remarque)}</td>
-                      <td>{r.nature_remarque}</td>
-                      <td>{r.expediteur_pseudo || '-'}</td>
-                      <td>{r.destinataire_pseudo || '-'}</td>
-                      <td className="comment-cell">{r.commentaire ? String(r.commentaire).slice(0, 120) + (r.commentaire.length > 120 ? '…' : '') : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {pagination.pages > 1 && (
-              <div className="remarques-pagination">
-                <button
-                  type="button"
-                  onClick={() => handleFilterChange('page', pagination.page - 1)}
-                  disabled={pagination.page <= 1}
-                >
-                  Précédent
-                </button>
-                <span>Page {pagination.page} sur {pagination.pages} (Total : {pagination.total})</span>
-                <button
-                  type="button"
-                  onClick={() => handleFilterChange('page', pagination.page + 1)}
-                  disabled={pagination.page >= pagination.pages}
-                >
-                  Suivant
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      ) : (
+        <p className="remarques-modal-hint">Vous n&apos;avez pas les droits pour envoyer des remarques.</p>
       )}
     </div>
   );

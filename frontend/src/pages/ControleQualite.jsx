@@ -695,7 +695,6 @@ const ControleQualite = () => {
         <div className="modal-overlay" onClick={() => { setRemarquesModalOpen(false); setRemarquesFicheContext(null); }}>
           <div className="modal-content remarques-modal" onClick={(e) => e.stopPropagation()}>
             <RemarquesContent
-              inModal
               onClose={() => { setRemarquesModalOpen(false); setRemarquesFicheContext(null); }}
               ficheContext={remarquesFicheContext}
             />

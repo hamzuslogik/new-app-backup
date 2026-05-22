@@ -3305,10 +3305,15 @@ router.get('/demandes-insertion', authenticate, checkPermissionCode('demandes_in
       ORDER BY di.date_demande DESC`,
       params
     );
+
+    const demandesWithHash = (demandes || []).map((d) => ({
+      ...d,
+      fiche_hash: d.fiche_hash || (d.id_fiche_existante ? encodeFicheId(d.id_fiche_existante) : null),
+    }));
     
     res.json({
       success: true,
-      data: demandes
+      data: demandesWithHash
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des demandes d\'insertion:', error);

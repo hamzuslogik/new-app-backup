@@ -340,11 +340,11 @@ const KPIQualification = () => {
               </div>
             </div>
 
-            {/* Taux de Conversion */}
+            {/* Taux de Conformité */}
             <div className="kpi-card taux-conversion">
               <div className="kpi-card-header">
                 <FaChartLine className="kpi-icon" />
-                <h2>Taux de Conversion</h2>
+                <h2>Taux de Conformité</h2>
                 <span className="period-label">{currentData.period}</span>
               </div>
               <div className="kpi-card-body">
@@ -394,7 +394,7 @@ const KPIQualification = () => {
                       </>
                     );
                   }
-                  return <div className="no-data">Données non disponibles (API taux de conversion)</div>;
+                  return <div className="no-data">Données non disponibles (API taux de conformité)</div>;
                 })()}
               </div>
             </div>
@@ -406,7 +406,7 @@ const KPIQualification = () => {
               Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
             </p>
             <p className="info-text">
-              <strong>Périmètre du taux (carte Taux de conversion) :</strong>{' '}
+              <strong>Périmètre du taux (carte Taux de conformité) :</strong>{' '}
               {user?.fonction === 12 || user?.fonction === 2 ? (
                 <>
                   les nombres « fiches validées » et « fiches produites » sont calculés sur les

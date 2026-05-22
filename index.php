@@ -618,7 +618,7 @@ if (!empty($agent) && ($reloadFiche || empty($vicidialData))) {
             writeLog("Lead trouve: ID " . $vicidialData['lead_id']);
             // Afficher un message si c'est un rechargement explicite
             if (isset($_GET['load_last']) && empty($success) && empty($error)) {
-                $success = "Derniere fiche OK chargee: ID " . $vicidialData['lead_id'];
+                $success = "Derniere fiche OK chargee.";
             }
         } else {
             if (isset($_GET['load_last'])) {
@@ -731,7 +731,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'revenu_foyer' => !empty($_POST['revenu_foyer']) ? sanitizeInput($_POST['revenu_foyer']) : null,
             'etude' => !empty($_POST['etude']) ? sanitizeInput($_POST['etude']) : null,
             'mode_chauffage' => !empty(trim($_POST['mode_chauffage'] ?? '')) ? sanitizeInput(trim($_POST['mode_chauffage'])) : null,
-            'complement_chauffage' => !empty(trim($_POST['complement_chauffage'] ?? '')) ? sanitizeInput($_POST['complement_chauffage']) : null,
             'annee_systeme_chauffage' => !empty($_POST['annee_systeme_chauffage']) ? sanitizeInput($_POST['annee_systeme_chauffage']) : null,
             'surface_habitable' => !empty($_POST['surface_habitable']) ? sanitizeInput($_POST['surface_habitable']) : null,
             'surface_chauffee' => !empty($_POST['surface_chauffee']) ? sanitizeInput($_POST['surface_chauffee']) : null,
@@ -802,9 +801,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($responseData['success']) && $responseData['success'] &&
             !empty($responseData['data']['autoApproved'])) {
             $message = $responseData['message'] ?? 'Fiche acceptee automatiquement (regle d\'autorisation).';
-            if (!empty($responseData['data']['id'])) {
-                $message .= ' ID: ' . $responseData['data']['id'];
-            }
             writeLog('AUTO APPROBATION: ' . $message);
             $_SESSION['success_message'] = $message;
             header('Location: ' . $_SERVER['PHP_SELF'] . '?reload=1');
@@ -814,10 +810,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Vérifier si une demande d'insertion existe déjà (pas de création)
         if (isset($responseData['success']) && $responseData['success'] && 
             isset($responseData['data']['existingDemande']) && $responseData['data']['existingDemande']) {
-            // Une demande d'insertion existe déjà pour aujourd'hui
-            $demandeId = $responseData['data']['demandeId'] ?? 'N/A';
-            $existingFicheId = $responseData['data']['existingFicheId'] ?? 'N/A';
-            $message = "Une demande d'insertion existe deja pour ce numero de telephone, cet agent et aujourd'hui (ID demande: {$demandeId}, ID fiche existante: {$existingFicheId}).";
+            $message = "Fiche existante, une demande d'insertion a ete envoyee au backoffice.";
             writeLog("DEMANDE D'INSERTION EXISTANTE: " . $message);
             // Rediriger pour éviter la resoumission - stocker comme notice (rouge)
             $_SESSION['notice_message'] = $message;
@@ -828,11 +821,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Vérifier si une demande d'insertion a été créée (fiche existante)
         if (isset($responseData['success']) && $responseData['success'] && 
             isset($responseData['data']['demandeCreated']) && $responseData['data']['demandeCreated']) {
-            // Une demande d'insertion a été créée car la fiche existe déjà
-            $demandeId = $responseData['data']['demandeId'] ?? 'N/A';
-            $existingFicheId = $responseData['data']['existingFicheId'] ?? 'N/A';
-            $message = "Une fiche existe deja avec ce numero de telephone. Une demande d'insertion a ete creee (ID demande: {$demandeId}, ID fiche existante: {$existingFicheId}).";
-            writeLog("DEMANDE D'INSERTION CREE: " . $message);
+            $demandeId = $responseData['data']['demandeId'] ?? null;
+            $existingFicheId = $responseData['data']['existingFicheId'] ?? null;
+            $message = "Fiche existante, une demande d'insertion a ete envoyee au backoffice.";
+            writeLog("DEMANDE D'INSERTION CREE: " . $message . " (demandeId=" . ($demandeId ?? 'N/A') . ", existingFicheId=" . ($existingFicheId ?? 'N/A') . ")");
             // Rediriger pour éviter la resoumission - stocker comme notice (rouge)
             $_SESSION['notice_message'] = $message;
             header('Location: ' . $_SERVER['PHP_SELF'] . '?reload=1');
@@ -840,7 +832,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($httpCode === 201) {
             // Fiche créée avec succès
             if (isset($responseData['success']) && $responseData['success']) {
-                $message = "Fiche creee avec succes! ID: " . ($responseData['data']['id'] ?? 'N/A');
+                $message = "Fiche inseree avec succes.";
                 writeLog("SUCCES: " . $message);
                 // Rediriger pour éviter la resoumission
                 $_SESSION['success_message'] = $message;
@@ -969,8 +961,7 @@ if (isset($_SESSION['error_message'])) {
         
         <?php if ($vicidialData): ?>
             <div class="vicidial-info">
-                <strong>Lead Vicidial trouvé:</strong><br>
-                ID: <?php echo $vicidialData['lead_id']; ?> | 
+                <strong>Dernière fiche qualifiée (Vicidial):</strong><br>
                 Nom: <?php echo htmlspecialchars($vicidialData['last_name']); ?> | 
                 Prénom: <?php echo htmlspecialchars($vicidialData['first_name']); ?> | 
                 Téléphone: <?php echo htmlspecialchars($vicidialData['phone_number']); ?> |
@@ -1156,10 +1147,6 @@ if (isset($_SESSION['error_message'])) {
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Mode de Chauffage</label>
                         <input type="text" name="mode_chauffage" maxlength="255" placeholder="Ex. : gaz, fioul, PAC air-eau, électrique…">
-                    </div>
-                    <div class="form-group champ-pac" style="display: none;">
-                        <label>Complément de chauffage (qualification)</label>
-                        <input type="text" name="complement_chauffage" data-force-optional="1" placeholder="Ex. : appoint, poêle, précision sur le mode…" maxlength="512">
                     </div>
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Année Système Chauffage</label>

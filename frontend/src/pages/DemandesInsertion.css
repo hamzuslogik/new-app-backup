@@ -159,22 +159,25 @@
   color: var(--text-secondary, #666);
 }
 
-.btn-view-fiche {
+.btn-link-fiche {
   display: inline-flex;
   align-items: center;
-  gap: 4.8px;
+  gap: 4px;
   padding: 4.8px 9.6px;
   background: var(--primary-color, #3498db);
   color: white;
   border: none;
   border-radius: 4px;
   font-size: 10.2px;
+  font-weight: 500;
+  text-decoration: none;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.btn-view-fiche:hover {
+.btn-link-fiche:hover {
   background: var(--primary-dark, #2980b9);
+  color: white;
 }
 
 .badge {
