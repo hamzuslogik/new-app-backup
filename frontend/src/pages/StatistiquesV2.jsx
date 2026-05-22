@@ -533,10 +533,7 @@ const StatistiquesV2 = () => {
           {/* Ratio par RE */}
           {qualifAdvanced.ratio_by_re?.length > 0 && (
             <div className="section-card">
-              <h2 className="section-title">Ratio production / effectif par RE</h2>
-              <p className="section-subtitle">
-                Fiches produites sur la période ÷ effectif (agents qualification actifs rattachés au RE). KO inclus dans la production.
-              </p>
+              <h2 className="section-title">Ratio par équipe (RE)</h2>
               <ResponsiveContainer width="100%" height={Math.max(300, qualifAdvanced.ratio_by_re.length * 36)}>
                 <BarChart data={qualifAdvanced.ratio_by_re} layout="vertical" margin={{ left: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -557,18 +554,19 @@ const StatistiquesV2 = () => {
                   />
                   <Tooltip
                     formatter={(value, name) => {
-                      if (name === 'ratio') return [value, 'Ratio (fiches/agent)'];
+                      if (name === 'ratio') return [value, 'Ratio'];
                       return [value, name];
                     }}
                     labelFormatter={(_, payload) => {
                       const p = payload?.[0]?.payload;
                       if (!p) return '';
                       const label = formatRatioLabel(p, 're_id', 're_pseudo', 're_nom', 're_prenom');
-                      return `${label} — ${p.fiches_produites} fiches / ${p.effectif} agents`;
+                      const jours = p.jours_travailles ?? qualifAdvanced.jours_travailles;
+                      return `${label} — ${p.fiches_produites} fiches, ${p.effectif} agents, ${jours} j`;
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="ratio" fill="#4a7a87" name="Production / effectif" />
+                  <Bar dataKey="ratio" fill="#4a7a87" name="Ratio" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -577,10 +575,7 @@ const StatistiquesV2 = () => {
           {/* Ratio par RP */}
           {qualifAdvanced.ratio_by_rp?.length > 0 && (
             <div className="section-card">
-              <h2 className="section-title">Ratio production / effectif par RP (plateau)</h2>
-              <p className="section-subtitle">
-                Fiches produites sur la période ÷ effectif total des agents qualification du plateau (tous RE du RP).
-              </p>
+              <h2 className="section-title">Ratio par plateau (RP)</h2>
               <ResponsiveContainer width="100%" height={Math.max(280, qualifAdvanced.ratio_by_rp.length * 40)}>
                 <BarChart data={qualifAdvanced.ratio_by_rp} layout="vertical" margin={{ left: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -601,18 +596,19 @@ const StatistiquesV2 = () => {
                   />
                   <Tooltip
                     formatter={(value, name) => {
-                      if (name === 'ratio') return [value, 'Ratio (fiches/agent)'];
+                      if (name === 'ratio') return [value, 'Ratio'];
                       return [value, name];
                     }}
                     labelFormatter={(_, payload) => {
                       const p = payload?.[0]?.payload;
                       if (!p) return '';
                       const label = formatRatioLabel(p, 'rp_id', 'rp_pseudo', 'rp_nom', 'rp_prenom');
-                      return `${label} — ${p.fiches_produites} fiches / ${p.effectif} agents`;
+                      const jours = p.jours_travailles ?? qualifAdvanced.jours_travailles;
+                      return `${label} — ${p.fiches_produites} fiches, ${p.effectif} agents, ${jours} j`;
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="ratio" fill="#9cbfc8" name="Production / effectif" />
+                  <Bar dataKey="ratio" fill="#9cbfc8" name="Ratio" />
                 </BarChart>
               </ResponsiveContainer>
             </div>

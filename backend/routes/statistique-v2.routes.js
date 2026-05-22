@@ -63,6 +63,40 @@ const SQL_FICHE_REJET = `
   (f.ko = 1 OR e.groupe = '0' OR e.groupe = 0)
 `;
 
+/** Nombre de jours calendaires travaillés sur la période (inclusif). */
+function countJoursTravailles(dateDebut, dateFin) {
+  const start = new Date(`${dateDebut}T00:00:00`);
+  const end = new Date(`${dateFin}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+  const diff = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(1, diff);
+}
+
+/** Ratio = fiches produites / effectif / jours travaillés */
+function computeRatioProduitAgentJour(fichesProduites, effectif, joursTravailles) {
+  const prod = Number(fichesProduites) || 0;
+  const eff = Number(effectif) || 0;
+  const jours = Number(joursTravailles) || 1;
+  if (eff <= 0 || jours <= 0) return 0;
+  return Math.round((prod / eff / jours) * 100) / 100;
+}
+
+function mapRatioRows(rows, joursTravailles) {
+  return (rows || []).map((row) => {
+    const effectif = parseInt(row.effectif || 0, 10);
+    const fichesProduites = parseInt(row.fiches_produites || 0, 10);
+    return {
+      ...row,
+      effectif,
+      fiches_produites: fichesProduites,
+      fiches_validees: parseInt(row.fiches_validees || 0, 10),
+      fiches_ko: parseInt(row.fiches_ko || 0, 10),
+      jours_travailles: joursTravailles,
+      ratio: computeRatioProduitAgentJour(fichesProduites, effectif, joursTravailles),
+    };
+  });
+}
+
 // GET /api/statistiques-v2/qualification-advanced
 // Métriques avancées pour l'onglet Qualification
 router.get('/qualification-advanced', authenticate, checkPermissionCode('statistiques_v2_view'), async (req, res) => {
@@ -81,6 +115,7 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
 
     const { whereSql, fromSql, filterParams } = buildQualifAdvancedFilters(req.query);
     const params = [startDate, endDate, ...filterParams];
+    const joursTravailles = countJoursTravailles(dateDebut, dateFin);
 
     // Top 10 agents qualification (fiches validées, sans temps de traitement)
     const top10Agents = await query(`
@@ -121,8 +156,8 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
       ORDER BY ko_count DESC, rejection_rate DESC
     `, params);
 
-    // Ratio production / effectif par équipe RE (fiches produites ÷ nb agents qualification actifs)
-    const ratioByRe = await query(`
+    // Ratio par équipe RE : fiches produites / effectif / jours travaillés
+    const ratioByReRaw = await query(`
       SELECT
         re.id as re_id,
         re.pseudo as re_pseudo,
@@ -137,37 +172,20 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
           WHERE ua.fonction = 3
             AND ua.chef_equipe = re.id
             AND (ua.etat > 0 OR ua.etat IS NULL)
-        ) as effectif,
-        CASE
-          WHEN (
-            SELECT COUNT(*)
-            FROM utilisateurs ua
-            WHERE ua.fonction = 3
-              AND ua.chef_equipe = re.id
-              AND (ua.etat > 0 OR ua.etat IS NULL)
-          ) > 0
-          THEN ROUND(
-            COUNT(DISTINCT f.id) / (
-              SELECT COUNT(*)
-              FROM utilisateurs ua
-              WHERE ua.fonction = 3
-                AND ua.chef_equipe = re.id
-                AND (ua.etat > 0 OR ua.etat IS NULL)
-            ),
-            2
-          )
-          ELSE 0
-        END as ratio
+        ) as effectif
       ${fromSql}
       WHERE ${whereSql}
         AND re.id IS NOT NULL
       GROUP BY re.id, re.pseudo, re.nom, re.prenom
       HAVING fiches_produites > 0
-      ORDER BY ratio DESC, fiches_produites DESC
     `, params);
 
-    // Ratio production / effectif par plateau RP qualification
-    const ratioByRp = await query(`
+    const ratioByRe = mapRatioRows(ratioByReRaw, joursTravailles).sort(
+      (a, b) => b.ratio - a.ratio || b.fiches_produites - a.fiches_produites
+    );
+
+    // Ratio par plateau RP qualification
+    const ratioByRpRaw = await query(`
       SELECT
         rp.id as rp_id,
         rp.pseudo as rp_pseudo,
@@ -184,38 +202,17 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
             AND ua.chef_equipe IN (
               SELECT r2.id FROM utilisateurs r2 WHERE r2.id_rp_qualif = rp.id
             )
-        ) as effectif,
-        CASE
-          WHEN (
-            SELECT COUNT(*)
-            FROM utilisateurs ua
-            WHERE ua.fonction = 3
-              AND (ua.etat > 0 OR ua.etat IS NULL)
-              AND ua.chef_equipe IN (
-                SELECT r2.id FROM utilisateurs r2 WHERE r2.id_rp_qualif = rp.id
-              )
-          ) > 0
-          THEN ROUND(
-            COUNT(DISTINCT f.id) / (
-              SELECT COUNT(*)
-              FROM utilisateurs ua
-              WHERE ua.fonction = 3
-                AND (ua.etat > 0 OR ua.etat IS NULL)
-                AND ua.chef_equipe IN (
-                  SELECT r2.id FROM utilisateurs r2 WHERE r2.id_rp_qualif = rp.id
-                )
-            ),
-            2
-          )
-          ELSE 0
-        END as ratio
+        ) as effectif
       ${fromSql}
       INNER JOIN utilisateurs rp ON re.id_rp_qualif = rp.id AND rp.fonction = 12
       WHERE ${whereSql}
       GROUP BY rp.id, rp.pseudo, rp.nom, rp.prenom
       HAVING fiches_produites > 0
-      ORDER BY ratio DESC, fiches_produites DESC
     `, params);
+
+    const ratioByRp = mapRatioRows(ratioByRpRaw, joursTravailles).sort(
+      (a, b) => b.ratio - a.ratio || b.fiches_produites - a.fiches_produites
+    );
 
     // Évolution quotidienne (total, validées, KO)
     const dailyEvolution = await query(`
@@ -242,22 +239,9 @@ router.get('/qualification-advanced', authenticate, checkPermissionCode('statist
           groupe0_count: parseInt(row.groupe0_count || 0, 10),
           total_count: parseInt(row.total_count || 0, 10),
         })),
-        ratio_by_re: (ratioByRe || []).map((row) => ({
-          ...row,
-          ratio: parseFloat(row.ratio || 0),
-          effectif: parseInt(row.effectif || 0, 10),
-          fiches_produites: parseInt(row.fiches_produites || 0, 10),
-          fiches_validees: parseInt(row.fiches_validees || 0, 10),
-          fiches_ko: parseInt(row.fiches_ko || 0, 10),
-        })),
-        ratio_by_rp: (ratioByRp || []).map((row) => ({
-          ...row,
-          ratio: parseFloat(row.ratio || 0),
-          effectif: parseInt(row.effectif || 0, 10),
-          fiches_produites: parseInt(row.fiches_produites || 0, 10),
-          fiches_validees: parseInt(row.fiches_validees || 0, 10),
-          fiches_ko: parseInt(row.fiches_ko || 0, 10),
-        })),
+        jours_travailles: joursTravailles,
+        ratio_by_re: ratioByRe,
+        ratio_by_rp: ratioByRp,
         daily_evolution: dailyEvolution || [],
       },
     });
