@@ -1,54 +1,34 @@
 -- =====================================================
--- Creer les utilisateurs manquants pour yj_fiche.nom_qualite
+-- Rapport : nom_qualite YJ sans agent qualite qualification (fonction 8)
 -- =====================================================
 --
--- Contexte : souvent id_qualite est vide dans yj_fiche et seul nom_qualite
--- est renseigne. La migration vers fiches.id_qualite exige un id dans utilisateurs.
---
--- Ce script insere un utilisateur par libelle distinct de nom_qualite lorsque
--- aucun utilisateur n'existe avec le meme pseudo OU login (comparaison insensible
--- a la casse), sur le meme principe que insert_compte_rendu_from_yj_compte_rendu.sql
--- (commerciaux).
---
--- A executer AVANT :
---   - insert_fiches_from_yj.sql
---   - ou update_fiches_id_qualite_from_yj_fiche.sql
---
--- Reglages :
---   @fonction_qualite : id dans la table fonctions (agent qualification / qualite).
---                       Par defaut 8 (qualification qualite).
---   @etat_inactif : toujours 0 — utilisateur cree mais INACTIF (pas de connexion / desactive).
---                   Reactiver manuellement dans le CRM (passer etat a 1) si besoin.
+-- NE CREE PLUS d'utilisateurs automatiquement.
+-- Pour remplir fiches.id_qualite, utiliser :
+--   update_fiches_id_qualite_from_yj_fiche.sql
+-- (id_qualite = 2814 par defaut si nom_qualite inconnu)
 --
 -- =====================================================
 
 USE `crm`;
 
+SET @id_qualite_defaut = 2814;
 SET @fonction_qualite = 8;
-SET @etat_inactif = 0;
 
-SET SQL_SAFE_UPDATES = 0;
-
-INSERT INTO `utilisateurs` (`nom`, `prenom`, `pseudo`, `login`, `etat`, `fonction`)
+-- Libelles distincts sans compte qualite qualification (fonction 8)
 SELECT
-  base.`display_name`,
-  '' AS `prenom`,
-  base.`display_name` AS `pseudo`,
-  base.`display_name` AS `login`,
-  @etat_inactif AS `etat`,
-  @fonction_qualite AS `fonction`
-FROM (
-  SELECT MIN(TRIM(yj.`nom_qualite`)) AS `display_name`
-  FROM `yj_fiche` yj
-  WHERE TRIM(IFNULL(yj.`nom_qualite`, '')) != ''
-  GROUP BY UPPER(TRIM(yj.`nom_qualite`))
-) base
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM `utilisateurs` u
-  WHERE TRIM(UPPER(u.`pseudo`)) = TRIM(UPPER(base.`display_name`))
-     OR TRIM(UPPER(u.`login`)) = TRIM(UPPER(base.`display_name`))
-);
-
--- Nombre de lignes inserees par l’INSERT ci-dessus (executer dans la meme session)
-SELECT ROW_COUNT() AS lignes_inserees_nom_qualite;
+  MIN(TRIM(yj.nom_qualite)) AS nom_qualite,
+  COUNT(*) AS nb_fiches_yj,
+  @id_qualite_defaut AS id_qualite_utilise_par_migration
+FROM yj_fiche yj
+WHERE TRIM(IFNULL(yj.nom_qualite, '')) != ''
+  AND NOT EXISTS (
+    SELECT 1
+    FROM utilisateurs u
+    WHERE u.fonction = @fonction_qualite
+      AND (
+        TRIM(UPPER(u.pseudo)) = TRIM(UPPER(yj.nom_qualite))
+        OR TRIM(UPPER(u.login)) = TRIM(UPPER(yj.nom_qualite))
+      )
+  )
+GROUP BY UPPER(TRIM(yj.nom_qualite))
+ORDER BY nb_fiches_yj DESC, nom_qualite;

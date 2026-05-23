@@ -8,9 +8,8 @@
 -- Si elle n'existe pas, vous devez d'abord exécuter yj_fiche.sql
 --
 -- yj_fiche.id_qualite n'est pas utilise (toujours NULL en pratique). fiches.id_qualite
--- est rempli uniquement via nom_qualite -> utilisateurs.pseudo.
--- Executer AVANT ce script : ensure_utilisateurs_nom_qualite_from_yj_fiche.sql
--- (cree les utilisateurs manquants, inactifs, pour que la resolution fonctionne)
+-- est rempli via nom_qualite -> utilisateurs fonction 8 (pseudo/login) ; sinon id 2814.
+-- Pas de creation automatique d'utilisateurs qualite.
 --
 -- Ce script migre toutes les fiches de yj_fiche vers la nouvelle table fiches
 -- en adaptant les noms de colonnes et en convertissant les types de données.
@@ -175,7 +174,7 @@ WHERE NULLIF(TRIM(yf.`ph3_installateur`), '') IS NOT NULL
 --   yj_fiche.nom_confirmateur_2 (varchar) -> fiches.id_confirmateur_2 (int) - conversion via table utilisateurs
 --   yj_fiche.nom_confirmateur_3 (varchar) -> fiches.id_confirmateur_3 (int) - conversion via table utilisateurs
 --   yj_fiche.commentaire -> fiches.conf_commentaire_produit (commentaire confirmateur / compte rendu)
---   yj_fiche.nom_qualite uniquement -> fiches.id_qualite via utilisateurs.pseudo (yj_fiche.id_qualite ignore)
+--   yj_fiche.nom_qualite -> fiches.id_qualite via utilisateurs fonction 8 (pseudo/login)
 --   yj_fiche.conf_consommations -> fiches.consommation_electricite (numérique -> texte)
 
 INSERT INTO `fiches` (
@@ -338,10 +337,20 @@ SELECT
   END as `id_confirmateur_3`,
   CASE
     WHEN NULLIF(TRIM(`nom_qualite`), '') IS NOT NULL
-    THEN (
-      SELECT `id` FROM `utilisateurs`
-      WHERE TRIM(UPPER(`pseudo`)) = TRIM(UPPER(`yj_fiche`.`nom_qualite`))
-      LIMIT 1
+    THEN COALESCE(
+      (
+        SELECT `id` FROM `utilisateurs`
+        WHERE `fonction` = 8
+          AND (
+            TRIM(UPPER(`pseudo`)) = TRIM(UPPER(`yj_fiche`.`nom_qualite`))
+            OR TRIM(UPPER(`login`)) = TRIM(UPPER(`yj_fiche`.`nom_qualite`))
+          )
+        ORDER BY
+          CASE WHEN `etat` > 0 OR `etat` IS NULL THEN 0 ELSE 1 END,
+          `id` ASC
+        LIMIT 1
+      ),
+      2814
     )
     ELSE NULL
   END as `id_qualite`,

@@ -1,7 +1,7 @@
 -- =====================================================
 -- Agents qualité qualification (fonction 8)
 -- =====================================================
--- Crée les comptes manquants et force fonction = 8 pour la liste ci-dessous.
+-- Met a jour UNIQUEMENT les comptes deja existants (pas de creation).
 -- À exécuter sur la base `crm` avant utilisation des stats / alertes / remarques.
 -- =====================================================
 
@@ -32,22 +32,16 @@ INSERT INTO tmp_qualite_qualification_pseudo (pseudo) VALUES
   ('Q_LEAD_PAC'),
   ('AD_MAHMOUD');
 
--- Comptes manquants (pseudo = login)
-INSERT INTO utilisateurs (nom, prenom, pseudo, login, etat, fonction)
-SELECT
-  t.pseudo AS nom,
-  '' AS prenom,
-  t.pseudo AS pseudo,
-  t.pseudo AS login,
-  @etat_actif AS etat,
-  @fonction_qualite AS fonction
+-- Pseudos de la liste absents de utilisateurs (non crees)
+SELECT t.pseudo AS pseudo_absent
 FROM tmp_qualite_qualification_pseudo t
 WHERE NOT EXISTS (
   SELECT 1
   FROM utilisateurs u
   WHERE TRIM(UPPER(u.pseudo)) = TRIM(UPPER(t.pseudo))
      OR TRIM(UPPER(u.login)) = TRIM(UPPER(t.pseudo))
-);
+)
+ORDER BY t.pseudo;
 
 -- Homologuer la fonction qualité qualification sur les comptes existants
 UPDATE utilisateurs u
