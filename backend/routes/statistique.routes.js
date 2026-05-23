@@ -3368,60 +3368,41 @@ router.get('/agents-qualite-kpis', authenticate, async (req, res) => {
     let agentsQualifTable = [];
 
     try {
-      // 1) Tableau qualité qualification : nb alertes envoyées, nb remarques envoyées (par id_qualite / id_expediteur)
-      let qualiteIdsFromAlertes = [];
-      let qualiteIdsFromRemarques = [];
-      try {
-        qualiteIdsFromAlertes = await query(
-          `SELECT id_qualite AS id FROM alert_ko WHERE date_alerte >= ? AND date_alerte <= ?`,
-          [startDate, endDate]
-        ) || [];
-      } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
-      try {
-        qualiteIdsFromRemarques = await query(
-          `SELECT id_expediteur AS id FROM remarques WHERE date_remarque >= ? AND date_remarque <= ?`,
-          [startDate, endDate]
-        ) || [];
-      } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
-      const allQualiteIds = [...new Set([
-        ...(qualiteIdsFromAlertes || []).map((r) => r.id),
-        ...(qualiteIdsFromRemarques || []).map((r) => r.id)
-      ])].filter(Boolean);
+      // 1) Tableau qualité qualification : tous les agents fonction 8 (actifs)
+      const qualiteUsers = await query(
+        `SELECT id, pseudo, nom, prenom
+         FROM utilisateurs
+         WHERE fonction = 8 AND (etat > 0 OR etat IS NULL)
+         ORDER BY pseudo ASC`
+      ).catch(() => []);
 
-      if (allQualiteIds.length > 0) {
-        const placeholders = allQualiteIds.map(() => '?').join(',');
-        const users = await query(
-          `SELECT id, pseudo, nom, prenom FROM utilisateurs WHERE id IN (${placeholders})`,
-          allQualiteIds
-        );
-        for (const u of users || []) {
-          let alertesSentNb = 0;
-          let remarquesSentNb = 0;
-          try {
-            const alertesSent = await queryOne(
-              `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_qualite = ? AND date_alerte >= ? AND date_alerte <= ?`,
-              [u.id, startDate, endDate]
-            );
-            alertesSentNb = alertesSent?.nb ?? 0;
-          } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
-          try {
-            const remarquesSent = await queryOne(
-              `SELECT COUNT(*) AS nb FROM remarques WHERE id_expediteur = ? AND date_remarque >= ? AND date_remarque <= ?`,
-              [u.id, startDate, endDate]
-            );
-            remarquesSentNb = remarquesSent?.nb ?? 0;
-          } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
-          qualiteTable.push({
-            id: u.id,
-            pseudo: u.pseudo,
-            nom: u.nom,
-            prenom: u.prenom,
-            nb_alertes_envoyees: alertesSentNb,
-            nb_remarques_envoyees: remarquesSentNb
-          });
-        }
-        qualiteTable.sort((a, b) => (b.nb_alertes_envoyees + b.nb_remarques_envoyees) - (a.nb_alertes_envoyees + a.nb_remarques_envoyees));
+      for (const u of qualiteUsers || []) {
+        let alertesSentNb = 0;
+        let remarquesSentNb = 0;
+        try {
+          const alertesSent = await queryOne(
+            `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_qualite = ? AND date_alerte >= ? AND date_alerte <= ?`,
+            [u.id, startDate, endDate]
+          );
+          alertesSentNb = alertesSent?.nb ?? 0;
+        } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
+        try {
+          const remarquesSent = await queryOne(
+            `SELECT COUNT(*) AS nb FROM remarques WHERE id_expediteur = ? AND date_remarque >= ? AND date_remarque <= ?`,
+            [u.id, startDate, endDate]
+          );
+          remarquesSentNb = remarquesSent?.nb ?? 0;
+        } catch (e) { if (e.code !== 'ER_NO_SUCH_TABLE') throw e; }
+        qualiteTable.push({
+          id: u.id,
+          pseudo: u.pseudo,
+          nom: u.nom,
+          prenom: u.prenom,
+          nb_alertes_envoyees: alertesSentNb,
+          nb_remarques_envoyees: remarquesSentNb
+        });
       }
+      qualiteTable.sort((a, b) => (b.nb_alertes_envoyees + b.nb_remarques_envoyees) - (a.nb_alertes_envoyees + a.nb_remarques_envoyees));
 
       // 2) RE qualification : alertes reçues par leurs agents (camembert : % et nombre)
       const reList = await query(
