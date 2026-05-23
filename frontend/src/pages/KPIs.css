@@ -31,36 +31,23 @@
   border-radius: 8px;
 }
 
-.kpis-page .kpi-date-filter.search-form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 8px;
+.kpis-page .kpi-date-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
   margin-bottom: 0;
 }
 
-.kpis-page .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.kpis-page .kpi-date-filter-row .form-group {
+  flex: 0 1 auto;
+  min-width: 140px;
 }
 
-.kpis-page .form-group label {
-  font-weight: 600;
-  font-size: 12px;
-  color: #065f46;
-}
-
-.kpis-page .form-group select,
-.kpis-page .form-group input.form-control {
-  padding: 8px 10px;
-  border: 1px solid #86efac;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 14px;
-}
-
-.kpis-page .date-group {
-  grid-column: span 2;
+.kpis-page .kpi-date-filter-row .date-group {
+  flex: 1 1 200px;
+  min-width: 200px;
+  max-width: 280px;
 }
 
 .kpis-page .date-time-inputs {
@@ -97,15 +84,36 @@
   border-color: #065f46;
 }
 
+.kpis-page .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpis-page .form-group label {
+  font-weight: 600;
+  font-size: 12px;
+  color: #065f46;
+}
+
+.kpis-page .form-group select,
+.kpis-page .form-group input.form-control {
+  padding: 8px 10px;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+}
+
 .kpis-page .kpi-date-filter-actions {
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
-  grid-column: 1 / -1;
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px solid #bbf7d0;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .kpis-page .kpi-date-filter-actions .btn-search,
@@ -140,12 +148,26 @@
 }
 
 .kpis-page .porte-ouverte-centre-filter {
-  margin-top: 4px;
+  margin-top: 0;
+  flex: 0 1 auto;
+  min-width: 180px;
+}
+
+.kpis-page .porte-ouverte-centre-filter label {
+  font-weight: 600;
+  font-size: 12px;
+  color: #065f46;
+}
+
+.kpis-page .porte-ouverte-centre-filter .month-select {
+  min-width: 180px;
+  border: 1px solid #86efac;
 }
 
 @media (max-width: 992px) {
-  .kpis-page .date-group {
-    grid-column: span 1;
+  .kpis-page .kpi-date-filter-row .date-group {
+    flex: 1 1 100%;
+    max-width: none;
   }
 }
 

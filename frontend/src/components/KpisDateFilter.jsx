@@ -21,7 +21,7 @@ const KpisDateFilter = ({
   return (
     <div className="header-controls kpi-date-filter-panel">
       <div className="search-form kpi-date-filter-form">
-        <div className="kpi-date-filter search-form-grid">
+        <div className="kpi-date-filter filters-row kpi-date-filter-row">
           <div className="form-group">
             <label htmlFor="kpi-date-champ">Champ de date</label>
             <select
@@ -71,6 +71,7 @@ const KpisDateFilter = ({
               </div>
             </>
           )}
+          {extraControls}
           <div className="search-form-actions-left kpi-date-filter-actions">
             <button type="button" className="btn-search" onClick={onApply}>
               <FaSearch /> Appliquer
@@ -81,7 +82,6 @@ const KpisDateFilter = ({
           </div>
         </div>
       </div>
-      {extraControls}
     </div>
   );
 };

@@ -285,8 +285,8 @@ const KPIs = () => {
           onReset={handleResetDateFilters}
           extraControls={
             activeTab === 'porte-ouverte' ? (
-              <div className="month-selector porte-ouverte-centre-filter">
-                <label htmlFor="porte-ouverte-centre-select">Centre :</label>
+              <div className="form-group porte-ouverte-centre-filter">
+                <label htmlFor="porte-ouverte-centre-select">Centre</label>
                 <select
                   id="porte-ouverte-centre-select"
                   value={selectedPorteOuverteCentre}
