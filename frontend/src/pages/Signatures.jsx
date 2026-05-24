@@ -29,6 +29,7 @@ const Signatures = () => {
   const isAdminSession = [1, 11].includes(Number(user?.fonction));
   const [dateDebut, setDateDebut] = useState(() => getFirstOfMonthLocal());
   const [dateFin, setDateFin] = useState(() => getTodayLocal());
+  const [dateChamp, setDateChamp] = useState('date_rdv_time');
   const [selectedConfirmateur, setSelectedConfirmateur] = useState('');
   const [selectedCommercial, setSelectedCommercial] = useState('');
   const [page, setPage] = useState(1);
@@ -46,10 +47,10 @@ const Signatures = () => {
 
   // Récupérer les KPI
   const { data: kpiData, isLoading: isLoadingKpi } = useQuery(
-    ['signature-kpi', dateDebut, dateFin],
+    ['signature-kpi', dateDebut, dateFin, dateChamp],
     async () => {
       const res = await api.get('/signature/kpi', {
-        params: { date_debut: dateDebut, date_fin: dateFin }
+        params: { date_debut: dateDebut, date_fin: dateFin, date_champ: dateChamp }
       });
       return res.data.data;
     },
@@ -58,10 +59,10 @@ const Signatures = () => {
 
   // Récupérer les statistiques
   const { data: statsData, isLoading: isLoadingStats } = useQuery(
-    ['signature-stats', dateDebut, dateFin],
+    ['signature-stats', dateDebut, dateFin, dateChamp],
     async () => {
       const res = await api.get('/signature/stats', {
-        params: { date_debut: dateDebut, date_fin: dateFin }
+        params: { date_debut: dateDebut, date_fin: dateFin, date_champ: dateChamp }
       });
       return res.data.data;
     },
@@ -70,11 +71,12 @@ const Signatures = () => {
 
   // Récupérer la liste des signatures
   const { data: signaturesData, isLoading: isLoadingSignatures } = useQuery(
-    ['signatures', dateDebut, dateFin, selectedConfirmateur, selectedCommercial, page, sortBy, sortOrder],
+    ['signatures', dateDebut, dateFin, dateChamp, selectedConfirmateur, selectedCommercial, page, sortBy, sortOrder],
     async () => {
       const params = {
         date_debut: dateDebut,
         date_fin: dateFin,
+        date_champ: dateChamp,
         page,
         limit,
         sort_by: sortBy,
@@ -94,11 +96,12 @@ const Signatures = () => {
 
   // Récupérer la liste des signatures rejetées
   const { data: rejectedData, isLoading: isLoadingRejected } = useQuery(
-    ['signatures-rejetees', dateDebut, dateFin, selectedConfirmateur, selectedCommercial, page, isAdminSession],
+    ['signatures-rejetees', dateDebut, dateFin, dateChamp, selectedConfirmateur, selectedCommercial, page, isAdminSession],
     async () => {
       const params = {
         date_debut: dateDebut,
         date_fin: dateFin,
+        date_champ: dateChamp,
         page,
         limit
       };
@@ -271,6 +274,20 @@ const Signatures = () => {
 
       {/* Filtres */}
       <div className="filters-section signatures-filter-row">
+        <div className="filter-group">
+          <label>Type de date :</label>
+          <select
+            value={dateChamp}
+            onChange={(e) => {
+              setDateChamp(e.target.value);
+              setPage(1);
+            }}
+            className="form-control"
+          >
+            <option value="date_rdv_time">Date de planning</option>
+            <option value="date_insert_time">Date d&apos;insertion</option>
+          </select>
+        </div>
         <div className="filter-group">
           <label>Date début :</label>
           <input

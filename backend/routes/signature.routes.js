@@ -23,6 +23,28 @@ function isAdminSession(fonction) {
   return [1, 11].includes(Number(fonction));
 }
 
+function normalizeSignatureDateChamp(dateChamp) {
+  return dateChamp === 'date_insert_time' ? 'date_insert_time' : 'date_rdv_time';
+}
+
+function resolveSignatureFicheDateColumn(dateChamp) {
+  return normalizeSignatureDateChamp(dateChamp) === 'date_insert_time'
+    ? 'f.date_insert_time'
+    : 'f.date_rdv_time';
+}
+
+function appendSignatureFicheDateRange(whereConditions, params, dateChamp, date_debut, date_fin) {
+  const dateCol = resolveSignatureFicheDateColumn(dateChamp);
+  if (date_debut) {
+    whereConditions.push(`${dateCol} >= ?`);
+    params.push(`${date_debut} 00:00:00`);
+  }
+  if (date_fin) {
+    whereConditions.push(`${dateCol} <= ?`);
+    params.push(`${date_fin} 23:59:59`);
+  }
+}
+
 async function ensureSignaturesRejeteesTable() {
   await query(
     `CREATE TABLE IF NOT EXISTS signatures_rejetees (
@@ -53,7 +75,8 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const { 
       date_debut, 
-      date_fin, 
+      date_fin,
+      date_champ,
       id_confirmateur, 
       id_commercial,
       id_fiche,
@@ -63,9 +86,11 @@ router.get('/', authenticate, async (req, res) => {
       page = 1,
       limit = 50
     } = req.query;
+    const safeDateChamp = normalizeSignatureDateChamp(date_champ);
     console.log('[signature][list] query params:', {
       date_debut,
       date_fin,
+      date_champ: safeDateChamp,
       id_confirmateur,
       id_commercial,
       id_fiche,
@@ -89,15 +114,8 @@ router.get('/', authenticate, async (req, res) => {
       params.push(id_etat_final);
     }
 
-    // Filtrer par date de planning (date RDV de la fiche)
-    if (date_debut) {
-      whereConditions.push('f.date_rdv_time >= ?');
-      params.push(`${date_debut} 00:00:00`);
-    }
-    if (date_fin) {
-      whereConditions.push('f.date_rdv_time <= ?');
-      params.push(`${date_fin} 23:59:59`);
-    }
+    // Filtrer par date (planning ou insertion)
+    appendSignatureFicheDateRange(whereConditions, params, safeDateChamp, date_debut, date_fin);
 
     // Filtrer par confirmateur (au moins une signature de la fiche avec ce confirmateur)
     if (id_confirmateur) {
@@ -253,16 +271,19 @@ router.get('/rejetees', authenticate, async (req, res) => {
     }
 
     await ensureSignaturesRejeteesTable();
-    const { date_debut, date_fin, id_confirmateur, id_commercial, page = 1, limit = 50 } = req.query;
+    const { date_debut, date_fin, date_champ, id_confirmateur, id_commercial, page = 1, limit = 50 } = req.query;
+    const safeDateChamp = normalizeSignatureDateChamp(date_champ);
+    const ficheDateCol = resolveSignatureFicheDateColumn(safeDateChamp);
     const whereConditions = ['1=1'];
     const params = [];
+    const joinFiche = 'LEFT JOIN fiches f ON sr.id_fiche = f.id';
 
     if (date_debut) {
-      whereConditions.push('sr.date_rejet >= ?');
+      whereConditions.push(`${ficheDateCol} >= ?`);
       params.push(`${date_debut} 00:00:00`);
     }
     if (date_fin) {
-      whereConditions.push('sr.date_rejet <= ?');
+      whereConditions.push(`${ficheDateCol} <= ?`);
       params.push(`${date_fin} 23:59:59`);
     }
     if (id_confirmateur) {
@@ -279,7 +300,7 @@ router.get('/rejetees', authenticate, async (req, res) => {
     const limitValue = parseInt(limit, 10);
 
     const totalRow = await queryOne(
-      `SELECT COUNT(*) as total FROM signatures_rejetees sr ${whereClause}`,
+      `SELECT COUNT(*) as total FROM signatures_rejetees sr ${joinFiche} ${whereClause}`,
       params
     );
 
@@ -304,9 +325,9 @@ router.get('/rejetees', authenticate, async (req, res) => {
         f.tel as fiche_tel,
         c.titre as centre_titre
       FROM signatures_rejetees sr
+      ${joinFiche}
       LEFT JOIN utilisateurs u_conf ON sr.confirmateur = u_conf.id
       LEFT JOIN utilisateurs u_rej ON sr.id_rejete_par = u_rej.id
-      LEFT JOIN fiches f ON sr.id_fiche = f.id
       LEFT JOIN centres c ON f.id_centre = c.id
       ${whereClause}
       ORDER BY sr.date_rejet DESC, sr.id DESC
@@ -340,22 +361,16 @@ router.get('/rejetees', authenticate, async (req, res) => {
 // =====================================================
 router.get('/stats', authenticate, async (req, res) => {
   try {
-    const { date_debut, date_fin } = req.query;
+    const { date_debut, date_fin, date_champ } = req.query;
+    const safeDateChamp = normalizeSignatureDateChamp(date_champ);
+    const ficheDateCol = resolveSignatureFicheDateColumn(safeDateChamp);
 
     // Limiter aux fiches actuellement signées (aligné sur "recherche tout signé par date de planning")
     const etatsSignes = [13, 16, 38, 44, 45]; // SIGNER, SIGNER RETRACTER, SIGNER RETRACTER 2 FOIS, SIGNER PM, SIGNER COMPLET
     let whereConditions = ['f.id IS NOT NULL', `f.id_etat_final IN (${etatsSignes.join(', ')})`];
     let params = [];
 
-    // Filtrer par date de planning
-    if (date_debut) {
-      whereConditions.push('f.date_rdv_time >= ?');
-      params.push(`${date_debut} 00:00:00`);
-    }
-    if (date_fin) {
-      whereConditions.push('f.date_rdv_time <= ?');
-      params.push(`${date_fin} 23:59:59`);
-    }
+    appendSignatureFicheDateRange(whereConditions, params, safeDateChamp, date_debut, date_fin);
 
     const whereClause = 'WHERE ' + whereConditions.join(' AND ');
     const joinFiches = 'INNER JOIN fiches f ON s.id_fiche = f.id';
@@ -438,15 +453,15 @@ router.get('/stats', authenticate, async (req, res) => {
     // Statistiques par jour (par date de planning, derniers 30 jours)
     const statsParJour = await query(
       `SELECT 
-        DATE(f.date_rdv_time) as date,
+        DATE(${ficheDateCol}) as date,
         SUM(s.ajoute) as total_score,
         COUNT(DISTINCT s.id_fiche) as nb_fiches,
         COUNT(*) as nb_signatures
       FROM signature s
       ${joinFiches}
       ${whereClause}
-      AND f.date_rdv_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-      GROUP BY DATE(f.date_rdv_time)
+      AND ${ficheDateCol} >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+      GROUP BY DATE(${ficheDateCol})
       ORDER BY date DESC`,
       params
     );
@@ -524,7 +539,9 @@ router.get('/stats', authenticate, async (req, res) => {
 // =====================================================
 router.get('/kpi', authenticate, async (req, res) => {
   try {
-    const { date_debut, date_fin } = req.query;
+    const { date_debut, date_fin, date_champ } = req.query;
+    const safeDateChamp = normalizeSignatureDateChamp(date_champ);
+    const ficheDateCol = resolveSignatureFicheDateColumn(safeDateChamp);
 
     // Dates par défaut : 1er du mois -> dernier jour du mois (heure locale)
     const dateDebut = date_debut || getFirstOfMonthLocal();
@@ -555,14 +572,14 @@ router.get('/kpi', authenticate, async (req, res) => {
 
     // KPI 1: Total signatures (score - SUM ajoute) - période actuelle - par date de planning
     const currentTotalResult = await queryOne(
-      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? ${whereEtatSigneKpi}`,
+      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? ${whereEtatSigneKpi}`,
       [currentStart, currentEnd]
     );
     const currentTotal = parseFloat(currentTotalResult?.total || 0);
 
     // KPI 2: Total signatures - période précédente
     const previousTotalResult = await queryOne(
-      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? ${whereEtatSigneKpi}`,
+      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? ${whereEtatSigneKpi}`,
       [previousStartStr, previousEndStr]
     );
     const previousTotal = parseFloat(previousTotalResult?.total || 0);
@@ -574,14 +591,14 @@ router.get('/kpi', authenticate, async (req, res) => {
 
     // KPI 4: Nombre de signatures (COUNT) - période actuelle
     const currentNombreResult = await queryOne(
-      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? ${whereEtatSigneKpi}`,
+      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? ${whereEtatSigneKpi}`,
       [currentStart, currentEnd]
     );
     const currentNombre = parseInt(currentNombreResult?.total || 0);
 
     // KPI 5: Nombre de signatures (COUNT) - période précédente
     const previousNombreResult = await queryOne(
-      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? ${whereEtatSigneKpi}`,
+      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? ${whereEtatSigneKpi}`,
       [previousStartStr, previousEndStr]
     );
     const previousNombre = parseInt(previousNombreResult?.total || 0);
@@ -595,7 +612,7 @@ router.get('/kpi', authenticate, async (req, res) => {
     const currentFichesResult = await queryOne(
       `SELECT COUNT(DISTINCT s.id_fiche) as total 
        FROM signature s ${joinFichesKpi} 
-       WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? AND s.id_fiche IS NOT NULL ${whereEtatSigneKpi}`,
+       WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? AND s.id_fiche IS NOT NULL ${whereEtatSigneKpi}`,
       [currentStart, currentEnd]
     );
     const currentFiches = parseInt(currentFichesResult?.total || 0);
@@ -604,7 +621,7 @@ router.get('/kpi', authenticate, async (req, res) => {
     const previousFichesResult = await queryOne(
       `SELECT COUNT(DISTINCT s.id_fiche) as total 
        FROM signature s ${joinFichesKpi} 
-       WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ? AND s.id_fiche IS NOT NULL ${whereEtatSigneKpi}`,
+       WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? AND s.id_fiche IS NOT NULL ${whereEtatSigneKpi}`,
       [previousStartStr, previousEndStr]
     );
     const previousFiches = parseInt(previousFichesResult?.total || 0);
@@ -623,7 +640,7 @@ router.get('/kpi', authenticate, async (req, res) => {
       FROM signature s
       ${joinFichesKpi}
       LEFT JOIN utilisateurs u ON s.confirmateur = u.id
-      WHERE f.date_rdv_time >= ? AND f.date_rdv_time <= ?
+      WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ?
       AND s.confirmateur IS NOT NULL ${whereEtatSigneKpi}
       GROUP BY s.confirmateur, u.pseudo
       ORDER BY total_score DESC
