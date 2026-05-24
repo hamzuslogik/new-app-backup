@@ -163,23 +163,14 @@ function getCommercialDateSql(source, dateField) {
   return `f.\`${field}\``;
 }
 
-/** Union fiches + fiches_histo + compte_rendu_pending pour stats commercial. */
+/** Union fiches_histo + compte_rendu_pending pour stats commercial (état = fh.id_etat, pas fiches.id_etat_final). */
 function buildCommercialUnionSql(koColumnKey, dateField, ficheExtraConditions) {
   const commercialFromHisto = 'COALESCE(NULLIF(fh.id_commercial_cr, 0), NULLIF(f.id_commercial, 0))';
-  const etatFiches = 'CASE WHEN (f.ko = 1) THEN ? ELSE CAST(f.id_etat_final AS CHAR) END';
   const etatHisto = 'CASE WHEN (f.ko = 1) THEN ? ELSE CAST(fh.id_etat AS CHAR) END';
   const etatCr = 'CASE WHEN (f.ko = 1) THEN ? ELSE CAST(cr.id_etat_final AS CHAR) END';
-  const dateFiches = getCommercialDateSql('fiches', dateField);
   const dateHisto = getCommercialDateSql('histo', dateField);
   const dateCr = getCommercialDateSql('cr', dateField);
   const baseFiche = '(f.archive = 0 OR f.archive IS NULL) AND f.active = 1';
-
-  const fichesPart = `
-    SELECT ${etatFiches} AS etat_key, f.id_commercial AS entity_id
-    FROM fiches f
-    WHERE ${baseFiche}
-      AND f.id_commercial IS NOT NULL AND f.id_commercial > 0
-      AND ${dateFiches} >= ? AND ${dateFiches} <= ?${ficheExtraConditions}`;
 
   const histoPart = `
     SELECT ${etatHisto} AS etat_key, ${commercialFromHisto} AS entity_id
@@ -199,12 +190,12 @@ function buildCommercialUnionSql(koColumnKey, dateField, ficheExtraConditions) {
       AND cr.id_etat_final IS NOT NULL
       AND ${dateCr} >= ? AND ${dateCr} <= ?${ficheExtraConditions}`;
 
-  return `(${fichesPart} UNION ALL ${histoPart} UNION ALL ${crPart}) commercial_src`;
+  return `(${histoPart} UNION ALL ${crPart}) commercial_src`;
 }
 
 function buildCommercialUnionParams(koColumnKey, dateStart, dateEnd, extraParams) {
   const part = [String(koColumnKey), dateStart, dateEnd, ...extraParams];
-  return [...part, ...part, ...part];
+  return [...part, ...part];
 }
 
 // Récupérer les statistiques par type (centre, confirmateur, commercial, agent)
