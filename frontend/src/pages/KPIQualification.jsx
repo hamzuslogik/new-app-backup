@@ -26,32 +26,16 @@ function getTauxConversionDisplay(tauxConversion) {
   return { kind: 'ok', taux, fichesValidees, fichesProduites };
 }
 
-function KpiCounterCard({ icon: Icon, label, total, filtered, showDual, accentClass }) {
-  const displayFiltered = filtered ?? 0;
-  const displayTotal = total ?? displayFiltered;
-
+function KpiCounterCard({ icon: Icon, label, value, accentClass }) {
   return (
     <div className={`kpi-counter-card ${accentClass || ''}`}>
       <div className="kpi-counter-header">
         <Icon className="kpi-counter-icon" aria-hidden />
         <h3>{label}</h3>
       </div>
-      {showDual ? (
-        <div className="kpi-counter-dual">
-          <div className="kpi-counter-block">
-            <span className="kpi-counter-value">{displayTotal.toLocaleString('fr-FR')}</span>
-            <span className="kpi-counter-sub">Totalité</span>
-          </div>
-          <div className="kpi-counter-block kpi-counter-block-filtered">
-            <span className="kpi-counter-value">{displayFiltered.toLocaleString('fr-FR')}</span>
-            <span className="kpi-counter-sub">Filtré</span>
-          </div>
-        </div>
-      ) : (
-        <div className="kpi-counter-single">
-          <span className="kpi-counter-value">{displayFiltered.toLocaleString('fr-FR')}</span>
-        </div>
-      )}
+      <div className="kpi-counter-single">
+        <span className="kpi-counter-value">{(value ?? 0).toLocaleString('fr-FR')}</span>
+      </div>
     </div>
   );
 }
@@ -141,7 +125,6 @@ const KPIQualification = () => {
 
   const currentData = kpiData?.[selectedPeriod];
   const details = currentData?.details;
-  const showDualCounters = !!(details?.has_filter && canUseScopeFilters);
   const detailCounters = [
     { key: 'fiches_produites', label: 'Fiches produites', icon: FaFileAlt, accentClass: 'counter-produites' },
     { key: 'nb_ko', label: 'KO', icon: FaBan, accentClass: 'counter-ko' },
@@ -454,9 +437,7 @@ const KPIQualification = () => {
                     icon={icon}
                     label={label}
                     accentClass={accentClass}
-                    showDual={showDualCounters}
-                    total={details.total?.[key]}
-                    filtered={details.filtered?.[key]}
+                    value={details.filtered?.[key]}
                   />
                 ))}
               </div>
