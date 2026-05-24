@@ -440,15 +440,11 @@ async function applyKoImportMatch(row, userId) {
 
   if (dateAppel) {
     await query(
-      'UPDATE fiches SET id_agent = ?, ko = 1, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
-      [idAgent, dateAppel, now, idFiche]
+      'UPDATE fiches SET id_agent = ?, ko = 1, date_appel_time = ? WHERE id = ?',
+      [idAgent, dateAppel, idFiche]
     );
   } else {
-    await query('UPDATE fiches SET id_agent = ?, ko = 1, date_modif_time = ? WHERE id = ?', [
-      idAgent,
-      now,
-      idFiche,
-    ]);
+    await query('UPDATE fiches SET id_agent = ?, ko = 1 WHERE id = ?', [idAgent, idFiche]);
   }
 
   if (oldKo !== 1) {
