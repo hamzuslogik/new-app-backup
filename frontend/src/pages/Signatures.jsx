@@ -263,31 +263,6 @@ const Signatures = () => {
   };
 
 
-  const applyCurrentWeek = () => {
-    const now = new Date();
-    const day = now.getDay();
-    const diffToMonday = day === 0 ? -6 : 1 - day;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + diffToMonday);
-    const friday = new Date(monday);
-    friday.setDate(monday.getDate() + 4);
-    const toLocal = (d) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${dd}`;
-    };
-    setDateDebut(toLocal(monday));
-    setDateFin(toLocal(friday));
-    setPage(1);
-  };
-
-  const applyCurrentMonth = () => {
-    setDateDebut(getFirstOfMonthLocal());
-    setDateFin(getTodayLocal());
-    setPage(1);
-  };
-
   return (
     <div className="signatures-page">
       <div className="page-header">
@@ -295,11 +270,7 @@ const Signatures = () => {
       </div>
 
       {/* Filtres */}
-      <div className="filters-section">
-        <div className="quick-access-row">
-          <button type="button" className="btn-quick-access" onClick={applyCurrentWeek}>Signatures de la semaine</button>
-          <button type="button" className="btn-quick-access" onClick={applyCurrentMonth}>Signatures du mois</button>
-        </div>
+      <div className="filters-section signatures-filter-row">
         <div className="filter-group">
           <label>Date début :</label>
           <input
