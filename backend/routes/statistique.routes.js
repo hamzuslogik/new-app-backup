@@ -145,57 +145,25 @@ function prefixFicheSqlConditions(additionalConditions) {
     .replace(/\bko = 1\b/g, 'f.ko = 1');
 }
 
-/** Colonne date par source pour l'onglet Commercial (fiches / fiches_histo / compte_rendu_pending). */
-function getCommercialDateSql(source, dateField) {
-  const field = ['date_modif_time', 'date_insert_time', 'date_rdv_time'].includes(dateField)
-    ? dateField
-    : 'date_modif_time';
-  if (source === 'fiches') return `f.\`${field}\``;
-  if (source === 'histo') {
-    if (field === 'date_rdv_time') return 'COALESCE(fh.date_rdv_time, f.date_rdv_time)';
-    return 'fh.date_creation';
-  }
-  if (source === 'cr') {
-    if (field === 'date_rdv_time') return 'f.date_rdv_time';
-    if (field === 'date_insert_time') return 'cr.date_creation';
-    return 'COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation)';
-  }
-  return `f.\`${field}\``;
-}
-
-/** Union fiches_histo + compte_rendu_pending pour stats commercial (état = fh.id_etat, pas fiches.id_etat_final). */
-function buildCommercialUnionSql(koColumnKey, dateField, ficheExtraConditions) {
-  const commercialFromHisto = 'COALESCE(NULLIF(fh.id_commercial_cr, 0), NULLIF(f.id_commercial, 0))';
-  const etatHisto = 'CASE WHEN (f.ko = 1) THEN ? ELSE CAST(fh.id_etat AS CHAR) END';
+/** Stats commercial : compte_rendu_pending uniquement, filtre date = f.date_rdv_time. */
+function buildCommercialCrSourceSql(koColumnKey, ficheExtraConditions) {
   const etatCr = 'CASE WHEN (f.ko = 1) THEN ? ELSE CAST(cr.id_etat_final AS CHAR) END';
-  const dateHisto = getCommercialDateSql('histo', dateField);
-  const dateCr = getCommercialDateSql('cr', dateField);
   const baseFiche = '(f.archive = 0 OR f.archive IS NULL) AND f.active = 1';
 
-  const histoPart = `
-    SELECT ${etatHisto} AS etat_key, ${commercialFromHisto} AS entity_id
-    FROM fiches_histo fh
-    INNER JOIN fiches f ON f.id = fh.id_fiche
-    WHERE ${baseFiche}
-      AND fh.id_etat IS NOT NULL
-      AND ${commercialFromHisto} IS NOT NULL AND ${commercialFromHisto} > 0
-      AND ${dateHisto} >= ? AND ${dateHisto} <= ?${ficheExtraConditions}`;
-
-  const crPart = `
+  return `
     SELECT ${etatCr} AS etat_key, cr.id_commercial AS entity_id
     FROM compte_rendu_pending cr
     INNER JOIN fiches f ON f.id = cr.id_fiche
     WHERE ${baseFiche}
       AND cr.id_commercial IS NOT NULL AND cr.id_commercial > 0
       AND cr.id_etat_final IS NOT NULL
-      AND ${dateCr} >= ? AND ${dateCr} <= ?${ficheExtraConditions}`;
-
-  return `(${histoPart} UNION ALL ${crPart}) commercial_src`;
+      AND f.date_rdv_time IS NOT NULL
+      AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?${ficheExtraConditions}
+  `;
 }
 
-function buildCommercialUnionParams(koColumnKey, dateStart, dateEnd, extraParams) {
-  const part = [String(koColumnKey), dateStart, dateEnd, ...extraParams];
-  return [...part, ...part];
+function buildCommercialCrParams(koColumnKey, dateStart, dateEnd, extraParams) {
+  return [String(koColumnKey), dateStart, dateEnd, ...extraParams];
 }
 
 // Récupérer les statistiques par type (centre, confirmateur, commercial, agent)
@@ -220,7 +188,9 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Valeurs par défaut (AGENT = date de saisie / insertion)
     const champ_date = name_stat === 'AGENT'
       ? (date || 'date_insert_time')
-      : (date || 'date_modif_time');
+      : name_stat === 'COMMERCIAL'
+        ? 'date_rdv_time'
+        : (date || 'date_modif_time');
     const startDate = date_debut || getTodayLocal();
     const endDate = date_fin || getTodayLocal();
     const statType = stat || 'net';
@@ -319,7 +289,11 @@ router.get('/all-stat', authenticate, async (req, res) => {
     const defaultDateField = name_stat === 'AGENT' ? 'date_insert_time' : 'date_modif_time';
     const safeDateField = allowedDateFields.includes(champ_date) ? champ_date : defaultDateField;
     // Onglet AGENT : toujours filtrer sur la date d'insertion (saisie)
-    const dateFieldForQuery = name_stat === 'AGENT' ? 'date_insert_time' : safeDateField;
+    const dateFieldForQuery = name_stat === 'AGENT'
+      ? 'date_insert_time'
+      : name_stat === 'COMMERCIAL'
+        ? 'date_rdv_time'
+        : safeDateField;
 
     // Valider le champ de groupement
     const allowedGroupFields = ['id_centre', 'id_confirmateur', 'id_commercial', 'id_agent'];
@@ -354,18 +328,14 @@ router.get('/all-stat', authenticate, async (req, res) => {
     let stats;
 
     if (isCommercialStat) {
-      const unionSql = buildCommercialUnionSql(
-        koColumnKey,
-        dateFieldForQuery,
-        commercialFicheExtra
-      );
+      const crSql = buildCommercialCrSourceSql(koColumnKey, commercialFicheExtra);
       const extrasForUnion = [];
       if (produit && (produit === '1' || produit === '2')) extrasForUnion.push(parseInt(produit, 10));
       if (id_centre) extrasForUnion.push(parseInt(id_centre, 10));
       if (id_confirmateur) extrasForUnion.push(parseInt(id_confirmateur, 10));
       if (id_agent) extrasForUnion.push(parseInt(id_agent, 10));
 
-      const unionParams = buildCommercialUnionParams(
+      const crParams = buildCommercialCrParams(
         koColumnKey,
         queryParams[0],
         queryParams[1],
@@ -376,9 +346,9 @@ router.get('/all-stat', authenticate, async (req, res) => {
 
       const totalResult = await queryOne(
         `SELECT COUNT(*) AS total
-         FROM ${unionSql}
+         FROM (${crSql}) commercial_src
          WHERE entity_id IS NOT NULL AND entity_id > 0${entityFilterSql}`,
-        [...unionParams, ...entityFilterParams]
+        [...crParams, ...entityFilterParams]
       );
       total = totalResult?.total || 0;
 
@@ -387,11 +357,11 @@ router.get('/all-stat', authenticate, async (req, res) => {
            etat_key,
            entity_id AS \`${groupByField}\`,
            COUNT(*) AS stats
-         FROM ${unionSql}
+         FROM (${crSql}) commercial_src
          WHERE entity_id IS NOT NULL AND entity_id > 0${entityFilterSql}
          GROUP BY etat_key, entity_id
          ORDER BY etat_key ASC`,
-        [...unionParams, ...entityFilterParams]
+        [...crParams, ...entityFilterParams]
       );
     } else {
       const totalResult = await queryOne(
