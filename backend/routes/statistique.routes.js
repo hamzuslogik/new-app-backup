@@ -133,6 +133,80 @@ function getLastDayOfMonthLocal() {
   return `${y}-${m}-${day}`;
 }
 
+/** Préfixe f. pour filtres appliqués via JOIN fiches (stats commercial). */
+function prefixFicheSqlConditions(additionalConditions) {
+  if (!additionalConditions) return '';
+  return additionalConditions
+    .replace(/\bid_centre\b/g, 'f.id_centre')
+    .replace(/\bid_confirmateur\b/g, 'f.id_confirmateur')
+    .replace(/\bid_commercial\b/g, 'f.id_commercial')
+    .replace(/\bid_agent\b/g, 'f.id_agent')
+    .replace(/\bproduit\b/g, 'f.produit')
+    .replace(/\bko = 1\b/g, 'f.ko = 1');
+}
+
+/** Colonne date par source pour l'onglet Commercial (fiches / fiches_histo / compte_rendu_pending). */
+function getCommercialDateSql(source, dateField) {
+  const field = ['date_modif_time', 'date_insert_time', 'date_rdv_time'].includes(dateField)
+    ? dateField
+    : 'date_modif_time';
+  if (source === 'fiches') return `f.\`${field}\``;
+  if (source === 'histo') {
+    if (field === 'date_rdv_time') return 'COALESCE(fh.date_rdv_time, f.date_rdv_time)';
+    return 'fh.date_creation';
+  }
+  if (source === 'cr') {
+    if (field === 'date_rdv_time') return 'f.date_rdv_time';
+    if (field === 'date_insert_time') return 'cr.date_creation';
+    return 'COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation)';
+  }
+  return `f.\`${field}\``;
+}
+
+/** Union fiches + fiches_histo + compte_rendu_pending pour stats commercial. */
+function buildCommercialUnionSql(koColumnKey, dateField, ficheExtraConditions) {
+  const commercialFromHisto = 'COALESCE(NULLIF(fh.id_commercial_cr, 0), NULLIF(f.id_commercial, 0))';
+  const etatFiches = 'CASE WHEN (f.ko = 1) THEN ? ELSE CAST(f.id_etat_final AS CHAR) END';
+  const etatHisto = 'CASE WHEN (f.ko = 1) THEN ? ELSE CAST(fh.id_etat AS CHAR) END';
+  const etatCr = 'CASE WHEN (f.ko = 1) THEN ? ELSE CAST(cr.id_etat_final AS CHAR) END';
+  const dateFiches = getCommercialDateSql('fiches', dateField);
+  const dateHisto = getCommercialDateSql('histo', dateField);
+  const dateCr = getCommercialDateSql('cr', dateField);
+  const baseFiche = '(f.archive = 0 OR f.archive IS NULL) AND f.active = 1';
+
+  const fichesPart = `
+    SELECT ${etatFiches} AS etat_key, f.id_commercial AS entity_id
+    FROM fiches f
+    WHERE ${baseFiche}
+      AND f.id_commercial IS NOT NULL AND f.id_commercial > 0
+      AND ${dateFiches} >= ? AND ${dateFiches} <= ?${ficheExtraConditions}`;
+
+  const histoPart = `
+    SELECT ${etatHisto} AS etat_key, ${commercialFromHisto} AS entity_id
+    FROM fiches_histo fh
+    INNER JOIN fiches f ON f.id = fh.id_fiche
+    WHERE ${baseFiche}
+      AND fh.id_etat IS NOT NULL
+      AND ${commercialFromHisto} IS NOT NULL AND ${commercialFromHisto} > 0
+      AND ${dateHisto} >= ? AND ${dateHisto} <= ?${ficheExtraConditions}`;
+
+  const crPart = `
+    SELECT ${etatCr} AS etat_key, cr.id_commercial AS entity_id
+    FROM compte_rendu_pending cr
+    INNER JOIN fiches f ON f.id = cr.id_fiche
+    WHERE ${baseFiche}
+      AND cr.id_commercial IS NOT NULL AND cr.id_commercial > 0
+      AND cr.id_etat_final IS NOT NULL
+      AND ${dateCr} >= ? AND ${dateCr} <= ?${ficheExtraConditions}`;
+
+  return `(${fichesPart} UNION ALL ${histoPart} UNION ALL ${crPart}) commercial_src`;
+}
+
+function buildCommercialUnionParams(koColumnKey, dateStart, dateEnd, extraParams) {
+  const part = [String(koColumnKey), dateStart, dateEnd, ...extraParams];
+  return [...part, ...part, ...part];
+}
+
 // Récupérer les statistiques par type (centre, confirmateur, commercial, agent)
 router.get('/all-stat', authenticate, async (req, res) => {
   try {
@@ -275,8 +349,61 @@ router.get('/all-stat', authenticate, async (req, res) => {
       groupByField = 'id_centre';
     }
 
+  const isCommercialStat = name_stat === 'COMMERCIAL';
+  const commercialFicheExtra = isCommercialStat
+    ? prefixFicheSqlConditions(
+        id_commercial
+          ? additionalConditions.replace(/\s*AND\s*id_commercial\s*=\s*\?/i, '')
+          : additionalConditions
+      )
+    : additionalConditions;
+
     // Récupérer le total de fiches pour la période
-    const totalResult = await queryOne(
+    let total;
+    let stats;
+
+    if (isCommercialStat) {
+      const unionSql = buildCommercialUnionSql(
+        koColumnKey,
+        dateFieldForQuery,
+        commercialFicheExtra
+      );
+      const extrasForUnion = [];
+      if (produit && (produit === '1' || produit === '2')) extrasForUnion.push(parseInt(produit, 10));
+      if (id_centre) extrasForUnion.push(parseInt(id_centre, 10));
+      if (id_confirmateur) extrasForUnion.push(parseInt(id_confirmateur, 10));
+      if (id_agent) extrasForUnion.push(parseInt(id_agent, 10));
+
+      const unionParams = buildCommercialUnionParams(
+        koColumnKey,
+        queryParams[0],
+        queryParams[1],
+        extrasForUnion
+      );
+      const entityFilterSql = id_commercial ? ' AND entity_id = ?' : '';
+      const entityFilterParams = id_commercial ? [parseInt(id_commercial, 10)] : [];
+
+      const totalResult = await queryOne(
+        `SELECT COUNT(*) AS total
+         FROM ${unionSql}
+         WHERE entity_id IS NOT NULL AND entity_id > 0${entityFilterSql}`,
+        [...unionParams, ...entityFilterParams]
+      );
+      total = totalResult?.total || 0;
+
+      stats = await query(
+        `SELECT
+           etat_key,
+           entity_id AS \`${groupByField}\`,
+           COUNT(*) AS stats
+         FROM ${unionSql}
+         WHERE entity_id IS NOT NULL AND entity_id > 0${entityFilterSql}
+         GROUP BY etat_key, entity_id
+         ORDER BY etat_key ASC`,
+        [...unionParams, ...entityFilterParams]
+      );
+    } else {
+      const totalResult = await queryOne(
       `SELECT COUNT(*) as total
        FROM fiches
        WHERE (archive = 0 OR archive IS NULL) 
@@ -285,10 +412,9 @@ router.get('/all-stat', authenticate, async (req, res) => {
        AND \`${dateFieldForQuery}\` <= ?${additionalConditions}`,
       queryParams
     );
-    const total = totalResult.total || 0;
+    total = totalResult?.total || 0;
 
-    // Récupérer les statistiques groupées (ko=1 → colonne KO, sinon id_etat_final)
-    const stats = await query(
+    stats = await query(
       `SELECT
          CASE WHEN (ko = 1) THEN ? ELSE CAST(id_etat_final AS CHAR) END AS etat_key,
          \`${groupByField}\`,
@@ -302,6 +428,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
        ORDER BY etat_key ASC`,
       [String(koColumnKey), ...queryParams]
     );
+    }
 
     // Organiser les données par utilisateur/centre
     const dataByEntity = {};
