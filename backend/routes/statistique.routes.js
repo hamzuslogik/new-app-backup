@@ -145,8 +145,9 @@ function prefixFicheSqlConditions(additionalConditions) {
     .replace(/\bko = 1\b/g, 'f.ko = 1');
 }
 
-/** Stats commercial : compte_rendu_pending uniquement, filtre date = f.date_rdv_time. */
+/** Stats commercial : compte_rendu_pending uniquement, filtre date = date modification CR. */
 function buildCommercialCrSourceSql(koColumnKey, ficheExtraConditions) {
+  const dateCr = 'COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation)';
   const etatCr = 'CASE WHEN (f.ko = 1) THEN ? ELSE CAST(cr.id_etat_final AS CHAR) END';
   const baseFiche = '(f.archive = 0 OR f.archive IS NULL) AND f.active = 1';
 
@@ -157,8 +158,8 @@ function buildCommercialCrSourceSql(koColumnKey, ficheExtraConditions) {
     WHERE ${baseFiche}
       AND cr.id_commercial IS NOT NULL AND cr.id_commercial > 0
       AND cr.id_etat_final IS NOT NULL
-      AND f.date_rdv_time IS NOT NULL
-      AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?${ficheExtraConditions}
+      AND ${dateCr} IS NOT NULL
+      AND ${dateCr} >= ? AND ${dateCr} <= ?${ficheExtraConditions}
   `;
 }
 
@@ -189,7 +190,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
     const champ_date = name_stat === 'AGENT'
       ? (date || 'date_insert_time')
       : name_stat === 'COMMERCIAL'
-        ? 'date_rdv_time'
+        ? 'date_modif_time'
         : (date || 'date_modif_time');
     const startDate = date_debut || getTodayLocal();
     const endDate = date_fin || getTodayLocal();
@@ -292,7 +293,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
     const dateFieldForQuery = name_stat === 'AGENT'
       ? 'date_insert_time'
       : name_stat === 'COMMERCIAL'
-        ? 'date_rdv_time'
+        ? 'date_modif_time'
         : safeDateField;
 
     // Valider le champ de groupement
