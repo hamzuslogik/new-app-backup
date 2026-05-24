@@ -228,6 +228,8 @@ router.get('/all-stat', authenticate, async (req, res) => {
     }
 
     const excludeKoFromStats = ['CENTRE', 'CONFIRMATEUR', 'COMMERCIAL'].includes(name_stat);
+    const isStatKo = name_stat === 'STAT_KO';
+    const useEtatFinalKey = excludeKoFromStats || isStatKo;
     if (excludeKoFromStats && name_stat !== 'COMMERCIAL') {
       conditions.push('(ko = 0 OR ko IS NULL)');
     }
@@ -290,7 +292,9 @@ router.get('/all-stat', authenticate, async (req, res) => {
         ];
     const etatsForDisplay = excludeKoFromStats
       ? etats.filter((e) => String(e.abbreviation || '').trim().toUpperCase() !== 'KO')
-      : etatsWithKo;
+      : isStatKo
+        ? etats
+        : etatsWithKo;
 
     // Valider le champ de date pour éviter les injections SQL
     // Note: date_appel_time n'existe pas dans le schéma, on utilise date_appel (bigint) si nécessaire
@@ -385,7 +389,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
 
     stats = await query(
       `SELECT
-         ${excludeKoFromStats
+         ${useEtatFinalKey
            ? 'CAST(id_etat_final AS CHAR) AS etat_key'
            : 'CASE WHEN (ko = 1) THEN ? ELSE CAST(id_etat_final AS CHAR) END AS etat_key'},
          \`${groupByField}\`,
@@ -397,7 +401,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
        AND \`${dateFieldForQuery}\` <= ?${additionalConditions}
        GROUP BY etat_key, \`${groupByField}\`
        ORDER BY etat_key ASC`,
-      excludeKoFromStats ? queryParams : [String(koColumnKey), ...queryParams]
+      useEtatFinalKey ? queryParams : [String(koColumnKey), ...queryParams]
     );
     }
 
