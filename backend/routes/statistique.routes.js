@@ -153,6 +153,8 @@ const KPI_FICHES_QUALIFIEES_HISTO_SQL = `
 `;
 
 const KPI_FICHE_INSERT_DATE_SQL = 'AND f.date_insert_time >= ? AND f.date_insert_time <= ?';
+const KPI_FICHE_RDV_DATE_SQL =
+  'AND f.date_rdv_time IS NOT NULL AND f.date_rdv_time != \'\' AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?';
 function getLastDayOfMonthLocal() {
   const d = new Date();
   const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
@@ -2249,7 +2251,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         period: 'Période sélectionnée',
         date_start: dateRange.start,
         date_end: dateRange.end,
-        date_champ: 'date_insert_time',
+        date_champ: 'date_rdv_time',
         top3_confirmations: [],
         top3_signatures: [],
         confirmation_rate: 0,
@@ -2299,7 +2301,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         WHERE u.fonction = 6
         AND u.etat > 0
         AND f.id_etat_final = 7
-        ${KPI_FICHE_INSERT_DATE_SQL}
+        ${KPI_FICHE_RDV_DATE_SQL}
         AND (f.archive = 0 OR f.archive IS NULL)
         ${KPI_FICHES_QUALIFIEES_HISTO_SQL}
         ${centreCondition}
@@ -2321,7 +2323,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
         INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
         WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-        ${KPI_FICHE_INSERT_DATE_SQL}
+        ${KPI_FICHE_RDV_DATE_SQL}
         GROUP BY s.confirmateur, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_signatures DESC
         LIMIT 3
@@ -2341,7 +2343,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
          FROM signature s
          INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
          WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-         ${KPI_FICHE_INSERT_DATE_SQL}`,
+         ${KPI_FICHE_RDV_DATE_SQL}`,
       [...centreParams, startDate, endDate]
     );
     const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
@@ -2353,7 +2355,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         WHERE cr.statut = 'approved'
         AND (f.archive = 0 OR f.archive IS NULL)
         ${centreCondition}
-        ${KPI_FICHE_INSERT_DATE_SQL}
+        ${KPI_FICHE_RDV_DATE_SQL}
       `;
     const fichesSigneesQuery = `
         SELECT COUNT(DISTINCT f.id) as count
@@ -2362,7 +2364,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         WHERE f.id_etat_final IN (${signedEtatsSql})
         AND (f.archive = 0 OR f.archive IS NULL)
         ${centreCondition}
-        ${KPI_FICHE_INSERT_DATE_SQL}
+        ${KPI_FICHE_RDV_DATE_SQL}
       `;
 
     const rdvsVisitesResult = await queryOne(rdvsVisitesQuery, [...centreParams, startDate, endDate]);
@@ -2374,7 +2376,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
         WHERE f.id_etat_final = 7
-        ${KPI_FICHE_INSERT_DATE_SQL}
+        ${KPI_FICHE_RDV_DATE_SQL}
         AND (f.archive = 0 OR f.archive IS NULL)
         ${KPI_FICHES_QUALIFIEES_HISTO_SQL}
         ${centreCondition}
@@ -2385,8 +2387,10 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
     const fichesTraiteesQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
-        WHERE f.date_insert_time >= ?
-        AND f.date_insert_time <= ?
+        WHERE f.date_rdv_time IS NOT NULL
+        AND f.date_rdv_time != ''
+        AND f.date_rdv_time >= ?
+        AND f.date_rdv_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
         ${KPI_FICHES_QUALIFIEES_HISTO_SQL}
         ${centreCondition}
@@ -2405,7 +2409,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
          FROM signature s
          INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
          WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-         ${KPI_FICHE_INSERT_DATE_SQL}`,
+         ${KPI_FICHE_RDV_DATE_SQL}`,
       [...centreParams, previousStartDate, previousEndDate]
     );
     const previousSignaturesCount = parseFloat(previousSignaturesTotalResult?.total || 0);
@@ -2459,7 +2463,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
           period: 'Période sélectionnée',
           date_start: periodStart,
           date_end: periodEnd,
-          date_champ: 'date_insert_time',
+          date_champ: 'date_rdv_time',
           confirmation_rate: confirmationRate,
           confirmation_rate_change: confirmationRateChange,
           confirmations_count: confirmationsCount,

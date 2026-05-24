@@ -9,7 +9,7 @@ const KpisDateFilter = ({
   onApply,
   onReset,
   extraControls = null,
-  insertionOnly = false,
+  fixedDateChamp = null,
 }) => {
   const filterToDatetimeLocalValue = (dateValue, timeValue, defaultTime = '00:00:00') => {
     const d = String(dateValue || '').trim();
@@ -19,7 +19,13 @@ const KpisDateFilter = ({
     return `${d}T${hhmm}`;
   };
 
-  const showDateInputs = insertionOnly || dateFilters.date_champ;
+  const showDateInputs = fixedDateChamp || dateFilters.date_champ;
+  const fixedDateLabel =
+    fixedDateChamp === 'date_rdv_time'
+      ? 'Date planning'
+      : fixedDateChamp === 'date_insert_time'
+        ? 'Date insertion'
+        : null;
 
   return (
     <div className="header-controls kpi-date-filter-panel">
@@ -27,9 +33,9 @@ const KpisDateFilter = ({
         <div className="kpi-date-filter filters-row kpi-date-filter-row">
           <div className="form-group">
             <label htmlFor="kpi-date-champ">Champ de date</label>
-            {insertionOnly ? (
+            {fixedDateChamp ? (
               <div className="month-select kpi-date-champ-static" id="kpi-date-champ">
-                Date insertion
+                {fixedDateLabel}
               </div>
             ) : (
               <select

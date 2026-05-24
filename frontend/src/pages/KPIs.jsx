@@ -45,7 +45,7 @@ const KPIs = () => {
 
   const buildKpiParams = (filters = appliedFilters) => {
     const params = {
-      date_champ: activeTab === 'confirmation' ? 'date_insert_time' : filters.date_champ,
+      date_champ: activeTab === 'confirmation' ? 'date_rdv_time' : filters.date_champ,
       date_debut: filters.date_debut,
       date_fin: filters.date_fin,
       time_debut: filters.time_debut,
@@ -115,7 +115,7 @@ const KPIs = () => {
     if (activeTab !== 'confirmation' && !dateFilters.date_champ) return;
     const nextFilters =
       activeTab === 'confirmation'
-        ? { ...dateFilters, date_champ: 'date_insert_time' }
+        ? { ...dateFilters, date_champ: 'date_rdv_time' }
         : { ...dateFilters };
     setAppliedFilters(nextFilters);
   };
@@ -290,7 +290,7 @@ const KPIs = () => {
           onApplyNow={applyNowToDatetimeBound}
           onApply={handleApplyDateFilters}
           onReset={handleResetDateFilters}
-          insertionOnly={activeTab === 'confirmation'}
+          fixedDateChamp={activeTab === 'confirmation' ? 'date_rdv_time' : null}
           extraControls={
             activeTab === 'porte-ouverte' ? (
               <div className="form-group porte-ouverte-centre-filter">
@@ -906,7 +906,7 @@ const KPIs = () => {
               Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
             </p>
             <p className="info-text">
-              Période basée sur la date d&apos;insertion. Fiches traitées = fiches appelées et qualifiées (historique groupe 0).
+              Période basée sur la date de planning (RDV). Fiches traitées = fiches appelées et qualifiées (historique groupe 0).
               Taux de confirmation = confirmations (état 7) / fiches traitées. Taux de signature = fiches signées / RDVs visités (comptes rendus approuvés).
             </p>
           </div>
