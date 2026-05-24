@@ -377,6 +377,109 @@
   font-style: italic;
 }
 
+.kpi-details-section {
+  margin-top: 8px;
+}
+
+.kpi-details-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.kpi-details-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+}
+
+.kpi-details-period {
+  font-size: 13px;
+  color: #666;
+  font-weight: 600;
+}
+
+.kpi-counter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.kpi-counter-card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  border-top: 4px solid #9cbfc8;
+}
+
+.kpi-counter-card.counter-produites { border-top-color: #2196F3; }
+.kpi-counter-card.counter-ko { border-top-color: #dc3545; }
+.kpi-counter-card.counter-hc { border-top-color: #ff9800; }
+.kpi-counter-card.counter-alertes { border-top-color: #9c27b0; }
+.kpi-counter-card.counter-remarques { border-top-color: #607d8b; }
+
+.kpi-counter-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.kpi-counter-icon {
+  color: #9cbfc8;
+  font-size: 18px;
+}
+
+.kpi-counter-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #444;
+}
+
+.kpi-counter-single,
+.kpi-counter-dual {
+  text-align: center;
+}
+
+.kpi-counter-dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.kpi-counter-block {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 10px 8px;
+}
+
+.kpi-counter-block-filtered {
+  background: #eef6f8;
+}
+
+.kpi-counter-value {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a2529;
+  line-height: 1.1;
+}
+
+.kpi-counter-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #777;
+}
+
 .period-info {
   background: #f8f9fa;
   padding: 20px;

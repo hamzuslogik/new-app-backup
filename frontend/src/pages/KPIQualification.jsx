@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaTrophy, FaUsers, FaChartLine, FaCalendarDay, FaCalendarWeek, FaCalendarAlt } from 'react-icons/fa';
+import { FaTrophy, FaUsers, FaChartLine, FaCalendarDay, FaCalendarWeek, FaCalendarAlt, FaFileAlt, FaBan, FaUserTimes, FaExclamationTriangle, FaCommentDots } from 'react-icons/fa';
 import './KPIQualification.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -24,6 +24,36 @@ function getTauxConversionDisplay(tauxConversion) {
     return { kind: 'missing' };
   }
   return { kind: 'ok', taux, fichesValidees, fichesProduites };
+}
+
+function KpiCounterCard({ icon: Icon, label, total, filtered, showDual, accentClass }) {
+  const displayFiltered = filtered ?? 0;
+  const displayTotal = total ?? displayFiltered;
+
+  return (
+    <div className={`kpi-counter-card ${accentClass || ''}`}>
+      <div className="kpi-counter-header">
+        <Icon className="kpi-counter-icon" aria-hidden />
+        <h3>{label}</h3>
+      </div>
+      {showDual ? (
+        <div className="kpi-counter-dual">
+          <div className="kpi-counter-block">
+            <span className="kpi-counter-value">{displayTotal.toLocaleString('fr-FR')}</span>
+            <span className="kpi-counter-sub">Totalité</span>
+          </div>
+          <div className="kpi-counter-block kpi-counter-block-filtered">
+            <span className="kpi-counter-value">{displayFiltered.toLocaleString('fr-FR')}</span>
+            <span className="kpi-counter-sub">Filtré</span>
+          </div>
+        </div>
+      ) : (
+        <div className="kpi-counter-single">
+          <span className="kpi-counter-value">{displayFiltered.toLocaleString('fr-FR')}</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 const KPIQualification = () => {
@@ -110,6 +140,15 @@ const KPIQualification = () => {
   ];
 
   const currentData = kpiData?.[selectedPeriod];
+  const details = currentData?.details;
+  const showDualCounters = !!(details?.has_filter && canUseScopeFilters);
+  const detailCounters = [
+    { key: 'fiches_produites', label: 'Fiches produites', icon: FaFileAlt, accentClass: 'counter-produites' },
+    { key: 'nb_ko', label: 'KO', icon: FaBan, accentClass: 'counter-ko' },
+    { key: 'nb_hc', label: 'HC', icon: FaUserTimes, accentClass: 'counter-hc' },
+    { key: 'nb_alertes_recues', label: 'Alertes reçues', icon: FaExclamationTriangle, accentClass: 'counter-alertes' },
+    { key: 'nb_remarques_recues', label: 'Remarques reçues', icon: FaCommentDots, accentClass: 'counter-remarques' },
+  ];
 
   if (isLoading) {
     return (
@@ -400,40 +439,29 @@ const KPIQualification = () => {
             </div>
           </div>
 
-          {/* Informations sur la période */}
-          <div className="period-info">
-            <p>
-              Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
-            </p>
-            <p className="info-text">
-              <strong>Périmètre du taux (carte Taux de conformité) :</strong>{' '}
-              {user?.fonction === 12 || user?.fonction === 2 ? (
-                <>
-                  les nombres « fiches validées » et « fiches produites » sont calculés sur les
-                  <strong> agents qualification sous votre responsabilité</strong> (RP qualification : agents des
-                  superviseurs qui vous sont assignés ; superviseur qualification : vos agents directs).
-                </>
-              ) : (
-                <>
-                  les nombres « fiches validées » et « fiches produites » sont calculés sur les{' '}
-                  <strong>agents qualification (fonction 3)</strong> de tout le CRM ; les filtres RP/RE/agent
-                  restreignent ensuite ce périmètre.
-                </>
-              )}
-            </p>
-            <p className="info-text">
-              <strong>Définitions :</strong> fiches validées = fiches en date de création sur la période, hors
-              poubelle (archive), hors fiches <strong>KO</strong> (<code>ko = 1</code>), hors état <strong>HC</strong> (hors cible, id 55) et hors états groupe 0 (qualification). Fiches produites = fiches insérées sur la période avec un{' '}
-              <strong>id_agent renseigné</strong> (saisies par un agent qualification, fonction 3) — les fiches
-              d’<strong>importation en masse</strong> sans agent ne sont <strong>pas</strong> comptabilisées —, hors
-              archive et hors état doublon (61). Le pourcentage est validées ÷ produites × 100 (ou{' '}
-              <strong>N/C</strong> si aucune fiche produite sur la période).
-            </p>
-            <p className="info-text kpi-hint-compare">
-              <strong>À comparer :</strong> la carte <em>Meilleur agent</em> / <em>Meilleure équipe</em> utilise le
-              même périmètre que le taux sur la période sélectionnée.
-            </p>
-          </div>
+          {details && (
+            <div className="kpi-details-section">
+              <div className="kpi-details-header">
+                <h2>Détail production</h2>
+                <span className="kpi-details-period">
+                  {currentData.date_start} → {currentData.date_end}
+                </span>
+              </div>
+              <div className="kpi-counter-grid">
+                {detailCounters.map(({ key, label, icon, accentClass }) => (
+                  <KpiCounterCard
+                    key={key}
+                    icon={icon}
+                    label={label}
+                    accentClass={accentClass}
+                    showDual={showDualCounters}
+                    total={details.total?.[key]}
+                    filtered={details.filtered?.[key]}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

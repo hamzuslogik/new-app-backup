@@ -1544,6 +1544,115 @@ router.get('/production-qualif', authenticate, async (req, res) => {
 // KPI QUALIFICATION
 // =====================================================
 
+// =====================================================
+// KPI Qualification — compteurs détail (produites, KO, HC, alertes, remarques)
+// =====================================================
+
+async function countKpiQualifDetails(agentIds, startDate, endDate) {
+  const ID_ETAT_HC = 55;
+  const empty = {
+    fiches_produites: 0,
+    nb_ko: 0,
+    nb_hc: 0,
+    nb_alertes_recues: 0,
+    nb_remarques_recues: 0,
+  };
+
+  const hasAgentList = Array.isArray(agentIds);
+  if (hasAgentList && agentIds.length === 0) return empty;
+
+  const agentInClauseF = hasAgentList
+    ? `AND f.id_agent IN (${agentIds.map(() => '?').join(',')})`
+    : '';
+  const agentInParams = hasAgentList ? agentIds : [];
+
+  const fichesProduitesRow = await queryOne(
+    `SELECT COUNT(DISTINCT f.id) AS count
+     FROM fiches f
+     INNER JOIN utilisateurs u ON f.id_agent = u.id
+     WHERE u.fonction = 3
+     ${agentInClauseF}
+     AND f.id_agent IS NOT NULL AND f.id_agent > 0
+     AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+     AND (f.archive = 0 OR f.archive IS NULL)
+     AND (f.id_etat_final != 61 OR f.id_etat_final IS NULL)`,
+    [...agentInParams, startDate, endDate]
+  );
+
+  const nbKoRow = await queryOne(
+    `SELECT COUNT(DISTINCT f.id) AS count
+     FROM fiches f
+     INNER JOIN utilisateurs u ON f.id_agent = u.id
+     WHERE u.fonction = 3
+     ${agentInClauseF}
+     AND f.id_agent IS NOT NULL AND f.id_agent > 0
+     AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+     AND (f.archive = 0 OR f.archive IS NULL)
+     AND (f.id_etat_final != 61 OR f.id_etat_final IS NULL)
+     AND f.ko = 1`,
+    [...agentInParams, startDate, endDate]
+  );
+
+  const nbHcRow = await queryOne(
+    `SELECT COUNT(DISTINCT f.id) AS count
+     FROM fiches f
+     INNER JOIN utilisateurs u ON f.id_agent = u.id
+     WHERE u.fonction = 3
+     ${agentInClauseF}
+     AND f.id_agent IS NOT NULL AND f.id_agent > 0
+     AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+     AND (f.archive = 0 OR f.archive IS NULL)
+     AND (f.id_etat_final != 61 OR f.id_etat_final IS NULL)
+     AND f.id_etat_final = ?`,
+    [...agentInParams, startDate, endDate, ID_ETAT_HC]
+  );
+
+  let nbAlertes = 0;
+  let nbRemarques = 0;
+  try {
+    if (hasAgentList) {
+      const ph = agentIds.map(() => '?').join(',');
+      const alertesRow = await queryOne(
+        `SELECT COUNT(*) AS nb FROM alert_ko WHERE id_agent IN (${ph}) AND date_alerte >= ? AND date_alerte <= ?`,
+        [...agentIds, startDate, endDate]
+      );
+      nbAlertes = alertesRow?.nb ?? 0;
+      const remarquesRow = await queryOne(
+        `SELECT COUNT(*) AS nb FROM remarques WHERE id_destinataire IN (${ph}) AND date_remarque >= ? AND date_remarque <= ?`,
+        [...agentIds, startDate, endDate]
+      );
+      nbRemarques = remarquesRow?.nb ?? 0;
+    } else {
+      const alertesRow = await queryOne(
+        `SELECT COUNT(*) AS nb
+         FROM alert_ko ak
+         INNER JOIN utilisateurs u ON ak.id_agent = u.id
+         WHERE u.fonction = 3 AND ak.date_alerte >= ? AND ak.date_alerte <= ?`,
+        [startDate, endDate]
+      );
+      nbAlertes = alertesRow?.nb ?? 0;
+      const remarquesRow = await queryOne(
+        `SELECT COUNT(*) AS nb
+         FROM remarques r
+         INNER JOIN utilisateurs u ON r.id_destinataire = u.id
+         WHERE u.fonction = 3 AND r.date_remarque >= ? AND r.date_remarque <= ?`,
+        [startDate, endDate]
+      );
+      nbRemarques = remarquesRow?.nb ?? 0;
+    }
+  } catch (err) {
+    if (err.code !== 'ER_NO_SUCH_TABLE') throw err;
+  }
+
+  return {
+    fiches_produites: Number(fichesProduitesRow?.count ?? 0),
+    nb_ko: Number(nbKoRow?.count ?? 0),
+    nb_hc: Number(nbHcRow?.count ?? 0),
+    nb_alertes_recues: Number(nbAlertes),
+    nb_remarques_recues: Number(nbRemarques),
+  };
+}
+
 // Récupérer les KPI qualification (meilleurs agents et équipes)
 router.get('/kpi-qualification', authenticate, async (req, res) => {
   try {
@@ -1627,6 +1736,13 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         }
       }
     }
+
+    let allQualifAgentIds = null;
+    if (isBackofficeOrAdmin) {
+      const allQualifAgents = await query(`SELECT id FROM utilisateurs WHERE fonction = 3`);
+      allQualifAgentIds = (allQualifAgents || []).map((a) => a.id);
+    }
+    const hasActiveUiFilter = isBackofficeOrAdmin && (filterRpId || filterSuperviseurId || filterAgentId);
 
     // Dates pour jour, semaine, mois
     const today = new Date();
@@ -1790,7 +1906,19 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
       const fichesConfirmees = await queryOne(fichesConfirmeesQuery, [startDate, endDate, ...scopedAgentParams]);
       const nbConfirmees = fichesConfirmees?.count || 0;
       const tauxTransformation = nbValidees > 0 ? ((nbConfirmees / nbValidees) * 100).toFixed(1) : 0;
-      
+
+      const filteredAgentIds = hasScopedAgents ? scopedAgentIds : null;
+      let detailsTotal;
+      let detailsFiltered;
+      if (hasActiveUiFilter) {
+        [detailsTotal, detailsFiltered] = await Promise.all([
+          countKpiQualifDetails(allQualifAgentIds, startDate, endDate),
+          countKpiQualifDetails(filteredAgentIds, startDate, endDate),
+        ]);
+      } else {
+        detailsFiltered = await countKpiQualifDetails(filteredAgentIds, startDate, endDate);
+        detailsTotal = detailsFiltered;
+      }
 
       kpiData[period.key] = {
         period: period.label,
@@ -1823,6 +1951,11 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
           fiches_confirmees: nbConfirmees,
           fiches_validees: nbValidees,
           taux: parseFloat(tauxTransformation)
+        },
+        details: {
+          total: detailsTotal,
+          filtered: detailsFiltered,
+          has_filter: !!hasActiveUiFilter,
         }
       };
     }
