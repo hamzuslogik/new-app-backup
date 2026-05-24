@@ -146,10 +146,10 @@ function prefixFicheSqlConditions(additionalConditions) {
 }
 
 /** Stats commercial : compte_rendu_pending uniquement, filtre date = date modification CR. */
-function buildCommercialCrSourceSql(koColumnKey, ficheExtraConditions) {
+function buildCommercialCrSourceSql(ficheExtraConditions) {
   const dateCr = 'COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation)';
-  const etatCr = 'CASE WHEN (f.ko = 1) THEN ? ELSE CAST(cr.id_etat_final AS CHAR) END';
-  const baseFiche = '(f.archive = 0 OR f.archive IS NULL) AND f.active = 1';
+  const etatCr = 'CAST(cr.id_etat_final AS CHAR)';
+  const baseFiche = '(f.archive = 0 OR f.archive IS NULL) AND f.active = 1 AND (f.ko = 0 OR f.ko IS NULL)';
 
   return `
     SELECT ${etatCr} AS etat_key, cr.id_commercial AS entity_id
@@ -163,8 +163,8 @@ function buildCommercialCrSourceSql(koColumnKey, ficheExtraConditions) {
   `;
 }
 
-function buildCommercialCrParams(koColumnKey, dateStart, dateEnd, extraParams) {
-  return [String(koColumnKey), dateStart, dateEnd, ...extraParams];
+function buildCommercialCrParams(dateStart, dateEnd, extraParams) {
+  return [dateStart, dateEnd, ...extraParams];
 }
 
 // Récupérer les statistiques par type (centre, confirmateur, commercial, agent)
@@ -227,6 +227,11 @@ router.get('/all-stat', authenticate, async (req, res) => {
       conditions.push('ko = 1');
     }
 
+    const excludeKoFromStats = ['CENTRE', 'CONFIRMATEUR', 'COMMERCIAL'].includes(name_stat);
+    if (excludeKoFromStats && name_stat !== 'COMMERCIAL') {
+      conditions.push('(ko = 0 OR ko IS NULL)');
+    }
+
     const additionalConditions = conditions.length > 0 ? ' AND ' + conditions.join(' AND ') : '';
 
     // Récupérer les états avec leurs taux et couleurs
@@ -283,6 +288,9 @@ router.get('/all-stat', authenticate, async (req, res) => {
             ordre: 99999
           }
         ];
+    const etatsForDisplay = excludeKoFromStats
+      ? etats.filter((e) => String(e.abbreviation || '').trim().toUpperCase() !== 'KO')
+      : etatsWithKo;
 
     // Valider le champ de date pour éviter les injections SQL
     // Note: date_appel_time n'existe pas dans le schéma, on utilise date_appel (bigint) si nécessaire
@@ -329,7 +337,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
     let stats;
 
     if (isCommercialStat) {
-      const crSql = buildCommercialCrSourceSql(koColumnKey, commercialFicheExtra);
+      const crSql = buildCommercialCrSourceSql(commercialFicheExtra);
       const extrasForUnion = [];
       if (produit && (produit === '1' || produit === '2')) extrasForUnion.push(parseInt(produit, 10));
       if (id_centre) extrasForUnion.push(parseInt(id_centre, 10));
@@ -337,7 +345,6 @@ router.get('/all-stat', authenticate, async (req, res) => {
       if (id_agent) extrasForUnion.push(parseInt(id_agent, 10));
 
       const crParams = buildCommercialCrParams(
-        koColumnKey,
         queryParams[0],
         queryParams[1],
         extrasForUnion
@@ -378,7 +385,9 @@ router.get('/all-stat', authenticate, async (req, res) => {
 
     stats = await query(
       `SELECT
-         CASE WHEN (ko = 1) THEN ? ELSE CAST(id_etat_final AS CHAR) END AS etat_key,
+         ${excludeKoFromStats
+           ? 'CAST(id_etat_final AS CHAR) AS etat_key'
+           : 'CASE WHEN (ko = 1) THEN ? ELSE CAST(id_etat_final AS CHAR) END AS etat_key'},
          \`${groupByField}\`,
          COUNT(*) AS stats
        FROM fiches
@@ -388,7 +397,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
        AND \`${dateFieldForQuery}\` <= ?${additionalConditions}
        GROUP BY etat_key, \`${groupByField}\`
        ORDER BY etat_key ASC`,
-      [String(koColumnKey), ...queryParams]
+      excludeKoFromStats ? queryParams : [String(koColumnKey), ...queryParams]
     );
     }
 
@@ -465,7 +474,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
       name_stat: (name_stat === 'STAT_KO') ? 'AGENT' : name_stat,
       stat_type: statType,
       total: total,
-      etats: etatsWithKo.map(e => ({
+      etats: etatsForDisplay.map(e => ({
         id: e.id,
         abbreviation: e.abbreviation || e.titre,
         color: e.color || (String(e.id) === String(koColumnKey) ? KO_STAT_COLOR : '#cccccc'),
@@ -488,8 +497,8 @@ router.get('/all-stat', authenticate, async (req, res) => {
         }
       };
 
-      // Ajouter les stats par état (incl. colonne KO)
-      etatsWithKo.forEach(etat => {
+      // Ajouter les stats par état
+      etatsForDisplay.forEach(etat => {
         entityData.stats[etat.id] = dataByEntity[entityId][etat.id] || 0;
       });
 
