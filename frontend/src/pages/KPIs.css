@@ -509,6 +509,15 @@
   letter-spacing: 1px;
 }
 
+.kpi-value-large .label.label-detail {
+  margin-top: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #9cbfc8;
+}
+
 .evolution-indicator {
   display: flex;
   align-items: center;

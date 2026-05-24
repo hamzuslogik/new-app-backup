@@ -45,7 +45,7 @@ const KPIs = () => {
 
   const buildKpiParams = (filters = appliedFilters) => {
     const params = {
-      date_champ: filters.date_champ,
+      date_champ: activeTab === 'confirmation' ? 'date_insert_time' : filters.date_champ,
       date_debut: filters.date_debut,
       date_fin: filters.date_fin,
       time_debut: filters.time_debut,
@@ -111,8 +111,13 @@ const KPIs = () => {
   };
 
   const handleApplyDateFilters = () => {
-    if (!dateFilters.date_champ || !dateFilters.date_debut || !dateFilters.date_fin) return;
-    setAppliedFilters({ ...dateFilters });
+    if (!dateFilters.date_debut || !dateFilters.date_fin) return;
+    if (activeTab !== 'confirmation' && !dateFilters.date_champ) return;
+    const nextFilters =
+      activeTab === 'confirmation'
+        ? { ...dateFilters, date_champ: 'date_insert_time' }
+        : { ...dateFilters };
+    setAppliedFilters(nextFilters);
   };
 
   const handleResetDateFilters = () => {
@@ -122,7 +127,9 @@ const KPIs = () => {
   };
 
   const dateFiltersReady =
-    !!appliedFilters.date_champ && !!appliedFilters.date_debut && !!appliedFilters.date_fin;
+    !!appliedFilters.date_debut &&
+    !!appliedFilters.date_fin &&
+    (activeTab === 'confirmation' || !!appliedFilters.date_champ);
 
   const kpiQueryKey = ['kpis-filters', appliedFilters, activeTab];
 
@@ -283,6 +290,7 @@ const KPIs = () => {
           onApplyNow={applyNowToDatetimeBound}
           onApply={handleApplyDateFilters}
           onReset={handleResetDateFilters}
+          insertionOnly={activeTab === 'confirmation'}
           extraControls={
             activeTab === 'porte-ouverte' ? (
               <div className="form-group porte-ouverte-centre-filter">
@@ -680,7 +688,12 @@ const KPIs = () => {
                   <div className="kpi-card-body">
                     <div className="kpi-value-large">
                       <span className="value">{formatPercentage(currentData.confirmation_rate)}</span>
-                      <span className="label">Fiches confirmées / Fiches totales</span>
+                      <span className="label">Confirmations / Fiches traitées</span>
+                      {(currentData.confirmations_count != null || currentData.fiches_traitees_count != null) && (
+                        <span className="label label-detail">
+                          {currentData.confirmations_count ?? 0} / {currentData.fiches_traitees_count ?? 0}
+                        </span>
+                      )}
                     </div>
                     {currentData.confirmation_rate_change !== undefined && (
                       <div className="evolution-indicator">
@@ -708,7 +721,12 @@ const KPIs = () => {
                   <div className="kpi-card-body">
                     <div className="kpi-value-large">
                       <span className="value">{formatPercentage(currentData.signature_rate)}</span>
-                      <span className="label">Fiches signées / Fiches totales</span>
+                      <span className="label">Fiches signées / RDVs visités</span>
+                      {(currentData.fiches_signees_count != null || currentData.rdvs_visites_count != null) && (
+                        <span className="label label-detail">
+                          {currentData.fiches_signees_count ?? 0} / {currentData.rdvs_visites_count ?? 0}
+                        </span>
+                      )}
                     </div>
                     {currentData.signature_rate_change !== undefined && (
                       <div className="evolution-indicator">
@@ -888,7 +906,8 @@ const KPIs = () => {
               Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
             </p>
             <p className="info-text">
-              Les confirmations correspondent aux fiches avec état CONFIRMER (7). Les signatures correspondent aux fiches avec états SIGNER (13, 16, 44, 45).
+              Période basée sur la date d&apos;insertion. Fiches traitées = fiches appelées et qualifiées (historique groupe 0).
+              Taux de confirmation = confirmations (état 7) / fiches traitées. Taux de signature = fiches signées / RDVs visités (comptes rendus approuvés).
             </p>
           </div>
         </div>

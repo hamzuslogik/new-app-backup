@@ -124,6 +124,35 @@ function buildKpiConfirmationEtat7DateClause(dateChampKey) {
     ],
   };
 }
+
+/** Filtre date comptes rendus approuvés (RDV visités) selon champ KPI. */
+function buildKpiCompteRenduDateClause(dateChampKey) {
+  if (dateChampKey === 'date_rdv_time') {
+    return {
+      sql: 'AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?',
+      params: (startDateTime, endDateTime) => [startDateTime, endDateTime],
+    };
+  }
+  return {
+    sql: `AND COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation) >= ?
+      AND COALESCE(cr.date_approbation, cr.date_modif, cr.date_creation) <= ?`,
+    params: (startDateTime, endDateTime) => [startDateTime, endDateTime],
+  };
+}
+
+const KPI_CONFIRMATION_SIGNED_ETATS = [13, 16, 38, 44, 45];
+
+/** Fiche appelée et qualifiée : présence d'une ligne fiches_histo avec état groupe 0. */
+const KPI_FICHES_QUALIFIEES_HISTO_SQL = `
+  AND EXISTS (
+    SELECT 1 FROM fiches_histo fh
+    INNER JOIN etats e ON e.id = fh.id_etat
+    WHERE fh.id_fiche = f.id
+    AND (e.groupe = '0' OR e.groupe = 0)
+  )
+`;
+
+const KPI_FICHE_INSERT_DATE_SQL = 'AND f.date_insert_time >= ? AND f.date_insert_time <= ?';
 function getLastDayOfMonthLocal() {
   const d = new Date();
   const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
@@ -2215,19 +2244,22 @@ router.get('/kpis', authenticate, async (req, res) => {
 router.get('/kpis-confirmation', authenticate, async (req, res) => {
   try {
     const dateRange = resolveKpiDateRangeFromQuery(req);
-    const dateChamp = dateRange.dateChamp;
     const emptyRangePayload = {
       range: {
         period: 'Période sélectionnée',
         date_start: dateRange.start,
         date_end: dateRange.end,
-        date_champ: dateRange.dateChampKey,
+        date_champ: 'date_insert_time',
         top3_confirmations: [],
         top3_signatures: [],
         confirmation_rate: 0,
-        signature_rate: 0,
         confirmation_rate_change: 0,
+        confirmations_count: 0,
+        fiches_traitees_count: 0,
+        signature_rate: 0,
         signature_rate_change: 0,
+        fiches_signees_count: 0,
+        rdvs_visites_count: 0,
       },
     };
 
@@ -2248,19 +2280,11 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
     const periodEnd = dateRange.end;
     const startDate = dateRange.startDateTime;
     const endDate = dateRange.endDateTime;
-    const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
-    const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
     const { previousStart, previousEnd } = getPreviousPeriodComparisonRange(periodStart, periodEnd);
     const previousStartDate = `${previousStart} ${dateRange.timeDebut}`;
     const previousEndDate = `${previousEnd} ${dateRange.timeFin}`;
-    const previousStartTimestamp = Math.floor(new Date(previousStartDate).getTime() / 1000);
-    const previousEndTimestamp = Math.floor(new Date(previousEndDate).getTime() / 1000);
 
-    const etat7Date = buildKpiConfirmationEtat7DateClause(dateRange.dateChampKey);
-    const signatureDateSql =
-      dateRange.dateChampKey === 'date_rdv_time'
-        ? 'AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?'
-        : 'AND s.date_heure >= ? AND s.date_heure <= ?';
+    const signedEtatsSql = KPI_CONFIRMATION_SIGNED_ETATS.join(', ');
 
     const top3ConfirmationsQuery = `
         SELECT 
@@ -2275,17 +2299,15 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         WHERE u.fonction = 6
         AND u.etat > 0
         AND f.id_etat_final = 7
-        ${etat7Date.sql}
+        ${KPI_FICHE_INSERT_DATE_SQL}
         AND (f.archive = 0 OR f.archive IS NULL)
+        ${KPI_FICHES_QUALIFIEES_HISTO_SQL}
         ${centreCondition}
         GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_confirmations DESC
         LIMIT 3
       `;
-    const top3Confirmations = await query(
-      top3ConfirmationsQuery,
-      [...etat7Date.params(startDate, endDate, startTimestamp, endTimestamp), ...centreParams]
-    );
+    const top3Confirmations = await query(top3ConfirmationsQuery, [startDate, endDate, ...centreParams]);
 
     const top3SignaturesQuery = `
         SELECT 
@@ -2299,7 +2321,7 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
         INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
         WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-        ${signatureDateSql}
+        ${KPI_FICHE_INSERT_DATE_SQL}
         GROUP BY s.confirmateur, u.pseudo, u.nom, u.prenom, u.photo
         ORDER BY count_signatures DESC
         LIMIT 3
@@ -2319,39 +2341,62 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
          FROM signature s
          INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
          WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-         ${signatureDateSql}`,
+         ${KPI_FICHE_INSERT_DATE_SQL}`,
       [...centreParams, startDate, endDate]
     );
     const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
+
+    const rdvsVisitesQuery = `
+        SELECT COUNT(DISTINCT cr.id) as count
+        FROM compte_rendu_pending cr
+        INNER JOIN fiches f ON f.id = cr.id_fiche
+        WHERE cr.statut = 'approved'
+        AND (f.archive = 0 OR f.archive IS NULL)
+        ${centreCondition}
+        ${KPI_FICHE_INSERT_DATE_SQL}
+      `;
+    const fichesSigneesQuery = `
+        SELECT COUNT(DISTINCT f.id) as count
+        FROM fiches f
+        INNER JOIN compte_rendu_pending cr ON cr.id_fiche = f.id AND cr.statut = 'approved'
+        WHERE f.id_etat_final IN (${signedEtatsSql})
+        AND (f.archive = 0 OR f.archive IS NULL)
+        ${centreCondition}
+        ${KPI_FICHE_INSERT_DATE_SQL}
+      `;
+
+    const rdvsVisitesResult = await queryOne(rdvsVisitesQuery, [...centreParams, startDate, endDate]);
+    const fichesSigneesResult = await queryOne(fichesSigneesQuery, [...centreParams, startDate, endDate]);
+    const rdvsVisitesCount = rdvsVisitesResult?.count || 0;
+    const fichesSigneesCount = fichesSigneesResult?.count || 0;
 
     const confirmationsQuery = `
         SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
         WHERE f.id_etat_final = 7
-        ${etat7Date.sql}
+        ${KPI_FICHE_INSERT_DATE_SQL}
         AND (f.archive = 0 OR f.archive IS NULL)
+        ${KPI_FICHES_QUALIFIEES_HISTO_SQL}
         ${centreCondition}
       `;
-    const confirmationsResult = await queryOne(
-      confirmationsQuery,
-      [...etat7Date.params(startDate, endDate, startTimestamp, endTimestamp), ...centreParams]
-    );
+    const confirmationsResult = await queryOne(confirmationsQuery, [startDate, endDate, ...centreParams]);
     const confirmationsCount = confirmationsResult?.count || 0;
 
-    const totalQuery = `
-        SELECT COUNT(*) as count
+    const fichesTraiteesQuery = `
+        SELECT COUNT(DISTINCT f.id) as count
         FROM fiches f
-        WHERE ${dateChamp} >= ?
-        AND ${dateChamp} <= ?
+        WHERE f.date_insert_time >= ?
+        AND f.date_insert_time <= ?
         AND (f.archive = 0 OR f.archive IS NULL)
+        ${KPI_FICHES_QUALIFIEES_HISTO_SQL}
         ${centreCondition}
       `;
-    const totalResult = await queryOne(totalQuery, [startDate, endDate, ...centreParams]);
-    const totalCount = totalResult?.count || 0;
+    const fichesTraiteesResult = await queryOne(fichesTraiteesQuery, [startDate, endDate, ...centreParams]);
+    const fichesTraiteesCount = fichesTraiteesResult?.count || 0;
 
     const previousConfirmationsResult = await queryOne(
       confirmationsQuery,
-      [...etat7Date.params(previousStartDate, previousEndDate, previousStartTimestamp, previousEndTimestamp), ...centreParams]
+      [previousStartDate, previousEndDate, ...centreParams]
     );
     const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
 
@@ -2360,19 +2405,34 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
          FROM signature s
          INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
          WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-         ${signatureDateSql}`,
+         ${KPI_FICHE_INSERT_DATE_SQL}`,
       [...centreParams, previousStartDate, previousEndDate]
     );
     const previousSignaturesCount = parseFloat(previousSignaturesTotalResult?.total || 0);
 
-    const previousTotalResult = await queryOne(totalQuery, [previousStartDate, previousEndDate, ...centreParams]);
-    const previousTotalCount = previousTotalResult?.count || 0;
+    const previousRdvsVisitesResult = await queryOne(
+      rdvsVisitesQuery,
+      [...centreParams, previousStartDate, previousEndDate]
+    );
+    const previousFichesSigneesResult = await queryOne(
+      fichesSigneesQuery,
+      [...centreParams, previousStartDate, previousEndDate]
+    );
+    const previousRdvsVisitesCount = previousRdvsVisitesResult?.count || 0;
+    const previousFichesSigneesCount = previousFichesSigneesResult?.count || 0;
 
-    const confirmationRate = totalCount > 0 ? (confirmationsCount / totalCount) * 100 : 0;
-    const signatureRate = confirmationsCount > 0 ? (signaturesCount / confirmationsCount) * 100 : 0;
-    const previousConfirmationRate = previousTotalCount > 0 ? (previousConfirmationsCount / previousTotalCount) * 100 : 0;
+    const previousFichesTraiteesResult = await queryOne(
+      fichesTraiteesQuery,
+      [previousStartDate, previousEndDate, ...centreParams]
+    );
+    const previousFichesTraiteesCount = previousFichesTraiteesResult?.count || 0;
+
+    const confirmationRate = fichesTraiteesCount > 0 ? (confirmationsCount / fichesTraiteesCount) * 100 : 0;
+    const signatureRate = rdvsVisitesCount > 0 ? (fichesSigneesCount / rdvsVisitesCount) * 100 : 0;
+    const previousConfirmationRate =
+      previousFichesTraiteesCount > 0 ? (previousConfirmationsCount / previousFichesTraiteesCount) * 100 : 0;
     const previousSignatureRate =
-      previousConfirmationsCount > 0 ? (previousSignaturesCount / previousConfirmationsCount) * 100 : 0;
+      previousRdvsVisitesCount > 0 ? (previousFichesSigneesCount / previousRdvsVisitesCount) * 100 : 0;
     const confirmationRateChange = confirmationRate - previousConfirmationRate;
     const signatureRateChange = signatureRate - previousSignatureRate;
 
@@ -2383,9 +2443,9 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
           ? 100
           : 0;
     const signatureEvolutionChange =
-      previousSignaturesCount > 0
-        ? ((signaturesCount - previousSignaturesCount) / previousSignaturesCount) * 100
-        : signaturesCount > 0
+      previousFichesSigneesCount > 0
+        ? ((fichesSigneesCount - previousFichesSigneesCount) / previousFichesSigneesCount) * 100
+        : fichesSigneesCount > 0
           ? 100
           : 0;
     const confirmationTrend =
@@ -2399,11 +2459,15 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
           period: 'Période sélectionnée',
           date_start: periodStart,
           date_end: periodEnd,
-          date_champ: dateRange.dateChampKey,
+          date_champ: 'date_insert_time',
           confirmation_rate: confirmationRate,
           confirmation_rate_change: confirmationRateChange,
+          confirmations_count: confirmationsCount,
+          fiches_traitees_count: fichesTraiteesCount,
           signature_rate: signatureRate,
           signature_rate_change: signatureRateChange,
+          fiches_signees_count: fichesSigneesCount,
+          rdvs_visites_count: rdvsVisitesCount,
           top3_confirmations: top3Confirmations.map((conf) => ({
             id: conf.id,
             pseudo: conf.pseudo,
@@ -2427,8 +2491,8 @@ router.get('/kpis-confirmation', authenticate, async (req, res) => {
             trend: confirmationTrend,
           },
           signature_evolution: {
-            current: parseFloat(signaturesCount.toFixed(2)),
-            previous: parseFloat(previousSignaturesCount.toFixed(2)),
+            current: fichesSigneesCount,
+            previous: previousFichesSigneesCount,
             change: signatureEvolutionChange,
             trend: signatureTrend,
           },

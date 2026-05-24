@@ -9,6 +9,7 @@ const KpisDateFilter = ({
   onApply,
   onReset,
   extraControls = null,
+  insertionOnly = false,
 }) => {
   const filterToDatetimeLocalValue = (dateValue, timeValue, defaultTime = '00:00:00') => {
     const d = String(dateValue || '').trim();
@@ -18,24 +19,32 @@ const KpisDateFilter = ({
     return `${d}T${hhmm}`;
   };
 
+  const showDateInputs = insertionOnly || dateFilters.date_champ;
+
   return (
     <div className="header-controls kpi-date-filter-panel">
       <div className="search-form kpi-date-filter-form">
         <div className="kpi-date-filter filters-row kpi-date-filter-row">
           <div className="form-group">
             <label htmlFor="kpi-date-champ">Champ de date</label>
-            <select
-              id="kpi-date-champ"
-              className="month-select"
-              value={dateFilters.date_champ || ''}
-              onChange={(e) => onDateChampChange(e.target.value)}
-            >
-              <option value="">Sélectionnez date</option>
-              <option value="date_insert_time">Date Insertion</option>
-              <option value="date_rdv_time">Date Planning</option>
-            </select>
+            {insertionOnly ? (
+              <div className="month-select kpi-date-champ-static" id="kpi-date-champ">
+                Date insertion
+              </div>
+            ) : (
+              <select
+                id="kpi-date-champ"
+                className="month-select"
+                value={dateFilters.date_champ || ''}
+                onChange={(e) => onDateChampChange(e.target.value)}
+              >
+                <option value="">Sélectionnez date</option>
+                <option value="date_insert_time">Date Insertion</option>
+                <option value="date_rdv_time">Date Planning</option>
+              </select>
+            )}
           </div>
-          {dateFilters.date_champ && (
+          {showDateInputs && (
             <>
               <div className="form-group date-group">
                 <label>Date début</label>
