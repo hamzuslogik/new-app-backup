@@ -145,11 +145,19 @@ function prefixFicheSqlConditions(additionalConditions) {
     .replace(/\bko = 1\b/g, 'f.ko = 1');
 }
 
+function isEtatGroupe0(etat) {
+  const g = etat?.groupe;
+  return g === '0' || g === 0;
+}
+
 /** Stats commercial : compte_rendu_pending uniquement, filtre date = date modification CR. */
-function buildCommercialCrSourceSql(ficheExtraConditions) {
+function buildCommercialCrSourceSql(ficheExtraConditions, excludeEtatIds = []) {
   const dateCr = 'COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation)';
   const etatCr = 'CAST(cr.id_etat_final AS CHAR)';
   const baseFiche = '(f.archive = 0 OR f.archive IS NULL) AND f.active = 1 AND (f.ko = 0 OR f.ko IS NULL)';
+  const excludeEtatsSql = excludeEtatIds.length
+    ? ` AND cr.id_etat_final NOT IN (${excludeEtatIds.map(() => '?').join(',')})`
+    : '';
 
   return `
     SELECT ${etatCr} AS etat_key, cr.id_commercial AS entity_id
@@ -159,7 +167,7 @@ function buildCommercialCrSourceSql(ficheExtraConditions) {
       AND cr.id_commercial IS NOT NULL AND cr.id_commercial > 0
       AND cr.id_etat_final IS NOT NULL
       AND ${dateCr} IS NOT NULL
-      AND ${dateCr} >= ? AND ${dateCr} <= ?${ficheExtraConditions}
+      AND ${dateCr} >= ? AND ${dateCr} <= ?${excludeEtatsSql}${ficheExtraConditions}
   `;
 }
 
@@ -229,6 +237,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
 
     const excludeKoFromStats = ['CENTRE', 'CONFIRMATEUR', 'COMMERCIAL'].includes(name_stat);
     const isStatKo = name_stat === 'STAT_KO';
+    const hideGroupe0Etats = ['CENTRE', 'CONFIRMATEUR', 'COMMERCIAL', 'STAT_KO'].includes(name_stat);
     const useEtatFinalKey = excludeKoFromStats || isStatKo;
     if (excludeKoFromStats && name_stat !== 'COMMERCIAL') {
       conditions.push('(ko = 0 OR ko IS NULL)');
@@ -290,11 +299,26 @@ router.get('/all-stat', authenticate, async (req, res) => {
             ordre: 99999
           }
         ];
-    const etatsForDisplay = excludeKoFromStats
+    const etatGroupe0Ids = hideGroupe0Etats
+      ? etats.filter(isEtatGroupe0).map((e) => e.id)
+      : [];
+    const etatGroupe0IdSet = new Set(etatGroupe0Ids.map(String));
+    const groupe0SqlExtra = etatGroupe0Ids.length
+      ? ` AND id_etat_final NOT IN (${etatGroupe0Ids.map(() => '?').join(',')})`
+      : '';
+    const fichesConditions = additionalConditions + groupe0SqlExtra;
+    const fichesQueryParams = groupe0SqlExtra
+      ? [...queryParams, ...etatGroupe0Ids]
+      : queryParams;
+
+    let baseEtatsForDisplay = excludeKoFromStats
       ? etats.filter((e) => String(e.abbreviation || '').trim().toUpperCase() !== 'KO')
       : isStatKo
         ? etats
         : etatsWithKo;
+    const etatsForDisplay = hideGroupe0Etats
+      ? baseEtatsForDisplay.filter((e) => !isEtatGroupe0(e))
+      : baseEtatsForDisplay;
 
     // Valider le champ de date pour éviter les injections SQL
     // Note: date_appel_time n'existe pas dans le schéma, on utilise date_appel (bigint) si nécessaire
@@ -341,7 +365,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
     let stats;
 
     if (isCommercialStat) {
-      const crSql = buildCommercialCrSourceSql(commercialFicheExtra);
+      const crSql = buildCommercialCrSourceSql(commercialFicheExtra, etatGroupe0Ids);
       const extrasForUnion = [];
       if (produit && (produit === '1' || produit === '2')) extrasForUnion.push(parseInt(produit, 10));
       if (id_centre) extrasForUnion.push(parseInt(id_centre, 10));
@@ -351,7 +375,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
       const crParams = buildCommercialCrParams(
         queryParams[0],
         queryParams[1],
-        extrasForUnion
+        [...etatGroupe0Ids, ...extrasForUnion]
       );
       const entityFilterSql = id_commercial ? ' AND entity_id = ?' : '';
       const entityFilterParams = id_commercial ? [parseInt(id_commercial, 10)] : [];
@@ -382,8 +406,8 @@ router.get('/all-stat', authenticate, async (req, res) => {
        WHERE (archive = 0 OR archive IS NULL) 
        AND active = 1 
        AND \`${dateFieldForQuery}\` >= ? 
-       AND \`${dateFieldForQuery}\` <= ?${additionalConditions}`,
-      queryParams
+       AND \`${dateFieldForQuery}\` <= ?${fichesConditions}`,
+      fichesQueryParams
     );
     total = totalResult?.total || 0;
 
@@ -398,10 +422,10 @@ router.get('/all-stat', authenticate, async (req, res) => {
        WHERE (archive = 0 OR archive IS NULL)
        AND active = 1
        AND \`${dateFieldForQuery}\` >= ?
-       AND \`${dateFieldForQuery}\` <= ?${additionalConditions}
+       AND \`${dateFieldForQuery}\` <= ?${fichesConditions}
        GROUP BY etat_key, \`${groupByField}\`
        ORDER BY etat_key ASC`,
-      useEtatFinalKey ? queryParams : [String(koColumnKey), ...queryParams]
+      useEtatFinalKey ? fichesQueryParams : [String(koColumnKey), ...fichesQueryParams]
     );
     }
 
@@ -424,6 +448,8 @@ router.get('/all-stat', authenticate, async (req, res) => {
 
       const etatId = stat.etat_key;
       const count = stat.stats;
+      if (hideGroupe0Etats && etatGroupe0IdSet.has(String(etatId))) return;
+
       const taux = etatsTaux[etatId] ?? (String(etatId) === String(koColumnKey) ? -1 : 0);
 
       // Stocker le nombre par état
