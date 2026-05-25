@@ -2285,19 +2285,37 @@ function buildEmptyKpisConfirmationRange(dateRange) {
   };
 }
 
+/** Log SQL + paramètres pour debug KPIs confirmation. */
+function logKpiConfirmationSql(scope, name, sql, params = []) {
+  const normalized = String(sql || '').replace(/\s+/g, ' ').trim();
+  console.log(`[STAT][KPI-CONFIRMATION][${scope}] --- ${name} ---`);
+  console.log(`[STAT][KPI-CONFIRMATION][${scope}] SQL: ${normalized}`);
+  console.log(`[STAT][KPI-CONFIRMATION][${scope}] Params:`, params);
+}
+
 /**
  * KPIs confirmation agrégés.
  * @param {number[]|null} centreIds - null = tous les centres actifs ; [] = aucun (vide) ; liste = filtre IN
+ * @param {object} dateRange
+ * @param {string} [logScope] - libellé pour les logs (ex. kpis-confirmation, kpis-confirmation-jws)
  */
-async function computeKpisConfirmationRange(centreIds, dateRange) {
+async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kpis-confirmation') {
   const periodStart = dateRange.start;
   const periodEnd = dateRange.end;
   const emptyRange = buildEmptyKpisConfirmationRange(dateRange);
   if (centreIds != null && centreIds.length === 0) {
+    console.log(`[STAT][KPI-CONFIRMATION][${logScope}] Aucun centre JWS — résultats vides`);
     return emptyRange;
   }
 
   const filterByCentre = centreIds != null && centreIds.length > 0;
+  const scopeLabel = filterByCentre
+    ? `${logScope}|JWS|centres=${centreIds.join(',')}`
+    : `${logScope}|TOUS_CENTRES`;
+  console.log(`[STAT][KPI-CONFIRMATION][${scopeLabel}] Période: ${dateRange.startDateTime} → ${dateRange.endDateTime}`);
+  console.log(
+    `[STAT][KPI-CONFIRMATION][${scopeLabel}] Période précédente: ${dateRange.start} → comparaison via getPreviousPeriodComparisonRange`
+  );
   const centreCondition = filterByCentre
     ? `AND f.id_centre IN (${centreIds.map(() => '?').join(',')})`
     : '';
@@ -2333,7 +2351,6 @@ async function computeKpisConfirmationRange(centreIds, dateRange) {
       ORDER BY count_confirmations DESC
       LIMIT 3
     `;
-  const top3Confirmations = await query(top3ConfirmationsQuery, [startDate, endDate, ...centreParams]);
 
   const top3SignaturesQuery = `
       SELECT 
@@ -2352,21 +2369,6 @@ async function computeKpisConfirmationRange(centreIds, dateRange) {
       ORDER BY count_signatures DESC
       LIMIT 3
     `;
-  const top3SignaturesRows = await query(top3SignaturesQuery, [
-    ...(filterByCentre ? centreParams : []),
-    startDate,
-    endDate,
-  ]);
-
-  const signaturesTotalResult = await queryOne(
-    `SELECT COALESCE(SUM(s.ajoute), 0) as total
-       FROM signature s
-       INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
-       ${signatureCentreWhere}
-       ${KPI_FICHE_RDV_DATE_SQL}`,
-    [...(filterByCentre ? centreParams : []), startDate, endDate]
-  );
-  const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
 
   const compteRenduVisitesQuery = `
       SELECT COUNT(*) as count
@@ -2397,7 +2399,75 @@ async function computeKpisConfirmationRange(centreIds, dateRange) {
       ${centreCondition}
     `;
 
+  const signaturesTotalSql = `SELECT COALESCE(SUM(s.ajoute), 0) as total
+       FROM signature s
+       INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+       ${signatureCentreWhere}
+       ${KPI_FICHE_RDV_DATE_SQL}`;
+
+  const signaturesTotalParams = [...(filterByCentre ? centreParams : []), startDate, endDate];
+  const signaturesTotalPreviousParams = [
+    ...(filterByCentre ? centreParams : []),
+    previousStartDate,
+    previousEndDate,
+  ];
+
+  logKpiConfirmationSql(scopeLabel, 'top3_confirmations', top3ConfirmationsQuery, [
+    startDate,
+    endDate,
+    ...centreParams,
+  ]);
+  logKpiConfirmationSql(scopeLabel, 'top3_signatures', top3SignaturesQuery, [
+    ...(filterByCentre ? centreParams : []),
+    startDate,
+    endDate,
+  ]);
+  logKpiConfirmationSql(scopeLabel, 'signatures_total (période actuelle)', signaturesTotalSql, signaturesTotalParams);
+  logKpiConfirmationSql(scopeLabel, 'compte_rendu_visites (période actuelle)', compteRenduVisitesQuery, [
+    startDate,
+    endDate,
+    ...centreParams,
+  ]);
+  logKpiConfirmationSql(scopeLabel, 'confirmations_count (période actuelle)', confirmationsQuery, [
+    startDate,
+    endDate,
+    ...centreParams,
+  ]);
+  logKpiConfirmationSql(scopeLabel, 'fiches_traitees (période actuelle)', fichesTraiteesQuery, [
+    startDate,
+    endDate,
+    ...centreParams,
+  ]);
+  logKpiConfirmationSql(scopeLabel, 'confirmations_count (période précédente)', confirmationsQuery, [
+    previousStartDate,
+    previousEndDate,
+    ...centreParams,
+  ]);
+  logKpiConfirmationSql(
+    scopeLabel,
+    'signatures_total (période précédente)',
+    signaturesTotalSql,
+    signaturesTotalPreviousParams
+  );
+  logKpiConfirmationSql(scopeLabel, 'compte_rendu_visites (période précédente)', compteRenduVisitesQuery, [
+    previousStartDate,
+    previousEndDate,
+    ...centreParams,
+  ]);
+  logKpiConfirmationSql(scopeLabel, 'fiches_traitees (période précédente)', fichesTraiteesQuery, [
+    previousStartDate,
+    previousEndDate,
+    ...centreParams,
+  ]);
+  console.log(
+    `[STAT][KPI-CONFIRMATION][${scopeLabel}] Filtre date_visite CR:`,
+    crDateVisiteFilter.sql.replace(/\s+/g, ' ').trim()
+  );
+
   const [
+    top3Confirmations,
+    top3SignaturesRows,
+    signaturesTotalResult,
     compteRenduVisitesResult,
     confirmationsResult,
     fichesTraiteesResult,
@@ -2406,21 +2476,23 @@ async function computeKpisConfirmationRange(centreIds, dateRange) {
     previousCompteRenduVisitesResult,
     previousFichesTraiteesResult,
   ] = await Promise.all([
+    query(top3ConfirmationsQuery, [startDate, endDate, ...centreParams]),
+    query(top3SignaturesQuery, [
+      ...(filterByCentre ? centreParams : []),
+      startDate,
+      endDate,
+    ]),
+    queryOne(signaturesTotalSql, signaturesTotalParams),
     queryOne(compteRenduVisitesQuery, [startDate, endDate, ...centreParams]),
     queryOne(confirmationsQuery, [startDate, endDate, ...centreParams]),
     queryOne(fichesTraiteesQuery, [startDate, endDate, ...centreParams]),
     queryOne(confirmationsQuery, [previousStartDate, previousEndDate, ...centreParams]),
-    queryOne(
-      `SELECT COALESCE(SUM(s.ajoute), 0) as total
-         FROM signature s
-         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
-         ${signatureCentreWhere}
-         ${KPI_FICHE_RDV_DATE_SQL}`,
-      [...(filterByCentre ? centreParams : []), previousStartDate, previousEndDate]
-    ),
+    queryOne(signaturesTotalSql, signaturesTotalPreviousParams),
     queryOne(compteRenduVisitesQuery, [previousStartDate, previousEndDate, ...centreParams]),
     queryOne(fichesTraiteesQuery, [previousStartDate, previousEndDate, ...centreParams]),
   ]);
+
+  const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
 
   const compteRenduVisitesCount = compteRenduVisitesResult?.count || 0;
   const confirmationsCount = confirmationsResult?.count || 0;
@@ -2457,6 +2529,19 @@ async function computeKpisConfirmationRange(centreIds, dateRange) {
   const confirmationTrend =
     confirmationEvolutionChange > 0 ? 'up' : confirmationEvolutionChange < 0 ? 'down' : 'stable';
   const signatureTrend = signatureEvolutionChange > 0 ? 'up' : signatureEvolutionChange < 0 ? 'down' : 'stable';
+
+  console.log(`[STAT][KPI-CONFIRMATION][${scopeLabel}] Résultats:`, {
+    confirmations_count: confirmationsCount,
+    fiches_traitees_count: fichesTraiteesCount,
+    confirmation_rate: confirmationRate,
+    signatures_count: signaturesCount,
+    compte_rendu_visites_count: compteRenduVisitesCount,
+    signature_rate: signatureRate,
+    previous_confirmations_count: previousConfirmationsCount,
+    previous_fiches_traitees_count: previousFichesTraiteesCount,
+    previous_signatures_count: previousSignaturesCount,
+    previous_compte_rendu_visites_count: previousCompteRenduVisitesCount,
+  });
 
   return {
     period: 'Période sélectionnée',
@@ -2503,20 +2588,28 @@ async function computeKpisConfirmationRange(centreIds, dateRange) {
   };
 }
 
-async function queryJwsCentreIds() {
-  const rows = await query(`
-    SELECT id FROM centres
+async function queryJwsCentreIds(logScope = 'kpis-confirmation-jws') {
+  const sql = `
+    SELECT id, titre FROM centres
     WHERE (titre = 'CALL_JWS' OR titre LIKE 'CALL_JWS%' OR titre LIKE 'Call_JWS%')
     AND etat > 0
-  `);
-  return (rows || []).map((c) => c.id);
+  `;
+  logKpiConfirmationSql(logScope, 'centres_jws', sql, []);
+  const rows = await query(sql);
+  const ids = (rows || []).map((c) => c.id);
+  console.log(
+    `[STAT][KPI-CONFIRMATION][${logScope}] Centres JWS:`,
+    (rows || []).map((c) => `${c.id}:${c.titre}`).join(' | ') || '(aucun)'
+  );
+  return ids;
 }
 
 // Récupérer les KPIs Confirmation (tous les centres)
 router.get('/kpis-confirmation', authenticate, async (req, res) => {
   try {
     const dateRange = resolveKpiDateRangeFromQuery(req);
-    const range = await computeKpisConfirmationRange(null, dateRange);
+    console.log('[STAT] /kpis-confirmation - query:', req.query);
+    const range = await computeKpisConfirmationRange(null, dateRange, 'kpis-confirmation');
     res.json({ success: true, data: { range } });
   } catch (error) {
     console.error('[STAT] /kpis-confirmation - Erreur:', error.message);
@@ -2788,8 +2881,9 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
 router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
   try {
     const dateRange = resolveKpiDateRangeFromQuery(req);
-    const centreIds = await queryJwsCentreIds();
-    const range = await computeKpisConfirmationRange(centreIds, dateRange);
+    console.log('[STAT] /kpis-confirmation-jws - query:', req.query);
+    const centreIds = await queryJwsCentreIds('kpis-confirmation-jws');
+    const range = await computeKpisConfirmationRange(centreIds, dateRange, 'kpis-confirmation-jws');
     res.json({ success: true, data: { range } });
   } catch (error) {
     console.error('[STAT] /kpis-confirmation-jws - Erreur:', error.message);
