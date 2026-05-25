@@ -2474,7 +2474,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange) {
       nom: conf.nom,
       prenom: conf.prenom,
       photo: conf.photo,
-      count: parseFloat((conf.count_signatures || 0).toFixed(2)),
+      count: parseFloat(Number(conf.count_signatures || 0).toFixed(2)),
     })),
     confirmation_evolution: {
       current: confirmationsCount,
