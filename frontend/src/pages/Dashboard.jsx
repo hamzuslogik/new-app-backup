@@ -239,8 +239,16 @@ const Dashboard = () => {
         fiche_search: true,
         ...urlParams
       };
-      if (newFilters.id_etat_final) {
-        newFilters.id_etat_final = parseInt(newFilters.id_etat_final);
+      if (newFilters.id_etat_final != null && newFilters.id_etat_final !== '') {
+        const etatRaw = String(newFilters.id_etat_final);
+        if (etatRaw === 't_s') {
+          newFilters.id_etat_final = 't_s';
+        } else {
+          const etatNum = parseInt(etatRaw, 10);
+          if (!Number.isNaN(etatNum)) {
+            newFilters.id_etat_final = etatNum;
+          }
+        }
       }
       if (newFilters.include_confirmateur_2 !== undefined && newFilters.include_confirmateur_2 !== null) {
         const v = newFilters.include_confirmateur_2;
@@ -647,7 +655,10 @@ const Dashboard = () => {
   const sousEtatsForSelectedEtat = (sousEtatsData || []).filter(
     s => Number(s.id_etat) === Number(filters.id_etat_final)
   );
-  const showSousEtatFilter = filters.id_etat_final && sousEtatsForSelectedEtat.length > 0;
+  const showSousEtatFilter =
+    filters.id_etat_final &&
+    String(filters.id_etat_final) !== 't_s' &&
+    sousEtatsForSelectedEtat.length > 0;
   const showSourceFilter =
     Number(filters.id_etat_final) === 8 || Number(filters.id_etat_final) === 9;
 

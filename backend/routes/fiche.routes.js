@@ -1083,11 +1083,20 @@ router.get('/', authenticate, async (req, res) => {
     }
     
     if (idEtatFinalForWhere !== undefined && idEtatFinalForWhere !== null && idEtatFinalForWhere !== '') {
-      if (idEtatFinalForWhere === 't_s') {
-        whereConditions.push('(fiche.id_etat_final = 13 OR fiche.id_etat_final = 45 OR fiche.id_etat_final = 44 OR fiche.id_etat_final = 16 OR fiche.id_etat_final = 38)');
+      const etatFinalRaw = String(idEtatFinalForWhere).trim();
+      if (etatFinalRaw === 't_s') {
+        // TOUT SIGNER : tous les états de la phase 3 (groupe Signer)
+        whereConditions.push(`EXISTS (
+          SELECT 1 FROM etats e_ts
+          WHERE e_ts.id = fiche.id_etat_final
+          AND (CAST(e_ts.groupe AS CHAR) = '3' OR e_ts.groupe = 3)
+        )`);
       } else {
         const etatFinal = Array.isArray(idEtatFinalForWhere) ? idEtatFinalForWhere : [idEtatFinalForWhere];
         const etatIds = etatFinal.map(e => parseInt(e, 10)).filter(n => !Number.isNaN(n));
+        if (etatIds.length === 0 && etatFinalRaw !== '') {
+          console.warn('[FICHES] id_etat_final ignoré (valeur non reconnue):', idEtatFinalForWhere);
+        }
         if (etatIds.length === 1) {
           if (qualificationCondition) {
             whereConditions.push(`(fiche.id_etat_final = ? OR ${qualificationCondition})`);
