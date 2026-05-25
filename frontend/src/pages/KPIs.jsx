@@ -287,12 +287,17 @@ const KPIs = () => {
                 <div className="kpi-card-body">
                   <div className="kpi-value-large">
                     <span className="value">{formatPercentage(data.signature_rate)}</span>
-                    <span className="label">Signatures (date planning) / Comptes rendus (date visite)</span>
-                    {((data.signatures_count ?? data.fiches_signees_count) != null ||
+                    <span className="label">Fiches signées distinctes (date planning) / Comptes rendus (date visite)</span>
+                    {((data.signatures_fiches_distinct_count ??
+                      data.signatures_count ??
+                      data.fiches_signees_count) != null ||
                       (data.compte_rendu_visites_count ?? data.rdvs_visites_count) != null) && (
                       <span className="label label-detail">
-                        {data.signatures_count ?? data.fiches_signees_count ?? 0} /{' '}
-                        {data.compte_rendu_visites_count ?? data.rdvs_visites_count ?? 0}
+                        {data.signatures_fiches_distinct_count ??
+                          data.signatures_count ??
+                          data.fiches_signees_count ??
+                          0}{' '}
+                        / {data.compte_rendu_visites_count ?? data.rdvs_visites_count ?? 0}
                       </span>
                     )}
                   </div>
@@ -346,7 +351,7 @@ const KPIs = () => {
               <div className="kpi-card evolution">
                 <div className="kpi-card-header">
                   <FaChartLine className="kpi-icon" />
-                  <h3>Évolution Signatures</h3>
+                  <h3>Évolution fiches signées</h3>
                 </div>
                 <div className="kpi-card-body">
                   <div className="evolution-comparison">
@@ -416,7 +421,7 @@ const KPIs = () => {
         </div>
 
         <div className="kpi-section">
-          <h2 className="section-title">Top 3 Confirmateurs - Signatures</h2>
+          <h2 className="section-title">Top 3 Confirmateurs - Fiches signées distinctes</h2>
           <div className="kpi-cards top-confirmateurs">
             {data.top3_signatures && data.top3_signatures.length > 0 ? (
               data.top3_signatures.map((confirmateur, index) => (
@@ -445,7 +450,7 @@ const KPIs = () => {
                     </div>
                     <div className="kpi-value">
                       <span className="value">{confirmateur.count}</span>
-                      <span className="label">signatures</span>
+                      <span className="label">fiches signées distinctes</span>
                     </div>
                   </div>
                 </div>
@@ -462,7 +467,7 @@ const KPIs = () => {
           </p>
           <p className="info-text">
             Taux de confirmation = nombre de confirmations (table confirmations, date de création) / nombre de qualifications
-            effectuées par les confirmateurs (fiches_histo, date de création). Taux de signature = signatures effectuées sur la
+            effectuées par les confirmateurs (fiches_histo, date de création). Taux de signature = fiches signées distinctes sur la
             période (date planning / date_rdv_time) / nombre total de comptes rendus dont la date de visite est dans la même période.
             {jwsScope
               ? ' Données limitées aux centres Call_JWS / CALL_JWS.'

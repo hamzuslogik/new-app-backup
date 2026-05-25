@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
-import { FaSignature, FaChartLine, FaUsers, FaSearch } from 'react-icons/fa';
+import { FaSignature, FaChartLine, FaUsers, FaFileAlt, FaSearch } from 'react-icons/fa';
 import api from '../config/api';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
@@ -342,13 +342,23 @@ const Signatures = () => {
           <div className="kpi-grid kpi-grid-compact">
             <div className="kpi-card">
               <div className="kpi-header">
+                <FaFileAlt className="kpi-icon" />
+                <h3>Nombre de fiches signées</h3>
+              </div>
+              <div className="kpi-value">{kpiData.fichesSignees?.current ?? 0}</div>
+              <div className="kpi-info">
+                Fiches distinctes sur la période (date de planning)
+              </div>
+            </div>
+
+            <div className="kpi-card">
+              <div className="kpi-header">
                 <FaChartLine className="kpi-icon" />
                 <h3>Fiches signées moyenne par jour</h3>
               </div>
               <div className="kpi-value">{formatNumber(kpiData.moyenneParJour)}</div>
               <div className="kpi-info">
-                {kpiData.fichesSignees?.current ?? 0} fiche{(kpiData.fichesSignees?.current ?? 0) > 1 ? 's' : ''} sur{' '}
-                {kpiData.periode?.jours || 0} jour{(kpiData.periode?.jours || 0) > 1 ? 's' : ''}
+                Sur {kpiData.periode?.jours || 0} jour{(kpiData.periode?.jours || 0) > 1 ? 's' : ''}
               </div>
             </div>
 

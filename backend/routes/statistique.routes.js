@@ -2359,14 +2359,15 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
         u.nom,
         u.prenom,
         u.photo,
-        SUM(s.ajoute) as count_signatures
+        COUNT(DISTINCT s.id_fiche) as count_fiches_signees
       FROM signature s
       INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
       INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
       ${signatureCentreWhere}
       ${KPI_FICHE_RDV_DATE_SQL}
+      AND s.id_fiche IS NOT NULL
       GROUP BY s.confirmateur, u.pseudo, u.nom, u.prenom, u.photo
-      ORDER BY count_signatures DESC
+      ORDER BY count_fiches_signees DESC
       LIMIT 3
     `;
 
@@ -2399,14 +2400,15 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
       ${centreCondition}
     `;
 
-  const signaturesTotalSql = `SELECT COALESCE(SUM(s.ajoute), 0) as total
+  const signaturesFichesDistinctSql = `SELECT COUNT(DISTINCT s.id_fiche) as total
        FROM signature s
        INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
        ${signatureCentreWhere}
-       ${KPI_FICHE_RDV_DATE_SQL}`;
+       ${KPI_FICHE_RDV_DATE_SQL}
+       AND s.id_fiche IS NOT NULL`;
 
-  const signaturesTotalParams = [...(filterByCentre ? centreParams : []), startDate, endDate];
-  const signaturesTotalPreviousParams = [
+  const signaturesFichesDistinctParams = [...(filterByCentre ? centreParams : []), startDate, endDate];
+  const signaturesFichesDistinctPreviousParams = [
     ...(filterByCentre ? centreParams : []),
     previousStartDate,
     previousEndDate,
@@ -2422,7 +2424,12 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
     startDate,
     endDate,
   ]);
-  logKpiConfirmationSql(scopeLabel, 'signatures_total (période actuelle)', signaturesTotalSql, signaturesTotalParams);
+  logKpiConfirmationSql(
+    scopeLabel,
+    'signatures_fiches_distinct (période actuelle)',
+    signaturesFichesDistinctSql,
+    signaturesFichesDistinctParams
+  );
   logKpiConfirmationSql(scopeLabel, 'compte_rendu_visites (période actuelle)', compteRenduVisitesQuery, [
     startDate,
     endDate,
@@ -2445,9 +2452,9 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
   ]);
   logKpiConfirmationSql(
     scopeLabel,
-    'signatures_total (période précédente)',
-    signaturesTotalSql,
-    signaturesTotalPreviousParams
+    'signatures_fiches_distinct (période précédente)',
+    signaturesFichesDistinctSql,
+    signaturesFichesDistinctPreviousParams
   );
   logKpiConfirmationSql(scopeLabel, 'compte_rendu_visites (période précédente)', compteRenduVisitesQuery, [
     previousStartDate,
@@ -2467,12 +2474,12 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
   const [
     top3Confirmations,
     top3SignaturesRows,
-    signaturesTotalResult,
+    signaturesFichesDistinctResult,
     compteRenduVisitesResult,
     confirmationsResult,
     fichesTraiteesResult,
     previousConfirmationsResult,
-    previousSignaturesTotalResult,
+    previousSignaturesFichesDistinctResult,
     previousCompteRenduVisitesResult,
     previousFichesTraiteesResult,
   ] = await Promise.all([
@@ -2482,34 +2489,37 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
       startDate,
       endDate,
     ]),
-    queryOne(signaturesTotalSql, signaturesTotalParams),
+    queryOne(signaturesFichesDistinctSql, signaturesFichesDistinctParams),
     queryOne(compteRenduVisitesQuery, [startDate, endDate, ...centreParams]),
     queryOne(confirmationsQuery, [startDate, endDate, ...centreParams]),
     queryOne(fichesTraiteesQuery, [startDate, endDate, ...centreParams]),
     queryOne(confirmationsQuery, [previousStartDate, previousEndDate, ...centreParams]),
-    queryOne(signaturesTotalSql, signaturesTotalPreviousParams),
+    queryOne(signaturesFichesDistinctSql, signaturesFichesDistinctPreviousParams),
     queryOne(compteRenduVisitesQuery, [previousStartDate, previousEndDate, ...centreParams]),
     queryOne(fichesTraiteesQuery, [previousStartDate, previousEndDate, ...centreParams]),
   ]);
 
-  const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
+  const signaturesFichesDistinctCount = parseInt(signaturesFichesDistinctResult?.total || 0, 10);
 
   const compteRenduVisitesCount = compteRenduVisitesResult?.count || 0;
   const confirmationsCount = confirmationsResult?.count || 0;
   const fichesTraiteesCount = fichesTraiteesResult?.count || 0;
   const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
-  const previousSignaturesCount = parseFloat(previousSignaturesTotalResult?.total || 0);
+  const previousSignaturesFichesDistinctCount = parseInt(
+    previousSignaturesFichesDistinctResult?.total || 0,
+    10
+  );
   const previousCompteRenduVisitesCount = previousCompteRenduVisitesResult?.count || 0;
   const previousFichesTraiteesCount = previousFichesTraiteesResult?.count || 0;
 
   const confirmationRate = fichesTraiteesCount > 0 ? (confirmationsCount / fichesTraiteesCount) * 100 : 0;
   const signatureRate =
-    compteRenduVisitesCount > 0 ? (signaturesCount / compteRenduVisitesCount) * 100 : 0;
+    compteRenduVisitesCount > 0 ? (signaturesFichesDistinctCount / compteRenduVisitesCount) * 100 : 0;
   const previousConfirmationRate =
     previousFichesTraiteesCount > 0 ? (previousConfirmationsCount / previousFichesTraiteesCount) * 100 : 0;
   const previousSignatureRate =
     previousCompteRenduVisitesCount > 0
-      ? (previousSignaturesCount / previousCompteRenduVisitesCount) * 100
+      ? (previousSignaturesFichesDistinctCount / previousCompteRenduVisitesCount) * 100
       : 0;
   const confirmationRateChange = confirmationRate - previousConfirmationRate;
   const signatureRateChange = signatureRate - previousSignatureRate;
@@ -2521,9 +2531,11 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
         ? 100
         : 0;
   const signatureEvolutionChange =
-    previousSignaturesCount > 0
-      ? ((signaturesCount - previousSignaturesCount) / previousSignaturesCount) * 100
-      : signaturesCount > 0
+    previousSignaturesFichesDistinctCount > 0
+      ? ((signaturesFichesDistinctCount - previousSignaturesFichesDistinctCount) /
+          previousSignaturesFichesDistinctCount) *
+        100
+      : signaturesFichesDistinctCount > 0
         ? 100
         : 0;
   const confirmationTrend =
@@ -2534,12 +2546,12 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
     confirmations_count: confirmationsCount,
     fiches_traitees_count: fichesTraiteesCount,
     confirmation_rate: confirmationRate,
-    signatures_count: signaturesCount,
+    signatures_fiches_distinct_count: signaturesFichesDistinctCount,
     compte_rendu_visites_count: compteRenduVisitesCount,
     signature_rate: signatureRate,
     previous_confirmations_count: previousConfirmationsCount,
     previous_fiches_traitees_count: previousFichesTraiteesCount,
-    previous_signatures_count: previousSignaturesCount,
+    previous_signatures_fiches_distinct_count: previousSignaturesFichesDistinctCount,
     previous_compte_rendu_visites_count: previousCompteRenduVisitesCount,
   });
 
@@ -2553,9 +2565,10 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
     fiches_traitees_count: fichesTraiteesCount,
     signature_rate: signatureRate,
     signature_rate_change: signatureRateChange,
-    signatures_count: signaturesCount,
+    signatures_count: signaturesFichesDistinctCount,
+    signatures_fiches_distinct_count: signaturesFichesDistinctCount,
     compte_rendu_visites_count: compteRenduVisitesCount,
-    fiches_signees_count: signaturesCount,
+    fiches_signees_count: signaturesFichesDistinctCount,
     rdvs_visites_count: compteRenduVisitesCount,
     top3_confirmations: (top3Confirmations || []).map((conf) => ({
       id: conf.id,
@@ -2571,7 +2584,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
       nom: conf.nom,
       prenom: conf.prenom,
       photo: conf.photo,
-      count: parseFloat(Number(conf.count_signatures || 0).toFixed(2)),
+      count: parseInt(conf.count_fiches_signees || 0, 10),
     })),
     confirmation_evolution: {
       current: confirmationsCount,
@@ -2580,8 +2593,8 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
       trend: confirmationTrend,
     },
     signature_evolution: {
-      current: signaturesCount,
-      previous: previousSignaturesCount,
+      current: signaturesFichesDistinctCount,
+      previous: previousSignaturesFichesDistinctCount,
       change: signatureEvolutionChange,
       trend: signatureTrend,
     },
