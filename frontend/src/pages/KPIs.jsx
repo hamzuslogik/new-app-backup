@@ -255,7 +255,7 @@ const KPIs = () => {
                 <div className="kpi-card-body">
                   <div className="kpi-value-large">
                     <span className="value">{formatPercentage(data.confirmation_rate)}</span>
-                    <span className="label">Confirmations (table confirmations) / Qualifications confirmateur (fiches_histo)</span>
+                    <span className="label">Confirmations (date planning) / Fiches distinctes qualifiées confirmateur (fiches_histo, date création)</span>
                     {(data.confirmations_count != null || data.fiches_traitees_count != null) && (
                       <span className="label label-detail">
                         {data.confirmations_count ?? 0} / {data.fiches_traitees_count ?? 0}
@@ -466,8 +466,8 @@ const KPIs = () => {
             Période: <strong>{data.date_start}</strong> au <strong>{data.date_end}</strong>
           </p>
           <p className="info-text">
-            Taux de confirmation = nombre de confirmations (table confirmations, date de création) / nombre de qualifications
-            effectuées par les confirmateurs (fiches_histo, date de création). Taux de signature = fiches signées distinctes encore en
+            Taux de confirmation = nombre de confirmations sur la période (date planning / date_rdv_time de la fiche) / nombre de
+            fiches distinctes qualifiées par un confirmateur (fiches_histo, date de création). Taux de signature = fiches signées distinctes encore en
             état signé sur la période (date planning / date_rdv_time), aligné sur la page Signatures / nombre total de comptes rendus
             dont la date de visite est dans la même période.
             {jwsScope

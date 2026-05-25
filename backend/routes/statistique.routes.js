@@ -157,7 +157,6 @@ const KPI_FICHES_QUALIFIEES_HISTO_SQL = `
 const KPI_FICHE_INSERT_DATE_SQL = 'AND f.date_insert_time >= ? AND f.date_insert_time <= ?';
 const KPI_FICHE_RDV_DATE_SQL =
   'AND f.date_rdv_time IS NOT NULL AND f.date_rdv_time != \'\' AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?';
-const KPI_CONFIRMATIONS_PERIOD_SQL = 'AND c.date_creation >= ? AND c.date_creation <= ?';
 const KPI_FICHES_HISTO_PERIOD_SQL = 'AND fh.date_creation >= ? AND fh.date_creation <= ?';
 
 /** Filtre date_visite sur compte_rendu_pending (repli date_rdv_time fiche si colonne absente). */
@@ -2347,7 +2346,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
       INNER JOIN utilisateurs u ON c.id_confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
       WHERE c.id_confirmateur IS NOT NULL
       AND c.id_confirmateur > 0
-      ${KPI_CONFIRMATIONS_PERIOD_SQL}
+      ${KPI_FICHE_RDV_DATE_SQL}
       ${centreCondition}
       GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
       ORDER BY count_confirmations DESC
@@ -2388,12 +2387,12 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
       FROM confirmations c
       INNER JOIN fiches f ON c.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
       WHERE 1=1
-      ${KPI_CONFIRMATIONS_PERIOD_SQL}
+      ${KPI_FICHE_RDV_DATE_SQL}
       ${centreCondition}
     `;
 
   const fichesTraiteesQuery = `
-      SELECT COUNT(*) as count
+      SELECT COUNT(DISTINCT fh.id_fiche) as count
       FROM fiches_histo fh
       INNER JOIN fiches f ON fh.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
       INNER JOIN utilisateurs u ON fh.id_confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
