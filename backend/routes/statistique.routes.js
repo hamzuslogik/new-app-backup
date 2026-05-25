@@ -141,6 +141,8 @@ function buildKpiCompteRenduDateClause(dateChampKey) {
 }
 
 const KPI_CONFIRMATION_SIGNED_ETATS = [13, 16, 38, 44, 45];
+/** Aligné page Signatures : fiches encore en état signé (pas seulement une ligne signature historique). */
+const KPI_CONFIRMATION_SIGNED_ETATS_SQL = `AND f.id_etat_final IN (${KPI_CONFIRMATION_SIGNED_ETATS.join(', ')})`;
 
 /** Fiche appelée et qualifiée : présence d'une ligne fiches_histo avec état groupe 0. */
 const KPI_FICHES_QUALIFIEES_HISTO_SQL = `
@@ -2365,6 +2367,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
       INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
       ${signatureCentreWhere}
       ${KPI_FICHE_RDV_DATE_SQL}
+      ${KPI_CONFIRMATION_SIGNED_ETATS_SQL}
       AND s.id_fiche IS NOT NULL
       GROUP BY s.confirmateur, u.pseudo, u.nom, u.prenom, u.photo
       ORDER BY count_fiches_signees DESC
@@ -2405,6 +2408,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
        INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
        ${signatureCentreWhere}
        ${KPI_FICHE_RDV_DATE_SQL}
+       ${KPI_CONFIRMATION_SIGNED_ETATS_SQL}
        AND s.id_fiche IS NOT NULL`;
 
   const signaturesFichesDistinctParams = [...(filterByCentre ? centreParams : []), startDate, endDate];

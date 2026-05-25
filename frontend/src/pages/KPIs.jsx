@@ -467,8 +467,9 @@ const KPIs = () => {
           </p>
           <p className="info-text">
             Taux de confirmation = nombre de confirmations (table confirmations, date de création) / nombre de qualifications
-            effectuées par les confirmateurs (fiches_histo, date de création). Taux de signature = fiches signées distinctes sur la
-            période (date planning / date_rdv_time) / nombre total de comptes rendus dont la date de visite est dans la même période.
+            effectuées par les confirmateurs (fiches_histo, date de création). Taux de signature = fiches signées distinctes encore en
+            état signé sur la période (date planning / date_rdv_time), aligné sur la page Signatures / nombre total de comptes rendus
+            dont la date de visite est dans la même période.
             {jwsScope
               ? ' Données limitées aux centres Call_JWS / CALL_JWS.'
               : ' Données agrégées sur tous les centres.'}
