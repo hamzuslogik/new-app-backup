@@ -10,6 +10,7 @@ const KpisDateFilter = ({
   onReset,
   extraControls = null,
   fixedDateChamp = null,
+  hideDateChamp = false,
 }) => {
   const filterToDatetimeLocalValue = (dateValue, timeValue, defaultTime = '00:00:00') => {
     const d = String(dateValue || '').trim();
@@ -19,7 +20,7 @@ const KpisDateFilter = ({
     return `${d}T${hhmm}`;
   };
 
-  const showDateInputs = fixedDateChamp || dateFilters.date_champ;
+  const showDateInputs = hideDateChamp || fixedDateChamp || dateFilters.date_champ;
   const fixedDateLabel =
     fixedDateChamp === 'date_rdv_time'
       ? 'Date planning'
@@ -31,25 +32,27 @@ const KpisDateFilter = ({
     <div className="header-controls kpi-date-filter-panel">
       <div className="search-form kpi-date-filter-form">
         <div className="kpi-date-filter filters-row kpi-date-filter-row">
-          <div className="form-group">
-            <label htmlFor="kpi-date-champ">Champ de date</label>
-            {fixedDateChamp ? (
-              <div className="month-select kpi-date-champ-static" id="kpi-date-champ">
-                {fixedDateLabel}
-              </div>
-            ) : (
-              <select
-                id="kpi-date-champ"
-                className="month-select"
-                value={dateFilters.date_champ || ''}
-                onChange={(e) => onDateChampChange(e.target.value)}
-              >
-                <option value="">Sélectionnez date</option>
-                <option value="date_insert_time">Date Insertion</option>
-                <option value="date_rdv_time">Date Planning</option>
-              </select>
-            )}
-          </div>
+          {!hideDateChamp && (
+            <div className="form-group">
+              <label htmlFor="kpi-date-champ">Champ de date</label>
+              {fixedDateChamp ? (
+                <div className="month-select kpi-date-champ-static" id="kpi-date-champ">
+                  {fixedDateLabel}
+                </div>
+              ) : (
+                <select
+                  id="kpi-date-champ"
+                  className="month-select"
+                  value={dateFilters.date_champ || ''}
+                  onChange={(e) => onDateChampChange(e.target.value)}
+                >
+                  <option value="">Sélectionnez date</option>
+                  <option value="date_insert_time">Date Insertion</option>
+                  <option value="date_rdv_time">Date Planning</option>
+                </select>
+              )}
+            </div>
+          )}
           {showDateInputs && (
             <>
               <div className="form-group date-group">
