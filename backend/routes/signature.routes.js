@@ -375,11 +375,8 @@ router.get('/stats', authenticate, async (req, res) => {
     const whereClause = 'WHERE ' + whereConditions.join(' AND ');
     const joinFiches = 'INNER JOIN fiches f ON s.id_fiche = f.id';
 
-    // Timestamps et dates pour la période (fiches confirmées = état 7)
     const startDateStr = date_debut ? `${date_debut} 00:00:00` : null;
     const endDateStr = date_fin ? `${date_fin} 23:59:59` : null;
-    const startTs = startDateStr ? Math.floor(new Date(startDateStr).getTime() / 1000) : 0;
-    const endTs = endDateStr ? Math.floor(new Date(endDateStr).getTime() / 1000) : 0;
 
     // Total signatures (somme des scores) - par date de planning
     const totalResult = await queryOne(
@@ -418,36 +415,26 @@ router.get('/stats', authenticate, async (req, res) => {
       params
     );
 
-    // Nombre de fiches confirmées par confirmateur : depuis la table confirmations, filtré par date RDV (pas date confirmation)
-    let fichesConfirmeesByConfirmateur = {};
+    // Fiches affiliées par confirmateur : fiches affectées (id_confirmateur), période = date de planning
+    let fichesAffilieesByConfirmateur = {};
     if (date_debut && date_fin) {
-      const confParams = [startDateStr, endDateStr];
-      const colRows = await query(
-        `SELECT COLUMN_NAME
-         FROM information_schema.columns
-         WHERE table_schema = DATABASE()
-           AND table_name = 'confirmations'
-           AND COLUMN_NAME IN ('date_rdv_time', 'date_planning')`
+      const affRows = await query(
+        `SELECT f.id_confirmateur as confirmateur_id, COUNT(DISTINCT f.id) as nb_fiches_affiliees
+         FROM fiches f
+         WHERE f.id_confirmateur IS NOT NULL
+           AND f.id_confirmateur > 0
+           AND f.date_rdv_time IS NOT NULL
+           AND f.date_rdv_time != ''
+           AND f.date_rdv_time >= ?
+           AND f.date_rdv_time <= ?
+           AND (f.archive = 0 OR f.archive IS NULL)
+           AND (f.active = 1 OR f.active IS NULL)
+         GROUP BY f.id_confirmateur`,
+        [startDateStr, endDateStr]
       ).catch(() => []);
-
-      const availableCols = new Set((colRows || []).map(r => r.COLUMN_NAME));
-      let dateCol = null;
-      if (availableCols.has('date_rdv_time')) dateCol = 'date_rdv_time';
-      else if (availableCols.has('date_planning')) dateCol = 'date_planning';
-
-      if (dateCol) {
-        const fcRows = await query(
-          `SELECT id_confirmateur as confirmateur_id, COUNT(*) as nb_fiches_confirmees
-           FROM confirmations
-           WHERE id_confirmateur IS NOT NULL AND id_confirmateur > 0
-             AND ${dateCol} >= ? AND ${dateCol} <= ?
-           GROUP BY id_confirmateur`,
-          confParams
-        ).catch(() => []);
-        (fcRows || []).forEach(row => {
-          fichesConfirmeesByConfirmateur[row.confirmateur_id] = parseInt(row.nb_fiches_confirmees || 0);
-        });
-      }
+      (affRows || []).forEach((row) => {
+        fichesAffilieesByConfirmateur[row.confirmateur_id] = parseInt(row.nb_fiches_affiliees || 0, 10);
+      });
     }
 
     // Statistiques par jour (par date de planning, derniers 30 jours)
@@ -487,16 +474,15 @@ router.get('/stats', authenticate, async (req, res) => {
     );
 
     const enrichConfirmateur = (c) => {
-      const nb_fiches_confirmees = fichesConfirmeesByConfirmateur[c.confirmateur] ?? 0;
+      const nb_fiches_affiliees = fichesAffilieesByConfirmateur[c.confirmateur] ?? 0;
       const total_score = parseFloat(c.total_score || 0);
-      const taux_signature = nb_fiches_confirmees > 0
-        ? (total_score / nb_fiches_confirmees) * 100
+      const taux_signature = nb_fiches_affiliees > 0
+        ? (total_score / nb_fiches_affiliees) * 100
         : null;
       return {
         ...c,
         total_score,
-        nb_fiches: nb_fiches_confirmees,
-        nb_fiches_confirmees,
+        nb_fiches_affiliees,
         nb_signatures: parseInt(c.nb_signatures || 0),
         taux_signature: taux_signature !== null ? parseFloat(taux_signature.toFixed(1)) : null
       };
@@ -555,60 +541,12 @@ router.get('/kpi', authenticate, async (req, res) => {
     const startDate = new Date(dateDebut);
     const endDate = new Date(dateFin);
     const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-    
-    // Calculer la même période du mois précédent
-    const previousStart = new Date(startDate);
-    previousStart.setMonth(previousStart.getMonth() - 1);
-    
-    const previousEnd = new Date(previousStart);
-    previousEnd.setDate(previousEnd.getDate() + daysDiff - 1);
-
-    const previousStartStr = previousStart.toISOString().split('T')[0] + ' 00:00:00';
-    const previousEndStr = previousEnd.toISOString().split('T')[0] + ' 23:59:59';
 
     const joinFichesKpi = 'INNER JOIN fiches f ON s.id_fiche = f.id';
     // Limiter aux fiches actuellement signées (aligné sur "recherche tout signé par date de planning")
     const whereEtatSigneKpi = 'AND f.id_etat_final IN (13, 16, 38, 44, 45)';
 
-    // KPI 1: Total signatures (score - SUM ajoute) - période actuelle - par date de planning
-    const currentTotalResult = await queryOne(
-      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? ${whereEtatSigneKpi}`,
-      [currentStart, currentEnd]
-    );
-    const currentTotal = parseFloat(currentTotalResult?.total || 0);
-
-    // KPI 2: Total signatures - période précédente
-    const previousTotalResult = await queryOne(
-      `SELECT SUM(s.ajoute) as total FROM signature s ${joinFichesKpi} WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? ${whereEtatSigneKpi}`,
-      [previousStartStr, previousEndStr]
-    );
-    const previousTotal = parseFloat(previousTotalResult?.total || 0);
-
-    // KPI 3: Évolution du score
-    const evolution = previousTotal > 0 
-      ? ((currentTotal - previousTotal) / previousTotal) * 100 
-      : (currentTotal > 0 ? 100 : 0);
-
-    // KPI 4: Nombre de signatures (COUNT) - période actuelle
-    const currentNombreResult = await queryOne(
-      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? ${whereEtatSigneKpi}`,
-      [currentStart, currentEnd]
-    );
-    const currentNombre = parseInt(currentNombreResult?.total || 0);
-
-    // KPI 5: Nombre de signatures (COUNT) - période précédente
-    const previousNombreResult = await queryOne(
-      `SELECT COUNT(*) as total FROM signature s ${joinFichesKpi} WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? ${whereEtatSigneKpi}`,
-      [previousStartStr, previousEndStr]
-    );
-    const previousNombre = parseInt(previousNombreResult?.total || 0);
-
-    // KPI 6: Évolution du nombre
-    const evolutionNombre = previousNombre > 0 
-      ? ((currentNombre - previousNombre) / previousNombre) * 100 
-      : (currentNombre > 0 ? 100 : 0);
-
-    // KPI 7: Nombre de fiches signées uniques (période actuelle)
+    // Fiches signées uniques (période actuelle)
     const currentFichesResult = await queryOne(
       `SELECT COUNT(DISTINCT s.id_fiche) as total 
        FROM signature s ${joinFichesKpi} 
@@ -617,21 +555,7 @@ router.get('/kpi', authenticate, async (req, res) => {
     );
     const currentFiches = parseInt(currentFichesResult?.total || 0);
 
-    // KPI 8: Nombre de fiches signées uniques (période précédente)
-    const previousFichesResult = await queryOne(
-      `SELECT COUNT(DISTINCT s.id_fiche) as total 
-       FROM signature s ${joinFichesKpi} 
-       WHERE ${ficheDateCol} >= ? AND ${ficheDateCol} <= ? AND s.id_fiche IS NOT NULL ${whereEtatSigneKpi}`,
-      [previousStartStr, previousEndStr]
-    );
-    const previousFiches = parseInt(previousFichesResult?.total || 0);
-
-    // KPI 9: Évolution fiches
-    const evolutionFiches = previousFiches > 0 
-      ? ((currentFiches - previousFiches) / previousFiches) * 100 
-      : (currentFiches > 0 ? 100 : 0);
-
-    // Top 3 confirmateurs (période actuelle) - par date de planning
+    // Top confirmateurs (période actuelle) - par date de planning
     const top3Result = await query(
       `SELECT 
         s.confirmateur,
@@ -654,40 +578,20 @@ router.get('/kpi', authenticate, async (req, res) => {
       score: parseFloat(c.total_score || 0)
     }));
 
-    // KPI 8: Moyenne par jour
-    const avgPerDay = daysDiff > 0 ? (currentTotal / daysDiff) : 0;
+    const fichesMoyenneParJour = daysDiff > 0 ? currentFiches / daysDiff : 0;
 
     res.json({
       success: true,
       data: {
-        totalSignatures: {
-          current: parseFloat(currentTotal.toFixed(2)),
-          previous: parseFloat(previousTotal.toFixed(2)),
-          evolution: parseFloat(evolution.toFixed(2)),
-          trend: evolution > 0 ? 'up' : (evolution < 0 ? 'down' : 'stable')
-        },
-        nombreSignatures: {
-          current: currentNombre,
-          previous: previousNombre,
-          evolution: parseFloat(evolutionNombre.toFixed(2)),
-          trend: evolutionNombre > 0 ? 'up' : (evolutionNombre < 0 ? 'down' : 'stable')
-        },
-        fichesSignees: {
-          current: currentFiches,
-          previous: previousFiches,
-          evolution: parseFloat(evolutionFiches.toFixed(2)),
-          trend: evolutionFiches > 0 ? 'up' : (evolutionFiches < 0 ? 'down' : 'stable')
-        },
+        fichesSignees: { current: currentFiches },
         top3Confirmateurs: top3,
-        moyenneParJour: parseFloat(avgPerDay.toFixed(2)),
+        moyenneParJour: parseFloat(fichesMoyenneParJour.toFixed(2)),
         periode: {
           debut: dateDebut,
           fin: dateFin,
           jours: daysDiff,
-          previous_debut: previousStart.toISOString().split('T')[0],
-          previous_fin: previousEnd.toISOString().split('T')[0]
-        }
-      }
+        },
+      },
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des KPI:', error);

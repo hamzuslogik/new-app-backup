@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
-import { FaSignature, FaChartLine, FaUsers, FaFileAlt, FaArrowUp, FaArrowDown, FaMinus, FaSearch } from 'react-icons/fa';
+import { FaSignature, FaChartLine, FaUsers, FaSearch } from 'react-icons/fa';
 import api from '../config/api';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
@@ -253,19 +253,6 @@ const Signatures = () => {
     return parseFloat(num).toFixed(2);
   };
 
-  const getTrendIcon = (trend) => {
-    if (trend === 'up') return <FaArrowUp className="trend-up" />;
-    if (trend === 'down') return <FaArrowDown className="trend-down" />;
-    return <FaMinus className="trend-stable" />;
-  };
-
-  const getTrendColor = (trend, value) => {
-    if (trend === 'up') return '#28a745';
-    if (trend === 'down') return '#dc3545';
-    return '#6c757d';
-  };
-
-
   return (
     <div className="signatures-page">
       <div className="page-header">
@@ -352,73 +339,24 @@ const Signatures = () => {
       ) : kpiData && (
         <div className="kpi-section">
           <h2>Indicateurs Clés (KPI)</h2>
-          <div className="kpi-grid">
-            {/* KPI 1: Total Signatures */}
-            <div className="kpi-card">
-              <div className="kpi-header">
-                <FaSignature className="kpi-icon" />
-                <h3>Total Signatures</h3>
-              </div>
-              <div className="kpi-value">{formatNumber(kpiData.totalSignatures?.current)}</div>
-              <div className="kpi-evolution">
-                <span style={{ color: getTrendColor(kpiData.totalSignatures?.trend, kpiData.totalSignatures?.evolution) }}>
-                  {getTrendIcon(kpiData.totalSignatures?.trend)}
-                  {kpiData.totalSignatures?.evolution > 0 ? '+' : ''}{formatNumber(kpiData.totalSignatures?.evolution)}%
-                </span>
-                <span className="kpi-previous">vs {formatNumber(kpiData.totalSignatures?.previous)}</span>
-              </div>
-            </div>
-
-            {/* KPI 2: Nombre de Signatures */}
-            <div className="kpi-card">
-              <div className="kpi-header">
-                <FaUsers className="kpi-icon" />
-                <h3>Nombre de Signatures</h3>
-              </div>
-              <div className="kpi-value">{kpiData.nombreSignatures?.current || 0}</div>
-              <div className="kpi-evolution">
-                <span style={{ color: getTrendColor(kpiData.nombreSignatures?.trend, kpiData.nombreSignatures?.evolution) }}>
-                  {getTrendIcon(kpiData.nombreSignatures?.trend)}
-                  {kpiData.nombreSignatures?.evolution > 0 ? '+' : ''}{formatNumber(kpiData.nombreSignatures?.evolution)}%
-                </span>
-                <span className="kpi-previous">vs {kpiData.nombreSignatures?.previous || 0}</span>
-              </div>
-            </div>
-
-            {/* KPI 3: Fiches Signées */}
-            <div className="kpi-card">
-              <div className="kpi-header">
-                <FaFileAlt className="kpi-icon" />
-                <h3>Fiches Signées</h3>
-              </div>
-              <div className="kpi-value">{kpiData.fichesSignees?.current || 0}</div>
-              <div className="kpi-evolution">
-                <span style={{ color: getTrendColor(kpiData.fichesSignees?.trend, kpiData.fichesSignees?.evolution) }}>
-                  {getTrendIcon(kpiData.fichesSignees?.trend)}
-                  {kpiData.fichesSignees?.evolution > 0 ? '+' : ''}{formatNumber(kpiData.fichesSignees?.evolution)}%
-                </span>
-                <span className="kpi-previous">vs {kpiData.fichesSignees?.previous || 0}</span>
-              </div>
-            </div>
-
-            {/* KPI 4: Moyenne par Jour */}
+          <div className="kpi-grid kpi-grid-compact">
             <div className="kpi-card">
               <div className="kpi-header">
                 <FaChartLine className="kpi-icon" />
-                <h3>Moyenne par Jour</h3>
+                <h3>Fiches signées moyenne par jour</h3>
               </div>
               <div className="kpi-value">{formatNumber(kpiData.moyenneParJour)}</div>
               <div className="kpi-info">
-                Sur {kpiData.periode?.jours || 0} jours
+                {kpiData.fichesSignees?.current ?? 0} fiche{(kpiData.fichesSignees?.current ?? 0) > 1 ? 's' : ''} sur{' '}
+                {kpiData.periode?.jours || 0} jour{(kpiData.periode?.jours || 0) > 1 ? 's' : ''}
               </div>
             </div>
 
-            {/* KPI 5: Top Confirmateur */}
             {kpiData.top3Confirmateurs && kpiData.top3Confirmateurs.length > 0 && (
               <div className="kpi-card">
                 <div className="kpi-header">
                   <FaUsers className="kpi-icon" />
-                  <h3>Top Confirmateur</h3>
+                  <h3>Top confirmateur</h3>
                 </div>
                 <div className="kpi-value">{kpiData.top3Confirmateurs[0]?.pseudo || '-'}</div>
                 <div className="kpi-info">
@@ -427,24 +365,6 @@ const Signatures = () => {
               </div>
             )}
           </div>
-
-          {/* Top 3 Confirmateurs */}
-          {kpiData.top3Confirmateurs && kpiData.top3Confirmateurs.length > 0 && (
-            <div className="top-confirmateurs-section">
-              <h3>Top 3 Confirmateurs</h3>
-              <div className="top-confirmateurs-list">
-                {kpiData.top3Confirmateurs.map((conf, index) => (
-                  <div key={conf.id} className="top-confirmateur-item">
-                    <div className="rank-badge">{index + 1}</div>
-                    <div className="confirmateur-info">
-                      <div className="confirmateur-name">{conf.pseudo}</div>
-                      <div className="confirmateur-score">Score: {formatNumber(conf.score)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -465,7 +385,7 @@ const Signatures = () => {
             </div>
           </div>
 
-          {/* Tous les confirmateurs (confirmés = table confirmations, par date RDV) */}
+          {/* Tous les confirmateurs — fiches affiliées = affectées au confirmateur, par date de planning */}
           {statsData.allConfirmateurs && statsData.allConfirmateurs.length > 0 && (
             <div className="top-10-section">
               <h3>Tous les confirmateurs</h3>
@@ -476,7 +396,7 @@ const Signatures = () => {
                       <th>Rang</th>
                       <th>Confirmateur</th>
                       <th>Score Total</th>
-                      <th>Fiches confirmées (RDV)</th>
+                      <th>Fiches affiliées</th>
                       <th>Signatures</th>
                       <th>Taux de signature</th>
                     </tr>
@@ -487,7 +407,7 @@ const Signatures = () => {
                         <td>{index + 1}</td>
                         <td>{conf.confirmateur_pseudo || 'Inconnu'}</td>
                         <td>{formatNumber(conf.total_score)}</td>
-                        <td>{conf.nb_fiches_confirmees ?? conf.nb_fiches ?? 0}</td>
+                        <td>{conf.nb_fiches_affiliees ?? 0}</td>
                         <td>{conf.nb_signatures || 0}</td>
                         <td>{conf.taux_signature != null ? `${conf.taux_signature.toFixed(1)}%` : '-'}</td>
                       </tr>
