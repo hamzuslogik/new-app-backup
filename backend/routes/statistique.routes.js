@@ -2265,253 +2265,248 @@ router.get('/kpis', authenticate, async (req, res) => {
 // KPIs CONFIRMATION - Top 3 confirmateurs, Taux de confirmation/signature, Évolution
 // =====================================================
 
-// Récupérer les KPIs Confirmation (Top 3 confirmateurs confirmations/signatures, Taux, Évolution) - centre CALL_JWS uniquement
-router.get('/kpis-confirmation', authenticate, async (req, res) => {
-  try {
-    const dateRange = resolveKpiDateRangeFromQuery(req);
-    const emptyRangePayload = {
-      range: {
-        period: 'Période sélectionnée',
-        date_start: dateRange.start,
-        date_end: dateRange.end,
-        top3_confirmations: [],
-        top3_signatures: [],
-        confirmation_rate: 0,
-        confirmation_rate_change: 0,
-        confirmations_count: 0,
-        fiches_traitees_count: 0,
-        signature_rate: 0,
-        signature_rate_change: 0,
-        signatures_count: 0,
-        compte_rendu_visites_count: 0,
-      },
-    };
+function buildEmptyKpisConfirmationRange(dateRange) {
+  return {
+    period: 'Période sélectionnée',
+    date_start: dateRange.start,
+    date_end: dateRange.end,
+    top3_confirmations: [],
+    top3_signatures: [],
+    confirmation_rate: 0,
+    confirmation_rate_change: 0,
+    confirmations_count: 0,
+    fiches_traitees_count: 0,
+    signature_rate: 0,
+    signature_rate_change: 0,
+    signatures_count: 0,
+    compte_rendu_visites_count: 0,
+    fiches_signees_count: 0,
+    rdvs_visites_count: 0,
+  };
+}
 
-    // Centre CALL_JWS uniquement
-    const callJwsCentres = await query(`
-      SELECT id FROM centres
-      WHERE (titre = 'CALL_JWS' OR titre LIKE 'CALL_JWS%' OR titre LIKE 'Call_JWS%')
-      AND etat > 0
-    `);
-    const callJwsCentreIds = (callJwsCentres || []).map(c => c.id);
-    if (callJwsCentreIds.length === 0) {
-      return res.json({ success: true, data: emptyRangePayload });
-    }
-    const centreCondition = `AND f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})`;
-    const centreParams = callJwsCentreIds;
+/** KPIs confirmation agrégés pour une liste de centres (ex. CALL_JWS). */
+async function computeKpisConfirmationRange(centreIds, dateRange) {
+  const periodStart = dateRange.start;
+  const periodEnd = dateRange.end;
+  const emptyRange = buildEmptyKpisConfirmationRange(dateRange);
+  if (!centreIds?.length) {
+    return emptyRange;
+  }
 
-    const periodStart = dateRange.start;
-    const periodEnd = dateRange.end;
-    const startDate = dateRange.startDateTime;
-    const endDate = dateRange.endDateTime;
-    const { previousStart, previousEnd } = getPreviousPeriodComparisonRange(periodStart, periodEnd);
-    const previousStartDate = `${previousStart} ${dateRange.timeDebut}`;
-    const previousEndDate = `${previousEnd} ${dateRange.timeFin}`;
+  const centreCondition = `AND f.id_centre IN (${centreIds.map(() => '?').join(',')})`;
+  const centreParams = centreIds;
+  const centreInList = centreIds.map(() => '?').join(', ');
 
-    const crDateVisiteFilter = await getKpiCompteRenduDateVisiteFilter();
+  const startDate = dateRange.startDateTime;
+  const endDate = dateRange.endDateTime;
+  const { previousStart, previousEnd } = getPreviousPeriodComparisonRange(periodStart, periodEnd);
+  const previousStartDate = `${previousStart} ${dateRange.timeDebut}`;
+  const previousEndDate = `${previousEnd} ${dateRange.timeFin}`;
 
-    const top3ConfirmationsQuery = `
-        SELECT 
-          u.id,
-          u.pseudo,
-          u.nom,
-          u.prenom,
-          u.photo,
-          COUNT(*) as count_confirmations
-        FROM confirmations c
-        INNER JOIN fiches f ON c.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
-        INNER JOIN utilisateurs u ON c.id_confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
-        WHERE c.id_confirmateur IS NOT NULL
-        AND c.id_confirmateur > 0
-        ${KPI_CONFIRMATIONS_PERIOD_SQL}
-        ${centreCondition}
-        GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
-        ORDER BY count_confirmations DESC
-        LIMIT 3
-      `;
-    const top3Confirmations = await query(top3ConfirmationsQuery, [startDate, endDate, ...centreParams]);
+  const crDateVisiteFilter = await getKpiCompteRenduDateVisiteFilter();
 
-    const top3SignaturesQuery = `
-        SELECT 
-          s.confirmateur as id,
-          u.pseudo,
-          u.nom,
-          u.prenom,
-          u.photo,
-          SUM(s.ajoute) as count_signatures
-        FROM signature s
-        INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
-        INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
-        WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-        ${KPI_FICHE_RDV_DATE_SQL}
-        GROUP BY s.confirmateur, u.pseudo, u.nom, u.prenom, u.photo
-        ORDER BY count_signatures DESC
-        LIMIT 3
-      `;
-    const top3SignaturesRows = await query(top3SignaturesQuery, [...centreParams, startDate, endDate]);
-    const top3Signatures = (top3SignaturesRows || []).map((conf) => ({
+  const top3ConfirmationsQuery = `
+      SELECT 
+        u.id,
+        u.pseudo,
+        u.nom,
+        u.prenom,
+        u.photo,
+        COUNT(*) as count_confirmations
+      FROM confirmations c
+      INNER JOIN fiches f ON c.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+      INNER JOIN utilisateurs u ON c.id_confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
+      WHERE c.id_confirmateur IS NOT NULL
+      AND c.id_confirmateur > 0
+      ${KPI_CONFIRMATIONS_PERIOD_SQL}
+      ${centreCondition}
+      GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
+      ORDER BY count_confirmations DESC
+      LIMIT 3
+    `;
+  const top3Confirmations = await query(top3ConfirmationsQuery, [startDate, endDate, ...centreParams]);
+
+  const top3SignaturesQuery = `
+      SELECT 
+        s.confirmateur as id,
+        u.pseudo,
+        u.nom,
+        u.prenom,
+        u.photo,
+        SUM(s.ajoute) as count_signatures
+      FROM signature s
+      INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+      INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
+      WHERE f.id_centre IN (${centreInList})
+      ${KPI_FICHE_RDV_DATE_SQL}
+      GROUP BY s.confirmateur, u.pseudo, u.nom, u.prenom, u.photo
+      ORDER BY count_signatures DESC
+      LIMIT 3
+    `;
+  const top3SignaturesRows = await query(top3SignaturesQuery, [...centreParams, startDate, endDate]);
+
+  const signaturesTotalResult = await queryOne(
+    `SELECT COALESCE(SUM(s.ajoute), 0) as total
+       FROM signature s
+       INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+       WHERE f.id_centre IN (${centreInList})
+       ${KPI_FICHE_RDV_DATE_SQL}`,
+    [...centreParams, startDate, endDate]
+  );
+  const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
+
+  const compteRenduVisitesQuery = `
+      SELECT COUNT(*) as count
+      FROM compte_rendu_pending cr
+      INNER JOIN fiches f ON f.id = cr.id_fiche
+      WHERE (f.archive = 0 OR f.archive IS NULL)
+      ${crDateVisiteFilter.sql}
+      ${centreCondition}
+    `;
+
+  const confirmationsQuery = `
+      SELECT COUNT(*) as count
+      FROM confirmations c
+      INNER JOIN fiches f ON c.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+      WHERE 1=1
+      ${KPI_CONFIRMATIONS_PERIOD_SQL}
+      ${centreCondition}
+    `;
+
+  const fichesTraiteesQuery = `
+      SELECT COUNT(*) as count
+      FROM fiches_histo fh
+      INNER JOIN fiches f ON fh.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+      INNER JOIN utilisateurs u ON fh.id_confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
+      WHERE fh.id_confirmateur IS NOT NULL
+      AND fh.id_confirmateur > 0
+      ${KPI_FICHES_HISTO_PERIOD_SQL}
+      ${centreCondition}
+    `;
+
+  const [
+    compteRenduVisitesResult,
+    confirmationsResult,
+    fichesTraiteesResult,
+    previousConfirmationsResult,
+    previousSignaturesTotalResult,
+    previousCompteRenduVisitesResult,
+    previousFichesTraiteesResult,
+  ] = await Promise.all([
+    queryOne(compteRenduVisitesQuery, [startDate, endDate, ...centreParams]),
+    queryOne(confirmationsQuery, [startDate, endDate, ...centreParams]),
+    queryOne(fichesTraiteesQuery, [startDate, endDate, ...centreParams]),
+    queryOne(confirmationsQuery, [previousStartDate, previousEndDate, ...centreParams]),
+    queryOne(
+      `SELECT COALESCE(SUM(s.ajoute), 0) as total
+         FROM signature s
+         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+         WHERE f.id_centre IN (${centreInList})
+         ${KPI_FICHE_RDV_DATE_SQL}`,
+      [...centreParams, previousStartDate, previousEndDate]
+    ),
+    queryOne(compteRenduVisitesQuery, [previousStartDate, previousEndDate, ...centreParams]),
+    queryOne(fichesTraiteesQuery, [previousStartDate, previousEndDate, ...centreParams]),
+  ]);
+
+  const compteRenduVisitesCount = compteRenduVisitesResult?.count || 0;
+  const confirmationsCount = confirmationsResult?.count || 0;
+  const fichesTraiteesCount = fichesTraiteesResult?.count || 0;
+  const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
+  const previousSignaturesCount = parseFloat(previousSignaturesTotalResult?.total || 0);
+  const previousCompteRenduVisitesCount = previousCompteRenduVisitesResult?.count || 0;
+  const previousFichesTraiteesCount = previousFichesTraiteesResult?.count || 0;
+
+  const confirmationRate = fichesTraiteesCount > 0 ? (confirmationsCount / fichesTraiteesCount) * 100 : 0;
+  const signatureRate =
+    compteRenduVisitesCount > 0 ? (signaturesCount / compteRenduVisitesCount) * 100 : 0;
+  const previousConfirmationRate =
+    previousFichesTraiteesCount > 0 ? (previousConfirmationsCount / previousFichesTraiteesCount) * 100 : 0;
+  const previousSignatureRate =
+    previousCompteRenduVisitesCount > 0
+      ? (previousSignaturesCount / previousCompteRenduVisitesCount) * 100
+      : 0;
+  const confirmationRateChange = confirmationRate - previousConfirmationRate;
+  const signatureRateChange = signatureRate - previousSignatureRate;
+
+  const confirmationEvolutionChange =
+    previousConfirmationsCount > 0
+      ? ((confirmationsCount - previousConfirmationsCount) / previousConfirmationsCount) * 100
+      : confirmationsCount > 0
+        ? 100
+        : 0;
+  const signatureEvolutionChange =
+    previousSignaturesCount > 0
+      ? ((signaturesCount - previousSignaturesCount) / previousSignaturesCount) * 100
+      : signaturesCount > 0
+        ? 100
+        : 0;
+  const confirmationTrend =
+    confirmationEvolutionChange > 0 ? 'up' : confirmationEvolutionChange < 0 ? 'down' : 'stable';
+  const signatureTrend = signatureEvolutionChange > 0 ? 'up' : signatureEvolutionChange < 0 ? 'down' : 'stable';
+
+  return {
+    period: 'Période sélectionnée',
+    date_start: periodStart,
+    date_end: periodEnd,
+    confirmation_rate: confirmationRate,
+    confirmation_rate_change: confirmationRateChange,
+    confirmations_count: confirmationsCount,
+    fiches_traitees_count: fichesTraiteesCount,
+    signature_rate: signatureRate,
+    signature_rate_change: signatureRateChange,
+    signatures_count: signaturesCount,
+    compte_rendu_visites_count: compteRenduVisitesCount,
+    fiches_signees_count: signaturesCount,
+    rdvs_visites_count: compteRenduVisitesCount,
+    top3_confirmations: (top3Confirmations || []).map((conf) => ({
       id: conf.id,
       pseudo: conf.pseudo,
       nom: conf.nom,
       prenom: conf.prenom,
       photo: conf.photo,
-      count_signatures: parseFloat(conf.count_signatures || 0),
-    }));
+      count: Math.round(conf.count_confirmations || 0),
+    })),
+    top3_signatures: (top3SignaturesRows || []).map((conf) => ({
+      id: conf.id,
+      pseudo: conf.pseudo,
+      nom: conf.nom,
+      prenom: conf.prenom,
+      photo: conf.photo,
+      count: parseFloat((conf.count_signatures || 0).toFixed(2)),
+    })),
+    confirmation_evolution: {
+      current: confirmationsCount,
+      previous: previousConfirmationsCount,
+      change: confirmationEvolutionChange,
+      trend: confirmationTrend,
+    },
+    signature_evolution: {
+      current: signaturesCount,
+      previous: previousSignaturesCount,
+      change: signatureEvolutionChange,
+      trend: signatureTrend,
+    },
+  };
+}
 
-    const signaturesTotalResult = await queryOne(
-      `SELECT COALESCE(SUM(s.ajoute), 0) as total
-         FROM signature s
-         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
-         WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-         ${KPI_FICHE_RDV_DATE_SQL}`,
-      [...centreParams, startDate, endDate]
-    );
-    const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
+async function queryJwsCentreIds() {
+  const rows = await query(`
+    SELECT id FROM centres
+    WHERE (titre = 'CALL_JWS' OR titre LIKE 'CALL_JWS%' OR titre LIKE 'Call_JWS%')
+    AND etat > 0
+  `);
+  return (rows || []).map((c) => c.id);
+}
 
-    const compteRenduVisitesQuery = `
-        SELECT COUNT(*) as count
-        FROM compte_rendu_pending cr
-        INNER JOIN fiches f ON f.id = cr.id_fiche
-        WHERE (f.archive = 0 OR f.archive IS NULL)
-        ${crDateVisiteFilter.sql}
-        ${centreCondition}
-      `;
-    const compteRenduVisitesResult = await queryOne(compteRenduVisitesQuery, [
-      startDate,
-      endDate,
-      ...centreParams,
-    ]);
-    const compteRenduVisitesCount = compteRenduVisitesResult?.count || 0;
-
-    const confirmationsQuery = `
-        SELECT COUNT(*) as count
-        FROM confirmations c
-        INNER JOIN fiches f ON c.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
-        WHERE 1=1
-        ${KPI_CONFIRMATIONS_PERIOD_SQL}
-        ${centreCondition}
-      `;
-    const confirmationsResult = await queryOne(confirmationsQuery, [startDate, endDate, ...centreParams]);
-    const confirmationsCount = confirmationsResult?.count || 0;
-
-    const fichesTraiteesQuery = `
-        SELECT COUNT(*) as count
-        FROM fiches_histo fh
-        INNER JOIN fiches f ON fh.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
-        INNER JOIN utilisateurs u ON fh.id_confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
-        WHERE fh.id_confirmateur IS NOT NULL
-        AND fh.id_confirmateur > 0
-        ${KPI_FICHES_HISTO_PERIOD_SQL}
-        ${centreCondition}
-      `;
-    const fichesTraiteesResult = await queryOne(fichesTraiteesQuery, [startDate, endDate, ...centreParams]);
-    const fichesTraiteesCount = fichesTraiteesResult?.count || 0;
-
-    const previousConfirmationsResult = await queryOne(
-      confirmationsQuery,
-      [previousStartDate, previousEndDate, ...centreParams]
-    );
-    const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
-
-    const previousSignaturesTotalResult = await queryOne(
-      `SELECT COALESCE(SUM(s.ajoute), 0) as total
-         FROM signature s
-         INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
-         WHERE f.id_centre IN (${callJwsCentreIds.map(() => '?').join(',')})
-         ${KPI_FICHE_RDV_DATE_SQL}`,
-      [...centreParams, previousStartDate, previousEndDate]
-    );
-    const previousSignaturesCount = parseFloat(previousSignaturesTotalResult?.total || 0);
-
-    const previousCompteRenduVisitesResult = await queryOne(compteRenduVisitesQuery, [
-      previousStartDate,
-      previousEndDate,
-      ...centreParams,
-    ]);
-    const previousCompteRenduVisitesCount = previousCompteRenduVisitesResult?.count || 0;
-
-    const previousFichesTraiteesResult = await queryOne(
-      fichesTraiteesQuery,
-      [previousStartDate, previousEndDate, ...centreParams]
-    );
-    const previousFichesTraiteesCount = previousFichesTraiteesResult?.count || 0;
-
-    const confirmationRate = fichesTraiteesCount > 0 ? (confirmationsCount / fichesTraiteesCount) * 100 : 0;
-    const signatureRate =
-      compteRenduVisitesCount > 0 ? (signaturesCount / compteRenduVisitesCount) * 100 : 0;
-    const previousConfirmationRate =
-      previousFichesTraiteesCount > 0 ? (previousConfirmationsCount / previousFichesTraiteesCount) * 100 : 0;
-    const previousSignatureRate =
-      previousCompteRenduVisitesCount > 0
-        ? (previousSignaturesCount / previousCompteRenduVisitesCount) * 100
-        : 0;
-    const confirmationRateChange = confirmationRate - previousConfirmationRate;
-    const signatureRateChange = signatureRate - previousSignatureRate;
-
-    const confirmationEvolutionChange =
-      previousConfirmationsCount > 0
-        ? ((confirmationsCount - previousConfirmationsCount) / previousConfirmationsCount) * 100
-        : confirmationsCount > 0
-          ? 100
-          : 0;
-    const signatureEvolutionChange =
-      previousSignaturesCount > 0
-        ? ((signaturesCount - previousSignaturesCount) / previousSignaturesCount) * 100
-        : signaturesCount > 0
-          ? 100
-          : 0;
-    const confirmationTrend =
-      confirmationEvolutionChange > 0 ? 'up' : confirmationEvolutionChange < 0 ? 'down' : 'stable';
-    const signatureTrend = signatureEvolutionChange > 0 ? 'up' : signatureEvolutionChange < 0 ? 'down' : 'stable';
-
-    res.json({
-      success: true,
-      data: {
-        range: {
-          period: 'Période sélectionnée',
-          date_start: periodStart,
-          date_end: periodEnd,
-          confirmation_rate: confirmationRate,
-          confirmation_rate_change: confirmationRateChange,
-          confirmations_count: confirmationsCount,
-          fiches_traitees_count: fichesTraiteesCount,
-          signature_rate: signatureRate,
-          signature_rate_change: signatureRateChange,
-          signatures_count: signaturesCount,
-          compte_rendu_visites_count: compteRenduVisitesCount,
-          fiches_signees_count: signaturesCount,
-          rdvs_visites_count: compteRenduVisitesCount,
-          top3_confirmations: top3Confirmations.map((conf) => ({
-            id: conf.id,
-            pseudo: conf.pseudo,
-            nom: conf.nom,
-            prenom: conf.prenom,
-            photo: conf.photo,
-            count: Math.round(conf.count_confirmations || 0),
-          })),
-          top3_signatures: top3Signatures.map((conf) => ({
-            id: conf.id,
-            pseudo: conf.pseudo,
-            nom: conf.nom,
-            prenom: conf.prenom,
-            photo: conf.photo,
-            count: parseFloat((conf.count_signatures || 0).toFixed(2)),
-          })),
-          confirmation_evolution: {
-            current: confirmationsCount,
-            previous: previousConfirmationsCount,
-            change: confirmationEvolutionChange,
-            trend: confirmationTrend,
-          },
-          signature_evolution: {
-            current: signaturesCount,
-            previous: previousSignaturesCount,
-            change: signatureEvolutionChange,
-            trend: signatureTrend,
-          },
-        },
-      },
-    });
+// Récupérer les KPIs Confirmation (Top 3 confirmateurs confirmations/signatures, Taux, Évolution) - centre CALL_JWS uniquement
+router.get('/kpis-confirmation', authenticate, async (req, res) => {
+  try {
+    const dateRange = resolveKpiDateRangeFromQuery(req);
+    const centreIds = await queryJwsCentreIds();
+    const range = await computeKpisConfirmationRange(centreIds, dateRange);
+    res.json({ success: true, data: { range } });
   } catch (error) {
     console.error('[STAT] /kpis-confirmation - Erreur:', error.message);
     res.status(500).json({
@@ -2778,164 +2773,13 @@ router.get('/kpis-centres', authenticate, async (req, res) => {
 // KPIs CONFIRMATION JWS - Statistiques pour le centre call_jws
 // =====================================================
 
-// Récupérer les KPIs pour le centre call_jws
+// KPIs Confirmation JWS — mêmes métriques que /kpis-confirmation, périmètre centres Call_JWS
 router.get('/kpis-confirmation-jws', authenticate, async (req, res) => {
   try {
     const dateRange = resolveKpiDateRangeFromQuery(req);
-    const dateChamp = dateRange.dateChamp;
-    
-    // Récupérer l'ID du centre call_jws (tous les centres qui commencent par Call_JWS ou CALL_JWS)
-    const jwsCentres = await query(`
-      SELECT id, titre
-      FROM centres
-      WHERE (titre LIKE 'Call_JWS%' OR titre LIKE 'CALL_JWS%')
-      AND etat > 0
-      ORDER BY titre ASC
-    `);
-    
-    if (!jwsCentres || jwsCentres.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          range: { period: 'Période sélectionnée', date_start: dateRange.start, date_end: dateRange.end, centres: [] },
-        },
-      });
-    }
-    
-    const jwsCentreIds = jwsCentres.map(c => c.id);
-    
-    // Récupérer les IDs des états groupe 0 pour exclure
-    const etatsGroupe0 = await query(`
-      SELECT id FROM etats
-      WHERE (groupe = '0' OR groupe = 0)
-    `);
-    const idsGroupe0 = etatsGroupe0.map(e => e.id);
-
-    const startDate = dateRange.startDateTime;
-    const endDate = dateRange.endDateTime;
-    const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
-    const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
-    const etat7Date = buildKpiConfirmationEtat7DateClause(dateRange.dateChampKey);
-
-    const centresKPIs = [];
-
-    for (const centre of jwsCentres) {
-        const totalQuery = `
-          SELECT COUNT(*) as count
-          FROM fiches f
-          WHERE f.id_centre = ?
-          AND ${dateChamp} >= ?
-          AND ${dateChamp} <= ?
-          AND (f.archive = 0 OR f.archive IS NULL)
-        `;
-        const totalResult = await queryOne(totalQuery, [centre.id, startDate, endDate]);
-        const totalCount = totalResult?.count || 0;
-
-        // Fiches validées (groupe 1, 2, 3) pour ce centre
-        const validatedParams = idsGroupe0.length > 0 
-          ? [centre.id, startDate, endDate, ...idsGroupe0]
-          : [centre.id, startDate, endDate];
-        
-        const validatedQuery = `
-          SELECT COUNT(DISTINCT f.id) as count
-          FROM fiches f
-          INNER JOIN etats e ON f.id_etat_final = e.id
-          WHERE f.id_centre = ?
-          AND ${dateChamp} >= ?
-          AND ${dateChamp} <= ?
-          AND (f.archive = 0 OR f.archive IS NULL)
-          ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
-          AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
-        `;
-        const validatedResult = await queryOne(validatedQuery, validatedParams);
-        const validatedCount = validatedResult?.count || 0;
-
-        const confirmedQuery = `
-          SELECT COUNT(DISTINCT f.id) as count
-          FROM fiches f
-          WHERE f.id_centre = ?
-          ${etat7Date.sql}
-          AND f.id_etat_final = 7
-          AND (f.archive = 0 OR f.archive IS NULL)
-        `;
-        const confirmedResult = await queryOne(
-          confirmedQuery,
-          [centre.id, ...etat7Date.params(startDate, endDate, startTimestamp, endTimestamp)]
-        );
-        const confirmedCount = confirmedResult?.count || 0;
-
-        const signedQuery = `
-          SELECT COUNT(DISTINCT f.id) as count
-          FROM fiches f
-          WHERE f.id_centre = ?
-          AND ${dateChamp} >= ?
-          AND ${dateChamp} <= ?
-          AND f.id_etat_final IN (13, 16, 44, 45)
-          AND f.id_etat_final != 38
-          AND (f.archive = 0 OR f.archive IS NULL)
-        `;
-        const signedResult = await queryOne(signedQuery, [centre.id, startDate, endDate]);
-        const signedCount = signedResult?.count || 0;
-
-        // Taux de conversion en confirmer (confirmées / totales)
-        // Confirmées comptées par date de confirmation, totales par date d'insertion
-        const confirmationRate = totalCount > 0 ? ((confirmedCount / totalCount) * 100).toFixed(2) : 0;
-        
-        // Taux de conversion en signatures (signées / totales)
-        // Signées et totales comptées par date d'insertion
-        const signatureRate = totalCount > 0 ? ((signedCount / totalCount) * 100).toFixed(2) : 0;
-
-        // Meilleur agent (par nombre de fiches validées)
-        const bestAgentQuery = `
-          SELECT 
-            u.id,
-            u.pseudo,
-            u.nom,
-            u.prenom,
-            u.photo,
-            COUNT(DISTINCT f.id) as count_validated
-          FROM fiches f
-          INNER JOIN utilisateurs u ON f.id_agent = u.id
-          INNER JOIN etats e ON f.id_etat_final = e.id
-          WHERE f.id_centre = ?
-          AND ${dateChamp} >= ?
-          AND ${dateChamp} <= ?
-          AND (f.archive = 0 OR f.archive IS NULL)
-          ${idsGroupe0.length > 0 ? `AND f.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})` : ''}
-          AND (e.groupe = '1' OR e.groupe = 1 OR e.groupe = '2' OR e.groupe = 2 OR e.groupe = '3' OR e.groupe = 3)
-          AND f.id_agent IS NOT NULL
-          GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
-          ORDER BY count_validated DESC
-          LIMIT 1
-        `;
-        const bestAgent = await queryOne(bestAgentQuery, validatedParams);
-
-        centresKPIs.push({
-          centre_id: centre.id,
-          centre_titre: centre.titre,
-          // Uniquement les taux de conversion en confirmer et en signatures
-          confirmation_rate: parseFloat(confirmationRate),
-          signature_rate: parseFloat(signatureRate),
-          confirmed_count: confirmedCount,
-          signed_count: signedCount,
-          total_count: totalCount
-        });
-      }
-
-    const kpiData = {
-      range: {
-        period: 'Période sélectionnée',
-        date_start: dateRange.start,
-        date_end: dateRange.end,
-        date_champ: dateRange.dateChampKey,
-        centres: centresKPIs,
-      },
-    };
-
-    res.json({
-      success: true,
-      data: kpiData,
-    });
+    const centreIds = await queryJwsCentreIds();
+    const range = await computeKpisConfirmationRange(centreIds, dateRange);
+    res.json({ success: true, data: { range } });
   } catch (error) {
     console.error('[STAT] /kpis-confirmation-jws - Erreur:', error.message);
     res.status(500).json({

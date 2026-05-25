@@ -50,7 +50,7 @@ const KPIs = () => {
       time_debut: filters.time_debut,
       time_fin: filters.time_fin,
     };
-    if (activeTab !== 'confirmation') {
+    if (activeTab !== 'confirmation' && activeTab !== 'confirmation-jws') {
       params.date_champ = filters.date_champ;
     }
     return params;
@@ -114,7 +114,7 @@ const KPIs = () => {
 
   const handleApplyDateFilters = () => {
     if (!dateFilters.date_debut || !dateFilters.date_fin) return;
-    if (activeTab !== 'confirmation' && !dateFilters.date_champ) return;
+    if (activeTab !== 'confirmation' && activeTab !== 'confirmation-jws' && !dateFilters.date_champ) return;
     setAppliedFilters({ ...dateFilters });
   };
 
@@ -127,7 +127,7 @@ const KPIs = () => {
   const dateFiltersReady =
     !!appliedFilters.date_debut &&
     !!appliedFilters.date_fin &&
-    (activeTab === 'confirmation' || !!appliedFilters.date_champ);
+    (activeTab === 'confirmation' || activeTab === 'confirmation-jws' || !!appliedFilters.date_champ);
 
   const kpiQueryKey = ['kpis-filters', appliedFilters, activeTab];
 
@@ -232,6 +232,245 @@ const KPIs = () => {
   // Médailles pour le classement
   const medals = ['🥇', '🥈', '🥉'];
 
+  const isConfirmationTab = activeTab === 'confirmation' || activeTab === 'confirmation-jws';
+
+  const renderConfirmationKpiContent = (data, { jwsScope = false } = {}) => {
+    if (!data) return null;
+    return (
+      <div className="kpis-content">
+        {jwsScope && (
+          <p className="section-description" style={{ marginBottom: '1rem', color: '#555' }}>
+            Périmètre : centres Call_JWS / CALL_JWS actifs uniquement.
+          </p>
+        )}
+        <div className="kpi-section">
+          <h2 className="section-title">Métriques Globales</h2>
+          <div className="kpi-cards metrics">
+            {data.confirmation_rate !== undefined && (
+              <div className="kpi-card confirmation-rate">
+                <div className="kpi-card-header">
+                  <FaPercentage className="kpi-icon" />
+                  <h3>Taux de Confirmation</h3>
+                </div>
+                <div className="kpi-card-body">
+                  <div className="kpi-value-large">
+                    <span className="value">{formatPercentage(data.confirmation_rate)}</span>
+                    <span className="label">Confirmations (table confirmations) / Qualifications confirmateur (fiches_histo)</span>
+                    {(data.confirmations_count != null || data.fiches_traitees_count != null) && (
+                      <span className="label label-detail">
+                        {data.confirmations_count ?? 0} / {data.fiches_traitees_count ?? 0}
+                      </span>
+                    )}
+                  </div>
+                  {data.confirmation_rate_change !== undefined && (
+                    <div className="evolution-indicator">
+                      {getTrendIcon(data.confirmation_rate_change > 0 ? 'up' : (data.confirmation_rate_change < 0 ? 'down' : 'stable'))}
+                      <span
+                        className="evolution-value"
+                        style={{ color: getTrendColor(data.confirmation_rate_change > 0 ? 'up' : (data.confirmation_rate_change < 0 ? 'down' : 'stable')) }}
+                      >
+                        {data.confirmation_rate_change > 0 ? '+' : ''}{formatPercentage(data.confirmation_rate_change)}
+                      </span>
+                      <span className="evolution-label">vs période précédente</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {data.signature_rate !== undefined && (
+              <div className="kpi-card signature-rate">
+                <div className="kpi-card-header">
+                  <FaPercentage className="kpi-icon" />
+                  <h3>Taux de Signature</h3>
+                </div>
+                <div className="kpi-card-body">
+                  <div className="kpi-value-large">
+                    <span className="value">{formatPercentage(data.signature_rate)}</span>
+                    <span className="label">Signatures (date planning) / Comptes rendus (date visite)</span>
+                    {((data.signatures_count ?? data.fiches_signees_count) != null ||
+                      (data.compte_rendu_visites_count ?? data.rdvs_visites_count) != null) && (
+                      <span className="label label-detail">
+                        {data.signatures_count ?? data.fiches_signees_count ?? 0} /{' '}
+                        {data.compte_rendu_visites_count ?? data.rdvs_visites_count ?? 0}
+                      </span>
+                    )}
+                  </div>
+                  {data.signature_rate_change !== undefined && (
+                    <div className="evolution-indicator">
+                      {getTrendIcon(data.signature_rate_change > 0 ? 'up' : (data.signature_rate_change < 0 ? 'down' : 'stable'))}
+                      <span
+                        className="evolution-value"
+                        style={{ color: getTrendColor(data.signature_rate_change > 0 ? 'up' : (data.signature_rate_change < 0 ? 'down' : 'stable')) }}
+                      >
+                        {data.signature_rate_change > 0 ? '+' : ''}{formatPercentage(data.signature_rate_change)}
+                      </span>
+                      <span className="evolution-label">vs période précédente</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {data.confirmation_evolution && (
+              <div className="kpi-card evolution">
+                <div className="kpi-card-header">
+                  <FaChartLine className="kpi-icon" />
+                  <h3>Évolution Confirmations</h3>
+                </div>
+                <div className="kpi-card-body">
+                  <div className="evolution-comparison">
+                    <div className="comparison-item">
+                      <span className="comparison-label">Période actuelle</span>
+                      <span className="comparison-value">{data.confirmation_evolution.current}</span>
+                    </div>
+                    <div className="comparison-item">
+                      <span className="comparison-label">Période précédente</span>
+                      <span className="comparison-value">{data.confirmation_evolution.previous}</span>
+                    </div>
+                  </div>
+                  <div className="evolution-indicator">
+                    {getTrendIcon(data.confirmation_evolution.trend)}
+                    <span
+                      className="evolution-value"
+                      style={{ color: getTrendColor(data.confirmation_evolution.trend) }}
+                    >
+                      {data.confirmation_evolution.change > 0 ? '+' : ''}{data.confirmation_evolution.change.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {data.signature_evolution && (
+              <div className="kpi-card evolution">
+                <div className="kpi-card-header">
+                  <FaChartLine className="kpi-icon" />
+                  <h3>Évolution Signatures</h3>
+                </div>
+                <div className="kpi-card-body">
+                  <div className="evolution-comparison">
+                    <div className="comparison-item">
+                      <span className="comparison-label">Période actuelle</span>
+                      <span className="comparison-value">{data.signature_evolution.current}</span>
+                    </div>
+                    <div className="comparison-item">
+                      <span className="comparison-label">Période précédente</span>
+                      <span className="comparison-value">{data.signature_evolution.previous}</span>
+                    </div>
+                  </div>
+                  <div className="evolution-indicator">
+                    {getTrendIcon(data.signature_evolution.trend)}
+                    <span
+                      className="evolution-value"
+                      style={{ color: getTrendColor(data.signature_evolution.trend) }}
+                    >
+                      {data.signature_evolution.change > 0 ? '+' : ''}{data.signature_evolution.change.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="kpi-section">
+          <h2 className="section-title">Top 3 Confirmateurs - Confirmations</h2>
+          <div className="kpi-cards top-confirmateurs">
+            {data.top3_confirmations && data.top3_confirmations.length > 0 ? (
+              data.top3_confirmations.map((confirmateur, index) => (
+                <div key={confirmateur.id} className="kpi-card confirmateur-card">
+                  <div className="kpi-card-header">
+                    <span className="medal">{medals[index]}</span>
+                    <h3>#{index + 1}</h3>
+                  </div>
+                  <div className="kpi-card-body">
+                    <div className="agent-info">
+                      {confirmateur.photo ? (
+                        <img src={confirmateur.photo} alt={confirmateur.pseudo} className="agent-avatar" />
+                      ) : (
+                        <div className="agent-avatar placeholder">
+                          {confirmateur.pseudo ? confirmateur.pseudo.charAt(0).toUpperCase() : '?'}
+                        </div>
+                      )}
+                      <div className="agent-details">
+                        <div className="agent-name">
+                          {confirmateur.nom && confirmateur.prenom
+                            ? `${confirmateur.nom} ${confirmateur.prenom}`
+                            : confirmateur.pseudo || 'N/A'}
+                        </div>
+                        <div className="agent-pseudo">{confirmateur.pseudo}</div>
+                      </div>
+                    </div>
+                    <div className="kpi-value">
+                      <span className="value">{confirmateur.count}</span>
+                      <span className="label">confirmations</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="no-data">Aucun confirmateur trouvé pour cette période</div>
+            )}
+          </div>
+        </div>
+
+        <div className="kpi-section">
+          <h2 className="section-title">Top 3 Confirmateurs - Signatures</h2>
+          <div className="kpi-cards top-confirmateurs">
+            {data.top3_signatures && data.top3_signatures.length > 0 ? (
+              data.top3_signatures.map((confirmateur, index) => (
+                <div key={confirmateur.id} className="kpi-card confirmateur-card">
+                  <div className="kpi-card-header">
+                    <span className="medal">{medals[index]}</span>
+                    <h3>#{index + 1}</h3>
+                  </div>
+                  <div className="kpi-card-body">
+                    <div className="agent-info">
+                      {confirmateur.photo ? (
+                        <img src={confirmateur.photo} alt={confirmateur.pseudo} className="agent-avatar" />
+                      ) : (
+                        <div className="agent-avatar placeholder">
+                          {confirmateur.pseudo ? confirmateur.pseudo.charAt(0).toUpperCase() : '?'}
+                        </div>
+                      )}
+                      <div className="agent-details">
+                        <div className="agent-name">
+                          {confirmateur.nom && confirmateur.prenom
+                            ? `${confirmateur.nom} ${confirmateur.prenom}`
+                            : confirmateur.pseudo || 'N/A'}
+                        </div>
+                        <div className="agent-pseudo">{confirmateur.pseudo}</div>
+                      </div>
+                    </div>
+                    <div className="kpi-value">
+                      <span className="value">{confirmateur.count}</span>
+                      <span className="label">signatures</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="no-data">Aucun confirmateur trouvé pour cette période</div>
+            )}
+          </div>
+        </div>
+
+        <div className="period-info">
+          <p>
+            Période: <strong>{data.date_start}</strong> au <strong>{data.date_end}</strong>
+          </p>
+          <p className="info-text">
+            Taux de confirmation = nombre de confirmations (table confirmations, date de création) / nombre de qualifications
+            effectuées par les confirmateurs (fiches_histo, date de création). Taux de signature = signatures effectuées sur la
+            période (date planning / date_rdv_time) / nombre total de comptes rendus dont la date de visite est dans la même période.
+            {jwsScope ? ' Données limitées aux centres Call_JWS / CALL_JWS.' : ''}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="kpis-page">
@@ -288,7 +527,7 @@ const KPIs = () => {
           onApplyNow={applyNowToDatetimeBound}
           onApply={handleApplyDateFilters}
           onReset={handleResetDateFilters}
-          hideDateChamp={activeTab === 'confirmation'}
+          hideDateChamp={isConfirmationTab}
           extraControls={
             activeTab === 'porte-ouverte' ? (
               <div className="form-group porte-ouverte-centre-filter">
@@ -669,317 +908,8 @@ const KPIs = () => {
         </div>
       )}
 
-      {/* Contenu pour l'onglet Confirmation */}
-      {activeTab === 'confirmation' && currentData && (
-        <div className="kpis-content">
-          {/* Section Métriques Globales Confirmation */}
-          <div className="kpi-section">
-            <h2 className="section-title">Métriques Globales</h2>
-            <div className="kpi-cards metrics">
-              {/* Taux de Confirmation */}
-              {currentData.confirmation_rate !== undefined && (
-                <div className="kpi-card confirmation-rate">
-                  <div className="kpi-card-header">
-                    <FaPercentage className="kpi-icon" />
-                    <h3>Taux de Confirmation</h3>
-                  </div>
-                  <div className="kpi-card-body">
-                    <div className="kpi-value-large">
-                      <span className="value">{formatPercentage(currentData.confirmation_rate)}</span>
-                      <span className="label">Confirmations (table confirmations) / Qualifications confirmateur (fiches_histo)</span>
-                      {(currentData.confirmations_count != null || currentData.fiches_traitees_count != null) && (
-                        <span className="label label-detail">
-                          {currentData.confirmations_count ?? 0} / {currentData.fiches_traitees_count ?? 0}
-                        </span>
-                      )}
-                    </div>
-                    {currentData.confirmation_rate_change !== undefined && (
-                      <div className="evolution-indicator">
-                        {getTrendIcon(currentData.confirmation_rate_change > 0 ? 'up' : (currentData.confirmation_rate_change < 0 ? 'down' : 'stable'))}
-                        <span 
-                          className="evolution-value"
-                          style={{ color: getTrendColor(currentData.confirmation_rate_change > 0 ? 'up' : (currentData.confirmation_rate_change < 0 ? 'down' : 'stable')) }}
-                        >
-                          {currentData.confirmation_rate_change > 0 ? '+' : ''}{formatPercentage(currentData.confirmation_rate_change)}
-                        </span>
-                        <span className="evolution-label">vs période précédente</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Taux de Signature */}
-              {currentData.signature_rate !== undefined && (
-                <div className="kpi-card signature-rate">
-                  <div className="kpi-card-header">
-                    <FaPercentage className="kpi-icon" />
-                    <h3>Taux de Signature</h3>
-                  </div>
-                  <div className="kpi-card-body">
-                    <div className="kpi-value-large">
-                      <span className="value">{formatPercentage(currentData.signature_rate)}</span>
-                      <span className="label">Signatures (date planning) / Comptes rendus (date visite)</span>
-                      {((currentData.signatures_count ?? currentData.fiches_signees_count) != null ||
-                        (currentData.compte_rendu_visites_count ?? currentData.rdvs_visites_count) != null) && (
-                        <span className="label label-detail">
-                          {currentData.signatures_count ?? currentData.fiches_signees_count ?? 0} /{' '}
-                          {currentData.compte_rendu_visites_count ?? currentData.rdvs_visites_count ?? 0}
-                        </span>
-                      )}
-                    </div>
-                    {currentData.signature_rate_change !== undefined && (
-                      <div className="evolution-indicator">
-                        {getTrendIcon(currentData.signature_rate_change > 0 ? 'up' : (currentData.signature_rate_change < 0 ? 'down' : 'stable'))}
-                        <span 
-                          className="evolution-value"
-                          style={{ color: getTrendColor(currentData.signature_rate_change > 0 ? 'up' : (currentData.signature_rate_change < 0 ? 'down' : 'stable')) }}
-                        >
-                          {currentData.signature_rate_change > 0 ? '+' : ''}{formatPercentage(currentData.signature_rate_change)}
-                        </span>
-                        <span className="evolution-label">vs période précédente</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Évolution Confirmations */}
-              {currentData.confirmation_evolution && (
-                <div className="kpi-card evolution">
-                  <div className="kpi-card-header">
-                    <FaChartLine className="kpi-icon" />
-                    <h3>Évolution Confirmations</h3>
-                  </div>
-                  <div className="kpi-card-body">
-                    <div className="evolution-comparison">
-                      <div className="comparison-item">
-                        <span className="comparison-label">Période actuelle</span>
-                        <span className="comparison-value">{currentData.confirmation_evolution.current}</span>
-                      </div>
-                      <div className="comparison-item">
-                        <span className="comparison-label">Période précédente</span>
-                        <span className="comparison-value">{currentData.confirmation_evolution.previous}</span>
-                      </div>
-                    </div>
-                    <div className="evolution-indicator">
-                      {getTrendIcon(currentData.confirmation_evolution.trend)}
-                      <span 
-                        className="evolution-value"
-                        style={{ color: getTrendColor(currentData.confirmation_evolution.trend) }}
-                      >
-                        {currentData.confirmation_evolution.change > 0 ? '+' : ''}{currentData.confirmation_evolution.change.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Évolution Signatures */}
-              {currentData.signature_evolution && (
-                <div className="kpi-card evolution">
-                  <div className="kpi-card-header">
-                    <FaChartLine className="kpi-icon" />
-                    <h3>Évolution Signatures</h3>
-                  </div>
-                  <div className="kpi-card-body">
-                    <div className="evolution-comparison">
-                      <div className="comparison-item">
-                        <span className="comparison-label">Période actuelle</span>
-                        <span className="comparison-value">{currentData.signature_evolution.current}</span>
-                      </div>
-                      <div className="comparison-item">
-                        <span className="comparison-label">Période précédente</span>
-                        <span className="comparison-value">{currentData.signature_evolution.previous}</span>
-                      </div>
-                    </div>
-                    <div className="evolution-indicator">
-                      {getTrendIcon(currentData.signature_evolution.trend)}
-                      <span 
-                        className="evolution-value"
-                        style={{ color: getTrendColor(currentData.signature_evolution.trend) }}
-                      >
-                        {currentData.signature_evolution.change > 0 ? '+' : ''}{currentData.signature_evolution.change.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section Top 3 Confirmateurs - Confirmations */}
-          <div className="kpi-section">
-            <h2 className="section-title">Top 3 Confirmateurs - Confirmations</h2>
-            <div className="kpi-cards top-confirmateurs">
-              {currentData.top3_confirmations && currentData.top3_confirmations.length > 0 ? (
-                currentData.top3_confirmations.map((confirmateur, index) => (
-                  <div key={confirmateur.id} className="kpi-card confirmateur-card">
-                    <div className="kpi-card-header">
-                      <span className="medal">{medals[index]}</span>
-                      <h3>#{index + 1}</h3>
-                    </div>
-                    <div className="kpi-card-body">
-                      <div className="agent-info">
-                        {confirmateur.photo ? (
-                          <img 
-                            src={confirmateur.photo} 
-                            alt={confirmateur.pseudo}
-                            className="agent-avatar"
-                          />
-                        ) : (
-                          <div className="agent-avatar placeholder">
-                            {confirmateur.pseudo ? confirmateur.pseudo.charAt(0).toUpperCase() : '?'}
-                          </div>
-                        )}
-                        <div className="agent-details">
-                          <div className="agent-name">
-                            {confirmateur.nom && confirmateur.prenom
-                              ? `${confirmateur.nom} ${confirmateur.prenom}`
-                              : confirmateur.pseudo || 'N/A'}
-                          </div>
-                          <div className="agent-pseudo">{confirmateur.pseudo}</div>
-                        </div>
-                      </div>
-                      <div className="kpi-value">
-                        <span className="value">{confirmateur.count}</span>
-                        <span className="label">confirmations</span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="no-data">Aucun confirmateur trouvé pour cette période</div>
-              )}
-            </div>
-          </div>
-
-          {/* Section Top 3 Confirmateurs - Signatures */}
-          <div className="kpi-section">
-            <h2 className="section-title">Top 3 Confirmateurs - Signatures</h2>
-            <div className="kpi-cards top-confirmateurs">
-              {currentData.top3_signatures && currentData.top3_signatures.length > 0 ? (
-                currentData.top3_signatures.map((confirmateur, index) => (
-                  <div key={confirmateur.id} className="kpi-card confirmateur-card">
-                    <div className="kpi-card-header">
-                      <span className="medal">{medals[index]}</span>
-                      <h3>#{index + 1}</h3>
-                    </div>
-                    <div className="kpi-card-body">
-                      <div className="agent-info">
-                        {confirmateur.photo ? (
-                          <img 
-                            src={confirmateur.photo} 
-                            alt={confirmateur.pseudo}
-                            className="agent-avatar"
-                          />
-                        ) : (
-                          <div className="agent-avatar placeholder">
-                            {confirmateur.pseudo ? confirmateur.pseudo.charAt(0).toUpperCase() : '?'}
-                          </div>
-                        )}
-                        <div className="agent-details">
-                          <div className="agent-name">
-                            {confirmateur.nom && confirmateur.prenom
-                              ? `${confirmateur.nom} ${confirmateur.prenom}`
-                              : confirmateur.pseudo || 'N/A'}
-                          </div>
-                          <div className="agent-pseudo">{confirmateur.pseudo}</div>
-                        </div>
-                      </div>
-                      <div className="kpi-value">
-                        <span className="value">{confirmateur.count}</span>
-                        <span className="label">signatures</span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="no-data">Aucun confirmateur trouvé pour cette période</div>
-              )}
-            </div>
-          </div>
-
-          {/* Informations sur la période */}
-          <div className="period-info">
-            <p>
-              Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
-            </p>
-            <p className="info-text">
-              Taux de confirmation = nombre de confirmations (table confirmations, date de création) / nombre de qualifications
-              effectuées par les confirmateurs (fiches_histo, date de création). Taux de signature = signatures effectuées sur la
-              période (date planning / date_rdv_time) / nombre total de comptes rendus dont la date de visite est dans la même période.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Contenu pour l'onglet Confirmation JWS */}
-      {activeTab === 'confirmation-jws' && currentData && (
-        <div className="kpis-content">
-          <div className="kpi-section">
-            <h2 className="section-title">Statistiques Confirmation JWS</h2>
-            <p className="section-description">
-              Statistiques de transformation et performance pour les centres Call_JWS
-            </p>
-            
-            {currentData.centres && currentData.centres.length > 0 ? (
-              <div className="centres-grid">
-                {currentData.centres.map((centre) => (
-                  <div key={centre.centre_id} className="centre-card">
-                    <div className="centre-header">
-                      <h3>{centre.centre_titre}</h3>
-                    </div>
-                    <div className="centre-metrics">
-                      {/* Métriques principales */}
-                      <div className="metric-row">
-                        <div className="metric-item">
-                          <div className="metric-label">Total Fiches</div>
-                          <div className="metric-value">{centre.total_count || 0}</div>
-                        </div>
-                        <div className="metric-item">
-                          <div className="metric-label">Fiches Confirmées</div>
-                          <div className="metric-value">{centre.confirmed_count || 0}</div>
-                        </div>
-                        <div className="metric-item">
-                          <div className="metric-label">Fiches Signées</div>
-                          <div className="metric-value">{centre.signed_count || 0}</div>
-                        </div>
-                      </div>
-                      
-                      {/* Taux de conversion - uniquement confirmer et signatures */}
-                      <div className="rates-section">
-                        <h4>Taux de Conversion</h4>
-                        <div className="rates-grid">
-                          <div className="rate-card highlight">
-                            <div className="rate-label">Taux de Conversion en Confirmer</div>
-                            <div className="rate-value">{formatPercentage(centre.confirmation_rate || 0)}</div>
-                            <div className="rate-description">Confirmées / Total (par date confirmation)</div>
-                          </div>
-                          <div className="rate-card highlight">
-                            <div className="rate-label">Taux de Conversion en Signatures</div>
-                            <div className="rate-value">{formatPercentage(centre.signature_rate || 0)}</div>
-                            <div className="rate-description">Signées / Total (par date insertion)</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-data">Aucune donnée disponible pour cette période</div>
-            )}
-            
-            {/* Informations sur la période */}
-            <div className="period-info">
-              <p>
-                Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === 'confirmation' && renderConfirmationKpiContent(currentData)}
+      {activeTab === 'confirmation-jws' && renderConfirmationKpiContent(currentData, { jwsScope: true })}
 
     </div>
   );
