@@ -238,11 +238,11 @@ const KPIs = () => {
     if (!data) return null;
     return (
       <div className="kpis-content">
-        {jwsScope && (
-          <p className="section-description" style={{ marginBottom: '1rem', color: '#555' }}>
-            Périmètre : centres Call_JWS / CALL_JWS actifs uniquement.
-          </p>
-        )}
+        <p className="section-description" style={{ marginBottom: '1rem', color: '#555' }}>
+          {jwsScope
+            ? 'Périmètre : centres Call_JWS / CALL_JWS actifs uniquement.'
+            : 'Périmètre : tous les centres (fiches non archivées).'}
+        </p>
         <div className="kpi-section">
           <h2 className="section-title">Métriques Globales</h2>
           <div className="kpi-cards metrics">
@@ -464,7 +464,9 @@ const KPIs = () => {
             Taux de confirmation = nombre de confirmations (table confirmations, date de création) / nombre de qualifications
             effectuées par les confirmateurs (fiches_histo, date de création). Taux de signature = signatures effectuées sur la
             période (date planning / date_rdv_time) / nombre total de comptes rendus dont la date de visite est dans la même période.
-            {jwsScope ? ' Données limitées aux centres Call_JWS / CALL_JWS.' : ''}
+            {jwsScope
+              ? ' Données limitées aux centres Call_JWS / CALL_JWS.'
+              : ' Données agrégées sur tous les centres.'}
           </p>
         </div>
       </div>

@@ -2285,18 +2285,26 @@ function buildEmptyKpisConfirmationRange(dateRange) {
   };
 }
 
-/** KPIs confirmation agrégés pour une liste de centres (ex. CALL_JWS). */
+/**
+ * KPIs confirmation agrégés.
+ * @param {number[]|null} centreIds - null = tous les centres actifs ; [] = aucun (vide) ; liste = filtre IN
+ */
 async function computeKpisConfirmationRange(centreIds, dateRange) {
   const periodStart = dateRange.start;
   const periodEnd = dateRange.end;
   const emptyRange = buildEmptyKpisConfirmationRange(dateRange);
-  if (!centreIds?.length) {
+  if (centreIds != null && centreIds.length === 0) {
     return emptyRange;
   }
 
-  const centreCondition = `AND f.id_centre IN (${centreIds.map(() => '?').join(',')})`;
-  const centreParams = centreIds;
-  const centreInList = centreIds.map(() => '?').join(', ');
+  const filterByCentre = centreIds != null && centreIds.length > 0;
+  const centreCondition = filterByCentre
+    ? `AND f.id_centre IN (${centreIds.map(() => '?').join(',')})`
+    : '';
+  const centreParams = filterByCentre ? centreIds : [];
+  const signatureCentreWhere = filterByCentre
+    ? `WHERE f.id_centre IN (${centreIds.map(() => '?').join(', ')})`
+    : 'WHERE 1=1';
 
   const startDate = dateRange.startDateTime;
   const endDate = dateRange.endDateTime;
@@ -2338,21 +2346,25 @@ async function computeKpisConfirmationRange(centreIds, dateRange) {
       FROM signature s
       INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
       INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
-      WHERE f.id_centre IN (${centreInList})
+      ${signatureCentreWhere}
       ${KPI_FICHE_RDV_DATE_SQL}
       GROUP BY s.confirmateur, u.pseudo, u.nom, u.prenom, u.photo
       ORDER BY count_signatures DESC
       LIMIT 3
     `;
-  const top3SignaturesRows = await query(top3SignaturesQuery, [...centreParams, startDate, endDate]);
+  const top3SignaturesRows = await query(top3SignaturesQuery, [
+    ...(filterByCentre ? centreParams : []),
+    startDate,
+    endDate,
+  ]);
 
   const signaturesTotalResult = await queryOne(
     `SELECT COALESCE(SUM(s.ajoute), 0) as total
        FROM signature s
        INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
-       WHERE f.id_centre IN (${centreInList})
+       ${signatureCentreWhere}
        ${KPI_FICHE_RDV_DATE_SQL}`,
-    [...centreParams, startDate, endDate]
+    [...(filterByCentre ? centreParams : []), startDate, endDate]
   );
   const signaturesCount = parseFloat(signaturesTotalResult?.total || 0);
 
@@ -2402,9 +2414,9 @@ async function computeKpisConfirmationRange(centreIds, dateRange) {
       `SELECT COALESCE(SUM(s.ajoute), 0) as total
          FROM signature s
          INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
-         WHERE f.id_centre IN (${centreInList})
+         ${signatureCentreWhere}
          ${KPI_FICHE_RDV_DATE_SQL}`,
-      [...centreParams, previousStartDate, previousEndDate]
+      [...(filterByCentre ? centreParams : []), previousStartDate, previousEndDate]
     ),
     queryOne(compteRenduVisitesQuery, [previousStartDate, previousEndDate, ...centreParams]),
     queryOne(fichesTraiteesQuery, [previousStartDate, previousEndDate, ...centreParams]),
@@ -2500,12 +2512,11 @@ async function queryJwsCentreIds() {
   return (rows || []).map((c) => c.id);
 }
 
-// Récupérer les KPIs Confirmation (Top 3 confirmateurs confirmations/signatures, Taux, Évolution) - centre CALL_JWS uniquement
+// Récupérer les KPIs Confirmation (tous les centres)
 router.get('/kpis-confirmation', authenticate, async (req, res) => {
   try {
     const dateRange = resolveKpiDateRangeFromQuery(req);
-    const centreIds = await queryJwsCentreIds();
-    const range = await computeKpisConfirmationRange(centreIds, dateRange);
+    const range = await computeKpisConfirmationRange(null, dateRange);
     res.json({ success: true, data: { range } });
   } catch (error) {
     console.error('[STAT] /kpis-confirmation - Erreur:', error.message);
