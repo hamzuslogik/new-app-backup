@@ -456,9 +456,6 @@ const Validation = () => {
             <p className="validation-audit-modal-subtitle">
               {auditModal.fiche.nom} {auditModal.fiche.prenom} — {auditModal.fiche.tel || '—'}
             </p>
-            <p className="validation-audit-modal-hint">
-              L&apos;observation sera enregistrée dans le champ <strong>observation_qualite</strong> de la fiche.
-            </p>
             <label htmlFor="validation-audit-observation">Observation</label>
             <textarea
               id="validation-audit-observation"

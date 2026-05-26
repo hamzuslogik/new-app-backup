@@ -727,3 +727,77 @@
   padding: 1rem;
 }
 
+.subsection-title {
+  margin: 1.5rem 0 0.75rem 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.confirmation-subsection-title {
+  margin-top: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4a7a87;
+}
+
+.confirmation-inline-subtitle {
+  margin-bottom: 1rem;
+}
+
+.confirmation-cards-grid {
+  margin-top: 1rem;
+}
+
+.confirmation-agent-card {
+  border-top-color: #4a7a87;
+}
+
+.confirmation-agent-card .confirmation-value {
+  color: #4a7a87;
+}
+
+.confirmation-placeholder {
+  background: #4a7a87 !important;
+}
+
+.stat-metrics-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.confirmation-detail-metrics {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.totaux-audit .totaux-value { color: #4a7a87; }
+.totaux-audit-obs .totaux-value { color: #17a2b8; }
+
+.confirmation-audit-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.confirmation-totaux-compact {
+  margin-bottom: 1rem;
+}
+
+.audit-table thead {
+  background: #5a8a97;
+}
+
+.rdvs-audites-content {
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .stat-metrics-3 {
+    grid-template-columns: 1fr;
+  }
+}
+

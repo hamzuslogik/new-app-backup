@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
+const { encodeFicheId } = require('./fiche.routes');
 
 // Dates en heure locale : 1er du mois / aujourd'hui (évite UTC qui peut donner le 31 du mois précédent)
 function getFirstOfMonthLocal() {
@@ -3446,6 +3447,130 @@ async function fetchQualiteConfirmationCompletudeStats(startDate, endDate) {
   }
 }
 
+/** RDV confirmés (état 7) audités par un agent qualité confirmation (fonction 4), période = date RDV. */
+async function fetchQualiteConfirmationAuditStats(startDate, endDate) {
+  const empty = {
+    agents: [],
+    totaux: { total_rdvs_audites: 0, avec_observation: 0 },
+    rdvs_audites: [],
+  };
+  try {
+    const rows = await query(
+      `SELECT
+        u.id,
+        u.pseudo,
+        u.nom,
+        u.prenom,
+        u.photo,
+        fn.titre AS fonction_titre,
+        c.titre AS centre_titre,
+        COUNT(DISTINCT f.id) AS total_rdvs_audites,
+        SUM(
+          CASE
+            WHEN f.observation_qualite IS NOT NULL AND TRIM(f.observation_qualite) != ''
+            THEN 1
+            ELSE 0
+          END
+        ) AS avec_observation
+      FROM fiches f
+      INNER JOIN utilisateurs u ON f.id_qualite_confirmation = u.id AND u.fonction = 4 AND u.etat > 0
+      LEFT JOIN fonctions fn ON u.fonction = fn.id
+      LEFT JOIN centres c ON u.centre = c.id
+      WHERE f.id_etat_final = 7
+      AND f.id_qualite_confirmation IS NOT NULL
+      AND f.date_rdv_time IS NOT NULL
+      AND f.date_rdv_time != ''
+      AND (f.archive = 0 OR f.archive IS NULL)
+      AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?
+      GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo, fn.titre, c.titre
+      ORDER BY total_rdvs_audites DESC`,
+      [startDate, endDate]
+    );
+    const agents = (rows || []).map((row) => ({
+      agent: {
+        id: row.id,
+        pseudo: row.pseudo,
+        nom: row.nom,
+        prenom: row.prenom,
+        photo: row.photo,
+        fonction_titre: row.fonction_titre,
+        centre_titre: row.centre_titre,
+      },
+      stats: {
+        total_rdvs_audites: parseInt(row.total_rdvs_audites || 0, 10),
+        avec_observation: parseInt(row.avec_observation || 0, 10),
+      },
+    }));
+    const totaux = agents.reduce(
+      (acc, a) => ({
+        total_rdvs_audites: acc.total_rdvs_audites + a.stats.total_rdvs_audites,
+        avec_observation: acc.avec_observation + a.stats.avec_observation,
+      }),
+      { total_rdvs_audites: 0, avec_observation: 0 }
+    );
+
+    const rdvsRows = await query(
+      `SELECT
+        f.id,
+        f.hash,
+        f.nom,
+        f.prenom,
+        f.tel,
+        f.cp,
+        f.ville,
+        f.date_rdv_time,
+        f.date_modif_time,
+        f.observation_qualite,
+        f.valider,
+        u_aud.id AS auditeur_id,
+        u_aud.pseudo AS auditeur_pseudo,
+        u_aud.nom AS auditeur_nom,
+        u_aud.prenom AS auditeur_prenom,
+        u1.pseudo AS confirmateur_pseudo,
+        p.nom AS produit_nom
+      FROM fiches f
+      LEFT JOIN utilisateurs u_aud ON f.id_qualite_confirmation = u_aud.id
+      LEFT JOIN utilisateurs u1 ON f.id_confirmateur = u1.id
+      LEFT JOIN produits p ON f.produit = p.id
+      WHERE f.id_etat_final = 7
+      AND f.id_qualite_confirmation IS NOT NULL
+      AND f.date_rdv_time IS NOT NULL
+      AND f.date_rdv_time != ''
+      AND (f.archive = 0 OR f.archive IS NULL)
+      AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?
+      ORDER BY f.date_rdv_time DESC, f.id DESC
+      LIMIT 500`,
+      [startDate, endDate]
+    );
+    const rdvs_audites = (rdvsRows || []).map((r) => ({
+      id: r.id,
+      hash: r.hash || encodeFicheId(r.id),
+      nom: r.nom,
+      prenom: r.prenom,
+      tel: r.tel,
+      cp: r.cp,
+      ville: r.ville,
+      date_rdv_time: r.date_rdv_time,
+      date_modif_time: r.date_modif_time,
+      observation_qualite: r.observation_qualite,
+      valider: r.valider,
+      auditeur: {
+        id: r.auditeur_id,
+        pseudo: r.auditeur_pseudo,
+        nom: r.auditeur_nom,
+        prenom: r.auditeur_prenom,
+      },
+      confirmateur_pseudo: r.confirmateur_pseudo,
+      produit_nom: r.produit_nom,
+    }));
+
+    return { agents, totaux, rdvs_audites };
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE' || err.code === 'ER_BAD_FIELD_ERROR') return empty;
+    throw err;
+  }
+}
+
 // Récupérer les statistiques par agent qualité (qui ont audité des fiches)
 // Se base sur le champ id_qualite dans la table fiches et date_insert_time pour la date
 router.get('/agents-qualite', authenticate, async (req, res) => {
@@ -3623,13 +3748,21 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
       })
     );
 
-    const qualiteConfirmation = await fetchQualiteConfirmationCompletudeStats(startDate, endDate);
+    const completudes = await fetchQualiteConfirmationCompletudeStats(startDate, endDate);
+    const auditConfirmation = await fetchQualiteConfirmationAuditStats(startDate, endDate);
 
     res.json({
       success: true,
       data: {
         agents: agentsStats,
-        qualite_confirmation: qualiteConfirmation,
+        qualite_confirmation: {
+          completudes,
+          audit_confirmation: {
+            agents: auditConfirmation.agents,
+            totaux: auditConfirmation.totaux,
+          },
+          rdvs_audites: auditConfirmation.rdvs_audites,
+        },
         period: {
           date_debut: startDateStr,
           date_fin: endDateStr

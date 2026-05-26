@@ -1,12 +1,29 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from 'react-query';
 import api from '../config/api';
-import { FaUserCheck, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaChartBar, FaList, FaChevronDown, FaChevronUp, FaClipboardCheck } from 'react-icons/fa';
+import {
+  FaUserCheck,
+  FaFilter,
+  FaSearch,
+  FaFileExcel,
+  FaFileCsv,
+  FaFilePdf,
+  FaChartBar,
+  FaList,
+  FaChevronDown,
+  FaChevronUp,
+  FaClipboardCheck,
+  FaChartPie,
+  FaCalendarCheck
+} from 'react-icons/fa';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './StatsAgentsQualite.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+
+const CHART_COLORS = ['#9cbfc8', '#4a7a87', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#e83e8c'];
 
 const StatsAgentsQualite = () => {
   useForceDesktopViewport('stats-agents-qualite-page');
@@ -14,6 +31,7 @@ const StatsAgentsQualite = () => {
   const [viewMode, setViewMode] = useState('stats');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedAgents, setExpandedAgents] = useState({});
+  const [expandedConfirmationAgents, setExpandedConfirmationAgents] = useState({});
 
   const [filters, setFilters] = useState({
     date_debut: getFirstOfMonthLocal(),
@@ -45,12 +63,27 @@ const StatsAgentsQualite = () => {
       const res = await api.get('/statistiques/agents-qualite', { params });
       return res.data.data;
     },
-    { enabled: !!filters.date_debut && !!filters.date_fin }
+    { enabled: !!filters.date_debut && !!filters.date_fin && viewMode !== 'kpis' }
+  );
+
+  const { data: kpisData, isLoading: kpisLoading } = useQuery(
+    ['stats-agents-qualite-kpis', filters.date_debut, filters.date_fin],
+    async () => {
+      const res = await api.get('/statistiques/agents-qualite-kpis', {
+        params: { date_debut: filters.date_debut, date_fin: filters.date_fin }
+      });
+      return res.data.data;
+    },
+    { enabled: viewMode === 'kpis' && !!filters.date_debut && !!filters.date_fin }
   );
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
+
+  const completudesData = statsData?.qualite_confirmation?.completudes;
+  const auditData = statsData?.qualite_confirmation?.audit_confirmation;
+  const rdvsAudites = statsData?.qualite_confirmation?.rdvs_audites || [];
 
   const filteredAgents = useMemo(() => {
     if (!statsData?.agents) return [];
@@ -66,7 +99,7 @@ const StatsAgentsQualite = () => {
   }, [statsData, searchTerm]);
 
   const filteredConfirmationAgents = useMemo(() => {
-    const agents = statsData?.qualite_confirmation?.agents || [];
+    const agents = completudesData?.agents || [];
     if (!searchTerm.trim()) return agents;
     const term = searchTerm.toLowerCase();
     return agents.filter(row =>
@@ -74,13 +107,58 @@ const StatsAgentsQualite = () => {
       row.agent.nom?.toLowerCase().includes(term) ||
       row.agent.prenom?.toLowerCase().includes(term)
     );
-  }, [statsData, searchTerm]);
+  }, [completudesData, searchTerm]);
+
+  const confirmationCardsByAgent = useMemo(() => {
+    const map = new Map();
+    (completudesData?.agents || []).forEach((row) => {
+      map.set(row.agent.id, {
+        agent: row.agent,
+        completudes: row.stats,
+        audit: { total_rdvs_audites: 0, avec_observation: 0 }
+      });
+    });
+    (auditData?.agents || []).forEach((row) => {
+      const existing = map.get(row.agent.id);
+      if (existing) {
+        existing.audit = row.stats;
+      } else {
+        map.set(row.agent.id, {
+          agent: row.agent,
+          completudes: { total_completudes: 0, en_attente: 0, traitees: 0 },
+          audit: row.stats
+        });
+      }
+    });
+    return Array.from(map.values()).filter((row) => {
+      if (!searchTerm.trim()) return true;
+      const term = searchTerm.toLowerCase();
+      return (
+        row.agent.pseudo?.toLowerCase().includes(term) ||
+        row.agent.nom?.toLowerCase().includes(term) ||
+        row.agent.prenom?.toLowerCase().includes(term)
+      );
+    });
+  }, [completudesData, auditData, searchTerm]);
+
+  const filteredRdvsAudites = useMemo(() => {
+    if (!searchTerm.trim()) return rdvsAudites;
+    const term = searchTerm.toLowerCase();
+    return rdvsAudites.filter((rdv) =>
+      rdv.nom?.toLowerCase().includes(term) ||
+      rdv.prenom?.toLowerCase().includes(term) ||
+      rdv.tel?.includes(term) ||
+      rdv.auditeur?.pseudo?.toLowerCase().includes(term) ||
+      rdv.confirmateur_pseudo?.toLowerCase().includes(term)
+    );
+  }, [rdvsAudites, searchTerm]);
 
   const toggleExpand = (agentId) => {
-    setExpandedAgents(prev => ({
-      ...prev,
-      [agentId]: !prev[agentId]
-    }));
+    setExpandedAgents(prev => ({ ...prev, [agentId]: !prev[agentId] }));
+  };
+
+  const toggleConfirmationExpand = (agentId) => {
+    setExpandedConfirmationAgents(prev => ({ ...prev, [agentId]: !prev[agentId] }));
   };
 
   const buildQualifExportData = () => {
@@ -136,9 +214,11 @@ const StatsAgentsQualite = () => {
     );
   };
 
-  const confirmationTotaux = statsData?.qualite_confirmation?.totaux;
+  const completudesTotaux = completudesData?.totaux;
+  const auditTotaux = auditData?.totaux;
+  const hasError = viewMode !== 'kpis' && error;
 
-  if (isLoading) {
+  if (viewMode !== 'kpis' && isLoading) {
     return (
       <div className="stats-agents-qualite-page">
         <div className="loading">Chargement des statistiques...</div>
@@ -146,7 +226,7 @@ const StatsAgentsQualite = () => {
     );
   }
 
-  if (error) {
+  if (hasError) {
     return (
       <div className="stats-agents-qualite-page">
         <div className="error">
@@ -155,6 +235,17 @@ const StatsAgentsQualite = () => {
       </div>
     );
   }
+
+  const formatDateTime = (value) => {
+    if (!value) return '-';
+    return new Date(value).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   return (
     <div className="stats-agents-qualite-page">
@@ -206,7 +297,10 @@ const StatsAgentsQualite = () => {
                 <option value="">Tous les agents</option>
                 {agentsQualiteData?.map(agentStat => (
                   <option key={agentStat.agent.id} value={agentStat.agent.id}>
-                    {agentStat.agent.pseudo} {agentStat.agent.nom && agentStat.agent.prenom ? `(${agentStat.agent.nom} ${agentStat.agent.prenom})` : ''}
+                    {agentStat.agent.pseudo}{' '}
+                    {agentStat.agent.nom && agentStat.agent.prenom
+                      ? `(${agentStat.agent.nom} ${agentStat.agent.prenom})`
+                      : ''}
                   </option>
                 ))}
               </select>
@@ -220,7 +314,7 @@ const StatsAgentsQualite = () => {
           <FaSearch className="search-icon" />
           <input
             type="text"
-            placeholder="Rechercher un agent qualité..."
+            placeholder="Rechercher..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -234,9 +328,11 @@ const StatsAgentsQualite = () => {
         </button>
       </div>
 
-      {statsData?.period && (
+      {(statsData?.period || kpisData?.period) && (
         <div className="period-info">
-          Période : <strong>{statsData.period.date_debut}</strong> au <strong>{statsData.period.date_fin}</strong>
+          Période :{' '}
+          <strong>{(statsData?.period || kpisData?.period)?.date_debut}</strong> au{' '}
+          <strong>{(statsData?.period || kpisData?.period)?.date_fin}</strong>
         </div>
       )}
 
@@ -260,13 +356,159 @@ const StatsAgentsQualite = () => {
               className={`mode-btn ${viewMode === 'fiches' ? 'active' : ''}`}
               onClick={() => setViewMode('fiches')}
             >
-              <FaList /> Fiches auditées
+              <FaList /> Fiches auditées qualif
+            </button>
+            <button
+              className={`mode-btn ${viewMode === 'rdvs' ? 'active' : ''}`}
+              onClick={() => setViewMode('rdvs')}
+            >
+              <FaCalendarCheck /> RDVs audités
+            </button>
+            <button
+              className={`mode-btn ${viewMode === 'kpis' ? 'active' : ''}`}
+              onClick={() => setViewMode('kpis')}
+            >
+              <FaChartPie /> KPIs
             </button>
           </div>
         </div>
 
-        {viewMode === 'stats' ? (
+        {viewMode === 'kpis' && (
+          <div className="kpis-content">
+            {kpisLoading ? (
+              <div className="loading">Chargement des KPIs...</div>
+            ) : (
+              <>
+                <section className="kpis-section">
+                  <h3>Qualité qualification – Alertes et remarques envoyées</h3>
+                  <div className="table-responsive">
+                    <table className="stats-table kpis-table">
+                      <thead>
+                        <tr>
+                          <th>Agent qualité</th>
+                          <th>Alertes KO envoyées</th>
+                          <th>Remarques envoyées</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(kpisData?.qualite_qualification || []).length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="no-data">Aucune donnée</td>
+                          </tr>
+                        ) : (
+                          (kpisData?.qualite_qualification || []).map((row) => (
+                            <tr key={row.id}>
+                              <td>{row.pseudo || `${row.nom || ''} ${row.prenom || ''}`.trim() || row.id}</td>
+                              <td>{row.nb_alertes_envoyees}</td>
+                              <td>{row.nb_remarques_envoyees}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className="kpis-section">
+                  <h3>Répartition des alertes KO par RE qualification</h3>
+                  <div className="kpis-chart-wrap">
+                    {(kpisData?.re_alertes_pie || []).length === 0 ? (
+                      <div className="no-data">Aucune alerte sur la période</div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={320}>
+                        <PieChart>
+                          <Pie
+                            data={kpisData.re_alertes_pie}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={120}
+                            label={({ name, value, percent }) =>
+                              `${name}: ${value} (${((percent || 0) * 100).toFixed(0)}%)`
+                            }
+                          >
+                            {(kpisData.re_alertes_pie || []).map((_, i) => (
+                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value, name, props) => [
+                              `${value} alertes (${((props?.payload?.percent ?? 0) * 100).toFixed(1)}%)`,
+                              name
+                            ]}
+                          />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                </section>
+
+                <section className="kpis-section">
+                  <h3>Remarques reçues par RE qualification (nombre et %)</h3>
+                  <div className="kpis-chart-wrap">
+                    {(kpisData?.re_remarques_bar || []).length === 0 ? (
+                      <div className="no-data">Aucune remarque sur la période</div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart
+                          data={kpisData.re_remarques_bar}
+                          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                        >
+                          <XAxis dataKey="name" angle={-25} textAnchor="end" height={60} />
+                          <YAxis />
+                          <Tooltip
+                            formatter={(value, name, props) => [
+                              `${value} (${props.payload.percent}%)`,
+                              name
+                            ]}
+                          />
+                          <Legend />
+                          <Bar dataKey="value" name="Remarques" fill="#4a7a87" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                </section>
+
+                <section className="kpis-section">
+                  <h3>Agents qualification – Remarques et alertes KO reçues</h3>
+                  <div className="table-responsive">
+                    <table className="stats-table kpis-table">
+                      <thead>
+                        <tr>
+                          <th>Agent</th>
+                          <th>Alertes KO reçues</th>
+                          <th>Remarques reçues</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(kpisData?.agents_qualification || []).length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="no-data">Aucun agent</td>
+                          </tr>
+                        ) : (
+                          (kpisData?.agents_qualification || []).map((row) => (
+                            <tr key={row.id}>
+                              <td>{row.pseudo || `${row.nom || ''} ${row.prenom || ''}`.trim() || row.id}</td>
+                              <td>{row.nb_alertes_ko_recues}</td>
+                              <td>{row.nb_remarques_recues}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </>
+            )}
+          </div>
+        )}
+
+        {viewMode === 'stats' && (
           <div className="stats-content">
+            <h3 className="subsection-title">Audits qualification</h3>
             {filteredAgents.length > 0 ? (
               <div className="agents-stats-grid">
                 {filteredAgents.map((agentStat) => (
@@ -303,7 +545,6 @@ const StatsAgentsQualite = () => {
                         {expandedAgents[agentStat.agent.id] ? <FaChevronUp /> : <FaChevronDown />}
                       </button>
                     </div>
-
                     <div className="agent-stat-body">
                       <div className="stat-metrics">
                         <div className="stat-metric">
@@ -315,7 +556,6 @@ const StatsAgentsQualite = () => {
                           <div className="stat-label">Avec commentaire</div>
                         </div>
                       </div>
-
                       {expandedAgents[agentStat.agent.id] && (
                         <div className="stats-details">
                           <h4>Répartition par état</h4>
@@ -341,8 +581,116 @@ const StatsAgentsQualite = () => {
             ) : (
               <div className="no-data">Aucune fiche auditée (agents qualification) pour cette période</div>
             )}
+
+            <h3 className="subsection-title confirmation-subsection-title">
+              <FaClipboardCheck /> Qualité confirmation
+            </h3>
+            <p className="section-subtitle confirmation-inline-subtitle">
+              Complétudes (date de création) et audits RDV (date du RDV) sur la période.
+            </p>
+
+            {(completudesTotaux || auditTotaux) && (
+              <div className="confirmation-totaux">
+                {completudesTotaux && (
+                  <>
+                    <div className="totaux-metric">
+                      <span className="totaux-value">{completudesTotaux.total_completudes}</span>
+                      <span className="totaux-label">Complétudes</span>
+                    </div>
+                    <div className="totaux-metric totaux-en-attente">
+                      <span className="totaux-value">{completudesTotaux.en_attente}</span>
+                      <span className="totaux-label">En attente</span>
+                    </div>
+                    <div className="totaux-metric totaux-traitees">
+                      <span className="totaux-value">{completudesTotaux.traitees}</span>
+                      <span className="totaux-label">Traitées</span>
+                    </div>
+                  </>
+                )}
+                {auditTotaux && (
+                  <>
+                    <div className="totaux-metric totaux-audit">
+                      <span className="totaux-value">{auditTotaux.total_rdvs_audites}</span>
+                      <span className="totaux-label">RDVs audités</span>
+                    </div>
+                    <div className="totaux-metric totaux-audit-obs">
+                      <span className="totaux-value">{auditTotaux.avec_observation}</span>
+                      <span className="totaux-label">Avec observation</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {confirmationCardsByAgent.length > 0 ? (
+              <div className="agents-stats-grid confirmation-cards-grid">
+                {confirmationCardsByAgent.map((row) => (
+                  <div key={row.agent.id} className="agent-stat-card confirmation-agent-card">
+                    <div className="agent-stat-header">
+                      <div className="agent-info">
+                        {row.agent.photo ? (
+                          <img src={row.agent.photo} alt={row.agent.pseudo} className="agent-avatar" />
+                        ) : (
+                          <div className="agent-avatar placeholder confirmation-placeholder">
+                            {row.agent.pseudo?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                        )}
+                        <div className="agent-details">
+                          <div className="agent-name">{row.agent.pseudo}</div>
+                          <div className="agent-meta">
+                            {row.agent.nom && row.agent.prenom
+                              ? `${row.agent.nom} ${row.agent.prenom}`
+                              : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        className="expand-btn"
+                        onClick={() => toggleConfirmationExpand(row.agent.id)}
+                      >
+                        {expandedConfirmationAgents[row.agent.id] ? <FaChevronUp /> : <FaChevronDown />}
+                      </button>
+                    </div>
+                    <div className="agent-stat-body">
+                      <div className="stat-metrics stat-metrics-3">
+                        <div className="stat-metric">
+                          <div className="stat-value confirmation-value">
+                            {row.completudes.total_completudes}
+                          </div>
+                          <div className="stat-label">Complétudes</div>
+                        </div>
+                        <div className="stat-metric">
+                          <div className="stat-value confirmation-value">
+                            {row.audit.total_rdvs_audites}
+                          </div>
+                          <div className="stat-label">RDVs audités</div>
+                        </div>
+                        <div className="stat-metric">
+                          <div className="stat-value confirmation-value">
+                            {row.audit.avec_observation}
+                          </div>
+                          <div className="stat-label">Avec observation</div>
+                        </div>
+                      </div>
+                      {expandedConfirmationAgents[row.agent.id] && (
+                        <div className="stats-details">
+                          <div className="confirmation-detail-metrics">
+                            <span>En attente : <strong>{row.completudes.en_attente}</strong></span>
+                            <span>Traitées : <strong>{row.completudes.traitees}</strong></span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="no-data">Aucune activité qualité confirmation sur cette période</div>
+            )}
           </div>
-        ) : (
+        )}
+
+        {viewMode === 'fiches' && (
           <div className="fiches-content">
             {filteredAgents.length > 0 ? (
               <div className="fiches-by-agent">
@@ -367,12 +715,13 @@ const StatsAgentsQualite = () => {
                             {agentStat.agent.nom && agentStat.agent.prenom
                               ? `${agentStat.agent.nom} ${agentStat.agent.prenom}`
                               : ''}{' '}
-                            — {agentStat.stats.total_audits} fiche{agentStat.stats.total_audits > 1 ? 's' : ''} auditée{agentStat.stats.total_audits > 1 ? 's' : ''}
+                            — {agentStat.stats.total_audits} fiche
+                            {agentStat.stats.total_audits > 1 ? 's' : ''} auditée
+                            {agentStat.stats.total_audits > 1 ? 's' : ''}
                           </p>
                         </div>
                       </div>
                     </div>
-
                     {agentStat.fiches_auditees?.length > 0 ? (
                       <table className="fiches-table">
                         <thead>
@@ -391,18 +740,11 @@ const StatsAgentsQualite = () => {
                         </thead>
                         <tbody>
                           {agentStat.fiches_auditees.map((fiche) => (
-                            <tr key={fiche.id} className={`${fiche.ko ? 'row-ko' : ''} ${fiche.hc ? 'row-hc' : ''}`}>
-                              <td>
-                                {fiche.date_audit
-                                  ? new Date(fiche.date_audit).toLocaleDateString('fr-FR', {
-                                      day: '2-digit',
-                                      month: '2-digit',
-                                      year: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })
-                                  : '-'}
-                              </td>
+                            <tr
+                              key={fiche.id}
+                              className={`${fiche.ko ? 'row-ko' : ''} ${fiche.hc ? 'row-hc' : ''}`}
+                            >
+                              <td>{formatDateTime(fiche.date_audit)}</td>
                               <td>
                                 <div className="name-cell">
                                   <span className="nom">{fiche.nom || '-'}</span>
@@ -420,7 +762,9 @@ const StatsAgentsQualite = () => {
                                 <div className="agent-cell">
                                   <span className="pseudo">{fiche.agent_pseudo || '-'}</span>
                                   {(fiche.agent_nom || fiche.agent_prenom) && (
-                                    <span className="fullname">{fiche.agent_nom} {fiche.agent_prenom}</span>
+                                    <span className="fullname">
+                                      {fiche.agent_nom} {fiche.agent_prenom}
+                                    </span>
                                   )}
                                 </div>
                               </td>
@@ -474,90 +818,231 @@ const StatsAgentsQualite = () => {
             )}
           </div>
         )}
-      </section>
 
-      {/* Section 2 — Qualité confirmation (complétudes) */}
-      <section className="page-main-section section-confirmation">
-        <div className="section-header">
-          <div>
-            <h2><FaClipboardCheck /> Qualité confirmation</h2>
-            <p className="section-subtitle">
-              Complétudes créées par les agents qualité confirmation (fonction 4), sur la période (date de création).
-            </p>
-          </div>
-        </div>
-
-        {confirmationTotaux && (
-          <div className="confirmation-totaux">
-            <div className="totaux-metric">
-              <span className="totaux-value">{confirmationTotaux.total_completudes}</span>
-              <span className="totaux-label">Total complétudes</span>
-            </div>
-            <div className="totaux-metric totaux-en-attente">
-              <span className="totaux-value">{confirmationTotaux.en_attente}</span>
-              <span className="totaux-label">En attente</span>
-            </div>
-            <div className="totaux-metric totaux-traitees">
-              <span className="totaux-value">{confirmationTotaux.traitees}</span>
-              <span className="totaux-label">Traitées</span>
-            </div>
-            <div className="totaux-metric totaux-non-traitees">
-              <span className="totaux-value">{confirmationTotaux.non_traitees}</span>
-              <span className="totaux-label">Non traitées</span>
-            </div>
+        {viewMode === 'rdvs' && (
+          <div className="fiches-content rdvs-audites-content">
+            {filteredRdvsAudites.length > 0 ? (
+              <div className="table-responsive">
+                <table className="fiches-table rdvs-audites-table">
+                  <thead>
+                    <tr>
+                      <th>Date RDV</th>
+                      <th>Nom / Prénom</th>
+                      <th>Téléphone</th>
+                      <th>CP / Ville</th>
+                      <th>Confirmateur</th>
+                      <th>Produit</th>
+                      <th>Audité par</th>
+                      <th>Observation</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRdvsAudites.map((rdv) => (
+                      <tr key={rdv.id}>
+                        <td>{formatDateTime(rdv.date_rdv_time)}</td>
+                        <td>
+                          <div className="name-cell">
+                            <span className="nom">{rdv.nom || '-'}</span>
+                            <span className="prenom">{rdv.prenom || '-'}</span>
+                          </div>
+                        </td>
+                        <td>{rdv.tel || '-'}</td>
+                        <td>
+                          <div className="location-cell">
+                            <span>{rdv.cp || '-'}</span>
+                            <span className="ville">{rdv.ville || '-'}</span>
+                          </div>
+                        </td>
+                        <td>{rdv.confirmateur_pseudo || '-'}</td>
+                        <td>{rdv.produit_nom || '-'}</td>
+                        <td>
+                          <div className="agent-cell">
+                            <span className="pseudo">{rdv.auditeur?.pseudo || '-'}</span>
+                            {(rdv.auditeur?.nom || rdv.auditeur?.prenom) && (
+                              <span className="fullname">
+                                {rdv.auditeur.nom} {rdv.auditeur.prenom}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="comment-cell">
+                          {rdv.observation_qualite ? (
+                            <div className="comment-preview" title={rdv.observation_qualite}>
+                              {rdv.observation_qualite.length > 80
+                                ? `${rdv.observation_qualite.substring(0, 80)}...`
+                                : rdv.observation_qualite}
+                            </div>
+                          ) : (
+                            <span className="no-comment">-</span>
+                          )}
+                        </td>
+                        <td>
+                          <FicheDetailLink
+                            ficheHash={rdv.hash}
+                            ficheId={rdv.id}
+                            className="btn-detail"
+                            title="Voir les détails"
+                          >
+                            <FaSearch />
+                          </FicheDetailLink>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="no-data">Aucun RDV audité sur cette période</div>
+            )}
           </div>
         )}
+      </section>
 
-        <div className="table-responsive">
-          <table className="stats-table confirmation-table">
-            <thead>
-              <tr>
-                <th>Agent qualité confirmation</th>
-                <th>Complétudes créées</th>
-                <th>En attente</th>
-                <th>Traitées</th>
-                <th>Non traitées</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredConfirmationAgents.length === 0 ? (
+      {/* Section 2 — Qualité confirmation (détail complétudes + audit) */}
+      {viewMode !== 'kpis' && (
+        <section className="page-main-section section-confirmation">
+          <div className="section-header">
+            <div>
+              <h2><FaClipboardCheck /> Qualité confirmation</h2>
+              <p className="section-subtitle">
+                Complétudes créées par les agents qualité confirmation (fonction 4) et audits RDV confirmés
+                (date du RDV).
+              </p>
+            </div>
+          </div>
+
+          {auditTotaux && (
+            <div className="confirmation-audit-summary">
+              <div className="totaux-metric totaux-audit">
+                <span className="totaux-value">{auditTotaux.total_rdvs_audites}</span>
+                <span className="totaux-label">RDVs audités (période)</span>
+              </div>
+              <div className="totaux-metric totaux-audit-obs">
+                <span className="totaux-value">{auditTotaux.avec_observation}</span>
+                <span className="totaux-label">Avec observation qualité</span>
+              </div>
+            </div>
+          )}
+
+          <h3 className="subsection-title">Complétudes par agent</h3>
+          {completudesTotaux && (
+            <div className="confirmation-totaux confirmation-totaux-compact">
+              <div className="totaux-metric">
+                <span className="totaux-value">{completudesTotaux.total_completudes}</span>
+                <span className="totaux-label">Total complétudes</span>
+              </div>
+              <div className="totaux-metric totaux-en-attente">
+                <span className="totaux-value">{completudesTotaux.en_attente}</span>
+                <span className="totaux-label">En attente</span>
+              </div>
+              <div className="totaux-metric totaux-traitees">
+                <span className="totaux-value">{completudesTotaux.traitees}</span>
+                <span className="totaux-label">Traitées</span>
+              </div>
+            </div>
+          )}
+
+          <div className="table-responsive">
+            <table className="stats-table confirmation-table">
+              <thead>
                 <tr>
-                  <td colSpan={5} className="no-data">Aucune complétude créée sur cette période</td>
+                  <th>Agent qualité confirmation</th>
+                  <th>Complétudes créées</th>
+                  <th>En attente</th>
+                  <th>Traitées</th>
                 </tr>
-              ) : (
-                filteredConfirmationAgents.map((row) => (
-                  <tr key={row.agent.id}>
-                    <td>
-                      <div className="agent-cell-inline">
-                        {row.agent.photo ? (
-                          <img src={row.agent.photo} alt={row.agent.pseudo} className="agent-avatar-sm" />
-                        ) : (
-                          <span className="agent-avatar-sm placeholder">
-                            {row.agent.pseudo?.charAt(0)?.toUpperCase() || '?'}
-                          </span>
-                        )}
-                        <span>
-                          <strong>{row.agent.pseudo}</strong>
-                          {(row.agent.nom || row.agent.prenom) && (
-                            <span className="agent-meta">
-                              {' '}
-                              — {row.agent.nom} {row.agent.prenom}
+              </thead>
+              <tbody>
+                {filteredConfirmationAgents.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="no-data">
+                      Aucune complétude créée sur cette période
+                    </td>
+                  </tr>
+                ) : (
+                  filteredConfirmationAgents.map((row) => (
+                    <tr key={row.agent.id}>
+                      <td>
+                        <div className="agent-cell-inline">
+                          {row.agent.photo ? (
+                            <img src={row.agent.photo} alt={row.agent.pseudo} className="agent-avatar-sm" />
+                          ) : (
+                            <span className="agent-avatar-sm placeholder">
+                              {row.agent.pseudo?.charAt(0)?.toUpperCase() || '?'}
                             </span>
                           )}
-                        </span>
-                      </div>
+                          <span>
+                            <strong>{row.agent.pseudo}</strong>
+                            {(row.agent.nom || row.agent.prenom) && (
+                              <span className="agent-meta">
+                                {' '}
+                                — {row.agent.nom} {row.agent.prenom}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="num-cell">{row.stats.total_completudes}</td>
+                      <td className="num-cell">{row.stats.en_attente}</td>
+                      <td className="num-cell">{row.stats.traitees}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <h3 className="subsection-title">Audit confirmation par agent</h3>
+          <div className="table-responsive">
+            <table className="stats-table confirmation-table audit-table">
+              <thead>
+                <tr>
+                  <th>Agent qualité confirmation</th>
+                  <th>RDVs audités</th>
+                  <th>Avec observation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(auditData?.agents || []).length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="no-data">
+                      Aucun RDV audité sur cette période
                     </td>
-                    <td className="num-cell">{row.stats.total_completudes}</td>
-                    <td className="num-cell">{row.stats.en_attente}</td>
-                    <td className="num-cell">{row.stats.traitees}</td>
-                    <td className="num-cell">{row.stats.non_traitees}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                ) : (
+                  (auditData?.agents || []).map((row) => (
+                    <tr key={row.agent.id}>
+                      <td>
+                        <div className="agent-cell-inline">
+                          {row.agent.photo ? (
+                            <img src={row.agent.photo} alt={row.agent.pseudo} className="agent-avatar-sm" />
+                          ) : (
+                            <span className="agent-avatar-sm placeholder">
+                              {row.agent.pseudo?.charAt(0)?.toUpperCase() || '?'}
+                            </span>
+                          )}
+                          <span>
+                            <strong>{row.agent.pseudo}</strong>
+                            {(row.agent.nom || row.agent.prenom) && (
+                              <span className="agent-meta">
+                                {' '}
+                                — {row.agent.nom} {row.agent.prenom}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="num-cell">{row.stats.total_rdvs_audites}</td>
+                      <td className="num-cell">{row.stats.avec_observation}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   );
 };

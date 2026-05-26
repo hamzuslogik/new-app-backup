@@ -83,10 +83,15 @@ function isEtatConfirmerLike(etatId, etatTitre) {
   return t === 'confirmer' || /^confirmer\b/i.test(t);
 }
 
-/** Cadre qualité confirmation : backoffice (11) + login contenant « backoffice ». */
+/** Cadre qualité confirmation : Qualité Confirmation (4), RP Confirmation (13) ; backoffice (11) si login contient « backoffice ». */
 function canShowQualiteConfirmationBackofficePanel(user) {
-  if (!user || Number(user.fonction) !== 11) return false;
-  return String(user.login || '').trim().toLowerCase().includes('backoffice');
+  if (!user) return false;
+  const fn = Number(user.fonction);
+  if (fn === 4 || fn === 13) return true;
+  if (fn === 11) {
+    return String(user.login || '').trim().toLowerCase().includes('backoffice');
+  }
+  return false;
 }
 
 /**
