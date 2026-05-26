@@ -403,9 +403,9 @@ html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(3)
 
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(4),
 html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(4) {
-  width: 108px !important;
-  min-width: 100px !important;
-  max-width: 116px !important;
+  width: 138px !important;
+  min-width: 132px !important;
+  max-width: 150px !important;
   white-space: nowrap !important;
 }
 
@@ -418,8 +418,11 @@ html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(5)
 
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(6),
 html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(6) {
-  min-width: 88px !important;
-  width: 100px !important;
+  min-width: 130px !important;
+  width: 155px !important;
+  max-width: 180px !important;
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(7),
@@ -434,10 +437,27 @@ html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(7)
 
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(8),
 html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(8) {
-  min-width: 56px !important;
-  width: 72px !important;
-  max-width: 80px !important;
-  white-space: normal !important;
+  min-width: 40px !important;
+  width: 44px !important;
+  max-width: 48px !important;
+  padding-left: 3px !important;
+  padding-right: 3px !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  overflow: hidden !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(8) .produit-badge {
+  display: inline-block;
+  width: 100%;
+  max-width: 38px;
+  padding: 3px 2px;
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(9),

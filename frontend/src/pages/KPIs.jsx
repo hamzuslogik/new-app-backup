@@ -234,15 +234,10 @@ const KPIs = () => {
 
   const isConfirmationTab = activeTab === 'confirmation' || activeTab === 'confirmation-jws';
 
-  const renderConfirmationKpiContent = (data, { jwsScope = false } = {}) => {
+  const renderConfirmationKpiContent = (data) => {
     if (!data) return null;
     return (
       <div className="kpis-content">
-        <p className="section-description" style={{ marginBottom: '1rem', color: '#555' }}>
-          {jwsScope
-            ? 'Périmètre : centres Call_JWS / CALL_JWS actifs uniquement.'
-            : 'Périmètre : tous les centres (fiches non archivées).'}
-        </p>
         <div className="kpi-section">
           <h2 className="section-title">Métriques Globales</h2>
           <div className="kpi-cards metrics">
@@ -464,15 +459,6 @@ const KPIs = () => {
         <div className="period-info">
           <p>
             Période: <strong>{data.date_start}</strong> au <strong>{data.date_end}</strong>
-          </p>
-          <p className="info-text">
-            Taux de confirmation = nombre de confirmations sur la période (date planning / date_rdv_time de la fiche) / nombre de
-            fiches distinctes qualifiées par un confirmateur (fiches_histo, date de création). Taux de signature = fiches signées distinctes encore en
-            état signé sur la période (date planning / date_rdv_time), aligné sur la page Signatures / nombre total de comptes rendus
-            dont la date de visite est dans la même période.
-            {jwsScope
-              ? ' Données limitées aux centres Call_JWS / CALL_JWS.'
-              : ' Données agrégées sur tous les centres.'}
           </p>
         </div>
       </div>
@@ -759,9 +745,6 @@ const KPIs = () => {
             <p>
               Période: <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
             </p>
-            <p className="info-text">
-              Taux de conformité = Fiches validées / Fiches produites. Taux de conversion = Fiches confirmées / Fiches validées. Validées = fiches hors groupe 0 et KO=0. Produites = fiches créées par agents qualification, hors poubelle et doublon.
-            </p>
           </div>
         </div>
       )}
@@ -771,9 +754,6 @@ const KPIs = () => {
         <div className="kpis-content">
           <div className="kpi-section">
             <h2 className="section-title">Statistiques Porte ouverte</h2>
-            <p className="section-description" style={{ marginBottom: '1rem', color: '#555' }}>
-              Comptes rendus approuvés avec une qualification « porte ouverte » (Honoré à suivre, Refuser, Signer, Hors cible confirmateur, HHC technique, etc.), par date de visite.
-            </p>
             <div className="kpi-cards metrics">
               <div className="kpi-card conversion-rate">
                 <div className="kpi-card-header">
@@ -909,15 +889,12 @@ const KPIs = () => {
             <p>
               Période : <strong>{currentData.date_start}</strong> au <strong>{currentData.date_end}</strong>
             </p>
-            <p className="info-text">
-              Périmètre identique aux autres onglets KPIs : fiches du centre CALL_JWS lorsque ce centre est configuré ; sinon toutes les fiches. Archives exclues.
-            </p>
           </div>
         </div>
       )}
 
       {activeTab === 'confirmation' && renderConfirmationKpiContent(currentData)}
-      {activeTab === 'confirmation-jws' && renderConfirmationKpiContent(currentData, { jwsScope: true })}
+      {activeTab === 'confirmation-jws' && renderConfirmationKpiContent(currentData)}
 
     </div>
   );
