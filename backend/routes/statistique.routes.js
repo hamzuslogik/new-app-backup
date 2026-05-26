@@ -158,6 +158,12 @@ const KPI_FICHES_QUALIFIEES_HISTO_SQL = `
 const KPI_FICHE_INSERT_DATE_SQL = 'AND f.date_insert_time >= ? AND f.date_insert_time <= ?';
 const KPI_FICHE_RDV_DATE_SQL =
   'AND f.date_rdv_time IS NOT NULL AND f.date_rdv_time != \'\' AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?';
+/** Période KPI confirmations : date_confirmation (repli date_creation si absent). */
+const KPI_CONFIRMATION_DATE_SQL = `
+  AND COALESCE(c.date_confirmation, c.date_creation) IS NOT NULL
+  AND COALESCE(c.date_confirmation, c.date_creation) >= ?
+  AND COALESCE(c.date_confirmation, c.date_creation) <= ?
+`;
 const KPI_FICHES_HISTO_PERIOD_SQL = 'AND fh.date_creation >= ? AND fh.date_creation <= ?';
 
 /** Filtre date_visite sur compte_rendu_pending (repli date_rdv_time fiche si colonne absente). */
@@ -2278,6 +2284,7 @@ function buildEmptyKpisConfirmationRange(dateRange) {
     confirmation_rate_change: 0,
     confirmations_count: 0,
     fiches_traitees_count: 0,
+    confirmateur_histo_modifications_count: 0,
     signature_rate: 0,
     signature_rate_change: 0,
     signatures_count: 0,
@@ -2347,7 +2354,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
       INNER JOIN utilisateurs u ON c.id_confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
       WHERE c.id_confirmateur IS NOT NULL
       AND c.id_confirmateur > 0
-      ${KPI_FICHE_RDV_DATE_SQL}
+      ${KPI_CONFIRMATION_DATE_SQL}
       ${centreCondition}
       GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo
       ORDER BY count_confirmations DESC
@@ -2388,17 +2395,21 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
       FROM confirmations c
       INNER JOIN fiches f ON c.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
       WHERE 1=1
-      ${KPI_FICHE_RDV_DATE_SQL}
+      ${KPI_CONFIRMATION_DATE_SQL}
       ${centreCondition}
     `;
 
+  /** Modifications d'état (fiches_histo) par agents confirmation (fonction 6), période = date_creation. */
   const fichesTraiteesQuery = `
-      SELECT COUNT(DISTINCT fh.id_fiche) as count
+      SELECT
+        COUNT(DISTINCT fh.id_fiche) AS count_fiches,
+        COUNT(*) AS count_modifications
       FROM fiches_histo fh
       INNER JOIN fiches f ON fh.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
       INNER JOIN utilisateurs u ON fh.id_confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
       WHERE fh.id_confirmateur IS NOT NULL
       AND fh.id_confirmateur > 0
+      AND fh.id_etat IS NOT NULL
       ${KPI_FICHES_HISTO_PERIOD_SQL}
       ${centreCondition}
     `;
@@ -2507,14 +2518,22 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
 
   const compteRenduVisitesCount = compteRenduVisitesResult?.count || 0;
   const confirmationsCount = confirmationsResult?.count || 0;
-  const fichesTraiteesCount = fichesTraiteesResult?.count || 0;
+  const fichesTraiteesCount = parseInt(fichesTraiteesResult?.count_fiches || 0, 10);
+  const confirmateurHistoModificationsCount = parseInt(
+    fichesTraiteesResult?.count_modifications || 0,
+    10
+  );
   const previousConfirmationsCount = previousConfirmationsResult?.count || 0;
   const previousSignaturesFichesDistinctCount = parseInt(
     previousSignaturesFichesDistinctResult?.total || 0,
     10
   );
   const previousCompteRenduVisitesCount = previousCompteRenduVisitesResult?.count || 0;
-  const previousFichesTraiteesCount = previousFichesTraiteesResult?.count || 0;
+  const previousFichesTraiteesCount = parseInt(previousFichesTraiteesResult?.count_fiches || 0, 10);
+  const previousConfirmateurHistoModificationsCount = parseInt(
+    previousFichesTraiteesResult?.count_modifications || 0,
+    10
+  );
 
   const confirmationRate = fichesTraiteesCount > 0 ? (confirmationsCount / fichesTraiteesCount) * 100 : 0;
   const signatureRate =
@@ -2549,12 +2568,14 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
   console.log(`[STAT][KPI-CONFIRMATION][${scopeLabel}] Résultats:`, {
     confirmations_count: confirmationsCount,
     fiches_traitees_count: fichesTraiteesCount,
+    confirmateur_histo_modifications_count: confirmateurHistoModificationsCount,
     confirmation_rate: confirmationRate,
     signatures_fiches_distinct_count: signaturesFichesDistinctCount,
     compte_rendu_visites_count: compteRenduVisitesCount,
     signature_rate: signatureRate,
     previous_confirmations_count: previousConfirmationsCount,
     previous_fiches_traitees_count: previousFichesTraiteesCount,
+    previous_confirmateur_histo_modifications_count: previousConfirmateurHistoModificationsCount,
     previous_signatures_fiches_distinct_count: previousSignaturesFichesDistinctCount,
     previous_compte_rendu_visites_count: previousCompteRenduVisitesCount,
   });
@@ -2567,6 +2588,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
     confirmation_rate_change: confirmationRateChange,
     confirmations_count: confirmationsCount,
     fiches_traitees_count: fichesTraiteesCount,
+    confirmateur_histo_modifications_count: confirmateurHistoModificationsCount,
     signature_rate: signatureRate,
     signature_rate_change: signatureRateChange,
     signatures_count: signaturesFichesDistinctCount,

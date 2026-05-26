@@ -250,10 +250,16 @@ const KPIs = () => {
                 <div className="kpi-card-body">
                   <div className="kpi-value-large">
                     <span className="value">{formatPercentage(data.confirmation_rate)}</span>
-                    <span className="label">Confirmations (date planning) / Fiches distinctes qualifiées confirmateur (fiches_histo, date création)</span>
-                    {(data.confirmations_count != null || data.fiches_traitees_count != null) && (
+                    <span className="label">
+                      Confirmations (date confirmation) / Modifications d&apos;état par agents confirmation (fiches_histo, date création)
+                    </span>
+                    {(data.confirmations_count != null ||
+                      data.fiches_traitees_count != null ||
+                      data.confirmateur_histo_modifications_count != null) && (
                       <span className="label label-detail">
-                        {data.confirmations_count ?? 0} / {data.fiches_traitees_count ?? 0}
+                        {data.confirmations_count ?? 0} confirmations —{' '}
+                        {data.confirmateur_histo_modifications_count ?? 0} modification(s) sur{' '}
+                        {data.fiches_traitees_count ?? 0} fiche(s) distincte(s)
                       </span>
                     )}
                   </div>
