@@ -3544,9 +3544,9 @@ const FicheDetail = ({
                         {auditeurLabel || '—'}
                       </span>
                     </div>
-                    <div className="qualite-confirmation-backoffice-panel__row qualite-confirmation-backoffice-panel__row--obs">
+                    <div className="qualite-confirmation-backoffice-panel__row">
                       <span className="qualite-confirmation-backoffice-panel__label">Observation :</span>
-                      <span className="qualite-confirmation-backoffice-panel__value qualite-confirmation-backoffice-panel__value--multiline">
+                      <span className="qualite-confirmation-backoffice-panel__value">
                         {observationText || '—'}
                       </span>
                     </div>

@@ -3112,10 +3112,8 @@
   font-size: 13px;
 }
 
-.qualite-confirmation-backoffice-panel__row--obs {
+.qualite-confirmation-backoffice-panel__row:last-child {
   margin-bottom: 0;
-  flex-direction: column;
-  align-items: flex-start;
 }
 
 .qualite-confirmation-backoffice-panel__label {
@@ -3127,12 +3125,6 @@
 .qualite-confirmation-backoffice-panel__value {
   color: #ffffff;
   font-weight: 700;
-}
-
-.qualite-confirmation-backoffice-panel__value--multiline {
-  white-space: pre-wrap;
-  word-break: break-word;
-  width: 100%;
 }
 
 /* Variante intégrée à la carte État actuel : pleine largeur du parent, marge top uniquement. */
