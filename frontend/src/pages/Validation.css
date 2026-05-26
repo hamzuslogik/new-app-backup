@@ -465,3 +465,121 @@
   }
 }
 
+.validation-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-audit-rdv {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  background: #4a7a87;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-audit-rdv:hover {
+  background: #3d6570;
+}
+
+.audit-badge.validated {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.validation-audit-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+}
+
+.validation-audit-modal {
+  background: #fff;
+  border-radius: 10px;
+  padding: 24px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.validation-audit-modal h3 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.validation-audit-modal-subtitle {
+  margin: 0 0 8px;
+  font-weight: 600;
+  color: #555;
+}
+
+.validation-audit-modal-hint {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.validation-audit-modal label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #444;
+}
+
+.validation-audit-modal textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.validation-audit-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn-audit-cancel {
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.btn-audit-save {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #4a7a87;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-audit-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

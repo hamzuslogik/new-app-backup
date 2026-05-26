@@ -1,91 +1,103 @@
 import React, { useState } from 'react';
-import { useQuery } from 'react-query';
-import { Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaCheck, FaTimes, FaCalendarAlt, FaFilter, FaEye, FaEyeSlash, FaSearch } from 'react-icons/fa';
+import {
+  FaCheck,
+  FaTimes,
+  FaCalendarAlt,
+  FaFilter,
+  FaEye,
+  FaEyeSlash,
+  FaSearch,
+  FaClipboardCheck,
+} from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
+import { toast } from 'react-toastify';
 import './Validation.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+
+const getDefaultDates = () => {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+
+  if (dayOfWeek === 5) {
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + 3);
+    const d = monday.toISOString().split('T')[0];
+    return { date_debut: d, date_fin: d };
+  }
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const d = tomorrow.toISOString().split('T')[0];
+  return { date_debut: d, date_fin: d };
+};
+
+function isFicheAuditee(fiche) {
+  if (fiche?.auditee === true) return true;
+  const id = fiche?.id_qualite_confirmation;
+  return id != null && id !== '' && Number(id) > 0;
+}
 
 const Validation = () => {
   useForceDesktopViewport('validation-page');
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const isQualiteConfirmation = Number(user?.fonction) === 4;
+
   const [showFilters, setShowFilters] = useState(true);
   const [showDetails, setShowDetails] = useState(true);
   const [quickSearchDep, setQuickSearchDep] = useState('');
-  
-  // Calculer les dates par défaut : lendemain, et si c'est vendredi, afficher les RDV de lundi
-  const getDefaultDates = () => {
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = dimanche, 5 = vendredi, 6 = samedi
-    
-    let dateDebut, dateFin;
-    
-    // Si c'est vendredi (5), afficher les RDV de lundi
-    if (dayOfWeek === 5) {
-      const monday = new Date(today);
-      // Calculer le nombre de jours jusqu'au prochain lundi
-      // Vendredi (5) -> lundi prochain = +3 jours
-      monday.setDate(today.getDate() + 3);
-      dateDebut = monday.toISOString().split('T')[0];
-      dateFin = monday.toISOString().split('T')[0];
-    } else {
-      // Sinon, afficher les RDV du lendemain
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      dateDebut = tomorrow.toISOString().split('T')[0];
-      dateFin = tomorrow.toISOString().split('T')[0];
-    }
-    
-    return { date_debut: dateDebut, date_fin: dateFin };
-  };
-  
+  const [auditModal, setAuditModal] = useState({ open: false, fiche: null, observation: '' });
+
   const defaultDates = getDefaultDates();
   const [filters, setFilters] = useState({
-    valider: '', // '' = tous, '1' = validés, '0' = non validés
+    valider: '',
     date_debut: defaultDates.date_debut,
-    date_fin: defaultDates.date_fin
+    date_fin: defaultDates.date_fin,
   });
 
-  // Confirmateur (6), Qualité Confirmation (4), RE Confirmation (14), admins / backoffice
   const canLoadValidation =
-    !!user &&
-    [1, 2, 4, 6, 7, 11, 14].includes(Number(user.fonction));
+    !!user && [1, 2, 4, 6, 7, 11, 14].includes(Number(user.fonction));
 
-  // Récupérer les RDV validés/non validés
   const { data: validationData, isLoading, error } = useQuery(
     ['validation-rdv', filters],
     async () => {
-      const params = {};
-      if (filters.valider !== '') params.valider = filters.valider;
-      // Toujours envoyer les dates (même vides) pour que le backend applique la logique par défaut
-      params.date_debut = filters.date_debut || '';
-      params.date_fin = filters.date_fin || '';
-      
+      const params = {
+        valider: filters.valider !== '' ? filters.valider : undefined,
+        date_debut: filters.date_debut || '',
+        date_fin: filters.date_fin || '',
+      };
       const res = await api.get('/fiches/validation-rdv', { params });
       return res.data.data;
     },
+    { enabled: canLoadValidation }
+  );
+
+  const saveObservationMutation = useMutation(
+    async ({ hash, observation_qualite }) => {
+      const res = await api.patch(`/fiches/${hash}/field`, {
+        field: 'observation_qualite',
+        value: observation_qualite,
+      });
+      return res.data;
+    },
     {
-      enabled: canLoadValidation
+      onSuccess: () => {
+        queryClient.invalidateQueries(['validation-rdv']);
+        setAuditModal({ open: false, fiche: null, observation: '' });
+        toast.success('Observation enregistrée — fiche auditée');
+      },
+      onError: (err) => {
+        toast.error(err.response?.data?.message || "Erreur lors de l'enregistrement");
+      },
     }
   );
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const getProduitName = (produitId) => {
@@ -96,10 +108,43 @@ const Validation = () => {
     return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#FFE441' : '#cccccc';
   };
 
+  const openAuditModal = (fiche) => {
+    setAuditModal({
+      open: true,
+      fiche,
+      observation: fiche.observation_qualite || '',
+    });
+  };
+
+  const closeAuditModal = () => {
+    if (saveObservationMutation.isLoading) return;
+    setAuditModal({ open: false, fiche: null, observation: '' });
+  };
+
+  const submitAudit = () => {
+    const hash = auditModal.fiche?.hash || auditModal.fiche?.id;
+    if (!hash) {
+      toast.error('Fiche introuvable');
+      return;
+    }
+    saveObservationMutation.mutate({
+      hash,
+      observation_qualite: auditModal.observation.trim(),
+    });
+  };
+
   const fiches = validationData?.fiches || [];
   const stats = validationData?.stats || { valides: 0, nonValides: 0, total: 0 };
   const statsByDepartement = validationData?.statsByDepartement || [];
   const totals = validationData?.totals || { valides: 0, nonValides: 0, total: 0 };
+
+  const auditStats = isQualiteConfirmation
+    ? {
+        auditees: fiches.filter((f) => isFicheAuditee(f)).length,
+        nonAuditees: fiches.filter((f) => !isFicheAuditee(f)).length,
+        total: fiches.length,
+      }
+    : null;
 
   const filteredFiches = (() => {
     const terms = quickSearchDep
@@ -114,70 +159,99 @@ const Validation = () => {
     });
   })();
 
+  const pageTitle = isQualiteConfirmation ? 'Audit RDVs' : 'Validation des RDV';
+  const PageIcon = isQualiteConfirmation ? FaClipboardCheck : FaCalendarAlt;
+
   return (
     <div className="validation-page">
       <div className="validation-header">
-        <h1><FaCalendarAlt /> Validation des RDV</h1>
+        <h1>
+          <PageIcon /> {pageTitle}
+        </h1>
         <div className="header-buttons">
-          <button 
-            className="filter-toggle-btn" 
-            onClick={() => setShowFilters(!showFilters)}
-          >
+          <button className="filter-toggle-btn" type="button" onClick={() => setShowFilters(!showFilters)}>
             <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
           </button>
-          <button 
-            className="details-toggle-btn" 
-            onClick={() => setShowDetails(!showDetails)}
-          >
+          <button className="details-toggle-btn" type="button" onClick={() => setShowDetails(!showDetails)}>
             {showDetails ? <FaEyeSlash /> : <FaEye />} {showDetails ? 'Masquer' : 'Afficher'} les détails
           </button>
         </div>
       </div>
 
-      {/* Stats cards */}
-      <div className="validation-stats">
-        <div className="stat-card validated">
-          <div className="stat-card-icon">
-            <FaCheck />
+      {isQualiteConfirmation && auditStats ? (
+        <div className="validation-stats">
+          <div className="stat-card validated">
+            <div className="stat-card-icon">
+              <FaCheck />
+            </div>
+            <div className="stat-card-content">
+              <div className="stat-card-value">{auditStats.auditees}</div>
+              <div className="stat-card-label">Auditées</div>
+            </div>
           </div>
-          <div className="stat-card-content">
-            <div className="stat-card-value">{stats.valides}</div>
-            <div className="stat-card-label">RDV Validés</div>
+          <div className="stat-card non-validated">
+            <div className="stat-card-icon">
+              <FaTimes />
+            </div>
+            <div className="stat-card-content">
+              <div className="stat-card-value">{auditStats.nonAuditees}</div>
+              <div className="stat-card-label">Non auditées</div>
+            </div>
+          </div>
+          <div className="stat-card total">
+            <div className="stat-card-icon">
+              <FaCalendarAlt />
+            </div>
+            <div className="stat-card-content">
+              <div className="stat-card-value">{auditStats.total}</div>
+              <div className="stat-card-label">Total RDV</div>
+            </div>
           </div>
         </div>
-        <div className="stat-card non-validated">
-          <div className="stat-card-icon">
-            <FaTimes />
+      ) : (
+        <div className="validation-stats">
+          <div className="stat-card validated">
+            <div className="stat-card-icon">
+              <FaCheck />
+            </div>
+            <div className="stat-card-content">
+              <div className="stat-card-value">{stats.valides}</div>
+              <div className="stat-card-label">RDV Validés</div>
+            </div>
           </div>
-          <div className="stat-card-content">
-            <div className="stat-card-value">{stats.nonValides}</div>
-            <div className="stat-card-label">RDV Non Validés</div>
+          <div className="stat-card non-validated">
+            <div className="stat-card-icon">
+              <FaTimes />
+            </div>
+            <div className="stat-card-content">
+              <div className="stat-card-value">{stats.nonValides}</div>
+              <div className="stat-card-label">RDV Non Validés</div>
+            </div>
+          </div>
+          <div className="stat-card total">
+            <div className="stat-card-icon">
+              <FaCalendarAlt />
+            </div>
+            <div className="stat-card-content">
+              <div className="stat-card-value">{stats.total}</div>
+              <div className="stat-card-label">Total</div>
+            </div>
           </div>
         </div>
-        <div className="stat-card total">
-          <div className="stat-card-icon">
-            <FaCalendarAlt />
-          </div>
-          <div className="stat-card-content">
-            <div className="stat-card-value">{stats.total}</div>
-            <div className="stat-card-label">Total</div>
-          </div>
-        </div>
-      </div>
+      )}
 
       {showFilters && (
         <div className="validation-filters">
-          <div className="filter-group">
-            <label>Statut</label>
-            <select
-              value={filters.valider}
-              onChange={(e) => handleFilterChange('valider', e.target.value)}
-            >
-              <option value="">Tous</option>
-              <option value="1">Validés</option>
-              <option value="0">Non validés</option>
-            </select>
-          </div>
+          {!isQualiteConfirmation && (
+            <div className="filter-group">
+              <label>Statut</label>
+              <select value={filters.valider} onChange={(e) => handleFilterChange('valider', e.target.value)}>
+                <option value="">Tous</option>
+                <option value="1">Validés</option>
+                <option value="0">Non validés</option>
+              </select>
+            </div>
+          )}
           <div className="filter-group">
             <label>Date début</label>
             <input
@@ -220,7 +294,7 @@ const Validation = () => {
         ) : filteredFiches.length === 0 ? (
           <div className="no-results">Aucun RDV trouvé</div>
         ) : showDetails ? (
-          <div className={`fiches-table-container ${!showDetails ? 'compact' : ''}`}>
+          <div className="fiches-table-container">
             <table className="fiches-table">
               <thead>
                 <tr>
@@ -232,17 +306,26 @@ const Validation = () => {
                   <th className="product-column">Produit</th>
                   <th>Date RDV</th>
                   <th className="detail-column">Confirmateur(s)</th>
-                  <th className="status-column">Statut</th>
+                  {isQualiteConfirmation ? (
+                    <>
+                      <th className="status-column">Audit</th>
+                      <th className="status-column">Validation</th>
+                    </>
+                  ) : (
+                    <th className="status-column">Statut</th>
+                  )}
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredFiches.map(fiche => {
+                {filteredFiches.map((fiche) => {
                   const confirmateurs = [];
                   if (fiche.confirmateur1_pseudo) confirmateurs.push(fiche.confirmateur1_pseudo);
                   if (fiche.confirmateur2_pseudo) confirmateurs.push(fiche.confirmateur2_pseudo);
                   if (fiche.confirmateur3_pseudo) confirmateurs.push(fiche.confirmateur3_pseudo);
-                  
+                  const auditee = isFicheAuditee(fiche);
+                  const ficheHash = fiche.hash || fiche.id;
+
                   return (
                     <tr key={fiche.id}>
                       <td>{fiche.nom || '-'}</td>
@@ -251,7 +334,7 @@ const Validation = () => {
                       <td className="detail-column">{fiche.cp || '-'}</td>
                       <td className="detail-column">{fiche.ville || '-'}</td>
                       <td className="product-column">
-                        <span 
+                        <span
                           className="produit-indicator"
                           style={{ backgroundColor: getProduitColor(fiche.produit) }}
                         >
@@ -260,6 +343,15 @@ const Validation = () => {
                       </td>
                       <td>{`${formatRdvDateOnly(fiche.date_rdv_time)} ${formatRdvTimeOnly(fiche.date_rdv_time)}`.trim()}</td>
                       <td className="detail-column">{confirmateurs.join(', ') || '-'}</td>
+                      {isQualiteConfirmation && (
+                        <td className="status-column">
+                          {auditee ? (
+                            <span className="validation-badge validated audit-badge">Audité</span>
+                          ) : (
+                            <span className="validation-badge non-validated audit-badge">Non auditée</span>
+                          )}
+                        </td>
+                      )}
                       <td className="status-column">
                         {fiche.valider === 1 ? (
                           <span className="validation-badge validated">
@@ -275,14 +367,27 @@ const Validation = () => {
                         )}
                       </td>
                       <td>
-                        <FicheDetailLink 
-                          ficheId={fiche.id}
-                          className="btn-detail"
-                          title="Voir les détails"
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
-                        </FicheDetailLink>
+                        <div className="validation-actions-cell">
+                          {isQualiteConfirmation && (
+                            <button
+                              type="button"
+                              className="btn-audit-rdv"
+                              onClick={() => openAuditModal(fiche)}
+                              title={auditee ? 'Modifier l\'audit' : 'Auditer ce RDV'}
+                            >
+                              <FaClipboardCheck /> Audit
+                            </button>
+                          )}
+                          <FicheDetailLink
+                            ficheHash={ficheHash}
+                            ficheId={fiche.id}
+                            className="btn-detail"
+                            title="Voir les détails"
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
+                          </FicheDetailLink>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -292,46 +397,94 @@ const Validation = () => {
           </div>
         ) : null}
 
-        {/* Tableau des statistiques par département */}
-        <div className="departements-stats-container">
-          <h2>Statistiques par Département</h2>
-          <div className="departements-table-container">
-            <table className="departements-table">
-              <thead>
-                <tr>
-                  <th>Département</th>
-                  <th>Validé</th>
-                  <th>Non Validé</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {statsByDepartement
-                  .filter(dep => (dep.nonValides || 0) > 0)
-                  .map((dep, index) => (
-                    <tr key={dep.departement || index}>
-                      <td>{dep.departement || '-'}</td>
-                      <td>{dep.valides || 0}</td>
-                      <td>{dep.nonValides || 0}</td>
-                      <td>{dep.total || 0}</td>
-                    </tr>
-                  ))}
-              </tbody>
-              <tfoot>
-                <tr className="totals-row">
-                  <td><strong>Total</strong></td>
-                  <td><strong>{totals.valides}</strong></td>
-                  <td><strong>{totals.nonValides}</strong></td>
-                  <td><strong>{totals.total}</strong></td>
-                </tr>
-              </tfoot>
-            </table>
+        {!isQualiteConfirmation && (
+          <div className="departements-stats-container">
+            <h2>Statistiques par Département</h2>
+            <div className="departements-table-container">
+              <table className="departements-table">
+                <thead>
+                  <tr>
+                    <th>Département</th>
+                    <th>Validé</th>
+                    <th>Non Validé</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statsByDepartement
+                    .filter((dep) => (dep.nonValides || 0) > 0)
+                    .map((dep, index) => (
+                      <tr key={dep.departement || index}>
+                        <td>{dep.departement || '-'}</td>
+                        <td>{dep.valides || 0}</td>
+                        <td>{dep.nonValides || 0}</td>
+                        <td>{dep.total || 0}</td>
+                      </tr>
+                    ))}
+                </tbody>
+                <tfoot>
+                  <tr className="totals-row">
+                    <td>
+                      <strong>Total</strong>
+                    </td>
+                    <td>
+                      <strong>{totals.valides}</strong>
+                    </td>
+                    <td>
+                      <strong>{totals.nonValides}</strong>
+                    </td>
+                    <td>
+                      <strong>{totals.total}</strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {auditModal.open && auditModal.fiche && (
+        <div className="validation-audit-modal-overlay" onClick={closeAuditModal} role="presentation">
+          <div
+            className="validation-audit-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="validation-audit-modal-title"
+          >
+            <h3 id="validation-audit-modal-title">Audit RDV</h3>
+            <p className="validation-audit-modal-subtitle">
+              {auditModal.fiche.nom} {auditModal.fiche.prenom} — {auditModal.fiche.tel || '—'}
+            </p>
+            <p className="validation-audit-modal-hint">
+              L&apos;observation sera enregistrée dans le champ <strong>observation_qualite</strong> de la fiche.
+            </p>
+            <label htmlFor="validation-audit-observation">Observation</label>
+            <textarea
+              id="validation-audit-observation"
+              rows={5}
+              value={auditModal.observation}
+              onChange={(e) => setAuditModal((prev) => ({ ...prev, observation: e.target.value }))}
+              placeholder="Saisir votre observation d'audit..."
+            />
+            <div className="validation-audit-modal-actions">
+              <button type="button" className="btn-audit-cancel" onClick={closeAuditModal} disabled={saveObservationMutation.isLoading}>
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="btn-audit-save"
+                onClick={submitAudit}
+                disabled={saveObservationMutation.isLoading || !auditModal.observation.trim()}
+              >
+                {saveObservationMutation.isLoading ? 'Enregistrement…' : 'Enregistrer l\'audit'}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
 export default Validation;
-

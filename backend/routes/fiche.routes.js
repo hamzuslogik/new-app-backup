@@ -3074,10 +3074,19 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
       total: statsDepartements.reduce((sum, dep) => sum + dep.total, 0)
     };
 
+    const fichesWithHash = (fiches || []).map((f) => ({
+      ...f,
+      hash: f.hash || encodeFicheId(f.id),
+      auditee:
+        f.id_qualite_confirmation != null &&
+        f.id_qualite_confirmation !== '' &&
+        Number(f.id_qualite_confirmation) > 0,
+    }));
+
     res.json({
       success: true,
       data: {
-        fiches,
+        fiches: fichesWithHash,
         stats,
         statsByDepartement: statsDepartements,
         totals
@@ -4170,6 +4179,14 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     } else if (user.fonction === 8) {
       // Qualité Qualification (fonction 8) : peuvent modifier toutes les fiches (pas de restriction)
       // Pas de vérification d'assignation nécessaire
+    } else if (user.fonction === 4) {
+      // Qualité Confirmation : uniquement observation_qualite (audit RDV)
+      if (field !== 'observation_qualite') {
+        return res.status(403).json({
+          success: false,
+          message: 'Seule l\'observation qualité confirmation peut être modifiée depuis votre session.',
+        });
+      }
     }
     // Admins (1, 2, 7) : peuvent tout modifier, pas de vérification supplémentaire
 

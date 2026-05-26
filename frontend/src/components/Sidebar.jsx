@@ -30,6 +30,7 @@ import {
   FaBullhorn,
   FaUser,
   FaListAlt,
+  FaClipboardCheck,
 } from 'react-icons/fa';
 import { showTrackingInSidebar } from '../utils/trackingAccess';
 import './Sidebar.css';
@@ -357,8 +358,8 @@ const Sidebar = ({ collapsed }) => {
     },
     {
       path: '/validation',
-      label: 'Validation',
-      icon: FaCheck,
+      label: Number(fonctionId) === 4 ? 'Audit RDVs' : 'Validation',
+      icon: Number(fonctionId) === 4 ? FaClipboardCheck : FaCheck,
       permission: 'validation_view',
       visible: true,
     },
