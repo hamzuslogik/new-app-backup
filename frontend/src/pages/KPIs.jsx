@@ -281,7 +281,6 @@ const KPIs = () => {
                 <div className="kpi-card-body">
                   <div className="kpi-value-large">
                     <span className="value">{formatPercentage(data.signature_rate)}</span>
-                    <span className="label">Fiches signées distinctes (date planning) / Comptes rendus (date visite)</span>
                     {((data.signatures_fiches_distinct_count ??
                       data.signatures_count ??
                       data.fiches_signees_count) != null ||
