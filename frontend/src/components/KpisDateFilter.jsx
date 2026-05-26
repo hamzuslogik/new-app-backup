@@ -90,14 +90,14 @@ const KpisDateFilter = ({
             </>
           )}
           {extraControls}
-          <div className="search-form-actions-left kpi-date-filter-actions">
-            <button type="button" className="btn-search" onClick={onApply}>
-              <FaSearch /> Appliquer
-            </button>
-            <button type="button" className="btn-reset" onClick={onReset}>
-              Réinitialiser
-            </button>
-          </div>
+        </div>
+        <div className="search-form-actions-left kpi-date-filter-actions">
+          <button type="button" className="btn-search" onClick={onApply}>
+            <FaSearch /> Appliquer
+          </button>
+          <button type="button" className="btn-reset" onClick={onReset}>
+            Réinitialiser
+          </button>
         </div>
       </div>
     </div>

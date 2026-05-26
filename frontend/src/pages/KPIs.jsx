@@ -840,7 +840,7 @@ const KPIs = () => {
           </div>
 
           <div className="kpi-section">
-            <h2 className="section-title" style={{ color: '#ffffff' }}>Détails des fiches porte ouverte</h2>
+            <h2 className="section-title">Détails des fiches porte ouverte</h2>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
               <div className="month-selector">
                 <label htmlFor="porte-ouverte-etat-details-select">État :</label>

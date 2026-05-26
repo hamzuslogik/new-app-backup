@@ -383,7 +383,6 @@ const PlanningCommercial = () => {
       <div className="planning-commercial-header">
         <div className="planning-commercial-header-left">
           <h1><FaCalendarAlt /> Planning Commercial</h1>
-          <p>Liste des rendez-vous confirmés et affectés aux commerciaux</p>
         </div>
       </div>
 

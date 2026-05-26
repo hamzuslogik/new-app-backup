@@ -341,9 +341,6 @@ const StatsAgentsQualite = () => {
         <div className="section-header">
           <div>
             <h2>Qualité qualification</h2>
-            <p className="section-subtitle">
-              Fiches auditées insérées par des agents qualification (fonction 3), sur la période (date d&apos;insertion).
-            </p>
           </div>
           <div className="section-mode-btns">
             <button
@@ -585,10 +582,6 @@ const StatsAgentsQualite = () => {
             <h3 className="subsection-title confirmation-subsection-title">
               <FaClipboardCheck /> Qualité confirmation
             </h3>
-            <p className="section-subtitle confirmation-inline-subtitle">
-              Complétudes (date de création) et audits RDV (date du RDV) sur la période.
-            </p>
-
             {(completudesTotaux || auditTotaux) && (
               <div className="confirmation-totaux">
                 {completudesTotaux && (
@@ -905,10 +898,6 @@ const StatsAgentsQualite = () => {
           <div className="section-header">
             <div>
               <h2><FaClipboardCheck /> Qualité confirmation</h2>
-              <p className="section-subtitle">
-                Complétudes créées par les agents qualité confirmation (fonction 4) et audits RDV confirmés
-                (date du RDV).
-              </p>
             </div>
           </div>
 

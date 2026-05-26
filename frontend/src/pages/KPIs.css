@@ -25,6 +25,9 @@
 }
 
 .kpi-date-filter-form.search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   padding: 10px 12px;
   background-color: #dcfce7;
   border: 1px solid #86efac;
@@ -109,11 +112,11 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-wrap: nowrap;
-  flex-shrink: 0;
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid #86efac;
 }
 
 .kpis-page .kpi-date-filter-actions .btn-search,
@@ -285,12 +288,12 @@
   gap: 20px;
 }
 
-.section-title {
+.kpis-page .section-title {
   font-size: 24px;
-  color: #333;
+  color: #ffffff !important;
   margin: 0;
   padding-bottom: 10px;
-  border-bottom: 2px solid #9cbfc8;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.45);
 }
 
 .kpi-cards {
