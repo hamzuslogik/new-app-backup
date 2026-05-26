@@ -3531,6 +3531,8 @@ const FicheDetail = ({
               const showQualiteConfirmationBackoffice = canShowQualiteConfirmationBackofficePanel(user);
               const renderQualiteConfirmationBackofficePanel = () => {
                 if (!showQualiteConfirmationBackoffice) return null;
+                const idQc = fiche?.id_qualite_confirmation;
+                if (idQc == null || idQc === '' || Number(idQc) <= 0) return null;
                 const auditeurLabel =
                   fiche?.qualite_confirmation_pseudo?.trim() ||
                   (fiche?.id_qualite_confirmation ? `Agent #${fiche.id_qualite_confirmation}` : null);
