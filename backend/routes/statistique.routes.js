@@ -3379,6 +3379,73 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
 // STATISTIQUES PAR AGENT QUALITÉ
 // =====================================================
 
+/** Fiches insérées par un agent qualification (fonction 3). */
+const STATS_QUALITE_FICHE_AGENT_QUALIF_JOIN = `
+  INNER JOIN utilisateurs agent_qualif ON f.id_agent = agent_qualif.id
+    AND agent_qualif.fonction = 3
+`;
+
+async function fetchQualiteConfirmationCompletudeStats(startDate, endDate) {
+  const empty = {
+    agents: [],
+    totaux: { total_completudes: 0, en_attente: 0, traitees: 0, non_traitees: 0 },
+  };
+  try {
+    const rows = await query(
+      `SELECT
+        u.id,
+        u.pseudo,
+        u.nom,
+        u.prenom,
+        u.photo,
+        fn.titre AS fonction_titre,
+        c.titre AS centre_titre,
+        COUNT(*) AS total_completudes,
+        SUM(CASE WHEN fc.statut = 'en_attente' THEN 1 ELSE 0 END) AS en_attente,
+        SUM(CASE WHEN fc.statut = 'traitee' THEN 1 ELSE 0 END) AS traitees,
+        SUM(CASE WHEN fc.statut = 'non_traitee' THEN 1 ELSE 0 END) AS non_traitees
+      FROM fiche_completude fc
+      INNER JOIN utilisateurs u ON fc.id_created_by = u.id AND u.fonction = 4 AND u.etat > 0
+      LEFT JOIN fonctions fn ON u.fonction = fn.id
+      LEFT JOIN centres c ON u.centre = c.id
+      WHERE fc.date_creation >= ? AND fc.date_creation <= ?
+      GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo, fn.titre, c.titre
+      ORDER BY total_completudes DESC`,
+      [startDate, endDate]
+    );
+    const agents = (rows || []).map((row) => ({
+      agent: {
+        id: row.id,
+        pseudo: row.pseudo,
+        nom: row.nom,
+        prenom: row.prenom,
+        photo: row.photo,
+        fonction_titre: row.fonction_titre,
+        centre_titre: row.centre_titre,
+      },
+      stats: {
+        total_completudes: parseInt(row.total_completudes || 0, 10),
+        en_attente: parseInt(row.en_attente || 0, 10),
+        traitees: parseInt(row.traitees || 0, 10),
+        non_traitees: parseInt(row.non_traitees || 0, 10),
+      },
+    }));
+    const totaux = agents.reduce(
+      (acc, a) => ({
+        total_completudes: acc.total_completudes + a.stats.total_completudes,
+        en_attente: acc.en_attente + a.stats.en_attente,
+        traitees: acc.traitees + a.stats.traitees,
+        non_traitees: acc.non_traitees + a.stats.non_traitees,
+      }),
+      { total_completudes: 0, en_attente: 0, traitees: 0, non_traitees: 0 }
+    );
+    return { agents, totaux };
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') return empty;
+    throw err;
+  }
+}
+
 // Récupérer les statistiques par agent qualité (qui ont audité des fiches)
 // Se base sur le champ id_qualite dans la table fiches et date_insert_time pour la date
 router.get('/agents-qualite', authenticate, async (req, res) => {
@@ -3412,6 +3479,7 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
         c.titre as centre_titre
       FROM fiches f
       INNER JOIN utilisateurs u ON f.id_qualite = u.id
+      ${STATS_QUALITE_FICHE_AGENT_QUALIF_JOIN}
       LEFT JOIN fonctions fn ON u.fonction = fn.id
       LEFT JOIN centres c ON u.centre = c.id
       WHERE f.id_qualite IS NOT NULL
@@ -3445,6 +3513,7 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
         const auditsQuery = `
           SELECT COUNT(*) as total_audits
           FROM fiches f
+          ${STATS_QUALITE_FICHE_AGENT_QUALIF_JOIN}
           WHERE f.id_qualite = ?
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
@@ -3457,6 +3526,7 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
         const commentQuery = `
           SELECT COUNT(*) as count
           FROM fiches f
+          ${STATS_QUALITE_FICHE_AGENT_QUALIF_JOIN}
           WHERE f.id_qualite = ?
           AND f.date_insert_time >= ?
           AND f.date_insert_time <= ?
@@ -3473,6 +3543,7 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
           const etatQuery = `
             SELECT COUNT(*) as count
             FROM fiches f
+            ${STATS_QUALITE_FICHE_AGENT_QUALIF_JOIN}
             WHERE f.id_qualite = ?
             AND f.date_insert_time >= ?
             AND f.date_insert_time <= ?
@@ -3517,6 +3588,7 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
             centre.titre as centre_titre,
             f.date_insert_time as date_audit
           FROM fiches f
+          ${STATS_QUALITE_FICHE_AGENT_QUALIF_JOIN}
           LEFT JOIN etats e ON f.id_etat_final = e.id
           LEFT JOIN utilisateurs agent_createur ON f.id_agent = agent_createur.id
           LEFT JOIN centres centre ON f.id_centre = centre.id
@@ -3551,10 +3623,13 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
       })
     );
 
+    const qualiteConfirmation = await fetchQualiteConfirmationCompletudeStats(startDate, endDate);
+
     res.json({
       success: true,
       data: {
         agents: agentsStats,
+        qualite_confirmation: qualiteConfirmation,
         period: {
           date_debut: startDateStr,
           date_fin: endDateStr

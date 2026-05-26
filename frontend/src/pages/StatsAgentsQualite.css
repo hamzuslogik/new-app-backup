@@ -543,7 +543,143 @@
   }
 }
 
-/* Onglet KPIs */
+/* Sections principales */
+.page-main-section {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.section-qualification {
+  border-top: 4px solid #9cbfc8;
+}
+
+.section-confirmation {
+  border-top: 4px solid #4a7a87;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.section-header h2 {
+  margin: 0 0 0.35rem 0;
+  font-size: 1.35rem;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+  max-width: 720px;
+}
+
+.section-mode-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.confirmation-totaux {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.totaux-metric {
+  text-align: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.totaux-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #4a7a87;
+}
+
+.totaux-label {
+  font-size: 0.8rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.totaux-en-attente .totaux-value { color: #f4a261; }
+.totaux-traitees .totaux-value { color: #28a745; }
+.totaux-non-traitees .totaux-value { color: #dc3545; }
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.stats-table th {
+  background: #4a7a87;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.confirmation-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.num-cell {
+  text-align: center;
+  font-weight: 600;
+}
+
+.agent-cell-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.agent-avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.agent-avatar-sm.placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #4a7a87;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+/* Onglet KPIs (legacy) */
 .kpis-content {
   margin-top: 1rem;
 }

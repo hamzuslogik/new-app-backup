@@ -3630,9 +3630,18 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
     } catch (_) { }
 
     let qualite_user = null;
+    let qualite_confirmation_user = null;
     try {
       if (fiche.id_qualite) {
         qualite_user = await queryOne('SELECT pseudo, color FROM utilisateurs WHERE id = ?', [fiche.id_qualite]);
+      }
+    } catch (_) { }
+
+    try {
+      if (fiche.id_qualite_confirmation) {
+        qualite_confirmation_user = await queryOne('SELECT pseudo, color FROM utilisateurs WHERE id = ?', [
+          fiche.id_qualite_confirmation,
+        ]);
       }
     } catch (_) { }
 
@@ -3796,6 +3805,9 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       confirmateur_3_color: confirmateur3?.color || null,
       qualite_pseudo: qualite_user?.pseudo || null,
       qualite_color: qualite_user?.color || null,
+      qualite_confirmation_pseudo: qualite_confirmation_user?.pseudo || null,
+      qualite_confirmation_color: qualite_confirmation_user?.color || null,
+      observation_qualite: fiche.observation_qualite || null,
       etat_final_titre: etat?.titre || null,
       etat_final_color: etat?.color || null,
       etat_final_groupe: etat?.groupe || null,
@@ -4247,9 +4259,10 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'conf_consommation_electricite', 'conf_consommations',
       'date_rdv_time', 'date_appel_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final',
-      'rdv_urgent', 'rdv_seul', 'commentaire', 'commentaire_qualite', 'commentaire_commercial', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
+      'rdv_urgent', 'rdv_seul', 'commentaire', 'commentaire_qualite', 'observation_qualite', 'commentaire_commercial', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
       'conf_type_contrat_mr', 'conf_type_contrat_madame',
-      'cq_etat', 'cq_dossier', 'observations_cq'
+      'cq_etat', 'cq_dossier', 'observations_cq',
+      'id_qualite_confirmation'
     ];
 
     if (!allowedFields.includes(field)) {
@@ -4283,7 +4296,16 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     const dbField = fieldToDb[field] || field;
     const dbOldValue = fieldToDb[field] ? (fiche[dbField] ?? oldValue) : oldValue;
 
-    const idUserFields = new Set(['id_commercial', 'id_commercial_2', 'id_agent', 'id_centre', 'id_confirmateur', 'id_confirmateur_2', 'id_confirmateur_3']);
+    const idUserFields = new Set([
+      'id_commercial',
+      'id_commercial_2',
+      'id_agent',
+      'id_centre',
+      'id_confirmateur',
+      'id_confirmateur_2',
+      'id_confirmateur_3',
+      'id_qualite_confirmation',
+    ]);
     let dbValue = value;
     if (idUserFields.has(dbField)) {
       if (value === null || value === undefined || value === '') {
@@ -4294,6 +4316,11 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       }
     } else {
       dbValue = value || null;
+    }
+
+    // Attribuer id_qualite_confirmation au premier enregistrement d'observation par un agent QC (fonction 4)
+    if (Number(user.fonction) === 4 && field === 'observation_qualite' && !fiche.id_qualite_confirmation) {
+      await query('UPDATE fiches SET id_qualite_confirmation = ? WHERE id = ?', [user.id, id]);
     }
 
     // Mettre à jour le champ
@@ -4660,7 +4687,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
           'nb_chemines', 'mode_chauffage', 'complement_chauffage', 'consommation_electricite', 'circuit_eau', 'age_mr', 'age_madame',
       'revenu_foyer', 'credit_foyer', 'situation_conjugale', 'entretien', 'nb_enfants', 'profession_mr',
       'profession_madame', 'type_contrat_mr', 'type_contrat_madame', 'commentaire', 'id_agent', 'id_centre', 'id_insert', 'id_confirmateur',
-      'id_confirmateur_2', 'id_confirmateur_3', 'id_qualite', 'id_qualif', 'id_commercial',
+      'id_confirmateur_2', 'id_confirmateur_3', 'id_qualite', 'id_qualite_confirmation', 'id_qualif', 'id_commercial',
       'id_commercial_2', 'id_etat_final', 'id_sous_etat', 'date_appel', 'date_insert', 'date_insert_time',
       'date_audit', 'date_confirmation', 'date_qualif', 'date_rdv', 'date_rdv_time',
       'date_affect', 'date_sign', 'date_sign_time', 'date_modif_time', 'archive', 'ko', 'hc',
@@ -5698,7 +5725,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
         'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
         'date_rdv_time', 'date_appel_time', 'id_centre', 'id_commercial',
-        'id_commercial_2', 'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
+        'id_commercial_2', 'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'observation_qualite', 'id_qualite_confirmation', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
         'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
         'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
         'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
@@ -6099,7 +6126,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
       'date_rdv_time', 'date_appel_time', 'date_modif_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final', 'id_sous_etat',
-      'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
+      'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'observation_qualite', 'id_qualite_confirmation', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
       // Champs de confirmation
       'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
       'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
