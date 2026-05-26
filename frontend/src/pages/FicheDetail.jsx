@@ -83,6 +83,12 @@ function isEtatConfirmerLike(etatId, etatTitre) {
   return t === 'confirmer' || /^confirmer\b/i.test(t);
 }
 
+/** Cadre qualité confirmation : backoffice (11) + login contenant « backoffice ». */
+function canShowQualiteConfirmationBackofficePanel(user) {
+  if (!user || Number(user.fonction) !== 11) return false;
+  return String(user.login || '').trim().toLowerCase().includes('backoffice');
+}
+
 /**
  * Mise en évidence détails CONFIRMER : style inline (couleur + gras) pour ne pas dépendre du CSS du modal.
  * Garde aussi les classes pour cohérence avec FicheDetail.css.
@@ -3522,6 +3528,32 @@ const FicheDetail = ({
           >
             {/* Fonction réutilisable pour afficher les détails selon l'état */}
             {(() => {
+              const showQualiteConfirmationBackoffice = canShowQualiteConfirmationBackofficePanel(user);
+              const renderQualiteConfirmationBackofficePanel = () => {
+                if (!showQualiteConfirmationBackoffice) return null;
+                const auditeurLabel =
+                  fiche?.qualite_confirmation_pseudo?.trim() ||
+                  (fiche?.id_qualite_confirmation ? `Agent #${fiche.id_qualite_confirmation}` : null);
+                const observationText = String(fiche?.observation_qualite ?? '').trim();
+                return (
+                  <div className="qualite-confirmation-backoffice-panel">
+                    <div className="qualite-confirmation-backoffice-panel__title">Qualité confirmation</div>
+                    <div className="qualite-confirmation-backoffice-panel__row">
+                      <span className="qualite-confirmation-backoffice-panel__label">Audité par :</span>
+                      <span className="qualite-confirmation-backoffice-panel__value">
+                        {auditeurLabel || '—'}
+                      </span>
+                    </div>
+                    <div className="qualite-confirmation-backoffice-panel__row qualite-confirmation-backoffice-panel__row--obs">
+                      <span className="qualite-confirmation-backoffice-panel__label">Observation :</span>
+                      <span className="qualite-confirmation-backoffice-panel__value qualite-confirmation-backoffice-panel__value--multiline">
+                        {observationText || '—'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              };
+
               const SIGNER_ETAT_IDS = [13, 16, 44, 45];
               const isEtatSigner = (id) => SIGNER_ETAT_IDS.includes(Number(id));
               // État SIGNER (13) : seul état qui porte le bloc Contrôle Qualité (affichage CQ + formulaire).
@@ -4530,6 +4562,9 @@ const FicheDetail = ({
                         </div>
                       )}
 
+                      {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
+                        renderQualiteConfirmationBackofficePanel()}
+
                       {hasPermission('fiche_validate') && Number(fiche.id_etat_final) === 7 && (
                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
                           {fiche.valider > 0 && (
@@ -4915,6 +4950,8 @@ const FicheDetail = ({
                                     </div>
                                   </div>
                                 )}
+                                {isEtatConfirmerLike(histo.id_etat, histoEtatTitre) &&
+                                  renderQualiteConfirmationBackofficePanel()}
                                 {/* Formulaire Contrôle Qualité dans l'historique : uniquement si l'état actuel n'est PAS SIGNER (13)
                                     et que cette entrée correspond à la dernière occurrence de l'état 13. */}
                                 {histoEtat13Id && histo.id === histoEtat13Id && (
