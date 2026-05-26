@@ -2350,7 +2350,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
         u.photo,
         COUNT(*) as count_confirmations
       FROM confirmations c
-      INNER JOIN fiches f ON c.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+      INNER JOIN fiches f ON c.id_fiche = f.id
       INNER JOIN utilisateurs u ON c.id_confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
       WHERE c.id_confirmateur IS NOT NULL
       AND c.id_confirmateur > 0
@@ -2370,7 +2370,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
         u.photo,
         COUNT(DISTINCT s.id_fiche) as count_fiches_signees
       FROM signature s
-      INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+      INNER JOIN fiches f ON s.id_fiche = f.id
       INNER JOIN utilisateurs u ON s.confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
       ${signatureCentreWhere}
       ${KPI_FICHE_RDV_DATE_SQL}
@@ -2385,7 +2385,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
       SELECT COUNT(*) as count
       FROM compte_rendu_pending cr
       INNER JOIN fiches f ON f.id = cr.id_fiche
-      WHERE (f.archive = 0 OR f.archive IS NULL)
+      WHERE 1=1
       ${crDateVisiteFilter.sql}
       ${centreCondition}
     `;
@@ -2393,7 +2393,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
   const confirmationsQuery = `
       SELECT COUNT(*) as count
       FROM confirmations c
-      INNER JOIN fiches f ON c.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+      INNER JOIN fiches f ON c.id_fiche = f.id
       WHERE 1=1
       ${KPI_CONFIRMATION_DATE_SQL}
       ${centreCondition}
@@ -2405,7 +2405,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
         COUNT(DISTINCT fh.id_fiche) AS count_fiches,
         COUNT(*) AS count_modifications
       FROM fiches_histo fh
-      INNER JOIN fiches f ON fh.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+      INNER JOIN fiches f ON fh.id_fiche = f.id
       INNER JOIN utilisateurs u ON fh.id_confirmateur = u.id AND u.fonction = 6 AND u.etat > 0
       WHERE fh.id_confirmateur IS NOT NULL
       AND fh.id_confirmateur > 0
@@ -2416,7 +2416,7 @@ async function computeKpisConfirmationRange(centreIds, dateRange, logScope = 'kp
 
   const signaturesFichesDistinctSql = `SELECT COUNT(DISTINCT s.id_fiche) as total
        FROM signature s
-       INNER JOIN fiches f ON s.id_fiche = f.id AND (f.archive = 0 OR f.archive IS NULL)
+       INNER JOIN fiches f ON s.id_fiche = f.id
        ${signatureCentreWhere}
        ${KPI_FICHE_RDV_DATE_SQL}
        ${KPI_CONFIRMATION_SIGNED_ETATS_SQL}
