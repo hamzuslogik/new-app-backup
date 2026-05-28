@@ -834,6 +834,19 @@
   margin-left: auto;
 }
 
+.audit-tone-table {
+  margin: 0 0 1rem 0;
+}
+
+.audit-tone-table td:first-child {
+  font-weight: 600;
+}
+
+.audit-tone-total-row td {
+  background: #f8f9fa;
+  font-weight: 700;
+}
+
 @media (max-width: 768px) {
   .stat-metrics-3 {
     grid-template-columns: 1fr;

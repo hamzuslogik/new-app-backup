@@ -145,6 +145,34 @@ const StatsAgentsQualite = () => {
     );
   }, [fichesAuditeesQualif, searchTerm]);
 
+  const fichesAuditeesToneStats = useMemo(() => {
+    const eligibleFiches = filteredFichesAuditeesQualif.filter((fiche) => {
+      const groupe = fiche?.etat_groupe;
+      return !(String(groupe) === '0');
+    });
+    const total = eligibleFiches.length;
+    const stats = { positif: 0, negatif: 0, neutre: 0, total };
+
+    eligibleFiches.forEach((fiche) => {
+      if (fiche.ko) {
+        stats.negatif += 1;
+      } else if (fiche.hc) {
+        stats.neutre += 1;
+      } else {
+        stats.positif += 1;
+      }
+    });
+
+    const percent = (value) => (total > 0 ? ((value / total) * 100).toFixed(1) : '0.0');
+
+    return {
+      ...stats,
+      positif_percent: percent(stats.positif),
+      negatif_percent: percent(stats.negatif),
+      neutre_percent: percent(stats.neutre),
+    };
+  }, [filteredFichesAuditeesQualif]);
+
   const filteredRdvsAudites = useMemo(() => {
     if (!searchTerm.trim()) return rdvsAudites;
     const term = searchTerm.toLowerCase();
@@ -696,6 +724,39 @@ const StatsAgentsQualite = () => {
               <span className="tab-results-count">
                 {filteredFichesAuditeesQualif.length} fiche(s)
               </span>
+            </div>
+            <div className="table-responsive">
+              <table className="stats-table audit-tone-table">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Nombre</th>
+                    <th>Pourcentage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Positif</td>
+                    <td className="num-cell">{fichesAuditeesToneStats.positif}</td>
+                    <td className="num-cell">{fichesAuditeesToneStats.positif_percent}%</td>
+                  </tr>
+                  <tr>
+                    <td>Négatif</td>
+                    <td className="num-cell">{fichesAuditeesToneStats.negatif}</td>
+                    <td className="num-cell">{fichesAuditeesToneStats.negatif_percent}%</td>
+                  </tr>
+                  <tr>
+                    <td>Neutre</td>
+                    <td className="num-cell">{fichesAuditeesToneStats.neutre}</td>
+                    <td className="num-cell">{fichesAuditeesToneStats.neutre_percent}%</td>
+                  </tr>
+                  <tr className="audit-tone-total-row">
+                    <td>Total</td>
+                    <td className="num-cell">{fichesAuditeesToneStats.total}</td>
+                    <td className="num-cell">100%</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
             {filteredFichesAuditeesQualif.length > 0 ? (
               <div className="table-responsive">
