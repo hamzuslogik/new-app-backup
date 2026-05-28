@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,6 +32,7 @@ const Fiches = () => {
   const [koModal, setKoModal] = useState({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' });
   const [editingFiche, setEditingFiche] = useState(null);
   const [quickSearch, setQuickSearch] = useState(''); // Recherche rapide
+  const [isSearching, setIsSearching] = useState(false);
   const debouncedQuickSearch = useDebouncedValue(quickSearch, 250);
   const getInitialFilters = () => ({
     page: 1,
@@ -249,7 +250,7 @@ const Fiches = () => {
       : 1;
 
   // Récupérer les fiches : chargement auto agent qualif / superviseur qualif / backoffice (jour courant) ; sinon au clic Recherche
-  const { data, isLoading, error, refetch } = useQuery(
+  const { data, isLoading, isFetching, error, refetch } = useQuery(
     ['fiches', appliedFilters, debouncedQuickSearch],
     async () => {
       const params = getQueryParams();
@@ -265,6 +266,12 @@ const Fiches = () => {
         isBackoffice
     }
   );
+
+  useEffect(() => {
+    if (!isFetching && isSearching) {
+      setIsSearching(false);
+    }
+  }, [isFetching, isSearching]);
 
   // Mutation pour créer une fiche
   const createMutation = useMutation(
@@ -390,6 +397,7 @@ const Fiches = () => {
     }));
     // Pagination et limite : mettre à jour appliedFilters pour lancer la requête
     if (key === 'page' || key === 'limit') {
+      setIsSearching(true);
       setAppliedFilters(prev => ({
         ...prev,
         [key]: key === 'page' ? value : nextValue,
@@ -432,6 +440,7 @@ const Fiches = () => {
       }
     }
     
+    setIsSearching(true);
     setFilters(newFilters);
     setAppliedFilters(newFilters);
   };
@@ -556,6 +565,7 @@ const Fiches = () => {
 
   const allFiches = data?.data || [];
   const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
+  const isFetchingList = isLoading || isFetching || isSearching;
 
   // Filtrer les fiches selon la recherche rapide
   const fiches = debouncedQuickSearch.trim() === '' 
@@ -1034,7 +1044,7 @@ const Fiches = () => {
             </div>
 
             <div className="search-form-actions">
-              <button type="submit" className="btn-search">
+              <button type="submit" className="btn-search" disabled={isFetchingList}>
                 <FaSearch /> RECHERCHE
               </button>
               <button type="button" onClick={handleReset} className="btn-reset">
@@ -1090,27 +1100,40 @@ const Fiches = () => {
         </div>
 
         <div className="results-header">
-          <h2>
-            {quickSearch.trim() !== '' 
-              ? `Résultats de la recherche rapide: ${fiches.length} fiche${fiches.length > 1 ? 's' : ''}`
-              : filters.fiche_search 
-                ? `Résultats de la recherche ${pagination.total}` 
-                : 'Fiches créées aujourd\'hui'}
-          </h2>
-          <p className="results-count">
-            {quickSearch.trim() !== '' 
-              ? <>Affichage: <strong>{fiches.length}</strong> fiches</>
-              : <>Total: <strong>{pagination.total}</strong> fiches</>}
-          </p>
+          <div className="results-header-main">
+            <h2>
+              {quickSearch.trim() !== '' 
+                ? `Résultats de la recherche rapide: ${fiches.length} fiche${fiches.length > 1 ? 's' : ''}`
+                : filters.fiche_search 
+                  ? `Résultats de la recherche ${pagination.total}` 
+                  : 'Fiches créées aujourd\'hui'}
+            </h2>
+            <p className="results-count">
+              {quickSearch.trim() !== '' 
+                ? <>Affichage: <strong>{fiches.length}</strong> fiches</>
+                : <>Total: <strong>{pagination.total}</strong> fiches</>}
+            </p>
+          </div>
+          {isFetchingList && (
+            <div className="search-loading-indicator">
+              <div className="spinner-small"></div>
+              <span>Recherche en cours...</span>
+            </div>
+          )}
         </div>
 
-        {fiches.length === 0 ? (
+        {(isLoading || isSearching || isFetching) && fiches.length === 0 ? (
+          <div className="fiches-loading fiches-loading--inline">
+            <div className="spinner"></div>
+            <p>Chargement des résultats de recherche...</p>
+          </div>
+        ) : !isFetchingList && fiches.length === 0 ? (
           <div className="no-results">
             <p>Aucune fiche trouvée{quickSearch ? ` pour "${quickSearch}"` : ''}</p>
           </div>
         ) : (
           <>
-            <div className="fiches-table-container">
+            <div className={`fiches-table-container${isFetchingList ? ' loading' : ''}`}>
               <table className="fiches-table">
                 <thead>
                   <tr>

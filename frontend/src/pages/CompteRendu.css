@@ -88,10 +88,19 @@
 
 .compte-rendu-filters .filter-input,
 .compte-rendu-filters .filter-select {
-  padding: 8px 12px;
+  padding: 6px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+.compte-rendu-filters .filter-select {
+  appearance: auto;
 }
 
 .compte-rendu-filters .filter-select-etat {

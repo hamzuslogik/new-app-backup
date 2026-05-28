@@ -2560,7 +2560,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 1000,
+      limit,
       id_agent,
       id_etat_final,
       id_superviseur,
@@ -2568,7 +2568,19 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       date_fin
     } = req.query;
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const parsedPage = parseInt(page, 10) || 1;
+    const parsedLimit =
+      limit !== undefined && limit !== '' && limit !== 'all'
+        ? parseInt(limit, 10)
+        : null;
+    const usePagination = parsedLimit != null && parsedLimit > 0;
+    const offset = usePagination ? (parsedPage - 1) * parsedLimit : 0;
+    const emptyPagination = () => ({
+      page: parsedPage,
+      limit: usePagination ? parsedLimit : 0,
+      total: 0,
+      pages: 0
+    });
 
     let agentIds = [];
     const fonction = Number(req.user?.fonction);
@@ -2596,12 +2608,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         return res.json({
           success: true,
           data: [],
-          pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total: 0,
-            pages: 0
-          }
+          pagination: emptyPagination()
         });
       }
 
@@ -2618,12 +2625,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
           return res.json({
             success: true,
             data: [],
-            pagination: {
-              page: parseInt(page),
-              limit: parseInt(limit),
-              total: 0,
-              pages: 0
-            }
+            pagination: emptyPagination()
           });
         }
       }
@@ -2671,12 +2673,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       return res.json({
         success: true,
         data: [],
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total: 0,
-          pages: 0
-        }
+        pagination: emptyPagination()
       });
     }
 
@@ -2717,12 +2714,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         return res.json({
           success: true,
           data: [],
-          pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total: 0,
-            pages: 0
-          }
+          pagination: emptyPagination()
         });
       }
     }
@@ -2854,9 +2846,8 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
 
     const total = totalResult?.total || 0;
 
-    // Récupérer les fiches
-    const fiches = await query(
-      `SELECT 
+    // Récupérer les fiches (sans LIMIT si limit non fourni — ex. page Production Qualif)
+    const fichesQuery = `SELECT 
         fiche.id,
         fiche.hash,
         fiche.nom,
@@ -2885,10 +2876,11 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
        LEFT JOIN centres centre ON fiche.id_centre = centre.id
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
        WHERE ${whereClause}
-       ORDER BY fiche.date_insert_time DESC
-       LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
-    );
+       ORDER BY fiche.date_insert_time DESC${
+         usePagination ? ' LIMIT ? OFFSET ?' : ''
+       }`;
+    const fichesParams = usePagination ? [...params, parsedLimit, offset] : params;
+    const fiches = await query(fichesQuery, fichesParams);
 
     // Encoder les IDs si le hash n'existe pas
     const fichesWithHash = fiches.map(fiche => ({
@@ -2900,10 +2892,10 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       success: true,
       data: fichesWithHash,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: parsedPage,
+        limit: usePagination ? parsedLimit : total,
         total,
-        pages: Math.ceil(total / parseInt(limit))
+        pages: usePagination ? Math.ceil(total / parsedLimit) : 1
       }
     });
   } catch (error) {
