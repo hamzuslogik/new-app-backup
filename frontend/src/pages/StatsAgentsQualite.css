@@ -845,14 +845,17 @@
   text-align: center;
 }
 
-.rdvs-audites-table thead {
-  background: #4a7a87;
+.stats-agents-qualite-page .rdvs-audites-table thead,
+.stats-agents-qualite-page .fiches-content .fiches-table thead {
+  background: #4a7a87 !important;
+  color: #ffffff !important;
 }
 
-.rdvs-audites-table th {
-  background: #4a7a87;
-  color: #fff;
-  font-weight: 700;
+.stats-agents-qualite-page .rdvs-audites-table th,
+.stats-agents-qualite-page .fiches-content .fiches-table th {
+  background: #4a7a87 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
 }
 
 .audit-tone-table {
