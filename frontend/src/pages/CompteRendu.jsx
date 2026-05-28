@@ -381,7 +381,12 @@ const CompteRendu = () => {
           {isLoadingPending ? (
             <div className="loading">Chargement...</div>
           ) : compteRendusPending.length > 0 ? (
-            <div className="compte-rendu-list">
+            <>
+              <p className="compte-rendu-results-count">
+                <strong>{compteRendusPending.length}</strong>{' '}
+                résultat{compteRendusPending.length > 1 ? 's' : ''}
+              </p>
+              <div className="compte-rendu-list">
               {compteRendusPending.map((cr) => (
                 <div
                   key={cr.id}
@@ -556,7 +561,8 @@ const CompteRendu = () => {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            </>
           ) : (
             <div className="no-data">Aucun compte rendu trouvé</div>
           )}
