@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -11,10 +11,9 @@ import TrackingButtonIcon from '../components/TrackingButtonIcon';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './CompteRendu.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
-import { isCompteRenduSignerEtat } from '../utils/compteRenduSigner';
+import { isCompteRenduSignerEtat, getEtatsCompteRenduFilter } from '../utils/compteRenduSigner';
 import { getDateRappelAffichage } from '../utils/compteRenduDateRappel';
 import { canManageTrackingFromCompteRendu } from '../utils/trackingAccess';
-import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 
 const getTodayISO = () => new Date().toISOString().split('T')[0];
 
@@ -170,8 +169,17 @@ const CompteRendu = () => {
   const centres = centresData || [];
   const installateurs = installateursData || [];
   const etats = etatsData || [];
-  const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } =
-    getEtatsGroupedByPhase(etats);
+  const etatsCompteRenduFiltre = useMemo(() => getEtatsCompteRenduFilter(etats), [etats]);
+
+  useEffect(() => {
+    if (
+      filterEtat &&
+      !etatsCompteRenduFiltre.some((e) => String(e.id) === String(filterEtat))
+    ) {
+      setFilterEtat('');
+    }
+  }, [etatsCompteRenduFiltre, filterEtat]);
+
   const compteRendusPending = comptesRendusPendingData || [];
   const isAdmin = [1, 2, 7].includes(Number(user.fonction));
   const isBackoffice = Number(user.fonction) === 11; // Backoffice = fonction 11
@@ -328,71 +336,15 @@ const CompteRendu = () => {
                   className="filter-select filter-select-etat"
                 >
                   <option value="">Tous</option>
-                  {etatsPhase0.length > 0 && (
-                    <optgroup label="PHASE 0">
-                      {etatsPhase0.map((etat) => (
-                        <option
-                          key={etat.id}
-                          value={etat.id}
-                          style={{ backgroundColor: etat.color || '#cccccc' }}
-                        >
-                          {etat.titre}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {etatsPhase1.length > 0 && (
-                    <optgroup label="PHASE 1">
-                      {etatsPhase1.map((etat) => (
-                        <option
-                          key={etat.id}
-                          value={etat.id}
-                          style={{ backgroundColor: etat.color || '#cccccc' }}
-                        >
-                          {etat.titre}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {etatsPhase2.length > 0 && (
-                    <optgroup label="PHASE 2">
-                      {etatsPhase2.map((etat) => (
-                        <option
-                          key={etat.id}
-                          value={etat.id}
-                          style={{ backgroundColor: etat.color || '#cccccc' }}
-                        >
-                          {etat.titre}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {etatsPhase3.length > 0 && (
-                    <optgroup label="PHASE 3">
-                      {etatsPhase3.map((etat) => (
-                        <option
-                          key={etat.id}
-                          value={etat.id}
-                          style={{ backgroundColor: etat.color || '#cccccc' }}
-                        >
-                          {etat.titre}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {etatsPhase0.length === 0 &&
-                    etatsPhase1.length === 0 &&
-                    etatsPhase2.length === 0 &&
-                    etatsPhase3.length === 0 &&
-                    etats.map((etat) => (
-                      <option
-                        key={etat.id}
-                        value={etat.id}
-                        style={{ backgroundColor: etat.color || '#cccccc' }}
-                      >
-                        {etat.titre}
-                      </option>
-                    ))}
+                  {etatsCompteRenduFiltre.map((etat) => (
+                    <option
+                      key={etat.id}
+                      value={etat.id}
+                      style={{ backgroundColor: etat.color || '#cccccc' }}
+                    >
+                      {etat.titre}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
