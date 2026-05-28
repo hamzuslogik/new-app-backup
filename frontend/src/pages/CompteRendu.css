@@ -108,6 +108,18 @@
   max-width: 280px;
 }
 
+.compte-rendu-page {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.compte-rendu-page .results-section {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 .compte-rendu-results-count {
   margin: 0 0 14px;
   font-size: 14px;
@@ -119,11 +131,28 @@
   font-size: 16px;
 }
 
-.compte-rendu-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 16px;
-  row-gap: 20px;
+/* 2 comptes rendu par ligne : une rangée flex explicite (évite les conflits grid / min-width) */
+.compte-rendu-page .compte-rendu-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.compte-rendu-page .compte-rendu-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+}
+
+.compte-rendu-page .compte-rendu-row > .compte-rendu-card {
+  flex: 0 0 calc((100% - 16px) / 2);
+  width: calc((100% - 16px) / 2);
+  max-width: calc((100% - 16px) / 2);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .compte-rendu-card {

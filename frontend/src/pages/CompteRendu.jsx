@@ -181,6 +181,13 @@ const CompteRendu = () => {
   }, [etatsCompteRenduFiltre, filterEtat]);
 
   const compteRendusPending = comptesRendusPendingData || [];
+  const compteRenduRows = useMemo(() => {
+    const rows = [];
+    for (let i = 0; i < compteRendusPending.length; i += 2) {
+      rows.push(compteRendusPending.slice(i, i + 2));
+    }
+    return rows;
+  }, [compteRendusPending]);
   const isAdmin = [1, 2, 7].includes(Number(user.fonction));
   const isBackoffice = Number(user.fonction) === 11; // Backoffice = fonction 11
   const isRPConfirmation = Number(user.fonction) === 13; // RP Confirmation = fonction 13
@@ -386,8 +393,10 @@ const CompteRendu = () => {
                 <strong>{compteRendusPending.length}</strong>{' '}
                 résultat{compteRendusPending.length > 1 ? 's' : ''}
               </p>
-              <div className="compte-rendu-list">
-              {compteRendusPending.map((cr) => (
+              <div className="compte-rendu-rows">
+              {compteRenduRows.map((row, rowIndex) => (
+                <div key={`row-${rowIndex}`} className="compte-rendu-row">
+              {row.map((cr) => (
                 <div
                   key={cr.id}
                   className={`compte-rendu-card statut-${cr.statut}`}
@@ -559,6 +568,8 @@ const CompteRendu = () => {
                       </div>
                     )}
                   </div>
+                </div>
+              ))}
                 </div>
               ))}
               </div>
