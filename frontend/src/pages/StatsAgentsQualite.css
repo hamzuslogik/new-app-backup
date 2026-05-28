@@ -858,6 +858,38 @@
   font-weight: 700 !important;
 }
 
+/* Uniformiser le wrapping pour les tableaux onglets Fiches/RDVs */
+.stats-agents-qualite-page .fiches-content .fiches-table {
+  table-layout: fixed;
+}
+
+.stats-agents-qualite-page .fiches-content .fiches-table th,
+.stats-agents-qualite-page .fiches-content .fiches-table td {
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  vertical-align: top;
+}
+
+/* Onglet RDVs audites : observation plus large, actions plus compacte */
+.stats-agents-qualite-page .rdvs-audites-table th:nth-child(8),
+.stats-agents-qualite-page .rdvs-audites-table td:nth-child(8) {
+  width: 23%;
+  min-width: 260px;
+}
+
+.stats-agents-qualite-page .rdvs-audites-table th:nth-child(9),
+.stats-agents-qualite-page .rdvs-audites-table td:nth-child(9) {
+  width: 70px;
+  min-width: 70px;
+  max-width: 70px;
+  text-align: center;
+}
+
+.stats-agents-qualite-page .rdvs-audites-table td:nth-child(9) .btn-detail {
+  padding: 4px 8px;
+}
+
 .audit-tone-table {
   margin: 0 0 1rem 0;
 }
