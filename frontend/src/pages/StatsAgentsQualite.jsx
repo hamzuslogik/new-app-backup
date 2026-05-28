@@ -154,12 +154,13 @@ const StatsAgentsQualite = () => {
     const stats = { positif: 0, negatif: 0, neutre: 0, total };
 
     eligibleFiches.forEach((fiche) => {
-      if (fiche.ko) {
+      const taux = String(fiche?.etat_taux || '').toUpperCase().trim();
+      if (taux === 'NEGATIVE') {
         stats.negatif += 1;
-      } else if (fiche.hc) {
-        stats.neutre += 1;
-      } else {
+      } else if (taux === 'POSITIVE') {
         stats.positif += 1;
+      } else {
+        stats.neutre += 1;
       }
     });
 
