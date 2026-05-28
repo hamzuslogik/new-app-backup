@@ -3469,14 +3469,149 @@ async function fetchQualiteConfirmationCompletudeStats(startDate, endDate) {
   }
 }
 
+/** Fiches auditées qualif : id_qualite + fiches créées par agent qualification (fonction 3), période = date_insert_time. */
+async function fetchFichesAuditeesQualifList(startDate, endDate, idAgentQualite = null) {
+  const empty = { fiches: [], agents_options: [] };
+  try {
+    const agentsOptions = await query(
+      `SELECT DISTINCT
+        u.id,
+        u.pseudo,
+        u.nom,
+        u.prenom
+      FROM fiches f
+      INNER JOIN utilisateurs u ON f.id_qualite = u.id AND u.etat > 0
+      ${STATS_QUALITE_FICHE_AGENT_QUALIF_JOIN}
+      WHERE f.id_qualite IS NOT NULL
+      AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+      AND (f.archive = 0 OR f.archive IS NULL)
+      ORDER BY u.pseudo ASC`,
+      [startDate, endDate]
+    );
+
+    const ficheParams = [startDate, endDate];
+    let agentFilterSql = '';
+    if (idAgentQualite) {
+      agentFilterSql = ' AND f.id_qualite = ?';
+      ficheParams.push(idAgentQualite);
+    }
+
+    const fichesRows = await query(
+      `SELECT
+        f.id,
+        f.hash,
+        f.nom,
+        f.prenom,
+        f.tel,
+        f.cp,
+        f.ville,
+        f.date_insert_time,
+        f.commentaire_qualite,
+        f.id_etat_final,
+        f.ko,
+        f.hc,
+        e.titre AS etat_titre,
+        e.color AS etat_color,
+        e.abbreviation AS etat_abbreviation,
+        u_qual.id AS qualite_id,
+        u_qual.pseudo AS qualite_pseudo,
+        u_qual.nom AS qualite_nom,
+        u_qual.prenom AS qualite_prenom,
+        agent_createur.pseudo AS agent_pseudo,
+        agent_createur.nom AS agent_nom,
+        agent_createur.prenom AS agent_prenom,
+        centre.titre AS centre_titre,
+        f.date_insert_time AS date_audit
+      FROM fiches f
+      ${STATS_QUALITE_FICHE_AGENT_QUALIF_JOIN}
+      INNER JOIN utilisateurs u_qual ON f.id_qualite = u_qual.id
+      LEFT JOIN etats e ON f.id_etat_final = e.id
+      LEFT JOIN utilisateurs agent_createur ON f.id_agent = agent_createur.id
+      LEFT JOIN centres centre ON f.id_centre = centre.id
+      WHERE f.id_qualite IS NOT NULL
+      AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+      AND (f.archive = 0 OR f.archive IS NULL)
+      ${agentFilterSql}
+      ORDER BY f.date_insert_time DESC, f.id DESC
+      LIMIT 1000`,
+      ficheParams
+    );
+
+    const fiches = (fichesRows || []).map((f) => ({
+      id: f.id,
+      hash: f.hash || encodeFicheId(f.id),
+      nom: f.nom,
+      prenom: f.prenom,
+      tel: f.tel,
+      cp: f.cp,
+      ville: f.ville,
+      date_audit: f.date_audit,
+      commentaire_qualite: f.commentaire_qualite,
+      id_etat_final: f.id_etat_final,
+      ko: f.ko,
+      hc: f.hc,
+      etat_titre: f.etat_titre,
+      etat_color: f.etat_color,
+      etat_abbreviation: f.etat_abbreviation,
+      agent_pseudo: f.agent_pseudo,
+      agent_nom: f.agent_nom,
+      agent_prenom: f.agent_prenom,
+      centre_titre: f.centre_titre,
+      qualite: {
+        id: f.qualite_id,
+        pseudo: f.qualite_pseudo,
+        nom: f.qualite_nom,
+        prenom: f.qualite_prenom,
+      },
+    }));
+
+    return {
+      fiches,
+      agents_options: (agentsOptions || []).map((u) => ({
+        id: u.id,
+        pseudo: u.pseudo,
+        nom: u.nom,
+        prenom: u.prenom,
+      })),
+    };
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE' || err.code === 'ER_BAD_FIELD_ERROR') return empty;
+    throw err;
+  }
+}
+
 /** RDV confirmés (état 7) audités par un agent qualité confirmation (fonction 4), période = date RDV. */
-async function fetchQualiteConfirmationAuditStats(startDate, endDate) {
+async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQualiteConfirmation = null) {
   const empty = {
     agents: [],
+    agents_options: [],
     totaux: { total_rdvs_audites: 0, avec_observation: 0 },
     rdvs_audites: [],
   };
   try {
+    const agentConfirmFilterSql = idAgentQualiteConfirmation
+      ? ' AND f.id_qualite_confirmation = ?'
+      : '';
+    const agentConfirmParams = idAgentQualiteConfirmation ? [idAgentQualiteConfirmation] : [];
+
+    const agentsOptions = await query(
+      `SELECT DISTINCT
+        u.id,
+        u.pseudo,
+        u.nom,
+        u.prenom
+      FROM fiches f
+      INNER JOIN utilisateurs u ON f.id_qualite_confirmation = u.id AND u.fonction = 4 AND u.etat > 0
+      WHERE f.id_etat_final = 7
+      AND f.id_qualite_confirmation IS NOT NULL
+      AND f.date_rdv_time IS NOT NULL
+      AND f.date_rdv_time != ''
+      AND (f.archive = 0 OR f.archive IS NULL)
+      AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?
+      ORDER BY u.pseudo ASC`,
+      [startDate, endDate]
+    );
+
     const rows = await query(
       `SELECT
         u.id,
@@ -3504,9 +3639,10 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate) {
       AND f.date_rdv_time != ''
       AND (f.archive = 0 OR f.archive IS NULL)
       AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?
+      ${agentConfirmFilterSql}
       GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo, fn.titre, c.titre
       ORDER BY total_rdvs_audites DESC`,
-      [startDate, endDate]
+      [startDate, endDate, ...agentConfirmParams]
     );
     const agents = (rows || []).map((row) => ({
       agent: {
@@ -3560,9 +3696,10 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate) {
       AND f.date_rdv_time != ''
       AND (f.archive = 0 OR f.archive IS NULL)
       AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?
+      ${agentConfirmFilterSql}
       ORDER BY f.date_rdv_time DESC, f.id DESC
-      LIMIT 500`,
-      [startDate, endDate]
+      LIMIT 1000`,
+      [startDate, endDate, ...agentConfirmParams]
     );
     const rdvs_audites = (rdvsRows || []).map((r) => ({
       id: r.id,
@@ -3586,7 +3723,17 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate) {
       produit_nom: r.produit_nom,
     }));
 
-    return { agents, totaux, rdvs_audites };
+    return {
+      agents,
+      agents_options: (agentsOptions || []).map((u) => ({
+        id: u.id,
+        pseudo: u.pseudo,
+        nom: u.nom,
+        prenom: u.prenom,
+      })),
+      totaux,
+      rdvs_audites,
+    };
   } catch (err) {
     if (err.code === 'ER_NO_SUCH_TABLE' || err.code === 'ER_BAD_FIELD_ERROR') return empty;
     throw err;
@@ -3597,11 +3744,19 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate) {
 // Se base sur le champ id_qualite dans la table fiches et date_insert_time pour la date
 router.get('/agents-qualite', authenticate, async (req, res) => {
   try {
-    const { 
-      date_debut, 
+    const {
+      date_debut,
       date_fin,
-      id_agent_qualite // Filtre optionnel par agent qualité
+      id_agent_qualite, // rétrocompat : filtre agent qualité qualification (stats)
+      id_agent_qualite_qualif,
+      id_agent_qualite_confirmation,
     } = req.query;
+
+    const idAgentQualifFilter = id_agent_qualite_qualif || id_agent_qualite;
+    const idAgentQualifParsed = idAgentQualifFilter ? parseInt(idAgentQualifFilter, 10) : null;
+    const idAgentConfirmationParsed = id_agent_qualite_confirmation
+      ? parseInt(id_agent_qualite_confirmation, 10)
+      : null;
 
     // Valeurs par défaut : mois en cours
     const today = new Date();
@@ -3637,9 +3792,9 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
 
     const agentsParams = [startDate, endDate];
 
-    if (id_agent_qualite) {
+    if (idAgentQualifParsed) {
       agentsQualiteQuery += ' AND u.id = ?';
-      agentsParams.push(parseInt(id_agent_qualite));
+      agentsParams.push(idAgentQualifParsed);
     }
 
     agentsQualiteQuery += ' ORDER BY u.pseudo ASC';
@@ -3771,17 +3926,29 @@ router.get('/agents-qualite', authenticate, async (req, res) => {
     );
 
     const completudes = await fetchQualiteConfirmationCompletudeStats(startDate, endDate);
-    const auditConfirmation = await fetchQualiteConfirmationAuditStats(startDate, endDate);
+    const auditConfirmation = await fetchQualiteConfirmationAuditStats(
+      startDate,
+      endDate,
+      idAgentConfirmationParsed
+    );
+    const fichesAuditeesQualif = await fetchFichesAuditeesQualifList(
+      startDate,
+      endDate,
+      idAgentQualifParsed
+    );
 
     res.json({
       success: true,
       data: {
         agents: agentsStats,
+        fiches_auditees_qualif: fichesAuditeesQualif.fiches,
+        agents_qualite_qualif_options: fichesAuditeesQualif.agents_options,
         qualite_confirmation: {
           completudes,
           audit_confirmation: {
             agents: auditConfirmation.agents,
             totaux: auditConfirmation.totaux,
+            agents_options: auditConfirmation.agents_options,
           },
           rdvs_audites: auditConfirmation.rdvs_audites,
         },

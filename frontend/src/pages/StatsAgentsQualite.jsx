@@ -36,22 +36,9 @@ const StatsAgentsQualite = () => {
   const [filters, setFilters] = useState({
     date_debut: getFirstOfMonthLocal(),
     date_fin: getTodayLocal(),
-    id_agent_qualite: ''
+    id_agent_qualite_qualif: '',
+    id_agent_qualite_confirmation: '',
   });
-
-  const { data: agentsQualiteData } = useQuery(
-    ['agents-qualite-list', filters.date_debut, filters.date_fin],
-    async () => {
-      const res = await api.get('/statistiques/agents-qualite', {
-        params: {
-          date_debut: filters.date_debut,
-          date_fin: filters.date_fin
-        }
-      });
-      return res.data.data?.agents || [];
-    },
-    { enabled: !!filters.date_debut && !!filters.date_fin }
-  );
 
   const { data: statsData, isLoading, error } = useQuery(
     ['stats-agents-qualite', filters],
@@ -84,6 +71,10 @@ const StatsAgentsQualite = () => {
   const completudesData = statsData?.qualite_confirmation?.completudes;
   const auditData = statsData?.qualite_confirmation?.audit_confirmation;
   const rdvsAudites = statsData?.qualite_confirmation?.rdvs_audites || [];
+  const fichesAuditeesQualif = statsData?.fiches_auditees_qualif || [];
+  const agentsQualiteQualifOptions = statsData?.agents_qualite_qualif_options || [];
+  const agentsQualiteConfirmationOptions =
+    statsData?.qualite_confirmation?.audit_confirmation?.agents_options || [];
 
   const filteredAgents = useMemo(() => {
     if (!statsData?.agents) return [];
@@ -141,6 +132,19 @@ const StatsAgentsQualite = () => {
     });
   }, [completudesData, auditData, searchTerm]);
 
+  const filteredFichesAuditeesQualif = useMemo(() => {
+    if (!searchTerm.trim()) return fichesAuditeesQualif;
+    const term = searchTerm.toLowerCase();
+    return fichesAuditeesQualif.filter((fiche) =>
+      fiche.nom?.toLowerCase().includes(term) ||
+      fiche.prenom?.toLowerCase().includes(term) ||
+      fiche.tel?.includes(term) ||
+      fiche.qualite?.pseudo?.toLowerCase().includes(term) ||
+      fiche.agent_pseudo?.toLowerCase().includes(term) ||
+      fiche.centre_titre?.toLowerCase().includes(term)
+    );
+  }, [fichesAuditeesQualif, searchTerm]);
+
   const filteredRdvsAudites = useMemo(() => {
     if (!searchTerm.trim()) return rdvsAudites;
     const term = searchTerm.toLowerCase();
@@ -152,6 +156,12 @@ const StatsAgentsQualite = () => {
       rdv.confirmateur_pseudo?.toLowerCase().includes(term)
     );
   }, [rdvsAudites, searchTerm]);
+
+  const formatAgentOptionLabel = (agent) => {
+    if (!agent) return '';
+    const name = `${agent.nom || ''} ${agent.prenom || ''}`.trim();
+    return name ? `${agent.pseudo} (${name})` : agent.pseudo;
+  };
 
   const toggleExpand = (agentId) => {
     setExpandedAgents(prev => ({ ...prev, [agentId]: !prev[agentId] }));
@@ -286,24 +296,6 @@ const StatsAgentsQualite = () => {
                 value={filters.date_fin}
                 onChange={(e) => handleFilterChange('date_fin', e.target.value)}
               />
-            </div>
-            <div className="filter-item">
-              <label htmlFor="id_agent_qualite">Agent Qualité :</label>
-              <select
-                id="id_agent_qualite"
-                value={filters.id_agent_qualite}
-                onChange={(e) => handleFilterChange('id_agent_qualite', e.target.value)}
-              >
-                <option value="">Tous les agents</option>
-                {agentsQualiteData?.map(agentStat => (
-                  <option key={agentStat.agent.id} value={agentStat.agent.id}>
-                    {agentStat.agent.pseudo}{' '}
-                    {agentStat.agent.nom && agentStat.agent.prenom
-                      ? `(${agentStat.agent.nom} ${agentStat.agent.prenom})`
-                      : ''}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
         </div>
@@ -685,135 +677,152 @@ const StatsAgentsQualite = () => {
 
         {viewMode === 'fiches' && (
           <div className="fiches-content">
-            {filteredAgents.length > 0 ? (
-              <div className="fiches-by-agent">
-                {filteredAgents.map((agentStat) => (
-                  <div key={agentStat.agent.id} className="agent-fiches-section">
-                    <div className="agent-section-header">
-                      <div className="agent-info">
-                        {agentStat.agent.photo ? (
-                          <img
-                            src={agentStat.agent.photo}
-                            alt={agentStat.agent.pseudo}
-                            className="agent-avatar"
-                          />
-                        ) : (
-                          <div className="agent-avatar placeholder">
-                            {agentStat.agent.pseudo ? agentStat.agent.pseudo.charAt(0).toUpperCase() : '?'}
+            <div className="tab-filters">
+              <div className="filter-item">
+                <label htmlFor="id_agent_qualite_qualif">Agent qualité qualification :</label>
+                <select
+                  id="id_agent_qualite_qualif"
+                  value={filters.id_agent_qualite_qualif}
+                  onChange={(e) => handleFilterChange('id_agent_qualite_qualif', e.target.value)}
+                >
+                  <option value="">Tous les agents</option>
+                  {agentsQualiteQualifOptions.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {formatAgentOptionLabel(agent)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span className="tab-results-count">
+                {filteredFichesAuditeesQualif.length} fiche(s)
+              </span>
+            </div>
+            {filteredFichesAuditeesQualif.length > 0 ? (
+              <div className="table-responsive">
+                <table className="fiches-table">
+                  <thead>
+                    <tr>
+                      <th>Date audit</th>
+                      <th>Nom / Prénom</th>
+                      <th>Téléphone</th>
+                      <th>CP / Ville</th>
+                      <th>Agent qualité qualification</th>
+                      <th>Agent qualification</th>
+                      <th>Centre</th>
+                      <th>État</th>
+                      <th>KO/HC</th>
+                      <th>Commentaire qualité</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredFichesAuditeesQualif.map((fiche) => (
+                      <tr
+                        key={fiche.id}
+                        className={`${fiche.ko ? 'row-ko' : ''} ${fiche.hc ? 'row-hc' : ''}`}
+                      >
+                        <td>{formatDateTime(fiche.date_audit)}</td>
+                        <td>
+                          <div className="name-cell">
+                            <span className="nom">{fiche.nom || '-'}</span>
+                            <span className="prenom">{fiche.prenom || '-'}</span>
                           </div>
-                        )}
-                        <div>
-                          <h3>{agentStat.agent.pseudo}</h3>
-                          <p className="agent-meta">
-                            {agentStat.agent.nom && agentStat.agent.prenom
-                              ? `${agentStat.agent.nom} ${agentStat.agent.prenom}`
-                              : ''}{' '}
-                            — {agentStat.stats.total_audits} fiche
-                            {agentStat.stats.total_audits > 1 ? 's' : ''} auditée
-                            {agentStat.stats.total_audits > 1 ? 's' : ''}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    {agentStat.fiches_auditees?.length > 0 ? (
-                      <table className="fiches-table">
-                        <thead>
-                          <tr>
-                            <th>Date audit</th>
-                            <th>Nom / Prénom</th>
-                            <th>Téléphone</th>
-                            <th>CP / Ville</th>
-                            <th>Agent qualification</th>
-                            <th>Centre</th>
-                            <th>État</th>
-                            <th>KO/HC</th>
-                            <th>Commentaire qualité</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {agentStat.fiches_auditees.map((fiche) => (
-                            <tr
-                              key={fiche.id}
-                              className={`${fiche.ko ? 'row-ko' : ''} ${fiche.hc ? 'row-hc' : ''}`}
-                            >
-                              <td>{formatDateTime(fiche.date_audit)}</td>
-                              <td>
-                                <div className="name-cell">
-                                  <span className="nom">{fiche.nom || '-'}</span>
-                                  <span className="prenom">{fiche.prenom || '-'}</span>
-                                </div>
-                              </td>
-                              <td>{fiche.tel || '-'}</td>
-                              <td>
-                                <div className="location-cell">
-                                  <span>{fiche.cp || '-'}</span>
-                                  <span className="ville">{fiche.ville || '-'}</span>
-                                </div>
-                              </td>
-                              <td>
-                                <div className="agent-cell">
-                                  <span className="pseudo">{fiche.agent_pseudo || '-'}</span>
-                                  {(fiche.agent_nom || fiche.agent_prenom) && (
-                                    <span className="fullname">
-                                      {fiche.agent_nom} {fiche.agent_prenom}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td>{fiche.centre_titre || '-'}</td>
-                              <td>
-                                <span
-                                  className="etat-badge"
-                                  style={{ backgroundColor: fiche.etat_color || '#ccc' }}
-                                >
-                                  {fiche.etat_abbreviation || fiche.etat_titre || '-'}
-                                </span>
-                              </td>
-                              <td className="status-cell">
-                                {fiche.ko ? <span className="status-badge ko">KO</span> : null}
-                                {fiche.hc ? <span className="status-badge hc">HC</span> : null}
-                                {!fiche.ko && !fiche.hc ? <span className="status-ok">-</span> : null}
-                              </td>
-                              <td className="comment-cell">
-                                {fiche.commentaire_qualite ? (
-                                  <div className="comment-preview" title={fiche.commentaire_qualite}>
-                                    {fiche.commentaire_qualite.length > 80
-                                      ? `${fiche.commentaire_qualite.substring(0, 80)}...`
-                                      : fiche.commentaire_qualite}
-                                  </div>
-                                ) : (
-                                  <span className="no-comment">-</span>
-                                )}
-                              </td>
-                              <td>
-                                <FicheDetailLink
-                                  ficheHash={fiche.hash}
-                                  ficheId={fiche.id}
-                                  className="btn-detail"
-                                  title="Voir les détails"
-                                >
-                                  <FaSearch />
-                                </FicheDetailLink>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <div className="no-fiches">Aucune fiche auditée pour cet agent</div>
-                    )}
-                  </div>
-                ))}
+                        </td>
+                        <td>{fiche.tel || '-'}</td>
+                        <td>
+                          <div className="location-cell">
+                            <span>{fiche.cp || '-'}</span>
+                            <span className="ville">{fiche.ville || '-'}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="agent-cell">
+                            <span className="pseudo">{fiche.qualite?.pseudo || '-'}</span>
+                            {(fiche.qualite?.nom || fiche.qualite?.prenom) && (
+                              <span className="fullname">
+                                {fiche.qualite.nom} {fiche.qualite.prenom}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="agent-cell">
+                            <span className="pseudo">{fiche.agent_pseudo || '-'}</span>
+                            {(fiche.agent_nom || fiche.agent_prenom) && (
+                              <span className="fullname">
+                                {fiche.agent_nom} {fiche.agent_prenom}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>{fiche.centre_titre || '-'}</td>
+                        <td>
+                          <span
+                            className="etat-badge"
+                            style={{ backgroundColor: fiche.etat_color || '#ccc' }}
+                          >
+                            {fiche.etat_abbreviation || fiche.etat_titre || '-'}
+                          </span>
+                        </td>
+                        <td className="status-cell">
+                          {fiche.ko ? <span className="status-badge ko">KO</span> : null}
+                          {fiche.hc ? <span className="status-badge hc">HC</span> : null}
+                          {!fiche.ko && !fiche.hc ? <span className="status-ok">-</span> : null}
+                        </td>
+                        <td className="comment-cell">
+                          {fiche.commentaire_qualite ? (
+                            <div className="comment-preview" title={fiche.commentaire_qualite}>
+                              {fiche.commentaire_qualite.length > 80
+                                ? `${fiche.commentaire_qualite.substring(0, 80)}...`
+                                : fiche.commentaire_qualite}
+                            </div>
+                          ) : (
+                            <span className="no-comment">-</span>
+                          )}
+                        </td>
+                        <td>
+                          <FicheDetailLink
+                            ficheHash={fiche.hash}
+                            ficheId={fiche.id}
+                            className="btn-detail"
+                            title="Voir les détails"
+                          >
+                            <FaSearch />
+                          </FicheDetailLink>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <div className="no-data">Aucune fiche auditée (agents qualification) pour cette période</div>
+              <div className="no-data">Aucune fiche auditée pour cette période</div>
             )}
           </div>
         )}
 
         {viewMode === 'rdvs' && (
           <div className="fiches-content rdvs-audites-content">
+            <div className="tab-filters">
+              <div className="filter-item">
+                <label htmlFor="id_agent_qualite_confirmation">Agent qualité confirmation :</label>
+                <select
+                  id="id_agent_qualite_confirmation"
+                  value={filters.id_agent_qualite_confirmation}
+                  onChange={(e) => handleFilterChange('id_agent_qualite_confirmation', e.target.value)}
+                >
+                  <option value="">Tous les agents</option>
+                  {agentsQualiteConfirmationOptions.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {formatAgentOptionLabel(agent)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span className="tab-results-count">
+                {filteredRdvsAudites.length} RDV(s)
+              </span>
+            </div>
             {filteredRdvsAudites.length > 0 ? (
               <div className="table-responsive">
                 <table className="fiches-table rdvs-audites-table">

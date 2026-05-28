@@ -795,6 +795,45 @@
   margin-top: 0.5rem;
 }
 
+.tab-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.tab-filters .filter-item {
+  min-width: 260px;
+}
+
+.tab-filters .filter-item label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.tab-filters .filter-item select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.tab-results-count {
+  font-size: 13px;
+  color: #666;
+  font-weight: 600;
+  margin-left: auto;
+}
+
 @media (max-width: 768px) {
   .stat-metrics-3 {
     grid-template-columns: 1fr;
