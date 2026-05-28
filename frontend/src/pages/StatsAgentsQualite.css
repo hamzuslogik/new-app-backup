@@ -845,6 +845,16 @@
   text-align: center;
 }
 
+.rdvs-audites-table thead {
+  background: #4a7a87;
+}
+
+.rdvs-audites-table th {
+  background: #4a7a87;
+  color: #fff;
+  font-weight: 700;
+}
+
 .audit-tone-table {
   margin: 0 0 1rem 0;
 }

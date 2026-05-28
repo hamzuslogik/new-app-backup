@@ -937,7 +937,6 @@ const StatsAgentsQualite = () => {
                       <th>Date RDV</th>
                       <th>Nom / Prénom</th>
                       <th>Téléphone</th>
-                      <th>CP / Ville</th>
                       <th>Confirmateur</th>
                       <th>Produit</th>
                       <th>Audité par</th>
@@ -956,12 +955,6 @@ const StatsAgentsQualite = () => {
                           </div>
                         </td>
                         <td>{rdv.tel || '-'}</td>
-                        <td>
-                          <div className="location-cell">
-                            <span>{rdv.cp || '-'}</span>
-                            <span className="ville">{rdv.ville || '-'}</span>
-                          </div>
-                        </td>
                         <td>{rdv.confirmateur_pseudo || '-'}</td>
                         <td>{rdv.produit_nom || '-'}</td>
                         <td>
