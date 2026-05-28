@@ -3534,8 +3534,7 @@ async function fetchFichesAuditeesQualifList(startDate, endDate, idAgentQualite 
       AND f.date_insert_time >= ? AND f.date_insert_time <= ?
       AND (f.archive = 0 OR f.archive IS NULL)
       ${agentFilterSql}
-      ORDER BY f.date_insert_time DESC, f.id DESC
-      LIMIT 1000`,
+      ORDER BY f.date_insert_time DESC, f.id DESC`,
       ficheParams
     );
 

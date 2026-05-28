@@ -893,19 +893,14 @@ const StatsAgentsQualite = () => {
                       <th colSpan={3}>Signature sur RDVs audités</th>
                     </tr>
                     <tr>
-                      <th>Métrique</th>
-                      <th>Nombre</th>
-                      <th>Taux</th>
+                      <th>RDVs audités</th>
+                      <th>Signatures</th>
+                      <th>Taux de signature</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td>RDVs audités</td>
                       <td className="num-cell">{auditTotaux?.total_rdvs_audites || 0}</td>
-                      <td className="num-cell">100%</td>
-                    </tr>
-                    <tr>
-                      <td>Signatures</td>
                       <td className="num-cell">{auditTotaux?.signatures || 0}</td>
                       <td className="num-cell">{auditTotaux?.taux_signature || 0}%</td>
                     </tr>
@@ -919,19 +914,14 @@ const StatsAgentsQualite = () => {
                       <th colSpan={3}>Porte ouverte sur RDVs audités</th>
                     </tr>
                     <tr>
-                      <th>Métrique</th>
-                      <th>Nombre</th>
-                      <th>Taux</th>
+                      <th>RDVs audités</th>
+                      <th>Porte ouverte</th>
+                      <th>Taux porte ouverte</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td>RDVs audités</td>
                       <td className="num-cell">{auditTotaux?.total_rdvs_audites || 0}</td>
-                      <td className="num-cell">100%</td>
-                    </tr>
-                    <tr>
-                      <td>Porte ouverte</td>
                       <td className="num-cell">{auditTotaux?.porte_ouverte || 0}</td>
                       <td className="num-cell">{auditTotaux?.taux_porte_ouverte || 0}%</td>
                     </tr>
