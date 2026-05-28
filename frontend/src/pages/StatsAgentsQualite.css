@@ -834,6 +834,17 @@
   margin-left: auto;
 }
 
+.rdvs-kpi-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.rdvs-kpi-table th[colspan='3'] {
+  text-align: center;
+}
+
 .audit-tone-table {
   margin: 0 0 1rem 0;
 }

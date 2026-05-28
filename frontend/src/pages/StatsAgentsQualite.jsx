@@ -884,6 +884,60 @@ const StatsAgentsQualite = () => {
                 {filteredRdvsAudites.length} RDV(s)
               </span>
             </div>
+            <div className="rdvs-kpi-tables">
+              <div className="table-responsive">
+                <table className="stats-table rdvs-kpi-table">
+                  <thead>
+                    <tr>
+                      <th colSpan={3}>Signature sur RDVs audités</th>
+                    </tr>
+                    <tr>
+                      <th>Métrique</th>
+                      <th>Nombre</th>
+                      <th>Taux</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>RDVs audités</td>
+                      <td className="num-cell">{auditTotaux?.total_rdvs_audites || 0}</td>
+                      <td className="num-cell">100%</td>
+                    </tr>
+                    <tr>
+                      <td>Signatures</td>
+                      <td className="num-cell">{auditTotaux?.signatures || 0}</td>
+                      <td className="num-cell">{auditTotaux?.taux_signature || 0}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="table-responsive">
+                <table className="stats-table rdvs-kpi-table">
+                  <thead>
+                    <tr>
+                      <th colSpan={3}>Porte ouverte sur RDVs audités</th>
+                    </tr>
+                    <tr>
+                      <th>Métrique</th>
+                      <th>Nombre</th>
+                      <th>Taux</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>RDVs audités</td>
+                      <td className="num-cell">{auditTotaux?.total_rdvs_audites || 0}</td>
+                      <td className="num-cell">100%</td>
+                    </tr>
+                    <tr>
+                      <td>Porte ouverte</td>
+                      <td className="num-cell">{auditTotaux?.porte_ouverte || 0}</td>
+                      <td className="num-cell">{auditTotaux?.taux_porte_ouverte || 0}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
             {filteredRdvsAudites.length > 0 ? (
               <div className="table-responsive">
                 <table className="fiches-table rdvs-audites-table">

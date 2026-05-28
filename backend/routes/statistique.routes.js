@@ -3587,7 +3587,14 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
   const empty = {
     agents: [],
     agents_options: [],
-    totaux: { total_rdvs_audites: 0, avec_observation: 0 },
+    totaux: {
+      total_rdvs_audites: 0,
+      avec_observation: 0,
+      signatures: 0,
+      taux_signature: 0,
+      porte_ouverte: 0,
+      taux_porte_ouverte: 0,
+    },
     rdvs_audites: [],
   };
   try {
@@ -3604,8 +3611,7 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
         u.prenom
       FROM fiches f
       INNER JOIN utilisateurs u ON f.id_qualite_confirmation = u.id AND u.fonction = 4 AND u.etat > 0
-      WHERE f.id_etat_final = 7
-      AND f.id_qualite_confirmation IS NOT NULL
+      WHERE f.id_qualite_confirmation IS NOT NULL
       AND f.date_rdv_time IS NOT NULL
       AND f.date_rdv_time != ''
       AND (f.archive = 0 OR f.archive IS NULL)
@@ -3635,8 +3641,7 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
       INNER JOIN utilisateurs u ON f.id_qualite_confirmation = u.id AND u.fonction = 4 AND u.etat > 0
       LEFT JOIN fonctions fn ON u.fonction = fn.id
       LEFT JOIN centres c ON u.centre = c.id
-      WHERE f.id_etat_final = 7
-      AND f.id_qualite_confirmation IS NOT NULL
+      WHERE f.id_qualite_confirmation IS NOT NULL
       AND f.date_rdv_time IS NOT NULL
       AND f.date_rdv_time != ''
       AND (f.archive = 0 OR f.archive IS NULL)
@@ -3681,19 +3686,24 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
         f.date_rdv_time,
         f.date_modif_time,
         f.observation_qualite,
+        f.id_etat_final,
         f.valider,
         u_aud.id AS auditeur_id,
         u_aud.pseudo AS auditeur_pseudo,
         u_aud.nom AS auditeur_nom,
         u_aud.prenom AS auditeur_prenom,
         u1.pseudo AS confirmateur_pseudo,
-        p.nom AS produit_nom
+        p.nom AS produit_nom,
+        po.id_fiche AS porte_ouverte_id_fiche
       FROM fiches f
       LEFT JOIN utilisateurs u_aud ON f.id_qualite_confirmation = u_aud.id
       LEFT JOIN utilisateurs u1 ON f.id_confirmateur = u1.id
       LEFT JOIN produits p ON f.produit = p.id
-      WHERE f.id_etat_final = 7
-      AND f.id_qualite_confirmation IS NOT NULL
+      LEFT JOIN (
+        SELECT DISTINCT id_fiche
+        FROM porte_ouverte
+      ) po ON po.id_fiche = f.id
+      WHERE f.id_qualite_confirmation IS NOT NULL
       AND f.date_rdv_time IS NOT NULL
       AND f.date_rdv_time != ''
       AND (f.archive = 0 OR f.archive IS NULL)
@@ -3714,7 +3724,9 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
       date_rdv_time: r.date_rdv_time,
       date_modif_time: r.date_modif_time,
       observation_qualite: r.observation_qualite,
+      id_etat_final: r.id_etat_final,
       valider: r.valider,
+      has_porte_ouverte: !!r.porte_ouverte_id_fiche,
       auditeur: {
         id: r.auditeur_id,
         pseudo: r.auditeur_pseudo,
@@ -3725,6 +3737,27 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
       produit_nom: r.produit_nom,
     }));
 
+    const signedEtats = new Set([13, 16, 38, 44, 45]);
+    const signaturesCount = rdvs_audites.reduce(
+      (acc, r) => acc + (signedEtats.has(Number(r.id_etat_final)) ? 1 : 0),
+      0
+    );
+    const porteOuverteCount = rdvs_audites.reduce(
+      (acc, r) => acc + (r.has_porte_ouverte ? 1 : 0),
+      0
+    );
+    const totalRdvs = rdvs_audites.length;
+    const tauxSignature = totalRdvs > 0 ? Number(((signaturesCount / totalRdvs) * 100).toFixed(1)) : 0;
+    const tauxPorteOuverte = totalRdvs > 0 ? Number(((porteOuverteCount / totalRdvs) * 100).toFixed(1)) : 0;
+    const enrichedTotaux = {
+      ...totaux,
+      total_rdvs_audites: totalRdvs,
+      signatures: signaturesCount,
+      taux_signature: tauxSignature,
+      porte_ouverte: porteOuverteCount,
+      taux_porte_ouverte: tauxPorteOuverte,
+    };
+
     return {
       agents,
       agents_options: (agentsOptions || []).map((u) => ({
@@ -3733,7 +3766,7 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
         nom: u.nom,
         prenom: u.prenom,
       })),
-      totaux,
+      totaux: enrichedTotaux,
       rdvs_audites,
     };
   } catch (err) {
