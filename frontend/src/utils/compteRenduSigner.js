@@ -9,13 +9,9 @@ export const ETATS_COMPTE_RENDU_FILTER_IDS = [
   8, // Porte / Imprévu / NRP → ANNULER À REPROGRAMMER
   9, // Déballé veut réfléchir → CLIENT HONORÉ À SUIVRE
   12, // Déballé sans suite → REFUSER
-  13, // Signer
-  16, // SIGNER RETRACTER
+  13, // Signer (uniquement SIGNER, pas les variantes PM / COMPLET / RETRACTER)
   34, // Infinançable → HHC FINANCEMENT À VÉRIFIER
-  35, // Infaisabilité technique → HHC TECHNIQUE
-  38, // SIGNER RETRACTER 2 FOIS
-  44, // SIGNER PM
-  45 // SIGNER COMPLET
+  35 // Infaisabilité technique → HHC TECHNIQUE
 ];
 
 /** Liste des états CR pour un filtre UI, dans l'ordre métier. */
