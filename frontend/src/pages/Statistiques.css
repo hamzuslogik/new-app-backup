@@ -372,6 +372,22 @@
   color: #333;
 }
 
+.kpi-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 0 8px;
+}
+
+.kpi-chart-legend-item {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .kpi-commercial-table {
   width: 100%;
   border-collapse: collapse;

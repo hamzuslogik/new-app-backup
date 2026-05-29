@@ -7,12 +7,18 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Ba
 import './Statistiques.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
-import { getEtatStatCellProps } from '../utils/etatColorContrast';
+import { getEtatContrastColor, getEtatStatCellProps, normalizeHex } from '../utils/etatColorContrast';
 
-const KPI_CHART_COLORS = [
+const KPI_CHART_FALLBACK_COLORS = [
   '#7030a0', '#4472c4', '#ed7d31', '#a5a5a5', '#ffc000',
   '#5b9bd5', '#70ad47', '#264478', '#9e480e', '#636363',
 ];
+
+function getCommercialChartColor(entry, index) {
+  const raw = String(entry?.color || '').trim();
+  if (raw) return normalizeHex(raw);
+  return KPI_CHART_FALLBACK_COLORS[index % KPI_CHART_FALLBACK_COLORS.length];
+}
 
 const MONTH_LABELS = [
   'JANVIER', 'FEVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN',
@@ -685,9 +691,10 @@ const Statistiques = () => {
     const period = kpiCommerciauxData.period || {};
     const chartData = rows
       .filter((r) => r.total_rdv_honores > 0)
-      .map((r) => ({
+      .map((r, index) => ({
         ...r,
         commercial: String(r.commercial || '').toUpperCase(),
+        barColor: getCommercialChartColor(r, index),
       }));
 
     const renderKpiTable = (countKey, countLabel, countClass, tauxKey, tauxLabel) => (
@@ -747,19 +754,35 @@ const Statistiques = () => {
             {chartData.length === 0 ? (
               <div className="no-data">Aucune signature sur la période.</div>
             ) : (
-              <ResponsiveContainer width="100%" height={340}>
-                <BarChart data={chartData} margin={{ top: 24, right: 12, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="commercial" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={70} />
-                  <YAxis tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
-                  <Tooltip formatter={(v) => [`${v}%`, 'Taux signés']} />
-                  <Bar dataKey="taux_signes" radius={[4, 4, 0, 0]} label={{ position: 'top', formatter: (v) => formatPct(v) }}>
-                    {chartData.map((entry, index) => (
-                      <Cell key={entry.id_commercial} fill={KPI_CHART_COLORS[index % KPI_CHART_COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height={340}>
+                  <BarChart data={chartData} margin={{ top: 24, right: 12, left: 0, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="commercial" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={70} />
+                    <YAxis tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
+                    <Tooltip formatter={(v) => [`${v}%`, 'Taux signés']} />
+                    <Bar dataKey="taux_signes" radius={[4, 4, 0, 0]} label={{ position: 'top', formatter: (v) => formatPct(v) }}>
+                      {chartData.map((entry) => (
+                        <Cell key={entry.id_commercial} fill={entry.barColor} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="kpi-chart-legend">
+                  {chartData.map((entry) => (
+                    <span
+                      key={entry.id_commercial}
+                      className="kpi-chart-legend-item"
+                      style={{
+                        backgroundColor: entry.barColor,
+                        color: getEtatContrastColor(entry.barColor),
+                      }}
+                    >
+                      {entry.commercial}
+                    </span>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>

@@ -674,6 +674,7 @@ router.get('/kpi-commerciaux', authenticate, async (req, res) => {
       `SELECT
         u.id AS id_commercial,
         u.pseudo AS commercial,
+        u.color AS commercial_color,
         COUNT(*) AS total_rdv_honores,
         SUM(CASE WHEN cr.id_etat_final = ? THEN 1 ELSE 0 END) AS honore_a_suivre,
         SUM(CASE WHEN cr.id_etat_final = ? THEN 1 ELSE 0 END) AS rdv_refuse,
@@ -689,12 +690,12 @@ router.get('/kpi-commerciaux', authenticate, async (req, res) => {
         AND (f.archive = 0 OR f.archive IS NULL)
         AND (f.ko = 0 OR f.ko IS NULL)
         ${produitSql}
-      GROUP BY u.id, u.pseudo`,
+      GROUP BY u.id, u.pseudo, u.color`,
       queryParams
     );
 
     const allCommerciaux = await query(
-      `SELECT id, pseudo FROM utilisateurs WHERE fonction = 5 AND etat > 0 ORDER BY pseudo ASC`
+      `SELECT id, pseudo, color FROM utilisateurs WHERE fonction = 5 AND etat > 0 ORDER BY pseudo ASC`
     );
 
     const statsById = new Map((statsRows || []).map((r) => [Number(r.id_commercial), r]));
@@ -709,6 +710,7 @@ router.get('/kpi-commerciaux', authenticate, async (req, res) => {
       return {
         id_commercial: u.id,
         commercial: u.pseudo || r?.commercial || `ID ${u.id}`,
+        color: u.color || r?.commercial_color || null,
         total_rdv_honores: total,
         honore_a_suivre: honore,
         rdv_refuse: refuse,
