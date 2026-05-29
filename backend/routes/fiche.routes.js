@@ -566,6 +566,24 @@ const checkQualifTableExists = async () => {
   }
 };
 
+let fichesHistoFromCrColumnCache = null;
+const checkFichesHistoFromCompteRenduColumn = async () => {
+  if (fichesHistoFromCrColumnCache !== null) return fichesHistoFromCrColumnCache;
+  try {
+    const row = await queryOne(
+      `SELECT COUNT(*) AS c
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'fiches_histo'
+         AND COLUMN_NAME = 'from_compte_rendu'`
+    );
+    fichesHistoFromCrColumnCache = !!(row && row.c > 0);
+  } catch (e) {
+    fichesHistoFromCrColumnCache = false;
+  }
+  return fichesHistoFromCrColumnCache;
+};
+
 // Fonction pour récupérer les groupes d'états et permissions (avec cache)
 const getEtatGroupsAndPermissions = async (userFonction) => {
   const now = Date.now();
@@ -839,6 +857,8 @@ router.get('/', authenticate, async (req, res) => {
       }
       statsDrillHandled = true;
     }
+
+    const isCommercialCrDrill = statsDrill?.source === 'commercial_cr';
 
     const includeConfSlots =
       req.user.fonction === 6 &&
@@ -1120,7 +1140,7 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push('fiche.id_sous_etat = ?');
       params.push(id_sous_etat);
     }
-    if (id_commercial) {
+    if (id_commercial && !isCommercialCrDrill) {
       whereConditions.push('(fiche.id_commercial = ? OR fiche.id_commercial_2 = ?)');
       params.push(id_commercial, id_commercial);
     }
@@ -1439,8 +1459,14 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
 
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimitRaw = parseInt(limit, 10) || 500;
+    const parsedLimit = statsDrillHandled
+      ? Math.min(Math.max(parsedLimitRaw, 1), 10000)
+      : Math.min(Math.max(parsedLimitRaw, 1), 50000);
+
     // Calculer la pagination
-    const offset = (page - 1) * limit;
+    const offset = (parsedPage - 1) * parsedLimit;
 
     // Construire le JOIN qualif si nécessaire (toujours l'ajouter pour récupérer qualification_code)
     const qualifJoin = qualifTableExists ? 'LEFT JOIN qualif ON fiche.id_qualif = qualif.id' : '';
@@ -1484,7 +1510,9 @@ router.get('/', authenticate, async (req, res) => {
        GROUP BY fiche.id
        ORDER BY fiche.date_rdv_time ASC
        LIMIT ? OFFSET ?`;
-    const selectParams = histoJoinForFichesHisto ? [...histoParamsForFichesHisto, ...params, parseInt(limit), offset] : [...params, parseInt(limit), offset];
+    const selectParams = histoJoinForFichesHisto
+      ? [...histoParamsForFichesHisto, ...params, parsedLimit, offset]
+      : [...params, parsedLimit, offset];
     const fiches = await query(selectQuery, selectParams);
     const selectDuration = Date.now() - selectStartTime;
 
@@ -1565,27 +1593,34 @@ router.get('/', authenticate, async (req, res) => {
 
     // État actuel = compte rendu : vrai ssi la dernière entrée fiches_histo a from_compte_rendu = 1 (pour affichage <CR> colonne état final)
     if (fiches.length > 0) {
-      const ficheIds = fiches.map((f) => f.id);
-      const currentStateFromCrRows = [];
-      for (const chunk of chunkArray(ficheIds, FICHE_IDS_IN_CHUNK)) {
-        const placeholders = chunk.map(() => '?').join(',');
-        const currentStateFromCrQuery = `
-        SELECT fh.id_fiche
-        FROM fiches_histo fh
-        INNER JOIN (
-          SELECT id_fiche, MAX(id) as max_id
-          FROM fiches_histo
-          WHERE id_fiche IN (${placeholders})
-          GROUP BY id_fiche
-        ) last ON fh.id_fiche = last.id_fiche AND fh.id = last.max_id
-        WHERE fh.from_compte_rendu = 1
-      `;
-        currentStateFromCrRows.push(...(await query(currentStateFromCrQuery, chunk)));
+      const hasFromCrCol = await checkFichesHistoFromCompteRenduColumn();
+      if (hasFromCrCol) {
+        const ficheIds = fiches.map((f) => f.id);
+        const currentStateFromCrRows = [];
+        for (const chunk of chunkArray(ficheIds, FICHE_IDS_IN_CHUNK)) {
+          const placeholders = chunk.map(() => '?').join(',');
+          const currentStateFromCrQuery = `
+          SELECT fh.id_fiche
+          FROM fiches_histo fh
+          INNER JOIN (
+            SELECT id_fiche, MAX(id) as max_id
+            FROM fiches_histo
+            WHERE id_fiche IN (${placeholders})
+            GROUP BY id_fiche
+          ) last ON fh.id_fiche = last.id_fiche AND fh.id = last.max_id
+          WHERE fh.from_compte_rendu = 1
+        `;
+          currentStateFromCrRows.push(...(await query(currentStateFromCrQuery, chunk)));
+        }
+        const currentStateFromCrSet = new Set(currentStateFromCrRows.map((r) => r.id_fiche));
+        fiches.forEach((fiche) => {
+          fiche.current_state_from_compte_rendu = currentStateFromCrSet.has(fiche.id);
+        });
+      } else {
+        fiches.forEach((fiche) => {
+          fiche.current_state_from_compte_rendu = false;
+        });
       }
-      const currentStateFromCrSet = new Set(currentStateFromCrRows.map((r) => r.id_fiche));
-      fiches.forEach((fiche) => {
-        fiche.current_state_from_compte_rendu = currentStateFromCrSet.has(fiche.id);
-      });
     }
 
     // Ajouter le hash pour chaque fiche (masquer l'ID)
@@ -1604,10 +1639,10 @@ router.get('/', authenticate, async (req, res) => {
       success: true,
       data: fichesWithHash,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: parsedPage,
+        limit: parsedLimit,
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / parsedLimit) || 1
       }
     });
   } catch (error) {
@@ -1616,7 +1651,8 @@ router.get('/', authenticate, async (req, res) => {
     console.error('Erreur lors de la récupération des fiches:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la récupération des fiches'
+      message: 'Erreur lors de la récupération des fiches',
+      detail: process.env.NODE_ENV !== 'production' ? error?.message : undefined
     });
   }
 });

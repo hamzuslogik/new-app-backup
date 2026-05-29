@@ -33,7 +33,7 @@ export function buildDashboardDrillUrl({
   const base = {
     fiche_search: '1',
     page: '1',
-    limit: '999999',
+    limit: '10000',
     stats_drill: '1',
     date_debut: filters.date_debut || '',
     date_fin: filters.date_fin || '',

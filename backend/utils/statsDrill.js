@@ -21,6 +21,8 @@ const KPI_METRIC_ETAT = {
   signatures: 13,
 };
 
+const { buildCommercialCrFicheIdsSubquery } = require('./commercialCrSql');
+
 function qTrim(v) {
   return v !== undefined && v !== null && String(v).trim() !== '';
 }
@@ -105,46 +107,20 @@ function applyStatsDrillWhere(drill, whereConditions, params) {
       return { ok: false, error: 'Période requise pour le drill commercial' };
     }
 
-    const crParts = [
-      `EXISTS (
-        SELECT 1 FROM compte_rendu_pending cr
-        INNER JOIN fiches f_cr ON f_cr.id = cr.id_fiche AND f_cr.id = fiche.id
-        INNER JOIN utilisateurs u_cr ON u_cr.id = cr.id_commercial AND u_cr.fonction = 5 AND u_cr.etat > 0
-        WHERE cr.statut = 'approved'
-          AND cr.id_commercial IS NOT NULL AND cr.id_commercial > 0
-          AND cr.id_etat_final IS NOT NULL`,
-    ];
+    const commercialId =
+      drill.entityField === 'id_commercial' && drill.entityId ? drill.entityId : null;
+    const sub = buildCommercialCrFicheIdsSubquery({
+      dateField: drill.dateField || 'date_rdv_time',
+      startDt,
+      endDt,
+      etatIds: drill.etatIds,
+      commercialId,
+    });
 
-    const crParams = [];
-
-    if (drill.etatIds.length) {
-      crParts.push(` AND cr.id_etat_final IN (${drill.etatIds.map(() => '?').join(',')})`);
-      crParams.push(...drill.etatIds);
-    }
-
-    if (drill.entityField === 'id_commercial' && drill.entityId) {
-      crParts.push(' AND cr.id_commercial = ?');
-      crParams.push(drill.entityId);
-    }
-
-    if (drill.dateField === 'date_rdv_time') {
-      crParts.push(
-        ` AND f_cr.date_rdv_time IS NOT NULL AND f_cr.date_rdv_time != ''
-          AND f_cr.date_rdv_time >= ? AND f_cr.date_rdv_time <= ?`
-      );
-    } else {
-      crParts.push(
-        ` AND COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation) >= ?
-          AND COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation) <= ?`
-      );
-    }
-    crParams.push(startDt, endDt);
-
-    crParts.push(' AND (f_cr.archive = 0 OR f_cr.archive IS NULL) AND (f_cr.ko = 0 OR f_cr.ko IS NULL)');
-    crParts.push(')');
-
-    whereConditions.push(crParts.join(''));
-    params.push(...crParams);
+    whereConditions.push('fiche.active = 1');
+    whereConditions.push('(fiche.archive = 0 OR fiche.archive IS NULL)');
+    whereConditions.push(`fiche.id IN (${sub.sql})`);
+    params.push(...sub.params);
 
     if (drill.produit === 1 || drill.produit === 2) {
       whereConditions.push('fiche.produit = ?');
