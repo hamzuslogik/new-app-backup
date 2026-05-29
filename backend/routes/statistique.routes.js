@@ -207,6 +207,53 @@ function prefixFicheSqlConditions(additionalConditions) {
     .replace(/\bko = 1\b/g, 'f.ko = 1');
 }
 
+/** Filtres centre/produit/etc. pour stats confirmateur (auteur = fh.id_confirmateur). */
+function prefixConfirmateurHistoSqlConditions(additionalConditions) {
+  if (!additionalConditions) return '';
+  return additionalConditions
+    .replace(/\bid_centre\b/g, 'f.id_centre')
+    .replace(/\bid_confirmateur\b/g, 'fh.id_confirmateur')
+    .replace(/\bid_commercial\b/g, 'f.id_commercial')
+    .replace(/\bid_agent\b/g, 'f.id_agent')
+    .replace(/\bproduit\b/g, 'f.produit');
+}
+
+/**
+ * Dernière ligne fiches_histo par fiche dans la plage (date_creation),
+ * état et confirmateur issus de cette ligne (aligné Dashboard date_champ=fiches_histo).
+ */
+function buildConfirmateurHistoSourceSql(ficheExtraConditions, excludeEtatIds = []) {
+  const excludeEtatsSql = excludeEtatIds.length
+    ? ` AND fh.id_etat NOT IN (${excludeEtatIds.map(() => '?').join(',')})`
+    : '';
+  return `
+    SELECT
+      CAST(fh.id_etat AS CHAR) AS etat_key,
+      fh.id_confirmateur AS entity_id,
+      fh.id_fiche
+    FROM fiches_histo fh
+    INNER JOIN fiches f ON f.id = fh.id_fiche
+    INNER JOIN (
+      SELECT fh2.id_fiche, MAX(fh2.id) AS max_id
+      FROM fiches_histo fh2
+      WHERE fh2.date_creation >= ? AND fh2.date_creation <= ?
+      GROUP BY fh2.id_fiche
+    ) histo_last ON fh.id_fiche = histo_last.id_fiche AND fh.id = histo_last.max_id
+    WHERE fh.date_creation >= ? AND fh.date_creation <= ?
+      AND fh.id_confirmateur IS NOT NULL AND fh.id_confirmateur > 0
+      AND fh.id_etat IS NOT NULL
+      AND (f.archive = 0 OR f.archive IS NULL)
+      AND f.active = 1
+      AND (f.ko = 0 OR f.ko IS NULL)
+      ${excludeEtatsSql}
+      ${ficheExtraConditions}
+  `;
+}
+
+function buildConfirmateurHistoParams(startDt, endDt, excludeEtatIds, filterParamsAfterDates = []) {
+  return [startDt, endDt, startDt, endDt, ...excludeEtatIds, ...filterParamsAfterDates];
+}
+
 function isEtatGroupe0(etat) {
   const g = etat?.groupe;
   return g === '0' || g === 0;
@@ -432,6 +479,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
     }
 
   const isCommercialStat = name_stat === 'COMMERCIAL';
+  const isConfirmateurStat = name_stat === 'CONFIRMATEUR';
   const commercialFicheExtra = isCommercialStat
     ? prefixFicheSqlConditions(
         id_commercial
@@ -439,12 +487,46 @@ router.get('/all-stat', authenticate, async (req, res) => {
           : additionalConditions
       )
     : additionalConditions;
+  const confirmateurHistoExtra = isConfirmateurStat
+    ? prefixConfirmateurHistoSqlConditions(additionalConditions)
+    : '';
 
     // Récupérer le total de fiches pour la période
     let total;
     let stats;
 
-    if (isCommercialStat) {
+    if (isConfirmateurStat) {
+      const histoParams = buildConfirmateurHistoParams(
+        queryParams[0],
+        queryParams[1],
+        etatGroupe0Ids,
+        queryParams.slice(2)
+      );
+      const histoSql = buildConfirmateurHistoSourceSql(
+        confirmateurHistoExtra,
+        etatGroupe0Ids
+      );
+
+      const totalResult = await queryOne(
+        `SELECT COUNT(DISTINCT id_fiche) AS total
+         FROM (${histoSql}) confirmateur_src
+         WHERE entity_id IS NOT NULL AND entity_id > 0`,
+        histoParams
+      );
+      total = totalResult?.total || 0;
+
+      stats = await query(
+        `SELECT
+           etat_key,
+           entity_id AS \`${groupByField}\`,
+           COUNT(DISTINCT id_fiche) AS stats
+         FROM (${histoSql}) confirmateur_src
+         WHERE entity_id IS NOT NULL AND entity_id > 0
+         GROUP BY etat_key, entity_id
+         ORDER BY etat_key ASC`,
+        histoParams
+      );
+    } else if (isCommercialStat) {
       const crSql = buildCommercialCrSourceSql(
         commercialFicheExtra,
         etatGroupe0Ids,

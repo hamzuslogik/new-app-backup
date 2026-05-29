@@ -22,6 +22,11 @@ import {
   printStatsArea,
   runStatsExport,
 } from '../utils/statistiquesExport';
+import {
+  buildDashboardDrillUrl,
+  openDashboardDrill,
+  isDrillableStatCell,
+} from '../utils/statistiquesDashboardDrill';
 
 const KPI_CHART_FALLBACK_COLORS = [
   '#7030a0', '#4472c4', '#ed7d31', '#a5a5a5', '#ffc000',
@@ -62,6 +67,7 @@ const Statistiques = () => {
   const [columnPrefsByView, setColumnPrefsByView] = useState({});
   const [contextMenu, setContextMenu] = useState(null);
   const [columnFilterOpen, setColumnFilterOpen] = useState(false);
+  const [viewFichesMode, setViewFichesMode] = useState(false);
   const statsPrintRef = useRef(null);
 
   const viewKey = getStatsViewKey(activeTab, statType);
@@ -80,7 +86,46 @@ const Statistiques = () => {
   useEffect(() => {
     setContextMenu(null);
     setColumnFilterOpen(false);
+    setViewFichesMode(false);
   }, [activeTab, statType]);
+
+  const getDrillCellProps = useCallback(
+    (drillOpts, etatsList) => {
+      if (!viewFichesMode || !isDrillableStatCell(statType, drillOpts.cellKind)) {
+        return {};
+      }
+      return {
+        className: 'stats-drillable-cell',
+        title: 'Ouvrir les fiches correspondantes dans le Dashboard',
+        onClick: (e) => {
+          e.stopPropagation();
+          const url = buildDashboardDrillUrl({
+            activeTab,
+            statType,
+            filters,
+            etats: etatsList,
+            ...drillOpts,
+          });
+          openDashboardDrill(url);
+        },
+      };
+    },
+    [viewFichesMode, activeTab, statType, filters]
+  );
+
+  const mergeTdProps = useCallback(
+    (baseProps, drillOpts, etatsList) => {
+      const drill = getDrillCellProps(drillOpts, etatsList);
+      if (!drill.onClick) return baseProps;
+      return {
+        ...baseProps,
+        ...drill,
+        className: [baseProps?.className, drill.className].filter(Boolean).join(' '),
+        style: { ...(baseProps?.style || {}), ...(drill.style || {}) },
+      };
+    },
+    [getDrillCellProps]
+  );
 
   // États pour les filtres
   const [filters, setFilters] = useState({
@@ -220,6 +265,9 @@ const Statistiques = () => {
     if (activeTab === 'commercial') {
       setFilters((prev) => ({ ...prev, date: 'date_rdv_time' }));
     }
+    if (activeTab === 'confirmateur') {
+      setFilters((prev) => (prev.date === 'fiches_histo' ? prev : { ...prev, date: 'fiches_histo' }));
+    }
     if (activeTab === 'kpi-commerciaux') {
       setFilters((prev) => ({
         ...prev,
@@ -320,6 +368,8 @@ const Statistiques = () => {
             >
               {activeTab === 'agent' ? (
                 <option value="date_insert_time">Date Insertion (Saisie)</option>
+              ) : activeTab === 'confirmateur' ? (
+                <option value="fiches_histo">Date actions (fiches_histo)</option>
               ) : activeTab === 'commercial' ? (
                 <>
                   <option value="date_rdv_time">Date Rendez-vous</option>
@@ -474,6 +524,7 @@ const Statistiques = () => {
     const { etats, data, total } = statsData;
     const visibleEtats = getVisibleEtats(etats, data, columnPrefs);
     const visibleTauxCols = getVisibleTauxColumns(data, columnPrefs);
+    const visibleEtatIds = visibleEtats.map((e) => e.id);
 
     if (statType === 'taux') {
       // Affichage en mode TAUX - Taux = positif / (positif + négatif)
@@ -484,7 +535,7 @@ const Statistiques = () => {
       const totalPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
       const totalNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
       return (
-        <table className="stats-table">
+        <table className={`stats-table${viewFichesMode ? ' stats-table-drill-mode' : ''}`}>
           <thead>
             <tr>
               <th>N°</th>
@@ -501,11 +552,14 @@ const Statistiques = () => {
             {data.map((item, idx) => (
               <tr key={idx}>
                 <td className="stat-numero">{idx + 1}</td>
-                <td>{item.name}</td>
+                <td {...getDrillCellProps({ row: item, etatIds: visibleEtatIds, cellKind: 'name' }, etats)}>
+                  {item.name}
+                </td>
                 {visibleTauxCols.map((col) => (
                   <td
                     key={col.id}
                     className={col.id === 'positive' ? 'stat-positive' : col.id === 'negative' ? 'stat-negative' : 'stat-neutre'}
+                    {...getDrillCellProps({ row: item, tauxColumn: col.id, cellKind: 'taux' }, etats)}
                   >
                     {col.getValue(item)}
                   </td>
@@ -515,11 +569,14 @@ const Statistiques = () => {
             ))}
             <tr className="total-row">
               <td className="stat-numero">—</td>
-              <td><strong>TOTAL</strong></td>
+              <td {...getDrillCellProps({ isTotalRow: true, etatIds: visibleEtatIds, cellKind: 'name' }, etats)}>
+                <strong>TOTAL</strong>
+              </td>
               {visibleTauxCols.map((col) => (
                 <td
                   key={col.id}
                   className={col.id === 'positive' ? 'stat-positive' : col.id === 'negative' ? 'stat-negative' : 'stat-neutre'}
+                  {...getDrillCellProps({ isTotalRow: true, tauxColumn: col.id, cellKind: 'taux' }, etats)}
                 >
                   <strong>{data.reduce((sum, item) => sum + (Number(col.getValue(item)) || 0), 0)}</strong>
                 </td>
@@ -535,7 +592,7 @@ const Statistiques = () => {
       // Répartition % : chaque ligne = 100 %, valeur = part de l'état dans le total de la ligne
       return (
         <div className="table-responsive">
-          <table className="stats-table stats-table-repartition">
+          <table className={`stats-table stats-table-repartition${viewFichesMode ? ' stats-table-drill-mode' : ''}`}>
             <thead>
               <tr>
                 <th>N°</th>
@@ -552,17 +609,31 @@ const Statistiques = () => {
               {data.map((item, idx) => (
                 <tr key={idx}>
                   <td className="stat-numero">{idx + 1}</td>
-                  <td>{item.name}</td>
+                  <td {...getDrillCellProps({ row: item, etatIds: visibleEtatIds, cellKind: 'name' }, etats)}>
+                    {item.name}
+                  </td>
                   {visibleEtats.map(etat => {
                     const count = item.stats[etat.id] || 0;
                     const pct = item.total > 0 ? ((count * 100) / item.total).toFixed(1) : '0';
                     return (
-                      <td key={etat.id} {...getEtatStatCellProps(etat)}>
+                      <td
+                        key={etat.id}
+                        {...mergeTdProps(
+                          getEtatStatCellProps(etat),
+                          { row: item, etatId: etat.id, cellKind: 'etat' },
+                          etats
+                        )}
+                      >
                         {pct}%
                       </td>
                     );
                   })}
-                  <td className="stat-total">{item.total}</td>
+                  <td
+                    className="stat-total"
+                    {...getDrillCellProps({ row: item, etatIds: visibleEtatIds, cellKind: 'total' }, etats)}
+                  >
+                    {item.total}
+                  </td>
                 </tr>
               ))}
               <tr className="total-row">
@@ -572,12 +643,24 @@ const Statistiques = () => {
                   const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                   const pct = total > 0 ? ((colTotal * 100) / total).toFixed(1) : '0';
                   return (
-                    <td key={etat.id} {...getEtatStatCellProps(etat)}>
+                    <td
+                      key={etat.id}
+                      {...mergeTdProps(
+                        getEtatStatCellProps(etat),
+                        { isTotalRow: true, etatId: etat.id, cellKind: 'etat' },
+                        etats
+                      )}
+                    >
                       <strong>{pct}%</strong>
                     </td>
                   );
                 })}
-                <td className="stat-total"><strong>{total}</strong></td>
+                <td
+                  className="stat-total"
+                  {...getDrillCellProps({ isTotalRow: true, etatIds: visibleEtatIds, cellKind: 'total' }, etats)}
+                >
+                  <strong>{total}</strong>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -589,7 +672,7 @@ const Statistiques = () => {
       // Part du total % : chaque cellule = part de ce count dans le total général
       return (
         <div className="table-responsive">
-          <table className="stats-table stats-table-part-total">
+          <table className={`stats-table stats-table-part-total${viewFichesMode ? ' stats-table-drill-mode' : ''}`}>
             <thead>
               <tr>
                 <th>N°</th>
@@ -606,17 +689,29 @@ const Statistiques = () => {
               {data.map((item, idx) => (
                 <tr key={idx}>
                   <td className="stat-numero">{idx + 1}</td>
-                  <td>{item.name}</td>
+                  <td {...getDrillCellProps({ row: item, etatIds: visibleEtatIds, cellKind: 'name' }, etats)}>
+                    {item.name}
+                  </td>
                   {visibleEtats.map(etat => {
                     const count = item.stats[etat.id] || 0;
                     const pct = total > 0 ? ((count * 100) / total).toFixed(1) : '0';
                     return (
-                      <td key={etat.id} {...getEtatStatCellProps(etat)}>
+                      <td
+                        key={etat.id}
+                        {...mergeTdProps(
+                          getEtatStatCellProps(etat),
+                          { row: item, etatId: etat.id, cellKind: 'etat' },
+                          etats
+                        )}
+                      >
                         {pct}%
                       </td>
                     );
                   })}
-                  <td className="stat-total">
+                  <td
+                    className="stat-total"
+                    {...getDrillCellProps({ row: item, etatIds: visibleEtatIds, cellKind: 'total' }, etats)}
+                  >
                     {total > 0 ? ((item.total * 100) / total).toFixed(1) : '0'}%
                   </td>
                 </tr>
@@ -628,7 +723,14 @@ const Statistiques = () => {
                   const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                   const pct = total > 0 ? ((colTotal * 100) / total).toFixed(1) : '0';
                   return (
-                    <td key={etat.id} {...getEtatStatCellProps(etat)}>
+                    <td
+                      key={etat.id}
+                      {...mergeTdProps(
+                        getEtatStatCellProps(etat),
+                        { isTotalRow: true, etatId: etat.id, cellKind: 'etat' },
+                        etats
+                      )}
+                    >
                       <strong>{pct}%</strong>
                     </td>
                   );
@@ -736,7 +838,7 @@ const Statistiques = () => {
     // Affichage en mode NET (chiffres)
     return (
       <div className="table-responsive">
-        <table className="stats-table">
+        <table className={`stats-table${viewFichesMode ? ' stats-table-drill-mode' : ''}`}>
           <thead>
             <tr>
               <th>N°</th>
@@ -753,16 +855,30 @@ const Statistiques = () => {
             {data.map((item, idx) => (
               <tr key={idx}>
                 <td className="stat-numero">{idx + 1}</td>
-                <td>{item.name}</td>
+                <td {...getDrillCellProps({ row: item, etatIds: visibleEtatIds, cellKind: 'name' }, etats)}>
+                  {item.name}
+                </td>
                 {visibleEtats.map(etat => {
                   const count = item.stats[etat.id] || 0;
                   return (
-                    <td key={etat.id} {...getEtatStatCellProps(etat)}>
+                    <td
+                      key={etat.id}
+                      {...mergeTdProps(
+                        getEtatStatCellProps(etat),
+                        { row: item, etatId: etat.id, cellKind: 'etat' },
+                        etats
+                      )}
+                    >
                       {count}
                     </td>
                   );
                 })}
-                <td className="stat-total">{item.total}</td>
+                <td
+                  className="stat-total"
+                  {...getDrillCellProps({ row: item, etatIds: visibleEtatIds, cellKind: 'total' }, etats)}
+                >
+                  {item.total}
+                </td>
               </tr>
             ))}
             <tr className="total-row">
@@ -773,12 +889,22 @@ const Statistiques = () => {
               {visibleEtats.map(etat => {
                 const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                 return (
-                  <td key={etat.id} {...getEtatStatCellProps(etat)}>
+                  <td
+                    key={etat.id}
+                    {...mergeTdProps(
+                      getEtatStatCellProps(etat),
+                      { isTotalRow: true, etatId: etat.id, cellKind: 'etat' },
+                      etats
+                    )}
+                  >
                     {colTotal}
                   </td>
                 );
               })}
-              <td className="stat-total">
+              <td
+                className="stat-total"
+                {...getDrillCellProps({ isTotalRow: true, etatIds: visibleEtatIds, cellKind: 'total' }, etats)}
+              >
                 <strong>{total}</strong>
               </td>
             </tr>
@@ -815,7 +941,7 @@ const Statistiques = () => {
 
     const renderKpiTable = (countKey, countLabel, countClass, tauxKey, tauxLabel) => (
       <div className="kpi-commercial-table-wrap">
-        <table className="kpi-commercial-table">
+        <table className={`kpi-commercial-table${viewFichesMode ? ' stats-table-drill-mode' : ''}`}>
           <thead>
             <tr>
               <th className="kpi-col-commercial">COMMERCIAL</th>
@@ -825,21 +951,45 @@ const Statistiques = () => {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={`${countKey}-${row.id_commercial}`}>
-                <td className="kpi-col-commercial">{String(row.commercial || '').toUpperCase()}</td>
-                <td className={countClass}>{row[countKey]}</td>
-                <td className="kpi-col-total">{row.total_rdv_honores}</td>
-                <td className="kpi-col-taux">{formatPct(row[tauxKey])}</td>
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const drillRow = { ...row, id: row.id_commercial };
+              return (
+                <tr key={`${countKey}-${row.id_commercial}`}>
+                  <td className="kpi-col-commercial">{String(row.commercial || '').toUpperCase()}</td>
+                  <td
+                    className={countClass}
+                    {...getDrillCellProps(
+                      { row: drillRow, kpiMetric: countKey, cellKind: 'etat' },
+                      []
+                    )}
+                  >
+                    {row[countKey]}
+                  </td>
+                  <td
+                    className="kpi-col-total"
+                    {...getDrillCellProps({ row: drillRow, cellKind: 'total' }, [])}
+                  >
+                    {row.total_rdv_honores}
+                  </td>
+                  <td
+                    className="kpi-col-taux"
+                    {...getDrillCellProps(
+                      { row: drillRow, kpiMetric: countKey, cellKind: 'etat' },
+                      []
+                    )}
+                  >
+                    {formatPct(row[tauxKey])}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     );
 
     return (
-      <div className="kpi-commerciaux-dashboard">
+      <div className={`kpi-commerciaux-dashboard${viewFichesMode ? ' stats-drill-active-banner' : ''}`}>
         <h3 className="kpi-commerciaux-title">
           {formatKpiPeriodTitle(period.date_debut, period.date_fin)}
         </h3>
@@ -975,6 +1125,11 @@ const Statistiques = () => {
             setContextMenu(null);
             setColumnFilterOpen(true);
           }}
+          onToggleViewFiches={() => {
+            setViewFichesMode((v) => !v);
+            setContextMenu(null);
+          }}
+          viewFichesMode={viewFichesMode}
           columnFilterOpen={columnFilterOpen}
           onCloseColumnFilter={() => setColumnFilterOpen(false)}
           toggleableColumns={toggleableColumns}
@@ -983,10 +1138,12 @@ const Statistiques = () => {
         >
           <div
             ref={statsPrintRef}
-            className="stats-results kpi-commerciaux-results stats-results-interactive"
+            className={`stats-results kpi-commerciaux-results stats-results-interactive${viewFichesMode ? ' stats-results-view-fiches' : ''}`}
             onContextMenu={handleResultsContextMenu}
           >
-            <p className="stats-results-hint">Clic droit : exporter, imprimer ou choisir les colonnes</p>
+            <p className="stats-results-hint">
+              Clic droit : exporter, imprimer, colonnes{viewFichesMode ? ' — cliquez une cellule pour ouvrir les fiches' : ''}
+            </p>
             {renderKpiCommerciaux()}
           </div>
         </StatsResultsActions>
@@ -1002,6 +1159,11 @@ const Statistiques = () => {
             setContextMenu(null);
             setColumnFilterOpen(true);
           }}
+          onToggleViewFiches={() => {
+            setViewFichesMode((v) => !v);
+            setContextMenu(null);
+          }}
+          viewFichesMode={viewFichesMode}
           columnFilterOpen={columnFilterOpen}
           onCloseColumnFilter={() => setColumnFilterOpen(false)}
           toggleableColumns={toggleableColumns}
@@ -1010,10 +1172,12 @@ const Statistiques = () => {
         >
           <div
             ref={statsPrintRef}
-            className="stats-results stats-results-interactive"
+            className={`stats-results stats-results-interactive${viewFichesMode ? ' stats-results-view-fiches' : ''}`}
             onContextMenu={handleResultsContextMenu}
           >
-            <p className="stats-results-hint">Clic droit : exporter, imprimer ou choisir les colonnes</p>
+            <p className="stats-results-hint">
+              Clic droit : exporter, imprimer, colonnes{viewFichesMode ? ' — cliquez une cellule pour ouvrir les fiches' : ''}
+            </p>
             {renderStatsTable()}
           </div>
         </StatsResultsActions>

@@ -63,6 +63,7 @@ function dashboardUrlHasNarrowingCriteria(params) {
     q('hc') ||
     q('annuler_repro_type') ||
     q('qualification_code') ||
+    q('stats_drill') ||
     params.include_archive === '1' ||
     params.include_archive === 'true' ||
     q('w') ||
@@ -821,6 +822,14 @@ const Dashboard = () => {
     set('ko', f.ko);
     set('include_archive', !!f.include_archive);
     set('include_confirmateur_2', !!f.include_confirmateur_2);
+    set('stats_drill', f.stats_drill);
+    set('stats_drill_source', f.stats_drill_source);
+    set('stats_drill_etat', f.stats_drill_etat);
+    set('stats_drill_etat_ids', f.stats_drill_etat_ids);
+    set('stats_drill_entity', f.stats_drill_entity);
+    set('stats_drill_entity_id', f.stats_drill_entity_id);
+    set('stats_drill_date_field', f.stats_drill_date_field);
+    set('stats_drill_kpi_metric', f.stats_drill_kpi_metric);
     if (f.produit !== undefined && f.produit !== null && f.produit !== '') {
       const p = Array.isArray(f.produit) ? f.produit[0] : f.produit;
       set('produit', p);

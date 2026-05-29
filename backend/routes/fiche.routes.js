@@ -17,6 +17,11 @@ const {
 } = require('../utils/fichesKo');
 const { approveInsertionFromDonnees } = require('../utils/demandeInsertionApprove');
 const { handleDuplicateFicheWithAutorisation } = require('../utils/demandeInsertionAuto');
+const {
+  parseStatsDrillQuery,
+  isStatsDrillNarrowing,
+  applyStatsDrillWhere,
+} = require('../utils/statsDrill');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -836,6 +841,7 @@ router.get('/', authenticate, async (req, res) => {
         qNarrow(include_ko) ||
         qNarrow(req.query.annuler_repro_type) ||
         qNarrow(req.query.qualification_code) ||
+        isStatsDrillNarrowing(req.query) ||
         includeArchive ||
         qNarrow(w) ||
         qNarrow(y) ||
@@ -866,6 +872,20 @@ router.get('/', authenticate, async (req, res) => {
     let params = [];
     let histoJoinForFichesHisto = '';
     let histoParamsForFichesHisto = [];
+
+    const statsDrill = parseStatsDrillQuery(req.query);
+    let statsDrillHandled = false;
+    if (statsDrill?.error) {
+      return res.status(400).json({ success: false, message: statsDrill.error });
+    }
+    if (statsDrill) {
+      const drillResult = applyStatsDrillWhere(statsDrill, whereConditions, params);
+      if (!drillResult.ok) {
+        return res.status(400).json({ success: false, message: drillResult.error });
+      }
+      statsDrillHandled = true;
+    }
+
     const includeConfSlots =
       req.user.fonction === 6 &&
       (include_confirmateur_2 === '1' ||
@@ -910,14 +930,15 @@ router.get('/', authenticate, async (req, res) => {
                           req.query.critere || req.query.nom || req.query.prenom || 
                           req.query.tel || req.query.cp || req.query.produit || 
                           req.query.id_etat_final || req.query.id_commercial || 
-                          req.query.id_confirmateur || req.query.id_re || req.query.id_centre;
+                          req.query.id_confirmateur || req.query.id_re || req.query.id_centre ||
+                          statsDrillHandled;
 
     /** Confirmateur : recherche par critère ou tel → résultats globaux, sans filtre « dernier histo / moi » */
     const hasCritereOuTelSearch =
       (critere !== undefined && critere !== null && String(critere).trim() !== '') ||
       (tel !== undefined && tel !== null && String(tel).trim() !== '');
 
-    if (!isActiveSearch) {
+    if (!isActiveSearch && !statsDrillHandled) {
       if (req.user.fonction === 5) {
         // Commerciaux : RDV du jour avec état final 7
         whereConditions.push('fiche.date_rdv_time >= ? AND fiche.date_rdv_time <= ?');
@@ -1058,7 +1079,7 @@ router.get('/', authenticate, async (req, res) => {
     if (cp) {
       appendCpDepartementFilter(whereConditions, params, cp);
     }
-    if (produit) {
+    if (produit && !statsDrillHandled) {
       const produits = Array.isArray(produit) ? produit : [produit];
       whereConditions.push(`fiche.produit IN (${produits.map(() => '?').join(',')})`);
       params.push(...produits);
@@ -1082,7 +1103,7 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
     
-    if (idEtatFinalForWhere !== undefined && idEtatFinalForWhere !== null && idEtatFinalForWhere !== '') {
+    if (!statsDrillHandled && idEtatFinalForWhere !== undefined && idEtatFinalForWhere !== null && idEtatFinalForWhere !== '') {
       const etatFinalRaw = String(idEtatFinalForWhere).trim();
       if (etatFinalRaw === 't_s') {
         // TOUT SIGNER : tous les états de la phase 3 (groupe Signer)
@@ -1278,7 +1299,7 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
     // Filtres de date avec validation du champ de date
-    if (date_champ) {
+    if (!statsDrillHandled && date_champ) {
       // Valider que date_champ est une colonne de date autorisée (sécurité)
       // confirmations = filtre par date_creation dans table confirmations
       // fiches_histo = fiches statuées aujourd'hui par le confirmateur connecté (table fiches_histo, id_confirmateur)

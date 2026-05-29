@@ -134,6 +134,25 @@
   background: #f0f4f8;
 }
 
+.stats-context-menu li button.stats-context-menu-active {
+  background: #ecfdf5;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.stats-results-view-fiches {
+  box-shadow: 0 0 0 2px #86efac;
+}
+
+.stats-table-drill-mode .stats-drillable-cell {
+  cursor: pointer;
+}
+
+.stats-table-drill-mode .stats-drillable-cell:hover {
+  outline: 2px solid #16a34a;
+  outline-offset: -2px;
+}
+
 .stats-context-menu-sep {
   height: 1px;
   margin: 4px 0;

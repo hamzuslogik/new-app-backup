@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { FaFileCsv, FaFileExcel, FaFilePdf, FaPrint, FaColumns, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaFileCsv, FaFileExcel, FaFilePdf, FaPrint, FaColumns, FaEye, FaEyeSlash, FaExternalLinkAlt } from 'react-icons/fa';
 
 export default function StatsResultsActions({
   contextMenu,
@@ -7,6 +7,8 @@ export default function StatsResultsActions({
   onExport,
   onPrint,
   onOpenColumnFilter,
+  onToggleViewFiches,
+  viewFichesMode,
   columnFilterOpen,
   onCloseColumnFilter,
   toggleableColumns,
@@ -56,6 +58,18 @@ export default function StatsResultsActions({
           style={{ left: contextMenu.x, top: contextMenu.y }}
           role="menu"
         >
+          <li role="none">
+            <button
+              type="button"
+              role="menuitem"
+              className={viewFichesMode ? 'stats-context-menu-active' : ''}
+              onClick={onToggleViewFiches}
+            >
+              <FaExternalLinkAlt />
+              {viewFichesMode ? 'Mode fiches actif (clic cellule)' : 'Voir les fiches'}
+            </button>
+          </li>
+          <li className="stats-context-menu-sep" role="separator" />
           <li role="none">
             <button type="button" role="menuitem" onClick={() => onExport('csv')}>
               <FaFileCsv /> Exporter CSV
