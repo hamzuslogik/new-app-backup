@@ -129,6 +129,31 @@
   text-align: center;
 }
 
+/* Cellules état colorées : priorité sur theme-improvements (.stats-table th { color: #333 !important }) */
+.statistiques-page .stats-table th.stats-etat-cell,
+.statistiques-page .stats-table td.stats-etat-cell {
+  background-color: var(--stats-etat-bg) !important;
+  font-weight: 800;
+}
+
+.statistiques-page .stats-table th.stats-etat-cell--dark,
+.statistiques-page .stats-table td.stats-etat-cell--dark,
+.statistiques-page .stats-table th.stats-etat-cell--dark *,
+.statistiques-page .stats-table td.stats-etat-cell--dark *,
+.statistiques-page .stats-barres-legend-item.stats-etat-cell--dark {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.statistiques-page .stats-table th.stats-etat-cell--light,
+.statistiques-page .stats-table td.stats-etat-cell--light,
+.statistiques-page .stats-table th.stats-etat-cell--light *,
+.statistiques-page .stats-table td.stats-etat-cell--light *,
+.statistiques-page .stats-barres-legend-item.stats-etat-cell--light {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
 .stats-table tbody tr:first-child td {
   border-top: 2px solid #9cbfc8;
 }

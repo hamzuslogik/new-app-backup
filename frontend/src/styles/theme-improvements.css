@@ -127,15 +127,14 @@ table:not(.planning-table):not(.planning-grid):not(.production-table):not(.dista
   color: #333333 !important;
 }
 
-.stats-table thead *,
-.stats-table thead th,
-.stats-table thead th *,
-.stats-table thead th span,
-.stats-table thead th div,
-.stats-table th,
-.stats-table th *,
-.stats-table th span,
-.stats-table th div,
+.stats-table thead th:not(.stats-etat-cell),
+.stats-table thead th:not(.stats-etat-cell) *,
+.stats-table thead th:not(.stats-etat-cell) span,
+.stats-table thead th:not(.stats-etat-cell) div,
+.stats-table th:not(.stats-etat-cell),
+.stats-table th:not(.stats-etat-cell) *,
+.stats-table th:not(.stats-etat-cell) span,
+.stats-table th:not(.stats-etat-cell) div,
 .suivi-table thead *,
 .suivi-table thead th,
 .suivi-table thead th *,

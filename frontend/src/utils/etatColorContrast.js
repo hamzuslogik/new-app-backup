@@ -23,10 +23,21 @@ export function getEtatContrastColor(bgHex) {
 }
 
 export function getEtatStatCellStyle(etat) {
+  return getEtatStatCellProps(etat).style;
+}
+
+/** className + style pour cellules stats (surcharge theme-improvements color !important) */
+export function getEtatStatCellProps(etat) {
   const bg = etat?.color || '#cccccc';
+  const fg = getEtatContrastColor(bg);
+  const tone = fg === '#ffffff' ? 'dark' : 'light';
   return {
-    backgroundColor: bg,
-    color: getEtatContrastColor(bg),
-    fontWeight: 800,
+    className: `stats-etat-cell stats-etat-cell--${tone}`,
+    style: {
+      '--stats-etat-bg': bg,
+      backgroundColor: bg,
+      color: fg,
+      fontWeight: 800,
+    },
   };
 }

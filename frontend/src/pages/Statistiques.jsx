@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Ba
 import './Statistiques.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
-import { getEtatContrastColor, getEtatStatCellStyle } from '../utils/etatColorContrast';
+import { getEtatStatCellProps } from '../utils/etatColorContrast';
 
 const KPI_CHART_COLORS = [
   '#7030a0', '#4472c4', '#ed7d31', '#a5a5a5', '#ffc000',
@@ -177,10 +177,7 @@ const Statistiques = () => {
       setFilters(prev => (prev.date === 'date_insert_time' ? prev : { ...prev, date: 'date_insert_time' }));
     }
     if (activeTab === 'commercial') {
-      setFilters((prev) => {
-        if (['date_modif_time', 'date_rdv_time'].includes(prev.date)) return prev;
-        return { ...prev, date: 'date_modif_time' };
-      });
+      setFilters((prev) => ({ ...prev, date: 'date_rdv_time' }));
     }
     if (activeTab === 'kpi-commerciaux') {
       setFilters((prev) => ({
@@ -218,8 +215,8 @@ const Statistiques = () => {
                 <option value="date_insert_time">Date Insertion (Saisie)</option>
               ) : activeTab === 'commercial' ? (
                 <>
-                  <option value="date_modif_time">Date Modification</option>
                   <option value="date_rdv_time">Date Rendez-vous</option>
+                  <option value="date_modif_time">Date Modification</option>
                 </>
               ) : (
                 <>
@@ -429,7 +426,7 @@ const Statistiques = () => {
                 <th>N°</th>
                 <th>{statsData.name_stat}</th>
                 {etats.map(etat => (
-                  <th key={etat.id} style={getEtatStatCellStyle(etat)}>
+                  <th key={etat.id} {...getEtatStatCellProps(etat)}>
                     {etat.abbreviation} %
                   </th>
                 ))}
@@ -445,7 +442,7 @@ const Statistiques = () => {
                     const count = item.stats[etat.id] || 0;
                     const pct = item.total > 0 ? ((count * 100) / item.total).toFixed(1) : '0';
                     return (
-                      <td key={etat.id} style={getEtatStatCellStyle(etat)}>
+                      <td key={etat.id} {...getEtatStatCellProps(etat)}>
                         {pct}%
                       </td>
                     );
@@ -460,7 +457,7 @@ const Statistiques = () => {
                   const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                   const pct = total > 0 ? ((colTotal * 100) / total).toFixed(1) : '0';
                   return (
-                    <td key={etat.id} style={getEtatStatCellStyle(etat)}>
+                    <td key={etat.id} {...getEtatStatCellProps(etat)}>
                       <strong>{pct}%</strong>
                     </td>
                   );
@@ -483,7 +480,7 @@ const Statistiques = () => {
                 <th>N°</th>
                 <th>{statsData.name_stat}</th>
                 {etats.map(etat => (
-                  <th key={etat.id} style={getEtatStatCellStyle(etat)}>
+                  <th key={etat.id} {...getEtatStatCellProps(etat)}>
                     {etat.abbreviation} %
                   </th>
                 ))}
@@ -499,7 +496,7 @@ const Statistiques = () => {
                     const count = item.stats[etat.id] || 0;
                     const pct = total > 0 ? ((count * 100) / total).toFixed(1) : '0';
                     return (
-                      <td key={etat.id} style={getEtatStatCellStyle(etat)}>
+                      <td key={etat.id} {...getEtatStatCellProps(etat)}>
                         {pct}%
                       </td>
                     );
@@ -516,7 +513,7 @@ const Statistiques = () => {
                   const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                   const pct = total > 0 ? ((colTotal * 100) / total).toFixed(1) : '0';
                   return (
-                    <td key={etat.id} style={getEtatStatCellStyle(etat)}>
+                    <td key={etat.id} {...getEtatStatCellProps(etat)}>
                       <strong>{pct}%</strong>
                     </td>
                   );
@@ -534,15 +531,18 @@ const Statistiques = () => {
       return (
         <div className="stats-barres-container">
           <div className="stats-barres-legend">
-            {etats.map(etat => (
-              <span
-                key={etat.id}
-                className="stats-barres-legend-item"
-                style={{ backgroundColor: etat.color, color: getEtatContrastColor(etat.color) }}
-              >
-                {etat.abbreviation}
-              </span>
-            ))}
+            {etats.map((etat) => {
+              const etatCell = getEtatStatCellProps(etat);
+              return (
+                <span
+                  key={etat.id}
+                  className={`stats-barres-legend-item ${etatCell.className}`}
+                  style={etatCell.style}
+                >
+                  {etat.abbreviation}
+                </span>
+              );
+            })}
           </div>
           <div className="stats-barres-list">
             {data.map((item, idx) => (
@@ -627,7 +627,7 @@ const Statistiques = () => {
               <th>N°</th>
               <th>{statsData.name_stat}</th>
               {etats.map(etat => (
-                <th key={etat.id} style={getEtatStatCellStyle(etat)}>
+                <th key={etat.id} {...getEtatStatCellProps(etat)}>
                   {etat.abbreviation}
                 </th>
               ))}
@@ -642,7 +642,7 @@ const Statistiques = () => {
                 {etats.map(etat => {
                   const count = item.stats[etat.id] || 0;
                   return (
-                    <td key={etat.id} style={getEtatStatCellStyle(etat)}>
+                    <td key={etat.id} {...getEtatStatCellProps(etat)}>
                       {count}
                     </td>
                   );
@@ -658,7 +658,7 @@ const Statistiques = () => {
               {etats.map(etat => {
                 const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                 return (
-                  <td key={etat.id} style={getEtatStatCellStyle(etat)}>
+                  <td key={etat.id} {...getEtatStatCellProps(etat)}>
                     {colTotal}
                   </td>
                 );
