@@ -22,6 +22,10 @@ const {
   isStatsDrillNarrowing,
   applyStatsDrillWhere,
 } = require('../utils/statsDrill');
+const {
+  confirmateurDerniereLigneHistoJoin,
+  fichesHistoLastInRangeJoin,
+} = require('../utils/fichesHistoJoinSql');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -139,56 +143,6 @@ function appendCpDepartementFilter(whereConditions, params, cpRaw) {
   if (orParts.length === 0) return;
   whereConditions.push(`(${orParts.join(' OR ')})`);
   params.push(...orParams);
-}
-
-/**
- * Confirmateur : lignes fiches_histo (plage date_creation) dont l’auteur est userId,
- * et qui sont la dernière ligne globale de la fiche (pas de fh2 avec même id_fiche et id > fh.id).
- * includeMultiSlot : si true, la ligne peut être « signée » par userId en id_confirmateur, _2 ou _3 (case Dashboard).
- */
-function confirmateurDerniereLigneHistoJoin(startDatetime, endDatetime, userId, includeMultiSlot = false) {
-  const confMatch = includeMultiSlot
-    ? '(fh.id_confirmateur = ? OR fh.id_confirmateur_2 = ? OR fh.id_confirmateur_3 = ?)'
-    : 'fh.id_confirmateur = ?';
-  const headParams = includeMultiSlot ? [userId, userId, userId] : [userId];
-  return {
-    joinSql: `INNER JOIN (
-    SELECT fh.id_fiche
-    FROM fiches_histo fh
-    WHERE ${confMatch}
-      AND fh.date_creation >= ? AND fh.date_creation <= ?
-      AND NOT EXISTS (
-        SELECT 1 FROM fiches_histo fh2
-        WHERE fh2.id_fiche = fh.id_fiche AND fh2.id > fh.id
-      )
-  ) histo_conf_last ON fiche.id = histo_conf_last.id_fiche`,
-    params: [...headParams, startDatetime, endDatetime],
-  };
-}
-
-/**
- * Dernière ligne fiches_histo par fiche **dont la date_creation est dans la plage** (autre profil que conf. pur),
- * puis filtre sur l’auteur de cette ligne (1er confirmateur ou 2e/3e si includeMultiSlot).
- */
-function fichesHistoLastInRangeJoin(startDatetime, endDatetime, userId, includeMultiSlot = false) {
-  const confClause = includeMultiSlot
-    ? '(fh.id_confirmateur = ? OR fh.id_confirmateur_2 = ? OR fh.id_confirmateur_3 = ?)'
-    : 'fh.id_confirmateur = ?';
-  const tailParams = includeMultiSlot ? [userId, userId, userId] : [userId];
-  return {
-    joinSql: `INNER JOIN (
-    SELECT fh.id_fiche
-    FROM fiches_histo fh
-    INNER JOIN (
-      SELECT id_fiche, MAX(id) AS max_id
-      FROM fiches_histo
-      WHERE date_creation >= ? AND date_creation <= ?
-      GROUP BY id_fiche
-    ) histo_last_in_range ON fh.id_fiche = histo_last_in_range.id_fiche AND fh.id = histo_last_in_range.max_id
-    WHERE ${confClause}
-  ) histo_ids ON fiche.id = histo_ids.id_fiche`,
-    params: [startDatetime, endDatetime, ...tailParams],
-  };
 }
 
 /** Remplit id_etat_histo (GROUP_CONCAT des id_etat) sans sous-requête corrélée par ligne sur le SELECT principal */
