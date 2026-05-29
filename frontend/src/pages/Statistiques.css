@@ -140,15 +140,11 @@
   font-weight: 700;
 }
 
-.stats-results-view-fiches {
-  box-shadow: 0 0 0 2px #86efac;
-}
-
-.stats-table-drill-mode .stats-drillable-cell {
+.stats-results-interactive .stats-drillable-cell {
   cursor: pointer;
 }
 
-.stats-table-drill-mode .stats-drillable-cell:hover {
+.stats-results-interactive .stats-drillable-cell:hover {
   outline: 2px solid #16a34a;
   outline-offset: -2px;
 }

@@ -67,7 +67,6 @@ const Statistiques = () => {
   const [columnPrefsByView, setColumnPrefsByView] = useState({});
   const [contextMenu, setContextMenu] = useState(null);
   const [columnFilterOpen, setColumnFilterOpen] = useState(false);
-  const [viewFichesMode, setViewFichesMode] = useState(false);
   const statsPrintRef = useRef(null);
 
   const [filters, setFilters] = useState({
@@ -97,12 +96,11 @@ const Statistiques = () => {
   useEffect(() => {
     setContextMenu(null);
     setColumnFilterOpen(false);
-    setViewFichesMode(false);
   }, [activeTab, statType]);
 
   const getDrillCellProps = useCallback(
     (drillOpts, etatsList) => {
-      if (!viewFichesMode || !isDrillableStatCell(statType, drillOpts.cellKind)) {
+      if (!isDrillableStatCell(statType, drillOpts.cellKind)) {
         return {};
       }
       return {
@@ -121,7 +119,7 @@ const Statistiques = () => {
         },
       };
     },
-    [viewFichesMode, activeTab, statType, filters]
+    [activeTab, statType, filters]
   );
 
   const mergeTdProps = useCallback(
@@ -534,7 +532,7 @@ const Statistiques = () => {
       const totalPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
       const totalNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
       return (
-        <table className={`stats-table${viewFichesMode ? ' stats-table-drill-mode' : ''}`}>
+        <table className="stats-table">
           <thead>
             <tr>
               <th>N°</th>
@@ -591,7 +589,7 @@ const Statistiques = () => {
       // Répartition % : chaque ligne = 100 %, valeur = part de l'état dans le total de la ligne
       return (
         <div className="table-responsive">
-          <table className={`stats-table stats-table-repartition${viewFichesMode ? ' stats-table-drill-mode' : ''}`}>
+          <table className="stats-table stats-table-repartition">
             <thead>
               <tr>
                 <th>N°</th>
@@ -671,7 +669,7 @@ const Statistiques = () => {
       // Part du total % : chaque cellule = part de ce count dans le total général
       return (
         <div className="table-responsive">
-          <table className={`stats-table stats-table-part-total${viewFichesMode ? ' stats-table-drill-mode' : ''}`}>
+          <table className="stats-table stats-table-part-total">
             <thead>
               <tr>
                 <th>N°</th>
@@ -837,7 +835,7 @@ const Statistiques = () => {
     // Affichage en mode NET (chiffres)
     return (
       <div className="table-responsive">
-        <table className={`stats-table${viewFichesMode ? ' stats-table-drill-mode' : ''}`}>
+        <table className="stats-table">
           <thead>
             <tr>
               <th>N°</th>
@@ -940,7 +938,7 @@ const Statistiques = () => {
 
     const renderKpiTable = (countKey, countLabel, countClass, tauxKey, tauxLabel) => (
       <div className="kpi-commercial-table-wrap">
-        <table className={`kpi-commercial-table${viewFichesMode ? ' stats-table-drill-mode' : ''}`}>
+        <table className="kpi-commercial-table">
           <thead>
             <tr>
               <th className="kpi-col-commercial">COMMERCIAL</th>
@@ -988,7 +986,7 @@ const Statistiques = () => {
     );
 
     return (
-      <div className={`kpi-commerciaux-dashboard${viewFichesMode ? ' stats-drill-active-banner' : ''}`}>
+      <div className="kpi-commerciaux-dashboard">
         <h3 className="kpi-commerciaux-title">
           {formatKpiPeriodTitle(period.date_debut, period.date_fin)}
         </h3>
@@ -1124,11 +1122,6 @@ const Statistiques = () => {
             setContextMenu(null);
             setColumnFilterOpen(true);
           }}
-          onToggleViewFiches={() => {
-            setViewFichesMode((v) => !v);
-            setContextMenu(null);
-          }}
-          viewFichesMode={viewFichesMode}
           columnFilterOpen={columnFilterOpen}
           onCloseColumnFilter={() => setColumnFilterOpen(false)}
           toggleableColumns={toggleableColumns}
@@ -1137,11 +1130,11 @@ const Statistiques = () => {
         >
           <div
             ref={statsPrintRef}
-            className={`stats-results kpi-commerciaux-results stats-results-interactive${viewFichesMode ? ' stats-results-view-fiches' : ''}`}
+            className="stats-results kpi-commerciaux-results stats-results-interactive"
             onContextMenu={handleResultsContextMenu}
           >
             <p className="stats-results-hint">
-              Clic droit : exporter, imprimer, colonnes{viewFichesMode ? ' — cliquez une cellule pour ouvrir les fiches' : ''}
+              Clic sur une cellule : ouvrir les fiches dans le Dashboard — clic droit : exporter, imprimer, colonnes
             </p>
             {renderKpiCommerciaux()}
           </div>
@@ -1158,11 +1151,6 @@ const Statistiques = () => {
             setContextMenu(null);
             setColumnFilterOpen(true);
           }}
-          onToggleViewFiches={() => {
-            setViewFichesMode((v) => !v);
-            setContextMenu(null);
-          }}
-          viewFichesMode={viewFichesMode}
           columnFilterOpen={columnFilterOpen}
           onCloseColumnFilter={() => setColumnFilterOpen(false)}
           toggleableColumns={toggleableColumns}
@@ -1171,11 +1159,11 @@ const Statistiques = () => {
         >
           <div
             ref={statsPrintRef}
-            className={`stats-results stats-results-interactive${viewFichesMode ? ' stats-results-view-fiches' : ''}`}
+            className="stats-results stats-results-interactive"
             onContextMenu={handleResultsContextMenu}
           >
             <p className="stats-results-hint">
-              Clic droit : exporter, imprimer, colonnes{viewFichesMode ? ' — cliquez une cellule pour ouvrir les fiches' : ''}
+              Clic sur une cellule : ouvrir les fiches dans le Dashboard — clic droit : exporter, imprimer, colonnes
             </p>
             {renderStatsTable()}
           </div>
