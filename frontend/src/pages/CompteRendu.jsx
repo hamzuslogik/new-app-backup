@@ -434,18 +434,29 @@ const CompteRendu = () => {
                     </div>
                     <div className="cr-actions">
                       {canManageTracking && (
-                        <button
-                          type="button"
-                          className={`btn-icon btn-tracking ${cr.tracking_id ? 'has-tracking' : ''}`}
-                          title={
-                            cr.tracking_id
-                              ? 'Tracking RDV (modifier — lié à ce compte rendu)'
-                              : 'Tracking RDV (créer — nouveau pour ce compte rendu)'
-                          }
-                          onClick={() => setTrackingCompteRenduId(cr.id)}
-                        >
-                          <TrackingButtonIcon className="btn-tracking-icon" size={22} />
-                        </button>
+                        <span className="cr-tracking-actions">
+                          {cr.tracking_id ? (
+                            <span
+                              className="cr-tracking-done-icon"
+                              title="Tracking déjà effectué"
+                              aria-label="Tracking déjà effectué"
+                            >
+                              <FaCheckCircle />
+                            </span>
+                          ) : null}
+                          <button
+                            type="button"
+                            className={`btn-icon btn-tracking ${cr.tracking_id ? 'has-tracking' : ''}`}
+                            title={
+                              cr.tracking_id
+                                ? 'Tracking RDV (modifier — lié à ce compte rendu)'
+                                : 'Tracking RDV (créer — nouveau pour ce compte rendu)'
+                            }
+                            onClick={() => setTrackingCompteRenduId(cr.id)}
+                          >
+                            <TrackingButtonIcon className="btn-tracking-icon" size={22} />
+                          </button>
+                        </span>
                       )}
                       <FicheDetailLink ficheHash={cr.fiche_hash} ficheId={cr.id_fiche} className="btn-icon" title="Détails fiche">
                         <FaSearch />

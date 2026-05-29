@@ -431,6 +431,23 @@
 .compte-rendu-card .cr-actions .btn-icon.btn-danger {
   background: #dc3545;
 }
+.cr-tracking-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cr-tracking-done-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #28a745;
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .compte-rendu-card .cr-actions .btn-icon.btn-tracking {
   background: #f8fafc;
   border: 1px solid #0ea5e9;
