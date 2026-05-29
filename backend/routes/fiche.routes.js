@@ -844,6 +844,8 @@ router.get('/', authenticate, async (req, res) => {
     let params = [];
     let histoJoinForFichesHisto = '';
     let histoParamsForFichesHisto = [];
+    let histoIdsSubquerySql = '';
+    let histoIdsSubqueryParams = [];
 
     const statsDrill = parseStatsDrillQuery(req.query);
     let statsDrillHandled = false;
@@ -933,6 +935,8 @@ router.get('/', authenticate, async (req, res) => {
         );
         histoJoinForFichesHisto = j.joinSql;
         histoParamsForFichesHisto = j.params;
+        histoIdsSubquerySql = j.idsSubquerySql;
+        histoIdsSubqueryParams = j.idsSubqueryParams;
       }
     } else {
       // Filtres par fonction quand recherche active
@@ -1308,6 +1312,8 @@ router.get('/', authenticate, async (req, res) => {
             );
             histoJoinForFichesHisto = j.joinSql;
             histoParamsForFichesHisto = j.params;
+            histoIdsSubquerySql = j.idsSubquerySql;
+            histoIdsSubqueryParams = j.idsSubqueryParams;
           } else {
             const j = fichesHistoLastInRangeJoin(
               startDatetime,
@@ -1317,14 +1323,19 @@ router.get('/', authenticate, async (req, res) => {
             );
             histoJoinForFichesHisto = j.joinSql;
             histoParamsForFichesHisto = j.params;
+            histoIdsSubquerySql = j.idsSubquerySql;
+            histoIdsSubqueryParams = j.idsSubqueryParams;
           }
         } else if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
           // Fiches confirmées : basé sur fiches_histo (id_etat=7, date_creation dans la plage)
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           whereConditions.push(`fiche.id_etat_final = 7`);
-          histoJoinForFichesHisto = `INNER JOIN (SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_etat = 7 AND date_creation >= ? AND date_creation <= ?) histo_conf ON fiche.id = histo_conf.id_fiche`;
-          histoParamsForFichesHisto = [startDatetime, endDatetime];
+          histoIdsSubquerySql =
+            'SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_etat = 7 AND date_creation >= ? AND date_creation <= ?';
+          histoIdsSubqueryParams = [startDatetime, endDatetime];
+          histoJoinForFichesHisto = `INNER JOIN (${histoIdsSubquerySql}) histo_conf ON fiche.id = histo_conf.id_fiche`;
+          histoParamsForFichesHisto = histoIdsSubqueryParams;
         } else if (date_champ === 'date_confirmation') {
           // Convertir les dates en timestamps Unix
           const startTimestamp = Math.floor(new Date(`${dateDebut || dateFin} ${timeStart}`).getTime() / 1000);
@@ -1424,22 +1435,23 @@ router.get('/', authenticate, async (req, res) => {
     const qualifJoinForCount = needsQualifJoin && qualifTableExists 
       ? 'LEFT JOIN qualif ON fiche.id_qualif = qualif.id' 
       : '';
-    const countParams = histoJoinForFichesHisto ? [...histoParamsForFichesHisto, ...params] : params;
+    const countParams = histoIdsSubquerySql
+      ? [...histoIdsSubqueryParams, ...params]
+      : histoJoinForFichesHisto
+        ? [...histoParamsForFichesHisto, ...params]
+        : params;
 
-    // Log des requêtes SQL exécutées pour agent qualification (fonction 3)
-    if (req.user.fonction === 3) {
-      const countSql = `SELECT COUNT(DISTINCT fiche.id) as total FROM fiches fiche ${histoJoinForFichesHisto} ${qualifJoinForCount} ${whereClause}`;
-    }
-    if (req.user.fonction === 6 && isActiveSearch) {
-      const countSqlPreview = `SELECT COUNT(DISTINCT fiche.id) as total FROM fiches fiche ${histoJoinForFichesHisto} ${qualifJoinForCount} ${whereClause}`;
-    }
+    const countSql = histoIdsSubquerySql
+      ? `SELECT COUNT(*) AS total
+         FROM (${histoIdsSubquerySql}) histo_cnt
+         INNER JOIN fiches fiche ON fiche.id = histo_cnt.id_fiche
+         ${qualifJoinForCount}
+         ${whereClause}`
+      : `SELECT COUNT(DISTINCT fiche.id) AS total FROM fiches fiche ${histoJoinForFichesHisto} ${qualifJoinForCount} ${whereClause}`;
 
     // Compter le total
     const countStartTime = Date.now();
-    const countResult = await queryOne(
-      `SELECT COUNT(DISTINCT fiche.id) as total FROM fiches fiche ${histoJoinForFichesHisto} ${qualifJoinForCount} ${whereClause}`,
-      countParams
-    );
+    const countResult = await queryOne(countSql, countParams);
     const total = countResult.total;
     const countDuration = Date.now() - countStartTime;
 
@@ -1516,7 +1528,14 @@ router.get('/', authenticate, async (req, res) => {
     const fiches = await query(selectQuery, selectParams);
     const selectDuration = Date.now() - selectStartTime;
 
-    await attachIdEtatHistoToFiches(fiches);
+    // « Mes actions » : éviter GROUP_CONCAT sur tout l'historique (très lent sur grosses tables)
+    if (!histoIdsSubquerySql) {
+      await attachIdEtatHistoToFiches(fiches);
+    } else {
+      fiches.forEach((f) => {
+        f.id_etat_histo = null;
+      });
+    }
 
     // Enrichir les fiches : has_etat_changed_by_compte_rendu + compte_rendu_commercial_pseudo (dernier CR approuvé)
     if (fiches.length > 0) {

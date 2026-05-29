@@ -1,6 +1,6 @@
 /**
  * Jointures Dashboard « Mes actions sur la fiche » (date_champ = fiches_histo).
- * Évite NOT EXISTS corrélé : candidats par confirmateur + plage, puis MAX(id) global par fiche.
+ * Retourne aussi idsSubquerySql pour COUNT rapide sans scanner toute la table fiches.
  */
 
 function confirmateurSlotParams(userId, includeMultiSlot) {
@@ -15,64 +15,96 @@ function confirmateurSlotMatch(alias, includeMultiSlot) {
 }
 
 /**
- * Confirmateur : dernière ligne globale de la fiche = action du user dans la plage.
+ * IDs fiches : dernière ligne globale = action du confirmateur dans la plage.
  */
-function confirmateurDerniereLigneHistoJoin(startDatetime, endDatetime, userId, includeMultiSlot = false) {
+function confirmateurDerniereLigneHistoIdsSql(
+  startDatetime,
+  endDatetime,
+  userId,
+  includeMultiSlot = false
+) {
   const confMatch = confirmateurSlotMatch('fh', includeMultiSlot);
-  const candidateMatch = confirmateurSlotMatch('', includeMultiSlot);
+  const candidateMatch = confirmateurSlotMatch('c', includeMultiSlot);
   const headParams = confirmateurSlotParams(userId, includeMultiSlot);
-  return {
-    joinSql: `INNER JOIN (
-    SELECT fh.id_fiche
-    FROM fiches_histo fh
-    INNER JOIN (
+
+  const sql = `SELECT fh.id_fiche
+    FROM (
       SELECT h.id_fiche, MAX(h.id) AS max_id
       FROM fiches_histo h
       INNER JOIN (
         SELECT DISTINCT id_fiche
-        FROM fiches_histo
+        FROM fiches_histo c
         WHERE ${candidateMatch}
-          AND date_creation >= ? AND date_creation <= ?
-      ) c ON h.id_fiche = c.id_fiche
+          AND c.date_creation >= ? AND c.date_creation <= ?
+      ) cand ON h.id_fiche = cand.id_fiche
       GROUP BY h.id_fiche
-    ) g ON fh.id_fiche = g.id_fiche AND fh.id = g.max_id
+    ) g
+    INNER JOIN fiches_histo fh ON fh.id = g.max_id
     WHERE ${confMatch}
-      AND fh.date_creation >= ? AND fh.date_creation <= ?
-  ) histo_conf_last ON fiche.id = histo_conf_last.id_fiche`,
-    params: [
-      ...headParams,
-      startDatetime,
-      endDatetime,
-      ...headParams,
-      startDatetime,
-      endDatetime,
-    ],
+      AND fh.date_creation >= ? AND fh.date_creation <= ?`;
+
+  const params = [
+    ...headParams,
+    startDatetime,
+    endDatetime,
+    ...headParams,
+    startDatetime,
+    endDatetime,
+  ];
+
+  return { sql, params };
+}
+
+function confirmateurDerniereLigneHistoJoin(startDatetime, endDatetime, userId, includeMultiSlot = false) {
+  const ids = confirmateurDerniereLigneHistoIdsSql(
+    startDatetime,
+    endDatetime,
+    userId,
+    includeMultiSlot
+  );
+  return {
+    joinSql: `INNER JOIN (${ids.sql}) histo_conf_last ON fiche.id = histo_conf_last.id_fiche`,
+    params: ids.params,
+    idsSubquerySql: ids.sql,
+    idsSubqueryParams: ids.params,
   };
 }
 
 /**
- * Dernière ligne dont date_creation est dans la plage, filtrée par auteur confirmateur.
+ * Dernière ligne dans la plage, auteur = confirmateur (filtre poussé dans l'agrégat).
  */
-function fichesHistoLastInRangeJoin(startDatetime, endDatetime, userId, includeMultiSlot = false) {
-  const confClause = confirmateurSlotMatch('fh', includeMultiSlot);
+function fichesHistoLastInRangeIdsSql(startDatetime, endDatetime, userId, includeMultiSlot = false) {
+  const slotWhere = confirmateurSlotMatch('', includeMultiSlot);
   const tailParams = confirmateurSlotParams(userId, includeMultiSlot);
-  return {
-    joinSql: `INNER JOIN (
-    SELECT fh.id_fiche
-    FROM fiches_histo fh
-    INNER JOIN (
+
+  const sql = `SELECT t.id_fiche
+    FROM (
       SELECT id_fiche, MAX(id) AS max_id
       FROM fiches_histo
       WHERE date_creation >= ? AND date_creation <= ?
+        AND ${slotWhere}
       GROUP BY id_fiche
-    ) histo_last_in_range ON fh.id_fiche = histo_last_in_range.id_fiche AND fh.id = histo_last_in_range.max_id
-    WHERE ${confClause}
-  ) histo_ids ON fiche.id = histo_ids.id_fiche`,
+    ) t`;
+
+  return {
+    sql,
     params: [startDatetime, endDatetime, ...tailParams],
+  };
+}
+
+function fichesHistoLastInRangeJoin(startDatetime, endDatetime, userId, includeMultiSlot = false) {
+  const ids = fichesHistoLastInRangeIdsSql(startDatetime, endDatetime, userId, includeMultiSlot);
+  return {
+    joinSql: `INNER JOIN (${ids.sql}) histo_ids ON fiche.id = histo_ids.id_fiche`,
+    params: ids.params,
+    idsSubquerySql: ids.sql,
+    idsSubqueryParams: ids.params,
   };
 }
 
 module.exports = {
   confirmateurDerniereLigneHistoJoin,
   fichesHistoLastInRangeJoin,
+  confirmateurDerniereLigneHistoIdsSql,
+  fichesHistoLastInRangeIdsSql,
 };

@@ -16,7 +16,8 @@ USE `crm`;
 
 -- Index pour la requête JOIN (plus rapide) : partir de fiches_histo filtré par confirmateur+date
 -- SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_confirmateur=? AND date_creation BETWEEN ? AND ?
--- (MariaDB et MySQL < 8.0.13 : pas de IF NOT EXISTS sur CREATE INDEX)
+-- Déjà exécuté ? Erreur #1061 Duplicate key name = index déjà présent (c'est normal).
+-- Pour les autres index : utiliser add_index_fiches_histo_performance.sql (idempotent).
 CREATE INDEX idx_fiches_histo_confirmateur_date_fiche 
 ON fiches_histo (id_confirmateur, date_creation, id_fiche);
 
