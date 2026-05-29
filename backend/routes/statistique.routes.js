@@ -212,6 +212,11 @@ function isEtatGroupe0(etat) {
   return g === '0' || g === 0;
 }
 
+/** États finaux possibles d'un compte rendu (aligné compte-rendu.routes + porte ouverte / signer). */
+const ETATS_COMPTE_RENDU_STAT_IDS = new Set(
+  [8, 9, 12, 13, 16, 23, 34, 35, 38, 44, 45].map(String)
+);
+
 /** Stats commercial : compte_rendu_pending, filtre date = modification CR ou date RDV fiche. */
 function buildCommercialCrSourceSql(ficheExtraConditions, excludeEtatIds = [], dateField = 'date_modif_time') {
   const etatCr = 'CAST(cr.id_etat_final AS CHAR)';
@@ -384,9 +389,15 @@ router.get('/all-stat', authenticate, async (req, res) => {
       : isStatKo
         ? etats
         : etatsWithKo;
-    const etatsForDisplay = hideGroupe0Etats
+    let etatsForDisplay = hideGroupe0Etats
       ? baseEtatsForDisplay.filter((e) => !isEtatGroupe0(e))
       : baseEtatsForDisplay;
+
+    if (name_stat === 'COMMERCIAL') {
+      etatsForDisplay = etatsForDisplay.filter((e) =>
+        ETATS_COMPTE_RENDU_STAT_IDS.has(String(e.id))
+      );
+    }
 
     // Valider le champ de date pour éviter les injections SQL
     // Note: date_appel_time n'existe pas dans le schéma, on utilise date_appel (bigint) si nécessaire
@@ -522,6 +533,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
       const etatId = stat.etat_key;
       const count = stat.stats;
       if (hideGroupe0Etats && etatGroupe0IdSet.has(String(etatId))) return;
+      if (name_stat === 'COMMERCIAL' && !ETATS_COMPTE_RENDU_STAT_IDS.has(String(etatId))) return;
 
       const taux = etatsTaux[etatId] ?? (String(etatId) === String(koColumnKey) ? -1 : 0);
 
