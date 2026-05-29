@@ -70,6 +70,17 @@ const Statistiques = () => {
   const [viewFichesMode, setViewFichesMode] = useState(false);
   const statsPrintRef = useRef(null);
 
+  const [filters, setFilters] = useState({
+    date_debut: new Date().toISOString().split('T')[0],
+    date_fin: new Date().toISOString().split('T')[0],
+    date: 'date_modif_time',
+    produit: '',
+    id_centre: '',
+    id_confirmateur: '',
+    id_commercial: '',
+    id_agent: '',
+  });
+
   const viewKey = getStatsViewKey(activeTab, statType);
   const columnPrefs = columnPrefsByView[viewKey] || DEFAULT_COLUMN_PREFS;
 
@@ -126,18 +137,6 @@ const Statistiques = () => {
     },
     [getDrillCellProps]
   );
-
-  // États pour les filtres
-  const [filters, setFilters] = useState({
-    date_debut: new Date().toISOString().split('T')[0],
-    date_fin: new Date().toISOString().split('T')[0],
-    date: 'date_modif_time',
-    produit: '',
-    id_centre: '',
-    id_confirmateur: '',
-    id_commercial: '',
-    id_agent: ''
-  });
 
   // Récupérer les données de référence
   const { data: centresData } = useQuery('centres', async () => {
