@@ -41,7 +41,7 @@ const CompteRendu = () => {
 
   const { data: commerciauxData } = useQuery('commerciaux', async () => {
     const res = await api.get('/management/utilisateurs');
-    return res.data.data?.filter(u => u.fonction === 5) || [];
+    return res.data.data?.filter(u => u.fonction === 5 && u.etat > 0) || [];
   });
 
   const { data: centresData } = useQuery('centres', async () => {

@@ -233,6 +233,7 @@ function buildCommercialCrSourceSql(ficheExtraConditions, excludeEtatIds = [], d
     SELECT ${etatCr} AS etat_key, cr.id_commercial AS entity_id
     FROM compte_rendu_pending cr
     INNER JOIN fiches f ON f.id = cr.id_fiche
+    INNER JOIN utilisateurs u_com ON u_com.id = cr.id_commercial AND u_com.fonction = 5 AND u_com.etat > 0
     WHERE ${baseFiche}
       AND cr.id_commercial IS NOT NULL AND cr.id_commercial > 0
       AND cr.id_etat_final IS NOT NULL
@@ -587,6 +588,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
 
     // Construire les données pour chaque entité
     Object.keys(dataByEntity).forEach(entityId => {
+      if (name_stat === 'COMMERCIAL' && !entitiesMap[entityId]) return;
       const entityName = entitiesMap[entityId] || `ID ${entityId}`;
       const entityData = {
         id: entityId,
@@ -631,6 +633,93 @@ router.get('/all-stat', authenticate, async (req, res) => {
       success: false,
       message: 'Erreur lors de la récupération des statistiques',
       error: error.message
+    });
+  }
+});
+
+// GET /api/statistiques/kpi-commerciaux
+// KPI commerciaux : honoré à suivre, refusés, signatures (comptes rendus approuvés, date RDV)
+router.get('/kpi-commerciaux', authenticate, async (req, res) => {
+  try {
+    const { date_debut, date_fin, produit } = req.query;
+    const startDate = date_debut || getFirstOfMonthLocal();
+    const endDate = date_fin || getTodayLocal();
+    const startDt = `${startDate} 00:00:00`;
+    const endDt = `${endDate} 23:59:59`;
+
+    const ID_HONORE = 9;
+    const ID_REFUSER = 12;
+    const SIGNER_IDS = [13, 16, 38, 44, 45];
+
+    let produitSql = '';
+    const queryParams = [ID_HONORE, ID_REFUSER, ...SIGNER_IDS, startDt, endDt];
+    if (produit === '1' || produit === '2') {
+      produitSql = ' AND f.produit = ?';
+      queryParams.push(parseInt(produit, 10));
+    }
+
+    const statsRows = await query(
+      `SELECT
+        u.id AS id_commercial,
+        u.pseudo AS commercial,
+        COUNT(*) AS total_rdv_honores,
+        SUM(CASE WHEN cr.id_etat_final = ? THEN 1 ELSE 0 END) AS honore_a_suivre,
+        SUM(CASE WHEN cr.id_etat_final = ? THEN 1 ELSE 0 END) AS rdv_refuse,
+        SUM(CASE WHEN cr.id_etat_final IN (${SIGNER_IDS.map(() => '?').join(',')}) THEN 1 ELSE 0 END) AS signatures
+      FROM compte_rendu_pending cr
+      INNER JOIN fiches f ON f.id = cr.id_fiche
+      INNER JOIN utilisateurs u ON u.id = cr.id_commercial AND u.fonction = 5 AND u.etat > 0
+      WHERE cr.statut = 'approved'
+        AND cr.id_commercial IS NOT NULL AND cr.id_commercial > 0
+        AND cr.id_etat_final IS NOT NULL
+        AND f.date_rdv_time IS NOT NULL AND f.date_rdv_time != ''
+        AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?
+        AND (f.archive = 0 OR f.archive IS NULL)
+        AND (f.ko = 0 OR f.ko IS NULL)
+        ${produitSql}
+      GROUP BY u.id, u.pseudo`,
+      queryParams
+    );
+
+    const allCommerciaux = await query(
+      `SELECT id, pseudo FROM utilisateurs WHERE fonction = 5 AND etat > 0 ORDER BY pseudo ASC`
+    );
+
+    const statsById = new Map((statsRows || []).map((r) => [Number(r.id_commercial), r]));
+    const pct = (n, total) => (total > 0 ? Math.round((n / total) * 10000) / 100 : 0);
+
+    const rows = (allCommerciaux || []).map((u) => {
+      const r = statsById.get(Number(u.id));
+      const total = Number(r?.total_rdv_honores) || 0;
+      const honore = Number(r?.honore_a_suivre) || 0;
+      const refuse = Number(r?.rdv_refuse) || 0;
+      const signatures = Number(r?.signatures) || 0;
+      return {
+        id_commercial: u.id,
+        commercial: u.pseudo || r?.commercial || `ID ${u.id}`,
+        total_rdv_honores: total,
+        honore_a_suivre: honore,
+        rdv_refuse: refuse,
+        signatures,
+        taux_r2: pct(honore, total),
+        taux_refuses: pct(refuse, total),
+        taux_signes: pct(signatures, total),
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        period: { date_debut: startDate, date_fin: endDate },
+        rows,
+      },
+    });
+  } catch (error) {
+    console.error('[STAT] /kpi-commerciaux - Erreur:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des KPI commerciaux',
+      error: error.message,
     });
   }
 });

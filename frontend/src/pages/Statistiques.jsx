@@ -3,14 +3,41 @@ import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaChartBar, FaSearch } from 'react-icons/fa';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import './Statistiques.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
+
+const KPI_CHART_COLORS = [
+  '#7030a0', '#4472c4', '#ed7d31', '#a5a5a5', '#ffc000',
+  '#5b9bd5', '#70ad47', '#264478', '#9e480e', '#636363',
+];
+
+const MONTH_LABELS = [
+  'JANVIER', 'FEVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN',
+  'JUILLET', 'AOUT', 'SEPTEMBRE', 'OCTOBRE', 'NOVEMBRE', 'DECEMBRE',
+];
+
+function formatKpiPeriodTitle(dateDebut, dateFin) {
+  if (!dateDebut || !dateFin) return 'KPI COMMERCIAUX';
+  if (dateDebut.slice(0, 7) === dateFin.slice(0, 7) && dateDebut.endsWith('-01')) {
+    const [y, m] = dateDebut.split('-');
+    const monthLabel = MONTH_LABELS[parseInt(m, 10) - 1] || m;
+    return `MOIS DE ${monthLabel} ${y}`;
+  }
+  return `Période du ${dateDebut} au ${dateFin}`;
+}
+
+function formatPct(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '0%';
+  return `${Number.isInteger(n) ? n : n.toFixed(1)}%`;
+}
 
 const Statistiques = () => {
   useForceDesktopViewport('statistiques-page');
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('centre'); // centre, confirmateur, commercial, agent, statko
+  const [activeTab, setActiveTab] = useState('centre'); // centre, confirmateur, commercial, kpi-commerciaux, agent, statko
   const [statType, setStatType] = useState('net'); // net, taux, repartition, part_total, barres, camembert
   
   // États pour les filtres
@@ -38,7 +65,7 @@ const Statistiques = () => {
 
   const { data: commerciauxData } = useQuery('commerciaux', async () => {
     const res = await api.get('/management/utilisateurs');
-    return res.data.data?.filter(u => u.fonction === 5) || [];
+    return res.data.data?.filter(u => u.fonction === 5 && u.etat > 0) || [];
   });
 
   const { data: agentsData } = useQuery('agents', async () => {
@@ -116,9 +143,27 @@ const Statistiques = () => {
     { enabled: false } // Ne pas charger automatiquement
   );
 
+  const { data: kpiCommerciauxData, isLoading: kpiCommerciauxLoading, refetch: refetchKpiCommerciaux } = useQuery(
+    ['statistiques-kpi-commerciaux', filters.date_debut, filters.date_fin, filters.produit],
+    async () => {
+      const params = {
+        date_debut: filters.date_debut,
+        date_fin: filters.date_fin,
+      };
+      if (filters.produit) params.produit = filters.produit;
+      const res = await api.get('/statistiques/kpi-commerciaux', { params });
+      return res.data.data;
+    },
+    { enabled: false }
+  );
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    refetch();
+    if (activeTab === 'kpi-commerciaux') {
+      refetchKpiCommerciaux();
+    } else {
+      refetch();
+    }
   };
 
   const handleFilterChange = (field, value) => {
@@ -135,6 +180,13 @@ const Statistiques = () => {
         if (['date_modif_time', 'date_rdv_time'].includes(prev.date)) return prev;
         return { ...prev, date: 'date_modif_time' };
       });
+    }
+    if (activeTab === 'kpi-commerciaux') {
+      setFilters((prev) => ({
+        ...prev,
+        date_debut: prev.date_debut || getFirstOfMonthLocal(),
+        date_fin: prev.date_fin || getTodayLocal(),
+      }));
     }
   }, [activeTab]);
 
@@ -154,6 +206,7 @@ const Statistiques = () => {
             </select>
           </div>
 
+          {activeTab !== 'kpi-commerciaux' && (
           <div className="form-group">
             <label>Type de date</label>
             <select
@@ -176,6 +229,14 @@ const Statistiques = () => {
               )}
             </select>
           </div>
+          )}
+
+          {activeTab === 'kpi-commerciaux' && (
+            <div className="form-group">
+              <label>Type de date</label>
+              <input type="text" value="Date Rendez-vous" readOnly className="kpi-date-readonly" />
+            </div>
+          )}
 
           {activeTab === 'centre' && (
             <div className="form-group">
@@ -269,6 +330,7 @@ const Statistiques = () => {
             />
           </div>
 
+          {activeTab !== 'kpi-commerciaux' && (
           <div className="form-group">
             <label>Affichage</label>
             <select
@@ -283,6 +345,7 @@ const Statistiques = () => {
               <option value="camembert">CAMEMBERT</option>
             </select>
           </div>
+          )}
         </div>
 
         <div className="search-form-actions-left">
@@ -626,6 +689,100 @@ const Statistiques = () => {
     );
   };
 
+  const renderKpiCommerciaux = () => {
+    if (kpiCommerciauxLoading) {
+      return <div className="loading">Chargement des KPI commerciaux...</div>;
+    }
+    if (!kpiCommerciauxData?.rows?.length) {
+      return <div className="no-data">Aucune donnée disponible pour les critères sélectionnés.</div>;
+    }
+
+    const rows = kpiCommerciauxData.rows;
+    const period = kpiCommerciauxData.period || {};
+    const chartData = rows
+      .filter((r) => r.total_rdv_honores > 0)
+      .map((r) => ({
+        ...r,
+        commercial: String(r.commercial || '').toUpperCase(),
+      }));
+
+    const renderKpiTable = (countKey, countLabel, countClass, tauxKey, tauxLabel) => (
+      <div className="kpi-commercial-table-wrap">
+        <table className="kpi-commercial-table">
+          <thead>
+            <tr>
+              <th className="kpi-col-commercial">COMMERCIAL</th>
+              <th className={countClass}>{countLabel}</th>
+              <th className="kpi-col-total">TOTAL RDV HONORÉS</th>
+              <th className="kpi-col-taux">{tauxLabel}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={`${countKey}-${row.id_commercial}`}>
+                <td className="kpi-col-commercial">{String(row.commercial || '').toUpperCase()}</td>
+                <td className={countClass}>{row[countKey]}</td>
+                <td className="kpi-col-total">{row.total_rdv_honores}</td>
+                <td className="kpi-col-taux">{formatPct(row[tauxKey])}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+
+    return (
+      <div className="kpi-commerciaux-dashboard">
+        <h3 className="kpi-commerciaux-title">
+          {formatKpiPeriodTitle(period.date_debut, period.date_fin)}
+        </h3>
+        <div className="kpi-commerciaux-grid">
+          {renderKpiTable(
+            'honore_a_suivre',
+            'NBRE DE HONORÉ À SUIVRE',
+            'kpi-col-honore',
+            'taux_r2',
+            'TAUX DE CONCRÉTISATION DES R2'
+          )}
+          {renderKpiTable(
+            'rdv_refuse',
+            'NBRE DE RDV REFUSÉ',
+            'kpi-col-refuse',
+            'taux_refuses',
+            'TAUX DE CONCRÉTISATION DES REFUSÉS'
+          )}
+          {renderKpiTable(
+            'signatures',
+            'NBRE DE SIGNATURE',
+            'kpi-col-signature',
+            'taux_signes',
+            'TAUX DE CONCRÉTISATION DES SIGNÉS'
+          )}
+          <div className="kpi-commercial-chart-wrap">
+            <h4 className="kpi-chart-title">TAUX DE CONCRÉTISATION DES SIGNÉS</h4>
+            {chartData.length === 0 ? (
+              <div className="no-data">Aucune signature sur la période.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={340}>
+                <BarChart data={chartData} margin={{ top: 24, right: 12, left: 0, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="commercial" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={70} />
+                  <YAxis tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
+                  <Tooltip formatter={(v) => [`${v}%`, 'Taux signés']} />
+                  <Bar dataKey="taux_signes" radius={[4, 4, 0, 0]} label={{ position: 'top', formatter: (v) => formatPct(v) }}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={entry.id_commercial} fill={KPI_CHART_COLORS[index % KPI_CHART_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="statistiques-page">
       <h2 className="page-title"><FaChartBar /> Statistiques</h2>
@@ -657,6 +814,12 @@ const Statistiques = () => {
           COMMERCIAL
         </button>
         <button
+          className={`menu-btn ${activeTab === 'kpi-commerciaux' ? 'active' : ''}`}
+          onClick={() => setActiveTab('kpi-commerciaux')}
+        >
+          KPI COMMERCIAUX
+        </button>
+        <button
           className={`menu-btn ${activeTab === 'statko' ? 'active' : ''}`}
           onClick={() => setActiveTab('statko')}
         >
@@ -668,14 +831,24 @@ const Statistiques = () => {
       <div className="stats-filters search-panel">
         <div className="search-panel-header">
           <h2>
-            <FaSearch /> {activeTab === 'statko' ? 'Statistiques fiches KO par Agent' : `Statistiques par ${activeTab.toUpperCase()}`}
+            <FaSearch />{' '}
+            {activeTab === 'statko'
+              ? 'Statistiques fiches KO par Agent'
+              : activeTab === 'kpi-commerciaux'
+                ? 'KPI Commerciaux'
+                : `Statistiques par ${activeTab.toUpperCase()}`}
           </h2>
         </div>
         {renderFilterForm()}
       </div>
 
-      {/* Tableau des résultats */}
-      {statsData && (
+      {activeTab === 'kpi-commerciaux' && kpiCommerciauxData && (
+        <div className="stats-results kpi-commerciaux-results">
+          {renderKpiCommerciaux()}
+        </div>
+      )}
+
+      {activeTab !== 'kpi-commerciaux' && statsData && (
         <div className="stats-results">
           {renderStatsTable()}
         </div>
