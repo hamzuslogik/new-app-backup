@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useQuery } from 'react-query';
-import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaChartBar, FaSearch } from 'react-icons/fa';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -8,6 +7,21 @@ import './Statistiques.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { getEtatContrastColor, getEtatStatCellProps, normalizeHex } from '../utils/etatColorContrast';
+import StatsResultsActions from '../components/statistiques/StatsResultsActions';
+import {
+  DEFAULT_COLUMN_PREFS,
+  getStatsViewKey,
+  getVisibleEtats,
+  getVisibleTauxColumns,
+  isEtatColumnAllZeros,
+  TAUX_FIXED_COLUMNS,
+} from '../utils/statistiquesColumnUtils';
+import {
+  buildKpiExport,
+  buildStatsTableExport,
+  printStatsArea,
+  runStatsExport,
+} from '../utils/statistiquesExport';
 
 const KPI_CHART_FALLBACK_COLORS = [
   '#7030a0', '#4472c4', '#ed7d31', '#a5a5a5', '#ffc000',
@@ -43,10 +57,31 @@ function formatPct(value) {
 
 const Statistiques = () => {
   useForceDesktopViewport('statistiques-page');
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('centre'); // centre, confirmateur, commercial, kpi-commerciaux, agent, statko
   const [statType, setStatType] = useState('net'); // net, taux, repartition, part_total, barres, camembert
-  
+  const [columnPrefsByView, setColumnPrefsByView] = useState({});
+  const [contextMenu, setContextMenu] = useState(null);
+  const [columnFilterOpen, setColumnFilterOpen] = useState(false);
+  const statsPrintRef = useRef(null);
+
+  const viewKey = getStatsViewKey(activeTab, statType);
+  const columnPrefs = columnPrefsByView[viewKey] || DEFAULT_COLUMN_PREFS;
+
+  const setColumnPrefs = useCallback(
+    (next) => {
+      setColumnPrefsByView((prev) => ({
+        ...prev,
+        [viewKey]: typeof next === 'function' ? next(prev[viewKey] || DEFAULT_COLUMN_PREFS) : next,
+      }));
+    },
+    [viewKey]
+  );
+
+  useEffect(() => {
+    setContextMenu(null);
+    setColumnFilterOpen(false);
+  }, [activeTab, statType]);
+
   // États pour les filtres
   const [filters, setFilters] = useState({
     date_debut: new Date().toISOString().split('T')[0],
@@ -193,6 +228,72 @@ const Statistiques = () => {
       }));
     }
   }, [activeTab]);
+
+  const handleResultsContextMenu = (e) => {
+    const hasStats = activeTab === 'kpi-commerciaux' ? kpiCommerciauxData?.rows?.length : statsData?.data?.length;
+    if (!hasStats) return;
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const toggleableColumns = useMemo(() => {
+    if (activeTab === 'kpi-commerciaux' && kpiCommerciauxData?.rows) {
+      const rows = kpiCommerciauxData.rows;
+      const sum = (key) => rows.reduce((s, r) => s + (Number(r[key]) || 0), 0);
+      return [
+        { id: 'honore', label: 'Honoré à suivre', allZeros: sum('honore_a_suivre') === 0 },
+        { id: 'refuse', label: 'RDV refusé', allZeros: sum('rdv_refuse') === 0 },
+        { id: 'signatures', label: 'Signatures', allZeros: sum('signatures') === 0 },
+      ];
+    }
+    if (!statsData?.data) return [];
+    if (statType === 'taux') {
+      return TAUX_FIXED_COLUMNS.map((col) => ({
+        id: col.id,
+        label: col.label,
+        allZeros: statsData.data.reduce((s, item) => s + (Number(col.getValue(item)) || 0), 0) === 0,
+      }));
+    }
+    if (['net', 'repartition', 'part_total', 'barres', 'camembert'].includes(statType) && statsData.etats) {
+      return statsData.etats.map((etat) => ({
+        id: etat.id,
+        label: etat.abbreviation || etat.titre,
+        allZeros: isEtatColumnAllZeros(statsData.data, etat.id),
+      }));
+    }
+    return [];
+  }, [activeTab, statType, statsData, kpiCommerciauxData]);
+
+  const handleStatsExport = (format) => {
+    setContextMenu(null);
+    let payload;
+    const filenameBase = `statistiques-${activeTab}-${filters.date_debut}-${filters.date_fin}`;
+    if (activeTab === 'kpi-commerciaux' && kpiCommerciauxData?.rows) {
+      const rows = kpiCommerciauxData.rows;
+      const sum = (key) => rows.reduce((s, r) => s + (Number(r[key]) || 0), 0);
+      const hidden = columnPrefs.hidden || {};
+      const hideZero = columnPrefs.hideZeroColumns !== false;
+      const visibleKpiBlocks = {
+        honore: !hidden.honore && (!hideZero || sum('honore_a_suivre') > 0),
+        refuse: !hidden.refuse && (!hideZero || sum('rdv_refuse') > 0),
+        signatures: !hidden.signatures && (!hideZero || sum('signatures') > 0),
+      };
+      payload = buildKpiExport(kpiCommerciauxData, visibleKpiBlocks);
+    } else if (statsData?.data) {
+      const visibleEtats = getVisibleEtats(statsData.etats, statsData.data, columnPrefs);
+      const visibleTauxCols = getVisibleTauxColumns(statsData.data, columnPrefs);
+      payload = buildStatsTableExport(statsData, statType, visibleEtats, visibleTauxCols);
+    } else {
+      alert('Aucune donnée à exporter');
+      return;
+    }
+    runStatsExport(format, payload, filenameBase);
+  };
+
+  const handleStatsPrint = () => {
+    setContextMenu(null);
+    printStatsArea(statsPrintRef.current);
+  };
 
   const renderFilterForm = () => {
     return (
@@ -371,6 +472,8 @@ const Statistiques = () => {
     }
 
     const { etats, data, total } = statsData;
+    const visibleEtats = getVisibleEtats(etats, data, columnPrefs);
+    const visibleTauxCols = getVisibleTauxColumns(data, columnPrefs);
 
     if (statType === 'taux') {
       // Affichage en mode TAUX - Taux = positif / (positif + négatif)
@@ -386,9 +489,11 @@ const Statistiques = () => {
             <tr>
               <th>N°</th>
               <th>{statsData.name_stat}</th>
-              <th>NEUTRE</th>
-              <th>POSITIVE</th>
-              <th>NEGATIVE</th>
+              {visibleTauxCols.map((col) => (
+                <th key={col.id} className={`stat-${col.id === 'positive' ? 'positive' : col.id === 'negative' ? 'negative' : 'neutre'}`}>
+                  {col.label}
+                </th>
+              ))}
               <th>TAUX %</th>
             </tr>
           </thead>
@@ -397,24 +502,28 @@ const Statistiques = () => {
               <tr key={idx}>
                 <td className="stat-numero">{idx + 1}</td>
                 <td>{item.name}</td>
-                <td className="stat-neutre">{item.totals.neutre}</td>
-                <td className="stat-positive">{item.totals.positive}</td>
-                <td className="stat-negative">{item.totals.negative}</td>
+                {visibleTauxCols.map((col) => (
+                  <td
+                    key={col.id}
+                    className={col.id === 'positive' ? 'stat-positive' : col.id === 'negative' ? 'stat-negative' : 'stat-neutre'}
+                  >
+                    {col.getValue(item)}
+                  </td>
+                ))}
                 <td className="stat-taux">{calcTaux(item.totals.positive, item.totals.negative)}</td>
               </tr>
             ))}
             <tr className="total-row">
               <td className="stat-numero">—</td>
               <td><strong>TOTAL</strong></td>
-              <td className="stat-neutre">
-                <strong>{data.reduce((sum, item) => sum + item.totals.neutre, 0)}</strong>
-              </td>
-              <td className="stat-positive">
-                <strong>{totalPos}</strong>
-              </td>
-              <td className="stat-negative">
-                <strong>{totalNeg}</strong>
-              </td>
+              {visibleTauxCols.map((col) => (
+                <td
+                  key={col.id}
+                  className={col.id === 'positive' ? 'stat-positive' : col.id === 'negative' ? 'stat-negative' : 'stat-neutre'}
+                >
+                  <strong>{data.reduce((sum, item) => sum + (Number(col.getValue(item)) || 0), 0)}</strong>
+                </td>
+              ))}
               <td className="stat-taux"><strong>{calcTaux(totalPos, totalNeg)}</strong></td>
             </tr>
           </tbody>
@@ -431,7 +540,7 @@ const Statistiques = () => {
               <tr>
                 <th>N°</th>
                 <th>{statsData.name_stat}</th>
-                {etats.map(etat => (
+                {visibleEtats.map(etat => (
                   <th key={etat.id} {...getEtatStatCellProps(etat)}>
                     {etat.abbreviation} %
                   </th>
@@ -444,7 +553,7 @@ const Statistiques = () => {
                 <tr key={idx}>
                   <td className="stat-numero">{idx + 1}</td>
                   <td>{item.name}</td>
-                  {etats.map(etat => {
+                  {visibleEtats.map(etat => {
                     const count = item.stats[etat.id] || 0;
                     const pct = item.total > 0 ? ((count * 100) / item.total).toFixed(1) : '0';
                     return (
@@ -459,7 +568,7 @@ const Statistiques = () => {
               <tr className="total-row">
                 <td className="stat-numero">—</td>
                 <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>TOTAL</td>
-                {etats.map(etat => {
+                {visibleEtats.map(etat => {
                   const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                   const pct = total > 0 ? ((colTotal * 100) / total).toFixed(1) : '0';
                   return (
@@ -485,7 +594,7 @@ const Statistiques = () => {
               <tr>
                 <th>N°</th>
                 <th>{statsData.name_stat}</th>
-                {etats.map(etat => (
+                {visibleEtats.map(etat => (
                   <th key={etat.id} {...getEtatStatCellProps(etat)}>
                     {etat.abbreviation} %
                   </th>
@@ -498,7 +607,7 @@ const Statistiques = () => {
                 <tr key={idx}>
                   <td className="stat-numero">{idx + 1}</td>
                   <td>{item.name}</td>
-                  {etats.map(etat => {
+                  {visibleEtats.map(etat => {
                     const count = item.stats[etat.id] || 0;
                     const pct = total > 0 ? ((count * 100) / total).toFixed(1) : '0';
                     return (
@@ -515,7 +624,7 @@ const Statistiques = () => {
               <tr className="total-row">
                 <td className="stat-numero">—</td>
                 <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>TOTAL</td>
-                {etats.map(etat => {
+                {visibleEtats.map(etat => {
                   const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                   const pct = total > 0 ? ((colTotal * 100) / total).toFixed(1) : '0';
                   return (
@@ -537,7 +646,7 @@ const Statistiques = () => {
       return (
         <div className="stats-barres-container">
           <div className="stats-barres-legend">
-            {etats.map((etat) => {
+            {visibleEtats.map((etat) => {
               const etatCell = getEtatStatCellProps(etat);
               return (
                 <span
@@ -557,7 +666,7 @@ const Statistiques = () => {
                   {item.name}
                 </div>
                 <div className="stats-barres-track">
-                  {item.total > 0 && etats.map(etat => {
+                  {item.total > 0 && visibleEtats.map(etat => {
                     const count = item.stats[etat.id] || 0;
                     const pct = (count * 100) / item.total;
                     if (pct <= 0) return null;
@@ -581,7 +690,7 @@ const Statistiques = () => {
 
     if (statType === 'camembert') {
       // Camembert : répartition par état (total par état)
-      const pieData = etats.map(etat => {
+      const pieData = visibleEtats.map(etat => {
         const value = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
         return {
           name: etat.abbreviation,
@@ -632,7 +741,7 @@ const Statistiques = () => {
             <tr>
               <th>N°</th>
               <th>{statsData.name_stat}</th>
-              {etats.map(etat => (
+              {visibleEtats.map(etat => (
                 <th key={etat.id} {...getEtatStatCellProps(etat)}>
                   {etat.abbreviation}
                 </th>
@@ -645,7 +754,7 @@ const Statistiques = () => {
               <tr key={idx}>
                 <td className="stat-numero">{idx + 1}</td>
                 <td>{item.name}</td>
-                {etats.map(etat => {
+                {visibleEtats.map(etat => {
                   const count = item.stats[etat.id] || 0;
                   return (
                     <td key={etat.id} {...getEtatStatCellProps(etat)}>
@@ -661,7 +770,7 @@ const Statistiques = () => {
               <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>
                 TOTAL
               </td>
-              {etats.map(etat => {
+              {visibleEtats.map(etat => {
                 const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                 return (
                   <td key={etat.id} {...getEtatStatCellProps(etat)}>
@@ -689,6 +798,13 @@ const Statistiques = () => {
 
     const rows = kpiCommerciauxData.rows;
     const period = kpiCommerciauxData.period || {};
+    const sumKpi = (key) => rows.reduce((s, r) => s + (Number(r[key]) || 0), 0);
+    const hidden = columnPrefs.hidden || {};
+    const hideZero = columnPrefs.hideZeroColumns !== false;
+    const showHonore = !hidden.honore && (!hideZero || sumKpi('honore_a_suivre') > 0);
+    const showRefuse = !hidden.refuse && (!hideZero || sumKpi('rdv_refuse') > 0);
+    const showSignatures = !hidden.signatures && (!hideZero || sumKpi('signatures') > 0);
+
     const chartData = rows
       .filter((r) => r.total_rdv_honores > 0)
       .map((r, index) => ({
@@ -728,21 +844,21 @@ const Statistiques = () => {
           {formatKpiPeriodTitle(period.date_debut, period.date_fin)}
         </h3>
         <div className="kpi-commerciaux-grid">
-          {renderKpiTable(
+          {showHonore && renderKpiTable(
             'honore_a_suivre',
             'NBRE DE HONORÉ À SUIVRE',
             'kpi-col-honore',
             'taux_r2',
             'TAUX DE CONCRÉTISATION DES R2'
           )}
-          {renderKpiTable(
+          {showRefuse && renderKpiTable(
             'rdv_refuse',
             'NBRE DE RDV REFUSÉ',
             'kpi-col-refuse',
             'taux_refuses',
             'TAUX DE CONCRÉTISATION DES REFUSÉS'
           )}
-          {renderKpiTable(
+          {showSignatures && renderKpiTable(
             'signatures',
             'NBRE DE SIGNATURE',
             'kpi-col-signature',
@@ -850,15 +966,57 @@ const Statistiques = () => {
       </div>
 
       {activeTab === 'kpi-commerciaux' && kpiCommerciauxData && (
-        <div className="stats-results kpi-commerciaux-results">
-          {renderKpiCommerciaux()}
-        </div>
+        <StatsResultsActions
+          contextMenu={contextMenu}
+          onCloseContextMenu={() => setContextMenu(null)}
+          onExport={handleStatsExport}
+          onPrint={handleStatsPrint}
+          onOpenColumnFilter={() => {
+            setContextMenu(null);
+            setColumnFilterOpen(true);
+          }}
+          columnFilterOpen={columnFilterOpen}
+          onCloseColumnFilter={() => setColumnFilterOpen(false)}
+          toggleableColumns={toggleableColumns}
+          columnPrefs={columnPrefs}
+          onColumnPrefsChange={setColumnPrefs}
+        >
+          <div
+            ref={statsPrintRef}
+            className="stats-results kpi-commerciaux-results stats-results-interactive"
+            onContextMenu={handleResultsContextMenu}
+          >
+            <p className="stats-results-hint">Clic droit : exporter, imprimer ou choisir les colonnes</p>
+            {renderKpiCommerciaux()}
+          </div>
+        </StatsResultsActions>
       )}
 
       {activeTab !== 'kpi-commerciaux' && statsData && (
-        <div className="stats-results">
-          {renderStatsTable()}
-        </div>
+        <StatsResultsActions
+          contextMenu={contextMenu}
+          onCloseContextMenu={() => setContextMenu(null)}
+          onExport={handleStatsExport}
+          onPrint={handleStatsPrint}
+          onOpenColumnFilter={() => {
+            setContextMenu(null);
+            setColumnFilterOpen(true);
+          }}
+          columnFilterOpen={columnFilterOpen}
+          onCloseColumnFilter={() => setColumnFilterOpen(false)}
+          toggleableColumns={toggleableColumns}
+          columnPrefs={columnPrefs}
+          onColumnPrefsChange={setColumnPrefs}
+        >
+          <div
+            ref={statsPrintRef}
+            className="stats-results stats-results-interactive"
+            onContextMenu={handleResultsContextMenu}
+          >
+            <p className="stats-results-hint">Clic droit : exporter, imprimer ou choisir les colonnes</p>
+            {renderStatsTable()}
+          </div>
+        </StatsResultsActions>
       )}
     </div>
   );
