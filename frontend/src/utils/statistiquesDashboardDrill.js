@@ -6,6 +6,18 @@ const ENTITY_FIELD_BY_TAB = {
   statko: 'id_agent',
 };
 
+const FICHE_DATE_FIELDS = new Set(['date_insert_time', 'date_modif_time', 'date_rdv_time']);
+
+/** Date drill alignée sur l’onglet (évite fiches_histo hérité de l’onglet Confirmateur). */
+function getDrillDateField(activeTab, filters) {
+  if (activeTab === 'agent') return 'date_insert_time';
+  if (activeTab === 'commercial') {
+    return filters?.date === 'date_modif_time' ? 'date_modif_time' : 'date_rdv_time';
+  }
+  if (FICHE_DATE_FIELDS.has(filters?.date)) return filters.date;
+  return 'date_modif_time';
+}
+
 function toQuery(params) {
   const sp = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
@@ -107,10 +119,9 @@ export function buildDashboardDrillUrl({
     return `/dashboard?${toQuery(base)}`;
   }
 
-  // Fiches classiques
+  // Fiches classiques (centre, agent, stat KO)
   base.stats_drill_source = 'fiches';
-  const dateField =
-    activeTab === 'agent' ? 'date_insert_time' : filters.date || 'date_modif_time';
+  const dateField = getDrillDateField(activeTab, filters);
   base.stats_drill_date_field = dateField;
   base.date_champ = dateField;
 

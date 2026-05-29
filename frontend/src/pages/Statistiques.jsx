@@ -60,6 +60,8 @@ function formatPct(value) {
   return `${Number.isInteger(n) ? n : n.toFixed(1)}%`;
 }
 
+const FICHE_DATE_FILTER_VALUES = new Set(['date_insert_time', 'date_modif_time', 'date_rdv_time']);
+
 const Statistiques = () => {
   useForceDesktopViewport('statistiques-page');
   const [activeTab, setActiveTab] = useState('centre'); // centre, confirmateur, commercial, kpi-commerciaux, agent, statko
@@ -202,7 +204,13 @@ const Statistiques = () => {
       stat: statType,
       date_debut: filters.date_debut,
       date_fin: filters.date_fin,
-      date: activeTab === 'agent' ? 'date_insert_time' : filters.date,
+      date: activeTab === 'agent'
+        ? 'date_insert_time'
+        : activeTab === 'confirmateur'
+          ? 'fiches_histo'
+          : FICHE_DATE_FILTER_VALUES.has(filters.date)
+            ? filters.date
+            : 'date_modif_time',
       produit: filters.produit
     };
 
@@ -256,6 +264,13 @@ const Statistiques = () => {
 
   // Onglet AGENT : statistiques par date de saisie (insertion), pas par qualification
   useEffect(() => {
+    if (activeTab === 'centre' || activeTab === 'statko') {
+      setFilters((prev) =>
+        FICHE_DATE_FILTER_VALUES.has(prev.date)
+          ? prev
+          : { ...prev, date: 'date_modif_time' }
+      );
+    }
     if (activeTab === 'agent') {
       setFilters(prev => (prev.date === 'date_insert_time' ? prev : { ...prev, date: 'date_insert_time' }));
     }

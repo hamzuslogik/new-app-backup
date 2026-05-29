@@ -1201,7 +1201,7 @@ router.get('/', authenticate, async (req, res) => {
         params.push(id_confirmateur, id_confirmateur, id_confirmateur);
       }
     }
-    if (id_centre) {
+    if (id_centre && !(statsDrillHandled && statsDrill?.entityField === 'id_centre')) {
       whereConditions.push('fiche.id_centre = ?');
       params.push(id_centre);
     }
