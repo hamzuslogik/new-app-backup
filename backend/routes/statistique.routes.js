@@ -212,9 +212,9 @@ function isEtatGroupe0(etat) {
   return g === '0' || g === 0;
 }
 
-/** États finaux possibles d'un compte rendu (aligné compte-rendu.routes + porte ouverte / signer). */
+/** États finaux possibles d'un compte rendu (Signer = id 13 uniquement, pas PM/COMPLET/RETRACTER). */
 const ETATS_COMPTE_RENDU_STAT_IDS = new Set(
-  [8, 9, 12, 13, 16, 23, 34, 35, 38, 44, 45].map(String)
+  [8, 9, 12, 13, 23, 34, 35].map(String)
 );
 
 /** Stats commercial : compte_rendu_pending, filtre date = modification CR ou date RDV fiche. */
