@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Ba
 import './Statistiques.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
+import { getEtatContrastColor, getEtatStatCellStyle } from '../utils/etatColorContrast';
 
 const KPI_CHART_COLORS = [
   '#7030a0', '#4472c4', '#ed7d31', '#a5a5a5', '#ffc000',
@@ -428,7 +429,7 @@ const Statistiques = () => {
                 <th>N°</th>
                 <th>{statsData.name_stat}</th>
                 {etats.map(etat => (
-                  <th key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                  <th key={etat.id} style={getEtatStatCellStyle(etat)}>
                     {etat.abbreviation} %
                   </th>
                 ))}
@@ -444,7 +445,7 @@ const Statistiques = () => {
                     const count = item.stats[etat.id] || 0;
                     const pct = item.total > 0 ? ((count * 100) / item.total).toFixed(1) : '0';
                     return (
-                      <td key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                      <td key={etat.id} style={getEtatStatCellStyle(etat)}>
                         {pct}%
                       </td>
                     );
@@ -459,7 +460,7 @@ const Statistiques = () => {
                   const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                   const pct = total > 0 ? ((colTotal * 100) / total).toFixed(1) : '0';
                   return (
-                    <td key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                    <td key={etat.id} style={getEtatStatCellStyle(etat)}>
                       <strong>{pct}%</strong>
                     </td>
                   );
@@ -482,7 +483,7 @@ const Statistiques = () => {
                 <th>N°</th>
                 <th>{statsData.name_stat}</th>
                 {etats.map(etat => (
-                  <th key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                  <th key={etat.id} style={getEtatStatCellStyle(etat)}>
                     {etat.abbreviation} %
                   </th>
                 ))}
@@ -498,7 +499,7 @@ const Statistiques = () => {
                     const count = item.stats[etat.id] || 0;
                     const pct = total > 0 ? ((count * 100) / total).toFixed(1) : '0';
                     return (
-                      <td key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                      <td key={etat.id} style={getEtatStatCellStyle(etat)}>
                         {pct}%
                       </td>
                     );
@@ -515,7 +516,7 @@ const Statistiques = () => {
                   const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                   const pct = total > 0 ? ((colTotal * 100) / total).toFixed(1) : '0';
                   return (
-                    <td key={etat.id} style={{ backgroundColor: etat.color, color: etat.id === 1 ? 'black' : 'white', fontWeight: 800 }}>
+                    <td key={etat.id} style={getEtatStatCellStyle(etat)}>
                       <strong>{pct}%</strong>
                     </td>
                   );
@@ -534,7 +535,11 @@ const Statistiques = () => {
         <div className="stats-barres-container">
           <div className="stats-barres-legend">
             {etats.map(etat => (
-              <span key={etat.id} className="stats-barres-legend-item" style={{ backgroundColor: etat.color }}>
+              <span
+                key={etat.id}
+                className="stats-barres-legend-item"
+                style={{ backgroundColor: etat.color, color: getEtatContrastColor(etat.color) }}
+              >
                 {etat.abbreviation}
               </span>
             ))}
@@ -622,14 +627,7 @@ const Statistiques = () => {
               <th>N°</th>
               <th>{statsData.name_stat}</th>
               {etats.map(etat => (
-                <th
-                  key={etat.id}
-                  style={{
-                    backgroundColor: etat.color,
-                    color: etat.id === 1 ? 'black' : 'white',
-                    fontWeight: 800
-                  }}
-                >
+                <th key={etat.id} style={getEtatStatCellStyle(etat)}>
                   {etat.abbreviation}
                 </th>
               ))}
@@ -644,14 +642,7 @@ const Statistiques = () => {
                 {etats.map(etat => {
                   const count = item.stats[etat.id] || 0;
                   return (
-                    <td
-                      key={etat.id}
-                      style={{
-                        backgroundColor: etat.color,
-                        color: etat.id === 1 ? 'black' : 'white',
-                        fontWeight: 800
-                      }}
-                    >
+                    <td key={etat.id} style={getEtatStatCellStyle(etat)}>
                       {count}
                     </td>
                   );
@@ -667,14 +658,7 @@ const Statistiques = () => {
               {etats.map(etat => {
                 const colTotal = data.reduce((sum, item) => sum + (item.stats[etat.id] || 0), 0);
                 return (
-                  <td
-                    key={etat.id}
-                    style={{
-                      backgroundColor: etat.color,
-                      color: etat.id === 1 ? 'black' : 'white',
-                      fontWeight: 800
-                    }}
-                  >
+                  <td key={etat.id} style={getEtatStatCellStyle(etat)}>
                     {colTotal}
                   </td>
                 );
