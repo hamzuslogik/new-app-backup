@@ -91,11 +91,7 @@ const Statistiques = () => {
       stat: statType,
       date_debut: filters.date_debut,
       date_fin: filters.date_fin,
-      date: activeTab === 'agent'
-        ? 'date_insert_time'
-        : activeTab === 'commercial'
-          ? 'date_modif_time'
-          : filters.date,
+      date: activeTab === 'agent' ? 'date_insert_time' : filters.date,
       produit: filters.produit
     };
 
@@ -135,7 +131,10 @@ const Statistiques = () => {
       setFilters(prev => (prev.date === 'date_insert_time' ? prev : { ...prev, date: 'date_insert_time' }));
     }
     if (activeTab === 'commercial') {
-      setFilters(prev => (prev.date === 'date_modif_time' ? prev : { ...prev, date: 'date_modif_time' }));
+      setFilters((prev) => {
+        if (['date_modif_time', 'date_rdv_time'].includes(prev.date)) return prev;
+        return { ...prev, date: 'date_modif_time' };
+      });
     }
   }, [activeTab]);
 
@@ -164,7 +163,10 @@ const Statistiques = () => {
               {activeTab === 'agent' ? (
                 <option value="date_insert_time">Date Insertion (Saisie)</option>
               ) : activeTab === 'commercial' ? (
-                <option value="date_modif_time">Date Modification</option>
+                <>
+                  <option value="date_modif_time">Date Modification</option>
+                  <option value="date_rdv_time">Date Rendez-vous</option>
+                </>
               ) : (
                 <>
                   <option value="date_modif_time">Date Qualification (Modification)</option>

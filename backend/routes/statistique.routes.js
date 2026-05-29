@@ -212,14 +212,22 @@ function isEtatGroupe0(etat) {
   return g === '0' || g === 0;
 }
 
-/** Stats commercial : compte_rendu_pending uniquement, filtre date = date modification CR. */
-function buildCommercialCrSourceSql(ficheExtraConditions, excludeEtatIds = []) {
-  const dateCr = 'COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation)';
+/** Stats commercial : compte_rendu_pending, filtre date = modification CR ou date RDV fiche. */
+function buildCommercialCrSourceSql(ficheExtraConditions, excludeEtatIds = [], dateField = 'date_modif_time') {
   const etatCr = 'CAST(cr.id_etat_final AS CHAR)';
   const baseFiche = '(f.archive = 0 OR f.archive IS NULL) AND f.active = 1 AND (f.ko = 0 OR f.ko IS NULL)';
   const excludeEtatsSql = excludeEtatIds.length
     ? ` AND cr.id_etat_final NOT IN (${excludeEtatIds.map(() => '?').join(',')})`
     : '';
+
+  const dateFilterSql =
+    dateField === 'date_rdv_time'
+      ? `f.date_rdv_time IS NOT NULL
+      AND f.date_rdv_time != ''
+      AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?`
+      : `COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation) IS NOT NULL
+      AND COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation) >= ?
+      AND COALESCE(cr.date_modif, cr.date_creation, cr.date_approbation) <= ?`;
 
   return `
     SELECT ${etatCr} AS etat_key, cr.id_commercial AS entity_id
@@ -228,8 +236,7 @@ function buildCommercialCrSourceSql(ficheExtraConditions, excludeEtatIds = []) {
     WHERE ${baseFiche}
       AND cr.id_commercial IS NOT NULL AND cr.id_commercial > 0
       AND cr.id_etat_final IS NOT NULL
-      AND ${dateCr} IS NOT NULL
-      AND ${dateCr} >= ? AND ${dateCr} <= ?${excludeEtatsSql}${ficheExtraConditions}
+      AND ${dateFilterSql}${excludeEtatsSql}${ficheExtraConditions}
   `;
 }
 
@@ -259,9 +266,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Valeurs par défaut (AGENT = date de saisie / insertion)
     const champ_date = name_stat === 'AGENT'
       ? (date || 'date_insert_time')
-      : name_stat === 'COMMERCIAL'
-        ? 'date_modif_time'
-        : (date || 'date_modif_time');
+      : (date || 'date_modif_time');
     const startDate = date_debut || getTodayLocal();
     const endDate = date_fin || getTodayLocal();
     const statType = stat || 'net';
@@ -390,9 +395,10 @@ router.get('/all-stat', authenticate, async (req, res) => {
     // Onglet AGENT : toujours filtrer sur la date d'insertion (saisie)
     const dateFieldForQuery = name_stat === 'AGENT'
       ? 'date_insert_time'
-      : name_stat === 'COMMERCIAL'
-        ? 'date_modif_time'
-        : safeDateField;
+      : safeDateField;
+
+    const commercialDateField =
+      safeDateField === 'date_rdv_time' ? 'date_rdv_time' : 'date_modif_time';
 
     // Valider le champ de groupement
     const allowedGroupFields = ['id_centre', 'id_confirmateur', 'id_commercial', 'id_agent'];
@@ -427,7 +433,11 @@ router.get('/all-stat', authenticate, async (req, res) => {
     let stats;
 
     if (isCommercialStat) {
-      const crSql = buildCommercialCrSourceSql(commercialFicheExtra, etatGroupe0Ids);
+      const crSql = buildCommercialCrSourceSql(
+        commercialFicheExtra,
+        etatGroupe0Ids,
+        commercialDateField
+      );
       const extrasForUnion = [];
       if (produit && (produit === '1' || produit === '2')) extrasForUnion.push(parseInt(produit, 10));
       if (id_centre) extrasForUnion.push(parseInt(id_centre, 10));
