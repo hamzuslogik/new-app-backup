@@ -7,6 +7,7 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { cleanObservationCQ } from '../utils/cleanObservationCQ';
+import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
 import './CQSignatures.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -144,7 +145,7 @@ const CQSignatures = () => {
     return etat?.color || '#9cbfc8';
   };
   const getEtatTitle = (row) => {
-    return row.etat_titre || '-';
+    return getEtatDisplayWithSousEtat(row, etatsData || [], []);
   };
   const getSortValue = (row, key) => {
     switch (key) {
@@ -348,8 +349,8 @@ const CQSignatures = () => {
                     <td className="telephone-col">{sig.tel || sig.fiche_tel || '-'}</td>
                     <td className="cp-col">{sig.cp || '-'}</td>
                     <td className="date-rdv-col">{sig.date_planning ? formatRdvDateTime(sig.date_planning) : '-'}</td>
-                    <td className="etat-col">
-                      <span className="etat-badge" style={{ backgroundColor: getEtatColor(sig) }}>
+                    <td className="etat-col etat-col-cell">
+                      <span className="etat-badge etat-badge--wrap" style={{ backgroundColor: getEtatColor(sig) }}>
                         {getEtatTitle(sig)}
                       </span>
                     </td>

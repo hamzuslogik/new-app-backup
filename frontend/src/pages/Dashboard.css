@@ -1692,11 +1692,21 @@ button.stat-card.stat-card-clickable {
   white-space: nowrap;
 }
 
+.fiches-table td.etat-col-cell,
+.fiches-table td:nth-child(7) {
+  white-space: normal;
+  vertical-align: top;
+}
+
+.fiches-table td.etat-col-cell .etat-badge--wrap,
 .fiches-table td:nth-child(7) .etat-badge {
   white-space: normal;
   word-break: break-word;
+  overflow-wrap: anywhere;
   max-width: 100%;
   box-sizing: border-box;
+  line-height: 1.25;
+  display: inline-block;
 }
 
 /* Indicateurs */

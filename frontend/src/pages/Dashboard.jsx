@@ -14,6 +14,7 @@ import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
+import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
 import './Dashboard.css';
 
 function resolveDashboardFicheNumericId(fiche) {
@@ -1000,9 +1001,13 @@ const Dashboard = () => {
     return etat?.titre || '';
   };
 
-  // Libellé d'état à afficher : priorité au etat_titre renvoyé par l'API (affiche tous les états en session confirmateur, ex. en attente)
+  const sousEtats = sousEtatsData || [];
+
+  // Libellé d'état : pour les états Signer, ajouter le sous-état dans la même colonne (ex. SIGNER - COMPLETE)
   const getEtatDisplayName = (fiche) =>
-    (fiche?.etat_titre || getEtatName(fiche?.id_etat_final) || '').trim();
+    getEtatDisplayWithSousEtat(fiche, etats, sousEtats).trim() ||
+    getEtatName(fiche?.id_etat_final) ||
+    '';
 
   // Bulle au survol : nom, téléphone, puis commentaire.
   // — État actuel issu d’un compte rendu (dernière ligne fiches_histo.from_compte_rendu) → commentaire commercial (fiches).
@@ -2080,9 +2085,12 @@ const Dashboard = () => {
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
                         <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                        <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}>
+                        <td
+                          data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
+                          className="etat-col-cell"
+                        >
                           <span 
-                            className="etat-badge"
+                            className="etat-badge etat-badge--wrap"
                             style={{ backgroundColor: etatColor }}
                           >
                             {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}

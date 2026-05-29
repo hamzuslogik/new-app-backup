@@ -1480,6 +1480,7 @@ router.get('/', authenticate, async (req, res) => {
     const selectQuery = `SELECT fiche.*,
        etat.titre as etat_titre,
        etat.color as etat_color,
+       sous_etat_se.titre as sous_etat_titre,
        cq_e.titre as cqe,
        cq_d.titre as cqd,
        install.nom as installeur,
@@ -1493,6 +1494,7 @@ router.get('/', authenticate, async (req, res) => {
        ${qualifSelect}
        FROM fiches fiche
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
+       LEFT JOIN sous_etat sous_etat_se ON fiche.id_sous_etat = sous_etat_se.id
        LEFT JOIN cq_etat cq_e ON fiche.cq_etat = cq_e.id
        LEFT JOIN cq_dossier cq_d ON fiche.cq_dossier = cq_d.id
        LEFT JOIN installateurs install ON fiche.ph3_installateur = install.id

@@ -25,6 +25,25 @@ function getSousEtatTitle(fiche, sousEtats = []) {
   return sousEtats.find((s) => Number(s.id) === Number(sousEtatId))?.titre || '';
 }
 
+/** États « Signer » (liste + variantes) — affichage état + sous-état dans la même colonne */
+export const ETATS_SIGNER_IDS = [13, 16, 38, 44, 45];
+
+export function isSignerEtat(fiche, etats = []) {
+  const etatId = Number(getEtatId(fiche));
+  if (ETATS_SIGNER_IDS.includes(etatId)) return true;
+  const etatTitle = normalizeLabel(getEtatTitle(fiche, etats));
+  return etatTitle.includes('signer');
+}
+
+/** Libellé colonne État : « SIGNER - COMPLETE » pour les états signer ayant un sous-état */
+export function getEtatDisplayWithSousEtat(fiche, etats = [], sousEtats = []) {
+  const baseTitle = (getEtatTitle(fiche, etats) || '').trim() || '-';
+  if (!isSignerEtat(fiche, etats)) return baseTitle;
+  const sousTitle = (getSousEtatTitle(fiche, sousEtats) || '').trim();
+  if (!sousTitle) return baseTitle;
+  return `${baseTitle} - ${sousTitle}`;
+}
+
 export function isSignerCompletBySousEtat(fiche, etats = [], sousEtats = []) {
   const etatId = Number(getEtatId(fiche));
   const etatTitle = normalizeLabel(getEtatTitle(fiche, etats));

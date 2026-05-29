@@ -166,7 +166,8 @@
 }
 
 .cq-table th.etat-col,
-.cq-table td.etat-col {
+.cq-table td.etat-col,
+.cq-table td.etat-col-cell {
   width: 118px;
   min-width: 118px;
   max-width: 118px;
@@ -268,11 +269,18 @@
   text-align: center;
 }
 
-/* Si l'état est long, retour à la ligne dans la colonne */
+/* Si l'état est long (ex. SIGNER - COMPLETE), retour à la ligne dans la colonne */
+.cq-signatures-page .cq-table td.etat-col-cell {
+  white-space: normal;
+  vertical-align: top;
+}
+
+.cq-signatures-page .etat-badge.etat-badge--wrap,
 .cq-signatures-page .etat-badge {
   white-space: normal;
-  word-break: normal;
-  overflow-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   max-width: 100%;
-  line-height: 1.2;
+  line-height: 1.25;
+  display: inline-block;
 }
