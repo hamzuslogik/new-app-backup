@@ -77,22 +77,27 @@ async function insertAuditQualiteRdv(params) {
 }
 
 /**
- * Stats confirmation depuis audit_qualite_rdv (période = date_rdv_time).
+ * Stats confirmation depuis audit_qualite_rdv (période = date_audit).
  */
 async function fetchAuditQualiteRdvStats(startDate, endDate, idAgentQualiteConfirmation = null, encodeFicheId) {
   const agentFilterSql = idAgentQualiteConfirmation
     ? ' AND a.id_qualite_confirmation = ?'
     : '';
+  const agentFilterSqlNoAlias = idAgentQualiteConfirmation
+    ? ' AND id_qualite_confirmation = ?'
+    : '';
   const agentParams = idAgentQualiteConfirmation ? [idAgentQualiteConfirmation] : [];
+  const periodParams = [startDate, endDate, ...agentParams];
+  const listParams = [...periodParams, ...periodParams];
 
   const agentsOptions = await query(
     `SELECT DISTINCT u.id, u.pseudo, u.nom, u.prenom
      FROM audit_qualite_rdv a
      INNER JOIN utilisateurs u ON a.id_qualite_confirmation = u.id AND u.fonction = 4 AND u.etat > 0
-     WHERE a.date_rdv_time IS NOT NULL AND a.date_rdv_time != ''
-       AND a.date_rdv_time >= ? AND a.date_rdv_time <= ?
+     WHERE a.date_audit >= ? AND a.date_audit <= ?
+       ${agentFilterSql}
      ORDER BY u.pseudo ASC`,
-    [startDate, endDate]
+    periodParams
   );
 
   const rows = await query(
@@ -105,22 +110,21 @@ async function fetchAuditQualiteRdvStats(startDate, endDate, idAgentQualiteConfi
        fn.titre AS fonction_titre,
        c.titre AS centre_titre,
        COUNT(DISTINCT a.id_fiche) AS total_rdvs_audites,
-       SUM(
-         CASE
-           WHEN a.observation IS NOT NULL AND TRIM(a.observation) != '' THEN 1
-           ELSE 0
+       COUNT(
+         DISTINCT CASE
+           WHEN a.observation IS NOT NULL AND TRIM(a.observation) != '' THEN a.id_fiche
+           ELSE NULL
          END
        ) AS avec_observation
      FROM audit_qualite_rdv a
      INNER JOIN utilisateurs u ON a.id_qualite_confirmation = u.id AND u.fonction = 4 AND u.etat > 0
      LEFT JOIN fonctions fn ON u.fonction = fn.id
      LEFT JOIN centres c ON u.centre = c.id
-     WHERE a.date_rdv_time IS NOT NULL AND a.date_rdv_time != ''
-       AND a.date_rdv_time >= ? AND a.date_rdv_time <= ?
+     WHERE a.date_audit >= ? AND a.date_audit <= ?
        ${agentFilterSql}
      GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo, fn.titre, c.titre
      ORDER BY total_rdvs_audites DESC`,
-    [startDate, endDate, ...agentParams]
+    periodParams
   );
 
   const agents = (rows || []).map((row) => ({
@@ -156,11 +160,11 @@ async function fetchAuditQualiteRdvStats(startDate, endDate, idAgentQualiteConfi
        f.tel,
        f.cp,
        f.ville,
-       a.date_rdv_time,
+       COALESCE(a.date_rdv_time, f.date_rdv_time) AS date_rdv_time,
        a.date_audit,
        f.date_modif_time,
        a.observation AS observation_qualite,
-       a.id_etat_final,
+       COALESCE(a.id_etat_final, f.id_etat_final) AS id_etat_final,
        f.valider,
        u_aud.id AS auditeur_id,
        u_aud.pseudo AS auditeur_pseudo,
@@ -171,17 +175,49 @@ async function fetchAuditQualiteRdvStats(startDate, endDate, idAgentQualiteConfi
        po.id_fiche AS porte_ouverte_id_fiche
      FROM audit_qualite_rdv a
      INNER JOIN fiches f ON f.id = a.id_fiche
+     INNER JOIN (
+       SELECT id_fiche, MAX(id) AS max_audit_id
+       FROM audit_qualite_rdv
+       WHERE date_audit >= ? AND date_audit <= ?
+         ${agentFilterSqlNoAlias}
+       GROUP BY id_fiche
+     ) latest ON latest.max_audit_id = a.id
      LEFT JOIN utilisateurs u_aud ON a.id_qualite_confirmation = u_aud.id
      LEFT JOIN utilisateurs u1 ON f.id_confirmateur = u1.id
      LEFT JOIN produits p ON f.produit = p.id
      LEFT JOIN (SELECT DISTINCT id_fiche FROM porte_ouverte) po ON po.id_fiche = f.id
      WHERE (f.archive = 0 OR f.archive IS NULL)
-       AND a.date_rdv_time IS NOT NULL AND a.date_rdv_time != ''
-       AND a.date_rdv_time >= ? AND a.date_rdv_time <= ?
+       AND a.date_audit >= ? AND a.date_audit <= ?
        ${agentFilterSql}
-     ORDER BY a.date_rdv_time DESC, a.id DESC
+     ORDER BY a.date_audit DESC, a.id DESC
      LIMIT 1000`,
-    [startDate, endDate, ...agentParams]
+    listParams
+  );
+
+  const kpiRow = await queryOne(
+    `SELECT
+       COUNT(DISTINCT a.id_fiche) AS total_rdvs_audites,
+       SUM(
+         CASE
+           WHEN COALESCE(a.id_etat_final, f.id_etat_final) IN (13, 16, 38, 44, 45) THEN 1
+           ELSE 0
+         END
+       ) AS signatures,
+       SUM(CASE WHEN po.id_fiche IS NOT NULL THEN 1 ELSE 0 END) AS porte_ouverte
+     FROM audit_qualite_rdv a
+     INNER JOIN fiches f ON f.id = a.id_fiche
+     INNER JOIN (
+       SELECT id_fiche, MAX(id) AS max_audit_id
+       FROM audit_qualite_rdv
+       WHERE date_audit >= ? AND date_audit <= ?
+         ${agentFilterSqlNoAlias}
+       GROUP BY id_fiche
+     ) latest ON latest.max_audit_id = a.id
+     LEFT JOIN (SELECT DISTINCT id_fiche FROM porte_ouverte) po ON po.id_fiche = f.id
+     WHERE (f.archive = 0 OR f.archive IS NULL)
+       AND a.date_audit >= ? AND a.date_audit <= ?
+       ${agentFilterSql}`,
+    listParams
   );
 
   const rdvs_audites = (rdvsRows || []).map((r) => ({
@@ -209,16 +245,9 @@ async function fetchAuditQualiteRdvStats(startDate, endDate, idAgentQualiteConfi
     produit_nom: r.produit_nom,
   }));
 
-  const signedEtats = new Set([13, 16, 38, 44, 45]);
-  const signaturesCount = rdvs_audites.reduce(
-    (acc, r) => acc + (signedEtats.has(Number(r.id_etat_final)) ? 1 : 0),
-    0
-  );
-  const porteOuverteCount = rdvs_audites.reduce(
-    (acc, r) => acc + (r.has_porte_ouverte ? 1 : 0),
-    0
-  );
-  const totalRdvs = rdvs_audites.length;
+  const signaturesCount = parseInt(kpiRow?.signatures || 0, 10);
+  const porteOuverteCount = parseInt(kpiRow?.porte_ouverte || 0, 10);
+  const totalRdvs = parseInt(kpiRow?.total_rdvs_audites || 0, 10);
   const tauxSignature =
     totalRdvs > 0 ? Number(((signaturesCount / totalRdvs) * 100).toFixed(1)) : 0;
   const tauxPorteOuverte =
@@ -233,8 +262,8 @@ async function fetchAuditQualiteRdvStats(startDate, endDate, idAgentQualiteConfi
       prenom: u.prenom,
     })),
     totaux: {
-      ...totauxBase,
       total_rdvs_audites: totalRdvs,
+      avec_observation: totauxBase.avec_observation,
       signatures: signaturesCount,
       taux_signature: tauxSignature,
       porte_ouverte: porteOuverteCount,

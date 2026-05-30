@@ -882,7 +882,7 @@ const StatsAgentsQualite = () => {
                 </select>
               </div>
               <span className="tab-results-count">
-                {filteredRdvsAudites.length} RDV(s)
+                {filteredRdvsAudites.length} RDV(s) — période sur date d&apos;audit
               </span>
             </div>
             <div className="rdvs-kpi-tables">
@@ -934,6 +934,7 @@ const StatsAgentsQualite = () => {
                 <table className="fiches-table rdvs-audites-table">
                   <thead>
                     <tr>
+                      <th>Date audit</th>
                       <th>Date RDV</th>
                       <th>Nom / Prénom</th>
                       <th>Téléphone</th>
@@ -947,6 +948,7 @@ const StatsAgentsQualite = () => {
                   <tbody>
                     {filteredRdvsAudites.map((rdv) => (
                       <tr key={rdv.id}>
+                        <td>{formatDateTime(rdv.date_audit || rdv.date_modif_time)}</td>
                         <td>{formatDateTime(rdv.date_rdv_time)}</td>
                         <td>
                           <div className="name-cell">
@@ -1013,7 +1015,7 @@ const StatsAgentsQualite = () => {
             <div className="confirmation-audit-summary">
               <div className="totaux-metric totaux-audit">
                 <span className="totaux-value">{auditTotaux.total_rdvs_audites}</span>
-                <span className="totaux-label">RDVs audités (période)</span>
+                <span className="totaux-label">RDVs audités (date d&apos;audit)</span>
               </div>
               <div className="totaux-metric totaux-audit-obs">
                 <span className="totaux-value">{auditTotaux.avec_observation}</span>

@@ -4,6 +4,10 @@ const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = r
 const { checkPermissionCode } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
 const { encodeFicheId } = require('./fiche.routes');
+const {
+  isAuditQualiteRdvTableAvailable,
+  fetchAuditQualiteRdvStats,
+} = require('../utils/auditQualiteRdv');
 
 // Dates en heure locale : 1er du mois / aujourd'hui (évite UTC qui peut donner le 31 du mois précédent)
 function getFirstOfMonthLocal() {
@@ -3773,7 +3777,7 @@ async function fetchFichesAuditeesQualifList(startDate, endDate, idAgentQualite 
   }
 }
 
-/** RDV audités : source stats = fiches (id_qualite_confirmation, observation_qualite, date_rdv_time). */
+/** RDV audités : période = date_audit (table audit_qualite_rdv), repli fiches.date_modif_time si table absente. */
 async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQualiteConfirmation = null) {
   const empty = {
     agents: [],
@@ -3789,10 +3793,20 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
     rdvs_audites: [],
   };
   try {
+    if (await isAuditQualiteRdvTableAvailable()) {
+      return fetchAuditQualiteRdvStats(
+        startDate,
+        endDate,
+        idAgentQualiteConfirmation,
+        encodeFicheId
+      );
+    }
+
     const agentConfirmFilterSql = idAgentQualiteConfirmation
       ? ' AND f.id_qualite_confirmation = ?'
       : '';
     const agentConfirmParams = idAgentQualiteConfirmation ? [idAgentQualiteConfirmation] : [];
+    const periodParams = [startDate, endDate, ...agentConfirmParams];
 
     const agentsOptions = await query(
       `SELECT DISTINCT
@@ -3803,12 +3817,10 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
       FROM fiches f
       INNER JOIN utilisateurs u ON f.id_qualite_confirmation = u.id AND u.fonction = 4 AND u.etat > 0
       WHERE f.id_qualite_confirmation IS NOT NULL
-      AND f.date_rdv_time IS NOT NULL
-      AND f.date_rdv_time != ''
       AND (f.archive = 0 OR f.archive IS NULL)
-      AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?
+      AND f.date_modif_time >= ? AND f.date_modif_time <= ?
       ORDER BY u.pseudo ASC`,
-      [startDate, endDate]
+      periodParams
     );
 
     const rows = await query(
@@ -3821,11 +3833,11 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
         fn.titre AS fonction_titre,
         c.titre AS centre_titre,
         COUNT(DISTINCT f.id) AS total_rdvs_audites,
-        SUM(
-          CASE
+        COUNT(
+          DISTINCT CASE
             WHEN f.observation_qualite IS NOT NULL AND TRIM(f.observation_qualite) != ''
-            THEN 1
-            ELSE 0
+            THEN f.id
+            ELSE NULL
           END
         ) AS avec_observation
       FROM fiches f
@@ -3833,14 +3845,12 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
       LEFT JOIN fonctions fn ON u.fonction = fn.id
       LEFT JOIN centres c ON u.centre = c.id
       WHERE f.id_qualite_confirmation IS NOT NULL
-      AND f.date_rdv_time IS NOT NULL
-      AND f.date_rdv_time != ''
       AND (f.archive = 0 OR f.archive IS NULL)
-      AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?
+      AND f.date_modif_time >= ? AND f.date_modif_time <= ?
       ${agentConfirmFilterSql}
       GROUP BY u.id, u.pseudo, u.nom, u.prenom, u.photo, fn.titre, c.titre
       ORDER BY total_rdvs_audites DESC`,
-      [startDate, endDate, ...agentConfirmParams]
+      periodParams
     );
     const agents = (rows || []).map((row) => ({
       agent: {
@@ -3875,7 +3885,7 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
         f.cp,
         f.ville,
         f.date_rdv_time,
-        f.date_modif_time,
+        f.date_modif_time AS date_audit,
         f.observation_qualite,
         f.id_etat_final,
         f.valider,
@@ -3895,14 +3905,12 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
         FROM porte_ouverte
       ) po ON po.id_fiche = f.id
       WHERE f.id_qualite_confirmation IS NOT NULL
-      AND f.date_rdv_time IS NOT NULL
-      AND f.date_rdv_time != ''
       AND (f.archive = 0 OR f.archive IS NULL)
-      AND f.date_rdv_time >= ? AND f.date_rdv_time <= ?
+      AND f.date_modif_time >= ? AND f.date_modif_time <= ?
       ${agentConfirmFilterSql}
-      ORDER BY f.date_rdv_time DESC, f.id DESC
+      ORDER BY f.date_modif_time DESC, f.id DESC
       LIMIT 1000`,
-      [startDate, endDate, ...agentConfirmParams]
+      periodParams
     );
     const rdvs_audites = (rdvsRows || []).map((r) => ({
       id: r.id,
@@ -3913,7 +3921,8 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
       cp: r.cp,
       ville: r.ville,
       date_rdv_time: r.date_rdv_time,
-      date_modif_time: r.date_modif_time,
+      date_audit: r.date_audit,
+      date_modif_time: r.date_audit,
       observation_qualite: r.observation_qualite,
       id_etat_final: r.id_etat_final,
       valider: r.valider,
@@ -3937,12 +3946,11 @@ async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQua
       (acc, r) => acc + (r.has_porte_ouverte ? 1 : 0),
       0
     );
-    const totalRdvs = rdvs_audites.length;
+    const totalRdvs = totaux.total_rdvs_audites;
     const tauxSignature = totalRdvs > 0 ? Number(((signaturesCount / totalRdvs) * 100).toFixed(1)) : 0;
     const tauxPorteOuverte = totalRdvs > 0 ? Number(((porteOuverteCount / totalRdvs) * 100).toFixed(1)) : 0;
     const enrichedTotaux = {
       ...totaux,
-      total_rdvs_audites: totalRdvs,
       signatures: signaturesCount,
       taux_signature: tauxSignature,
       porte_ouverte: porteOuverteCount,
