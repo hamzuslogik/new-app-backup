@@ -1,0 +1,107 @@
+.qualite-confirmation-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-audit-rdv {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  background: #4a7a87;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-audit-rdv:hover {
+  background: #3d6570;
+}
+
+.qualite-confirmation-audit-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+}
+
+.qualite-confirmation-audit-modal {
+  background: #fff;
+  border-radius: 10px;
+  padding: 24px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.qualite-confirmation-audit-modal h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #333;
+}
+
+.qualite-confirmation-audit-modal-subtitle {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+.qualite-confirmation-audit-modal label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #444;
+}
+
+.qualite-confirmation-audit-modal textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.qualite-confirmation-audit-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn-audit-cancel {
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.btn-audit-save {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  background: #4a7a87;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-audit-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -3773,7 +3773,7 @@ async function fetchFichesAuditeesQualifList(startDate, endDate, idAgentQualite 
   }
 }
 
-/** RDV confirmés (état 7) audités par un agent qualité confirmation (fonction 4), période = date RDV. */
+/** RDV audités : source stats = fiches (id_qualite_confirmation, observation_qualite, date_rdv_time). */
 async function fetchQualiteConfirmationAuditStats(startDate, endDate, idAgentQualiteConfirmation = null) {
   const empty = {
     agents: [],

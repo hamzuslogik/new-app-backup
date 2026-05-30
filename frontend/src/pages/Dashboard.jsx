@@ -5,6 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
 import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSignature, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
+import {
+  QualiteConfirmationAuditButton,
+  QualiteConfirmationAuditModal,
+} from '../components/QualiteConfirmationAuditModal';
 import FicheDetailModal from '../components/FicheDetailModal';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import SystemMessageBanner from '../components/SystemMessageBanner';
@@ -147,6 +151,7 @@ const Dashboard = () => {
   const isConfirmateur = user?.fonction === 6;
   const isREConfirmation = user?.fonction === 14;
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
+  const isQualiteConfirmation = Number(user?.fonction) === 4;
   /** Menu contextuel (clic droit) sur les lignes du tableau : admin (1), backoffice (11), RP (13), RE (14) */
   const canFicheContextMenu = [1, 11, 13, 14].includes(Number(user?.fonction));
   const [showFilters, setShowFilters] = useState(true);
@@ -288,6 +293,7 @@ const Dashboard = () => {
   /** null | { hash: string, focusHistoriqueEtats?: boolean } */
   const [ficheDetailModal, setFicheDetailModal] = useState(null);
   const [ficheContextMenu, setFicheContextMenu] = useState(null);
+  const [auditFiche, setAuditFiche] = useState(null);
   const [etatModalFiche, setEtatModalFiche] = useState(null);
   const [etatModalNewId, setEtatModalNewId] = useState('');
   const [etatModalMotif, setEtatModalMotif] = useState('');
@@ -2148,35 +2154,43 @@ const Dashboard = () => {
                             {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
                             {indicators.rs && <span className="indicator rs" title="SEUL">SEUL</span>}
                           </div>
-                          <button
-                            onClick={() => {
-                              setFicheDetailModal({ hash: fiche.hash });
-                              setLastViewedFicheHash(fiche.hash);
-                            }}
-                            className="btn-detail"
-                            title="Voir les détails"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                          >
-                            <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
-                              {lastViewedFicheHash === fiche.hash && (
-                                <span
-                                  style={{
-                                    position: 'absolute',
-                                    top: '50%',
-                                    left: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    width: '28px',
-                                    height: '28px',
-                                    border: '3px solid #9e9e9e',
-                                    borderRadius: '1px',
-                                    backgroundColor: 'transparent',
-                                    boxSizing: 'border-box'
-                                  }}
-                                />
-                              )}
-                            </span>
-                          </button>
+                          <div className="qualite-confirmation-actions-cell dashboard-actions-cell">
+                            {isQualiteConfirmation && (
+                              <QualiteConfirmationAuditButton
+                                fiche={fiche}
+                                onClick={() => setAuditFiche(fiche)}
+                              />
+                            )}
+                            <button
+                              onClick={() => {
+                                setFicheDetailModal({ hash: fiche.hash });
+                                setLastViewedFicheHash(fiche.hash);
+                              }}
+                              className="btn-detail"
+                              title="Voir les détails"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                            >
+                              <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
+                                {lastViewedFicheHash === fiche.hash && (
+                                  <span
+                                    style={{
+                                      position: 'absolute',
+                                      top: '50%',
+                                      left: '50%',
+                                      transform: 'translate(-50%, -50%)',
+                                      width: '28px',
+                                      height: '28px',
+                                      border: '3px solid #9e9e9e',
+                                      borderRadius: '1px',
+                                      backgroundColor: 'transparent',
+                                      boxSizing: 'border-box'
+                                    }}
+                                  />
+                                )}
+                              </span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -2717,6 +2731,18 @@ const Dashboard = () => {
               Validation…
             </button>
           )}
+          {isQualiteConfirmation && (
+            <button
+              type="button"
+              className="dashboard-fiche-context-menu-item"
+              onClick={() => {
+                setAuditFiche(ficheContextMenu.fiche);
+                setFicheContextMenu(null);
+              }}
+            >
+              Audit…
+            </button>
+          )}
           <button
             type="button"
             className="dashboard-fiche-context-menu-item"
@@ -3040,6 +3066,14 @@ const Dashboard = () => {
             )}
           </div>
         </div>
+      )}
+
+      {auditFiche && (
+        <QualiteConfirmationAuditModal
+          fiche={auditFiche}
+          onClose={() => setAuditFiche(null)}
+          invalidateQueryKeys={[['fiches', appliedFilters, activeTab, debouncedQuickSearch, statsListOverride], ['fiches']]}
+        />
       )}
 
       <ScrollToTopButton />

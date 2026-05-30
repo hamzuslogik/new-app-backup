@@ -17,6 +17,7 @@ const {
 } = require('../utils/fichesKo');
 const { approveInsertionFromDonnees } = require('../utils/demandeInsertionApprove');
 const { handleDuplicateFicheWithAutorisation } = require('../utils/demandeInsertionAuto');
+const { insertAuditQualiteRdv } = require('../utils/auditQualiteRdv');
 const {
   parseStatsDrillQuery,
   isStatsDrillNarrowing,
@@ -4362,9 +4363,10 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     // Attribuer id_qualite_confirmation au premier enregistrement d'observation par un agent QC (fonction 4)
     if (Number(user.fonction) === 4 && field === 'observation_qualite' && !fiche.id_qualite_confirmation) {
       await query('UPDATE fiches SET id_qualite_confirmation = ? WHERE id = ?', [user.id, id]);
+      fiche.id_qualite_confirmation = user.id;
     }
 
-    // Mettre à jour le champ
+    // Mettre à jour le champ sur fiches (source de vérité affichage fiche + stats)
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     await query(
       `UPDATE fiches SET \`${dbField}\` = ?, date_modif_time = ? WHERE id = ?`,
@@ -4449,6 +4451,23 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
           date_fiche: fiche.date_insert_time ?? null
         });
       }
+    }
+
+    if (field === 'observation_qualite' && Number(user.fonction) === 4) {
+      const qualiteConfirmationId = fiche.id_qualite_confirmation || user.id;
+      // Historique complémentaire (la fiche reste la référence courante)
+      await insertAuditQualiteRdv({
+        id_fiche: parseInt(id, 10),
+        id_qualite_confirmation: qualiteConfirmationId,
+        observation: dbValue,
+        date_rdv_time: fiche.date_rdv_time || null,
+        id_etat_final: fiche.id_etat_final ?? null,
+        id_confirmateur: fiche.id_confirmateur ?? null,
+        id_centre: fiche.id_centre ?? null,
+        id_commercial: fiche.id_commercial ?? null,
+        id_agent: fiche.id_agent ?? null,
+        date_audit: now,
+      });
     }
 
     res.json({
@@ -6222,6 +6241,35 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             newValue
           );
         }
+      }
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(ficheData, 'observation_qualite') &&
+      Number(req.user.fonction) === 4
+    ) {
+      if (!fiche.id_qualite_confirmation) {
+        await query('UPDATE fiches SET id_qualite_confirmation = ? WHERE id = ?', [
+          req.user.id,
+          id,
+        ]);
+      }
+      const updatedForAudit = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
+      if (updatedForAudit) {
+        const auditNow = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        await insertAuditQualiteRdv({
+          id_fiche: parseInt(id, 10),
+          id_qualite_confirmation:
+            updatedForAudit.id_qualite_confirmation || req.user.id,
+          observation: updatedForAudit.observation_qualite || null,
+          date_rdv_time: updatedForAudit.date_rdv_time || null,
+          id_etat_final: updatedForAudit.id_etat_final ?? null,
+          id_confirmateur: updatedForAudit.id_confirmateur ?? null,
+          id_centre: updatedForAudit.id_centre ?? null,
+          id_commercial: updatedForAudit.id_commercial ?? null,
+          id_agent: updatedForAudit.id_agent ?? null,
+          date_audit: auditNow,
+        });
       }
     }
 
