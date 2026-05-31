@@ -13,7 +13,7 @@ const {
   buildCommentaireQualiteFromKo,
   isValidKoMotif,
   insertFicheKoRecord,
-  deleteFicheKoRecordsByFicheId,
+  clearFicheKoHistoryWhenKoRemoved,
 } = require('../utils/fichesKo');
 const { approveInsertionFromDonnees } = require('../utils/demandeInsertionApprove');
 const { handleDuplicateFicheWithAutorisation } = require('../utils/demandeInsertionAuto');
@@ -5031,7 +5031,7 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
 
     // Vérifier que la fiche existe (id_sous_etat, date_rdv_time pour fiches_histo)
     const fiche = await queryOne(
-      'SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time, commentaire_qualite FROM fiches WHERE id = ?',
+      'SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time, commentaire_qualite, ko FROM fiches WHERE id = ?',
       [id]
     );
     if (!fiche) {
@@ -5082,11 +5082,17 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
       );
     }
 
-    // Mettre à jour l'état vers "En-Attente" et date_appel_time automatiquement lors du changement d'état
+    const oldKoVal = fiche.ko != null ? Number(fiche.ko) : 0;
+
+    // Mettre à jour l'état vers "En-Attente" (validation hors KO) et retirer le flag KO
     await query(
-      'UPDATE fiches SET id_etat_final = ?, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
+      'UPDATE fiches SET id_etat_final = ?, ko = 0, hc = 0, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
       [newEtatId, now, now, id]
     );
+    if (oldKoVal === 1) {
+      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'ko', oldKoVal, 0);
+    }
+    await clearFicheKoHistoryWhenKoRemoved(id);
 
     // Enregistrer dans l'historique si changement d'état
     if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
@@ -5384,7 +5390,7 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
       });
     }
     const fiche = await queryOne(
-      'SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time, commentaire_qualite FROM fiches WHERE id = ?',
+      'SELECT id_etat_final, id_qualite, id_sous_etat, date_rdv_time, commentaire_qualite, ko FROM fiches WHERE id = ?',
       [id]
     );
     if (!fiche) {
@@ -5435,11 +5441,17 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
       await query('UPDATE fiches SET id_qualite = ? WHERE id = ?', [req.user.id, id]);
     }
     
-    // Mettre à jour la fiche avec l'état, le sous-état HC et le commentaire
+    const oldKoValHc = fiche.ko != null ? Number(fiche.ko) : 0;
+
+    // Mettre à jour la fiche avec l'état HC (hors KO) et retirer le flag KO
     await query(
-      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = ?, hc = 1, commentaire_qualite = ?, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
+      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = ?, hc = 1, ko = 0, commentaire_qualite = ?, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
       [newEtatId, id_sous_etat, commentaire_hc || null, now, now, id]
     );
+    if (oldKoValHc === 1) {
+      await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'ko', oldKoValHc, 0);
+    }
+    await clearFicheKoHistoryWhenKoRemoved(id);
     
     if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
       const histoConf = getHistoConfirmateur(req, fiche);
@@ -6648,8 +6660,8 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
         `UPDATE fiches SET ko = ?, date_modif_time = ? WHERE id = ?`,
         [newKoVal, now, id]
       );
-      if (newKoVal === 0 && oldKoVal === 1) {
-        await deleteFicheKoRecordsByFicheId(id);
+      if (newKoVal === 0) {
+        await clearFicheKoHistoryWhenKoRemoved(id);
       }
       if (oldKoVal !== newKoVal) {
         await logModification(

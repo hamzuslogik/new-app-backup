@@ -1,5 +1,23 @@
-const { query } = require('../config/database');
+const { query, queryOne } = require('../config/database');
 const { buildCommentaireQualiteFromKo, isValidKoMotif, normalizeKoMotif } = require('../constants/koMotifs');
+
+/**
+ * Indique si la fiche possède déjà au moins une ligne dans fiches_ko.
+ */
+async function ficheKoRecordExists(id_fiche) {
+  const idFiche = parseInt(id_fiche, 10);
+  if (!idFiche) return false;
+
+  try {
+    const row = await queryOne('SELECT id FROM fiches_ko WHERE id_fiche = ? LIMIT 1', [idFiche]);
+    return !!row;
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return false;
+    }
+    throw err;
+  }
+}
 
 /**
  * Enregistre une ligne dans fiches_ko (ignore si table absente).
@@ -56,6 +74,13 @@ async function insertFicheKoRecord({
 }
 
 /**
+ * Supprime l'historique fiches_ko lorsque la fiche n'est plus en KO (ko ≠ 1).
+ */
+async function clearFicheKoHistoryWhenKoRemoved(id_fiche) {
+  return deleteFicheKoRecordsByFicheId(id_fiche);
+}
+
+/**
  * Supprime les enregistrements fiches_ko d'une fiche (annulation du KO).
  */
 async function deleteFicheKoRecordsByFicheId(id_fiche) {
@@ -75,7 +100,9 @@ async function deleteFicheKoRecordsByFicheId(id_fiche) {
 }
 
 module.exports = {
+  ficheKoRecordExists,
   insertFicheKoRecord,
+  clearFicheKoHistoryWhenKoRemoved,
   deleteFicheKoRecordsByFicheId,
   buildCommentaireQualiteFromKo,
   isValidKoMotif,

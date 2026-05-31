@@ -1,6 +1,6 @@
 const XLSX = require('xlsx');
 const { query, queryOne } = require('../config/database');
-const { insertFicheKoRecord } = require('./fichesKo');
+const { ficheKoRecordExists, insertFicheKoRecord } = require('./fichesKo');
 
 const IMPORT_KO_MOTIF = 'TRAITEMENT';
 const IMPORT_KO_SOURCE = 'import_gestion';
@@ -447,7 +447,8 @@ async function applyKoImportMatch(row, userId) {
     await query('UPDATE fiches SET id_agent = ?, ko = 1 WHERE id = ?', [idAgent, idFiche]);
   }
 
-  if (oldKo !== 1) {
+  const hasKoRecord = await ficheKoRecordExists(idFiche);
+  if (!hasKoRecord) {
     await insertFicheKoRecord({
       id_fiche: idFiche,
       motif_ko: IMPORT_KO_MOTIF,
@@ -461,11 +462,17 @@ async function applyKoImportMatch(row, userId) {
       source: IMPORT_KO_SOURCE,
       date_ko: dateAppel || now,
     });
+  } else {
+    logLine('apply', line, 'fiches_ko déjà présent — mise à jour fiches uniquement', {
+      id_fiche: idFiche,
+    });
   }
 
   return {
     success: true,
-    message: 'Mis à jour (id_agent + ko=1)',
+    message: hasKoRecord
+      ? 'Mis à jour (fiches uniquement, fiches_ko déjà existant)'
+      : 'Mis à jour (id_agent + ko=1 + fiches_ko)',
     id_agent_avant: oldAgent,
     ko_avant: oldKo,
     date_appel_appliquee_ymd: dateAppelYmd,
