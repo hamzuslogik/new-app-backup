@@ -36,13 +36,13 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   // iOS Safari : empêcher le scroll horizontal du body pendant le modal (évite le rebond)
   useEffect(() => {
     if (!ficheHash) return undefined;
-    const prevBodyOverflowX = document.body.style.overflowX;
-    const prevHtmlOverflowX = document.documentElement.style.overflowX;
-    document.body.style.overflowX = 'hidden';
-    document.documentElement.style.overflowX = 'hidden';
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflowX = prevBodyOverflowX;
-      document.documentElement.style.overflowX = prevHtmlOverflowX;
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
     };
   }, [ficheHash]);
 

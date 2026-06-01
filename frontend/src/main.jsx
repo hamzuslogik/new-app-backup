@@ -7,8 +7,10 @@ import 'react-toastify/dist/ReactToastify.css';
 import App from './App';
 import './index.css';
 import { applyForceDesktopViewport } from './utils/applyForceDesktopViewport';
+import { initTableScrollContainment } from './utils/tableScrollContainment';
 
 applyForceDesktopViewport();
+initTableScrollContainment();
 
 const queryClient = new QueryClient({
   defaultOptions: {

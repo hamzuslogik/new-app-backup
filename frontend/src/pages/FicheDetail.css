@@ -627,11 +627,11 @@
 }
 
 .planning-table-container {
-  overflow-x: scroll;
+  overflow: auto;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overscroll-behavior-x: contain;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
   isolation: isolate;

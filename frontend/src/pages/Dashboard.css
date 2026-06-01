@@ -1257,16 +1257,16 @@ button.stat-card.stat-card-clickable {
 
 /* Tableau des fiches */
 .fiches-table-container {
-  overflow-x: auto;
+  overflow: auto;
   margin-bottom: 16px;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
+  overscroll-behavior: contain;
 }
 
 html[data-desktop-viewport] .fiches-table-container,
 html[data-desktop-viewport] .confirmateurs-table-container {
-  overflow-x: scroll;
-  overscroll-behavior-x: contain;
+  overflow: auto;
+  overscroll-behavior: contain;
   touch-action: pan-x pan-y;
 }
 
@@ -2459,7 +2459,7 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   z-index: 2000;
   overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior-x: none;
+  overscroll-behavior: contain;
   padding: 20px;
   display: flex;
   justify-content: center;
@@ -2476,7 +2476,7 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   min-height: 100vh;
   overflow-x: hidden;
   overflow-y: visible;
-  overscroll-behavior-x: none;
+  overscroll-behavior: contain;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
   transition: border-color 0.3s ease;
@@ -2594,12 +2594,12 @@ html[data-desktop-viewport] .confirmateurs-table-container {
 }
 
 .fiche-detail-modal-content .planning-table-container {
-  overflow-x: scroll !important;
+  overflow: auto !important;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
-  overscroll-behavior-x: contain !important;
+  overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-x pan-y;
   isolation: isolate;
@@ -2611,8 +2611,8 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   }
 
   .fiche-detail-modal-content .planning-table-container {
-    overflow-x: scroll !important;
-    overscroll-behavior-x: contain !important;
+    overflow: auto !important;
+    overscroll-behavior: contain !important;
   }
 }
 
@@ -2622,8 +2622,8 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   }
 
   .fiche-detail-modal-content .planning-table-container {
-    overflow-x: scroll !important;
-    overscroll-behavior-x: contain !important;
+    overflow: auto !important;
+    overscroll-behavior: contain !important;
   }
 }
 

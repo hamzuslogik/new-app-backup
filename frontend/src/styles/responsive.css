@@ -269,8 +269,10 @@ select {
 
 /* Container de tableau */
 .table-container-responsive {
-  overflow-x: auto;
+  overflow: auto;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
   width: 100%;
 }
 
