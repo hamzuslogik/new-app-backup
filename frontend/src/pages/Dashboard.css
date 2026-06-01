@@ -1260,6 +1260,14 @@ button.stat-card.stat-card-clickable {
   overflow-x: auto;
   margin-bottom: 16px;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+html[data-desktop-viewport] .fiches-table-container,
+html[data-desktop-viewport] .confirmateurs-table-container {
+  overflow-x: scroll;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
 }
 
 .fiches-table {

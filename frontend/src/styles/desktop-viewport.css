@@ -7,6 +7,7 @@ body[data-desktop-viewport] {
   overflow-x: auto !important;
   margin: 0 !important;
   -webkit-text-size-adjust: 100%;
+  overscroll-behavior-x: none;
 }
 
 html[data-desktop-viewport] #root,
@@ -18,12 +19,70 @@ body[data-desktop-viewport] .app {
 }
 
 body[data-desktop-viewport] .content-wrapper {
-  min-width: 1400px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 body[data-desktop-viewport] .content-wrapper > * {
-  min-width: 1400px;
-  max-width: none;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Un seul scroll horizontal de page : pas de scroll imbriqué sur les parents */
+body[data-desktop-viewport] .app,
+body[data-desktop-viewport] .main-content,
+body[data-desktop-viewport] .content-wrapper {
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none !important;
+}
+
+/* Scroll horizontal des tableaux isolé (évite le rebond Safari en fin de course) */
+body[data-desktop-viewport] .fiches-table-container,
+body[data-desktop-viewport] .confirmateurs-table-container,
+body[data-desktop-viewport] .table-container-responsive,
+body[data-desktop-viewport] [class*='-table-container'] {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  isolation: isolate;
+}
+
+body[data-desktop-viewport] .fiches-table,
+body[data-desktop-viewport] .confirmateurs-table {
+  width: max-content;
+  min-width: 100%;
+  max-width: none !important;
+}
+
+body.dashboard-page[data-desktop-viewport] .fiches-table-container,
+body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overscroll-behavior-x: contain !important;
+}
+
+body.dashboard-page[data-desktop-viewport] .fiches-table,
+body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
+  min-width: 100% !important;
+  width: max-content !important;
+  max-width: none !important;
+}
+
+body.dashboard-page[data-desktop-viewport] .dashboard {
+  overflow-x: hidden !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box;
 }
 
 /* Sidebar toujours visible (pas de mode overlay / hamburger) */
@@ -82,8 +141,13 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
 
   body[data-desktop-viewport] .content-wrapper,
   body[data-desktop-viewport] .content-wrapper > * {
-    min-width: 1400px !important;
-    max-width: none !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  body[data-desktop-viewport] .fiches-table-container,
+  body[data-desktop-viewport] .confirmateurs-table-container {
+    overscroll-behavior-x: contain !important;
   }
 
   html[data-desktop-viewport] .sidebar,

@@ -28,6 +28,14 @@
   min-width: 0; /* Permettre au flex de réduire la largeur si nécessaire */
 }
 
+/* Mode desktop forcé : scroll horizontal uniquement dans les tableaux, pas ici */
+html[data-desktop-viewport] .app,
+html[data-desktop-viewport] .main-content,
+html[data-desktop-viewport] .content-wrapper {
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none !important;
+}
+
 /* Sur desktop (> 1024px), le main-content ajuste la marge selon l'état du sidebar */
 @media (min-width: 1025px) {
   .main-content {
