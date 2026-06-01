@@ -33,6 +33,19 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   // Ne plus bloquer le scroll du body - le modal utilise le scroll de la page
   // useModalScrollLock(!!ficheHash);
 
+  // iOS Safari : empêcher le scroll horizontal du body pendant le modal (évite le rebond)
+  useEffect(() => {
+    if (!ficheHash) return undefined;
+    const prevBodyOverflowX = document.body.style.overflowX;
+    const prevHtmlOverflowX = document.documentElement.style.overflowX;
+    document.body.style.overflowX = 'hidden';
+    document.documentElement.style.overflowX = 'hidden';
+    return () => {
+      document.body.style.overflowX = prevBodyOverflowX;
+      document.documentElement.style.overflowX = prevHtmlOverflowX;
+    };
+  }, [ficheHash]);
+
   // Récupérer les données de la fiche pour obtenir la couleur de l'état
   const { data: ficheData } = useQuery(
     ['fiche', ficheHash],

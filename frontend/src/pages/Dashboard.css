@@ -2457,8 +2457,9 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 2000;
-  overflow-y: auto; /* Permettre le scroll de la page */
+  overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
   padding: 20px;
   display: flex;
   justify-content: center;
@@ -2469,13 +2470,13 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   position: relative;
   background: #f3f4f6;
   border-radius: 8px;
-  /* Largeur : 30 % de moins qu’avant (70 % × 0,7 ≈ 49 %) */
   max-width: 49%;
   min-width: 350px;
   width: 49%;
-  min-height: 100vh; /* Prendre au moins la hauteur de la fenêtre */
-  overflow-x: hidden; /* Empêcher la barre horizontale */
-  overflow-y: visible; /* Garder le comportement vertical actuel */
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: visible;
+  overscroll-behavior-x: none;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
   transition: border-color 0.3s ease;
@@ -2588,45 +2589,41 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-}
-
-/* Sur mobile, permettre le scroll horizontal pour afficher la largeur complète du tableau */
-@media (max-width: 768px) {
-  .fiche-detail-modal-content .planning-view {
-    overflow-x: auto !important; /* Permettre le scroll horizontal */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
-  }
-}
-
-@media (max-width: 480px) {
-  .fiche-detail-modal-content .planning-view {
-    overflow-x: auto !important; /* Permettre le scroll horizontal */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
-  }
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none !important;
 }
 
 .fiche-detail-modal-content .planning-table-container {
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   box-sizing: border-box !important;
-  -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+  overscroll-behavior-x: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y;
+  isolation: isolate;
 }
 
-/* Sur mobile, assurer que le conteneur permet le scroll horizontal */
 @media (max-width: 768px) {
+  .fiche-detail-modal-content .planning-view {
+    overflow-x: hidden !important;
+  }
+
   .fiche-detail-modal-content .planning-table-container {
-    overflow-x: auto !important; /* Permettre le scroll horizontal pour afficher la largeur complète du tableau */
-    overflow-y: visible !important;
-    -webkit-overflow-scrolling: touch !important;
+    overflow-x: scroll !important;
+    overscroll-behavior-x: contain !important;
   }
 }
 
 @media (max-width: 480px) {
+  .fiche-detail-modal-content .planning-view {
+    overflow-x: hidden !important;
+  }
+
   .fiche-detail-modal-content .planning-table-container {
-    overflow-x: auto !important; /* Permettre le scroll horizontal pour afficher la largeur complète du tableau */
-    overflow-y: visible !important;
-    -webkit-overflow-scrolling: touch !important;
+    overflow-x: scroll !important;
+    overscroll-behavior-x: contain !important;
   }
 }
 

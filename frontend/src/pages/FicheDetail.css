@@ -622,11 +622,19 @@
 /* Styles pour le planning dans le modal - réutilisés depuis Planning.css */
 .planning-view {
   width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 .planning-table-container {
-  overflow-x: auto;
+  overflow-x: scroll;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  isolation: isolate;
 }
 
 .planning-table {
