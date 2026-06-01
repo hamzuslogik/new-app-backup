@@ -1,118 +1,84 @@
-/* Désactiver la responsivité mobile - Forcer largeur minimale 1400px */
-/* Appliquer uniquement quand la classe dashboard-page est présente */
-html.dashboard-page,
-body.dashboard-page {
-  min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
-  overflow-x: auto !important; /* Permettre le scroll horizontal si nécessaire */
+/* Dashboard : content-wrapper aligné sur le header, pas de scroll horizontal de page */
+body.dashboard-page .app {
+  overflow-x: hidden;
+}
+
+body.dashboard-page .main-content {
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+body.dashboard-page .content-wrapper {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+body.dashboard-page .dashboard {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box;
+  overflow-x: hidden;
   margin: 0 !important;
 }
 
-/* Forcer les tableaux CRM à prendre toute la largeur dans Dashboard */
-.dashboard-page .fiches-table,
-.dashboard-page .confirmateurs-table {
-  min-width: 1400px !important;
-  width: 100% !important;
+body.dashboard-page .fiches-table-container,
+body.dashboard-page .confirmateurs-table-container {
+  min-width: 0 !important;
   max-width: 100% !important;
-  table-layout: fixed !important;
-  border-collapse: collapse !important;
+  width: 100% !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.dashboard-page .fiches-table-container,
-.dashboard-page .confirmateurs-table-container {
-  min-width: 1400px !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: auto !important; /* Permettre le scroll horizontal si nécessaire */
+body.dashboard-page .fiches-table,
+body.dashboard-page .confirmateurs-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
 }
 
-/* Désactiver toute règle responsive mobile existante */
-@media (max-width: 768px) {
-  .dashboard-page * {
-    max-width: none !important;
-  }
-  
+/* Téléphone / tablette (écran physique) : pas de min-width 1400px sur la page */
+@media screen and (max-device-width: 1024px) {
   html.dashboard-page,
   body.dashboard-page {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-    overflow-x: auto !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
   }
-  
-  .dashboard-page .dashboard {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-  }
-  
-  .dashboard-page .fiches-table,
-  .dashboard-page .confirmateurs-table {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-  }
-  
-  .dashboard-page .fiches-table-container,
-  .dashboard-page .confirmateurs-table-container {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-    overflow-x: auto !important;
+
+  body.dashboard-page #root,
+  body.dashboard-page .app {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
   }
 }
 
-@media (max-width: 480px) {
-  .dashboard-page * {
-    max-width: none !important;
-  }
-  
-  html.dashboard-page,
-  body.dashboard-page {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-    overflow-x: auto !important;
-  }
-  
-  .dashboard-page .dashboard {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-  }
-  
-  .dashboard-page .fiches-table,
-  .dashboard-page .confirmateurs-table {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-  }
-  
-  .dashboard-page .fiches-table-container,
-  .dashboard-page .confirmateurs-table-container {
-    min-width: 1400px !important;
-    width: auto !important;
-    max-width: none !important;
-    overflow-x: auto !important;
+/* Desktop large : layout 1400px+ */
+@media screen and (min-width: 1400px) {
+  body.dashboard-page .fiches-table,
+  body.dashboard-page .confirmateurs-table {
+    width: 100% !important;
+    table-layout: fixed !important;
   }
 }
 
 .dashboard {
   padding: 16px;
-  min-width: 1400px;
-  width: auto;
-  max-width: none;
-  overflow-x: visible;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
   margin: 0;
-}
-
-/* Forcer le dashboard dans Dashboard */
-.dashboard-page .dashboard {
-  min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
-  margin: 0 !important;
 }
 
 .dashboard-header {

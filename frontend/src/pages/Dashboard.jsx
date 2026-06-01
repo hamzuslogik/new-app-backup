@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { applyForceDesktopViewport } from '../utils/applyForceDesktopViewport';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
 import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSignature, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
@@ -93,57 +94,32 @@ const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = 'confirmed'; // Toujours 'confirmed' puisqu'il n'y a plus d'onglet
   
-  // Forcer le viewport à 1400px pour désactiver la responsivité mobile
+  // Mobile réel : viewport adapté à l'écran pour éviter le scroll horizontal de page
   useEffect(() => {
-    // Sauvegarder le viewport original
-    const originalViewport = document.querySelector('meta[name="viewport"]');
-    const originalContent = originalViewport?.getAttribute('content') || '';
-    
-    // Créer ou modifier la balise meta viewport
-    let viewport = document.querySelector('meta[name="viewport"]');
-    if (!viewport) {
-      viewport = document.createElement('meta');
-      viewport.setAttribute('name', 'viewport');
-      document.head.appendChild(viewport);
-    }
-    viewport.setAttribute('content', 'width=1400');
-    
-    // Ajouter une classe au body pour cibler uniquement cette page
     document.body.classList.add('dashboard-page');
     document.documentElement.classList.add('dashboard-page');
-    
-    // Forcer les styles sur html et body - utiliser min-width pour permettre le scroll si nécessaire
-    document.documentElement.style.minWidth = '1400px';
-    document.documentElement.style.width = 'auto';
-    document.documentElement.style.maxWidth = 'none';
-    document.documentElement.style.overflowX = 'auto'; // Permettre le scroll horizontal si nécessaire
-    document.body.style.minWidth = '1400px';
-    document.body.style.width = 'auto';
-    document.body.style.maxWidth = 'none';
-    document.body.style.overflowX = 'auto'; // Permettre le scroll horizontal si nécessaire
-    
-    // Nettoyage au démontage du composant
+
+    const viewport = document.querySelector('meta[name="viewport"]');
+    const isNarrowDevice =
+      window.matchMedia('(max-device-width: 1024px)').matches ||
+      window.screen.width <= 1024;
+
+    if (isNarrowDevice && viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1');
+      document.documentElement.style.minWidth = '';
+      document.documentElement.style.overflowX = 'hidden';
+      document.body.style.minWidth = '';
+      document.body.style.overflowX = 'hidden';
+    }
+
     return () => {
-      // Restaurer le viewport original
-      if (originalViewport && originalContent) {
-        originalViewport.setAttribute('content', originalContent);
-      } else if (viewport) {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1');
-      }
-      
-      // Retirer la classe du body
       document.body.classList.remove('dashboard-page');
       document.documentElement.classList.remove('dashboard-page');
-      
-      // Restaurer les styles html et body
       document.documentElement.style.minWidth = '';
-      document.documentElement.style.width = '';
-      document.documentElement.style.maxWidth = '';
       document.documentElement.style.overflowX = '';
       document.body.style.minWidth = '';
-      document.body.style.width = '';
-      document.body.style.maxWidth = '';
       document.body.style.overflowX = '';
+      applyForceDesktopViewport();
     };
   }, []);
   
