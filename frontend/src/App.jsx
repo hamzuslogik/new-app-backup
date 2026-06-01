@@ -60,13 +60,11 @@ import CodeSecours from './pages/CodeSecours';
 import BackofficeLoginRoute from './components/BackofficeLoginRoute';
 import Layout from './components/Layout';
 import HomeRedirect from './components/HomeRedirect';
-import ForceDesktopViewport from './components/ForceDesktopViewport';
 import './App.css';
 
 function App() {
   return (
     <AuthProvider>
-      <ForceDesktopViewport />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route

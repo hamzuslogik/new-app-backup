@@ -6,9 +6,6 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import App from './App';
 import './index.css';
-import { applyForceDesktopViewport } from './utils/applyForceDesktopViewport';
-
-applyForceDesktopViewport();
 
 const queryClient = new QueryClient({
   defaultOptions: {
