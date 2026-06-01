@@ -1,9 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
 
 const SidebarContext = createContext(null);
 
 // Fonction pour déterminer l'état initial du sidebar selon la taille d'écran
 const getInitialSidebarState = () => {
+  if (FORCE_DESKTOP_VIEWPORT) {
+    return false;
+  }
   const width = window.innerWidth;
   const isDesktop = width > 1024;
   // Sur mobile/tablet, le sidebar est fermé par défaut
@@ -13,14 +17,24 @@ const getInitialSidebarState = () => {
 
 export const SidebarProvider = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarState());
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [isTablet, setIsTablet] = useState(window.innerWidth > 768 && window.innerWidth <= 1024);
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
+  const [isMobile, setIsMobile] = useState(
+    FORCE_DESKTOP_VIEWPORT ? false : window.innerWidth <= 768
+  );
+  const [isTablet, setIsTablet] = useState(
+    FORCE_DESKTOP_VIEWPORT ? false : window.innerWidth > 768 && window.innerWidth <= 1024
+  );
+  const [isDesktop, setIsDesktop] = useState(
+    FORCE_DESKTOP_VIEWPORT ? true : window.innerWidth > 1024
+  );
   const [autoHideEnabled, setAutoHideEnabled] = useState(false); // Pour masquer automatiquement quand il y a des données
   const userToggleRef = React.useRef(false); // Flag pour savoir si l'utilisateur a ouvert manuellement
 
   // Détecter la taille de l'écran
   useEffect(() => {
+    if (FORCE_DESKTOP_VIEWPORT) {
+      return undefined;
+    }
+
     const handleResize = () => {
       const width = window.innerWidth;
       const mobile = width <= 768;
@@ -69,9 +83,6 @@ export const SidebarProvider = ({ children }) => {
     // Utiliser une fonction de callback pour s'assurer que l'état est à jour
     setSidebarCollapsed(prevCollapsed => {
       const newState = !prevCollapsed;
-      const width = window.innerWidth;
-      const mobile = width <= 768;
-      const tablet = width > 768 && width <= 1024;
       // Si on ouvre manuellement, désactiver l'auto-hide et marquer comme toggle manuel
       if (newState === false) {
         setAutoHideEnabled(false);
@@ -105,7 +116,7 @@ export const SidebarProvider = ({ children }) => {
   const setAutoHide = React.useCallback((enabled) => {
     // Ne pas activer l'auto-hide sur mobile/tablet, seulement sur desktop
     // Sur mobile/tablet, le sidebar doit rester contrôlé manuellement par l'utilisateur
-    if (!isDesktop) {
+    if (!FORCE_DESKTOP_VIEWPORT && !isDesktop) {
       return; // Ignorer l'auto-hide sur mobile/tablet
     }
 

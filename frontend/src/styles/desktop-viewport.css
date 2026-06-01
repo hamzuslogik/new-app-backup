@@ -1,4 +1,4 @@
-/* Affichage desktop forcé (hook useForceDesktopViewport / même logique que Dashboard) */
+/* Affichage desktop forcé sur mobile (Android / iOS) — global via main.jsx + index.html */
 html[data-desktop-viewport],
 body[data-desktop-viewport] {
   min-width: 1400px !important;
@@ -8,6 +8,13 @@ body[data-desktop-viewport] {
   margin: 0 !important;
 }
 
+html[data-desktop-viewport] #root,
+body[data-desktop-viewport] #root,
+body[data-desktop-viewport] .app {
+  min-width: 1400px;
+  max-width: none;
+}
+
 body[data-desktop-viewport] .content-wrapper {
   min-width: 1400px;
 }
@@ -15,6 +22,14 @@ body[data-desktop-viewport] .content-wrapper {
 body[data-desktop-viewport] .content-wrapper > * {
   min-width: 1400px;
   max-width: none;
+}
+
+body[data-desktop-viewport] .main-content {
+  margin-left: 200px !important;
+}
+
+body[data-desktop-viewport] .main-content.sidebar-collapsed {
+  margin-left: 0 !important;
 }
 
 @media (max-width: 768px) {
