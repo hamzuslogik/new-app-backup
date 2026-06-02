@@ -308,12 +308,14 @@ body.planning-commercial-page {
   color: #666;
 }
 
-/* Tableau — scroll horizontal unique via la page (pas de overflow sur le conteneur) */
+/* Tableau — même logique que Dashboard (.dashboard-page .fiches-table) : largeur min 1400px, colonnes fixes */
 html.planning-commercial-page .planning-commercial .fiches-table-container,
 body.planning-commercial-page .planning-commercial .fiches-table-container {
-  overflow: visible !important;
-  overscroll-behavior: auto;
-  touch-action: auto;
+  min-width: 1400px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
   margin-bottom: 16px;
 }
 
@@ -328,8 +330,9 @@ body.planning-commercial-page .planning-commercial .fiches-table {
 }
 
 .fiches-table-container {
-  overflow: visible;
+  overflow-x: auto;
   margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .fiches-table {
