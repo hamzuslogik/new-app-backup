@@ -2457,13 +2457,15 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 2000;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  overscroll-behavior: none;
   padding: 20px;
+  padding-top: max(20px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  box-sizing: border-box;
 }
 
 .fiche-detail-modal-content {
@@ -2473,10 +2475,12 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   max-width: 49%;
   min-width: 350px;
   width: 49%;
-  min-height: 100vh;
+  max-height: calc(100dvh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  min-height: 0;
   overflow-x: hidden;
-  overflow-y: visible;
-  overscroll-behavior: contain;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
   transition: border-color 0.3s ease;
@@ -2797,19 +2801,19 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     width: 98% !important;
     min-width: 95% !important;
-    max-height: none !important;
-    height: auto !important;
-    min-height: 95vh !important;
-    overflow-x: hidden !important; /* Pas de scroll horizontal */
-    overflow-y: visible !important; /* Pas de scroll vertical interne */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+    max-height: calc(100dvh - 2vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: none !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 }
 
 @media (max-width: 480px) {
   .fiche-detail-modal-overlay {
     padding: 0.5vh 0.5vw !important;
-    padding-top: 0.5vh !important;
+    padding-top: max(0.5vh, env(safe-area-inset-top, 0px)) !important;
     background: rgba(0, 0, 0, 0.5) !important; /* Opacité normale */
   }
 
@@ -2817,13 +2821,13 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 100% !important; /* Largeur maximale pour très petits écrans */
     width: 100% !important;
     min-width: 98% !important;
-    max-height: none !important;
-    height: auto !important;
-    min-height: 98vh !important;
+    max-height: calc(100dvh - 1vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 0 !important;
     border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
-    overflow-x: hidden !important; /* Pas de scroll horizontal */
-    overflow-y: visible !important; /* Pas de scroll vertical interne */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: none !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 }
 
@@ -3694,13 +3698,15 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     min-width: 95% !important; /* Largeur minimale en mode mobile */
-    min-height: 100vh !important; /* Prendre au moins la hauteur de la fenêtre */
-    overflow-x: hidden !important; /* Pas de scroll horizontal */
-    overflow-y: visible !important; /* Pas de scroll vertical interne */
+    max-height: calc(100dvh - 4vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: none !important;
     border-radius: 8px !important; /* Rétablir le border-radius */
     display: flex !important;
     flex-direction: column !important;
-    margin: 20px auto !important; /* Centrer horizontalement */
+    margin: 0 auto !important; /* Centrer horizontalement */
     position: relative !important;
     padding-bottom: 20px !important; /* Espace en bas pour que le bouton soit visible */
   }

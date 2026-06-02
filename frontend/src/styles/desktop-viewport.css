@@ -65,7 +65,15 @@ body[data-desktop-viewport] .planning-table {
 
 /* Détail fiche (modal + page) */
 body[data-desktop-viewport] .fiche-detail-modal-overlay {
-  overscroll-behavior: contain !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+body[data-desktop-viewport] .fiche-detail-modal-content {
+  overflow-y: auto !important;
+  overscroll-behavior: none !important;
+  -webkit-overflow-scrolling: touch !important;
+  max-height: calc(100dvh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
 }
 
 body[data-desktop-viewport] .fiche-detail-modal-content,
@@ -83,7 +91,8 @@ body[data-desktop-viewport] .fiche-detail .planning-view {
 body[data-desktop-viewport] .fiche-detail-modal-content .planning-table-container,
 body[data-desktop-viewport] .fiche-detail .planning-table-container {
   overflow: auto !important;
-  overscroll-behavior: contain !important;
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: none !important;
 }
 
 body[data-desktop-viewport] .fiche-detail-modal-content .planning-table,

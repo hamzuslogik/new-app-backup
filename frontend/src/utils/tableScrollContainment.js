@@ -32,8 +32,13 @@ function isPageLinkedTableContainer(el) {
 
 function findTableScrollContainer(target) {
   if (!(target instanceof Element)) return null;
-  if (target.matches(TABLE_SCROLL_SELECTOR)) return target;
-  return target.closest(TABLE_SCROLL_SELECTOR);
+  const container = target.matches(TABLE_SCROLL_SELECTOR)
+    ? target
+    : target.closest(TABLE_SCROLL_SELECTOR);
+  if (container?.closest('.fiche-detail-modal-content')) {
+    return null;
+  }
+  return container;
 }
 
 function getScrollLimits(el) {

@@ -7,7 +7,7 @@ import FicheDetail from '../pages/FicheDetail';
 import { FaTimes } from 'react-icons/fa';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import usePreventOverscrollBounce from '../hooks/usePreventOverscrollBounce';
 import { getHomePage } from '../utils/getHomePage';
 import '../pages/Dashboard.css';
 
@@ -30,10 +30,9 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   // Session commercial : éviter la fermeture accidentelle au clic extérieur
   const isBackdropCloseLocked = isOverlayLocked || Number(user?.fonction) === 5;
 
-  // Ne plus bloquer le scroll du body - le modal utilise le scroll de la page
-  // useModalScrollLock(!!ficheHash);
+  usePreventOverscrollBounce(modalContentRef, !!ficheHash);
 
-  // iOS Safari : empêcher le scroll horizontal du body pendant le modal (évite le rebond)
+  // Bloquer le scroll du body ; le scroll vertical est dans .fiche-detail-modal-content
   useEffect(() => {
     if (!ficheHash) return undefined;
     const prevBodyOverflow = document.body.style.overflow;
