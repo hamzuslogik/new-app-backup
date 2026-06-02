@@ -8,6 +8,7 @@ import { FaTimes } from 'react-icons/fa';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 import usePreventOverscrollBounce from '../hooks/usePreventOverscrollBounce';
+import useModalVisualViewport from '../hooks/useModalVisualViewport';
 import { getHomePage } from '../utils/getHomePage';
 import '../pages/Dashboard.css';
 
@@ -31,6 +32,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const isBackdropCloseLocked = isOverlayLocked;
 
   usePreventOverscrollBounce(modalOverlayRef, !!ficheHash);
+  useModalVisualViewport(modalOverlayRef, modalContentRef, !!ficheHash);
 
   // Bloquer le scroll du body ; le scroll vertical est dans .fiche-detail-modal-content
   useEffect(() => {
