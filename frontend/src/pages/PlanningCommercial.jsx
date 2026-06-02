@@ -19,7 +19,7 @@ const getLocalDateStr = () => {
 };
 
 const PlanningCommercial = () => {
-  useForceDesktopViewport('planning-commercial-page');
+  useForceDesktopViewport('planning-commercial-page', { viewportMode: 'device' });
   const { user, hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('today'); // 'yesterday', 'today', 'tomorrow', 'week', 'nextWeek'

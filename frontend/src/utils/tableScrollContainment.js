@@ -8,10 +8,9 @@ const TABLE_SCROLL_SELECTOR = [
 
 const SCROLL_EDGE_EPS = 2;
 
-/** Page zoomée (pinch) : laisser le scroll se propager au document aux bords du tableau. */
-function isPageZoomed() {
-  const vv = window.visualViewport;
-  return Boolean(vv && vv.scale > 1.02);
+/** Planning commercial : un seul scroll horizontal (document), pas de containment. */
+function isPlanningCommercialPage() {
+  return document.body?.classList.contains('planning-commercial-page');
 }
 
 function findTableScrollContainer(target) {
@@ -54,6 +53,7 @@ export function initTableScrollContainment() {
     'touchmove',
     (e) => {
       if (e.touches.length !== 1) return;
+      if (isPlanningCommercialPage()) return;
 
       const container = findTableScrollContainer(e.target) || activeContainer;
       if (!container) return;
@@ -82,13 +82,10 @@ export function initTableScrollContainment() {
       if (horizontal) {
         const goingLeft = dx > 0;
         const goingRight = dx < 0;
-        if (maxLeft > 0 && ((goingLeft && atLeft) || (goingRight && atRight))) {
-          if (!isPageZoomed()) {
-            e.preventDefault();
-          }
+        if (maxLeft <= 0) {
           return;
         }
-        if (maxLeft <= 0 && Math.abs(dx) > 3 && !isPageZoomed()) {
+        if ((goingLeft && atLeft) || (goingRight && atRight)) {
           e.preventDefault();
         }
         return;

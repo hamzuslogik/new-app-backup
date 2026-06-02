@@ -117,28 +117,41 @@ body.dashboard-page[data-desktop-viewport] .dashboard {
   box-sizing: border-box;
 }
 
-/* Planning commercial : scroll tableau isolé, même logique que dashboard */
+/* Planning commercial : un seul scroll horizontal (document), pas de scroll imbriqué */
+body.planning-commercial-page[data-desktop-viewport] .main-content,
+body.planning-commercial-page[data-desktop-viewport] .content-wrapper {
+  overflow-x: visible !important;
+  max-width: none !important;
+}
+
+body.planning-commercial-page[data-desktop-viewport] .content-wrapper > .planning-commercial {
+  min-width: 1400px !important;
+  max-width: none !important;
+  width: auto !important;
+}
+
+body.planning-commercial-page[data-desktop-viewport] .planning-commercial,
+body.planning-commercial-page[data-desktop-viewport] .planning-commercial-results {
+  overflow-x: visible !important;
+  min-width: 1400px !important;
+  max-width: none !important;
+  width: auto !important;
+  box-sizing: border-box;
+}
+
 body.planning-commercial-page[data-desktop-viewport] .planning-commercial .fiches-table-container {
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
   min-width: 0 !important;
   width: 100% !important;
-  max-width: 100% !important;
-  overflow: auto !important;
-  overscroll-behavior: contain !important;
-  touch-action: pan-x pan-y pinch-zoom;
+  max-width: none !important;
+  touch-action: auto;
 }
 
 body.planning-commercial-page[data-desktop-viewport] .planning-commercial .fiches-table {
   min-width: 1400px !important;
-  width: max-content !important;
+  width: 1400px !important;
   max-width: none !important;
-}
-
-body.planning-commercial-page[data-desktop-viewport] .planning-commercial {
-  overflow-x: hidden !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  width: 100% !important;
-  box-sizing: border-box;
 }
 
 /* Sidebar toujours visible */
