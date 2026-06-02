@@ -28,8 +28,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const isOverlayLocked =
     lockedFromOption ||
     (searchParams.get('overlay') === '1' && searchParams.get('close') === '0');
-  // Session commercial : éviter la fermeture accidentelle au clic extérieur
-  const isBackdropCloseLocked = isOverlayLocked || Number(user?.fonction) === 5;
+  const isBackdropCloseLocked = isOverlayLocked;
 
   usePreventOverscrollBounce(modalOverlayRef, !!ficheHash);
 
