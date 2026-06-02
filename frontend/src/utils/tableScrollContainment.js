@@ -7,6 +7,24 @@ const TABLE_SCROLL_SELECTOR = [
 ].join(', ');
 
 const SCROLL_EDGE_EPS = 2;
+const ZOOM_SCALE_THRESHOLD = 1.02;
+
+function isPageVisuallyZoomed() {
+  const vv = window.visualViewport;
+  return Boolean(vv && vv.scale > ZOOM_SCALE_THRESHOLD);
+}
+
+function getPageScrollRoot() {
+  return document.scrollingElement || document.documentElement;
+}
+
+function getPageScrollLimits() {
+  const root = getPageScrollRoot();
+  return {
+    root,
+    maxLeft: Math.max(0, root.scrollWidth - root.clientWidth),
+  };
+}
 
 function findTableScrollContainer(target) {
   if (!(target instanceof Element)) return null;
@@ -76,6 +94,33 @@ export function initTableScrollContainment() {
       if (horizontal) {
         const goingLeft = dx > 0;
         const goingRight = dx < 0;
+        const zoomed = isPageVisuallyZoomed();
+
+        if (zoomed) {
+          const { root, maxLeft: pageMaxLeft } = getPageScrollLimits();
+          const pageSl = root.scrollLeft;
+          const pageAtLeft = pageSl <= SCROLL_EDGE_EPS;
+          const pageAtRight = pageSl >= pageMaxLeft - SCROLL_EDGE_EPS;
+
+          if (goingRight && atRight && !pageAtRight && pageMaxLeft > 0) {
+            root.scrollLeft = Math.min(pageMaxLeft, pageSl - dx);
+            e.preventDefault();
+            return;
+          }
+          if (goingLeft && atLeft && !pageAtLeft) {
+            root.scrollLeft = Math.max(0, pageSl - dx);
+            e.preventDefault();
+            return;
+          }
+          if (maxLeft <= 0 && Math.abs(dx) > 3) {
+            return;
+          }
+          if (maxLeft > 0 && ((goingLeft && atLeft) || (goingRight && atRight))) {
+            return;
+          }
+          return;
+        }
+
         if (maxLeft > 0 && ((goingLeft && atLeft) || (goingRight && atRight))) {
           e.preventDefault();
           return;
