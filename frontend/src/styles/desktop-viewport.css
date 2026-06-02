@@ -117,6 +117,18 @@ body.dashboard-page[data-desktop-viewport] .dashboard {
   box-sizing: border-box;
 }
 
+/* Planning commercial : tableau lié à la page (scroll H uniquement sur html/body) */
+body.planning-commercial-page[data-desktop-viewport] .planning-commercial .fiches-table-container.table-page-scroll {
+  overflow-x: visible !important;
+  overflow-y: auto !important;
+  max-width: none !important;
+  min-width: 1400px !important;
+  width: 100% !important;
+  overscroll-behavior-x: auto !important;
+  overscroll-behavior-y: contain !important;
+  touch-action: pan-y pinch-zoom;
+}
+
 /* Sidebar toujours visible */
 html[data-desktop-viewport] .sidebar,
 html[data-desktop-viewport] .sidebar.collapsed {

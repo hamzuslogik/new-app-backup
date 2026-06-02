@@ -26,6 +26,10 @@ function getPageScrollLimits() {
   };
 }
 
+function isPageLinkedTableContainer(el) {
+  return el?.classList?.contains('table-page-scroll');
+}
+
 function findTableScrollContainer(target) {
   if (!(target instanceof Element)) return null;
   if (target.matches(TABLE_SCROLL_SELECTOR)) return target;
@@ -90,6 +94,11 @@ export function initTableScrollContainment() {
       const atBottom = st >= maxTop - SCROLL_EDGE_EPS;
 
       const horizontal = Math.abs(dx) >= Math.abs(dy);
+      const pageLinked = isPageLinkedTableContainer(containerEl);
+
+      if (pageLinked && horizontal) {
+        return;
+      }
 
       if (horizontal) {
         const goingLeft = dx > 0;

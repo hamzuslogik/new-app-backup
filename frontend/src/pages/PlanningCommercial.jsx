@@ -757,7 +757,7 @@ const PlanningCommercial = () => {
           </div>
         ) : (
           <>
-            <div className="fiches-table-container">
+            <div className="fiches-table-container table-page-scroll">
               <table className="fiches-table">
                 <thead>
                   <tr>
