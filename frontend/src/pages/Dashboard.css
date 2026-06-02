@@ -2457,8 +2457,10 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 2000;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
   padding: 20px;
   padding-top: max(20px, env(safe-area-inset-top, 0px));
   padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
@@ -2475,12 +2477,10 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   max-width: 49%;
   min-width: 350px;
   width: 49%;
-  max-height: calc(100dvh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-  min-height: 0;
+  min-height: 100vh;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
   overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
   transition: border-color 0.3s ease;
@@ -2801,12 +2801,9 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     width: 98% !important;
     min-width: 95% !important;
-    max-height: calc(100dvh - 2vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
-    min-height: 0 !important;
+    min-height: 95vh !important;
     overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: none !important;
-    -webkit-overflow-scrolling: touch !important;
+    overflow-y: visible !important;
   }
 }
 
@@ -2821,13 +2818,10 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 100% !important; /* Largeur maximale pour très petits écrans */
     width: 100% !important;
     min-width: 98% !important;
-    max-height: calc(100dvh - 1vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
-    min-height: 0 !important;
+    min-height: 98vh !important;
     border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
     overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: none !important;
-    -webkit-overflow-scrolling: touch !important;
+    overflow-y: visible !important;
   }
 }
 
@@ -3698,15 +3692,13 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     min-width: 95% !important; /* Largeur minimale en mode mobile */
-    max-height: calc(100dvh - 4vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
-    min-height: 0 !important;
+    min-height: 100vh !important;
     overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: none !important;
+    overflow-y: visible !important;
     border-radius: 8px !important; /* Rétablir le border-radius */
     display: flex !important;
     flex-direction: column !important;
-    margin: 0 auto !important; /* Centrer horizontalement */
+    margin: 20px auto !important; /* Centrer horizontalement */
     position: relative !important;
     padding-bottom: 20px !important; /* Espace en bas pour que le bouton soit visible */
   }

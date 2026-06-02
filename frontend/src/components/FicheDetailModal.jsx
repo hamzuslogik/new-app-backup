@@ -19,6 +19,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const userRef = React.useRef(user);
   userRef.current = user;
   const modalContentRef = React.useRef(null);
+  const modalOverlayRef = React.useRef(null);
   const isDirectAccess = React.useRef(false);
   const searchParams = new URLSearchParams(location.search);
   const lockedFromOption = options?.closeMode === '0';
@@ -30,7 +31,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   // Session commercial : éviter la fermeture accidentelle au clic extérieur
   const isBackdropCloseLocked = isOverlayLocked || Number(user?.fonction) === 5;
 
-  usePreventOverscrollBounce(modalContentRef, !!ficheHash);
+  usePreventOverscrollBounce(modalOverlayRef, !!ficheHash);
 
   // Bloquer le scroll du body ; le scroll vertical est dans .fiche-detail-modal-content
   useEffect(() => {
@@ -160,6 +161,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
 
   const modalContent = (
     <div
+      ref={modalOverlayRef}
       className="fiche-detail-modal-overlay"
       onClick={isBackdropCloseLocked ? undefined : onClose}
     >

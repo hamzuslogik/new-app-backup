@@ -65,15 +65,15 @@ body[data-desktop-viewport] .planning-table {
 
 /* Détail fiche (modal + page) */
 body[data-desktop-viewport] .fiche-detail-modal-overlay {
-  overflow: hidden !important;
-  overscroll-behavior: none !important;
-}
-
-body[data-desktop-viewport] .fiche-detail-modal-content {
+  overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: none !important;
   -webkit-overflow-scrolling: touch !important;
-  max-height: calc(100dvh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+}
+
+body[data-desktop-viewport] .fiche-detail-modal-content {
+  overflow-y: visible !important;
+  overscroll-behavior: none !important;
 }
 
 body[data-desktop-viewport] .fiche-detail-modal-content,
