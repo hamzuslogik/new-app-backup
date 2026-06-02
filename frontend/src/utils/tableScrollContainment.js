@@ -96,7 +96,17 @@ export function initTableScrollContainment() {
       const horizontal = Math.abs(dx) >= Math.abs(dy);
       const pageLinked = isPageLinkedTableContainer(containerEl);
 
-      if (pageLinked && horizontal) {
+      if (pageLinked) {
+        if (horizontal) {
+          const { root, maxLeft: pageMaxLeft } = getPageScrollLimits();
+          if (pageMaxLeft > 0) {
+            root.scrollLeft = Math.min(
+              pageMaxLeft,
+              Math.max(0, root.scrollLeft - dx)
+            );
+            e.preventDefault();
+          }
+        }
         return;
       }
 
