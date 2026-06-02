@@ -51,7 +51,7 @@ body[data-desktop-viewport] .planning-table-container {
   overflow: auto !important;
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y pinch-zoom;
   isolation: isolate;
 }
 
@@ -110,6 +110,30 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 }
 
 body.dashboard-page[data-desktop-viewport] .dashboard {
+  overflow-x: hidden !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* Planning commercial : scroll tableau isolé, même logique que dashboard */
+body.planning-commercial-page[data-desktop-viewport] .planning-commercial .fiches-table-container {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: auto !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+body.planning-commercial-page[data-desktop-viewport] .planning-commercial .fiches-table {
+  min-width: 1400px !important;
+  width: max-content !important;
+  max-width: none !important;
+}
+
+body.planning-commercial-page[data-desktop-viewport] .planning-commercial {
   overflow-x: hidden !important;
   min-width: 0 !important;
   max-width: 100% !important;
