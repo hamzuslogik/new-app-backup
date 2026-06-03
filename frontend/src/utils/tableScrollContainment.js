@@ -8,19 +8,10 @@ const TABLE_SCROLL_SELECTOR = [
 
 const SCROLL_EDGE_EPS = 2;
 
-function isPageLinkedTableContainer(el) {
-  return el?.classList?.contains('table-page-scroll');
-}
-
 function findTableScrollContainer(target) {
   if (!(target instanceof Element)) return null;
-  const container = target.matches(TABLE_SCROLL_SELECTOR)
-    ? target
-    : target.closest(TABLE_SCROLL_SELECTOR);
-  if (isPageLinkedTableContainer(container)) {
-    return null;
-  }
-  return container;
+  if (target.matches(TABLE_SCROLL_SELECTOR)) return target;
+  return target.closest(TABLE_SCROLL_SELECTOR);
 }
 
 function getScrollLimits(el) {
@@ -57,7 +48,6 @@ export function initTableScrollContainment() {
     'touchmove',
     (e) => {
       if (e.touches.length !== 1) return;
-      if (document.body.classList.contains('planning-commercial-page')) return;
 
       const container = findTableScrollContainer(e.target) || activeContainer;
       if (!container) return;

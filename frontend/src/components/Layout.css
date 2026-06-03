@@ -29,12 +29,9 @@
 }
 
 /* Mode desktop forcé : scroll horizontal uniquement dans les tableaux, pas ici */
-html[data-desktop-viewport]:not(.planning-commercial-page) .app,
-html[data-desktop-viewport]:not(.planning-commercial-page) .main-content,
-html[data-desktop-viewport]:not(.planning-commercial-page) .content-wrapper,
-body[data-desktop-viewport]:not(.planning-commercial-page) .app,
-body[data-desktop-viewport]:not(.planning-commercial-page) .main-content,
-body[data-desktop-viewport]:not(.planning-commercial-page) .content-wrapper {
+html[data-desktop-viewport] .app,
+html[data-desktop-viewport] .main-content,
+html[data-desktop-viewport] .content-wrapper {
   overflow-x: hidden !important;
   overscroll-behavior-x: none !important;
 }
