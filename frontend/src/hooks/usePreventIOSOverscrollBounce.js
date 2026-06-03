@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 
-const EDGE_EPS = 2;
-const MIN_OVERSCROLL_PX = 4;
-const ZOOM_THRESHOLD = 1.02;
+const PAGE_CLASS = 'planning-commercial-page';
 
 function isIOSTouchDevice() {
   return (
@@ -11,55 +9,81 @@ function isIOSTouchDevice() {
   );
 }
 
-function isPageZoomed() {
-  const vv = window.visualViewport;
-  return Boolean(vv && vv.scale > ZOOM_THRESHOLD);
-}
-
-function getDocumentScrollRoot() {
-  return document.scrollingElement || document.documentElement;
-}
-
-function getVerticalScrollRoot() {
-  const wrapper = document.querySelector('.content-wrapper');
-  if (wrapper && wrapper.scrollHeight > wrapper.clientHeight + EDGE_EPS) {
-    return wrapper;
-  }
-  return getDocumentScrollRoot();
-}
-
-function getHorizontalScrollRoot() {
-  return getDocumentScrollRoot();
-}
-
-function getScrollRoot(horizontal) {
-  if (isPageZoomed()) {
-    return getDocumentScrollRoot();
-  }
-  return horizontal ? getHorizontalScrollRoot() : getVerticalScrollRoot();
+function isPlanningCommercialActive() {
+  return (
+    document.body.classList.contains(PAGE_CLASS) ||
+    document.documentElement.classList.contains(PAGE_CLASS)
+  );
 }
 
 /**
- * Bloque uniquement le rebond : le geste ne peut plus faire avancer le scroll.
+ * @returns {false|null|true}
+ *   false = cet élément peut encore scroller dans cette direction
+ *   true  = rebond à bloquer sur cet élément
+ *   null  = pas scrollable sur cet axe, remonter au parent
  */
-function shouldBlockBounce(root, dx, dy) {
-  const maxTop = Math.max(0, root.scrollHeight - root.clientHeight);
-  const maxLeft = Math.max(0, root.scrollWidth - root.clientWidth);
-  const horizontal = Math.abs(dx) >= Math.abs(dy);
+function overscrollOnElement(el, dx, dy) {
+  const style = window.getComputedStyle(el);
+  const horizontal = Math.abs(dx) > Math.abs(dy);
 
-  if (horizontal) {
-    if (maxLeft <= EDGE_EPS || Math.abs(dx) < MIN_OVERSCROLL_PX) return false;
-    const nextLeft = Math.min(maxLeft, Math.max(0, root.scrollLeft - dx));
-    return nextLeft === root.scrollLeft;
+  const canScrollY =
+    (style.overflowY === 'auto' ||
+      style.overflowY === 'scroll' ||
+      style.overflowY === 'overlay') &&
+    el.scrollHeight > el.clientHeight + 1;
+
+  const canScrollX =
+    (style.overflowX === 'auto' ||
+      style.overflowX === 'scroll' ||
+      style.overflowX === 'overlay') &&
+    el.scrollWidth > el.clientWidth + 1;
+
+  if (horizontal && canScrollX) {
+    const atLeft = el.scrollLeft <= 0;
+    const atRight = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
+    if (dx > 0 && atLeft) return true;
+    if (dx < 0 && atRight) return true;
+    return false;
   }
 
-  if (maxTop <= EDGE_EPS || Math.abs(dy) < MIN_OVERSCROLL_PX) return false;
-  const nextTop = Math.min(maxTop, Math.max(0, root.scrollTop - dy));
-  return nextTop === root.scrollTop;
+  if (!horizontal && canScrollY) {
+    const atTop = el.scrollTop <= 0;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    if (dy > 0 && atTop) return true;
+    if (dy < 0 && atBottom) return true;
+    return false;
+  }
+
+  return null;
+}
+
+function shouldPreventOverscroll(target, dx, dy) {
+  let el = target instanceof Element ? target : null;
+
+  while (el && el !== document.documentElement) {
+    const result = overscrollOnElement(el, dx, dy);
+    if (result === false) return false;
+    if (result === true) return true;
+    el = el.parentElement;
+  }
+
+  const roots = [
+    document.scrollingElement,
+    document.documentElement,
+    document.body,
+  ].filter(Boolean);
+
+  for (const root of roots) {
+    const result = overscrollOnElement(root, dx, dy);
+    if (result === false) return false;
+    if (result === true) return true;
+  }
+
+  return false;
 }
 
 /**
- * iOS Safari : pas de rebond élastique aux limites, scroll normal conservé (y compris après zoom).
+ * iOS Safari — Planning commercial : anti-rebond, scroll + zoom inchangés.
  */
 export function usePreventIOSOverscrollBounce(enabled = true) {
   useEffect(() => {
@@ -75,7 +99,7 @@ export function usePreventIOSOverscrollBounce(enabled = true) {
     };
 
     const onTouchMove = (e) => {
-      if (e.touches.length !== 1) return;
+      if (!isPlanningCommercialActive() || e.touches.length !== 1) return;
 
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
@@ -86,10 +110,7 @@ export function usePreventIOSOverscrollBounce(enabled = true) {
 
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
 
-      const horizontal = Math.abs(dx) >= Math.abs(dy);
-      const root = getScrollRoot(horizontal);
-
-      if (shouldBlockBounce(root, dx, dy)) {
+      if (shouldPreventOverscroll(e.target, dx, dy)) {
         e.preventDefault();
       }
     };

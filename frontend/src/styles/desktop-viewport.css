@@ -31,9 +31,9 @@ body[data-desktop-viewport] .content-wrapper > * {
 }
 
 /* Pas de scroll horizontal imbriqué sur les parents de tableaux */
-body[data-desktop-viewport] .app,
-body[data-desktop-viewport] .main-content,
-body[data-desktop-viewport] .content-wrapper {
+body[data-desktop-viewport]:not(.planning-commercial-page) .app,
+body[data-desktop-viewport]:not(.planning-commercial-page) .main-content,
+body[data-desktop-viewport]:not(.planning-commercial-page) .content-wrapper {
   overflow-x: hidden !important;
   overscroll-behavior-x: none !important;
 }
@@ -120,16 +120,23 @@ body.dashboard-page[data-desktop-viewport] .dashboard {
 /* Planning commercial : tableau collé à la page, scroll H + zoom sur document */
 body.planning-commercial-page[data-desktop-viewport],
 html.planning-commercial-page[data-desktop-viewport] {
-  overflow-x: auto !important;
+  overflow: auto !important;
   overscroll-behavior: none !important;
+  -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 body.planning-commercial-page[data-desktop-viewport] .app,
 body.planning-commercial-page[data-desktop-viewport] .main-content,
 body.planning-commercial-page[data-desktop-viewport] .content-wrapper {
+  overflow: visible !important;
   overflow-x: visible !important;
+  overflow-y: visible !important;
   overscroll-behavior: none !important;
+  -webkit-overflow-scrolling: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  flex: 1 0 auto !important;
 }
 
 body.planning-commercial-page[data-desktop-viewport] .content-wrapper > * {
@@ -205,10 +212,15 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
     overscroll-behavior: none !important;
   }
 
-  body[data-desktop-viewport] .content-wrapper,
-  body[data-desktop-viewport] .content-wrapper > * {
+  body[data-desktop-viewport]:not(.planning-commercial-page) .content-wrapper,
+  body[data-desktop-viewport]:not(.planning-commercial-page) .content-wrapper > * {
     min-width: 0 !important;
     max-width: 100% !important;
+  }
+
+  body.planning-commercial-page[data-desktop-viewport] .content-wrapper,
+  body.planning-commercial-page[data-desktop-viewport] .content-wrapper > * {
+    max-width: none !important;
   }
 
   body[data-desktop-viewport] .fiches-table-container,

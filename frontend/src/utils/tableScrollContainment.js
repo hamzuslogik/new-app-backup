@@ -57,6 +57,7 @@ export function initTableScrollContainment() {
     'touchmove',
     (e) => {
       if (e.touches.length !== 1) return;
+      if (document.body.classList.contains('planning-commercial-page')) return;
 
       const container = findTableScrollContainer(e.target) || activeContainer;
       if (!container) return;
