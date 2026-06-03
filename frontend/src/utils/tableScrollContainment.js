@@ -8,10 +8,19 @@ const TABLE_SCROLL_SELECTOR = [
 
 const SCROLL_EDGE_EPS = 2;
 
+function isPageLinkedTableContainer(el) {
+  return el?.classList?.contains('table-page-scroll');
+}
+
 function findTableScrollContainer(target) {
   if (!(target instanceof Element)) return null;
-  if (target.matches(TABLE_SCROLL_SELECTOR)) return target;
-  return target.closest(TABLE_SCROLL_SELECTOR);
+  const container = target.matches(TABLE_SCROLL_SELECTOR)
+    ? target
+    : target.closest(TABLE_SCROLL_SELECTOR);
+  if (isPageLinkedTableContainer(container)) {
+    return null;
+  }
+  return container;
 }
 
 function getScrollLimits(el) {
