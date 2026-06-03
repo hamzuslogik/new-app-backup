@@ -71,6 +71,7 @@ body[data-desktop-viewport] .fiche-detail-modal-overlay {
 
 body[data-desktop-viewport] .fiche-detail-modal-content {
   overflow: hidden !important;
+  height: calc(100dvh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
   max-height: calc(100dvh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
   overscroll-behavior: none !important;
 }
@@ -81,6 +82,12 @@ body[data-desktop-viewport] .fiche-detail-modal-scroll {
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-y pinch-zoom !important;
   overscroll-behavior: none !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+body[data-desktop-viewport] .fiche-detail-modal-scroll .compte-rendu-section {
+  overflow: visible !important;
 }
 
 body[data-desktop-viewport] .fiche-detail-modal-content,

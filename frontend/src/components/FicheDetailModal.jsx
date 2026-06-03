@@ -33,7 +33,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const isBackdropCloseLocked = isOverlayLocked;
 
   usePreventOverscrollBounce(modalScrollRef, !!ficheHash);
-  useFicheDetailModalIosScroll(modalOverlayRef, modalScrollRef, !!ficheHash);
+  useFicheDetailModalIosScroll(modalOverlayRef, modalScrollRef, modalContentRef, !!ficheHash);
 
   // Bloquer le scroll du body ; le scroll vertical est dans .fiche-detail-modal-content
   useEffect(() => {
