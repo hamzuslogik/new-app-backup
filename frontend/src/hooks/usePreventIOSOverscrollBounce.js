@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 
 const EDGE_EPS = 2;
+const MIN_OVERSCROLL_PX = 4;
+const ZOOM_THRESHOLD = 1.02;
 
 function isIOSTouchDevice() {
   return (
@@ -9,46 +11,55 @@ function isIOSTouchDevice() {
   );
 }
 
+function isPageZoomed() {
+  const vv = window.visualViewport;
+  return Boolean(vv && vv.scale > ZOOM_THRESHOLD);
+}
+
+function getDocumentScrollRoot() {
+  return document.scrollingElement || document.documentElement;
+}
+
 function getVerticalScrollRoot() {
   const wrapper = document.querySelector('.content-wrapper');
   if (wrapper && wrapper.scrollHeight > wrapper.clientHeight + EDGE_EPS) {
     return wrapper;
   }
-  return document.scrollingElement || document.documentElement;
+  return getDocumentScrollRoot();
 }
 
 function getHorizontalScrollRoot() {
-  return document.scrollingElement || document.documentElement;
+  return getDocumentScrollRoot();
 }
 
-function preventBounceAtEdge(root, dx, dy) {
-  const maxTop = Math.max(0, root.scrollHeight - root.clientHeight);
-  const maxLeft = Math.max(0, root.scrollWidth - root.clientWidth);
-  const st = root.scrollTop;
-  const sl = root.scrollLeft;
-
-  const horizontal = Math.abs(dx) >= Math.abs(dy);
-
-  if (horizontal) {
-    if (maxLeft <= EDGE_EPS) return false;
-    const goingLeft = dx > 0;
-    const goingRight = dx < 0;
-    const atLeft = sl <= EDGE_EPS;
-    const atRight = sl >= maxLeft - EDGE_EPS;
-    return (goingLeft && atLeft) || (goingRight && atRight);
+function getScrollRoot(horizontal) {
+  if (isPageZoomed()) {
+    return getDocumentScrollRoot();
   }
-
-  if (maxTop <= EDGE_EPS) return false;
-  const pullingDown = dy > 0;
-  const pullingUp = dy < 0;
-  const atTop = st <= EDGE_EPS;
-  const atBottom = st >= maxTop - EDGE_EPS;
-  return (pullingDown && atTop) || (pullingUp && atBottom);
+  return horizontal ? getHorizontalScrollRoot() : getVerticalScrollRoot();
 }
 
 /**
- * iOS Safari : supprime le rebond (rubber-band) en haut/bas/gauche/droite
- * des zones scrollables de la page Planning commercial.
+ * Bloque uniquement le rebond : le geste ne peut plus faire avancer le scroll.
+ */
+function shouldBlockBounce(root, dx, dy) {
+  const maxTop = Math.max(0, root.scrollHeight - root.clientHeight);
+  const maxLeft = Math.max(0, root.scrollWidth - root.clientWidth);
+  const horizontal = Math.abs(dx) >= Math.abs(dy);
+
+  if (horizontal) {
+    if (maxLeft <= EDGE_EPS || Math.abs(dx) < MIN_OVERSCROLL_PX) return false;
+    const nextLeft = Math.min(maxLeft, Math.max(0, root.scrollLeft - dx));
+    return nextLeft === root.scrollLeft;
+  }
+
+  if (maxTop <= EDGE_EPS || Math.abs(dy) < MIN_OVERSCROLL_PX) return false;
+  const nextTop = Math.min(maxTop, Math.max(0, root.scrollTop - dy));
+  return nextTop === root.scrollTop;
+}
+
+/**
+ * iOS Safari : pas de rebond élastique aux limites, scroll normal conservé (y compris après zoom).
  */
 export function usePreventIOSOverscrollBounce(enabled = true) {
   useEffect(() => {
@@ -76,9 +87,9 @@ export function usePreventIOSOverscrollBounce(enabled = true) {
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
 
       const horizontal = Math.abs(dx) >= Math.abs(dy);
-      const root = horizontal ? getHorizontalScrollRoot() : getVerticalScrollRoot();
+      const root = getScrollRoot(horizontal);
 
-      if (preventBounceAtEdge(root, dx, dy)) {
+      if (shouldBlockBounce(root, dx, dy)) {
         e.preventDefault();
       }
     };
