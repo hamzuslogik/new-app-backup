@@ -5,8 +5,16 @@ body.planning-commercial-page {
   width: auto !important;
   max-width: none !important;
   overflow-x: auto !important;
+  overscroll-behavior: none !important;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;
+}
+
+html.planning-commercial-page .content-wrapper,
+body.planning-commercial-page .content-wrapper,
+html.planning-commercial-page .main-content,
+body.planning-commercial-page .main-content {
+  overscroll-behavior: none !important;
 }
 
 /* Scroll horizontal = page entière (filtres + stats + tableau), pas le conteneur du tableau */
@@ -17,7 +25,7 @@ body.planning-commercial-page[data-desktop-viewport] .app,
 body.planning-commercial-page[data-desktop-viewport] .main-content,
 body.planning-commercial-page[data-desktop-viewport] .content-wrapper {
   overflow-x: visible !important;
-  overscroll-behavior-x: auto !important;
+  overscroll-behavior: none !important;
 }
 
 html.planning-commercial-page[data-desktop-viewport] .content-wrapper > *,
@@ -352,7 +360,7 @@ body.planning-commercial-page .planning-commercial .fiches-table-container.table
   max-width: none !important;
   overflow-x: visible !important;
   overflow-y: visible !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;
   margin-bottom: 16px;

@@ -121,6 +121,7 @@ body.dashboard-page[data-desktop-viewport] .dashboard {
 body.planning-commercial-page[data-desktop-viewport],
 html.planning-commercial-page[data-desktop-viewport] {
   overflow-x: auto !important;
+  overscroll-behavior: none !important;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
@@ -128,7 +129,7 @@ body.planning-commercial-page[data-desktop-viewport] .app,
 body.planning-commercial-page[data-desktop-viewport] .main-content,
 body.planning-commercial-page[data-desktop-viewport] .content-wrapper {
   overflow-x: visible !important;
-  overscroll-behavior-x: auto !important;
+  overscroll-behavior: none !important;
 }
 
 body.planning-commercial-page[data-desktop-viewport] .content-wrapper > * {
@@ -146,7 +147,7 @@ body.planning-commercial-page[data-desktop-viewport] .fiches-table-container.tab
   max-width: none !important;
   min-width: 1400px !important;
   width: 100% !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
   touch-action: pan-x pan-y pinch-zoom !important;
   isolation: auto !important;
 }

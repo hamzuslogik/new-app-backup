@@ -10,6 +10,7 @@ import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+import usePreventIOSOverscrollBounce from '../hooks/usePreventIOSOverscrollBounce';
 import './PlanningCommercial.css';
 
 // Date du jour en YYYY-MM-DD (heure locale) pour éviter le décalage UTC sur "RDV aujourd'hui"
@@ -20,6 +21,7 @@ const getLocalDateStr = () => {
 
 const PlanningCommercial = () => {
   useForceDesktopViewport('planning-commercial-page');
+  usePreventIOSOverscrollBounce(true);
   const { user, hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('today'); // 'yesterday', 'today', 'tomorrow', 'week', 'nextWeek'
