@@ -7,8 +7,7 @@ import FicheDetail from '../pages/FicheDetail';
 import { FaTimes } from 'react-icons/fa';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
-import usePreventOverscrollBounce from '../hooks/usePreventOverscrollBounce';
-import useFicheDetailModalIosScroll from '../hooks/useFicheDetailModalIosScroll';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getHomePage } from '../utils/getHomePage';
 import '../pages/Dashboard.css';
 
@@ -20,8 +19,6 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const userRef = React.useRef(user);
   userRef.current = user;
   const modalContentRef = React.useRef(null);
-  const modalScrollRef = React.useRef(null);
-  const modalOverlayRef = React.useRef(null);
   const isDirectAccess = React.useRef(false);
   const searchParams = new URLSearchParams(location.search);
   const lockedFromOption = options?.closeMode === '0';
@@ -30,12 +27,13 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const isOverlayLocked =
     lockedFromOption ||
     (searchParams.get('overlay') === '1' && searchParams.get('close') === '0');
-  const isBackdropCloseLocked = isOverlayLocked;
+  // Session commercial : éviter la fermeture accidentelle au clic extérieur
+  const isBackdropCloseLocked = isOverlayLocked || Number(user?.fonction) === 5;
 
-  usePreventOverscrollBounce(modalScrollRef, !!ficheHash);
-  useFicheDetailModalIosScroll(modalOverlayRef, modalScrollRef, modalContentRef, !!ficheHash);
+  // Ne plus bloquer le scroll du body - le modal utilise le scroll de la page
+  // useModalScrollLock(!!ficheHash);
 
-  // Bloquer le scroll du body ; le scroll vertical est dans .fiche-detail-modal-content
+  // iOS Safari : empêcher le scroll horizontal du body pendant le modal (évite le rebond)
   useEffect(() => {
     if (!ficheHash) return undefined;
     const prevBodyOverflow = document.body.style.overflow;
@@ -163,7 +161,6 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
 
   const modalContent = (
     <div
-      ref={modalOverlayRef}
       className="fiche-detail-modal-overlay"
       onClick={isBackdropCloseLocked ? undefined : onClose}
     >
@@ -188,17 +185,15 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
           <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-banner-logo" />
           <span className="fiche-detail-modal-banner-title">DETAILS FICHE</span>
         </div>
-        <div ref={modalScrollRef} className="fiche-detail-modal-scroll">
-          <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
-            <FicheDetail
-              ficheHash={ficheHash}
-              onClose={onClose}
-              isModal={true}
-              initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
-              initialTab={options?.initialTab || null}
-            />
-          </RouteParamsProvider>
-        </div>
+        <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
+          <FicheDetail
+            ficheHash={ficheHash}
+            onClose={onClose}
+            isModal={true}
+            initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
+            initialTab={options?.initialTab || null}
+          />
+        </RouteParamsProvider>
       </div>
     </div>
   );

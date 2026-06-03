@@ -51,7 +51,7 @@ body[data-desktop-viewport] .planning-table-container {
   overflow: auto !important;
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y pinch-zoom;
+  touch-action: pan-x pan-y;
   isolation: isolate;
 }
 
@@ -65,29 +65,7 @@ body[data-desktop-viewport] .planning-table {
 
 /* Détail fiche (modal + page) */
 body[data-desktop-viewport] .fiche-detail-modal-overlay {
-  overflow: hidden !important;
-  overscroll-behavior: none !important;
-}
-
-body[data-desktop-viewport] .fiche-detail-modal-content {
-  overflow: hidden !important;
-  height: calc(100dvh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
-  max-height: calc(100dvh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
-  overscroll-behavior: none !important;
-}
-
-body[data-desktop-viewport] .fiche-detail-modal-scroll {
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  touch-action: pan-y pinch-zoom !important;
-  overscroll-behavior: none !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-}
-
-body[data-desktop-viewport] .fiche-detail-modal-scroll .compte-rendu-section {
-  overflow: visible !important;
+  overscroll-behavior: contain !important;
 }
 
 body[data-desktop-viewport] .fiche-detail-modal-content,
@@ -105,8 +83,7 @@ body[data-desktop-viewport] .fiche-detail .planning-view {
 body[data-desktop-viewport] .fiche-detail-modal-content .planning-table-container,
 body[data-desktop-viewport] .fiche-detail .planning-table-container {
   overflow: auto !important;
-  overscroll-behavior-x: contain !important;
-  overscroll-behavior-y: none !important;
+  overscroll-behavior: contain !important;
 }
 
 body[data-desktop-viewport] .fiche-detail-modal-content .planning-table,
@@ -138,23 +115,6 @@ body.dashboard-page[data-desktop-viewport] .dashboard {
   max-width: 100% !important;
   width: 100% !important;
   box-sizing: border-box;
-}
-
-/* Tableau lié à la page : scroll H sur html/body, swipe horizontal possible depuis le tableau */
-body[data-desktop-viewport] .fiches-table-container.table-page-scroll,
-body[data-desktop-viewport] [class*='-table-container'].table-page-scroll {
-  overflow-x: visible !important;
-  overflow-y: auto !important;
-  max-width: none !important;
-  overscroll-behavior-x: auto !important;
-  overscroll-behavior-y: auto !important;
-  touch-action: pan-x pan-y pinch-zoom !important;
-  isolation: auto !important;
-}
-
-body.planning-commercial-page[data-desktop-viewport] .planning-commercial .fiches-table-container.table-page-scroll {
-  min-width: 1400px !important;
-  width: 100% !important;
 }
 
 /* Sidebar toujours visible */

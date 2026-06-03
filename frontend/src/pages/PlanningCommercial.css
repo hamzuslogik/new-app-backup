@@ -14,36 +14,6 @@ body.planning-commercial-page {
   overflow-x: visible;
 }
 
-/* Tableau = largeur de la page : un seul scroll horizontal (html/body), pas dans le conteneur */
-html.planning-commercial-page[data-desktop-viewport] .app,
-html.planning-commercial-page[data-desktop-viewport] .main-content,
-html.planning-commercial-page[data-desktop-viewport] .content-wrapper,
-body.planning-commercial-page[data-desktop-viewport] .app,
-body.planning-commercial-page[data-desktop-viewport] .main-content,
-body.planning-commercial-page[data-desktop-viewport] .content-wrapper {
-  overflow-x: visible !important;
-}
-
-html.planning-commercial-page[data-desktop-viewport] .content-wrapper > *,
-body.planning-commercial-page[data-desktop-viewport] .content-wrapper > * {
-  max-width: none !important;
-}
-
-html.planning-commercial-page .planning-commercial,
-body.planning-commercial-page .planning-commercial {
-  min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
-  box-sizing: border-box;
-}
-
-html.planning-commercial-page .planning-commercial-results,
-body.planning-commercial-page .planning-commercial-results {
-  min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
-}
-
 .planning-commercial-header {
   display: flex;
   justify-content: space-between;
@@ -343,20 +313,10 @@ html.planning-commercial-page .planning-commercial .fiches-table-container,
 body.planning-commercial-page .planning-commercial .fiches-table-container {
   min-width: 1400px !important;
   width: 100% !important;
-  max-width: none !important;
-  overflow-x: visible !important;
-  overflow-y: auto !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: auto !important;
-  overscroll-behavior-y: auto !important;
-  touch-action: pan-x pan-y pinch-zoom;
-  isolation: auto;
   margin-bottom: 16px;
-}
-
-html.planning-commercial-page .planning-commercial .fiches-table-container.table-page-scroll .fiches-table,
-body.planning-commercial-page .planning-commercial .fiches-table-container.table-page-scroll .fiches-table {
-  touch-action: pan-x pan-y pinch-zoom;
 }
 
 html.planning-commercial-page .planning-commercial .fiches-table,
