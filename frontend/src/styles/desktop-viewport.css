@@ -39,11 +39,11 @@ body[data-desktop-viewport]:not(.planning-commercial-page) .content-wrapper {
 }
 
 /* Conteneurs de tableaux : scroll isolé H + V, ne propage pas à la page */
-body[data-desktop-viewport] .fiches-table-container,
-body[data-desktop-viewport] .confirmateurs-table-container,
-body[data-desktop-viewport] .table-container-responsive,
-body[data-desktop-viewport] [class*='-table-container'],
-body[data-desktop-viewport] .planning-table-container {
+body[data-desktop-viewport]:not(.planning-commercial-page) .fiches-table-container,
+body[data-desktop-viewport]:not(.planning-commercial-page) .confirmateurs-table-container,
+body[data-desktop-viewport]:not(.planning-commercial-page) .table-container-responsive,
+body[data-desktop-viewport]:not(.planning-commercial-page) [class*='-table-container'],
+body[data-desktop-viewport]:not(.planning-commercial-page) .planning-table-container {
   display: block;
   width: 100% !important;
   max-width: 100% !important;
@@ -55,9 +55,9 @@ body[data-desktop-viewport] .planning-table-container {
   isolation: isolate;
 }
 
-body[data-desktop-viewport] .fiches-table,
-body[data-desktop-viewport] .confirmateurs-table,
-body[data-desktop-viewport] .planning-table {
+body[data-desktop-viewport]:not(.planning-commercial-page) .fiches-table,
+body[data-desktop-viewport]:not(.planning-commercial-page) .confirmateurs-table,
+body[data-desktop-viewport]:not(.planning-commercial-page) .planning-table {
   width: max-content;
   min-width: 100%;
   max-width: none !important;
@@ -140,23 +140,32 @@ body.planning-commercial-page[data-desktop-viewport] .content-wrapper {
 }
 
 body.planning-commercial-page[data-desktop-viewport] .content-wrapper > * {
-  max-width: none !important;
+  max-width: 100% !important;
 }
 
 body.planning-commercial-page[data-desktop-viewport] .planning-commercial,
 body.planning-commercial-page[data-desktop-viewport] .planning-commercial-results {
   min-width: 1400px !important;
-  max-width: none !important;
+  max-width: 1400px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-body.planning-commercial-page[data-desktop-viewport] .fiches-table-container.table-page-scroll {
+body.planning-commercial-page[data-desktop-viewport] .planning-commercial .fiches-table-container.table-page-scroll {
   overflow: visible !important;
-  max-width: none !important;
-  min-width: 1400px !important;
+  max-width: 1400px !important;
+  min-width: 0 !important;
   width: 100% !important;
   overscroll-behavior: none !important;
   touch-action: pan-x pan-y pinch-zoom !important;
   isolation: auto !important;
+}
+
+body.planning-commercial-page[data-desktop-viewport] .planning-commercial .fiches-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 1400px !important;
+  table-layout: fixed !important;
 }
 
 /* Sidebar toujours visible */
@@ -220,7 +229,7 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
 
   body.planning-commercial-page[data-desktop-viewport] .content-wrapper,
   body.planning-commercial-page[data-desktop-viewport] .content-wrapper > * {
-    max-width: none !important;
+    max-width: 100% !important;
   }
 
   body[data-desktop-viewport] .fiches-table-container,
