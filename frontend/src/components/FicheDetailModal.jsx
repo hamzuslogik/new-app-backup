@@ -8,7 +8,7 @@ import { FaTimes } from 'react-icons/fa';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 import usePreventOverscrollBounce from '../hooks/usePreventOverscrollBounce';
-import useModalVisualViewport from '../hooks/useModalVisualViewport';
+import useFicheDetailModalIosScroll from '../hooks/useFicheDetailModalIosScroll';
 import { getHomePage } from '../utils/getHomePage';
 import '../pages/Dashboard.css';
 
@@ -20,6 +20,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const userRef = React.useRef(user);
   userRef.current = user;
   const modalContentRef = React.useRef(null);
+  const modalScrollRef = React.useRef(null);
   const modalOverlayRef = React.useRef(null);
   const isDirectAccess = React.useRef(false);
   const searchParams = new URLSearchParams(location.search);
@@ -31,8 +32,8 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
     (searchParams.get('overlay') === '1' && searchParams.get('close') === '0');
   const isBackdropCloseLocked = isOverlayLocked;
 
-  usePreventOverscrollBounce(modalOverlayRef, !!ficheHash);
-  useModalVisualViewport(modalOverlayRef, modalContentRef, !!ficheHash);
+  usePreventOverscrollBounce(modalScrollRef, !!ficheHash);
+  useFicheDetailModalIosScroll(modalOverlayRef, modalScrollRef, !!ficheHash);
 
   // Bloquer le scroll du body ; le scroll vertical est dans .fiche-detail-modal-content
   useEffect(() => {
@@ -187,15 +188,17 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
           <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-banner-logo" />
           <span className="fiche-detail-modal-banner-title">DETAILS FICHE</span>
         </div>
-        <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
-          <FicheDetail
-            ficheHash={ficheHash}
-            onClose={onClose}
-            isModal={true}
-            initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
-            initialTab={options?.initialTab || null}
-          />
-        </RouteParamsProvider>
+        <div ref={modalScrollRef} className="fiche-detail-modal-scroll">
+          <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
+            <FicheDetail
+              ficheHash={ficheHash}
+              onClose={onClose}
+              isModal={true}
+              initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
+              initialTab={options?.initialTab || null}
+            />
+          </RouteParamsProvider>
+        </div>
       </div>
     </div>
   );

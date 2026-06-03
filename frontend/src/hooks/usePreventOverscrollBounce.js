@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { isVisuallyZoomed } from './useModalVisualViewport';
+import { isFicheModalVisuallyZoomed } from './useFicheDetailModalIosScroll';
 
 const EDGE_EPS = 2;
 
@@ -29,7 +29,7 @@ export function usePreventOverscrollBounce(scrollRef, enabled = true) {
 
       const onTouchMove = (e) => {
         if (e.touches.length !== 1) return;
-        if (isVisuallyZoomed()) return;
+        if (isFicheModalVisuallyZoomed()) return;
 
         const y = e.touches[0].clientY;
         const dy = y - lastY;

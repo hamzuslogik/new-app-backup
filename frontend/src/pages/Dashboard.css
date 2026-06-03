@@ -2457,17 +2457,33 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 2000;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
   padding: 20px;
   padding-top: max(20px, env(safe-area-inset-top, 0px));
   padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   box-sizing: border-box;
+}
+
+/* iOS : après pinch-zoom, la carte suit la zone visible */
+.fiche-detail-modal-overlay.fiche-detail-modal-vv-zoomed {
+  padding: 0;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.fiche-detail-modal-overlay.fiche-detail-modal-vv-zoomed .fiche-detail-modal-content {
+  max-width: var(--modal-vv-w, 100%) !important;
+  width: var(--modal-vv-w, 100%) !important;
+  min-width: 0 !important;
+  max-height: var(--modal-vv-h, 100dvh) !important;
+  min-height: 0 !important;
+  height: var(--modal-vv-h, 100dvh) !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
 }
 
 .fiche-detail-modal-content {
@@ -2477,9 +2493,9 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   max-width: 49%;
   min-width: 350px;
   width: 49%;
-  min-height: 100vh;
-  overflow-x: hidden;
-  overflow-y: visible;
+  max-height: calc(100dvh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  min-height: 0;
+  overflow: hidden;
   overscroll-behavior: none;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
@@ -2490,7 +2506,18 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   padding: 8px;
   padding-bottom: 20px; /* Espace en bas pour que le bouton soit visible */
   background: #f3f4f6;
-  margin: 20px auto; /* Centrer et ajouter de l'espace */
+  margin: 0 auto;
+}
+
+/* Zone scrollable (haut/bas du détail fiche) — indispensable après zoom iOS */
+.fiche-detail-modal-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pinch-zoom;
 }
 
 .fiche-detail-modal-topbar {
@@ -2801,9 +2828,9 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     width: 98% !important;
     min-width: 95% !important;
-    min-height: 95vh !important;
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
+    max-height: calc(100dvh - 2vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
   }
 }
 
@@ -2818,10 +2845,10 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 100% !important; /* Largeur maximale pour très petits écrans */
     width: 100% !important;
     min-width: 98% !important;
-    min-height: 98vh !important;
+    max-height: calc(100dvh - 1vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 0 !important;
     border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
+    overflow: hidden !important;
   }
 }
 
@@ -2848,7 +2875,7 @@ html[data-desktop-viewport] .confirmateurs-table-container {
 }
 
 /* Wrapper pour le contenu scrollable */
-.fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar):not(.fiche-detail-modal-banner) {
+.fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar):not(.fiche-detail-modal-banner):not(.fiche-detail-modal-scroll) {
   flex: 1;
   min-height: 0;
   overflow-y: visible;
@@ -2858,6 +2885,12 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   box-sizing: border-box !important;
   overflow-wrap: break-word !important;
   word-wrap: break-word !important;
+}
+
+.fiche-detail-modal-scroll {
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* Activer le scroll horizontal en mobile pour le contenu du modal */
@@ -3692,13 +3725,13 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     min-width: 95% !important; /* Largeur minimale en mode mobile */
-    min-height: 100vh !important;
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
+    max-height: calc(100dvh - 4vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
     border-radius: 8px !important; /* Rétablir le border-radius */
     display: flex !important;
     flex-direction: column !important;
-    margin: 20px auto !important; /* Centrer horizontalement */
+    margin: 0 auto !important; /* Centrer horizontalement */
     position: relative !important;
     padding-bottom: 20px !important; /* Espace en bas pour que le bouton soit visible */
   }
