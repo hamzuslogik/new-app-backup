@@ -34,29 +34,31 @@ body.planning-commercial-page[data-desktop-viewport] .content-wrapper {
 
 html.planning-commercial-page[data-desktop-viewport] .content-wrapper > *,
 body.planning-commercial-page[data-desktop-viewport] .content-wrapper > * {
-  max-width: none !important;
+  max-width: 100% !important;
 }
 
 html.planning-commercial-page .planning-commercial,
 body.planning-commercial-page .planning-commercial {
   min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
+  max-width: 1400px !important;
+  width: 100% !important;
   box-sizing: border-box;
 }
 
 html.planning-commercial-page .planning-commercial-results,
 body.planning-commercial-page .planning-commercial-results {
-  min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
+  min-width: 0 !important;
+  max-width: 1400px !important;
+  width: 100% !important;
+  box-sizing: border-box;
 }
 
 .planning-commercial {
   padding: 16px;
   min-width: 1400px;
-  width: auto;
-  max-width: none;
+  max-width: 1400px;
+  width: 100%;
+  box-sizing: border-box;
   overflow-x: visible;
 }
 
@@ -359,9 +361,9 @@ html.planning-commercial-page .planning-commercial .fiches-table-container,
 body.planning-commercial-page .planning-commercial .fiches-table-container,
 html.planning-commercial-page .planning-commercial .fiches-table-container.table-page-scroll,
 body.planning-commercial-page .planning-commercial .fiches-table-container.table-page-scroll {
-  min-width: 1400px !important;
+  min-width: 0 !important;
   width: 100% !important;
-  max-width: none !important;
+  max-width: 1400px !important;
   overflow-x: visible !important;
   overflow-y: visible !important;
   overscroll-behavior: none !important;
@@ -372,9 +374,9 @@ body.planning-commercial-page .planning-commercial .fiches-table-container.table
 
 html.planning-commercial-page .planning-commercial .fiches-table,
 body.planning-commercial-page .planning-commercial .fiches-table {
-  min-width: 1400px !important;
+  min-width: 0 !important;
   width: 100% !important;
-  max-width: 100% !important;
+  max-width: 1400px !important;
   table-layout: fixed !important;
   border-collapse: collapse !important;
   font-size: 11px;
