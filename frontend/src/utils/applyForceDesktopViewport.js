@@ -9,7 +9,7 @@ export function applyForceDesktopViewport(width = DESKTOP_VIEWPORT_WIDTH) {
   }
   viewport.setAttribute(
     'content',
-    `width=${width}, viewport-fit=cover`
+    `width=${width}, initial-scale=1, minimum-scale=0.25, maximum-scale=5, user-scalable=yes, viewport-fit=cover`
   );
 
   document.documentElement.dataset.desktopViewport = String(width);

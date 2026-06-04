@@ -1263,6 +1263,12 @@ button.stat-card.stat-card-clickable {
   margin-bottom: 16px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: auto;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+.dashboard-page .fiches-table,
+.dashboard-page .confirmateurs-table {
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .dashboard-page .fiches-table-container,
@@ -1273,10 +1279,19 @@ button.stat-card.stat-card-clickable {
 html[data-desktop-viewport] .dashboard-page .fiches-table-container,
 html[data-desktop-viewport] .dashboard-page .confirmateurs-table-container,
 html.dashboard-page[data-desktop-viewport] .fiches-table-container,
-html.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
+html.dashboard-page[data-desktop-viewport] .confirmateurs-table-container,
+body.dashboard-page[data-desktop-viewport] .fiches-table-container,
+body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
   overflow: auto;
   overscroll-behavior: auto !important;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+body.dashboard-page[data-desktop-viewport] .fiches-table,
+body.dashboard-page[data-desktop-viewport] .confirmateurs-table,
+html.dashboard-page[data-desktop-viewport] .fiches-table,
+html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 .fiches-table {
