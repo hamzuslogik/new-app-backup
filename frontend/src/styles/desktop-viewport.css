@@ -231,3 +231,36 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
     margin-left: 200px !important;
   }
 }
+
+/* Après pinch-zoom (iOS / Android) : scroll H + V sur le document */
+html.viewport-zoomed,
+html.viewport-zoomed body {
+  overflow: auto !important;
+  overflow-x: scroll !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: auto !important;
+  touch-action: auto !important;
+}
+
+html.viewport-zoomed[data-desktop-viewport],
+html.viewport-zoomed[data-desktop-viewport] body {
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+html.viewport-zoomed .app,
+html.viewport-zoomed .main-content,
+html.viewport-zoomed .content-wrapper,
+html.viewport-zoomed .dashboard,
+html.viewport-zoomed .fiches-table-container,
+html.viewport-zoomed .confirmateurs-table-container {
+  overflow: visible !important;
+  touch-action: auto !important;
+}
+
+html.viewport-zoomed body.dashboard-page,
+html.viewport-zoomed body.dashboard-page .fiches-table-container {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}

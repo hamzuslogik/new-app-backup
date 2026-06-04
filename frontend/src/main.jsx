@@ -8,8 +8,11 @@ import App from './App';
 import './index.css';
 import { applyForceDesktopViewport } from './utils/applyForceDesktopViewport';
 import { initTableScrollContainment } from './utils/tableScrollContainment';
+import { initViewportZoomScrollFix } from './utils/viewportZoomScrollFix';
+
 applyForceDesktopViewport();
 initTableScrollContainment();
+initViewportZoomScrollFix();
 
 const queryClient = new QueryClient({
   defaultOptions: {

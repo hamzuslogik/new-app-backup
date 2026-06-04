@@ -1,0 +1,160 @@
+import { DESKTOP_VIEWPORT_WIDTH } from '../config/viewport';
+
+const ZOOM_THRESHOLD = 1.01;
+let rafId = 0;
+
+function isTouchMobile() {
+  return (
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
+function getVisualViewport() {
+  return window.visualViewport || null;
+}
+
+function isZoomed() {
+  const vv = getVisualViewport();
+  return Boolean(vv && vv.scale > ZOOM_THRESHOLD);
+}
+
+function applyZoomedDocumentStyles(zoomed) {
+  const html = document.documentElement;
+  const body = document.body;
+  if (!html) return;
+
+  if (zoomed) {
+    html.classList.add('viewport-zoomed');
+    html.style.overflow = 'auto';
+    html.style.overflowX = 'scroll';
+    html.style.overflowY = 'auto';
+    if (body) {
+      body.style.overflow = 'auto';
+      body.style.overflowX = 'scroll';
+      body.style.overflowY = 'auto';
+    }
+  } else {
+    html.classList.remove('viewport-zoomed');
+    html.style.overflow = '';
+    html.style.overflowX = '';
+    html.style.overflowY = '';
+    if (body) {
+      body.style.overflow = '';
+      body.style.overflowX = '';
+      body.style.overflowY = '';
+    }
+    html.style.minWidth = `${DESKTOP_VIEWPORT_WIDTH}px`;
+    html.style.width = 'auto';
+    if (body) {
+      body.style.minWidth = `${DESKTOP_VIEWPORT_WIDTH}px`;
+      body.style.width = 'auto';
+    }
+  }
+}
+
+/**
+ * iOS / Android : après pinch-zoom, Safari/Chrome décrochent le scroll horizontal
+ * du layout viewport. On synchronise visualViewport → window.scroll.
+ */
+function syncLayoutScrollFromVisualViewport() {
+  const vv = getVisualViewport();
+  if (!vv || !isZoomed()) return;
+
+  const left = Math.max(0, vv.pageLeft ?? vv.offsetLeft ?? 0);
+  const top = Math.max(0, vv.pageTop ?? vv.offsetTop ?? 0);
+
+  if (
+    Math.abs(window.scrollX - left) > 0.5 ||
+    Math.abs(window.scrollY - top) > 0.5
+  ) {
+    window.scrollTo(left, top);
+  }
+}
+
+function scheduleSync() {
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(() => {
+    rafId = 0;
+    applyZoomedDocumentStyles(isZoomed());
+    syncLayoutScrollFromVisualViewport();
+  });
+}
+
+/**
+ * Active la correction scroll post-zoom (iOS + Android).
+ */
+export function initViewportZoomScrollFix() {
+  if (!isTouchMobile() || !getVisualViewport()) return () => {};
+
+  const vv = getVisualViewport();
+
+  const onViewportChange = () => scheduleSync();
+  const onOrientationChange = () => scheduleSync();
+
+  vv.addEventListener('resize', onViewportChange);
+  vv.addEventListener('scroll', onViewportChange);
+  window.addEventListener('orientationchange', onOrientationChange);
+  window.addEventListener('resize', onOrientationChange);
+
+  scheduleSync();
+
+  let panLastX = 0;
+  let panLastY = 0;
+  let panActive = false;
+
+  const shouldPanDocument = (target) => {
+    if (!(target instanceof Element)) return true;
+    if (target.closest('input, textarea, select, [contenteditable="true"]')) return false;
+    if (target.closest('.fiche-detail-modal-overlay')) return false;
+    return true;
+  };
+
+  const onTouchStart = (e) => {
+    if (!isZoomed() || e.touches.length !== 1) {
+      panActive = false;
+      return;
+    }
+    panLastX = e.touches[0].clientX;
+    panLastY = e.touches[0].clientY;
+    panActive = shouldPanDocument(e.target);
+  };
+
+  const onTouchMove = (e) => {
+    if (!panActive || !isZoomed() || e.touches.length !== 1) return;
+
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+    const dx = x - panLastX;
+    const dy = y - panLastY;
+    panLastX = x;
+    panLastY = y;
+
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+
+    window.scrollBy(-dx, -dy);
+    e.preventDefault();
+  };
+
+  const onTouchEnd = () => {
+    panActive = false;
+  };
+
+  document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+  document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+  document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
+  document.addEventListener('touchcancel', onTouchEnd, { passive: true, capture: true });
+
+  return () => {
+    if (rafId) cancelAnimationFrame(rafId);
+    vv.removeEventListener('resize', onViewportChange);
+    vv.removeEventListener('scroll', onViewportChange);
+    window.removeEventListener('orientationchange', onOrientationChange);
+    window.removeEventListener('resize', onOrientationChange);
+    document.removeEventListener('touchstart', onTouchStart, { capture: true });
+    document.removeEventListener('touchmove', onTouchMove, { capture: true });
+    document.removeEventListener('touchend', onTouchEnd, { capture: true });
+    document.removeEventListener('touchcancel', onTouchEnd, { capture: true });
+    applyZoomedDocumentStyles(false);
+  };
+}
