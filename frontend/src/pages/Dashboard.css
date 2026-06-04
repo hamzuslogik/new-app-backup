@@ -25,7 +25,7 @@ body.dashboard-page {
   width: 100% !important;
   max-width: 100% !important;
   overflow: auto !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1262,7 +1262,7 @@ button.stat-card.stat-card-clickable {
   overflow: auto;
   margin-bottom: 16px;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: auto;
+  overscroll-behavior: none;
   touch-action: pan-x pan-y pinch-zoom;
 }
 
@@ -1273,7 +1273,7 @@ button.stat-card.stat-card-clickable {
 
 .dashboard-page .fiches-table-container,
 .dashboard-page .confirmateurs-table-container {
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
 }
 
 html[data-desktop-viewport] .dashboard-page .fiches-table-container,
@@ -1283,7 +1283,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table-container,
 body.dashboard-page[data-desktop-viewport] .fiches-table-container,
 body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
   overflow: auto;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
@@ -2482,8 +2482,8 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   background: rgba(0, 0, 0, 0.5);
   z-index: 2000;
   overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: auto;
+  overflow-x: auto;
+  overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
   padding: 20px;
   display: flex;
@@ -2505,7 +2505,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   overflow-x: auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: auto;
+  overscroll-behavior: none;
   touch-action: pan-x pan-y pinch-zoom;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
@@ -2620,7 +2620,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   max-width: 100% !important;
   box-sizing: border-box !important;
   overflow: visible !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
 }
 
 .fiche-detail-modal-content .planning-table-container {
@@ -2629,7 +2629,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   max-width: 100% !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
@@ -2637,12 +2637,12 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 @media (max-width: 768px) {
   .fiche-detail-modal-content .planning-view {
     overflow: visible !important;
-    overscroll-behavior: auto !important;
+    overscroll-behavior: none !important;
   }
 
   .fiche-detail-modal-content .planning-table-container {
     overflow: auto !important;
-    overscroll-behavior: auto !important;
+    overscroll-behavior: none !important;
     touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
@@ -2650,12 +2650,12 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 @media (max-width: 480px) {
   .fiche-detail-modal-content .planning-view {
     overflow: visible !important;
-    overscroll-behavior: auto !important;
+    overscroll-behavior: none !important;
   }
 
   .fiche-detail-modal-content .planning-table-container {
     overflow: auto !important;
-    overscroll-behavior: auto !important;
+    overscroll-behavior: none !important;
     touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
@@ -2835,7 +2835,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     min-height: 0 !important;
     overflow-x: auto !important;
     overflow-y: auto !important;
-    overscroll-behavior: auto !important;
+    overscroll-behavior: none !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y pinch-zoom !important;
   }
@@ -2858,7 +2858,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
     overflow-x: auto !important;
     overflow-y: auto !important;
-    overscroll-behavior: auto !important;
+    overscroll-behavior: none !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y pinch-zoom !important;
   }
@@ -2884,7 +2884,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 .fiche-detail-modal-content .planning-tab .fiche-detail,
 .fiche-detail-modal-content .fiche-detail {
   overflow: visible !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
 }

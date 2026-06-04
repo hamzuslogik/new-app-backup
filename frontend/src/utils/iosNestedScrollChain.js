@@ -31,7 +31,7 @@ function isScrollable(el) {
   return canY || canX;
 }
 
-/** Du plus interne (proche de la cible) au plus externe, jusqu’à boundary inclus. */
+/** Du plus interne au plus externe, jusqu’à boundary inclus. */
 function collectScrollChain(from, boundary) {
   const chain = [];
   let el = from instanceof Element ? from : null;
@@ -91,14 +91,31 @@ function applyScrollDelta(el, dx, dy) {
 }
 
 /**
- * Modal détail fiche : tableau planning → panneau → overlay.
- * @param {HTMLElement} boundaryEl — .fiche-detail-modal-overlay
+ * iOS : pas de rebond élastique sur la couche courante ; scroll parent si bord atteint.
  */
-export function attachIosNestedScrollChain(boundaryEl) {
-  if (!isIOSTouchDevice() || !(boundaryEl instanceof HTMLElement)) {
-    return () => {};
+function processScrollChainTouch(e, chain, dx, dy) {
+  if (!chain.length) return;
+
+  for (let i = 0; i < chain.length; i += 1) {
+    if (canConsumeScroll(chain[i], dx, dy)) {
+      if (i === 0) return;
+      if (applyScrollDelta(chain[i], dx, dy)) e.preventDefault();
+      return;
+    }
   }
 
+  for (let i = chain.length - 1; i >= 1; i -= 1) {
+    if (applyScrollDelta(chain[i], dx, dy)) {
+      e.preventDefault();
+      return;
+    }
+  }
+
+  e.preventDefault();
+}
+
+function createTouchChainHandler(getChain, options = {}) {
+  const { containsCheck } = options;
   const state = { lastX: 0, lastY: 0 };
 
   const onTouchStart = (e) => {
@@ -109,7 +126,7 @@ export function attachIosNestedScrollChain(boundaryEl) {
 
   const onTouchMove = (e) => {
     if (e.touches.length !== 1) return;
-    if (!boundaryEl.contains(e.target)) return;
+    if (containsCheck && !containsCheck(e.target)) return;
 
     const x = e.touches[0].clientX;
     const y = e.touches[0].clientY;
@@ -120,20 +137,29 @@ export function attachIosNestedScrollChain(boundaryEl) {
 
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
 
-    const chain = collectScrollChain(e.target, boundaryEl);
+    const chain = getChain(e.target);
     if (!chain.length) return;
 
-    for (let i = 0; i < chain.length; i += 1) {
-      if (canConsumeScroll(chain[i], dx, dy)) return;
-    }
-
-    for (let i = 1; i < chain.length; i += 1) {
-      if (applyScrollDelta(chain[i], dx, dy)) {
-        e.preventDefault();
-        return;
-      }
-    }
+    processScrollChainTouch(e, chain, dx, dy);
   };
+
+  return { onTouchStart, onTouchMove };
+}
+
+/**
+ * Modal détail fiche : tableau → panneau → overlay (sans rebond sur les couches internes).
+ */
+export function attachIosNestedScrollChain(boundaryEl) {
+  if (!isIOSTouchDevice() || !(boundaryEl instanceof HTMLElement)) {
+    return () => {};
+  }
+
+  const { onTouchStart, onTouchMove } = createTouchChainHandler(
+    (target) => collectScrollChain(target, boundaryEl),
+    {
+      containsCheck: (target) => boundaryEl.contains(target),
+    }
+  );
 
   boundaryEl.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
   boundaryEl.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
@@ -156,63 +182,27 @@ function touchInDashboardTable(target) {
   return Boolean(target.closest(TABLE_SELECTOR));
 }
 
+function getDashboardChain(target) {
+  const chain = collectScrollChain(target, document.documentElement);
+  const pageRoot = document.scrollingElement || document.documentElement;
+  if (pageRoot && isScrollable(pageRoot) && !chain.includes(pageRoot)) {
+    chain.push(pageRoot);
+  }
+  if (document.body && isScrollable(document.body) && !chain.includes(document.body)) {
+    chain.push(document.body);
+  }
+  return chain;
+}
+
 /**
- * Dashboard : tableau fiches → page (scroll H + V sur iOS).
+ * Dashboard : tableau fiches → page (H + V), sans rebond sur le tableau.
  */
 export function initDashboardIosScrollChain() {
   if (!isIOSTouchDevice()) return () => {};
 
-  const state = { lastX: 0, lastY: 0 };
-
-  const onTouchStart = (e) => {
-    if (e.touches.length !== 1) return;
-    state.lastX = e.touches[0].clientX;
-    state.lastY = e.touches[0].clientY;
-  };
-
-  const onTouchMove = (e) => {
-    if (e.touches.length !== 1) return;
-    if (!isDashboardPage()) return;
-    if (!touchInDashboardTable(e.target)) return;
-
-    const x = e.touches[0].clientX;
-    const y = e.touches[0].clientY;
-    const dx = x - state.lastX;
-    const dy = y - state.lastY;
-    state.lastX = x;
-    state.lastY = y;
-
-    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
-
-    const chain = collectScrollChain(e.target, document.documentElement);
-    const pageRoot = document.scrollingElement || document.documentElement;
-    if (
-      pageRoot &&
-      isScrollable(pageRoot) &&
-      !chain.includes(pageRoot)
-    ) {
-      chain.push(pageRoot);
-    }
-    if (
-      document.body &&
-      isScrollable(document.body) &&
-      !chain.includes(document.body)
-    ) {
-      chain.push(document.body);
-    }
-    if (!chain.length) return;
-
-    for (let i = 0; i < chain.length; i += 1) {
-      if (canConsumeScroll(chain[i], dx, dy)) return;
-    }
-
-    for (let i = 1; i < chain.length; i += 1) {
-      if (applyScrollDelta(chain[i], dx, dy)) {
-        e.preventDefault();
-        return;
-      }
-    }
-  };
+  const { onTouchStart, onTouchMove } = createTouchChainHandler(getDashboardChain, {
+    containsCheck: (target) => isDashboardPage() && touchInDashboardTable(target),
+  });
 
   document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
   document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });

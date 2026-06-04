@@ -7,7 +7,7 @@ body[data-desktop-viewport] {
   overflow: auto !important;
   margin: 0 !important;
   -webkit-text-size-adjust: 100%;
-  overscroll-behavior: auto;
+  overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;
 }
@@ -58,7 +58,7 @@ body[data-desktop-viewport] .planning-table-container {
   max-width: 100% !important;
   min-width: 0 !important;
   overflow: auto !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;
   isolation: isolate;
@@ -75,8 +75,8 @@ body[data-desktop-viewport] .planning-table {
 
 /* Détail fiche — modal : scroll tableau puis panneau (comme dashboard / fiches-table) */
 body[data-desktop-viewport] .fiche-detail-modal-overlay {
-  overflow-y: auto !important;
-  overscroll-behavior: auto !important;
+  overflow: auto !important;
+  overscroll-behavior: none !important;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
@@ -84,7 +84,7 @@ body[data-desktop-viewport] .fiche-detail-modal-overlay {
 body[data-desktop-viewport] .fiche-detail-modal-content {
   overflow-x: auto !important;
   overflow-y: auto !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
@@ -96,13 +96,13 @@ body[data-desktop-viewport] .fiche-detail .planning-tab,
 body[data-desktop-viewport] .fiche-detail-modal-content .planning-view,
 body[data-desktop-viewport] .fiche-detail .planning-view {
   overflow: visible !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
 }
 
 body[data-desktop-viewport] .fiche-detail-modal-content .planning-table-container,
 body[data-desktop-viewport] .fiche-detail .planning-table-container {
   overflow: auto !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
@@ -119,7 +119,7 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
   width: 100% !important;
   max-width: 100% !important;
   overflow: auto !important;
-  overscroll-behavior: auto !important;
+  overscroll-behavior: none !important;
 }
 
 body.dashboard-page[data-desktop-viewport] .fiches-table,
@@ -200,7 +200,7 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
   body[data-desktop-viewport] .confirmateurs-table-container,
   body[data-desktop-viewport] .planning-table-container,
   body[data-desktop-viewport] [class*='-table-container'] {
-    overscroll-behavior: auto !important;
+    overscroll-behavior: none !important;
   }
 
   html[data-desktop-viewport] .sidebar,
