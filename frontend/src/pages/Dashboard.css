@@ -2457,13 +2457,13 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 2000;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   overscroll-behavior: contain;
   padding: 20px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  box-sizing: border-box;
 }
 
 .fiche-detail-modal-content {
@@ -2473,9 +2473,11 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   max-width: 49%;
   min-width: 350px;
   width: 49%;
-  min-height: 100vh;
+  max-height: calc(100dvh - 40px);
+  min-height: 0;
   overflow-x: hidden;
-  overflow-y: visible;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
@@ -2797,12 +2799,12 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 98% !important; /* Largeur maximale comme en desktop proportionnellement */
     width: 98% !important;
     min-width: 95% !important;
-    max-height: none !important;
+    max-height: calc(100dvh - 2vh) !important;
     height: auto !important;
-    min-height: 95vh !important;
-    overflow-x: hidden !important; /* Pas de scroll horizontal */
-    overflow-y: visible !important; /* Pas de scroll vertical interne */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 }
 
@@ -2817,13 +2819,13 @@ html[data-desktop-viewport] .confirmateurs-table-container {
     max-width: 100% !important; /* Largeur maximale pour très petits écrans */
     width: 100% !important;
     min-width: 98% !important;
-    max-height: none !important;
+    max-height: calc(100dvh - 1vh) !important;
     height: auto !important;
-    min-height: 98vh !important;
+    min-height: 0 !important;
     border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
-    overflow-x: hidden !important; /* Pas de scroll horizontal */
-    overflow-y: visible !important; /* Pas de scroll vertical interne */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 }
 
@@ -2843,49 +2845,15 @@ html[data-desktop-viewport] .confirmateurs-table-container {
   white-space: nowrap !important;
 }
 
-/* Permettre le scroll si nécessaire */
-.fiche-detail-modal-content .planning-tab .fiche-detail {
+/* Contenu fiche dans le modal : suit le scroll du panneau */
+.fiche-detail-modal-content .planning-tab .fiche-detail,
+.fiche-detail-modal-content .fiche-detail {
   overflow-x: hidden !important;
   overflow-y: visible !important;
-}
-
-/* Wrapper pour le contenu scrollable */
-.fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar):not(.fiche-detail-modal-banner) {
-  flex: 1;
-  min-height: 0;
-  overflow-y: visible;
-  overflow-x: hidden;
   max-width: 100% !important;
-  width: 100% !important;
   box-sizing: border-box !important;
-  overflow-wrap: break-word !important;
-  word-wrap: break-word !important;
 }
 
-/* Activer le scroll horizontal en mobile pour le contenu du modal */
-@media (max-width: 768px) {
-  .fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar):not(.fiche-detail-modal-banner) {
-    overflow-x: hidden !important; /* Pas de scroll horizontal en mobile */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
-  }
-
-  .fiche-detail-modal-content .planning-tab .fiche-detail {
-    overflow-x: hidden !important; /* Pas de scroll horizontal pour le planning */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
-  }
-}
-
-@media (max-width: 480px) {
-  .fiche-detail-modal-content > *:not(.fiche-detail-modal-close):not(.fiche-detail-modal-topbar):not(.fiche-detail-modal-banner) {
-    overflow-x: hidden !important; /* Pas de scroll horizontal en mobile */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
-  }
-
-  .fiche-detail-modal-content .planning-tab .fiche-detail {
-    overflow-x: hidden !important; /* Pas de scroll horizontal pour le planning */
-    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
-  }
-}
 
 /* Empêcher tout élément de dépasser la largeur du modal - mais exclure les boutons et éléments interactifs */
 .fiche-detail-modal-content input,

@@ -30,21 +30,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   // Session commercial : éviter la fermeture accidentelle au clic extérieur
   const isBackdropCloseLocked = isOverlayLocked || Number(user?.fonction) === 5;
 
-  // Ne plus bloquer le scroll du body - le modal utilise le scroll de la page
-  // useModalScrollLock(!!ficheHash);
-
-  // iOS Safari : empêcher le scroll horizontal du body pendant le modal (évite le rebond)
-  useEffect(() => {
-    if (!ficheHash) return undefined;
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevHtmlOverflow = document.documentElement.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prevBodyOverflow;
-      document.documentElement.style.overflow = prevHtmlOverflow;
-    };
-  }, [ficheHash]);
+  useModalScrollLock(!!ficheHash);
 
   // Récupérer les données de la fiche pour obtenir la couleur de l'état
   const { data: ficheData } = useQuery(
