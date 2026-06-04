@@ -1,7 +1,7 @@
 -- =====================================================
 -- Table audit_qualite_rdv
 -- Historique des audits RDV par agents qualité confirmation (fonction 4)
--- La table fiches reste la source de vérité pour l''affichage fiche et les stats agents qualité :
+-- La table f iches reste la source de vérité pour l''affichage fiche et les stats agents qualité :
 --   fiches.id_qualite_confirmation, fiches.observation_qualite
 -- Cette table conserve l''historique de chaque saisie (audit_qualite_rdv).
 -- =====================================================
