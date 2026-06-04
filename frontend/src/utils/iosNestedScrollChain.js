@@ -1,18 +1,15 @@
 const EPS = 2;
 
-const TABLE_SELECTOR = [
-  '.fiches-table-container',
-  '.confirmateurs-table-container',
-  '.planning-table-container',
-  '.table-container-responsive',
-  '[class*="-table-container"]',
-].join(', ');
-
 export function isIOSTouchDevice() {
   return (
     /iPad|iPhone|iPod/i.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   );
+}
+
+/** Pinch-zoom actif : laisser Safari gérer le scroll nativement. */
+function isViewportZoomed() {
+  return Boolean(window.visualViewport && window.visualViewport.scale > 1.01);
 }
 
 function isScrollable(el) {
@@ -110,8 +107,6 @@ function processScrollChainTouch(e, chain, dx, dy) {
       return;
     }
   }
-
-  e.preventDefault();
 }
 
 function createTouchChainHandler(getChain, options = {}) {
@@ -126,6 +121,7 @@ function createTouchChainHandler(getChain, options = {}) {
 
   const onTouchMove = (e) => {
     if (e.touches.length !== 1) return;
+    if (isViewportZoomed()) return;
     if (containsCheck && !containsCheck(e.target)) return;
 
     const x = e.touches[0].clientX;
@@ -170,45 +166,7 @@ export function attachIosNestedScrollChain(boundaryEl) {
   };
 }
 
-function isDashboardPage() {
-  return (
-    document.body.classList.contains('dashboard-page') ||
-    document.documentElement.classList.contains('dashboard-page')
-  );
-}
-
-function touchInDashboardTable(target) {
-  if (!(target instanceof Element)) return false;
-  return Boolean(target.closest(TABLE_SELECTOR));
-}
-
-function getDashboardChain(target) {
-  const chain = collectScrollChain(target, document.documentElement);
-  const pageRoot = document.scrollingElement || document.documentElement;
-  if (pageRoot && isScrollable(pageRoot) && !chain.includes(pageRoot)) {
-    chain.push(pageRoot);
-  }
-  if (document.body && isScrollable(document.body) && !chain.includes(document.body)) {
-    chain.push(document.body);
-  }
-  return chain;
-}
-
-/**
- * Dashboard : tableau fiches → page (H + V), sans rebond sur le tableau.
- */
+/** @deprecated Dashboard : scroll natif sur document (CSS table-page-scroll). */
 export function initDashboardIosScrollChain() {
-  if (!isIOSTouchDevice()) return () => {};
-
-  const { onTouchStart, onTouchMove } = createTouchChainHandler(getDashboardChain, {
-    containsCheck: (target) => isDashboardPage() && touchInDashboardTable(target),
-  });
-
-  document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
-  document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
-
-  return () => {
-    document.removeEventListener('touchstart', onTouchStart, { capture: true });
-    document.removeEventListener('touchmove', onTouchMove, { capture: true });
-  };
+  return () => {};
 }

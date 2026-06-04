@@ -47,12 +47,12 @@ body[data-desktop-viewport] .content-wrapper {
   max-height: none !important;
 }
 
-/* Conteneurs de tableaux : scroll isolé H + V, ne propage pas à la page */
-body[data-desktop-viewport] .fiches-table-container,
-body[data-desktop-viewport] .confirmateurs-table-container,
-body[data-desktop-viewport] .table-container-responsive,
-body[data-desktop-viewport] [class*='-table-container'],
-body[data-desktop-viewport] .planning-table-container {
+/* Conteneurs de tableaux : scroll isolé (sauf Dashboard = scroll page) */
+body[data-desktop-viewport]:not(.dashboard-page) .fiches-table-container,
+body[data-desktop-viewport]:not(.dashboard-page) .confirmateurs-table-container,
+body[data-desktop-viewport]:not(.dashboard-page) .table-container-responsive,
+body[data-desktop-viewport]:not(.dashboard-page) [class*='-table-container'],
+body[data-desktop-viewport]:not(.dashboard-page) .planning-table-container {
   display: block;
   width: 100% !important;
   max-width: 100% !important;
@@ -113,20 +113,32 @@ body[data-desktop-viewport] .fiche-detail .planning-table {
   max-width: none !important;
 }
 
+/* Dashboard iOS : un seul scroll = page (H + V), tableau collé au document */
+body.dashboard-page[data-desktop-viewport],
+html.dashboard-page[data-desktop-viewport] {
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
 body.dashboard-page[data-desktop-viewport] .fiches-table-container,
 body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
-  min-width: 0 !important;
+  min-width: 1400px !important;
   width: 100% !important;
-  max-width: 100% !important;
-  overflow: auto !important;
-  overscroll-behavior: none !important;
+  max-width: none !important;
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
+  -webkit-overflow-scrolling: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  isolation: auto !important;
 }
 
 body.dashboard-page[data-desktop-viewport] .fiches-table,
 body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
-  min-width: 100% !important;
-  width: max-content !important;
+  min-width: 1400px !important;
+  width: 100% !important;
   max-width: none !important;
+  table-layout: fixed !important;
 }
 
 body.dashboard-page[data-desktop-viewport] .dashboard {
@@ -196,11 +208,17 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
     max-width: none !important;
   }
 
-  body[data-desktop-viewport] .fiches-table-container,
-  body[data-desktop-viewport] .confirmateurs-table-container,
-  body[data-desktop-viewport] .planning-table-container,
-  body[data-desktop-viewport] [class*='-table-container'] {
+  body[data-desktop-viewport]:not(.dashboard-page) .fiches-table-container,
+  body[data-desktop-viewport]:not(.dashboard-page) .confirmateurs-table-container,
+  body[data-desktop-viewport]:not(.dashboard-page) .planning-table-container,
+  body[data-desktop-viewport]:not(.dashboard-page) [class*='-table-container'] {
     overscroll-behavior: none !important;
+  }
+
+  body.dashboard-page[data-desktop-viewport] .fiches-table-container,
+  body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
   }
 
   html[data-desktop-viewport] .sidebar,

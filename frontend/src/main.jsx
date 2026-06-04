@@ -8,11 +8,8 @@ import App from './App';
 import './index.css';
 import { applyForceDesktopViewport } from './utils/applyForceDesktopViewport';
 import { initTableScrollContainment } from './utils/tableScrollContainment';
-import { initDashboardIosScrollChain } from './utils/iosNestedScrollChain';
-
 applyForceDesktopViewport();
 initTableScrollContainment();
-initDashboardIosScrollChain();
 
 const queryClient = new QueryClient({
   defaultOptions: {
