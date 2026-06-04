@@ -2481,13 +2481,16 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 2000;
-  overflow: hidden;
-  overscroll-behavior: contain;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 20px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   box-sizing: border-box;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .fiche-detail-modal-content {
@@ -2499,10 +2502,11 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   width: 49%;
   max-height: calc(100dvh - 40px);
   min-height: 0;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
+  touch-action: pan-x pan-y pinch-zoom;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   border: 8px solid #3498db; /* Couleur par défaut, sera remplacée par le style inline */
   transition: border-color 0.3s ease;
@@ -2615,8 +2619,8 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-  overflow-x: hidden !important;
-  overscroll-behavior-x: none !important;
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
 }
 
 .fiche-detail-modal-content .planning-table-container {
@@ -2625,31 +2629,35 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   max-width: 100% !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
-  overscroll-behavior: contain !important;
+  overscroll-behavior: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y pinch-zoom !important;
   isolation: isolate;
 }
 
 @media (max-width: 768px) {
   .fiche-detail-modal-content .planning-view {
-    overflow-x: hidden !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
   }
 
   .fiche-detail-modal-content .planning-table-container {
     overflow: auto !important;
-    overscroll-behavior: contain !important;
+    overscroll-behavior: auto !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
 
 @media (max-width: 480px) {
   .fiche-detail-modal-content .planning-view {
-    overflow-x: hidden !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
   }
 
   .fiche-detail-modal-content .planning-table-container {
     overflow: auto !important;
-    overscroll-behavior: contain !important;
+    overscroll-behavior: auto !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
 
@@ -2826,9 +2834,11 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     max-height: calc(100dvh - 2vh) !important;
     height: auto !important;
     min-height: 0 !important;
-    overflow-x: hidden !important;
+    overflow-x: auto !important;
     overflow-y: auto !important;
+    overscroll-behavior: auto !important;
     -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
 
@@ -2847,9 +2857,11 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     height: auto !important;
     min-height: 0 !important;
     border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
-    overflow-x: hidden !important;
+    overflow-x: auto !important;
     overflow-y: auto !important;
+    overscroll-behavior: auto !important;
     -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
 
@@ -2869,11 +2881,11 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   white-space: nowrap !important;
 }
 
-/* Contenu fiche dans le modal : suit le scroll du panneau */
+/* Contenu fiche : scroll du tableau planning puis du panneau modal (comme dashboard) */
 .fiche-detail-modal-content .planning-tab .fiche-detail,
 .fiche-detail-modal-content .fiche-detail {
-  overflow-x: hidden !important;
-  overflow-y: visible !important;
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
 }

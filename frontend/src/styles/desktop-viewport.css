@@ -73,12 +73,21 @@ body[data-desktop-viewport] .planning-table {
   touch-action: pan-x pan-y pinch-zoom;
 }
 
-/* Détail fiche (modal + page) */
+/* Détail fiche — modal : scroll tableau puis panneau (comme dashboard / fiches-table) */
 body[data-desktop-viewport] .fiche-detail-modal-overlay {
-  overscroll-behavior: contain !important;
+  overflow-y: auto !important;
+  overscroll-behavior: auto !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
-body[data-desktop-viewport] .fiche-detail-modal-content,
+body[data-desktop-viewport] .fiche-detail-modal-content {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
 body[data-desktop-viewport] .fiche-detail-modal-content .fiche-detail,
 body[data-desktop-viewport] .fiche-detail-modal-content .fiche-sections,
 body[data-desktop-viewport] .fiche-detail .fiche-sections,
@@ -86,14 +95,15 @@ body[data-desktop-viewport] .fiche-detail-modal-content .planning-tab,
 body[data-desktop-viewport] .fiche-detail .planning-tab,
 body[data-desktop-viewport] .fiche-detail-modal-content .planning-view,
 body[data-desktop-viewport] .fiche-detail .planning-view {
-  overflow-x: hidden !important;
-  overscroll-behavior-x: none !important;
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
 }
 
 body[data-desktop-viewport] .fiche-detail-modal-content .planning-table-container,
 body[data-desktop-viewport] .fiche-detail .planning-table-container {
   overflow: auto !important;
-  overscroll-behavior: contain !important;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 body[data-desktop-viewport] .fiche-detail-modal-content .planning-table,

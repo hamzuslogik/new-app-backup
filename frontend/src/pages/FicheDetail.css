@@ -631,10 +631,16 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y pinch-zoom;
   isolation: isolate;
+}
+
+/* Modal : le scroll du tableau planning se propage au panneau */
+.fiche-detail-modal-content .planning-table-container {
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 .planning-table {
