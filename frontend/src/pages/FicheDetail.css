@@ -634,7 +634,6 @@
   overscroll-behavior: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;
-  isolation: isolate;
 }
 
 /* Modal : le scroll du tableau planning se propage au panneau */

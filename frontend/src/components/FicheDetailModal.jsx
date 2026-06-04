@@ -8,6 +8,7 @@ import { FaTimes } from 'react-icons/fa';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { useIosNestedScrollChain } from '../hooks/useIosNestedScrollChain';
 import { getHomePage } from '../utils/getHomePage';
 import '../pages/Dashboard.css';
 
@@ -19,6 +20,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const userRef = React.useRef(user);
   userRef.current = user;
   const modalContentRef = React.useRef(null);
+  const modalOverlayRef = React.useRef(null);
   const isDirectAccess = React.useRef(false);
   const searchParams = new URLSearchParams(location.search);
   const lockedFromOption = options?.closeMode === '0';
@@ -31,6 +33,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const isBackdropCloseLocked = isOverlayLocked || Number(user?.fonction) === 5;
 
   useModalScrollLock(!!ficheHash);
+  useIosNestedScrollChain(modalOverlayRef, !!ficheHash);
 
   // Récupérer les données de la fiche pour obtenir la couleur de l'état
   const { data: ficheData } = useQuery(
@@ -147,6 +150,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
 
   const modalContent = (
     <div
+      ref={modalOverlayRef}
       className="fiche-detail-modal-overlay"
       onClick={isBackdropCloseLocked ? undefined : onClose}
     >
