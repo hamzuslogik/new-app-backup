@@ -21,9 +21,16 @@ function getScrollLimits(el) {
   };
 }
 
+function isDashboardPage() {
+  return (
+    document.body.classList.contains('dashboard-page') ||
+    document.documentElement.classList.contains('dashboard-page')
+  );
+}
+
 /**
- * iOS Safari : empêche le scroll de « continuer » sur la page quand on atteint
- * le bord d'un conteneur de tableau (horizontal ou vertical).
+ * iOS Safari : sur les pages autres que Dashboard, limite le scroll au tableau.
+ * Dashboard : ne pas bloquer aux bords → le scroll continue sur la page.
  */
 export function initTableScrollContainment() {
   let lastX = 0;
@@ -48,6 +55,7 @@ export function initTableScrollContainment() {
     'touchmove',
     (e) => {
       if (e.touches.length !== 1) return;
+      if (isDashboardPage()) return;
 
       const container = findTableScrollContainer(e.target) || activeContainer;
       if (!container) return;

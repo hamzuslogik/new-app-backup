@@ -99,7 +99,7 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
   width: 100% !important;
   max-width: 100% !important;
   overflow: auto !important;
-  overscroll-behavior: contain !important;
+  overscroll-behavior: auto !important;
 }
 
 body.dashboard-page[data-desktop-viewport] .fiches-table,
@@ -176,11 +176,16 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
     max-width: 100% !important;
   }
 
-  body[data-desktop-viewport] .fiches-table-container,
-  body[data-desktop-viewport] .confirmateurs-table-container,
-  body[data-desktop-viewport] .planning-table-container,
-  body[data-desktop-viewport] [class*='-table-container'] {
+  body[data-desktop-viewport]:not(.dashboard-page) .fiches-table-container,
+  body[data-desktop-viewport]:not(.dashboard-page) .confirmateurs-table-container,
+  body[data-desktop-viewport]:not(.dashboard-page) .planning-table-container,
+  body[data-desktop-viewport]:not(.dashboard-page) [class*='-table-container'] {
     overscroll-behavior: contain !important;
+  }
+
+  body.dashboard-page[data-desktop-viewport] .fiches-table-container,
+  body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
+    overscroll-behavior: auto !important;
   }
 
   html[data-desktop-viewport] .sidebar,

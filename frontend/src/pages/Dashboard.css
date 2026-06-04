@@ -24,7 +24,9 @@ body.dashboard-page {
   min-width: 1400px !important;
   width: 100% !important;
   max-width: 100% !important;
-  overflow-x: auto !important; /* Permettre le scroll horizontal si nécessaire */
+  overflow: auto !important;
+  overscroll-behavior: auto !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Désactiver toute règle responsive mobile existante */
@@ -1260,13 +1262,20 @@ button.stat-card.stat-card-clickable {
   overflow: auto;
   margin-bottom: 16px;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
 }
 
-html[data-desktop-viewport] .fiches-table-container,
-html[data-desktop-viewport] .confirmateurs-table-container {
+.dashboard-page .fiches-table-container,
+.dashboard-page .confirmateurs-table-container {
+  overscroll-behavior: auto !important;
+}
+
+html[data-desktop-viewport] .dashboard-page .fiches-table-container,
+html[data-desktop-viewport] .dashboard-page .confirmateurs-table-container,
+html.dashboard-page[data-desktop-viewport] .fiches-table-container,
+html.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
   overflow: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto !important;
   touch-action: pan-x pan-y;
 }
 
