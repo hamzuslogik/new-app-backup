@@ -4,38 +4,47 @@ body[data-desktop-viewport] {
   min-width: 1400px !important;
   width: auto !important;
   max-width: none !important;
-  overflow-x: auto !important;
+  overflow: auto !important;
   margin: 0 !important;
   -webkit-text-size-adjust: 100%;
-  overscroll-behavior: none;
+  overscroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 html[data-desktop-viewport] #root,
-body[data-desktop-viewport] #root,
+body[data-desktop-viewport] #root {
+  min-width: 1400px;
+  overflow: visible;
+}
+
 body[data-desktop-viewport] .app {
   min-width: 1400px;
   min-height: 100vh;
   min-height: -webkit-fill-available;
+  overflow: visible;
 }
 
 body[data-desktop-viewport] .content-wrapper {
   min-width: 0;
-  max-width: 100%;
-  overscroll-behavior-y: auto;
-  overscroll-behavior-x: none;
+  max-width: none;
+  overflow: visible !important;
+  overscroll-behavior: auto;
 }
 
 body[data-desktop-viewport] .content-wrapper > * {
   min-width: 0;
-  max-width: 100%;
+  max-width: none;
 }
 
-/* Pas de scroll horizontal imbriqué sur les parents de tableaux */
+/* Scroll page = document ; pas de clip sur app / main / content-wrapper */
 body[data-desktop-viewport] .app,
 body[data-desktop-viewport] .main-content,
 body[data-desktop-viewport] .content-wrapper {
-  overflow-x: hidden !important;
-  overscroll-behavior-x: none !important;
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
+  height: auto !important;
+  max-height: none !important;
 }
 
 /* Conteneurs de tableaux : scroll isolé H + V, ne propage pas à la page */
@@ -49,9 +58,9 @@ body[data-desktop-viewport] .planning-table-container {
   max-width: 100% !important;
   min-width: 0 !important;
   overflow: auto !important;
-  overscroll-behavior: contain !important;
+  overscroll-behavior: auto !important;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y pinch-zoom;
   isolation: isolate;
 }
 
@@ -110,10 +119,10 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 }
 
 body.dashboard-page[data-desktop-viewport] .dashboard {
-  overflow-x: hidden !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  width: 100% !important;
+  overflow: visible !important;
+  min-width: 1400px !important;
+  max-width: none !important;
+  width: auto !important;
   box-sizing: border-box;
 }
 
@@ -166,25 +175,20 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
     min-width: 1400px !important;
     width: auto !important;
     max-width: none !important;
-    overflow-x: auto !important;
-    overscroll-behavior: none !important;
+    overflow: auto !important;
+    overscroll-behavior: auto !important;
   }
 
   body[data-desktop-viewport] .content-wrapper,
   body[data-desktop-viewport] .content-wrapper > * {
     min-width: 0 !important;
-    max-width: 100% !important;
+    max-width: none !important;
   }
 
-  body[data-desktop-viewport]:not(.dashboard-page) .fiches-table-container,
-  body[data-desktop-viewport]:not(.dashboard-page) .confirmateurs-table-container,
-  body[data-desktop-viewport]:not(.dashboard-page) .planning-table-container,
-  body[data-desktop-viewport]:not(.dashboard-page) [class*='-table-container'] {
-    overscroll-behavior: contain !important;
-  }
-
-  body.dashboard-page[data-desktop-viewport] .fiches-table-container,
-  body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
+  body[data-desktop-viewport] .fiches-table-container,
+  body[data-desktop-viewport] .confirmateurs-table-container,
+  body[data-desktop-viewport] .planning-table-container,
+  body[data-desktop-viewport] [class*='-table-container'] {
     overscroll-behavior: auto !important;
   }
 

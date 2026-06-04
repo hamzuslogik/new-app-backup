@@ -20,11 +20,11 @@ export function applyForceDesktopViewport(width = DESKTOP_VIEWPORT_WIDTH) {
   document.documentElement.style.minWidth = `${width}px`;
   document.documentElement.style.width = 'auto';
   document.documentElement.style.maxWidth = 'none';
-  document.documentElement.style.overflowX = 'auto';
+  document.documentElement.style.overflow = 'auto';
   if (document.body) {
     document.body.style.minWidth = `${width}px`;
     document.body.style.width = 'auto';
     document.body.style.maxWidth = 'none';
-    document.body.style.overflowX = 'auto';
+    document.body.style.overflow = 'auto';
   }
 }
