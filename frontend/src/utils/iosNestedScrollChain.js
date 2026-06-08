@@ -12,8 +12,24 @@ function isViewportZoomed() {
   return Boolean(window.visualViewport && window.visualViewport.scale > 1.01);
 }
 
+function isDocumentScrollRoot(el) {
+  return (
+    el === document.documentElement ||
+    el === document.body ||
+    el === document.scrollingElement
+  );
+}
+
 function isScrollable(el) {
   if (!(el instanceof Element)) return false;
+
+  if (isDocumentScrollRoot(el)) {
+    return (
+      el.scrollHeight > el.clientHeight + EPS ||
+      el.scrollWidth > el.clientWidth + EPS
+    );
+  }
+
   const style = window.getComputedStyle(el);
   const canY =
     (style.overflowY === 'auto' ||
@@ -166,7 +182,104 @@ export function attachIosNestedScrollChain(boundaryEl) {
   };
 }
 
-/** @deprecated Dashboard : scroll natif sur document (CSS table-page-scroll). */
+function appendPageScrollRoots(chain) {
+  const result = [...chain];
+  const wrapper = document.querySelector('.content-wrapper');
+  if (wrapper && isScrollable(wrapper) && !result.includes(wrapper)) {
+    result.push(wrapper);
+  }
+
+  const pageRoot = document.scrollingElement || document.documentElement;
+  if (pageRoot && isScrollable(pageRoot) && !result.includes(pageRoot)) {
+    result.push(pageRoot);
+  }
+  if (document.body && isScrollable(document.body) && !result.includes(document.body)) {
+    result.push(document.body);
+  }
+
+  return result;
+}
+
+function buildMainScrollChain(target) {
+  return appendPageScrollRoots(collectScrollChain(target, document.documentElement));
+}
+
+function touchIsInMainContent(target) {
+  if (!(target instanceof Element)) return false;
+  if (target.closest('.sidebar')) return false;
+  if (target.closest('.fiche-detail-modal-overlay')) return false;
+  if (target.closest('input, textarea, select, [contenteditable="true"]')) return false;
+  return Boolean(target.closest('.main-content'));
+}
+
+/**
+ * iOS Safari : scroll imbriqué dans la zone main (tableau → page).
+ * Safari ne propage pas toujours le touch scroll vers html/body avec viewport desktop forcé.
+ */
+function processMainScrollTouch(e, chain, dx, dy) {
+  if (!chain.length) return;
+
+  for (let i = 0; i < chain.length; i += 1) {
+    if (canConsumeScroll(chain[i], dx, dy)) {
+      if (i === 0 && isDocumentScrollRoot(chain[i])) {
+        if (applyScrollDelta(chain[i], dx, dy)) e.preventDefault();
+        return;
+      }
+      if (i === 0) return;
+      if (applyScrollDelta(chain[i], dx, dy)) e.preventDefault();
+      return;
+    }
+  }
+
+  for (let i = 1; i < chain.length; i += 1) {
+    if (applyScrollDelta(chain[i], dx, dy)) {
+      e.preventDefault();
+      return;
+    }
+  }
+}
+
+export function initMainContentIosScrollChain() {
+  if (!isIOSTouchDevice()) return () => {};
+
+  const state = { lastX: 0, lastY: 0 };
+
+  const onTouchStart = (e) => {
+    if (e.touches.length !== 1) return;
+    state.lastX = e.touches[0].clientX;
+    state.lastY = e.touches[0].clientY;
+  };
+
+  const onTouchMove = (e) => {
+    if (e.touches.length !== 1) return;
+    if (isViewportZoomed()) return;
+    if (!touchIsInMainContent(e.target)) return;
+
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+    const dx = x - state.lastX;
+    const dy = y - state.lastY;
+    state.lastX = x;
+    state.lastY = y;
+
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+
+    const chain = buildMainScrollChain(e.target);
+    if (!chain.length) return;
+
+    processMainScrollTouch(e, chain, dx, dy);
+  };
+
+  document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+  document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+
+  return () => {
+    document.removeEventListener('touchstart', onTouchStart, { capture: true });
+    document.removeEventListener('touchmove', onTouchMove, { capture: true });
+  };
+}
+
+/** @deprecated Utiliser initMainContentIosScrollChain */
 export function initDashboardIosScrollChain() {
-  return () => {};
+  return initMainContentIosScrollChain();
 }
