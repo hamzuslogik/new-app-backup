@@ -7,6 +7,18 @@ export function isLoginPath(pathname = '') {
   return path === LOGIN_PATH || path.endsWith(LOGIN_PATH);
 }
 
+function replaceViewportMeta(content) {
+  document.querySelectorAll('meta[name="viewport"]').forEach((el) => el.remove());
+  const viewport = document.createElement('meta');
+  viewport.setAttribute('name', 'viewport');
+  viewport.setAttribute('content', content);
+  document.head.appendChild(viewport);
+}
+
+function notifyViewportChange() {
+  window.dispatchEvent(new Event('resize'));
+}
+
 function clearDocumentScrollStyles() {
   const props = ['minWidth', 'width', 'maxWidth', 'overflow', 'overflowX', 'overflowY'];
   for (const prop of props) {
@@ -17,14 +29,7 @@ function clearDocumentScrollStyles() {
 
 /** Viewport mobile natif — page de connexion iOS / Android */
 export function applyMobileViewport() {
-  let viewport = document.querySelector('meta[name="viewport"]');
-  if (!viewport) {
-    viewport = document.createElement('meta');
-    viewport.setAttribute('name', 'viewport');
-    document.head.appendChild(viewport);
-  }
-  viewport.setAttribute(
-    'content',
+  replaceViewportMeta(
     'width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover'
   );
 
@@ -35,17 +40,13 @@ export function applyMobileViewport() {
 
   document.documentElement.classList.add('login-page');
   if (document.body) document.body.classList.add('login-page');
+
+  notifyViewportChange();
 }
 
+/** Layout desktop 1400px — CRM après connexion (iOS / Android inclus) */
 export function applyForceDesktopViewport(width = DESKTOP_VIEWPORT_WIDTH) {
-  let viewport = document.querySelector('meta[name="viewport"]');
-  if (!viewport) {
-    viewport = document.createElement('meta');
-    viewport.setAttribute('name', 'viewport');
-    document.head.appendChild(viewport);
-  }
-  viewport.setAttribute(
-    'content',
+  replaceViewportMeta(
     `width=${width}, initial-scale=1, minimum-scale=0.25, maximum-scale=5, user-scalable=yes, viewport-fit=cover`
   );
 
@@ -67,6 +68,8 @@ export function applyForceDesktopViewport(width = DESKTOP_VIEWPORT_WIDTH) {
     document.body.style.maxWidth = 'none';
     document.body.style.overflow = 'auto';
   }
+
+  notifyViewportChange();
 }
 
 export function applyViewportForPath(pathname) {
