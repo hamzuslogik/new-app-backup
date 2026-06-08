@@ -4,9 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/ico/logo.ico" />
     <link rel="apple-touch-icon" href="/logo/logo.png" />
-    <meta name="viewport" content="width=1400, initial-scale=1, minimum-scale=0.25, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
     <script>
-      document.documentElement.dataset.desktopViewport = '1400';
+      (function () {
+        var path = window.location.pathname || '';
+        var isLogin = path === '/login' || path.endsWith('/login');
+        if (isLogin) {
+          document.documentElement.classList.add('login-page');
+        } else {
+          document.documentElement.dataset.desktopViewport = '1400';
+        }
+      })();
     </script>
     <meta name="description" content="CRM JWS Group - Gestion de la relation client" />
     <title>CRM JWS Group</title>
@@ -16,4 +24,3 @@
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
-

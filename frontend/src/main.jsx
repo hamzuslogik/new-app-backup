@@ -6,13 +6,11 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import App from './App';
 import './index.css';
-import { applyForceDesktopViewport } from './utils/applyForceDesktopViewport';
+import { applyViewportForPath } from './utils/applyForceDesktopViewport';
 import { initTableScrollContainment } from './utils/tableScrollContainment';
-import { initViewportZoomScrollFix } from './utils/viewportZoomScrollFix';
 
-applyForceDesktopViewport();
+applyViewportForPath(window.location.pathname);
 initTableScrollContainment();
-initViewportZoomScrollFix();
 
 const queryClient = new QueryClient({
   defaultOptions: {

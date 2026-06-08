@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
-import { DESKTOP_VIEWPORT_WIDTH } from '../config/viewport';
-import { applyForceDesktopViewport } from '../utils/applyForceDesktopViewport';
+import { useLocation } from 'react-router-dom';
+import { applyViewportForPath } from '../utils/applyForceDesktopViewport';
 
 const ForceDesktopViewport = () => {
+  const { pathname } = useLocation();
+
   useEffect(() => {
-    applyForceDesktopViewport(DESKTOP_VIEWPORT_WIDTH);
-  }, []);
+    applyViewportForPath(pathname);
+  }, [pathname]);
 
   return null;
 };
