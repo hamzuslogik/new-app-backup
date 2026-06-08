@@ -1,13 +1,10 @@
 import { useLayoutEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { applyViewportForPath } from '../utils/applyForceDesktopViewport';
+import { applyForceDesktopViewport } from '../utils/applyForceDesktopViewport';
 
 const ForceDesktopViewport = () => {
-  const { pathname } = useLocation();
-
   useLayoutEffect(() => {
-    applyViewportForPath(pathname);
-  }, [pathname]);
+    applyForceDesktopViewport();
+  }, []);
 
   return null;
 };

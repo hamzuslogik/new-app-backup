@@ -12,22 +12,6 @@
   box-sizing: border-box;
 }
 
-/* Page connexion : pas de layout desktop forcé (1400px) */
-html.login-page,
-body.login-page {
-  min-width: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: hidden !important;
-  margin: 0 !important;
-}
-
-html.login-page #root {
-  min-width: 0 !important;
-  max-width: 100% !important;
-  width: 100% !important;
-}
-
 .login-box {
   background: white;
   border-radius: 8px;

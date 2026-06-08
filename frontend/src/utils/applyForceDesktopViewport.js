@@ -1,12 +1,5 @@
 import { DESKTOP_VIEWPORT_WIDTH } from '../config/viewport';
 
-export const LOGIN_PATH = '/login';
-
-export function isLoginPath(pathname = '') {
-  const path = pathname || (typeof window !== 'undefined' ? window.location.pathname : '');
-  return path === LOGIN_PATH || path.endsWith(LOGIN_PATH);
-}
-
 function isTouchMobile() {
   return (
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -39,14 +32,6 @@ function resetScrollPosition() {
   }
 }
 
-function clearDocumentScrollStyles() {
-  const props = ['minWidth', 'width', 'maxWidth', 'overflow', 'overflowX', 'overflowY'];
-  for (const prop of props) {
-    document.documentElement.style[prop] = '';
-    if (document.body) document.body.style[prop] = '';
-  }
-}
-
 /**
  * Échelle initiale pour voir toute la largeur desktop à l'écran (pas de zoom avant).
  * Sur PC : 1. Sur mobile : largeur écran / 1400.
@@ -69,40 +54,8 @@ function buildDesktopViewportContent(width = DESKTOP_VIEWPORT_WIDTH) {
   return `width=${width}, initial-scale=${scaleStr}, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover`;
 }
 
-/** iOS / Android : réinitialise le zoom visuel avant le passage en layout desktop */
-function resetTouchZoomBeforeDesktop() {
-  if (!isTouchMobile()) return;
-  replaceViewportMeta(
-    'width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover'
-  );
-  void document.documentElement.offsetHeight;
-  if (document.body) void document.body.offsetHeight;
-}
-
-/** Viewport mobile natif — page de connexion iOS / Android */
-export function applyMobileViewport() {
-  replaceViewportMeta(
-    'width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover'
-  );
-
-  delete document.documentElement.dataset.desktopViewport;
-  if (document.body) delete document.body.dataset.desktopViewport;
-
-  clearDocumentScrollStyles();
-
-  document.documentElement.classList.add('login-page');
-  if (document.body) document.body.classList.add('login-page');
-
-  resetScrollPosition();
-  notifyViewportChange();
-}
-
-/** Layout desktop 1400px — vue d'ensemble à l'écran dès le chargement (iOS / Android) */
+/** Layout desktop 1400px — toute l'application, y compris la page de connexion */
 export function applyForceDesktopViewport(width = DESKTOP_VIEWPORT_WIDTH) {
-  if (document.documentElement.classList.contains('login-page')) {
-    resetTouchZoomBeforeDesktop();
-  }
-
   replaceViewportMeta(buildDesktopViewportContent(width));
 
   document.documentElement.dataset.desktopViewport = String(width);
@@ -124,18 +77,18 @@ export function applyForceDesktopViewport(width = DESKTOP_VIEWPORT_WIDTH) {
     document.body.style.overflow = 'auto';
   }
 
-  resetScrollPosition();
-
-  requestAnimationFrame(() => {
+  if (isTouchMobile()) {
     resetScrollPosition();
+    requestAnimationFrame(() => {
+      resetScrollPosition();
+      notifyViewportChange();
+    });
+  } else {
     notifyViewportChange();
-  });
+  }
 }
 
-export function applyViewportForPath(pathname) {
-  if (isLoginPath(pathname)) {
-    applyMobileViewport();
-  } else {
-    applyForceDesktopViewport();
-  }
+/** Alias conservé pour main.jsx / ForceDesktopViewport */
+export function applyViewportForPath(_pathname) {
+  applyForceDesktopViewport();
 }

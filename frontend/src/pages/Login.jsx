@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
 import { getHomePage } from '../utils/getHomePage';
-import { applyForceDesktopViewport } from '../utils/applyForceDesktopViewport';
 import api from '../config/api';
 import './Login.css';
 
@@ -55,7 +54,6 @@ const Login = () => {
     }
 
     const homePage = getHomePage(savedUser, fonctionData, agentsSousResponsabilite);
-    applyForceDesktopViewport();
     navigate(homePage);
   };
 
