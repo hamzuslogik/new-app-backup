@@ -28,15 +28,34 @@
   min-width: 0; /* Permettre au flex de réduire la largeur si nécessaire */
 }
 
-/* Mode desktop forcé : scroll sur le document (html/body), pas de clip ici */
+/* Mode desktop forcé : scroll dans .content-wrapper (zone main) */
 html[data-desktop-viewport] .app,
 html[data-desktop-viewport] .main-content,
-html[data-desktop-viewport] .content-wrapper,
 body[data-desktop-viewport] .app,
-body[data-desktop-viewport] .main-content,
-body[data-desktop-viewport] .content-wrapper {
-  overflow: visible !important;
+body[data-desktop-viewport] .main-content {
   overscroll-behavior: auto !important;
+}
+
+html[data-desktop-viewport] .main-content,
+body[data-desktop-viewport] .main-content {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100vh;
+  max-height: -webkit-fill-available;
+  overflow: hidden !important;
+}
+
+html[data-desktop-viewport] .content-wrapper,
+body[data-desktop-viewport] .content-wrapper {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  overscroll-behavior: auto !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 /* Sur desktop (> 1024px), le main-content ajuste la marge selon l'état du sidebar */
