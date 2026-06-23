@@ -25,7 +25,7 @@ body[data-desktop-viewport] .app {
   overflow: visible;
 }
 
-/* Scroll page = document (html/body) ; iOS : initMainContentIosScrollChain */
+/* Scroll page = document (html/body) ; conteneurs internes via initMainContentIosScrollChain */
 body[data-desktop-viewport] .app,
 body[data-desktop-viewport] .main-content,
 body[data-desktop-viewport] .content-wrapper {

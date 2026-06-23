@@ -182,26 +182,10 @@ export function attachIosNestedScrollChain(boundaryEl) {
   };
 }
 
-function appendPageScrollRoots(chain) {
-  const result = [...chain];
-  const wrapper = document.querySelector('.content-wrapper');
-  if (wrapper && isScrollable(wrapper) && !result.includes(wrapper)) {
-    result.push(wrapper);
-  }
-
-  const pageRoot = document.scrollingElement || document.documentElement;
-  if (pageRoot && isScrollable(pageRoot) && !result.includes(pageRoot)) {
-    result.push(pageRoot);
-  }
-  if (document.body && isScrollable(document.body) && !result.includes(document.body)) {
-    result.push(document.body);
-  }
-
-  return result;
-}
-
 function buildMainScrollChain(target) {
-  return appendPageScrollRoots(collectScrollChain(target, document.documentElement));
+  return collectScrollChain(target, document.documentElement).filter(
+    (el) => !isDocumentScrollRoot(el)
+  );
 }
 
 function touchIsInMainContent(target) {
@@ -213,26 +197,23 @@ function touchIsInMainContent(target) {
 }
 
 /**
- * iOS Safari : scroll imbriqué dans la zone main (tableau → page).
- * Safari ne propage pas toujours le touch scroll vers html/body avec viewport desktop forcé.
+ * iOS Safari : scroll imbriqué dans la zone main (conteneurs internes uniquement).
+ * Le scroll page (html/body) reste 100 % natif — pas de preventDefault sur le document.
  */
 function processMainScrollTouch(e, chain, dx, dy) {
-  if (!chain.length) return;
+  const nestedChain = chain.filter((el) => !isDocumentScrollRoot(el));
+  if (!nestedChain.length) return;
 
-  for (let i = 0; i < chain.length; i += 1) {
-    if (canConsumeScroll(chain[i], dx, dy)) {
-      if (i === 0 && isDocumentScrollRoot(chain[i])) {
-        if (applyScrollDelta(chain[i], dx, dy)) e.preventDefault();
-        return;
-      }
+  for (let i = 0; i < nestedChain.length; i += 1) {
+    if (canConsumeScroll(nestedChain[i], dx, dy)) {
       if (i === 0) return;
-      if (applyScrollDelta(chain[i], dx, dy)) e.preventDefault();
+      if (applyScrollDelta(nestedChain[i], dx, dy)) e.preventDefault();
       return;
     }
   }
 
-  for (let i = 1; i < chain.length; i += 1) {
-    if (applyScrollDelta(chain[i], dx, dy)) {
+  for (let i = nestedChain.length - 1; i >= 1; i -= 1) {
+    if (applyScrollDelta(nestedChain[i], dx, dy)) {
       e.preventDefault();
       return;
     }

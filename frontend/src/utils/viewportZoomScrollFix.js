@@ -26,13 +26,13 @@ function applyZoomedDocumentStyles(zoomed) {
 
   if (zoomed) {
     html.classList.add('viewport-zoomed');
-    html.style.overflow = 'auto';
-    html.style.overflowX = 'scroll';
-    html.style.overflowY = 'auto';
+    html.style.overflow = '';
+    html.style.overflowX = '';
+    html.style.overflowY = '';
     if (body) {
-      body.style.overflow = 'auto';
-      body.style.overflowX = 'scroll';
-      body.style.overflowY = 'auto';
+      body.style.overflow = '';
+      body.style.overflowX = '';
+      body.style.overflowY = '';
     }
   } else {
     html.classList.remove('viewport-zoomed');
@@ -53,107 +53,34 @@ function applyZoomedDocumentStyles(zoomed) {
   }
 }
 
-/**
- * iOS / Android : après pinch-zoom, Safari/Chrome décrochent le scroll horizontal
- * du layout viewport. On synchronise uniquement l'axe X — le vertical reste natif.
- */
-function syncLayoutScrollFromVisualViewport() {
-  const vv = getVisualViewport();
-  if (!vv || !isZoomed()) return;
-
-  const left = Math.max(0, vv.pageLeft ?? vv.offsetLeft ?? 0);
-
-  if (Math.abs(window.scrollX - left) > 0.5) {
-    window.scrollTo(left, window.scrollY);
-  }
-}
-
 function scheduleSync() {
   if (rafId) cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(() => {
     rafId = 0;
     applyZoomedDocumentStyles(isZoomed());
-    syncLayoutScrollFromVisualViewport();
   });
 }
 
 /**
- * Active la correction scroll post-zoom (iOS + Android).
+ * Après pinch-zoom : classe CSS uniquement (pas de touch handlers ni sync scroll).
+ * Le scroll reste 100 % natif pour éviter les saccades avec ou sans zoom.
  */
 export function initViewportZoomScrollFix() {
   if (!isTouchMobile() || !getVisualViewport()) return () => {};
 
   const vv = getVisualViewport();
 
-  const onViewportChange = () => scheduleSync();
-  const onOrientationChange = () => scheduleSync();
+  const onViewportResize = () => scheduleSync();
 
-  vv.addEventListener('resize', onViewportChange);
-  vv.addEventListener('scroll', onViewportChange);
-  window.addEventListener('orientationchange', onOrientationChange);
-  window.addEventListener('resize', onOrientationChange);
+  vv.addEventListener('resize', onViewportResize);
+  window.addEventListener('orientationchange', onViewportResize);
 
   scheduleSync();
 
-  let panLastX = 0;
-  let panLastY = 0;
-  let panActive = false;
-
-  const shouldPanDocument = (target) => {
-    if (!(target instanceof Element)) return true;
-    if (target.closest('input, textarea, select, [contenteditable="true"]')) return false;
-    if (target.closest('.fiche-detail-modal-overlay')) return false;
-    return true;
-  };
-
-  const onTouchStart = (e) => {
-    if (!isZoomed() || e.touches.length !== 1) {
-      panActive = false;
-      return;
-    }
-    panLastX = e.touches[0].clientX;
-    panLastY = e.touches[0].clientY;
-    panActive = shouldPanDocument(e.target);
-  };
-
-  const onTouchMove = (e) => {
-    if (!panActive || !isZoomed() || e.touches.length !== 1) return;
-
-    const x = e.touches[0].clientX;
-    const y = e.touches[0].clientY;
-    const dx = x - panLastX;
-    const dy = y - panLastY;
-    panLastX = x;
-    panLastY = y;
-
-    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
-
-    // Vertical : laisser le scroll natif (évite le scroll haut/bas instable après zoom)
-    if (Math.abs(dy) >= Math.abs(dx)) return;
-
-    window.scrollBy(-dx, 0);
-    e.preventDefault();
-  };
-
-  const onTouchEnd = () => {
-    panActive = false;
-  };
-
-  document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
-  document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
-  document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
-  document.addEventListener('touchcancel', onTouchEnd, { passive: true, capture: true });
-
   return () => {
     if (rafId) cancelAnimationFrame(rafId);
-    vv.removeEventListener('resize', onViewportChange);
-    vv.removeEventListener('scroll', onViewportChange);
-    window.removeEventListener('orientationchange', onOrientationChange);
-    window.removeEventListener('resize', onOrientationChange);
-    document.removeEventListener('touchstart', onTouchStart, { capture: true });
-    document.removeEventListener('touchmove', onTouchMove, { capture: true });
-    document.removeEventListener('touchend', onTouchEnd, { capture: true });
-    document.removeEventListener('touchcancel', onTouchEnd, { capture: true });
+    vv.removeEventListener('resize', onViewportResize);
+    window.removeEventListener('orientationchange', onViewportResize);
     applyZoomedDocumentStyles(false);
   };
 }
