@@ -238,7 +238,7 @@ html.viewport-zoomed body {
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
   overscroll-behavior: auto !important;
-  touch-action: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 html.viewport-zoomed[data-desktop-viewport],
@@ -255,7 +255,7 @@ html.viewport-zoomed .dashboard,
 html.viewport-zoomed .fiches-table-container,
 html.viewport-zoomed .confirmateurs-table-container {
   overflow: visible !important;
-  touch-action: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 html.viewport-zoomed body.dashboard-page,

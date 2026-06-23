@@ -55,20 +55,16 @@ function applyZoomedDocumentStyles(zoomed) {
 
 /**
  * iOS / Android : après pinch-zoom, Safari/Chrome décrochent le scroll horizontal
- * du layout viewport. On synchronise visualViewport → window.scroll.
+ * du layout viewport. On synchronise uniquement l'axe X — le vertical reste natif.
  */
 function syncLayoutScrollFromVisualViewport() {
   const vv = getVisualViewport();
   if (!vv || !isZoomed()) return;
 
   const left = Math.max(0, vv.pageLeft ?? vv.offsetLeft ?? 0);
-  const top = Math.max(0, vv.pageTop ?? vv.offsetTop ?? 0);
 
-  if (
-    Math.abs(window.scrollX - left) > 0.5 ||
-    Math.abs(window.scrollY - top) > 0.5
-  ) {
-    window.scrollTo(left, top);
+  if (Math.abs(window.scrollX - left) > 0.5) {
+    window.scrollTo(left, window.scrollY);
   }
 }
 
@@ -132,7 +128,10 @@ export function initViewportZoomScrollFix() {
 
     if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
 
-    window.scrollBy(-dx, -dy);
+    // Vertical : laisser le scroll natif (évite le scroll haut/bas instable après zoom)
+    if (Math.abs(dy) >= Math.abs(dx)) return;
+
+    window.scrollBy(-dx, 0);
     e.preventDefault();
   };
 
