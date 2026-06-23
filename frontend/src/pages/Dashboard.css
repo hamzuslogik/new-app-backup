@@ -4235,3 +4235,242 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   overflow-wrap: anywhere !important;
   hyphens: auto !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Dashboard mobile extranet (viewport natif, hamburger, filtres mobile,
+   tableau desktop scrollable, modal plein écran)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]),
+body.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]) {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100%;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+html.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]) #root,
+body.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]) .app,
+body.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]) .main-content,
+body.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]) .content-wrapper,
+body.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]) .dashboard {
+  touch-action: pan-x pan-y pinch-zoom !important;
+  overflow: visible !important;
+}
+
+html.dashboard-page.dashboard-page--extranet-scroll,
+body.dashboard-page.dashboard-page--extranet-scroll {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  height: auto;
+  min-height: 100%;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+@supports (-webkit-touch-callout: none) {
+  html.dashboard-page.dashboard-page--extranet-scroll,
+  body.dashboard-page.dashboard-page--extranet-scroll {
+    min-height: -webkit-fill-available;
+  }
+}
+
+body.dashboard-page.dashboard-page--extranet-scroll #root,
+body.dashboard-page.dashboard-page--extranet-scroll .app,
+body.dashboard-page.dashboard-page--extranet-scroll .main-content,
+body.dashboard-page.dashboard-page--extranet-scroll .content-wrapper {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  overflow: visible !important;
+  overscroll-behavior: none !important;
+  flex: none !important;
+}
+
+body.dashboard-page.dashboard-page--extranet-scroll .dashboard {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 8px;
+  overflow: visible !important;
+}
+
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table-container,
+body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table-container {
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  max-height: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  overscroll-behavior: none !important;
+  isolation: auto !important;
+  touch-action: pan-x pan-y pinch-zoom;
+  margin-bottom: 16px !important;
+}
+
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table,
+body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table {
+  min-width: 1400px !important;
+  width: max-content !important;
+  max-width: none !important;
+  table-layout: fixed !important;
+}
+
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table th,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td,
+body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table th,
+body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table td {
+  white-space: nowrap;
+}
+
+html.viewport-zoomed.dashboard-page.dashboard-page--extranet-scroll,
+html.viewport-zoomed body.dashboard-page.dashboard-page--extranet-scroll {
+  overflow: auto !important;
+  overflow-x: scroll !important;
+  overflow-y: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Filtres empilés (mobile) — modèle photo extranet */
+body.dashboard-page.dashboard-page--mobile-native .search-panel {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 8px !important;
+  box-sizing: border-box;
+}
+
+body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-two-columns {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-left,
+body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-right {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  gap: 8px !important;
+}
+
+body.dashboard-page.dashboard-page--mobile-native .search-panel .form-group {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body.dashboard-page.dashboard-page--mobile-native .search-panel .form-group input,
+body.dashboard-page.dashboard-page--mobile-native .search-panel .form-group select,
+body.dashboard-page.dashboard-page--mobile-native .search-panel .date-time-inputs input[type="date"],
+body.dashboard-page.dashboard-page--mobile-native .search-panel .date-time-inputs input[type="time"],
+body.dashboard-page.dashboard-page--mobile-native .search-panel .date-time-with-actuellement input[type="datetime-local"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-actions-left {
+  width: 100% !important;
+  flex-direction: column !important;
+}
+
+body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-actions-left .btn-search {
+  width: 100% !important;
+}
+
+/* Modal fiche plein écran (viewport natif mobile) */
+html.fiche-detail-modal-open,
+body.fiche-detail-modal-open {
+  overflow: hidden !important;
+}
+
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 3000 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: #f3f4f6 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  overflow: hidden !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  padding: 0 !important;
+  padding-bottom: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: none !important;
+  flex: 1 1 auto !important;
+}
+
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-close {
+  z-index: 10;
+  color: #ffffff !important;
+  font-size: 24px !important;
+}
+
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-banner {
+  flex: 0 0 72px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
+  background: #00d100 !important;
+}
+
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content .fiche-detail {
+  flex: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content .fiche-sections,
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content .planning-tab,
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content .planning-view {
+  overflow: visible !important;
+  max-height: none !important;
+}

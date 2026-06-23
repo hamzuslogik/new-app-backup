@@ -35,6 +35,16 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   useModalScrollLock(!!ficheHash);
   useIosNestedScrollChain(modalOverlayRef, !!ficheHash);
 
+  useEffect(() => {
+    if (!ficheHash) return undefined;
+    document.documentElement.classList.add('fiche-detail-modal-open');
+    document.body.classList.add('fiche-detail-modal-open');
+    return () => {
+      document.documentElement.classList.remove('fiche-detail-modal-open');
+      document.body.classList.remove('fiche-detail-modal-open');
+    };
+  }, [ficheHash]);
+
   // Récupérer les données de la fiche pour obtenir la couleur de l'état
   const { data: ficheData } = useQuery(
     ['fiche', ficheHash],
@@ -173,7 +183,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
           style={{ height: '72px', minHeight: '72px', maxHeight: '72px', flex: '0 0 72px' }}
         >
           <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-banner-logo" />
-          <span className="fiche-detail-modal-banner-title">DETAILS FICHE</span>
+          <span className="fiche-detail-modal-banner-title">DÉTAIL FICHE</span>
         </div>
         <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
           <FicheDetail

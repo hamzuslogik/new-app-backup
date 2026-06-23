@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,7 +19,15 @@ import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
+import {
+  applyForceDesktopViewport,
+  applyMobileNativeViewport,
+  isTouchMobileDevice,
+} from '../utils/applyForceDesktopViewport';
 import './Dashboard.css';
+
+const DASHBOARD_MOBILE_NATIVE_CLASS = 'dashboard-page--mobile-native';
+const DASHBOARD_EXTRANET_SCROLL_CLASS = 'dashboard-page--extranet-scroll';
 
 function resolveDashboardFicheNumericId(fiche) {
   if (!fiche) return null;
@@ -99,6 +107,39 @@ const Dashboard = () => {
     return () => {
       document.body.classList.remove('dashboard-page');
       document.documentElement.classList.remove('dashboard-page');
+    };
+  }, []);
+
+  /** Mobile : viewport device-width + pinch zoom (modèle extranet PHP) */
+  useLayoutEffect(() => {
+    if (!isTouchMobileDevice()) return undefined;
+
+    document.documentElement.classList.add(DASHBOARD_MOBILE_NATIVE_CLASS);
+    document.body.classList.add(DASHBOARD_MOBILE_NATIVE_CLASS);
+
+    applyMobileNativeViewport();
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(applyMobileNativeViewport);
+    });
+
+    return () => {
+      cancelAnimationFrame(id);
+      document.documentElement.classList.remove(DASHBOARD_MOBILE_NATIVE_CLASS);
+      document.body.classList.remove(DASHBOARD_MOBILE_NATIVE_CLASS);
+      applyForceDesktopViewport();
+    };
+  }, []);
+
+  /** Mobile : scroll page unique, tableau desktop (max-content) */
+  useLayoutEffect(() => {
+    if (!isTouchMobileDevice()) return undefined;
+
+    document.documentElement.classList.add(DASHBOARD_EXTRANET_SCROLL_CLASS);
+    document.body.classList.add(DASHBOARD_EXTRANET_SCROLL_CLASS);
+
+    return () => {
+      document.documentElement.classList.remove(DASHBOARD_EXTRANET_SCROLL_CLASS);
+      document.body.classList.remove(DASHBOARD_EXTRANET_SCROLL_CLASS);
     };
   }, []);
   

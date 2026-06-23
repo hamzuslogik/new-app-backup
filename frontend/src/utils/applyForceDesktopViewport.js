@@ -1,10 +1,39 @@
 import { DESKTOP_VIEWPORT_WIDTH } from '../config/viewport';
 
-function isTouchMobile() {
+function isTouchMobileDevice() {
   return (
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   );
+}
+
+function clearDocumentLayoutStyles() {
+  document.documentElement.style.minWidth = '';
+  document.documentElement.style.width = '';
+  document.documentElement.style.maxWidth = '';
+  document.documentElement.style.overflow = '';
+  if (document.body) {
+    document.body.style.minWidth = '';
+    document.body.style.width = '';
+    document.body.style.maxWidth = '';
+    document.body.style.overflow = '';
+  }
+}
+
+export { isTouchMobileDevice };
+
+export function isMobileNativeExtranetPage() {
+  return (
+    isTouchMobileDevice() &&
+    (document.body?.classList.contains('dashboard-page--mobile-native') ||
+      document.body?.classList.contains('planning-commercial-page--mobile-native')) &&
+    !document.documentElement.dataset.desktopViewport
+  );
+}
+
+function notifyViewportLayoutChange() {
+  window.dispatchEvent(new Event('resize'));
+  window.dispatchEvent(new Event('viewport-layout-change'));
 }
 
 function replaceViewportMeta(content) {
@@ -54,6 +83,27 @@ function buildDesktopViewportContent(width = DESKTOP_VIEWPORT_WIDTH) {
   return `width=${width}, initial-scale=${scaleStr}, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover`;
 }
 
+/** Viewport natif mobile (device-width, pinch zoom) */
+export function applyMobileNativeViewport() {
+  replaceViewportMeta('width=device-width, initial-scale=1.0, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover');
+
+  delete document.documentElement.dataset.desktopViewport;
+  if (document.body) delete document.body.dataset.desktopViewport;
+
+  clearDocumentLayoutStyles();
+
+  if (isTouchMobileDevice()) {
+    resetScrollPosition();
+    requestAnimationFrame(() => {
+      resetScrollPosition();
+      notifyViewportLayoutChange();
+      requestAnimationFrame(notifyViewportLayoutChange);
+    });
+  } else {
+    notifyViewportLayoutChange();
+  }
+}
+
 /** Layout desktop 1400px — toute l'application, y compris la page de connexion */
 export function applyForceDesktopViewport(width = DESKTOP_VIEWPORT_WIDTH) {
   replaceViewportMeta(buildDesktopViewportContent(width));
@@ -77,14 +127,14 @@ export function applyForceDesktopViewport(width = DESKTOP_VIEWPORT_WIDTH) {
     document.body.style.overflow = 'auto';
   }
 
-  if (isTouchMobile()) {
+  if (isTouchMobileDevice()) {
     resetScrollPosition();
     requestAnimationFrame(() => {
       resetScrollPosition();
-      notifyViewportChange();
+      notifyViewportLayoutChange();
     });
   } else {
-    notifyViewportChange();
+    notifyViewportLayoutChange();
   }
 }
 

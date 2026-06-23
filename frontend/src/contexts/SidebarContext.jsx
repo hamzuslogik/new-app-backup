@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
+import { isMobileNativeExtranetPage } from '../utils/applyForceDesktopViewport';
 
 const SidebarContext = createContext(null);
 
 const getInitialSidebarState = () => {
-  if (FORCE_DESKTOP_VIEWPORT) {
+  if (FORCE_DESKTOP_VIEWPORT && !isMobileNativeExtranetPage()) {
     return false;
   }
   const width = window.innerWidth;
@@ -14,20 +15,43 @@ const getInitialSidebarState = () => {
 
 export const SidebarProvider = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarState());
+  const [mobileExtranetActive, setMobileExtranetActive] = useState(isMobileNativeExtranetPage());
   const [isMobile, setIsMobile] = useState(
-    FORCE_DESKTOP_VIEWPORT ? false : window.innerWidth <= 768
+    mobileExtranetActive || (!FORCE_DESKTOP_VIEWPORT && window.innerWidth <= 768)
   );
   const [isTablet, setIsTablet] = useState(
-    FORCE_DESKTOP_VIEWPORT ? false : window.innerWidth > 768 && window.innerWidth <= 1024
+    !mobileExtranetActive && !FORCE_DESKTOP_VIEWPORT && window.innerWidth > 768 && window.innerWidth <= 1024
   );
   const [isDesktop, setIsDesktop] = useState(
-    FORCE_DESKTOP_VIEWPORT ? true : window.innerWidth > 1024
+    FORCE_DESKTOP_VIEWPORT && !mobileExtranetActive ? true : window.innerWidth > 1024
   );
   const [autoHideEnabled, setAutoHideEnabled] = useState(false);
   const userToggleRef = React.useRef(false);
+  const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !mobileExtranetActive;
 
   useEffect(() => {
-    if (FORCE_DESKTOP_VIEWPORT) {
+    const syncExtranetLayout = () => {
+      const extranet = isMobileNativeExtranetPage();
+      setMobileExtranetActive(extranet);
+      if (extranet) {
+        setIsMobile(true);
+        setIsTablet(false);
+        setIsDesktop(false);
+        setSidebarCollapsed(true);
+      }
+    };
+
+    syncExtranetLayout();
+    window.addEventListener('viewport-layout-change', syncExtranetLayout);
+    window.addEventListener('resize', syncExtranetLayout);
+    return () => {
+      window.removeEventListener('viewport-layout-change', syncExtranetLayout);
+      window.removeEventListener('resize', syncExtranetLayout);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (forceDesktopSidebar) {
       return undefined;
     }
 
@@ -60,7 +84,7 @@ export const SidebarProvider = ({ children }) => {
   }, [autoHideEnabled, isDesktop]);
 
   const toggleSidebar = () => {
-    if (FORCE_DESKTOP_VIEWPORT) {
+    if (forceDesktopSidebar) {
       return;
     }
 
@@ -80,7 +104,7 @@ export const SidebarProvider = ({ children }) => {
   };
 
   const closeSidebar = () => {
-    if (FORCE_DESKTOP_VIEWPORT) {
+    if (forceDesktopSidebar) {
       return;
     }
     setSidebarCollapsed(true);
@@ -97,17 +121,17 @@ export const SidebarProvider = ({ children }) => {
   };
 
   const setAutoHide = React.useCallback((enabled) => {
-    if (!FORCE_DESKTOP_VIEWPORT && !isDesktop) {
+    if (!forceDesktopSidebar && !isDesktop) {
       return;
     }
 
     setAutoHideEnabled(enabled);
-    if (enabled && !FORCE_DESKTOP_VIEWPORT) {
+    if (enabled && !forceDesktopSidebar) {
       setSidebarCollapsed(true);
     }
-  }, [isDesktop]);
+  }, [forceDesktopSidebar, isDesktop]);
 
-  const effectiveCollapsed = FORCE_DESKTOP_VIEWPORT ? false : sidebarCollapsed;
+  const effectiveCollapsed = forceDesktopSidebar ? false : sidebarCollapsed;
 
   return (
     <SidebarContext.Provider
@@ -121,6 +145,7 @@ export const SidebarProvider = ({ children }) => {
         isTablet,
         isDesktop,
         autoHideEnabled,
+        mobileExtranetActive,
       }}
     >
       {children}
