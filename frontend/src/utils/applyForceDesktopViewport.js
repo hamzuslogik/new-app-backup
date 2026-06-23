@@ -31,6 +31,60 @@ export function isMobileNativeExtranetPage() {
   );
 }
 
+export const DASHBOARD_TABLE_DESKTOP_VIEW_CLASS = 'dashboard-page--table-desktop-view';
+
+export function isDashboardTableDesktopView() {
+  return document.body?.classList.contains(DASHBOARD_TABLE_DESKTOP_VIEW_CLASS);
+}
+
+/** Vue mobile (device-width, zoom in par défaut) */
+export function applyDashboardMobileView() {
+  replaceViewportMeta(
+    'width=device-width, initial-scale=1.0, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover'
+  );
+
+  delete document.documentElement.dataset.desktopViewport;
+  if (document.body) delete document.body.dataset.desktopViewport;
+
+  clearDocumentLayoutStyles();
+  document.documentElement.classList.remove(DASHBOARD_TABLE_DESKTOP_VIEW_CLASS);
+  document.body?.classList.remove(DASHBOARD_TABLE_DESKTOP_VIEW_CLASS);
+
+  if (isTouchMobileDevice()) {
+    resetScrollPosition();
+    requestAnimationFrame(() => {
+      resetScrollPosition();
+      notifyViewportLayoutChange();
+      requestAnimationFrame(notifyViewportLayoutChange);
+    });
+  } else {
+    notifyViewportLayoutChange();
+  }
+}
+
+/** Vue tableau desktop (layout 1400px réduit à l’écran) — sans sidebar fixe */
+export function applyDashboardTableDesktopView(width = DESKTOP_VIEWPORT_WIDTH) {
+  replaceViewportMeta(buildDesktopViewportContent(width));
+
+  delete document.documentElement.dataset.desktopViewport;
+  if (document.body) delete document.body.dataset.desktopViewport;
+
+  clearDocumentLayoutStyles();
+  document.documentElement.classList.add(DASHBOARD_TABLE_DESKTOP_VIEW_CLASS);
+  document.body?.classList.add(DASHBOARD_TABLE_DESKTOP_VIEW_CLASS);
+
+  if (isTouchMobileDevice()) {
+    resetScrollPosition();
+    requestAnimationFrame(() => {
+      resetScrollPosition();
+      notifyViewportLayoutChange();
+      requestAnimationFrame(notifyViewportLayoutChange);
+    });
+  } else {
+    notifyViewportLayoutChange();
+  }
+}
+
 function notifyViewportLayoutChange() {
   window.dispatchEvent(new Event('resize'));
   window.dispatchEvent(new Event('viewport-layout-change'));
@@ -91,27 +145,9 @@ function buildDesktopViewportContent(width = DESKTOP_VIEWPORT_WIDTH) {
   return `width=${width}, initial-scale=${scaleStr}, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover`;
 }
 
-/** Viewport natif mobile (device-width, zoom in par défaut, pinch zoom out jusqu'à 0.15) */
+/** Viewport natif mobile (device-width, zoom in par défaut) */
 export function applyMobileNativeViewport() {
-  replaceViewportMeta(
-    'width=device-width, initial-scale=1.0, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover'
-  );
-
-  delete document.documentElement.dataset.desktopViewport;
-  if (document.body) delete document.body.dataset.desktopViewport;
-
-  clearDocumentLayoutStyles();
-
-  if (isTouchMobileDevice()) {
-    resetScrollPosition();
-    requestAnimationFrame(() => {
-      resetScrollPosition();
-      notifyViewportLayoutChange();
-      requestAnimationFrame(notifyViewportLayoutChange);
-    });
-  } else {
-    notifyViewportLayoutChange();
-  }
+  applyDashboardMobileView();
 }
 
 /** Layout desktop 1400px — toute l'application, y compris la page de connexion */

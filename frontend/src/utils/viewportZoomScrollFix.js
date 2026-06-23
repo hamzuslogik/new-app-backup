@@ -1,4 +1,5 @@
 import { DESKTOP_VIEWPORT_WIDTH } from '../config/viewport';
+import { isMobileNativeExtranetPage } from './applyForceDesktopViewport';
 
 const ZOOM_THRESHOLD = 1.01;
 let rafId = 0;
@@ -44,11 +45,20 @@ function applyZoomedDocumentStyles(zoomed) {
       body.style.overflowX = '';
       body.style.overflowY = '';
     }
-    html.style.minWidth = `${DESKTOP_VIEWPORT_WIDTH}px`;
-    html.style.width = 'auto';
-    if (body) {
-      body.style.minWidth = `${DESKTOP_VIEWPORT_WIDTH}px`;
-      body.style.width = 'auto';
+    if (!isMobileNativeExtranetPage()) {
+      html.style.minWidth = `${DESKTOP_VIEWPORT_WIDTH}px`;
+      html.style.width = 'auto';
+      if (body) {
+        body.style.minWidth = `${DESKTOP_VIEWPORT_WIDTH}px`;
+        body.style.width = 'auto';
+      }
+    } else {
+      html.style.minWidth = '';
+      html.style.width = '';
+      if (body) {
+        body.style.minWidth = '';
+        body.style.width = '';
+      }
     }
   }
 }

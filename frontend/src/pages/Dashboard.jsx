@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
-import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSignature, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSignature, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash, FaExpand, FaCompress } from 'react-icons/fa';
 import {
   QualiteConfirmationAuditButton,
   QualiteConfirmationAuditModal,
@@ -14,6 +14,7 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { useDashboardViewportPinch } from '../hooks/useDashboardViewportPinch';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
@@ -22,6 +23,8 @@ import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
 import {
   applyForceDesktopViewport,
   applyMobileNativeViewport,
+  applyDashboardMobileView,
+  applyDashboardTableDesktopView,
   isTouchMobileDevice,
 } from '../utils/applyForceDesktopViewport';
 import './Dashboard.css';
@@ -153,6 +156,29 @@ const Dashboard = () => {
   const [showFilters, setShowFilters] = useState(true);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isTableDesktopView, setIsTableDesktopView] = useState(false);
+  const isDashboardTouchMobile = isTouchMobileDevice();
+
+  const switchToMobileView = useCallback(() => {
+    applyDashboardMobileView();
+    setIsTableDesktopView(false);
+  }, []);
+
+  const switchToTableDesktopView = useCallback(() => {
+    applyDashboardTableDesktopView();
+    setIsTableDesktopView(true);
+  }, []);
+
+  const toggleDashboardViewport = useCallback(() => {
+    if (isTableDesktopView) switchToMobileView();
+    else switchToTableDesktopView();
+  }, [isTableDesktopView, switchToMobileView, switchToTableDesktopView]);
+
+  useDashboardViewportPinch(isDashboardTouchMobile, {
+    onPinchOut: switchToTableDesktopView,
+    onPinchIn: switchToMobileView,
+  });
+
   // Par défaut : filtre vide (état Tous, date non sélectionnée, date début/fin vides)
   const getInitialFilters = () => ({
     page: 1,
@@ -1470,6 +1496,24 @@ const Dashboard = () => {
       <SystemMessageBanner />
       <div className="dashboard-header">
         <div className="dashboard-header-left">
+          {isDashboardTouchMobile && (
+            <button
+              type="button"
+              className="btn-dashboard-view-toggle"
+              onClick={toggleDashboardViewport}
+              title={isTableDesktopView ? 'Revenir à la vue mobile' : 'Vue tableau desktop (pinch 2 doigts écartés)'}
+            >
+              {isTableDesktopView ? (
+                <>
+                  <FaCompress /> Vue mobile
+                </>
+              ) : (
+                <>
+                  <FaExpand /> Vue tableau
+                </>
+              )}
+            </button>
+          )}
           {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 9) && (
             <button 
               className="btn-search-modal"

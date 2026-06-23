@@ -4485,3 +4485,60 @@ html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-mod
   overflow: visible !important;
   max-height: none !important;
 }
+
+/* Bouton bascule vue mobile ↔ tableau desktop */
+.btn-dashboard-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-right: 8px;
+  border: 1px solid #9cbfc8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.btn-dashboard-view-toggle:hover {
+  background: #f0f7f9;
+}
+
+/* Vue tableau desktop (viewport 1400px réduit, pinch out ou bouton) */
+html.dashboard-page.dashboard-page--table-desktop-view:not([data-desktop-viewport]),
+body.dashboard-page.dashboard-page--table-desktop-view:not([data-desktop-viewport]) {
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.dashboard-page.dashboard-page--table-desktop-view .fiches-table,
+body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table {
+  min-width: 1400px !important;
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container,
+body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table-container {
+  min-width: 1400px !important;
+  width: 100% !important;
+  overflow: visible !important;
+}
+
+body.dashboard-page.dashboard-page--table-desktop-view .search-panel .search-form-two-columns {
+  flex-direction: row !important;
+}
+
+body.dashboard-page.dashboard-page--table-desktop-view .search-panel .form-group input,
+body.dashboard-page.dashboard-page--table-desktop-view .search-panel .form-group select {
+  width: 200px !important;
+  max-width: 200px !important;
+}
