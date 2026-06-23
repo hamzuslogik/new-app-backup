@@ -4243,9 +4243,9 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 
 html.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]),
 body.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]) {
-  min-width: 1400px !important;
-  width: auto !important;
-  max-width: none !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
   overflow: auto !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
@@ -4341,6 +4341,17 @@ html.viewport-zoomed body.dashboard-page.dashboard-page--extranet-scroll {
   overflow-x: scroll !important;
   overflow-y: auto !important;
   touch-action: pan-x pan-y pinch-zoom !important;
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+/* Zoom out (pinch) : tableau desktop pleine largeur visible */
+html.viewport-zoomed.dashboard-page.dashboard-page--extranet-scroll .fiches-table,
+html.viewport-zoomed body.dashboard-page.dashboard-page--extranet-scroll .fiches-table {
+  min-width: 1400px !important;
+  width: 100% !important;
+  table-layout: fixed !important;
 }
 
 /* Filtres empilés (mobile) — modèle photo extranet */

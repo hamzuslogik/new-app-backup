@@ -21,7 +21,7 @@ import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
 import {
   applyForceDesktopViewport,
-  applyDashboardMobileViewport,
+  applyMobileNativeViewport,
   isTouchMobileDevice,
 } from '../utils/applyForceDesktopViewport';
 import './Dashboard.css';
@@ -110,16 +110,16 @@ const Dashboard = () => {
     };
   }, []);
 
-  /** Mobile : viewport 1400px zoomé pour voir le tableau + pinch in/out */
+  /** Mobile par défaut (device-width, zoom in) — pinch zoom out pour vue tableau desktop */
   useLayoutEffect(() => {
     if (!isTouchMobileDevice()) return undefined;
 
     document.documentElement.classList.add(DASHBOARD_MOBILE_NATIVE_CLASS);
     document.body.classList.add(DASHBOARD_MOBILE_NATIVE_CLASS);
 
-    applyDashboardMobileViewport();
+    applyMobileNativeViewport();
     const id = requestAnimationFrame(() => {
-      requestAnimationFrame(applyDashboardMobileViewport);
+      requestAnimationFrame(applyMobileNativeViewport);
     });
 
     return () => {

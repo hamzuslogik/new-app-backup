@@ -2,7 +2,7 @@ import { useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   applyForceDesktopViewport,
-  applyDashboardMobileViewport,
+  applyMobileNativeViewport,
   isTouchMobileDevice,
 } from '../utils/applyForceDesktopViewport';
 
@@ -13,7 +13,7 @@ const ForceDesktopViewport = () => {
 
   useLayoutEffect(() => {
     if (isTouchMobileDevice() && MOBILE_NATIVE_VIEWPORT_PATHS.has(pathname)) {
-      applyDashboardMobileViewport();
+      applyMobileNativeViewport();
       return undefined;
     }
     applyForceDesktopViewport();
