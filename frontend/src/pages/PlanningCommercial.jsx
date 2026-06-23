@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,8 +9,17 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
-import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+import {
+  applyForceDesktopViewport,
+  applyMobileNativeViewport,
+  isTouchMobileDevice,
+} from '../utils/applyForceDesktopViewport';
 import './PlanningCommercial.css';
+import './Dashboard.css';
+
+const PLANNING_COMMERCIAL_PAGE_CLASS = 'planning-commercial-page';
+const PLANNING_MOBILE_NATIVE_CLASS = 'planning-commercial-page--mobile-native';
+const PLANNING_EXTRANET_SCROLL_CLASS = 'planning-commercial-page--extranet-scroll';
 
 // Date du jour en YYYY-MM-DD (heure locale) pour éviter le décalage UTC sur "RDV aujourd'hui"
 const getLocalDateStr = () => {
@@ -19,8 +28,49 @@ const getLocalDateStr = () => {
 };
 
 const PlanningCommercial = () => {
-  useForceDesktopViewport('planning-commercial-page');
   const { user, hasPermission } = useAuth();
+
+  useEffect(() => {
+    document.body.classList.add(PLANNING_COMMERCIAL_PAGE_CLASS);
+    document.documentElement.classList.add(PLANNING_COMMERCIAL_PAGE_CLASS);
+    return () => {
+      document.body.classList.remove(PLANNING_COMMERCIAL_PAGE_CLASS);
+      document.documentElement.classList.remove(PLANNING_COMMERCIAL_PAGE_CLASS);
+    };
+  }, []);
+
+  /** Viewport natif mobile (touch) — même modèle que dashboard */
+  useLayoutEffect(() => {
+    if (!isTouchMobileDevice()) return undefined;
+
+    document.documentElement.classList.add(PLANNING_MOBILE_NATIVE_CLASS);
+    document.body.classList.add(PLANNING_MOBILE_NATIVE_CLASS);
+
+    applyMobileNativeViewport();
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(applyMobileNativeViewport);
+    });
+
+    return () => {
+      cancelAnimationFrame(id);
+      document.documentElement.classList.remove(PLANNING_MOBILE_NATIVE_CLASS);
+      document.body.classList.remove(PLANNING_MOBILE_NATIVE_CLASS);
+      applyForceDesktopViewport();
+    };
+  }, []);
+
+  /** Scroll page unique + tableau max-content (session commercial mobile) */
+  useLayoutEffect(() => {
+    if (!isTouchMobileDevice()) return undefined;
+
+    document.documentElement.classList.add(PLANNING_EXTRANET_SCROLL_CLASS);
+    document.body.classList.add(PLANNING_EXTRANET_SCROLL_CLASS);
+
+    return () => {
+      document.documentElement.classList.remove(PLANNING_EXTRANET_SCROLL_CLASS);
+      document.body.classList.remove(PLANNING_EXTRANET_SCROLL_CLASS);
+    };
+  }, []);
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('today'); // 'yesterday', 'today', 'tomorrow', 'week', 'nextWeek'
   const [showFilters, setShowFilters] = useState(false);
