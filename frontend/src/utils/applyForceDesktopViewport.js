@@ -37,6 +37,14 @@ function notifyViewportLayoutChange() {
 }
 
 function replaceViewportMeta(content) {
+  const existing = document.querySelector('meta[name="viewport"]');
+  if (isTouchMobileDevice() && existing) {
+    existing.setAttribute('content', content);
+    void document.documentElement.offsetHeight;
+    existing.setAttribute('content', content);
+    return;
+  }
+
   document.querySelectorAll('meta[name="viewport"]').forEach((el) => el.remove());
   const viewport = document.createElement('meta');
   viewport.setAttribute('name', 'viewport');
@@ -86,6 +94,30 @@ function buildDesktopViewportContent(width = DESKTOP_VIEWPORT_WIDTH) {
 /** Viewport natif mobile (device-width, pinch zoom) */
 export function applyMobileNativeViewport() {
   replaceViewportMeta('width=device-width, initial-scale=1.0, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover');
+
+  delete document.documentElement.dataset.desktopViewport;
+  if (document.body) delete document.body.dataset.desktopViewport;
+
+  clearDocumentLayoutStyles();
+
+  if (isTouchMobileDevice()) {
+    resetScrollPosition();
+    requestAnimationFrame(() => {
+      resetScrollPosition();
+      notifyViewportLayoutChange();
+      requestAnimationFrame(notifyViewportLayoutChange);
+    });
+  } else {
+    notifyViewportLayoutChange();
+  }
+}
+
+/**
+ * Dashboard mobile : largeur layout 1400px + zoom initial pour voir tout le tableau
+ * (comme desktop), avec pinch zoom in/out. Sans data-desktop-viewport → UI mobile (hamburger).
+ */
+export function applyDashboardMobileViewport(width = DESKTOP_VIEWPORT_WIDTH) {
+  replaceViewportMeta(buildDesktopViewportContent(width));
 
   delete document.documentElement.dataset.desktopViewport;
   if (document.body) delete document.body.dataset.desktopViewport;

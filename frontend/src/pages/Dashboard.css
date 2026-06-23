@@ -4243,9 +4243,9 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 
 html.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]),
 body.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]) {
-  min-width: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
   overflow: auto !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
