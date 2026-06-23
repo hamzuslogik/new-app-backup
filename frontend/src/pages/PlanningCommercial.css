@@ -4,14 +4,26 @@ body.planning-commercial-page {
   min-width: 1400px !important;
   width: auto !important;
   max-width: none !important;
-  overflow-x: auto !important;
+  overflow: auto !important;
+  margin: 0 !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .planning-commercial {
   padding: 16px;
-  min-width: 0;
-  max-width: 100%;
+  min-width: 1400px;
+  width: auto;
+  max-width: none;
   overflow-x: visible;
+  margin: 0;
+}
+
+.planning-commercial-page .planning-commercial {
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
 }
 
 .planning-commercial-header {
@@ -313,9 +325,10 @@ html.planning-commercial-page .planning-commercial .fiches-table-container,
 body.planning-commercial-page .planning-commercial .fiches-table-container {
   min-width: 1400px !important;
   width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: auto !important;
-  -webkit-overflow-scrolling: touch;
+  max-width: none !important;
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom;
   margin-bottom: 16px;
 }
 
@@ -592,6 +605,42 @@ html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(12
 }
 
 @media (max-width: 768px) {
+  .planning-commercial-page * {
+    max-width: none !important;
+  }
+
+  html.planning-commercial-page,
+  body.planning-commercial-page {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+
+  .planning-commercial-page .planning-commercial {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  html.planning-commercial-page .planning-commercial .fiches-table,
+  body.planning-commercial-page .planning-commercial .fiches-table {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  html.planning-commercial-page .planning-commercial .fiches-table-container,
+  body.planning-commercial-page .planning-commercial .fiches-table-container {
+    min-width: 1400px !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+
   .planning-commercial {
     padding: 8px;
   }
@@ -600,7 +649,6 @@ html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(12
     font-size: 20.4px;
   }
 
-  /* Comme Dashboard : garder le tableau + défilement horizontal (pas de mode « cartes ») */
   html.planning-commercial-page .planning-commercial .fiches-table {
     font-size: 10.2px;
   }
@@ -608,6 +656,44 @@ html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(12
   html.planning-commercial-page .planning-commercial .fiches-table th,
   html.planning-commercial-page .planning-commercial .fiches-table td {
     padding: 5px 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .planning-commercial-page * {
+    max-width: none !important;
+  }
+
+  html.planning-commercial-page,
+  body.planning-commercial-page {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+
+  .planning-commercial-page .planning-commercial {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  html.planning-commercial-page .planning-commercial .fiches-table,
+  body.planning-commercial-page .planning-commercial .fiches-table {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  html.planning-commercial-page .planning-commercial .fiches-table-container,
+  body.planning-commercial-page .planning-commercial .fiches-table-container {
+    min-width: 1400px !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
 

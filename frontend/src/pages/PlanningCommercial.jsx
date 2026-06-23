@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaCalendarAlt, FaUser, FaFileAlt, FaMapMarkerAlt, FaSearch, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import FicheDetailLink from '../components/FicheDetailLink';
+import FicheDetailModal from '../components/FicheDetailModal';
+import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
-import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import './PlanningCommercial.css';
 
 // Date du jour en YYYY-MM-DD (heure locale) pour éviter le décalage UTC sur "RDV aujourd'hui"
@@ -19,9 +19,20 @@ const getLocalDateStr = () => {
 };
 
 const PlanningCommercial = () => {
-  useForceDesktopViewport('planning-commercial-page');
   const { user, hasPermission } = useAuth();
+
+  useEffect(() => {
+    document.body.classList.add('planning-commercial-page');
+    document.documentElement.classList.add('planning-commercial-page');
+    return () => {
+      document.body.classList.remove('planning-commercial-page');
+      document.documentElement.classList.remove('planning-commercial-page');
+    };
+  }, []);
+
   const queryClient = useQueryClient();
+  const [ficheDetailModal, setFicheDetailModal] = useState(null);
+  const { lastViewedFicheHash, setLastViewedFicheHash } = useFicheDetailModal();
   const [activeTab, setActiveTab] = useState('today'); // 'yesterday', 'today', 'tomorrow', 'week', 'nextWeek'
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -874,14 +885,35 @@ const PlanningCommercial = () => {
                         </td>
                         <td data-label="Centre:">{fiche.centre_titre || '-'}</td>
                         <td data-label="">
-                          <FicheDetailLink 
-                            ficheHash={fiche.hash}
+                          <button
+                            onClick={() => {
+                              setFicheDetailModal({ hash: fiche.hash });
+                              setLastViewedFicheHash(fiche.hash);
+                            }}
                             className="btn-detail"
                             title="Voir les détails"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                           >
-                            <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
-                          </FicheDetailLink>
+                            <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
+                              {lastViewedFicheHash === fiche.hash && (
+                                <span
+                                  style={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    width: '28px',
+                                    height: '28px',
+                                    border: '3px solid #9e9e9e',
+                                    borderRadius: '1px',
+                                    backgroundColor: 'transparent',
+                                    boxSizing: 'border-box',
+                                  }}
+                                />
+                              )}
+                            </span>
+                          </button>
                         </td>
                       </tr>
                     );
@@ -913,6 +945,17 @@ const PlanningCommercial = () => {
           </>
         )}
       </div>
+
+      {ficheDetailModal && (
+        <FicheDetailModal
+          ficheHash={ficheDetailModal.hash}
+          onClose={() => setFicheDetailModal(null)}
+          options={{
+            focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats,
+            initialTab: ficheDetailModal.initialTab || undefined,
+          }}
+        />
+      )}
     </div>
   );
 };
