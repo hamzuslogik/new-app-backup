@@ -63,15 +63,8 @@ export function applyDashboardMobileView() {
 }
 
 /** Vue tableau desktop (layout 1400px réduit à l’écran) — sans sidebar fixe */
-export function applyDashboardTableDesktopView(width = DESKTOP_VIEWPORT_WIDTH, options = {}) {
-  const { forFicheModal = false } = options;
-  const scaleMultiplier = forFicheModal ? 0.88 : 1;
-
-  if (isTouchMobileDevice()) {
-    forceTouchViewportScaleReset(width, scaleMultiplier);
-  } else {
-    replaceViewportMeta(buildDesktopViewportContent(width, scaleMultiplier));
-  }
+export function applyDashboardTableDesktopView(width = DESKTOP_VIEWPORT_WIDTH) {
+  replaceViewportMeta(buildDesktopViewportContent(width));
 
   delete document.documentElement.dataset.desktopViewport;
   if (document.body) delete document.body.dataset.desktopViewport;
@@ -90,17 +83,6 @@ export function applyDashboardTableDesktopView(width = DESKTOP_VIEWPORT_WIDTH, o
   } else {
     notifyViewportLayoutChange();
   }
-}
-
-/** Réinitialise le zoom tableau après ouverture du modal fiche (iOS). */
-export function resetDashboardTableViewZoomForFicheModal(width = DESKTOP_VIEWPORT_WIDTH) {
-  if (!isTouchMobileDevice()) return;
-  forceTouchViewportScaleReset(width, 0.88);
-  resetScrollPosition();
-  requestAnimationFrame(() => {
-    resetScrollPosition();
-    notifyViewportLayoutChange();
-  });
 }
 
 function notifyViewportLayoutChange() {
@@ -141,52 +123,26 @@ function resetScrollPosition() {
   }
 }
 
-/** Largeur écran physique (ignore le pinch-zoom Safari en cours). */
-function getMobileScreenWidth() {
-  const screenW = window.screen?.width;
-  if (screenW && screenW > 0) return screenW;
-  const vv = window.visualViewport;
-  if (vv && vv.scale > 1.01) return Math.round(vv.width * vv.scale);
-  return window.innerWidth || document.documentElement.clientWidth || DESKTOP_VIEWPORT_WIDTH;
-}
-
 /**
  * Échelle initiale pour voir toute la largeur desktop à l'écran (pas de zoom avant).
  * Sur PC : 1. Sur mobile : largeur écran / 1400.
  */
-function getDesktopInitialScale(layoutWidth = DESKTOP_VIEWPORT_WIDTH, scaleMultiplier = 1) {
-  const screenW = getMobileScreenWidth();
+function getDesktopInitialScale(layoutWidth = DESKTOP_VIEWPORT_WIDTH) {
+  const screenW =
+    window.innerWidth ||
+    document.documentElement.clientWidth ||
+    window.screen?.width ||
+    layoutWidth;
 
   if (screenW >= layoutWidth) return 1;
 
-  return Math.min(1, Math.max(0.15, (screenW / layoutWidth) * scaleMultiplier));
+  return Math.min(1, Math.max(0.15, screenW / layoutWidth));
 }
 
-function buildDesktopViewportContent(width = DESKTOP_VIEWPORT_WIDTH, scaleMultiplier = 1) {
-  const scale = getDesktopInitialScale(width, scaleMultiplier);
+function buildDesktopViewportContent(width = DESKTOP_VIEWPORT_WIDTH) {
+  const scale = getDesktopInitialScale(width);
   const scaleStr = Number(scale.toFixed(4));
   return `width=${width}, initial-scale=${scaleStr}, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover`;
-}
-
-/**
- * iOS Safari : forcer la réapplication du zoom (évite de conserver un pinch précédent).
- */
-function forceTouchViewportScaleReset(width = DESKTOP_VIEWPORT_WIDTH, scaleMultiplier = 1) {
-  if (!isTouchMobileDevice()) return;
-
-  const scale = getDesktopInitialScale(width, scaleMultiplier);
-  const scaleStr = Number(scale.toFixed(4));
-  const finalContent = buildDesktopViewportContent(width, scaleMultiplier);
-  const lockContent = `width=${width}, initial-scale=${scaleStr}, minimum-scale=${scaleStr}, maximum-scale=${scaleStr}, user-scalable=no, viewport-fit=cover`;
-
-  replaceViewportMeta(lockContent);
-  void document.documentElement.offsetHeight;
-  replaceViewportMeta(finalContent);
-  void document.documentElement.offsetHeight;
-
-  document.documentElement.classList.remove('viewport-zoomed');
-  if (document.body) document.body.classList.remove('viewport-zoomed');
-  resetScrollPosition();
 }
 
 /** Viewport natif mobile (device-width, zoom in par défaut) */

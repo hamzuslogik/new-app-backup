@@ -24,7 +24,6 @@ import {
   applyMobileNativeViewport,
   applyDashboardMobileView,
   applyDashboardTableDesktopView,
-  resetDashboardTableViewZoomForFicheModal,
   isTouchMobileDevice,
 } from '../utils/applyForceDesktopViewport';
 import './Dashboard.css';
@@ -164,8 +163,8 @@ const Dashboard = () => {
     setIsTableDesktopView(false);
   }, []);
 
-  const switchToTableDesktopView = useCallback((options) => {
-    applyDashboardTableDesktopView(undefined, options);
+  const switchToTableDesktopView = useCallback(() => {
+    applyDashboardTableDesktopView();
     setIsTableDesktopView(true);
   }, []);
 
@@ -326,7 +325,7 @@ const Dashboard = () => {
   const openDashboardFicheDetail = useCallback(
     (modalState) => {
       if (isDashboardTouchMobile) {
-        switchToTableDesktopView({ forFicheModal: true });
+        switchToTableDesktopView();
       }
       setFicheDetailModal(modalState);
       if (modalState?.hash) {
@@ -335,22 +334,6 @@ const Dashboard = () => {
     },
     [isDashboardTouchMobile, switchToTableDesktopView, setLastViewedFicheHash]
   );
-
-  useEffect(() => {
-    if (!ficheDetailModal || !isDashboardTouchMobile) return undefined;
-
-    let innerId = 0;
-    const outerId = requestAnimationFrame(() => {
-      innerId = requestAnimationFrame(() => {
-        resetDashboardTableViewZoomForFicheModal();
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(outerId);
-      if (innerId) cancelAnimationFrame(innerId);
-    };
-  }, [ficheDetailModal, isDashboardTouchMobile]);
 
   const closeDashboardFicheDetail = useCallback(() => {
     setFicheDetailModal(null);
