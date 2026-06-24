@@ -9,7 +9,6 @@ import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { useIosNestedScrollChain } from '../hooks/useIosNestedScrollChain';
-import { useFicheDetailModalPinchZoom } from '../hooks/useFicheDetailModalPinchZoom';
 import { getHomePage } from '../utils/getHomePage';
 import '../pages/Dashboard.css';
 
@@ -32,11 +31,9 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
     (searchParams.get('overlay') === '1' && searchParams.get('close') === '0');
   // Session commercial : éviter la fermeture accidentelle au clic extérieur
   const isBackdropCloseLocked = isOverlayLocked || Number(user?.fonction) === 5;
-  const pinchZoomEnabled = options?.pinchZoom === true;
 
   useModalScrollLock(!!ficheHash);
   useIosNestedScrollChain(modalOverlayRef, !!ficheHash);
-  useFicheDetailModalPinchZoom(modalOverlayRef, modalContentRef, pinchZoomEnabled && !!ficheHash);
 
   useEffect(() => {
     if (!ficheHash) return undefined;
@@ -164,12 +161,12 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const modalContent = (
     <div
       ref={modalOverlayRef}
-      className={`fiche-detail-modal-overlay${pinchZoomEnabled ? ' fiche-detail-modal-overlay--pinch-zoom' : ''}`}
+      className="fiche-detail-modal-overlay"
       onClick={isBackdropCloseLocked ? undefined : onClose}
     >
       <div 
         ref={modalContentRef}
-        className={`fiche-detail-modal-content${pinchZoomEnabled ? ' fiche-detail-modal-content--pinch-zoom' : ''}`}
+        className="fiche-detail-modal-content" 
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
         style={{
@@ -181,24 +178,22 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
         <button className="fiche-detail-modal-close" onClick={onClose} aria-label="Fermer">
           <FaTimes />
         </button>
-        <div className="fiche-detail-modal-zoom-inner">
-          <div
-            className="fiche-detail-modal-banner"
-            style={{ height: '72px', minHeight: '72px', maxHeight: '72px', flex: '0 0 72px' }}
-          >
-            <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-banner-logo" />
-            <span className="fiche-detail-modal-banner-title">DÉTAIL FICHE</span>
-          </div>
-          <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
-            <FicheDetail
-              ficheHash={ficheHash}
-              onClose={onClose}
-              isModal={true}
-              initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
-              initialTab={options?.initialTab || null}
-            />
-          </RouteParamsProvider>
+        <div
+          className="fiche-detail-modal-banner"
+          style={{ height: '72px', minHeight: '72px', maxHeight: '72px', flex: '0 0 72px' }}
+        >
+          <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-banner-logo" />
+          <span className="fiche-detail-modal-banner-title">DÉTAIL FICHE</span>
         </div>
+        <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
+          <FicheDetail
+            ficheHash={ficheHash}
+            onClose={onClose}
+            isModal={true}
+            initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
+            initialTab={options?.initialTab || null}
+          />
+        </RouteParamsProvider>
       </div>
     </div>
   );
