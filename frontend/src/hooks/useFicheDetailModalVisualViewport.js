@@ -15,10 +15,11 @@ function getVisualViewport() {
   return window.visualViewport || null;
 }
 
-function applyModalLayout(overlay, content, baseScale) {
-  const vv = getVisualViewport();
-  if (!overlay || !content) return;
+/** Ajuste uniquement la taille du conteneur — l'overlay reste plein écran (inset: 0). */
+function applyModalContentSize(content, baseScale) {
+  if (!content) return;
 
+  const vv = getVisualViewport();
   const scale = vv?.scale || 1;
   const base = baseScale > 0 ? baseScale : scale;
   const zoomFactor = scale / base;
@@ -28,43 +29,12 @@ function applyModalLayout(overlay, content, baseScale) {
 
   content.style.setProperty('--fiche-modal-width-pct', `${Number(widthPct.toFixed(2))}%`);
   content.style.setProperty('--fiche-modal-height-pct', `${Number(heightPct.toFixed(2))}%`);
-
-  const needsViewportPosition = zoomFactor > 1.02 && vv && vv.width >= 50 && vv.height >= 50;
-
-  if (!needsViewportPosition) {
-    overlay.style.removeProperty('top');
-    overlay.style.removeProperty('left');
-    overlay.style.removeProperty('width');
-    overlay.style.removeProperty('height');
-    overlay.style.removeProperty('right');
-    overlay.style.removeProperty('bottom');
-    overlay.removeAttribute('data-viewport-positioned');
-    return;
-  }
-
-  overlay.style.top = `${vv.offsetTop}px`;
-  overlay.style.left = `${vv.offsetLeft}px`;
-  overlay.style.width = `${vv.width}px`;
-  overlay.style.height = `${vv.height}px`;
-  overlay.style.right = 'auto';
-  overlay.style.bottom = 'auto';
-  overlay.setAttribute('data-viewport-positioned', 'true');
 }
 
-function resetModalLayout(overlay, content) {
-  if (overlay) {
-    overlay.style.removeProperty('top');
-    overlay.style.removeProperty('left');
-    overlay.style.removeProperty('width');
-    overlay.style.removeProperty('height');
-    overlay.style.removeProperty('right');
-    overlay.style.removeProperty('bottom');
-    overlay.removeAttribute('data-viewport-positioned');
-  }
-  if (content) {
-    content.style.removeProperty('--fiche-modal-width-pct');
-    content.style.removeProperty('--fiche-modal-height-pct');
-  }
+function resetModalContentSize(content) {
+  if (!content) return;
+  content.style.removeProperty('--fiche-modal-width-pct');
+  content.style.removeProperty('--fiche-modal-height-pct');
 }
 
 /**
@@ -75,21 +45,19 @@ export function useFicheDetailModalVisualViewport(overlayRef, contentRef, enable
 
   useLayoutEffect(() => {
     if (!enabled) return undefined;
-    const overlay = overlayRef?.current;
     const content = contentRef?.current;
-    if (!overlay || !content) return undefined;
+    if (!content) return undefined;
     const vv = getVisualViewport();
     baseScaleRef.current = vv?.scale || 1;
-    applyModalLayout(overlay, content, baseScaleRef.current);
+    applyModalContentSize(content, baseScaleRef.current);
     return undefined;
-  }, [enabled, overlayRef, contentRef]);
+  }, [enabled, contentRef]);
 
   useEffect(() => {
     if (!enabled) return undefined;
 
-    const overlay = overlayRef?.current;
     const content = contentRef?.current;
-    if (!overlay || !content) return undefined;
+    if (!content) return undefined;
 
     const vv = getVisualViewport();
     baseScaleRef.current = vv?.scale || 1;
@@ -99,7 +67,7 @@ export function useFicheDetailModalVisualViewport(overlayRef, contentRef, enable
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         rafId = 0;
-        applyModalLayout(overlay, content, baseScaleRef.current);
+        applyModalContentSize(content, baseScaleRef.current);
       });
     };
 
@@ -120,10 +88,10 @@ export function useFicheDetailModalVisualViewport(overlayRef, contentRef, enable
       }
       window.removeEventListener('resize', sync);
       window.removeEventListener('orientationchange', sync);
-      resetModalLayout(overlay, content);
+      resetModalContentSize(content);
       baseScaleRef.current = 1;
     };
-  }, [enabled, overlayRef, contentRef]);
+  }, [enabled, contentRef]);
 }
 
 export default useFicheDetailModalVisualViewport;

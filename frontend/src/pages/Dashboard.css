@@ -4409,15 +4409,25 @@ body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-act
 }
 
 /* Modal fiche — plein écran en vue mobile native, conteneur margé en vue tableau */
-html.fiche-detail-modal-open:not(.viewport-zoomed),
-body.fiche-detail-modal-open:not(.viewport-zoomed) {
+html.fiche-detail-modal-open,
+body.fiche-detail-modal-open {
   overflow: hidden !important;
 }
 
+/* Dashboard tableau + modal : autoriser pinch-zoom page même quand zoomé */
+html.viewport-zoomed.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open,
+html.viewport-zoomed body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open,
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open,
 html:not([data-desktop-viewport]).dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open {
   overflow: auto !important;
   touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html.viewport-zoomed .fiche-detail-modal-overlay--viewport-sync {
+  z-index: 3000 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 /* Autres pages mobile : modal plein écran */
@@ -4536,22 +4546,6 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-nat
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay {
   position: fixed !important;
   inset: 0 !important;
-  z-index: 3000 !important;
-  padding: 48px 24px !important;
-  margin: 0 !important;
-  background: rgba(0, 0, 0, 0.45) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
-  touch-action: pan-x pan-y pinch-zoom !important;
-}
-
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay--viewport-sync[data-viewport-positioned="true"] {
-  position: fixed !important;
-  inset: auto !important;
   z-index: 3000 !important;
   padding: 48px 24px !important;
   margin: 0 !important;
