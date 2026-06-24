@@ -31,6 +31,30 @@ import './Dashboard.css';
 
 const DASHBOARD_MOBILE_NATIVE_CLASS = 'dashboard-page--mobile-native';
 const DASHBOARD_EXTRANET_SCROLL_CLASS = 'dashboard-page--extranet-scroll';
+const DASHBOARD_OPEN_FICHE_PARAM = 'openFiche';
+
+function getFicheModalStateFromUrl() {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const openFiche = params.get(DASHBOARD_OPEN_FICHE_PARAM);
+  if (!openFiche) return null;
+  return {
+    hash: openFiche,
+    focusHistoriqueEtats: params.get('ficheFocusHisto') === '1',
+    initialTab: params.get('ficheTab') || undefined,
+  };
+}
+
+function clearFicheModalUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.get(DASHBOARD_OPEN_FICHE_PARAM)) return;
+  params.delete(DASHBOARD_OPEN_FICHE_PARAM);
+  params.delete('tableModal');
+  params.delete('ficheFocusHisto');
+  params.delete('ficheTab');
+  const qs = params.toString();
+  window.history.replaceState(null, '', qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+}
 
 function resolveDashboardFicheNumericId(fiche) {
   if (!fiche) return null;
@@ -113,9 +137,25 @@ const Dashboard = () => {
     };
   }, []);
 
+  /** iOS : rechargement avec ?openFiche=… → tableau zoom out + modal */
+  useLayoutEffect(() => {
+    if (!isTouchMobileDevice()) return undefined;
+
+    const params = new URLSearchParams(window.location.search);
+    const openFiche = params.get(DASHBOARD_OPEN_FICHE_PARAM);
+    if (!openFiche) return undefined;
+
+    applyDashboardTableDesktopViewForFicheModal();
+
+    return undefined;
+  }, []);
+
   /** Mobile par défaut (device-width) — bascule vue tableau via le bouton */
   useLayoutEffect(() => {
     if (!isTouchMobileDevice()) return undefined;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get(DASHBOARD_OPEN_FICHE_PARAM)) return undefined;
 
     document.documentElement.classList.add(DASHBOARD_MOBILE_NATIVE_CLASS);
     document.body.classList.add(DASHBOARD_MOBILE_NATIVE_CLASS);
@@ -156,7 +196,7 @@ const Dashboard = () => {
   const [showFilters, setShowFilters] = useState(true);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [isTableDesktopView, setIsTableDesktopView] = useState(false);
+  const [isTableDesktopView, setIsTableDesktopView] = useState(() => Boolean(getFicheModalStateFromUrl()));
   const isDashboardTouchMobile = isTouchMobileDevice();
 
   const switchToMobileView = useCallback(() => {
@@ -166,11 +206,6 @@ const Dashboard = () => {
 
   const switchToTableDesktopView = useCallback(() => {
     applyDashboardTableDesktopView();
-    setIsTableDesktopView(true);
-  }, []);
-
-  const switchToTableDesktopViewForFicheModal = useCallback(() => {
-    applyDashboardTableDesktopViewForFicheModal();
     setIsTableDesktopView(true);
   }, []);
 
@@ -313,7 +348,7 @@ const Dashboard = () => {
   }, [showSearchModal, user?.fonction]);
 
   /** null | { hash: string, focusHistoriqueEtats?: boolean } */
-  const [ficheDetailModal, setFicheDetailModal] = useState(null);
+  const [ficheDetailModal, setFicheDetailModal] = useState(getFicheModalStateFromUrl);
   const [ficheContextMenu, setFicheContextMenu] = useState(null);
   const [auditFiche, setAuditFiche] = useState(null);
   const [etatModalFiche, setEtatModalFiche] = useState(null);
@@ -327,35 +362,43 @@ const Dashboard = () => {
   const [validationConfPresenceCouple, setValidationConfPresenceCouple] = useState('');
   const { lastViewedFicheHash, setLastViewedFicheHash } = useFicheDetailModal();
 
-  /** iOS / mobile : ouvrir la fiche en vue tableau + modal conteneur */
+  /** iOS / mobile : rechargement page → tableau zoom out + modal */
   const openDashboardFicheDetail = useCallback(
     (modalState) => {
+      if (!modalState?.hash) return;
+
       if (isDashboardTouchMobile) {
-        switchToTableDesktopViewForFicheModal();
+        const params = new URLSearchParams(window.location.search);
+        params.set(DASHBOARD_OPEN_FICHE_PARAM, modalState.hash);
+        if (modalState.focusHistoriqueEtats) params.set('ficheFocusHisto', '1');
+        if (modalState.initialTab) params.set('ficheTab', modalState.initialTab);
+        params.set('tableModal', '1');
+        const qs = params.toString();
+        window.location.assign(qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+        return;
       }
+
       setFicheDetailModal(modalState);
-      if (modalState?.hash) {
+      if (modalState.hash) {
         setLastViewedFicheHash(modalState.hash);
       }
     },
-    [isDashboardTouchMobile, switchToTableDesktopViewForFicheModal, setLastViewedFicheHash]
+    [isDashboardTouchMobile, setLastViewedFicheHash]
   );
 
   useEffect(() => {
-    if (!ficheDetailModal || !isDashboardTouchMobile) return undefined;
+    if (!isDashboardTouchMobile) return undefined;
 
-    let innerId = 0;
-    const outerId = requestAnimationFrame(() => {
-      innerId = requestAnimationFrame(() => {
-        applyDashboardTableDesktopViewForFicheModal();
-      });
-    });
+    const initialModal = getFicheModalStateFromUrl();
+    if (!initialModal) return undefined;
 
-    return () => {
-      cancelAnimationFrame(outerId);
-      if (innerId) cancelAnimationFrame(innerId);
-    };
-  }, [ficheDetailModal, isDashboardTouchMobile]);
+    setIsTableDesktopView(true);
+    setFicheDetailModal(initialModal);
+    setLastViewedFicheHash(initialModal.hash);
+    clearFicheModalUrlParams();
+
+    return undefined;
+  }, [isDashboardTouchMobile, setLastViewedFicheHash]);
 
   const closeDashboardFicheDetail = useCallback(() => {
     setFicheDetailModal(null);

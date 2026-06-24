@@ -63,8 +63,10 @@ export function applyDashboardMobileView() {
 }
 
 /** Vue tableau desktop (layout 1400px réduit à l’écran) — sans sidebar fixe */
-export function applyDashboardTableDesktopView(width = DESKTOP_VIEWPORT_WIDTH) {
-  const content = buildDesktopViewportContent(width);
+export const DASHBOARD_FICHE_MODAL_SCALE_MULTIPLIER = 0.78;
+
+export function applyDashboardTableDesktopView(width = DESKTOP_VIEWPORT_WIDTH, scaleMultiplier = 1) {
+  const content = buildDesktopViewportContent(width, scaleMultiplier);
   if (isTouchMobileDevice()) {
     forceTouchViewportScaleReset(content);
   } else {
@@ -91,31 +93,10 @@ export function applyDashboardTableDesktopView(width = DESKTOP_VIEWPORT_WIDTH) {
 }
 
 /**
- * iOS : ouverture modal fiche — viewport device-width (scale 1) + mode tableau.
- * Évite le décalage du modal (photo 2) causé par le layout 1400px + zoom Safari.
+ * iOS : mode tableau 1400px avec zoom out pour voir la page + le modal d'un coup.
  */
-export function applyDashboardTableDesktopViewForFicheModal() {
-  if (!isTouchMobileDevice()) {
-    applyDashboardTableDesktopView();
-    return;
-  }
-
-  forceTouchViewportScaleReset(MOBILE_NATIVE_VIEWPORT_CONTENT);
-
-  delete document.documentElement.dataset.desktopViewport;
-  if (document.body) delete document.body.dataset.desktopViewport;
-
-  clearDocumentLayoutStyles();
-  document.documentElement.classList.add(DASHBOARD_TABLE_DESKTOP_VIEW_CLASS);
-  document.body?.classList.add(DASHBOARD_TABLE_DESKTOP_VIEW_CLASS);
-
-  resetScrollPosition();
-  requestAnimationFrame(() => {
-    resetScrollPosition();
-    forceTouchViewportScaleReset(MOBILE_NATIVE_VIEWPORT_CONTENT);
-    notifyViewportLayoutChange();
-    requestAnimationFrame(notifyViewportLayoutChange);
-  });
+export function applyDashboardTableDesktopViewForFicheModal(width = DESKTOP_VIEWPORT_WIDTH) {
+  applyDashboardTableDesktopView(width, DASHBOARD_FICHE_MODAL_SCALE_MULTIPLIER);
 }
 
 function notifyViewportLayoutChange() {
@@ -175,9 +156,6 @@ function buildDesktopViewportContent(width = DESKTOP_VIEWPORT_WIDTH, scaleMultip
   const scaleStr = Number(scale.toFixed(4));
   return `width=${width}, initial-scale=${scaleStr}, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover`;
 }
-
-const MOBILE_NATIVE_VIEWPORT_CONTENT =
-  'width=device-width, initial-scale=1.0, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover';
 
 /** iOS : verrouiller puis réappliquer le viewport pour annuler un pinch-zoom Safari en cours. */
 function forceTouchViewportScaleReset(content) {
