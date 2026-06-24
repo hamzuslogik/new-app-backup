@@ -4549,7 +4549,7 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay--viewport-sync {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay--viewport-sync[data-viewport-positioned="true"] {
   position: fixed !important;
   inset: auto !important;
   z-index: 3000 !important;

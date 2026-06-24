@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from 'react-query';
@@ -33,6 +33,21 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   // Session commercial : éviter la fermeture accidentelle au clic extérieur
   const isBackdropCloseLocked = isOverlayLocked || Number(user?.fonction) === 5;
   const pinchZoomEnabled = options?.pinchZoom === true;
+  const backdropCloseReadyRef = useRef(false);
+
+  useEffect(() => {
+    if (!ficheHash) return undefined;
+    backdropCloseReadyRef.current = false;
+    const timer = setTimeout(() => {
+      backdropCloseReadyRef.current = true;
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [ficheHash]);
+
+  const handleBackdropClick = () => {
+    if (isBackdropCloseLocked || !backdropCloseReadyRef.current) return;
+    onClose();
+  };
 
   useModalScrollLock(!!ficheHash, { lockDocumentOverflow: !pinchZoomEnabled });
   useIosNestedScrollChain(modalOverlayRef, !!ficheHash && !pinchZoomEnabled);
@@ -166,7 +181,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
     <div
       ref={modalOverlayRef}
       className={`fiche-detail-modal-overlay${pinchZoomEnabled ? ' fiche-detail-modal-overlay--viewport-sync' : ''}`}
-      onClick={isBackdropCloseLocked ? undefined : onClose}
+      onClick={isBackdropCloseLocked ? undefined : handleBackdropClick}
     >
       <div
         ref={modalContentRef}

@@ -17,15 +17,30 @@ function getVisualViewport() {
 
 function applyModalLayout(overlay, content, baseScale) {
   const vv = getVisualViewport();
-  if (!vv || !overlay || !content) return;
-  if (vv.width < 80 || vv.height < 80) return;
+  if (!overlay || !content) return;
 
-  const scale = vv.scale || 1;
+  const scale = vv?.scale || 1;
   const base = baseScale > 0 ? baseScale : scale;
   const zoomFactor = scale / base;
 
   const widthPct = clamp(BASE_WIDTH_PCT / zoomFactor, MIN_WIDTH_PCT, MAX_WIDTH_PCT);
   const heightPct = clamp(BASE_HEIGHT_PCT / zoomFactor, MIN_HEIGHT_PCT, MAX_HEIGHT_PCT);
+
+  content.style.setProperty('--fiche-modal-width-pct', `${Number(widthPct.toFixed(2))}%`);
+  content.style.setProperty('--fiche-modal-height-pct', `${Number(heightPct.toFixed(2))}%`);
+
+  const needsViewportPosition = zoomFactor > 1.02 && vv && vv.width >= 50 && vv.height >= 50;
+
+  if (!needsViewportPosition) {
+    overlay.style.removeProperty('top');
+    overlay.style.removeProperty('left');
+    overlay.style.removeProperty('width');
+    overlay.style.removeProperty('height');
+    overlay.style.removeProperty('right');
+    overlay.style.removeProperty('bottom');
+    overlay.removeAttribute('data-viewport-positioned');
+    return;
+  }
 
   overlay.style.top = `${vv.offsetTop}px`;
   overlay.style.left = `${vv.offsetLeft}px`;
@@ -33,9 +48,7 @@ function applyModalLayout(overlay, content, baseScale) {
   overlay.style.height = `${vv.height}px`;
   overlay.style.right = 'auto';
   overlay.style.bottom = 'auto';
-
-  content.style.setProperty('--fiche-modal-width-pct', `${Number(widthPct.toFixed(2))}%`);
-  content.style.setProperty('--fiche-modal-height-pct', `${Number(heightPct.toFixed(2))}%`);
+  overlay.setAttribute('data-viewport-positioned', 'true');
 }
 
 function resetModalLayout(overlay, content) {
@@ -46,6 +59,7 @@ function resetModalLayout(overlay, content) {
     overlay.style.removeProperty('height');
     overlay.style.removeProperty('right');
     overlay.style.removeProperty('bottom');
+    overlay.removeAttribute('data-viewport-positioned');
   }
   if (content) {
     content.style.removeProperty('--fiche-modal-width-pct');

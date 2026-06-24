@@ -27,6 +27,11 @@ import {
   applyDashboardTableDesktopViewForFicheModal,
   isTouchMobileDevice,
 } from '../utils/applyForceDesktopViewport';
+import {
+  stashPendingDashboardFicheModal,
+  clearPendingDashboardFicheModal,
+  resolvePendingDashboardFicheModal,
+} from '../utils/dashboardFicheModalSession';
 import './Dashboard.css';
 
 const DASHBOARD_MOBILE_NATIVE_CLASS = 'dashboard-page--mobile-native';
@@ -119,6 +124,70 @@ function getTodayDateRange() {
   const day = String(today.getDate()).padStart(2, '0');
   const dateStr = `${year}-${month}-${day}`;
   return { dateStr, timeStart: '00:00:00', timeEnd: '23:59:59' };
+}
+
+const DASHBOARD_MODAL_URL_KEYS = new Set([
+  DASHBOARD_OPEN_FICHE_PARAM,
+  'tableModal',
+  'ficheFocusHisto',
+  'ficheTab',
+]);
+
+function isDashboardModalBootstrapUrl(params) {
+  if (!params.get(DASHBOARD_OPEN_FICHE_PARAM)) return false;
+  return [...params.keys()].every((key) => DASHBOARD_MODAL_URL_KEYS.has(key));
+}
+
+function filtersToUrlParams(f) {
+  const out = {};
+  const set = (key, value) => {
+    if (value === undefined || value === null) return;
+    if (typeof value === 'boolean') {
+      if (value) out[key] = '1';
+      return;
+    }
+    const s = String(value).trim();
+    if (s === '') return;
+    out[key] = s;
+  };
+  set('fiche_search', true);
+  set('page', f.page || 1);
+  if (f.limit && f.limit !== 999999) set('limit', f.limit);
+  set('id_etat_final', f.id_etat_final);
+  set('id_sous_etat', f.id_sous_etat);
+  set('annuler_repro_type', f.annuler_repro_type);
+  set('date_champ', f.date_champ);
+  set('date_debut', f.date_debut);
+  set('date_fin', f.date_fin);
+  set('time_debut', f.time_debut);
+  set('time_fin', f.time_fin);
+  set('id_confirmateur', f.id_confirmateur);
+  set('id_commercial', f.id_commercial);
+  set('id_centre', f.id_centre);
+  set('id_agent', f.id_agent);
+  set('id_re', f.id_re);
+  set('critere', f.critere);
+  set('critere_champ', f.critere_champ);
+  set('cp', f.cp);
+  set('tel', f.tel);
+  set('nom', f.nom);
+  set('prenom', f.prenom);
+  set('ko', f.ko);
+  set('include_archive', !!f.include_archive);
+  set('include_confirmateur_2', !!f.include_confirmateur_2);
+  set('stats_drill', f.stats_drill);
+  set('stats_drill_source', f.stats_drill_source);
+  set('stats_drill_etat', f.stats_drill_etat);
+  set('stats_drill_etat_ids', f.stats_drill_etat_ids);
+  set('stats_drill_entity', f.stats_drill_entity);
+  set('stats_drill_entity_id', f.stats_drill_entity_id);
+  set('stats_drill_date_field', f.stats_drill_date_field);
+  set('stats_drill_kpi_metric', f.stats_drill_kpi_metric);
+  if (f.produit !== undefined && f.produit !== null && f.produit !== '') {
+    const p = Array.isArray(f.produit) ? f.produit[0] : f.produit;
+    set('produit', p);
+  }
+  return out;
 }
 
 const Dashboard = () => {
@@ -242,6 +311,8 @@ const Dashboard = () => {
   const [filters, setFilters] = useState(getInitialFilters);
   // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
   const [appliedFilters, setAppliedFilters] = useState(getInitialFilters);
+  const appliedFiltersRef = useRef(appliedFilters);
+  appliedFiltersRef.current = appliedFilters;
   /** Vue liste depuis la carte « RDV à venir » sans modifier l’URL ni les champs du formulaire */
   const [statsListOverride, setStatsListOverride] = useState(null);
 
@@ -291,17 +362,32 @@ const Dashboard = () => {
   useEffect(() => {
     const urlParams = Object.fromEntries(searchParams.entries());
     const hasUrl = Object.keys(urlParams).length > 0;
-    if (hasUrl && urlParams.fiche_search === '1' && !dashboardUrlHasNarrowingCriteria(urlParams)) {
+
+    if (hasUrl && isDashboardModalBootstrapUrl(searchParams) && user) {
+      applyDashboardDefaultsFromEmptyUrl();
+      return;
+    }
+
+    if (
+      hasUrl &&
+      urlParams.fiche_search === '1' &&
+      !dashboardUrlHasNarrowingCriteria(urlParams) &&
+      !searchParams.get(DASHBOARD_OPEN_FICHE_PARAM)
+    ) {
       setSearchParams({}, { replace: true });
       return;
     }
     if (hasUrl && urlParams.fiche_search === '1') {
       setStatsListOverride(null);
+      const cleanedUrlParams = { ...urlParams };
+      DASHBOARD_MODAL_URL_KEYS.forEach((key) => {
+        delete cleanedUrlParams[key];
+      });
       const newFilters = {
         page: parseInt(urlParams.page) || 1,
         limit: parseInt(urlParams.limit) || 999999,
         fiche_search: true,
-        ...urlParams
+        ...cleanedUrlParams
       };
       if (newFilters.id_etat_final != null && newFilters.id_etat_final !== '') {
         const etatRaw = String(newFilters.id_etat_final);
@@ -348,7 +434,9 @@ const Dashboard = () => {
   }, [showSearchModal, user?.fonction]);
 
   /** null | { hash: string, focusHistoriqueEtats?: boolean } */
-  const [ficheDetailModal, setFicheDetailModal] = useState(getFicheModalStateFromUrl);
+  const [ficheDetailModal, setFicheDetailModal] = useState(() =>
+    resolvePendingDashboardFicheModal(getFicheModalStateFromUrl())
+  );
   const [ficheContextMenu, setFicheContextMenu] = useState(null);
   const [auditFiche, setAuditFiche] = useState(null);
   const [etatModalFiche, setEtatModalFiche] = useState(null);
@@ -368,7 +456,13 @@ const Dashboard = () => {
       if (!modalState?.hash) return;
 
       if (isDashboardTouchMobile) {
+        stashPendingDashboardFicheModal(modalState);
         const params = new URLSearchParams(window.location.search);
+        if (!params.get('fiche_search') && appliedFiltersRef.current?.fiche_search) {
+          Object.entries(filtersToUrlParams(appliedFiltersRef.current)).forEach(([key, value]) => {
+            params.set(key, String(value));
+          });
+        }
         params.set(DASHBOARD_OPEN_FICHE_PARAM, modalState.hash);
         if (modalState.focusHistoriqueEtats) params.set('ficheFocusHisto', '1');
         if (modalState.initialTab) params.set('ficheTab', modalState.initialTab);
@@ -389,18 +483,20 @@ const Dashboard = () => {
   useEffect(() => {
     if (!isDashboardTouchMobile) return undefined;
 
-    const initialModal = getFicheModalStateFromUrl();
-    if (!initialModal) return undefined;
+    const fromUrl = getFicheModalStateFromUrl();
+    const pending = resolvePendingDashboardFicheModal(fromUrl);
+    if (!pending?.hash) return undefined;
 
     setIsTableDesktopView(true);
-    setFicheDetailModal(initialModal);
-    setLastViewedFicheHash(initialModal.hash);
-    clearFicheModalUrlParams();
+    setFicheDetailModal(pending);
+    setLastViewedFicheHash(pending.hash);
+    if (fromUrl) clearFicheModalUrlParams();
 
     return undefined;
   }, [isDashboardTouchMobile, setLastViewedFicheHash]);
 
   const closeDashboardFicheDetail = useCallback(() => {
+    clearPendingDashboardFicheModal();
     setFicheDetailModal(null);
     if (isDashboardTouchMobile) {
       switchToMobileView();
@@ -893,58 +989,6 @@ const Dashboard = () => {
    * Sert à conserver les critères de recherche dans l'URL : ainsi un rafraîchissement de la page
    * relance la même recherche (cf. useEffect qui lit `searchParams` au montage).
    */
-  const filtersToUrlParams = (f) => {
-    const out = {};
-    const set = (key, value) => {
-      if (value === undefined || value === null) return;
-      if (typeof value === 'boolean') {
-        if (value) out[key] = '1';
-        return;
-      }
-      const s = String(value).trim();
-      if (s === '') return;
-      out[key] = s;
-    };
-    set('fiche_search', true);
-    set('page', f.page || 1);
-    if (f.limit && f.limit !== 999999) set('limit', f.limit);
-    set('id_etat_final', f.id_etat_final);
-    set('id_sous_etat', f.id_sous_etat);
-    set('annuler_repro_type', f.annuler_repro_type);
-    set('date_champ', f.date_champ);
-    set('date_debut', f.date_debut);
-    set('date_fin', f.date_fin);
-    set('time_debut', f.time_debut);
-    set('time_fin', f.time_fin);
-    set('id_confirmateur', f.id_confirmateur);
-    set('id_commercial', f.id_commercial);
-    set('id_centre', f.id_centre);
-    set('id_agent', f.id_agent);
-    set('id_re', f.id_re);
-    set('critere', f.critere);
-    set('critere_champ', f.critere_champ);
-    set('cp', f.cp);
-    set('tel', f.tel);
-    set('nom', f.nom);
-    set('prenom', f.prenom);
-    set('ko', f.ko);
-    set('include_archive', !!f.include_archive);
-    set('include_confirmateur_2', !!f.include_confirmateur_2);
-    set('stats_drill', f.stats_drill);
-    set('stats_drill_source', f.stats_drill_source);
-    set('stats_drill_etat', f.stats_drill_etat);
-    set('stats_drill_etat_ids', f.stats_drill_etat_ids);
-    set('stats_drill_entity', f.stats_drill_entity);
-    set('stats_drill_entity_id', f.stats_drill_entity_id);
-    set('stats_drill_date_field', f.stats_drill_date_field);
-    set('stats_drill_kpi_metric', f.stats_drill_kpi_metric);
-    if (f.produit !== undefined && f.produit !== null && f.produit !== '') {
-      const p = Array.isArray(f.produit) ? f.produit[0] : f.produit;
-      set('produit', p);
-    }
-    return out;
-  };
-
   const handleSearch = async (e) => {
     e.preventDefault();
     // Afficher la confirmation uniquement si la recherche n'est pas affinée (risque de recherche lourde)
