@@ -24,6 +24,7 @@ import {
   applyMobileNativeViewport,
   applyDashboardMobileView,
   applyDashboardTableDesktopView,
+  applyDashboardTableDesktopViewForFicheModal,
   isTouchMobileDevice,
 } from '../utils/applyForceDesktopViewport';
 import './Dashboard.css';
@@ -165,6 +166,11 @@ const Dashboard = () => {
 
   const switchToTableDesktopView = useCallback(() => {
     applyDashboardTableDesktopView();
+    setIsTableDesktopView(true);
+  }, []);
+
+  const switchToTableDesktopViewForFicheModal = useCallback(() => {
+    applyDashboardTableDesktopViewForFicheModal();
     setIsTableDesktopView(true);
   }, []);
 
@@ -325,15 +331,31 @@ const Dashboard = () => {
   const openDashboardFicheDetail = useCallback(
     (modalState) => {
       if (isDashboardTouchMobile) {
-        switchToTableDesktopView();
+        switchToTableDesktopViewForFicheModal();
       }
       setFicheDetailModal(modalState);
       if (modalState?.hash) {
         setLastViewedFicheHash(modalState.hash);
       }
     },
-    [isDashboardTouchMobile, switchToTableDesktopView, setLastViewedFicheHash]
+    [isDashboardTouchMobile, switchToTableDesktopViewForFicheModal, setLastViewedFicheHash]
   );
+
+  useEffect(() => {
+    if (!ficheDetailModal || !isDashboardTouchMobile) return undefined;
+
+    let innerId = 0;
+    const outerId = requestAnimationFrame(() => {
+      innerId = requestAnimationFrame(() => {
+        applyDashboardTableDesktopViewForFicheModal();
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(outerId);
+      if (innerId) cancelAnimationFrame(innerId);
+    };
+  }, [ficheDetailModal, isDashboardTouchMobile]);
 
   const closeDashboardFicheDetail = useCallback(() => {
     setFicheDetailModal(null);
