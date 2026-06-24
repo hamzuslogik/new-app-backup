@@ -6,7 +6,7 @@ import {
   isTouchMobileDevice,
 } from '../utils/applyForceDesktopViewport';
 
-const MOBILE_NATIVE_VIEWPORT_PATHS = new Set(['/dashboard']);
+const MOBILE_NATIVE_VIEWPORT_PATHS = new Set(['/dashboard', '/login']);
 
 const ForceDesktopViewport = () => {
   const { pathname } = useLocation();

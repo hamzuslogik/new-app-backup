@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
 import { getHomePage } from '../utils/getHomePage';
 import api from '../config/api';
+import { applyMobileNativeViewport, isTouchMobileDevice } from '../utils/applyForceDesktopViewport';
 import './Login.css';
 
 const Login = () => {
@@ -14,6 +15,25 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login: loginUser } = useAuth();
   const navigate = useNavigate();
+
+  /** iOS / mobile : viewport natif (device-width) */
+  useLayoutEffect(() => {
+    if (!isTouchMobileDevice()) return undefined;
+
+    document.documentElement.classList.add('login-page');
+    document.body.classList.add('login-page');
+
+    applyMobileNativeViewport();
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(applyMobileNativeViewport);
+    });
+
+    return () => {
+      cancelAnimationFrame(id);
+      document.documentElement.classList.remove('login-page');
+      document.body.classList.remove('login-page');
+    };
+  }, []);
 
   useEffect(() => {
     const reason = sessionStorage.getItem('logoutReason');
