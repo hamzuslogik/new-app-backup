@@ -335,6 +335,13 @@ const Dashboard = () => {
     [isDashboardTouchMobile, switchToTableDesktopView, setLastViewedFicheHash]
   );
 
+  const closeDashboardFicheDetail = useCallback(() => {
+    setFicheDetailModal(null);
+    if (isDashboardTouchMobile) {
+      switchToMobileView();
+    }
+  }, [isDashboardTouchMobile, switchToMobileView]);
+
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
     direction: 'asc', // 'asc' or 'desc'
@@ -2366,7 +2373,7 @@ const Dashboard = () => {
       {ficheDetailModal && (
         <FicheDetailModal
           ficheHash={ficheDetailModal.hash}
-          onClose={() => setFicheDetailModal(null)}
+          onClose={closeDashboardFicheDetail}
           options={{
             focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats,
             initialTab: ficheDetailModal.initialTab || undefined,
