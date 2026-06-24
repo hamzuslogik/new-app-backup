@@ -112,6 +112,8 @@ export function initViewportZoomScrollFix() {
   const shouldPanDocument = (target) => {
     if (!(target instanceof Element)) return true;
     if (target.closest('input, textarea, select, [contenteditable="true"]')) return false;
+    if (target.closest('.fiche-detail-modal-content')) return false;
+    if (isZoomed() && target.closest('.fiche-detail-modal-overlay--viewport-sync')) return true;
     if (target.closest('.fiche-detail-modal-overlay')) return false;
     return true;
   };

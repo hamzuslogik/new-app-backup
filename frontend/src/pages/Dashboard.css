@@ -4409,9 +4409,15 @@ body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-act
 }
 
 /* Modal fiche — plein écran en vue mobile native, conteneur margé en vue tableau */
-html.fiche-detail-modal-open,
-body.fiche-detail-modal-open {
+html.fiche-detail-modal-open:not(.viewport-zoomed),
+body.fiche-detail-modal-open:not(.viewport-zoomed) {
   overflow: hidden !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open,
+html:not([data-desktop-viewport]).dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open {
+  overflow: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 /* Autres pages mobile : modal plein écran */
@@ -4540,7 +4546,23 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
   justify-content: center !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
-  touch-action: none !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay--viewport-sync {
+  position: fixed !important;
+  inset: auto !important;
+  z-index: 3000 !important;
+  padding: 48px 24px !important;
+  margin: 0 !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content {
@@ -4562,10 +4584,16 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
   display: flex !important;
   flex-direction: column !important;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35) !important;
-  touch-action: pan-y !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
-/* Pinch zoom : conteneur rétrécit (H+L), contenu grossit */
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync {
+  width: var(--fiche-modal-width-pct, 88%) !important;
+  max-width: var(--fiche-modal-width-pct, 88%) !important;
+  max-height: var(--fiche-modal-height-pct, 82%) !important;
+}
+
+/* Contenu modal : zoom page Safari natif (pas de transform CSS) */
 .fiche-detail-modal-zoom-inner {
   display: flex;
   flex-direction: column;
@@ -4574,53 +4602,38 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
   box-sizing: border-box;
 }
 
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom {
-  width: var(--fiche-modal-width-pct, 88%) !important;
-  max-width: var(--fiche-modal-width-pct, 88%) !important;
-  max-height: var(--fiche-modal-height-pct, 82%) !important;
-}
-
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .fiche-detail-modal-zoom-inner {
-  --fiche-modal-zoom: 1;
-  transform: scale(var(--fiche-modal-zoom, 1));
-  transform-origin: top center;
-  width: calc(100% / var(--fiche-modal-zoom, 1));
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .fiche-detail,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .field-label,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .field-value,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .field-display,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .section-title {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .fiche-detail,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .field-label,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .field-value,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .field-display,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .section-title {
   line-height: 1.45 !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
 }
 
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .fiche-details-table,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .fiche-sections,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .form-grid,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .form-row {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .fiche-details-table,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .fiche-sections,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .form-grid,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .form-row {
   max-width: 100% !important;
   overflow-x: hidden !important;
 }
 
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .planning-table,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .planning-table-container {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .planning-table,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .planning-table-container {
   min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
   overflow-x: hidden !important;
 }
 
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .planning-table {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .planning-table {
   table-layout: fixed !important;
 }
 
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .planning-table th,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--pinch-zoom .planning-table td {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .planning-table th,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .planning-table td {
   white-space: normal !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;

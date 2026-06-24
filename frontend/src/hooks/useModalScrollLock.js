@@ -4,8 +4,11 @@ import { useEffect } from 'react';
  * Hook personnalisé pour bloquer le défilement du body quand un modal est ouvert
  * Permet le scroll avec la roulette et les flèches uniquement sur le modal
  * @param {boolean} isOpen - État du modal (ouvert/fermé)
+ * @param {{ lockDocumentOverflow?: boolean }} [options]
  */
-export const useModalScrollLock = (isOpen) => {
+export const useModalScrollLock = (isOpen, options = {}) => {
+  const lockDocumentOverflow = options.lockDocumentOverflow !== false;
+
   useEffect(() => {
     if (isOpen) {
       // Sauvegarder les valeurs actuelles
@@ -17,12 +20,13 @@ export const useModalScrollLock = (isOpen) => {
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       
       // Bloquer le scroll sans position:fixed pour éviter que la page rétrécisse (affichage moitié largeur)
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-      
-      // Ajouter un padding-right pour compenser la disparition de la scrollbar
-      if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      if (lockDocumentOverflow) {
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+
+        if (scrollbarWidth > 0) {
+          document.body.style.paddingRight = `${scrollbarWidth}px`;
+        }
       }
 
       // Gérer les événements wheel pour permettre le scroll uniquement sur les modals
@@ -191,6 +195,6 @@ export const useModalScrollLock = (isOpen) => {
         document.body.style.paddingRight = originalBodyPaddingRight;
       };
     }
-  }, [isOpen]);
+  }, [isOpen, lockDocumentOverflow]);
 };
 
