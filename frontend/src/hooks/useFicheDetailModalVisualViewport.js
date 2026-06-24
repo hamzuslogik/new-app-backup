@@ -2,9 +2,10 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 
 const BASE_WIDTH_PCT = 88;
 const BASE_HEIGHT_PCT = 82;
-const MIN_WIDTH_PCT = 52;
+/** Plancher bas : le conteneur continue de rétrécir jusqu’à ~×3,4 du zoom initial */
+const MIN_WIDTH_PCT = 26;
 const MAX_WIDTH_PCT = 96;
-const MIN_HEIGHT_PCT = 48;
+const MIN_HEIGHT_PCT = 24;
 const MAX_HEIGHT_PCT = 90;
 
 function clamp(value, min, max) {
