@@ -4531,12 +4531,12 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
   position: fixed !important;
   inset: 0 !important;
   z-index: 3000 !important;
-  padding: 16px 10px !important;
+  padding: 48px 24px !important;
   margin: 0 !important;
   background: rgba(0, 0, 0, 0.45) !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: stretch !important;
+  align-items: center !important;
   justify-content: center !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
@@ -4544,12 +4544,12 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
 }
 
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content {
-  width: 100% !important;
-  max-width: 100% !important;
+  width: 88% !important;
+  max-width: 88% !important;
   min-width: 0 !important;
-  flex: 1 1 auto !important;
+  flex: 0 1 auto !important;
   min-height: 0 !important;
-  max-height: 100% !important;
+  max-height: 82% !important;
   height: auto !important;
   margin: 0 auto !important;
   border-radius: 8px !important;
@@ -4596,8 +4596,10 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
 
 @supports (-webkit-touch-callout: none) {
   html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay {
-    padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
-    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)) !important;
+    padding-top: max(48px, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: max(48px, env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: max(24px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(24px, env(safe-area-inset-right, 0px)) !important;
   }
 }
 
