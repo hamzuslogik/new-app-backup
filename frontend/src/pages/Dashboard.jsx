@@ -2442,6 +2442,7 @@ const Dashboard = () => {
           options={{
             focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats,
             initialTab: ficheDetailModal.initialTab || undefined,
+            textPinch: isDashboardTouchMobile,
           }}
         />
       )}

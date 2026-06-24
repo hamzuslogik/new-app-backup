@@ -4565,6 +4565,61 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
   touch-action: pan-y !important;
 }
 
+/* Pinch texte : conteneur fixe, écriture zoomée à l'intérieur */
+.fiche-detail-modal-zoom-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .fiche-detail-modal-zoom-inner {
+  --fiche-modal-text-scale: 1;
+  transform: scale(var(--fiche-modal-text-scale, 1));
+  transform-origin: top center;
+  width: calc(100% / var(--fiche-modal-text-scale, 1));
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .fiche-detail,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .field-label,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .field-value,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .field-display,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .section-title {
+  line-height: 1.45 !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .fiche-details-table,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .fiche-sections,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .form-grid,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .form-row {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .planning-table,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .planning-table-container {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .planning-table {
+  table-layout: fixed !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .planning-table th,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--text-pinch .planning-table td {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-close {
   z-index: 10;
   color: #ffffff !important;
