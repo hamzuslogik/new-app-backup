@@ -14,7 +14,6 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { useDashboardViewportPinch } from '../hooks/useDashboardViewportPinch';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
@@ -113,7 +112,7 @@ const Dashboard = () => {
     };
   }, []);
 
-  /** Mobile par défaut (device-width, zoom in) — pinch zoom out pour vue tableau desktop */
+  /** Mobile par défaut (device-width) — bascule vue tableau via le bouton */
   useLayoutEffect(() => {
     if (!isTouchMobileDevice()) return undefined;
 
@@ -174,12 +173,7 @@ const Dashboard = () => {
     else switchToTableDesktopView();
   }, [isTableDesktopView, switchToMobileView, switchToTableDesktopView]);
 
-  useDashboardViewportPinch(isDashboardTouchMobile, {
-    onPinchOut: switchToTableDesktopView,
-    onPinchIn: switchToMobileView,
-  });
-
-  // Par défaut : filtre vide (état Tous, date non sélectionnée, date début/fin vides)
+  // Par défaut : filtre vide
   const getInitialFilters = () => ({
     page: 1,
     limit: 999999,
@@ -326,6 +320,20 @@ const Dashboard = () => {
   const [validationConfRdvAvec, setValidationConfRdvAvec] = useState('');
   const [validationConfPresenceCouple, setValidationConfPresenceCouple] = useState('');
   const { lastViewedFicheHash, setLastViewedFicheHash } = useFicheDetailModal();
+
+  /** iOS / mobile : ouvrir la fiche en vue tableau + modal conteneur */
+  const openDashboardFicheDetail = useCallback(
+    (modalState) => {
+      if (isDashboardTouchMobile) {
+        switchToTableDesktopView();
+      }
+      setFicheDetailModal(modalState);
+      if (modalState?.hash) {
+        setLastViewedFicheHash(modalState.hash);
+      }
+    },
+    [isDashboardTouchMobile, switchToTableDesktopView, setLastViewedFicheHash]
+  );
 
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
@@ -1434,22 +1442,19 @@ const Dashboard = () => {
 
   const openFicheDetailFromMenu = () => {
     if (!ficheContextMenu?.fiche?.hash) return;
-    setFicheDetailModal({ hash: ficheContextMenu.fiche.hash });
-    setLastViewedFicheHash(ficheContextMenu.fiche.hash);
+    openDashboardFicheDetail({ hash: ficheContextMenu.fiche.hash });
     setFicheContextMenu(null);
   };
 
   const openFicheHistoriqueOverlay = () => {
     if (!ficheContextMenu?.fiche?.hash) return;
-    setFicheDetailModal({ hash: ficheContextMenu.fiche.hash, focusHistoriqueEtats: true });
-    setLastViewedFicheHash(ficheContextMenu.fiche.hash);
+    openDashboardFicheDetail({ hash: ficheContextMenu.fiche.hash, focusHistoriqueEtats: true });
     setFicheContextMenu(null);
   };
 
   const openFicheSmsFromMenu = () => {
     if (!ficheContextMenu?.fiche?.hash) return;
-    setFicheDetailModal({ hash: ficheContextMenu.fiche.hash, initialTab: 'sms' });
-    setLastViewedFicheHash(ficheContextMenu.fiche.hash);
+    openDashboardFicheDetail({ hash: ficheContextMenu.fiche.hash, initialTab: 'sms' });
     setFicheContextMenu(null);
   };
 
@@ -1501,7 +1506,7 @@ const Dashboard = () => {
               type="button"
               className="btn-dashboard-view-toggle"
               onClick={toggleDashboardViewport}
-              title={isTableDesktopView ? 'Revenir à la vue mobile' : 'Vue tableau desktop (pinch 2 doigts écartés)'}
+              title={isTableDesktopView ? 'Revenir à la vue mobile' : 'Afficher le tableau en vue desktop'}
             >
               {isTableDesktopView ? (
                 <>
@@ -2202,10 +2207,7 @@ const Dashboard = () => {
                               />
                             )}
                             <button
-                              onClick={() => {
-                                setFicheDetailModal({ hash: fiche.hash });
-                                setLastViewedFicheHash(fiche.hash);
-                              }}
+                              onClick={() => openDashboardFicheDetail({ hash: fiche.hash })}
                               className="btn-detail"
                               title="Voir les détails"
                               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}

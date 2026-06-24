@@ -4408,13 +4408,14 @@ body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-act
   width: 100% !important;
 }
 
-/* Modal fiche plein écran (viewport natif mobile) */
+/* Modal fiche — plein écran en vue mobile native, conteneur margé en vue tableau */
 html.fiche-detail-modal-open,
 body.fiche-detail-modal-open {
   overflow: hidden !important;
 }
 
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-overlay {
+/* Autres pages mobile : modal plein écran */
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open:not(.dashboard-page) .fiche-detail-modal-overlay {
   position: fixed !important;
   inset: 0 !important;
   z-index: 3000 !important;
@@ -4429,7 +4430,46 @@ html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-mod
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content {
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open:not(.dashboard-page) .fiche-detail-modal-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  padding: 0 !important;
+  padding-bottom: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: none !important;
+  flex: 1 1 auto !important;
+}
+
+/* Vue mobile native dashboard (hors mode tableau) : modal plein écran */
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 3000 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: #f3f4f6 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  overflow: hidden !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
@@ -4450,13 +4490,13 @@ html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-mod
   flex: 1 1 auto !important;
 }
 
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-close {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-close {
   z-index: 10;
   color: #ffffff !important;
   font-size: 24px !important;
 }
 
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-banner {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-banner {
   flex: 0 0 72px !important;
   width: 100% !important;
   margin: 0 !important;
@@ -4467,23 +4507,98 @@ html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-mod
   background: #00d100 !important;
 }
 
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content {
   overflow-x: hidden !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
 }
 
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content .fiche-detail {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content .fiche-detail {
   flex: none !important;
   min-height: 0 !important;
   overflow: visible !important;
 }
 
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content .fiche-sections,
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content .planning-tab,
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-modal-content .planning-view {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content .fiche-sections,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content .planning-tab,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content .planning-view {
   overflow: visible !important;
   max-height: none !important;
+}
+
+/* Vue tableau iOS : conteneur margé, scroll interne */
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 3000 !important;
+  padding: 16px 10px !important;
+  margin: 0 !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  touch-action: none !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  height: auto !important;
+  margin: 0 auto !important;
+  border-radius: 8px !important;
+  padding: 0 !important;
+  padding-bottom: 12px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35) !important;
+  touch-action: pan-x pan-y !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-close {
+  z-index: 10;
+  color: #ffffff !important;
+  font-size: 24px !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-banner {
+  flex: 0 0 72px !important;
+  width: 100% !important;
+  margin: 0 0 10px 0 !important;
+  border-radius: 4px 4px 0 0 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content .fiche-detail {
+  flex: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content .fiche-sections,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content .planning-tab,
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content .planning-view {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+@supports (-webkit-touch-callout: none) {
+  html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay {
+    padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)) !important;
+  }
 }
 
 /* Bouton bascule vue mobile ↔ tableau desktop */
@@ -4508,7 +4623,7 @@ html:not([data-desktop-viewport]) body.fiche-detail-modal-open .fiche-detail-mod
   background: #f0f7f9;
 }
 
-/* Vue tableau desktop (viewport 1400px réduit, pinch out ou bouton) */
+/* Vue tableau desktop (viewport 1400px réduit, bouton) */
 html.dashboard-page.dashboard-page--table-desktop-view:not([data-desktop-viewport]),
 body.dashboard-page.dashboard-page--table-desktop-view:not([data-desktop-viewport]) {
   min-width: 1400px !important;
