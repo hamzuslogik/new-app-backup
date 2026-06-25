@@ -497,7 +497,11 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Consommation annuelle ancien système:</label>
+                  <label>
+                    Consommation annuelle
+                    <br />
+                    ancien système:
+                  </label>
                   <input
                     type="number"
                     step="0.01"

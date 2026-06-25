@@ -5953,7 +5953,11 @@ const FicheDetail = ({
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_conf_consommations_signer">Consommation annuelle ancien système :</label>
+                    <label htmlFor="compte_rendu_etat_conf_consommations_signer">
+                      Consommation annuelle
+                      <br />
+                      ancien système :
+                    </label>
                     <input
                       type="number"
                       id="compte_rendu_etat_conf_consommations_signer"
@@ -7161,7 +7165,11 @@ const FicheDetail = ({
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="etat_conf_consommations_signer">Consommation annuelle ancien système :</label>
+                  <label htmlFor="etat_conf_consommations_signer">
+                    Consommation annuelle
+                    <br />
+                    ancien système :
+                  </label>
                   <input
                     type="number"
                     id="etat_conf_consommations_signer"
