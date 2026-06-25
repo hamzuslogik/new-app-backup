@@ -29,8 +29,66 @@ import './PlanningCommercial.css';
 const PLANNING_MOBILE_NATIVE_CLASS = 'planning-commercial-page--mobile-native';
 const PLANNING_EXTRANET_SCROLL_CLASS = 'planning-commercial-page--extranet-scroll';
 const PLANNING_OPEN_FICHE_PARAM = 'openFiche';
+const PLANNING_DAY_OFFSET = 5;
 
-const PLANNING_TABS = new Set(['yesterday', 'today', 'tomorrow', 'week', 'nextWeek']);
+const toLocalDateString = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+function isPlanningDayTab(tab) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(tab || '');
+}
+
+function formatPlanningDayTabLabel(date) {
+  const dayName = date.toLocaleDateString('fr-FR', { weekday: 'long' });
+  const dayNum = String(date.getDate()).padStart(2, '0');
+  return `${dayName} ${dayNum}`;
+}
+
+function parseLocalDate(yyyyMmDd) {
+  if (!isPlanningDayTab(yyyyMmDd)) return null;
+  const [y, m, d] = yyyyMmDd.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function buildPlanningDayTabs() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tabs = [];
+  for (let offset = -PLANNING_DAY_OFFSET; offset <= PLANNING_DAY_OFFSET; offset += 1) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + offset);
+    const dateStr = toLocalDateString(d);
+    tabs.push({
+      dateStr,
+      label: formatPlanningDayTabLabel(d),
+      isToday: offset === 0,
+    });
+  }
+  return tabs;
+}
+
+function resolveInitialPlanningTab(tab) {
+  if (isPlanningDayTab(tab)) return tab;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (tab === 'yesterday') {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 1);
+    return toLocalDateString(d);
+  }
+  if (tab === 'tomorrow') {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 1);
+    return toLocalDateString(d);
+  }
+  return toLocalDateString(today);
+}
 
 function getFicheModalStateFromUrl() {
   if (typeof window === 'undefined') return null;
@@ -168,9 +226,9 @@ const PlanningCommercial = () => {
   const isPlanningTouchMobile = isTouchMobileDevice();
 
   const initialTabFromUrl = (() => {
-    if (typeof window === 'undefined') return 'today';
+    if (typeof window === 'undefined') return toLocalDateString(new Date());
     const tab = new URLSearchParams(window.location.search).get('tab');
-    return tab && PLANNING_TABS.has(tab) ? tab : 'today';
+    return resolveInitialPlanningTab(tab);
   })();
 
   const [activeTab, setActiveTab] = useState(initialTabFromUrl);
@@ -180,8 +238,8 @@ const PlanningCommercial = () => {
     limit: 100,
     fiche_search: false,
     date_champ: 'date_rdv_time',
-    date_debut: getLocalDateStr(),
-    date_fin: getLocalDateStr(),
+    date_debut: initialTabFromUrl,
+    date_fin: initialTabFromUrl,
     time_debut: '00:00:00',
     time_fin: '23:59:59',
     id_etat_final: user?.fonction === 5 ? '7' : '',
@@ -223,7 +281,7 @@ const PlanningCommercial = () => {
           Object.entries(planningFiltersToUrlParams(filtersRef.current)).forEach(([key, value]) => {
             params.set(key, String(value));
           });
-        } else if (activeTabRef.current && PLANNING_TABS.has(activeTabRef.current)) {
+        } else if (activeTabRef.current && isPlanningDayTab(activeTabRef.current)) {
           params.set('tab', activeTabRef.current);
         }
         params.set(PLANNING_OPEN_FICHE_PARAM, modalState.hash);
@@ -268,97 +326,15 @@ const PlanningCommercial = () => {
     }
   }, [isPlanningTouchMobile, switchToMobileView, closeSidebar]);
 
-  // Formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC qui fausse "RDV aujourd'hui")
-  const toLocalDateString = (date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  };
-
-  // Fonctions pour calculer les dates (toujours en date locale pour cohérence avec "RDV aujourd'hui")
+  // Plage d'un jour (onglet = date YYYY-MM-DD)
   const getDateRange = (period) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    switch(period) {
-      case 'yesterday': {
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const dateStr = toLocalDateString(yesterday);
-        return {
-          date_debut: dateStr,
-          date_fin: dateStr,
-          time_debut: '00:00:00',
-          time_fin: '23:59:59'
-        };
-      }
-      case 'today': {
-        const dateStr = toLocalDateString(today);
-        return {
-          date_debut: dateStr,
-          date_fin: dateStr,
-          time_debut: '00:00:00',
-          time_fin: '23:59:59'
-        };
-      }
-      case 'tomorrow': {
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const dateStr = toLocalDateString(tomorrow);
-        return {
-          date_debut: dateStr,
-          date_fin: dateStr,
-          time_debut: '00:00:00',
-          time_fin: '23:59:59'
-        };
-      }
-      case 'week': {
-        // Semaine actuelle : lundi à dimanche
-        const dayOfWeek = today.getDay();
-        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Si dimanche, aller au lundi précédent
-        const monday = new Date(today);
-        monday.setDate(today.getDate() + diff);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        
-        return {
-          date_debut: toLocalDateString(monday),
-          date_fin: toLocalDateString(sunday),
-          time_debut: '00:00:00',
-          time_fin: '23:59:59'
-        };
-      }
-      case 'nextWeek': {
-        // Semaine prochaine : lundi à dimanche
-        const dayOfWeek = today.getDay();
-        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Si dimanche, aller au lundi précédent
-        const currentMonday = new Date(today);
-        currentMonday.setDate(today.getDate() + diff);
-        
-        // Lundi de la semaine prochaine (7 jours après le lundi actuel)
-        const nextMonday = new Date(currentMonday);
-        nextMonday.setDate(currentMonday.getDate() + 7);
-        
-        // Dimanche de la semaine prochaine
-        const nextSunday = new Date(nextMonday);
-        nextSunday.setDate(nextMonday.getDate() + 6);
-        
-        return {
-          date_debut: toLocalDateString(nextMonday),
-          date_fin: toLocalDateString(nextSunday),
-          time_debut: '00:00:00',
-          time_fin: '23:59:59'
-        };
-      }
-      default:
-        return {
-          date_debut: toLocalDateString(today),
-          date_fin: toLocalDateString(today),
-          time_debut: '00:00:00',
-          time_fin: '23:59:59'
-        };
-    }
+    const dateStr = isPlanningDayTab(period) ? period : toLocalDateString(new Date());
+    return {
+      date_debut: dateStr,
+      date_fin: dateStr,
+      time_debut: '00:00:00',
+      time_fin: '23:59:59',
+    };
   };
 
   // Récupérer les données de référence
@@ -512,7 +488,7 @@ const PlanningCommercial = () => {
 
   const handleReset = () => {
     const today = getLocalDateStr();
-    setActiveTab('today'); // Réinitialiser à l'onglet "Aujourd'hui"
+    setActiveTab(today);
     setFilters({
       page: 1,
       limit: 100,
@@ -603,11 +579,10 @@ const PlanningCommercial = () => {
 
   const fiches = data?.data || [];
   const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
-  const tabDateRange = !filters.fiche_search ? getTabDateRange() : null;
-  const periodLabel =
-    tabDateRange?.date_debut && tabDateRange?.date_fin
-      ? `${formatDateFr(tabDateRange.date_debut)} → ${formatDateFr(tabDateRange.date_fin)}`
-      : null;
+  const planningDayTabs = buildPlanningDayTabs();
+  const activeDayLabel = activeTab && parseLocalDate(activeTab)
+    ? formatPlanningDayTabLabel(parseLocalDate(activeTab))
+    : null;
 
   return (
     <div className="planning-commercial">
@@ -920,61 +895,31 @@ const PlanningCommercial = () => {
         </div>
       )}
 
-      {/* Onglets pour accès rapide */}
+      {/* Onglets : 5 jours avant → 5 jours après (ex. lundi 01, mardi 02…) */}
       <div className="planning-commercial-tabs">
-        <button
-          className={`tab-button ${activeTab === 'yesterday' ? 'active' : ''}`}
-          onClick={() => handleTabChange('yesterday')}
-        >
-          <FaCalendarAlt /> RDV d'hier
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'today' ? 'active' : ''}`}
-          onClick={() => handleTabChange('today')}
-        >
-          <FaCalendarAlt /> RDV aujourd'hui
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'tomorrow' ? 'active' : ''}`}
-          onClick={() => handleTabChange('tomorrow')}
-        >
-          <FaCalendarAlt /> RDV de demain
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'week' ? 'active' : ''}`}
-          onClick={() => handleTabChange('week')}
-        >
-          <FaCalendarAlt /> RDV de la semaine
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'nextWeek' ? 'active' : ''}`}
-          onClick={() => handleTabChange('nextWeek')}
-        >
-          <FaCalendarAlt /> Semaine prochaine
-        </button>
+        {planningDayTabs.map((day) => (
+          <button
+            key={day.dateStr}
+            type="button"
+            className={`tab-button${activeTab === day.dateStr ? ' active' : ''}${day.isToday ? ' tab-button--today' : ''}`}
+            onClick={() => handleTabChange(day.dateStr)}
+            title={formatDateFr(day.dateStr)}
+          >
+            {day.label}
+          </button>
+        ))}
       </div>
 
       {/* Résultats */}
       <div className="planning-commercial-results">
         <div className="results-header">
           <h2>
-            {filters.fiche_search 
-              ? 'Résultats de la recherche' 
-              : activeTab === 'yesterday'
-                ? 'RDV confirmés d\'hier'
-                : activeTab === 'today'
-                  ? 'RDV confirmés aujourd\'hui'
-                  : activeTab === 'tomorrow'
-                    ? 'RDV confirmés de demain'
-                    : activeTab === 'week'
-                      ? 'RDV confirmés de la semaine'
-                      : activeTab === 'nextWeek'
-                        ? 'RDV confirmés de la semaine prochaine'
-                        : 'RDV confirmés des commerciaux'}
+            {filters.fiche_search
+              ? 'Résultats de la recherche'
+              : activeDayLabel
+                ? `RDV confirmés du ${activeDayLabel}`
+                : 'RDV confirmés des commerciaux'}
           </h2>
-          {periodLabel && (activeTab === 'week' || activeTab === 'nextWeek') && (
-            <p className="results-period-label">{periodLabel}</p>
-          )}
           <div className="results-header-right">
             <div className="limit-selector">
               <label htmlFor="limit-select">Afficher :</label>

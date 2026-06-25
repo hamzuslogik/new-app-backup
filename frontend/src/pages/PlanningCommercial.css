@@ -55,17 +55,20 @@ body.planning-commercial-page {
 /* Onglets pour accès rapide */
 .planning-commercial-tabs {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 16px;
   border-bottom: 2px solid #e0e0e0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
 }
 
 .planning-commercial-tabs .tab-button {
   display: flex;
   align-items: center;
   gap: 6.4px;
-  padding: 9.6px 16px;
+  padding: 9.6px 12px;
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
@@ -75,6 +78,13 @@ body.planning-commercial-page {
   color: #666;
   transition: all 0.3s ease;
   margin-bottom: -2px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.planning-commercial-tabs .tab-button--today:not(.active) {
+  color: var(--primary-color, #9cbfc8);
+  font-weight: 700;
 }
 
 .planning-commercial-tabs .tab-button:hover {
