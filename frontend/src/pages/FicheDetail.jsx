@@ -21,6 +21,7 @@ import {
   SignerProduitPacPvFields,
   SignerBonusAnnonceSelect,
 } from '../components/SignerProduitFormFields';
+import { validateSignerCompteRenduForm, alertSignerCompteRenduValidation } from '../utils/validateSignerCompteRendu';
 
 /** Mode de chauffage (VARCHAR en base) : affichage tel quel. */
 function modeChauffageAffiche(confProp, modeProp) {
@@ -2524,6 +2525,20 @@ const FicheDetail = ({
       if (selectedEtat === 34 && !(etatFormData.conf_rdv_avec || '').trim()) {
         alert('Veuillez renseigner "Appel avec qui".');
         return;
+      }
+
+      // SIGNER (13, 44, 45) : tous les champs obligatoires (sauf Commercial 2)
+      if ([13, 44, 45].includes(selectedEtat)) {
+        const signerValidation = validateSignerCompteRenduForm({
+          etatFormData,
+          produits,
+          sousEtats,
+          requireCommercial: [1, 2, 7].includes(Number(user?.fonction)),
+        });
+        if (!signerValidation.valid) {
+          alertSignerCompteRenduValidation(signerValidation.missing);
+          return;
+        }
       }
 
       // Si on modifie un compte rendu existant
@@ -5783,6 +5798,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.pseudo}
                       onChange={(e) => setEtatFormData({ ...etatFormData, pseudo: e.target.value })}
+                      required
                     />
                   </div>
 
@@ -5796,6 +5812,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.produit}
                       onChange={(e) => setEtatFormData({...etatFormData, produit: e.target.value})}
+                      required
                     >
                       <option value="">Sélectionner</option>
                       {produits?.map(prod => (
@@ -5822,6 +5839,7 @@ const FicheDetail = ({
                           className="form-control"
                           value={etatFormData.id_sous_etat}
                           onChange={(e) => setEtatFormData({ ...etatFormData, id_sous_etat: e.target.value })}
+                          required
                         >
                           <option value="">Sélectionner</option>
                           {sousEtatsSigner.map((setat) => (
@@ -5842,6 +5860,7 @@ const FicheDetail = ({
                         className="form-control"
                         value={etatFormData.id_commercial}
                         onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
+                        required
                       >
                         <option value="">Sélectionner</option>
                         {commerciaux?.map(com => (
@@ -5877,6 +5896,7 @@ const FicheDetail = ({
                       idPrefix="compte_rendu_etat"
                       value={etatFormData.ph3_pac}
                       onChange={(e) => setEtatFormData({ ...etatFormData, ph3_pac: e.target.value })}
+                      required
                     />
                   )}
 
@@ -5887,6 +5907,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.ph3_attente}
                       onChange={(e) => setEtatFormData({...etatFormData, ph3_attente: e.target.value})}
+                      required
                     >
                       <option value="">Sélectionner</option>
                       {typesFinancement.filter(t => t.etat !== 0).map(t => (
@@ -5900,6 +5921,7 @@ const FicheDetail = ({
                     kind={resolveSignerProduitKind(etatFormData.produit, produits)}
                     etatFormData={etatFormData}
                     setEtatFormData={setEtatFormData}
+                    required
                   />
 
                   <div className="form-group">
@@ -5910,6 +5932,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.ph3_prix}
                       onChange={(e) => setEtatFormData({...etatFormData, ph3_prix: e.target.value})}
+                      required
                     />
                   </div>
 
@@ -5921,6 +5944,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.credit_immobilier}
                       onChange={(e) => setEtatFormData({...etatFormData, credit_immobilier: e.target.value})}
+                      required
                     />
                   </div>
 
@@ -5932,6 +5956,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.credit_autre}
                       onChange={(e) => setEtatFormData({...etatFormData, credit_autre: e.target.value})}
+                      required
                     />
                   </div>
 
@@ -5942,6 +5967,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.ph3_installateur}
                       onChange={(e) => setEtatFormData({...etatFormData, ph3_installateur: e.target.value})}
+                      required
                     >
                       <option value="">Sélectionner</option>
                       {installateurs?.map(inst => (
@@ -5964,6 +5990,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.conf_consommations}
                       onChange={(e) => setEtatFormData({...etatFormData, conf_consommations: e.target.value})}
+                      required
                     />
                   </div>
 
@@ -5975,6 +6002,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.valeur_mensualite}
                       onChange={(e) => setEtatFormData({...etatFormData, valeur_mensualite: e.target.value})}
+                      required
                     />
                   </div>
 
@@ -5983,6 +6011,7 @@ const FicheDetail = ({
                     kind={resolveSignerProduitKind(etatFormData.produit, produits)}
                     value={etatFormData.ph3_bonus_30}
                     onChange={(e) => setEtatFormData({ ...etatFormData, ph3_bonus_30: e.target.value })}
+                    required
                   />
 
                   <div className="form-group">
@@ -5993,6 +6022,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.ph3_mensualite}
                       onChange={(e) => setEtatFormData({...etatFormData, ph3_mensualite: e.target.value})}
+                      required
                     />
                   </div>
 
@@ -6004,6 +6034,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.nbr_annee_finance}
                       onChange={(e) => setEtatFormData({...etatFormData, nbr_annee_finance: e.target.value})}
+                      required
                     />
                   </div>
 
@@ -6018,6 +6049,7 @@ const FicheDetail = ({
                         const [date = '', time = ''] = e.target.value.split('T');
                         setEtatFormData({ ...etatFormData, date_sign_date: date, date_sign_time: time });
                       }}
+                      required
                     />
                   </div>
                     </>
@@ -6098,6 +6130,7 @@ const FicheDetail = ({
                       value={etatFormData.conf_commentaire_produit}
                       onChange={(e) => setEtatFormData({ ...etatFormData, conf_commentaire_produit: e.target.value })}
                       placeholder="Saisissez votre compte rendu commercial..."
+                      required
                     />
                   </div>
 
@@ -6997,6 +7030,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.produit}
                     onChange={(e) => setEtatFormData({...etatFormData, produit: e.target.value})}
+                    required
                   >
                     <option value="">Sélectionner</option>
                     {produits?.map(prod => (
@@ -7023,6 +7057,7 @@ const FicheDetail = ({
                         className="form-control"
                         value={etatFormData.id_sous_etat}
                         onChange={(e) => setEtatFormData({...etatFormData, id_sous_etat: e.target.value})}
+                        required
                       >
                         <option value="">Sélectionner</option>
                         {sousEtatsSigner.map((setat) => (
@@ -7043,6 +7078,7 @@ const FicheDetail = ({
                       className="form-control"
                       value={etatFormData.id_commercial}
                       onChange={(e) => setEtatFormData({...etatFormData, id_commercial: e.target.value})}
+                      required
                     >
                       <option value="">Sélectionner</option>
                       {commerciaux?.map(com => (
@@ -7081,6 +7117,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.pseudo}
                     onChange={(e) => setEtatFormData({...etatFormData, pseudo: e.target.value})}
+                    required
                   />
                 </div>
 
@@ -7089,6 +7126,7 @@ const FicheDetail = ({
                     idPrefix="etat"
                     value={etatFormData.ph3_pac}
                     onChange={(e) => setEtatFormData({ ...etatFormData, ph3_pac: e.target.value })}
+                    required
                   />
                 )}
 
@@ -7099,6 +7137,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.ph3_attente}
                     onChange={(e) => setEtatFormData({...etatFormData, ph3_attente: e.target.value})}
+                    required
                   >
                     <option value="">Sélectionner</option>
                     {typesFinancement.filter(t => t.etat !== 0).map(t => (
@@ -7112,6 +7151,7 @@ const FicheDetail = ({
                   kind={resolveSignerProduitKind(etatFormData.produit, produits)}
                   etatFormData={etatFormData}
                   setEtatFormData={setEtatFormData}
+                  required
                 />
 
                 <div className="form-group">
@@ -7122,6 +7162,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.ph3_prix}
                     onChange={(e) => setEtatFormData({...etatFormData, ph3_prix: e.target.value})}
+                    required
                   />
                 </div>
 
@@ -7133,6 +7174,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.credit_immobilier}
                     onChange={(e) => setEtatFormData({...etatFormData, credit_immobilier: e.target.value})}
+                    required
                   />
                 </div>
 
@@ -7144,6 +7186,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.credit_autre}
                     onChange={(e) => setEtatFormData({...etatFormData, credit_autre: e.target.value})}
+                    required
                   />
                 </div>
 
@@ -7154,6 +7197,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.ph3_installateur}
                     onChange={(e) => setEtatFormData({...etatFormData, ph3_installateur: e.target.value})}
+                    required
                   >
                     <option value="">Sélectionner</option>
                     {installateurs?.map(inst => (
@@ -7176,6 +7220,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.conf_consommations}
                     onChange={(e) => setEtatFormData({...etatFormData, conf_consommations: e.target.value})}
+                    required
                   />
                 </div>
 
@@ -7187,6 +7232,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.valeur_mensualite}
                     onChange={(e) => setEtatFormData({...etatFormData, valeur_mensualite: e.target.value})}
+                    required
                   />
                 </div>
 
@@ -7195,6 +7241,7 @@ const FicheDetail = ({
                   kind={resolveSignerProduitKind(etatFormData.produit, produits)}
                   value={etatFormData.ph3_bonus_30}
                   onChange={(e) => setEtatFormData({ ...etatFormData, ph3_bonus_30: e.target.value })}
+                  required
                 />
 
                 <div className="form-group">
@@ -7205,6 +7252,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.ph3_mensualite}
                     onChange={(e) => setEtatFormData({...etatFormData, ph3_mensualite: e.target.value})}
+                    required
                   />
                 </div>
 
@@ -7216,6 +7264,7 @@ const FicheDetail = ({
                     className="form-control"
                     value={etatFormData.nbr_annee_finance}
                     onChange={(e) => setEtatFormData({...etatFormData, nbr_annee_finance: e.target.value})}
+                    required
                   />
                 </div>
 
@@ -7230,6 +7279,7 @@ const FicheDetail = ({
                       const [date = '', time = ''] = e.target.value.split('T');
                       setEtatFormData({ ...etatFormData, date_sign_date: date, date_sign_time: time });
                     }}
+                    required
                   />
                 </div>
 
@@ -7250,6 +7300,7 @@ const FicheDetail = ({
                     onChange={(e) => setEtatFormData({...etatFormData, conf_commentaire_produit: e.target.value})}
                     disabled={!hasPermission('compte_rendu_write')}
                     placeholder={user?.fonction === 5 ? 'Saisissez votre compte rendu commercial...' : 'Saisissez un commentaire...'}
+                    required
                   />
                 </div>
 

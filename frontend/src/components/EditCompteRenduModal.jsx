@@ -11,6 +11,7 @@ import {
   SignerProduitPacPvFields,
   SignerBonusAnnonceSelect,
 } from './SignerProduitFormFields';
+import { validateSignerCompteRenduForm, alertSignerCompteRenduValidation } from '../utils/validateSignerCompteRendu';
 import './EditCompteRenduModal.css';
 
 const getLocalTodayDate = () => {
@@ -185,6 +186,31 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (isEtatSigner) {
+      const commentaire = (formData.commentaire || '').trim();
+      if (!commentaire) {
+        alert('Veuillez saisir un compte rendu.');
+        return;
+      }
+      const signerValidation = validateSignerCompteRenduForm({
+        etatFormData: formData,
+        produits: produitsData,
+        sousEtats: sousEtatsData,
+        requireCommercial: false,
+        sousEtatsMode: 'any',
+        extraFields: {
+          pseudo: otherModifications.pseudo,
+          conf_consommations: otherModifications.conf_consommations,
+          valeur_mensualite: otherModifications.valeur_mensualite,
+        },
+      });
+      if (!signerValidation.valid) {
+        alertSignerCompteRenduValidation(signerValidation.missing);
+        return;
+      }
+    }
+
     const mods = { ...otherModifications };
     if (isEtatAnnulerRepro) {
       if (formData.conf_rdv_date) mods.conf_rdv_date = formData.conf_rdv_date;

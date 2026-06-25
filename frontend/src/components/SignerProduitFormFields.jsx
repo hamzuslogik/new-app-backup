@@ -16,6 +16,7 @@ export function SignerProduitPacPvFields({
   setEtatFormData,
   disabled = false,
   useFormControlClass = true,
+  required = false,
 }) {
   if (!kind) return null;
 
@@ -34,6 +35,7 @@ export function SignerProduitPacPvFields({
             value={etatFormData.ph3_rr_model}
             onChange={(e) => patch({ ph3_rr_model: e.target.value })}
             disabled={disabled}
+            required={required}
           />
         </div>
 
@@ -45,6 +47,7 @@ export function SignerProduitPacPvFields({
             value={etatFormData.ph3_puissance}
             onChange={(e) => patch({ ph3_puissance: e.target.value })}
             disabled={disabled}
+            required={required}
           >
             <option value="">Sélectionner</option>
             <option value="11kw">11kw</option>
@@ -61,6 +64,7 @@ export function SignerProduitPacPvFields({
             value={etatFormData.ph3_ballon}
             onChange={(e) => patch({ ph3_ballon: e.target.value })}
             disabled={disabled}
+            required={required}
           >
             <option value="">Sélectionner</option>
             <option value="Avec Ballon">Avec Ballon</option>
@@ -77,6 +81,7 @@ export function SignerProduitPacPvFields({
             value={etatFormData.ph3_marque_ballon}
             onChange={(e) => patch({ ph3_marque_ballon: e.target.value })}
             disabled={disabled}
+            required={required}
           />
         </div>
 
@@ -88,6 +93,7 @@ export function SignerProduitPacPvFields({
             value={etatFormData.ph3_alimentation}
             onChange={(e) => patch({ ph3_alimentation: e.target.value })}
             disabled={disabled}
+            required={required}
           >
             <option value="">Sélectionner</option>
             <option value="mono">mono</option>
@@ -103,6 +109,7 @@ export function SignerProduitPacPvFields({
             value={etatFormData.ph3_type}
             onChange={(e) => patch({ ph3_type: e.target.value })}
             disabled={disabled}
+            required={required}
           >
             <option value="">Sélectionner</option>
             <option value="Bizonne">Bizonne</option>
@@ -126,6 +133,7 @@ export function SignerProduitPacPvFields({
             value={etatFormData.ph3_rr_model}
             onChange={(e) => patch({ ph3_rr_model: e.target.value })}
             disabled={disabled}
+            required={required}
           />
         </div>
 
@@ -137,6 +145,7 @@ export function SignerProduitPacPvFields({
             value={etatFormData.ph3_puissance_pv}
             onChange={(e) => patch({ ph3_puissance_pv: e.target.value })}
             disabled={disabled}
+            required={required}
           >
             <option value="">Sélectionner</option>
             <option value="4.5">4.5</option>
@@ -151,7 +160,7 @@ export function SignerProduitPacPvFields({
   return null;
 }
 
-export function SignerPacSelect({ idPrefix, value, onChange, disabled = false, useFormControlClass = true }) {
+export function SignerPacSelect({ idPrefix, value, onChange, disabled = false, useFormControlClass = true, required = false }) {
   const inputClass = useFormControlClass ? 'form-control' : undefined;
   return (
     <div className="form-group">
@@ -162,6 +171,7 @@ export function SignerPacSelect({ idPrefix, value, onChange, disabled = false, u
         value={value}
         onChange={onChange}
         disabled={disabled}
+        required={required}
       >
         <option value="reau">R/EAU</option>
         <option value="rr">R/R</option>
@@ -177,6 +187,7 @@ export function SignerBonusAnnonceSelect({
   onChange,
   disabled = false,
   useFormControlClass = true,
+  required = false,
 }) {
   if (!kind) return null;
 
@@ -191,6 +202,7 @@ export function SignerBonusAnnonceSelect({
         value={value}
         onChange={onChange}
         disabled={disabled}
+        required={required}
       >
         <option value="">Sélectionner</option>
         {kind === 'pac' && (
