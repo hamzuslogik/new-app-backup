@@ -16,7 +16,34 @@ function getVisualViewport() {
   return window.visualViewport || null;
 }
 
-/** Ajuste uniquement la taille du conteneur — l'overlay reste plein écran (inset: 0). */
+/** Cadre overlay = viewport visible (pinch Safari) pour garder le modal centré à l'écran. */
+function applyOverlayViewportFrame(overlay) {
+  if (!overlay) return;
+
+  const vv = getVisualViewport();
+  if (!vv) return;
+
+  const top = Number(vv.offsetTop) || 0;
+  const left = Number(vv.offsetLeft) || 0;
+  const width = Number(vv.width) || window.innerWidth;
+  const height = Number(vv.height) || window.innerHeight;
+
+  overlay.style.setProperty('top', `${top}px`);
+  overlay.style.setProperty('left', `${left}px`);
+  overlay.style.setProperty('width', `${width}px`);
+  overlay.style.setProperty('height', `${height}px`);
+  overlay.style.setProperty('right', 'auto');
+  overlay.style.setProperty('bottom', 'auto');
+}
+
+function resetOverlayViewportFrame(overlay) {
+  if (!overlay) return;
+  ['top', 'left', 'width', 'height', 'right', 'bottom'].forEach((prop) => {
+    overlay.style.removeProperty(prop);
+  });
+}
+
+/** Ajuste la taille du conteneur — l'overlay suit le viewport visible via applyOverlayViewportFrame. */
 function applyModalContentSize(content, baseScale) {
   if (!content) return;
 
@@ -39,26 +66,33 @@ function resetModalContentSize(content) {
 }
 
 /**
- * Pinch Safari natif (visualViewport) : zoom page réel + conteneur modal qui rétrécit.
+ * Pinch Safari natif (visualViewport) : zoom page réel + overlay calé sur l'écran visible + conteneur qui rétrécit.
  */
 export function useFicheDetailModalVisualViewport(overlayRef, contentRef, enabled = false) {
   const baseScaleRef = useRef(1);
 
+  const applySync = (overlay, content) => {
+    if (overlay) applyOverlayViewportFrame(overlay);
+    if (content) applyModalContentSize(content, baseScaleRef.current);
+  };
+
   useLayoutEffect(() => {
     if (!enabled) return undefined;
+    const overlay = overlayRef?.current;
     const content = contentRef?.current;
-    if (!content) return undefined;
+    if (!overlay || !content) return undefined;
     const vv = getVisualViewport();
     baseScaleRef.current = vv?.scale || 1;
-    applyModalContentSize(content, baseScaleRef.current);
+    applySync(overlay, content);
     return undefined;
-  }, [enabled, contentRef]);
+  }, [enabled, overlayRef, contentRef]);
 
   useEffect(() => {
     if (!enabled) return undefined;
 
+    const overlay = overlayRef?.current;
     const content = contentRef?.current;
-    if (!content) return undefined;
+    if (!overlay || !content) return undefined;
 
     const vv = getVisualViewport();
     baseScaleRef.current = vv?.scale || 1;
@@ -68,7 +102,7 @@ export function useFicheDetailModalVisualViewport(overlayRef, contentRef, enable
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         rafId = 0;
-        applyModalContentSize(content, baseScaleRef.current);
+        applySync(overlay, content);
       });
     };
 
@@ -89,10 +123,11 @@ export function useFicheDetailModalVisualViewport(overlayRef, contentRef, enable
       }
       window.removeEventListener('resize', sync);
       window.removeEventListener('orientationchange', sync);
+      resetOverlayViewportFrame(overlay);
       resetModalContentSize(content);
       baseScaleRef.current = 1;
     };
-  }, [enabled, contentRef]);
+  }, [enabled, overlayRef, contentRef]);
 }
 
 export default useFicheDetailModalVisualViewport;

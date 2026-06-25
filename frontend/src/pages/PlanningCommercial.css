@@ -876,6 +876,12 @@ html:not([data-desktop-viewport]).planning-commercial-page.planning-commercial-p
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
+html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay.fiche-detail-modal-overlay--viewport-sync {
+  inset: unset !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
 html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay {
   position: fixed !important;
   inset: 0 !important;
