@@ -2325,7 +2325,8 @@
 .fiche-detail-modal-content span.fiche-detail-etat-confirmer-val--rdv-avant,
 .fiche-detail-modal-content span[data-confirmer-hl='rdv-avant'] {
   display: inline-block;
-  margin-right: 8px;
+  margin-left: 8px;
+  margin-right: 0;
   padding: 2px 8px;
   border: 4px solid #b91c1c !important;
   border-radius: 6px;

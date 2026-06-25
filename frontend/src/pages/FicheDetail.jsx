@@ -4479,7 +4479,6 @@ const FicheDetail = ({
                                 <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff', fontWeight: 'bold' }}>
                                   <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ffffff' }}>
                                     <strong style={{ color: '#ffffff', fontWeight: 'bold' }}>{item.label}:</strong>{' '}
-                                    {item.label === 'Date RDV' && renderHeureRdvAvantBadge(heureRdvAvantDecalage)}
                                     {isEditableDateRdvInline ? (
                                       <>
                                         <span
@@ -4537,6 +4536,7 @@ const FicheDetail = ({
                                             title="Modifier l'heure du RDV puis cliquer sur le bouton de validation"
                                           />
                                         </span>
+                                        {item.label === 'Date RDV' && renderHeureRdvAvantBadge(heureRdvAvantDecalage)}
                                         <button
                                           type="button"
                                           onClick={saveInlineRdvTime}
@@ -4667,6 +4667,7 @@ const FicheDetail = ({
                                         })()}
                                       </>
                                     ) : (
+                                      <>
                                       <span
                                         className={hi?.className}
                                         style={{
@@ -4678,6 +4679,8 @@ const FicheDetail = ({
                                       >
                                         {item.value || '-'}
                                       </span>
+                                      {item.label === 'Date RDV' && renderHeureRdvAvantBadge(heureRdvAvantDecalage)}
+                                      </>
                                     )}
                                   </span>
                                 </div>
