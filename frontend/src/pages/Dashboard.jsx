@@ -192,7 +192,7 @@ function filtersToUrlParams(f) {
 
 const Dashboard = () => {
   const { user, hasPermission } = useAuth();
-  const { setAutoHide, isDesktop, isMobile } = useSidebar();
+  const { setAutoHide, isDesktop, isMobile, closeSidebar } = useSidebar();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = 'confirmed'; // Toujours 'confirmed' puisqu'il n'y a plus d'onglet
@@ -269,11 +269,17 @@ const Dashboard = () => {
   const isDashboardTouchMobile = isTouchMobileDevice();
 
   const switchToMobileView = useCallback(() => {
+    document.documentElement.classList.add(DASHBOARD_MOBILE_NATIVE_CLASS);
+    document.body.classList.add(DASHBOARD_MOBILE_NATIVE_CLASS);
     applyDashboardMobileView();
+    window.dispatchEvent(new Event('viewport-layout-change'));
+    closeSidebar();
     setIsTableDesktopView(false);
-  }, []);
+  }, [closeSidebar]);
 
   const switchToTableDesktopView = useCallback(() => {
+    document.documentElement.classList.remove(DASHBOARD_MOBILE_NATIVE_CLASS);
+    document.body.classList.remove(DASHBOARD_MOBILE_NATIVE_CLASS);
     applyDashboardTableDesktopView();
     setIsTableDesktopView(true);
   }, []);
@@ -500,8 +506,10 @@ const Dashboard = () => {
     setFicheDetailModal(null);
     if (isDashboardTouchMobile) {
       switchToMobileView();
+    } else {
+      closeSidebar();
     }
-  }, [isDashboardTouchMobile, switchToMobileView]);
+  }, [isDashboardTouchMobile, switchToMobileView, closeSidebar]);
 
   const [sortConfig, setSortConfig] = useState({
     key: 'date_rdv_time', // Tri par défaut sur la date de RDV
