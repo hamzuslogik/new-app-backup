@@ -148,6 +148,20 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
   return null;
 }
 
+function renderHeureRdvAvantBadge(heureRdvAvant) {
+  if (!heureRdvAvant) return null;
+  const timeOnly = formatRdvTimeOnly(heureRdvAvant);
+  if (!timeOnly) return null;
+  return (
+    <span
+      className="fiche-detail-etat-confirmer-val--rdv-avant"
+      data-confirmer-hl="rdv-avant"
+    >
+      Avant: {timeOnly}
+    </span>
+  );
+}
+
 /** Date d'appel exploitable pour affichage (détails fiche, pas historique). */
 function parseFicheDateAppel(fiche) {
   if (!fiche) return null;
@@ -4050,13 +4064,15 @@ const FicheDetail = ({
                   } else if (!etatData.from_compte_rendu && etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire confirmateur', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.heure_rdv_avant_decalage) {
+                  if (etatData.date_rdv_time) {
                     items.push({
-                      label: 'Heure RDV avant',
-                      value: formatRdvDateTime(etatData.heure_rdv_avant_decalage),
+                      label: 'Date RDV',
+                      value: formatRdvDateTime(etatData.date_rdv_time),
+                      ...(etatData.heure_rdv_avant_decalage
+                        ? { heure_rdv_avant_decalage: etatData.heure_rdv_avant_decalage }
+                        : {}),
                     });
                   }
-                  if (etatData.date_rdv_time) items.push({ label: 'Date RDV', value: formatRdvDateTime(etatData.date_rdv_time) });
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
                   // Champs conf_ (affichés uniquement si non vides)
                   if (etatData.conf_rdv_avec) items.push({ label: 'RDV pris avec', value: etatData.conf_rdv_avec });
@@ -4457,10 +4473,13 @@ const FicheDetail = ({
                                   setDateRdvInlineEdit('');
                                 }
                               };
+                              const heureRdvAvantDecalage =
+                                item.heure_rdv_avant_decalage || etatActuel.heure_rdv_avant_decalage;
                               return (
                                 <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff', fontWeight: 'bold' }}>
                                   <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ffffff' }}>
                                     <strong style={{ color: '#ffffff', fontWeight: 'bold' }}>{item.label}:</strong>{' '}
+                                    {item.label === 'Date RDV' && renderHeureRdvAvantBadge(heureRdvAvantDecalage)}
                                     {isEditableDateRdvInline ? (
                                       <>
                                         <span

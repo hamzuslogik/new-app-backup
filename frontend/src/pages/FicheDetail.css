@@ -2314,6 +2314,28 @@
   -webkit-text-fill-color: #b91c1c !important;
 }
 
+.etat-current-history-section span.fiche-detail-etat-confirmer-val--rdv-avant,
+.etat-actuel-card span.fiche-detail-etat-confirmer-val--rdv-avant,
+.historique-list span.fiche-detail-etat-confirmer-val--rdv-avant,
+.fiche-detail-etat-confirmer-val--rdv-avant,
+.fiche-detail span[data-confirmer-hl='rdv-avant'],
+.etat-current-history-section span[data-confirmer-hl='rdv-avant'],
+.etat-actuel-card span[data-confirmer-hl='rdv-avant'],
+.historique-list span[data-confirmer-hl='rdv-avant'],
+.fiche-detail-modal-content span.fiche-detail-etat-confirmer-val--rdv-avant,
+.fiche-detail-modal-content span[data-confirmer-hl='rdv-avant'] {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 8px;
+  border: 4px solid #b91c1c !important;
+  border-radius: 6px;
+  background-color: #fef2f2 !important;
+  color: #b91c1c !important;
+  -webkit-text-fill-color: #b91c1c !important;
+  font-weight: 800 !important;
+  vertical-align: middle;
+}
+
 /*
  * Modal « détail fiche » : cette feuille est chargée après Dashboard.css.
  * Les règles globales (.etat-change-form .form-control, autocomplete RDV en
@@ -2734,7 +2756,6 @@
 .decalage-form .decalage-rdv-historique-table tr,
 .decalage-form .decalage-rdv-historique-table th,
 .decalage-form .decalage-rdv-historique-table td,
-.decalage-form .decalage-already-created-notice,
 .decalage-form .decalage-already-created-notice p,
 .decalage-form .decalage-already-created-notice-text,
 .fiche-detail-modal-content .decalage-form .decalage-rdv-historique,
@@ -2745,7 +2766,6 @@
 .fiche-detail-modal-content .decalage-form .decalage-rdv-historique-table tr,
 .fiche-detail-modal-content .decalage-form .decalage-rdv-historique-table th,
 .fiche-detail-modal-content .decalage-form .decalage-rdv-historique-table td,
-.fiche-detail-modal-content .decalage-form .decalage-already-created-notice,
 .fiche-detail-modal-content .decalage-form .decalage-already-created-notice p,
 .fiche-detail-modal-content .decalage-form .decalage-already-created-notice-text {
   color: #000000 !important;
@@ -2758,10 +2778,20 @@
   font-size: 12px;
 }
 
+.decalage-form .decalage-already-created-notice .btn-confirm,
+.decalage-form .decalage-new-form .btn-confirm,
+.fiche-detail-modal-content .decalage-form .decalage-already-created-notice .btn-confirm,
+.fiche-detail-modal-content .decalage-form .decalage-new-form .btn-confirm {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 .decalage-form .decalage-already-created-notice .btn-confirm:disabled,
-.fiche-detail-modal-content .decalage-form .decalage-already-created-notice .btn-confirm:disabled {
-  color: #374151 !important;
-  -webkit-text-fill-color: #374151 !important;
+.decalage-form .decalage-new-form .btn-confirm:disabled,
+.fiche-detail-modal-content .decalage-form .decalage-already-created-notice .btn-confirm:disabled,
+.fiche-detail-modal-content .decalage-form .decalage-new-form .btn-confirm:disabled {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 .decalage-form .form-group,
