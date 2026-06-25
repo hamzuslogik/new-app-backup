@@ -4185,6 +4185,24 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   gap: 4px !important;
   margin-bottom: 6px !important;
   align-items: flex-start !important;
+  display: grid !important;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+}
+
+.dashboard-page .search-panel .search-form-left {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.dashboard-page .search-panel .search-form-right {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.dashboard-page .search-panel .search-form-actions-left {
+  grid-column: 1;
+  grid-row: 2;
 }
 
 .dashboard-page .search-panel .search-form-left,
@@ -4370,6 +4388,7 @@ body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form {
 }
 
 body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-two-columns {
+  display: flex !important;
   flex-direction: column !important;
   align-items: stretch !important;
   gap: 8px !important;
@@ -4382,6 +4401,20 @@ body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-rig
   width: 100% !important;
   max-width: 100% !important;
   gap: 8px !important;
+}
+
+body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-actions-left {
+  order: 99;
+  width: 100% !important;
+  flex-direction: column !important;
+  margin-top: 4px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid #e0e0e0;
+}
+
+body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-actions-left .btn-search,
+body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-actions-left .btn-reset {
+  width: 100% !important;
 }
 
 body.dashboard-page.dashboard-page--mobile-native .search-panel .form-group {
@@ -4397,15 +4430,6 @@ body.dashboard-page.dashboard-page--mobile-native .search-panel .date-time-with-
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box;
-}
-
-body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-actions-left {
-  width: 100% !important;
-  flex-direction: column !important;
-}
-
-body.dashboard-page.dashboard-page--mobile-native .search-panel .search-form-actions-left .btn-search {
-  width: 100% !important;
 }
 
 /* Modal fiche — plein écran en vue mobile native, conteneur margé en vue tableau */

@@ -1982,15 +1982,6 @@ const Dashboard = () => {
                   </label>
                 </div>
 
-                {/* Boutons d'action */}
-                <div className="search-form-actions-left">
-                  <button type="submit" className="btn-search">
-                    <FaSearch /> RECHERCHE
-                  </button>
-                  <button type="button" onClick={handleReset} className="btn-reset">
-                    Réinitialiser
-                  </button>
-                </div>
               </div>
 
               {/* Colonne de droite */}
@@ -2121,6 +2112,15 @@ const Dashboard = () => {
                     </label>
                   </div>
                 )}
+              </div>
+
+              <div className="search-form-actions-left">
+                <button type="submit" className="btn-search">
+                  <FaSearch /> RECHERCHE
+                </button>
+                <button type="button" onClick={handleReset} className="btn-reset">
+                  Réinitialiser
+                </button>
               </div>
             </div>
           </form>
