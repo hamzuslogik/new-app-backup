@@ -23,6 +23,18 @@ function modeChauffageAffiche(confProp, modeProp) {
   return String(v).trim();
 }
 
+/** Session commercial (fonction 5) : champs non modifiables dans le détail fiche. */
+const COMMERCIAL_SESSION_READONLY_FIELDS = new Set([
+  'commentaire_qualite',
+  'conf_commentaire_produit',
+  'motif_qualif',
+  'commentaire',
+  'etude',
+  'conf_deja_etude',
+  'etude_raison',
+  'date_rdv_time',
+]);
+
 function hasConfValue(v) {
   return v != null && String(v).trim() !== '';
 }
@@ -1141,6 +1153,13 @@ const FicheDetail = ({
   // Vérifier si c'est un R2 (deuxième commercial assigné)
   const isR2 = isCommercial && ficheData && Number(ficheData.id_commercial_2) === Number(user?.id);
 
+  const canCommercialEditFiche =
+    isCommercial &&
+    hasPermission('fiches_edit') &&
+    ficheData &&
+    (Number(ficheData.id_commercial) === Number(user?.id) ||
+      Number(ficheData.id_commercial_2) === Number(user?.id));
+
   const getCommercialDisplayName = (id) => {
     if (!id) return '';
     const found = (commerciaux || []).find((c) => String(c.id) === String(id));
@@ -1644,6 +1663,11 @@ const FicheDetail = ({
   };
 
   const handleSaveField = async (field) => {
+    if (canCommercialEditFiche && COMMERCIAL_SESSION_READONLY_FIELDS.has(field)) {
+      alert('Ce champ ne peut pas être modifié depuis la session commercial.');
+      handleCancelEdit();
+      return;
+    }
     await updateFieldMutation.mutateAsync({ field, value: editValue });
   };
 
@@ -2762,16 +2786,17 @@ const FicheDetail = ({
     const isQualiteQualif = userFonction == 2 || userFonction == 8 || userFonction == 12;
     const isAdmin = userFonction == 1 || userFonction == 7;
     const isAgent = userFonction == 3 && user.centre === ficheData.id_centre;
-    const isCommercial = userFonction == 5 && hasPermission('fiches_edit') && ficheData.id_commercial === user.id;
+    const isCommercialEditor = canCommercialEditFiche;
     const isConfirmateur = userFonction == 6;
     const isREConfirmation = userFonction == 14; // RE confirmation : modification rapide
     const isRPConfirmation = userFonction == 13; // RP confirmation : modification rapide
     const isBackoffice = userFonction == 11; // Backoffice : modification rapide
     const canEditModificationRapide = isREConfirmation || isRPConfirmation || isBackoffice || (typeof hasPermission === 'function' && hasPermission('fiche_quick_edit'));
 
-    // Pour les sessions "modification rapide", tous les champs sont modifiables (sauf date_appel_time si backend le refuse)
-    const effectiveReadOnly = readOnly && !canEditModificationRapide;
-    const canEditField = !effectiveReadOnly && userFonction != null && (isAdmin || isQualiteQualif || isAgent || isCommercial || isConfirmateur || canEditModificationRapide);
+    const isCommercialFieldBlocked =
+      isCommercialEditor && COMMERCIAL_SESSION_READONLY_FIELDS.has(field);
+    const effectiveReadOnly = (readOnly || isCommercialFieldBlocked) && !canEditModificationRapide;
+    const canEditField = !effectiveReadOnly && userFonction != null && (isAdmin || isQualiteQualif || isAgent || isCommercialEditor || isConfirmateur || canEditModificationRapide);
     
 
     return (
@@ -4331,6 +4356,7 @@ const FicheDetail = ({
                                 item.label
                               );
                               const isEditableDateRdvInline =
+                                !isCommercial &&
                                 isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
                                 item.label === 'Date RDV' &&
                                 !!etatActuel.date_rdv_time;

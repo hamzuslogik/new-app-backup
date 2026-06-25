@@ -4134,8 +4134,8 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
         });
       }
     } else if (user.fonction === 5) {
-      // Commerciaux : seulement leurs fiches
-      if (fiche.id_commercial !== user.id) {
+      // Commerciaux : fiches où ils sont commercial 1 ou R2
+      if (Number(fiche.id_commercial) !== Number(user.id) && Number(fiche.id_commercial_2) !== Number(user.id)) {
         return res.status(403).json({
           success: false,
           message: 'Vous n\'avez pas la permission de modifier cette fiche'
@@ -4311,6 +4311,23 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       return res.status(400).json({
         success: false,
         message: `Le champ "${field}" n'est pas autorisé à être modifié`
+      });
+    }
+
+    const commercialReadonlyFields = new Set([
+      'commentaire_qualite',
+      'conf_commentaire_produit',
+      'motif_qualif',
+      'commentaire',
+      'etude',
+      'conf_deja_etude',
+      'etude_raison',
+      'date_rdv_time',
+    ]);
+    if (user.fonction === 5 && commercialReadonlyFields.has(field)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Ce champ ne peut pas être modifié depuis la session commercial.',
       });
     }
 
