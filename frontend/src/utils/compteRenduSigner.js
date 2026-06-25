@@ -6,12 +6,12 @@ export const ETATS_COMPTE_RENDU_SIGNER = [13, 44, 45];
  * Filtre page Compte rendu : Signer, Honoré à suivre, Refuser, etc.
  */
 export const ETATS_COMPTE_RENDU_FILTER_IDS = [
-  8, // Porte / Imprévu / NRP → ANNULER À REPROGRAMMER
-  9, // Déballé veut réfléchir → CLIENT HONORÉ À SUIVRE
-  12, // Déballé sans suite → REFUSER
-  13, // Signer (uniquement SIGNER, pas les variantes PM / COMPLET / RETRACTER)
-  34, // Infinançable → HHC FINANCEMENT À VÉRIFIER
-  35 // Infaisabilité technique → HHC TECHNIQUE
+  8, // Porte, Téléphone, NRP, RDV non faisable → ANNULER À REPROGRAMMER
+  9, // Honoré veut réfléchir → CLIENT HONORÉ À SUIVRE
+  12, // Honoré pas intéressé → REFUSER
+  13, // Signé
+  34, // Honoré infinançable → HHC FINANCEMENT À VÉRIFIER
+  35 // Honoré infaisabilité technique → HHC TECHNIQUE
 ];
 
 /** Liste des états CR pour un filtre UI, dans l'ordre métier. */

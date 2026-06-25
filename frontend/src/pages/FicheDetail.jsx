@@ -22,6 +22,14 @@ import {
   SignerBonusAnnonceSelect,
 } from '../components/SignerProduitFormFields';
 import { validateSignerCompteRenduForm, alertSignerCompteRenduValidation } from '../utils/validateSignerCompteRendu';
+import {
+  COMPTE_RENDU_COMMERCIAL_OPTIONS,
+  applyCompteRenduOptionChange,
+  getCompteRenduOptionLabel,
+  isCommercialAnnulerReproSimpleOption,
+  resolveCompteRenduOptionFromCr,
+  resolveOptionKey,
+} from '../utils/compteRenduCommercialOptions';
 
 /** Mode de chauffage (VARCHAR en base) : affichage tel quel. */
 function modeChauffageAffiche(confProp, modeProp) {
@@ -970,9 +978,8 @@ const FicheDetail = ({
       if (compteRenduOption === 'deballé_réfléchir' && selectedEtat === 19) {
         // Trouver le sous-état "DÉBALLÉ DOIT RÉFLÉCHIR"
         sousEtatToSelect = sousEtats.find(se => se.titre === 'DÉBALLÉ DOIT RÉFLÉCHIR');
-      } else if (compteRenduOption === 'porte_imprevu_nrp' && selectedEtat === 8) {
-        // Pour "Porte / Imprévu / NRP", on laisse l'utilisateur choisir entre PORTE ou IMPRÉVU CLIENT
-        // On ne pré-sélectionne pas automatiquement
+      } else if (isCommercialAnnulerReproSimpleOption(compteRenduOption) && selectedEtat === 8) {
+        // Annuler à reprogrammer (commercial) : sous-état / dates saisis plus tard par le backoffice
       }
       
       // Ne pas présélectionner automatiquement le sous-état pour garder "Sélectionner" par défaut.
@@ -2466,6 +2473,17 @@ const FicheDetail = ({
   );
 
   // Soumettre le changement d'état pour les autres états
+  const handleCompteRenduOptionChange = (value) => {
+    setCompteRenduOption(value);
+    applyCompteRenduOptionChange(value, {
+      etatFormData,
+      ficheData,
+      splitDateTimeForInput,
+      setSelectedEtat,
+      setEtatFormData,
+    });
+  };
+
   const handleEtatSubmit = async () => {
     try {
       if (!selectedEtat) {
@@ -2478,15 +2496,17 @@ const FicheDetail = ({
         return;
       }
 
-      const isCommercialPorteImprevuNrp =
-        Number(user?.fonction) === 5 && compteRenduOption === 'porte_imprevu_nrp' && Number(selectedEtat) === 8;
+      const isCommercialAnnulerReproSimple =
+        Number(user?.fonction) === 5 &&
+        isCommercialAnnulerReproSimpleOption(compteRenduOption) &&
+        Number(selectedEtat) === 8;
 
       // Validation : sous-état obligatoire si la liste existe (sauf états 11 et 12 où il est facultatif)
       if (
         etatsSousEtatObligatoire.includes(selectedEtat) &&
         sousEtats &&
         sousEtats.length > 0 &&
-        !(selectedEtat === 8 && isCommercialPorteImprevuNrp)
+        !(selectedEtat === 8 && isCommercialAnnulerReproSimple)
       ) {
         const idSousEtat =
           selectedEtat === 2
@@ -2551,6 +2571,9 @@ const FicheDetail = ({
 
         // Construire les données de modification selon le type d'état
         const modifications = {};
+        if (compteRenduOption) {
+          modifications.compte_rendu_option = resolveOptionKey(compteRenduOption);
+        }
         const commentaireEtat =
           ETATS_MOTIF_QUALIF_REQUIS.includes(selectedEtat)
             ? (etatFormData.motif_qualif || etatFormData.conf_commentaire_produit || '')
@@ -2562,8 +2585,8 @@ const FicheDetail = ({
           id_etat_final: selectedEtat,
           commentaire: commentaireEtat
         };
-        // Pour "Porte / Imprévu / NRP" (état 8), le commercial ne modifie que le commentaire.
-        if (!isCommercialPorteImprevuNrp) {
+        // Pour les options « Annuler à reprogrammer » côté commercial, seul le commentaire est saisi ici.
+        if (!isCommercialAnnulerReproSimple) {
           updateData.id_sous_etat = selectedEtat === 2
             ? (nrpFormData.id_sous_etat ? parseInt(nrpFormData.id_sous_etat) : null)
             : (etatFormData.id_sous_etat ? parseInt(etatFormData.id_sous_etat) : null);
@@ -2613,7 +2636,7 @@ const FicheDetail = ({
           updateData.nbr_annee_finance = etatFormData.nbr_annee_finance || null;
           updateData.credit_immobilier = etatFormData.credit_immobilier || null;
           updateData.credit_autre = etatFormData.credit_autre || null;
-        } else if (selectedEtat === 8 && !isCommercialPorteImprevuNrp) {
+        } else if (selectedEtat === 8 && !isCommercialAnnulerReproSimple) {
           // ANNULER À REPROGRAMMER
           if (etatFormData.conf_rdv_date && etatFormData.conf_rdv_time) {
             modifications.conf_rdv_date = etatFormData.conf_rdv_date;
@@ -2637,6 +2660,9 @@ const FicheDetail = ({
       const updateData = {
         id_etat_final: parseInt(selectedEtat)
       };
+      if (Number(user?.fonction) === 5 && compteRenduOption) {
+        updateData.compte_rendu_option = resolveOptionKey(compteRenduOption);
+      }
       if (showHistoConfirmateurDropdown && histoConfirmateurId !== '' && histoConfirmateurId != null) {
         updateData.histo_id_confirmateur = parseInt(histoConfirmateurId, 10);
       }
@@ -2655,8 +2681,8 @@ const FicheDetail = ({
         }
       } else if (selectedEtat === 8) {
         // ANNULER À REPROGRAMMER
-        // Pour "Porte / Imprévu / NRP" côté commercial, on ne saisit que le commentaire.
-        if (!isCommercialPorteImprevuNrp) {
+        // Pour "Porte / Téléphone / NRP / RDV non faisable" côté commercial, on ne saisit que le commentaire.
+        if (!isCommercialAnnulerReproSimple) {
           if (etatFormData.conf_rdv_date) {
             const dateRdvStr = `${etatFormData.conf_rdv_date} ${etatFormData.conf_rdv_time || '00:00'}:00`;
             updateData.date_rdv_time = dateRdvStr;
@@ -5469,17 +5495,11 @@ const FicheDetail = ({
               <div className="fiche-section compte-rendu-section">
                 <h2 className="section-title">Comptes rendu en attente</h2>
                 {ficheData.comptes_rendus.filter((cr) => cr.statut === 'pending').map((cr) => {
-                  // Mapper l'état de la base de données vers le libellé commercial
-                  const getEtatCommercialLabel = (etatId) => {
-                    if ([13, 44, 45].includes(etatId)) return 'Signer';
-                    if (etatId === 9) return 'Déballé veut réfléchir';
-                    if (etatId === 12) return 'Déballé sans suite';
-                    if (etatId === 34) return 'Infinançable';
-                    if (etatId === 35) return 'Infaisabilité technique';
-                    if (etatId === 23) return 'Hors cible confirmateur';
-                    if (etatId === 8) return 'Porte / Imprévu / NRP';
-                    return cr.etat_titre || 'N/A';
-                  };
+                  const crOptionKey = resolveCompteRenduOptionFromCr(cr);
+                  const crCommercialLabel =
+                    getCompteRenduOptionLabel(crOptionKey, cr.id_etat_final) ||
+                    cr.etat_titre ||
+                    'N/A';
 
                   return (
                     <div key={cr.id} className="compte-rendu-item" style={{ 
@@ -5491,7 +5511,7 @@ const FicheDetail = ({
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <div>
-                          <strong>État :</strong> {getEtatCommercialLabel(cr.id_etat_final)} | 
+                          <strong>État :</strong> {crCommercialLabel} | 
                           <strong> Statut :</strong> {cr.statut === 'pending' ? 'En attente' : cr.statut === 'approved' ? 'Approuvé' : 'Rejeté'} |
                           <strong> Date :</strong> {cr.date_creation ? new Date(cr.date_creation).toLocaleString('fr-FR') : 'N/A'}
                         </div>
@@ -5500,10 +5520,10 @@ const FicheDetail = ({
                             className="btn-edit" 
                             onClick={() => {
                               setEditingCompteRendu(cr.id);
-                              // Charger les données du compte rendu dans le formulaire
+                              const optionKey = resolveCompteRenduOptionFromCr(cr);
+                              setCompteRenduOption(optionKey);
+                              setSelectedEtat(cr.id_etat_final);
                               if ([13, 44, 45].includes(cr.id_etat_final)) {
-                                setCompteRenduOption('signer');
-                                setSelectedEtat(cr.id_etat_final);
                                 const crMods = cr.modifications || {};
                                 const pickCrValue = (modKey, topKey = modKey, fallback = '') => {
                                   const modVal = crMods?.[modKey];
@@ -5543,24 +5563,14 @@ const FicheDetail = ({
                                   conf_commentaire_produit: cr.commentaire || ''
                                 });
                               } else if (cr.id_etat_final === 9) {
-                                setCompteRenduOption('deballé_réfléchir');
-                                setSelectedEtat(9);
                                 setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || ''});
                               } else if (cr.id_etat_final === 12) {
-                                setCompteRenduOption('deballé_sans_suite');
-                                setSelectedEtat(12);
                                 setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: cr.commentaire || ''});
                               } else if (cr.id_etat_final === 34) {
-                                setCompteRenduOption('infinançable');
-                                setSelectedEtat(34);
                                 setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: cr.commentaire || ''});
                               } else if (cr.id_etat_final === 35) {
-                                setCompteRenduOption('infaisabilité_technique');
-                                setSelectedEtat(35);
                                 setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || ''});
                               } else if (cr.id_etat_final === 8) {
-                                setCompteRenduOption('porte_imprevu_nrp');
-                                setSelectedEtat(8);
                                 // Extraire date et heure si disponibles
                                 let dateRdv = '';
                                 let timeRdv = '';
@@ -5606,71 +5616,15 @@ const FicheDetail = ({
                   <select
                     id="compte_rendu_option"
                     className="form-control"
-                    value={compteRenduOption}
-                    onChange={(e) => {
-                    setCompteRenduOption(e.target.value);
-                    // Définir l'état correspondant selon l'option sélectionnée
-                    // Les libellés affichés au commercial ne correspondent pas aux IDs d'états réels
-                    if (e.target.value === 'signer') {
-                      setSelectedEtat(13); // SIGNER
-                      // Réinitialiser le formulaire pour SIGNER
-                      const { date: dateStr, time: timeStr } = splitDateTimeForInput(ficheData?.date_rdv_time);
-                      setEtatFormData({
-                        ...etatFormData,
-                        date_sign_date: dateStr,
-                        date_sign_time: timeStr,
-                        produit: ficheData?.produit ? String(ficheData.produit) : '',
-                        id_commercial: ficheData?.id_commercial ? String(ficheData.id_commercial) : '',
-                        id_sous_etat: ''
-                      });
-                    } else if (e.target.value === 'deballé_réfléchir') {
-                      setSelectedEtat(9); // CLIENT HONORE A SUIVRE
-                      setEtatFormData({
-                        ...etatFormData,
-                        conf_commentaire_produit: ''
-                      });
-                    } else if (e.target.value === 'deballé_sans_suite') {
-                      setSelectedEtat(12); // REFUSER
-                      setEtatFormData({
-                        ...etatFormData,
-                        conf_commentaire_produit: '',
-                        motif_qualif: ''
-                      });
-                    } else if (e.target.value === 'infinançable') {
-                      setSelectedEtat(34); // HHC FINANCEMENT A VERIFIER
-                      setEtatFormData({
-                        ...etatFormData,
-                        conf_commentaire_produit: '',
-                        motif_qualif: ''
-                      });
-                    } else if (e.target.value === 'infaisabilité_technique') {
-                      setSelectedEtat(35); // HCC TECHNIQUE
-                      setEtatFormData({
-                        ...etatFormData,
-                        conf_commentaire_produit: ''
-                      });
-                    } else if (e.target.value === 'porte_imprevu_nrp') {
-                      setSelectedEtat(8); // ANNULER À REPROGRAMMER
-                      setEtatFormData({
-                        ...etatFormData,
-                        conf_rdv_date: '',
-                        conf_rdv_time: '',
-                        id_sous_etat: '',
-                        conf_rdv_avec: '',
-                        conf_commentaire_produit: ''
-                      });
-                    } else {
-                      setSelectedEtat(null);
-                    }
-                    }}
+                    value={resolveOptionKey(compteRenduOption)}
+                    onChange={(e) => handleCompteRenduOptionChange(e.target.value)}
                   >
                     <option value="">Sélectionner une option</option>
-                    <option value="signer">Signer</option>
-                    <option value="deballé_réfléchir">Déballé veut réfléchir</option>
-                    <option value="deballé_sans_suite">Déballé sans suite</option>
-                    <option value="infinançable">Infinançable</option>
-                    <option value="infaisabilité_technique">Infaisabilité technique</option>
-                    <option value="porte_imprevu_nrp">Porte / Imprévu / NRP</option>
+                    {COMPTE_RENDU_COMMERCIAL_OPTIONS.map((opt) => (
+                      <option key={opt.key} value={opt.key}>
+                        {opt.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -5691,70 +5645,15 @@ const FicheDetail = ({
                       <select
                         id="compte_rendu_option_edit"
                         className="form-control"
-                        value={compteRenduOption}
-                        onChange={(e) => {
-                          setCompteRenduOption(e.target.value);
-                          // Définir l'état correspondant selon l'option sélectionnée
-                          if (e.target.value === 'signer') {
-                            setSelectedEtat(13); // SIGNER
-                            // Réinitialiser le formulaire pour SIGNER
-                            const { date: dateStr, time: timeStr } = splitDateTimeForInput(ficheData?.date_rdv_time);
-                            setEtatFormData({
-                              ...etatFormData,
-                              date_sign_date: dateStr,
-                              date_sign_time: timeStr,
-                              produit: ficheData?.produit ? String(ficheData.produit) : '',
-                              id_commercial: ficheData?.id_commercial ? String(ficheData.id_commercial) : '',
-                              id_sous_etat: ''
-                            });
-                          } else if (e.target.value === 'deballé_réfléchir') {
-                            setSelectedEtat(9); // CLIENT HONORE A SUIVRE
-                            setEtatFormData({
-                              ...etatFormData,
-                              conf_commentaire_produit: ''
-                            });
-                          } else if (e.target.value === 'deballé_sans_suite') {
-                            setSelectedEtat(12); // REFUSER
-                            setEtatFormData({
-                              ...etatFormData,
-                              conf_commentaire_produit: '',
-                              motif_qualif: ''
-                            });
-                          } else if (e.target.value === 'infinançable') {
-                            setSelectedEtat(34); // HHC FINANCEMENT A VERIFIER
-                            setEtatFormData({
-                              ...etatFormData,
-                              conf_commentaire_produit: '',
-                              motif_qualif: ''
-                            });
-                          } else if (e.target.value === 'infaisabilité_technique') {
-                            setSelectedEtat(35); // HCC TECHNIQUE
-                            setEtatFormData({
-                              ...etatFormData,
-                              conf_commentaire_produit: ''
-                            });
-                          } else if (e.target.value === 'porte_imprevu_nrp') {
-                            setSelectedEtat(8); // ANNULER À REPROGRAMMER
-                            setEtatFormData({
-                              ...etatFormData,
-                              conf_rdv_date: '',
-                              conf_rdv_time: '',
-                              id_sous_etat: '',
-                              conf_rdv_avec: '',
-                              conf_commentaire_produit: ''
-                            });
-                          } else {
-                            setSelectedEtat(null);
-                          }
-                        }}
+                        value={resolveOptionKey(compteRenduOption)}
+                        onChange={(e) => handleCompteRenduOptionChange(e.target.value)}
                       >
                         <option value="">Sélectionner une option</option>
-                        <option value="signer">Signer</option>
-                        <option value="deballé_réfléchir">Déballé veut réfléchir</option>
-                        <option value="deballé_sans_suite">Déballé sans suite</option>
-                        <option value="infinançable">Infinançable</option>
-                        <option value="infaisabilité_technique">Infaisabilité technique</option>
-                        <option value="porte_imprevu_nrp">Porte / Imprévu / NRP</option>
+                        {COMPTE_RENDU_COMMERCIAL_OPTIONS.map((opt) => (
+                          <option key={opt.key} value={opt.key}>
+                            {opt.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div style={{ marginTop: '10px', textAlign: 'right' }}>
@@ -6056,9 +5955,8 @@ const FicheDetail = ({
                   )}
 
                   {/* Champs spécifiques ANNULER À REPROGRAMMER (état 8).
-                      Pour l'option "Porte / Imprévu / NRP", le commercial ne remplit que le commentaire,
-                      les autres champs seront saisis dans la page Compte Rendu. */}
-                  {selectedEtat === 8 && !(Number(user?.fonction) === 5 && compteRenduOption === 'porte_imprevu_nrp') && (
+                      Pour Porte / Téléphone / NRP / RDV non faisable, le commercial ne remplit que le commentaire. */}
+                  {selectedEtat === 8 && !(Number(user?.fonction) === 5 && isCommercialAnnulerReproSimpleOption(compteRenduOption)) && (
                     <>
                       {sousEtats.length > 0 && (
                         <div className="form-group">

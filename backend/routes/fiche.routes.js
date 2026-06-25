@@ -5861,6 +5861,10 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         }
       }
 
+      if (ficheData.compte_rendu_option) {
+        modifications.compte_rendu_option = String(ficheData.compte_rendu_option);
+      }
+
       // Si on a un commentaire compte rendu ou des modifications ou un changement d'état ou des données Phase 3, on peut créer un compte rendu
       if (Object.keys(modifications).length === 0 && !commentaireCompteRendu && !id_etat_final && Object.keys(ph3Data).length === 0) {
         return res.status(400).json({
