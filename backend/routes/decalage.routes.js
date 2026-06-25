@@ -252,18 +252,18 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
       });
     }
 
-    // Commercial : une seule demande en attente par fiche
+    // Commercial : une seule demande par fiche (tant qu'une demande existe en base)
     if (req.user.fonction === 5) {
-      const pendingDecalage = await queryOne(
+      const existingDecalage = await queryOne(
         `SELECT id FROM decalages
-         WHERE id_fiche = ? AND expediteur = ? AND id_etat = 1
+         WHERE id_fiche = ? AND expediteur = ?
          LIMIT 1`,
         [idFicheNum, req.user.id]
       );
-      if (pendingDecalage) {
+      if (existingDecalage) {
         return res.status(400).json({
           success: false,
-          message: 'Une demande de décalage est déjà en attente pour cette fiche. Annulez-la avant d\'en créer une nouvelle.'
+          message: 'Une demande de décalage a déjà été créée pour cette fiche.'
         });
       }
     }

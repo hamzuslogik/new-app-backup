@@ -35,16 +35,6 @@ const COMMERCIAL_SESSION_READONLY_FIELDS = new Set([
   'date_rdv_time',
 ]);
 
-function getValidationRdvSelectValue(fiche) {
-  if (!fiche || !(Number(fiche.valider) > 0)) return '0';
-  const avec = String(fiche.validation_conf_rdv_avec || fiche.conf_rdv_avec || '')
-    .trim()
-    .toUpperCase();
-  if (avec === 'MR') return '1-MR';
-  if (avec === 'MME') return '1-MME';
-  return '0';
-}
-
 function hasConfValue(v) {
   return v != null && String(v).trim() !== '';
 }
@@ -1219,6 +1209,13 @@ const FicheDetail = ({
 
   const hasCommercialPendingDecalage = !!commercialPendingDecalage;
 
+  const commercialAlreadyCreatedDecalage = useMemo(() => {
+    if (!isCommercial || !Array.isArray(decalagesData)) return false;
+    return decalagesData.some((d) => Number(d.expediteur) === Number(user?.id));
+  }, [decalagesData, isCommercial, user?.id]);
+
+  const commercialCanCreateDecalage = !commercialAlreadyCreatedDecalage;
+
   const decalageRdvHistorique = useMemo(() => {
     if (!Array.isArray(decalagesData)) return [];
     return [...decalagesData]
@@ -1378,8 +1375,8 @@ const FicheDetail = ({
       return;
     }
 
-    if (user.fonction === 5 && hasCommercialPendingDecalage) {
-      alert('Une demande de décalage est déjà en attente pour cette fiche. Annulez-la avant d\'en créer une nouvelle.');
+    if (user.fonction === 5 && commercialAlreadyCreatedDecalage) {
+      alert('Une demande de décalage a déjà été créée pour cette fiche.');
       return;
     }
 
@@ -1493,54 +1490,6 @@ const FicheDetail = ({
       }
     }
   );
-
-  const handleCommercialValidationRdvChange = (event) => {
-    const nextValue = event.target.value;
-    const currentValue = getValidationRdvSelectValue(ficheData);
-    if (nextValue === currentValue) return;
-
-    const resetSelect = () => {
-      event.target.value = currentValue;
-    };
-
-    if (nextValue === '0') {
-      if (!window.confirm('Marquer ce RDV comme NRP (non validé) ?')) {
-        resetSelect();
-        return;
-      }
-      validateMutation.mutate({
-        type_valid: '0',
-        conf_rdv_avec: null,
-        conf_presence_couple: null,
-      });
-      return;
-    }
-
-    if (nextValue === '1-MR') {
-      if (!window.confirm('Valider le RDV avec MR ?')) {
-        resetSelect();
-        return;
-      }
-      validateMutation.mutate({
-        type_valid: '1-MR',
-        conf_rdv_avec: 'MR',
-        conf_presence_couple: null,
-      });
-      return;
-    }
-
-    if (nextValue === '1-MME') {
-      if (!window.confirm('Valider le RDV avec MME ?')) {
-        resetSelect();
-        return;
-      }
-      validateMutation.mutate({
-        type_valid: '1-MME',
-        conf_rdv_avec: 'MME',
-        conf_presence_couple: null,
-      });
-    }
-  };
 
   // Mutation pour mettre à jour un champ
   const updateFieldMutation = useMutation(
@@ -5104,50 +5053,6 @@ const FicheDetail = ({
           </div>
         )}
 
-        {/* Validation RDV — session commercial (fiche confirmée, état 7) */}
-        {canCommercialEditFiche && Number(fiche.id_etat_final) === 7 && (
-          <div className="fiche-section commercial-validation-rdv-section" style={{ marginTop: '24px' }}>
-            <h2
-              className="section-title"
-              style={{
-                background: '#16a34a',
-                color: '#fff',
-                padding: '10px',
-                textAlign: 'center',
-                marginBottom: '0',
-                fontSize: '13.6px',
-                fontWeight: 'bold',
-              }}
-            >
-              Validation RDV
-            </h2>
-            <div className="commercial-validation-rdv-select">
-              <label htmlFor="commercial-validation-rdv-select">Validation RDV :</label>
-              <select
-                id="commercial-validation-rdv-select"
-                className="commercial-validation-rdv-select-input"
-                defaultValue={getValidationRdvSelectValue(fiche)}
-                key={`validation-rdv-${fiche.valider}-${fiche.conf_rdv_avec || ''}-${fiche.validation_conf_rdv_avec || ''}`}
-                disabled={validateMutation.isLoading}
-                onChange={handleCommercialValidationRdvChange}
-              >
-                <option value="0">NRP (non validé)</option>
-                <option value="1-MR">VALIDE avec MR</option>
-                <option value="1-MME">VALIDE avec MME</option>
-              </select>
-              {fiche.valider > 0 && fiche.validation_date_time && (
-                <p className="commercial-validation-rdv-hint">
-                  Validé le {formatRdvDateTime(fiche.validation_date_time)}
-                  {fiche.validation_conf_rdv_avec || fiche.conf_rdv_avec
-                    ? ` avec ${String(fiche.validation_conf_rdv_avec || fiche.conf_rdv_avec).toUpperCase()}`
-                    : ''}
-                  {fiche.validateur_pseudo ? ` par ${fiche.validateur_pseudo}` : ''}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Formulaire de décalage de RDV (session commercial) — sous État actuel */} 
         {hasPermission('decalage_create') && 
          user.fonction === 5 && 
@@ -5288,10 +5193,43 @@ const FicheDetail = ({
               </div>
             )}
             
-            {!hasCommercialPendingDecalage && (
+            {commercialAlreadyCreatedDecalage && !hasCommercialPendingDecalage && (
+              <div
+                className="decalage-already-created-notice"
+                style={{
+                  border: '1px solid #e0e0e0',
+                  borderTop: decalageRdvHistorique.length > 0 ? '1px solid #e0e0e0' : 'none',
+                  padding: '15px',
+                  background: '#f9fafb',
+                  textAlign: 'center',
+                }}
+              >
+                <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#374151' }}>
+                  Une demande de décalage a déjà été créée pour cette fiche.
+                </p>
+                <button
+                  type="button"
+                  className="btn-confirm"
+                  disabled
+                  title="Une demande de décalage a déjà été créée pour cette fiche."
+                  style={{
+                    display: 'inline-block',
+                    borderRadius: '7px',
+                    fontWeight: 'bold',
+                    padding: '10px 20px',
+                    opacity: 0.55,
+                    cursor: 'not-allowed',
+                  }}
+                >
+                  Demande de décalage
+                </button>
+              </div>
+            )}
+
+            {commercialCanCreateDecalage && (
             <div className="decalage-new-form" style={{ 
               border: '1px solid #e0e0e0', 
-              borderTop: (decalageRdvHistorique.length > 0 || commercialPendingDecalage) ? '1px solid #e0e0e0' : 'none', 
+              borderTop: (decalageRdvHistorique.length > 0 || commercialPendingDecalage || (commercialAlreadyCreatedDecalage && !hasCommercialPendingDecalage)) ? '1px solid #e0e0e0' : 'none', 
               padding: '15px',
               background: '#fff'
             }}>
