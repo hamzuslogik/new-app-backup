@@ -2725,6 +2725,45 @@
   cursor: wait !important;
 }
 
+/* Historique RDV + message « demande déjà créée » : texte noir (le bloc .decalage-form impose le blanc). */
+.decalage-form .decalage-rdv-historique,
+.decalage-form .decalage-rdv-historique h3,
+.decalage-form .decalage-rdv-historique-table,
+.decalage-form .decalage-rdv-historique-table thead,
+.decalage-form .decalage-rdv-historique-table tbody,
+.decalage-form .decalage-rdv-historique-table tr,
+.decalage-form .decalage-rdv-historique-table th,
+.decalage-form .decalage-rdv-historique-table td,
+.decalage-form .decalage-already-created-notice,
+.decalage-form .decalage-already-created-notice p,
+.decalage-form .decalage-already-created-notice-text,
+.fiche-detail-modal-content .decalage-form .decalage-rdv-historique,
+.fiche-detail-modal-content .decalage-form .decalage-rdv-historique h3,
+.fiche-detail-modal-content .decalage-form .decalage-rdv-historique-table,
+.fiche-detail-modal-content .decalage-form .decalage-rdv-historique-table thead,
+.fiche-detail-modal-content .decalage-form .decalage-rdv-historique-table tbody,
+.fiche-detail-modal-content .decalage-form .decalage-rdv-historique-table tr,
+.fiche-detail-modal-content .decalage-form .decalage-rdv-historique-table th,
+.fiche-detail-modal-content .decalage-form .decalage-rdv-historique-table td,
+.fiche-detail-modal-content .decalage-form .decalage-already-created-notice,
+.fiche-detail-modal-content .decalage-form .decalage-already-created-notice p,
+.fiche-detail-modal-content .decalage-form .decalage-already-created-notice-text {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+.decalage-form .decalage-already-created-notice-text,
+.fiche-detail-modal-content .decalage-form .decalage-already-created-notice-text {
+  margin: 0 0 12px;
+  font-size: 12px;
+}
+
+.decalage-form .decalage-already-created-notice .btn-confirm:disabled,
+.fiche-detail-modal-content .decalage-form .decalage-already-created-notice .btn-confirm:disabled {
+  color: #374151 !important;
+  -webkit-text-fill-color: #374151 !important;
+}
+
 .decalage-form .form-group,
 .etat-change-section .form-group,
 .compte-rendu-section .form-group {
@@ -3264,13 +3303,5 @@
     flex: 0 0 auto;
     padding-top: 0;
   }
-}
-
-.decalage-rdv-historique,
-.decalage-rdv-historique h3,
-.decalage-rdv-historique-table,
-.decalage-rdv-historique-table th,
-.decalage-rdv-historique-table td {
-  color: #000000;
 }
 

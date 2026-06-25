@@ -5204,7 +5204,7 @@ const FicheDetail = ({
                   textAlign: 'center',
                 }}
               >
-                <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#374151' }}>
+                <p className="decalage-already-created-notice-text">
                   Une demande de décalage a déjà été créée pour cette fiche.
                 </p>
                 <button
