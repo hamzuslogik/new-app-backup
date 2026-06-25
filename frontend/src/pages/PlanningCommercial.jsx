@@ -895,19 +895,23 @@ const PlanningCommercial = () => {
         </div>
       )}
 
-      {/* Onglets : 5 jours avant → 5 jours après (ex. lundi 01, mardi 02…) */}
-      <div className="planning-commercial-tabs">
-        {planningDayTabs.map((day) => (
-          <button
-            key={day.dateStr}
-            type="button"
-            className={`tab-button${activeTab === day.dateStr ? ' active' : ''}${day.isToday ? ' tab-button--today' : ''}`}
-            onClick={() => handleTabChange(day.dateStr)}
-            title={formatDateFr(day.dateStr)}
-          >
-            {day.label}
-          </button>
-        ))}
+      {/* Sélection du jour : 5 jours avant → 5 jours après */}
+      <div className="planning-commercial-day-select">
+        <label htmlFor="planning-day-select">Jour :</label>
+        <select
+          id="planning-day-select"
+          className="planning-day-select"
+          value={activeTab || getLocalDateStr()}
+          onChange={(e) => handleTabChange(e.target.value)}
+          disabled={filters.fiche_search}
+        >
+          {planningDayTabs.map((day) => (
+            <option key={day.dateStr} value={day.dateStr}>
+              {day.label}
+              {day.isToday ? ' (aujourd\'hui)' : ''}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Résultats */}
