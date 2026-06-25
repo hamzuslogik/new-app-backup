@@ -35,6 +35,10 @@ body.planning-commercial-page {
 
 .planning-commercial-header-left {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .planning-commercial-header h1 {
@@ -695,5 +699,299 @@ html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(12
     overflow: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Planning commercial mobile extranet (viewport natif, tableau scrollable,
+   modal fiche tableau + pinch zoom Safari)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html.planning-commercial-page.planning-commercial-page--mobile-native:not([data-desktop-viewport]),
+body.planning-commercial-page.planning-commercial-page--mobile-native:not([data-desktop-viewport]) {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100%;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+html.planning-commercial-page.planning-commercial-page--mobile-native:not([data-desktop-viewport]) #root,
+body.planning-commercial-page.planning-commercial-page--mobile-native:not([data-desktop-viewport]) .app,
+body.planning-commercial-page.planning-commercial-page--mobile-native:not([data-desktop-viewport]) .main-content,
+body.planning-commercial-page.planning-commercial-page--mobile-native:not([data-desktop-viewport]) .content-wrapper,
+body.planning-commercial-page.planning-commercial-page--mobile-native:not([data-desktop-viewport]) .planning-commercial {
+  touch-action: pan-x pan-y pinch-zoom !important;
+  overflow: visible !important;
+}
+
+html.planning-commercial-page.planning-commercial-page--extranet-scroll,
+body.planning-commercial-page.planning-commercial-page--extranet-scroll {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  height: auto;
+  min-height: 100%;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+@supports (-webkit-touch-callout: none) {
+  html.planning-commercial-page.planning-commercial-page--extranet-scroll,
+  body.planning-commercial-page.planning-commercial-page--extranet-scroll {
+    min-height: -webkit-fill-available;
+  }
+}
+
+body.planning-commercial-page.planning-commercial-page--extranet-scroll #root,
+body.planning-commercial-page.planning-commercial-page--extranet-scroll .app,
+body.planning-commercial-page.planning-commercial-page--extranet-scroll .main-content,
+body.planning-commercial-page.planning-commercial-page--extranet-scroll .content-wrapper {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  overflow: visible !important;
+  overscroll-behavior: none !important;
+  flex: none !important;
+}
+
+body.planning-commercial-page.planning-commercial-page--extranet-scroll .planning-commercial {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 8px;
+  overflow: visible !important;
+}
+
+body.planning-commercial-page.planning-commercial-page--extranet-scroll .fiches-table-container {
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  max-height: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  overscroll-behavior: none !important;
+  isolation: auto !important;
+  touch-action: pan-x pan-y pinch-zoom;
+  margin-bottom: 16px !important;
+}
+
+body.planning-commercial-page.planning-commercial-page--extranet-scroll .fiches-table {
+  min-width: 1400px !important;
+  width: max-content !important;
+  max-width: none !important;
+  table-layout: fixed !important;
+}
+
+body.planning-commercial-page.planning-commercial-page--extranet-scroll .fiches-table th,
+body.planning-commercial-page.planning-commercial-page--extranet-scroll .fiches-table td {
+  white-space: nowrap;
+}
+
+html.viewport-zoomed.planning-commercial-page.planning-commercial-page--extranet-scroll,
+html.viewport-zoomed body.planning-commercial-page.planning-commercial-page--extranet-scroll {
+  overflow: auto !important;
+  overflow-x: scroll !important;
+  overflow-y: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+html.viewport-zoomed.planning-commercial-page.planning-commercial-page--extranet-scroll .fiches-table,
+html.viewport-zoomed body.planning-commercial-page.planning-commercial-page--extranet-scroll .fiches-table {
+  min-width: 1400px !important;
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .search-form {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 8px !important;
+  box-sizing: border-box;
+}
+
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .search-form-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .form-group {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .form-group input,
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .form-group select,
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .date-time-inputs input[type="date"],
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .date-time-inputs input[type="time"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .search-form-actions-end {
+  order: 99;
+  width: 100% !important;
+  flex-direction: column !important;
+  margin-top: 4px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid #e0e0e0;
+}
+
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .search-form-actions-end .btn-search,
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .search-form-actions-end .btn-reset {
+  width: 100% !important;
+}
+
+body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel .search-form {
+  display: flex;
+  flex-direction: column;
+}
+
+html.viewport-zoomed.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open,
+html.viewport-zoomed body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open,
+html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open,
+html:not([data-desktop-viewport]).planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open {
+  overflow: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 3000 !important;
+  padding: 48px 24px !important;
+  margin: 0 !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content {
+  width: 88% !important;
+  max-width: 88% !important;
+  min-width: 0 !important;
+  flex: 0 1 auto !important;
+  min-height: 0 !important;
+  max-height: 82% !important;
+  height: auto !important;
+  margin: 0 auto !important;
+  border-radius: 8px !important;
+  padding: 0 !important;
+  padding-bottom: 12px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35) !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync {
+  width: var(--fiche-modal-width-pct, 88%) !important;
+  max-width: var(--fiche-modal-width-pct, 88%) !important;
+  max-height: var(--fiche-modal-height-pct, 82%) !important;
+}
+
+html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-close {
+  z-index: 10;
+  color: #ffffff !important;
+  font-size: 24px !important;
+}
+
+html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-banner {
+  flex: 0 0 72px !important;
+  width: 100% !important;
+  margin: 0 0 10px 0 !important;
+  border-radius: 4px 4px 0 0 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
+}
+
+@supports (-webkit-touch-callout: none) {
+  html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay {
+    padding-top: max(48px, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: max(48px, env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: max(24px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(24px, env(safe-area-inset-right, 0px)) !important;
+  }
+}
+
+.btn-planning-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-right: 8px;
+  border: 1px solid #9cbfc8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.btn-planning-view-toggle:hover {
+  background: #f0f7f9;
+}
+
+html.planning-commercial-page.planning-commercial-page--table-desktop-view:not([data-desktop-viewport]),
+body.planning-commercial-page.planning-commercial-page--table-desktop-view:not([data-desktop-viewport]) {
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .fiches-table {
+  min-width: 1400px !important;
+  width: max-content !important;
+}
+
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .fiches-table-container {
+  overflow: visible !important;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .search-form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .search-panel .form-group input,
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .search-panel .form-group select {
+  max-width: 100%;
 }
 

@@ -1,16 +1,95 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
-import { FaCalendarAlt, FaUser, FaFileAlt, FaMapMarkerAlt, FaSearch, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaCalendarAlt, FaUser, FaFileAlt, FaMapMarkerAlt, FaSearch, FaChevronDown, FaChevronUp, FaExpand, FaCompress } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailModal from '../components/FicheDetailModal';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import SystemMessageBanner from '../components/SystemMessageBanner';
+import {
+  applyForceDesktopViewport,
+  applyMobileNativeViewport,
+  applyPlanningCommercialMobileView,
+  applyPlanningCommercialTableDesktopView,
+  applyPlanningCommercialTableDesktopViewForFicheModal,
+  isTouchMobileDevice,
+} from '../utils/applyForceDesktopViewport';
+import {
+  stashPendingPlanningCommercialFicheModal,
+  clearPendingPlanningCommercialFicheModal,
+  resolvePendingPlanningCommercialFicheModal,
+} from '../utils/planningCommercialFicheModalSession';
 import './PlanningCommercial.css';
+
+const PLANNING_MOBILE_NATIVE_CLASS = 'planning-commercial-page--mobile-native';
+const PLANNING_EXTRANET_SCROLL_CLASS = 'planning-commercial-page--extranet-scroll';
+const PLANNING_OPEN_FICHE_PARAM = 'openFiche';
+
+const PLANNING_TABS = new Set(['yesterday', 'today', 'tomorrow', 'week', 'nextWeek']);
+
+function getFicheModalStateFromUrl() {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const openFiche = params.get(PLANNING_OPEN_FICHE_PARAM);
+  if (!openFiche) return null;
+  return {
+    hash: openFiche,
+    focusHistoriqueEtats: params.get('ficheFocusHisto') === '1',
+    initialTab: params.get('ficheTab') || undefined,
+  };
+}
+
+function clearFicheModalUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.get(PLANNING_OPEN_FICHE_PARAM)) return;
+  params.delete(PLANNING_OPEN_FICHE_PARAM);
+  params.delete('tableModal');
+  params.delete('ficheFocusHisto');
+  params.delete('ficheTab');
+  const qs = params.toString();
+  window.history.replaceState(null, '', qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+}
+
+function planningFiltersToUrlParams(f) {
+  const out = {};
+  const set = (key, value) => {
+    if (value === undefined || value === null) return;
+    if (typeof value === 'boolean') {
+      if (value) out[key] = '1';
+      return;
+    }
+    const s = String(value).trim();
+    if (s === '') return;
+    out[key] = s;
+  };
+  set('fiche_search', true);
+  set('page', f.page || 1);
+  set('limit', f.limit);
+  set('id_etat_final', f.id_etat_final);
+  set('date_champ', f.date_champ);
+  set('date_debut', f.date_debut);
+  set('date_fin', f.date_fin);
+  set('time_debut', f.time_debut);
+  set('time_fin', f.time_fin);
+  set('id_confirmateur', f.id_confirmateur);
+  set('id_commercial', f.id_commercial);
+  set('id_centre', f.id_centre);
+  set('critere', f.critere);
+  set('critere_champ', f.critere_champ);
+  set('cp', f.cp);
+  set('nom', f.nom);
+  set('prenom', f.prenom);
+  if (f.produit !== undefined && f.produit !== null && f.produit !== '') {
+    const p = Array.isArray(f.produit) ? f.produit[0] : f.produit;
+    set('produit', p);
+  }
+  return out;
+}
 
 // Date du jour en YYYY-MM-DD (heure locale) pour éviter le décalage UTC sur "RDV aujourd'hui"
 const getLocalDateStr = () => {
@@ -20,6 +99,7 @@ const getLocalDateStr = () => {
 
 const PlanningCommercial = () => {
   const { user, hasPermission } = useAuth();
+  const { closeSidebar } = useSidebar();
 
   useEffect(() => {
     document.body.classList.add('planning-commercial-page');
@@ -30,10 +110,70 @@ const PlanningCommercial = () => {
     };
   }, []);
 
+  /** iOS : rechargement avec ?openFiche=… → tableau zoom out + modal */
+  useLayoutEffect(() => {
+    if (!isTouchMobileDevice()) return undefined;
+
+    const params = new URLSearchParams(window.location.search);
+    const openFiche = params.get(PLANNING_OPEN_FICHE_PARAM);
+    if (!openFiche) return undefined;
+
+    applyPlanningCommercialTableDesktopViewForFicheModal();
+
+    return undefined;
+  }, []);
+
+  /** Mobile par défaut (device-width) — bascule vue tableau via le bouton */
+  useLayoutEffect(() => {
+    if (!isTouchMobileDevice()) return undefined;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get(PLANNING_OPEN_FICHE_PARAM)) return undefined;
+
+    document.documentElement.classList.add(PLANNING_MOBILE_NATIVE_CLASS);
+    document.body.classList.add(PLANNING_MOBILE_NATIVE_CLASS);
+
+    applyMobileNativeViewport();
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(applyMobileNativeViewport);
+    });
+
+    return () => {
+      cancelAnimationFrame(id);
+      document.documentElement.classList.remove(PLANNING_MOBILE_NATIVE_CLASS);
+      document.body.classList.remove(PLANNING_MOBILE_NATIVE_CLASS);
+      applyForceDesktopViewport();
+    };
+  }, []);
+
+  /** Mobile : scroll page unique, tableau desktop (max-content) */
+  useLayoutEffect(() => {
+    if (!isTouchMobileDevice()) return undefined;
+
+    document.documentElement.classList.add(PLANNING_EXTRANET_SCROLL_CLASS);
+    document.body.classList.add(PLANNING_EXTRANET_SCROLL_CLASS);
+
+    return () => {
+      document.documentElement.classList.remove(PLANNING_EXTRANET_SCROLL_CLASS);
+      document.body.classList.remove(PLANNING_EXTRANET_SCROLL_CLASS);
+    };
+  }, []);
+
   const queryClient = useQueryClient();
-  const [ficheDetailModal, setFicheDetailModal] = useState(null);
+  const [ficheDetailModal, setFicheDetailModal] = useState(() =>
+    resolvePendingPlanningCommercialFicheModal(getFicheModalStateFromUrl())
+  );
   const { lastViewedFicheHash, setLastViewedFicheHash } = useFicheDetailModal();
-  const [activeTab, setActiveTab] = useState('today'); // 'yesterday', 'today', 'tomorrow', 'week', 'nextWeek'
+  const [isTableDesktopView, setIsTableDesktopView] = useState(() => Boolean(getFicheModalStateFromUrl()));
+  const isPlanningTouchMobile = isTouchMobileDevice();
+
+  const initialTabFromUrl = (() => {
+    if (typeof window === 'undefined') return 'today';
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    return tab && PLANNING_TABS.has(tab) ? tab : 'today';
+  })();
+
+  const [activeTab, setActiveTab] = useState(initialTabFromUrl);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     page: 1,
@@ -44,8 +184,89 @@ const PlanningCommercial = () => {
     date_fin: getLocalDateStr(),
     time_debut: '00:00:00',
     time_fin: '23:59:59',
-    id_etat_final: user?.fonction === 5 ? '7' : '' // Pour commerciaux : pré-sélectionner CONFIRMER (7)
+    id_etat_final: user?.fonction === 5 ? '7' : '',
   });
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+
+  const switchToMobileView = useCallback(() => {
+    document.documentElement.classList.add(PLANNING_MOBILE_NATIVE_CLASS);
+    document.body.classList.add(PLANNING_MOBILE_NATIVE_CLASS);
+    applyPlanningCommercialMobileView();
+    window.dispatchEvent(new Event('viewport-layout-change'));
+    closeSidebar();
+    setIsTableDesktopView(false);
+  }, [closeSidebar]);
+
+  const switchToTableDesktopView = useCallback(() => {
+    document.documentElement.classList.remove(PLANNING_MOBILE_NATIVE_CLASS);
+    document.body.classList.remove(PLANNING_MOBILE_NATIVE_CLASS);
+    applyPlanningCommercialTableDesktopView();
+    setIsTableDesktopView(true);
+  }, []);
+
+  const togglePlanningViewport = useCallback(() => {
+    if (isTableDesktopView) switchToMobileView();
+    else switchToTableDesktopView();
+  }, [isTableDesktopView, switchToMobileView, switchToTableDesktopView]);
+
+  const openPlanningFicheDetail = useCallback(
+    (modalState) => {
+      if (!modalState?.hash) return;
+
+      if (isPlanningTouchMobile) {
+        stashPendingPlanningCommercialFicheModal(modalState);
+        const params = new URLSearchParams(window.location.search);
+        if (filtersRef.current?.fiche_search) {
+          Object.entries(planningFiltersToUrlParams(filtersRef.current)).forEach(([key, value]) => {
+            params.set(key, String(value));
+          });
+        } else if (activeTabRef.current && PLANNING_TABS.has(activeTabRef.current)) {
+          params.set('tab', activeTabRef.current);
+        }
+        params.set(PLANNING_OPEN_FICHE_PARAM, modalState.hash);
+        if (modalState.focusHistoriqueEtats) params.set('ficheFocusHisto', '1');
+        if (modalState.initialTab) params.set('ficheTab', modalState.initialTab);
+        params.set('tableModal', '1');
+        const qs = params.toString();
+        window.location.assign(qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+        return;
+      }
+
+      setFicheDetailModal(modalState);
+      if (modalState.hash) {
+        setLastViewedFicheHash(modalState.hash);
+      }
+    },
+    [isPlanningTouchMobile, setLastViewedFicheHash]
+  );
+
+  useEffect(() => {
+    if (!isPlanningTouchMobile) return undefined;
+
+    const fromUrl = getFicheModalStateFromUrl();
+    const pending = resolvePendingPlanningCommercialFicheModal(fromUrl);
+    if (!pending?.hash) return undefined;
+
+    setIsTableDesktopView(true);
+    setFicheDetailModal(pending);
+    setLastViewedFicheHash(pending.hash);
+    if (fromUrl) clearFicheModalUrlParams();
+
+    return undefined;
+  }, [isPlanningTouchMobile, setLastViewedFicheHash]);
+
+  const closePlanningFicheDetail = useCallback(() => {
+    clearPendingPlanningCommercialFicheModal();
+    setFicheDetailModal(null);
+    if (isPlanningTouchMobile) {
+      switchToMobileView();
+    } else {
+      closeSidebar();
+    }
+  }, [isPlanningTouchMobile, switchToMobileView, closeSidebar]);
 
   // Formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC qui fausse "RDV aujourd'hui")
   const toLocalDateString = (date) => {
@@ -393,6 +614,24 @@ const PlanningCommercial = () => {
       <SystemMessageBanner />
       <div className="planning-commercial-header">
         <div className="planning-commercial-header-left">
+          {isPlanningTouchMobile && (
+            <button
+              type="button"
+              className="btn-planning-view-toggle"
+              onClick={togglePlanningViewport}
+              title={isTableDesktopView ? 'Revenir à la vue mobile' : 'Afficher le tableau en vue desktop'}
+            >
+              {isTableDesktopView ? (
+                <>
+                  <FaCompress /> Vue mobile
+                </>
+              ) : (
+                <>
+                  <FaExpand /> Vue tableau
+                </>
+              )}
+            </button>
+          )}
           <h1><FaCalendarAlt /> Planning Commercial</h1>
         </div>
       </div>
@@ -668,7 +907,7 @@ const PlanningCommercial = () => {
                 </div>
               </div>
 
-              <div className="form-actions">
+              <div className="form-actions search-form-actions-end">
                 <button type="submit" className="btn-search">
                   <FaSearch /> RECHERCHE
                 </button>
@@ -886,10 +1125,7 @@ const PlanningCommercial = () => {
                         <td data-label="Centre:">{fiche.centre_titre || '-'}</td>
                         <td data-label="">
                           <button
-                            onClick={() => {
-                              setFicheDetailModal({ hash: fiche.hash });
-                              setLastViewedFicheHash(fiche.hash);
-                            }}
+                            onClick={() => openPlanningFicheDetail({ hash: fiche.hash })}
                             className="btn-detail"
                             title="Voir les détails"
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
@@ -949,10 +1185,11 @@ const PlanningCommercial = () => {
       {ficheDetailModal && (
         <FicheDetailModal
           ficheHash={ficheDetailModal.hash}
-          onClose={() => setFicheDetailModal(null)}
+          onClose={closePlanningFicheDetail}
           options={{
             focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats,
             initialTab: ficheDetailModal.initialTab || undefined,
+            pinchZoom: isPlanningTouchMobile,
           }}
         />
       )}

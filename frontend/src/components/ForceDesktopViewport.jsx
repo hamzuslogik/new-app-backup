@@ -16,7 +16,7 @@ const ForceDesktopViewport = () => {
       applyMobileNativeViewport();
       return undefined;
     }
-    if (isTouchMobileDevice() && pathname === '/dashboard') {
+    if (isTouchMobileDevice() && (pathname === '/dashboard' || pathname === '/planning-commercial')) {
       return undefined;
     }
     applyForceDesktopViewport();

@@ -99,6 +99,67 @@ export function applyDashboardTableDesktopViewForFicheModal(width = DESKTOP_VIEW
   applyDashboardTableDesktopView(width, DASHBOARD_FICHE_MODAL_SCALE_MULTIPLIER);
 }
 
+export const PLANNING_COMMERCIAL_TABLE_DESKTOP_VIEW_CLASS = 'planning-commercial-page--table-desktop-view';
+
+export function isPlanningCommercialTableDesktopView() {
+  return document.body?.classList.contains(PLANNING_COMMERCIAL_TABLE_DESKTOP_VIEW_CLASS);
+}
+
+export function applyPlanningCommercialMobileView() {
+  replaceViewportMeta(
+    'width=device-width, initial-scale=1.0, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover'
+  );
+
+  delete document.documentElement.dataset.desktopViewport;
+  if (document.body) delete document.body.dataset.desktopViewport;
+
+  clearDocumentLayoutStyles();
+  document.documentElement.classList.remove(PLANNING_COMMERCIAL_TABLE_DESKTOP_VIEW_CLASS);
+  document.body?.classList.remove(PLANNING_COMMERCIAL_TABLE_DESKTOP_VIEW_CLASS);
+
+  if (isTouchMobileDevice()) {
+    resetScrollPosition();
+    requestAnimationFrame(() => {
+      resetScrollPosition();
+      notifyViewportLayoutChange();
+      requestAnimationFrame(notifyViewportLayoutChange);
+    });
+  } else {
+    notifyViewportLayoutChange();
+  }
+}
+
+export function applyPlanningCommercialTableDesktopView(width = DESKTOP_VIEWPORT_WIDTH, scaleMultiplier = 1) {
+  const content = buildDesktopViewportContent(width, scaleMultiplier);
+  if (isTouchMobileDevice()) {
+    forceTouchViewportScaleReset(content);
+  } else {
+    replaceViewportMeta(content);
+  }
+
+  delete document.documentElement.dataset.desktopViewport;
+  if (document.body) delete document.body.dataset.desktopViewport;
+
+  clearDocumentLayoutStyles();
+  document.documentElement.classList.add(PLANNING_COMMERCIAL_TABLE_DESKTOP_VIEW_CLASS);
+  document.body?.classList.add(PLANNING_COMMERCIAL_TABLE_DESKTOP_VIEW_CLASS);
+
+  if (isTouchMobileDevice()) {
+    resetScrollPosition();
+    requestAnimationFrame(() => {
+      resetScrollPosition();
+      notifyViewportLayoutChange();
+      requestAnimationFrame(notifyViewportLayoutChange);
+    });
+  } else {
+    notifyViewportLayoutChange();
+  }
+}
+
+export function applyPlanningCommercialTableDesktopViewForFicheModal(width = DESKTOP_VIEWPORT_WIDTH) {
+  applyPlanningCommercialTableDesktopView(width, DASHBOARD_FICHE_MODAL_SCALE_MULTIPLIER);
+}
+
 function notifyViewportLayoutChange() {
   window.dispatchEvent(new Event('resize'));
   window.dispatchEvent(new Event('viewport-layout-change'));
