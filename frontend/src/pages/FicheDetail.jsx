@@ -3177,7 +3177,7 @@ const FicheDetail = ({
                   ? (typeContrat?.find(t => String(t.id) === String(fiche.conf_type_contrat_madame))?.nom || fiche.conf_type_contrat_madame || '-')
                   : (typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_madame))?.nom || fiche.type_contrat_madame || '-'),
                 'select', typeContrat)}
-              {renderField('Date & Heure d\'appel', 'date_appel_time', 
+              {!isCommercial && renderField('Date & Heure d\'appel', 'date_appel_time', 
                 (() => {
                   const dAppel = parseFicheDateAppel(fiche);
                   if (!dAppel) return '-';
@@ -3189,7 +3189,7 @@ const FicheDetail = ({
                   return `${absolute} — ${formatDateAppelRelativeDescription(dAppel)}`;
                 })(),
                 null, null, true)}
-              {renderField(
+              {!isCommercial && renderField(
                 'Entretien en tunisie avec',
                 'conf_appel_tunisie_avec',
                 displayAppelTunisieAvec(fiche),
@@ -3213,7 +3213,7 @@ const FicheDetail = ({
                   null,
                   true
                 )}
-              {renderField('Centre', 'id_centre',
+              {!isCommercial && renderField('Centre', 'id_centre',
                 centres?.find(c => c.id === fiche.id_centre)?.titre || fiche.centre_titre || '-',
                 'select', centres)}
               {renderField('Présence du couple', 'rdv_seul',
