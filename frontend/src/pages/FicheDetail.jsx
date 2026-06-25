@@ -1191,6 +1191,9 @@ const FicheDetail = ({
     }
   }, [ficheData?.id, ficheData?.id_commercial]);
 
+  const ID_ETAT_DECALAGE_EN_ATTENTE = 1;
+  const ID_ETAT_DECALAGE_ANNULE = 6;
+
   // Récupérer les décalages existants pour cette fiche
   const { data: decalagesData } = useQuery(
     ['decalages', ficheData?.id],
@@ -1199,8 +1202,47 @@ const FicheDetail = ({
       const res = await api.get('/decalages');
       return (res.data.data || []).filter(d => d.id_fiche === ficheData.id);
     },
-    { enabled: !!ficheData?.id }
+    {
+      enabled: !!ficheData?.id,
+      refetchInterval: isCommercial ? 15000 : false,
+    }
   );
+
+  const commercialPendingDecalage = useMemo(() => {
+    if (!isCommercial || !Array.isArray(decalagesData)) return null;
+    return decalagesData.find(
+      (d) =>
+        Number(d.expediteur) === Number(user?.id) &&
+        Number(d.id_etat) === ID_ETAT_DECALAGE_EN_ATTENTE
+    ) || null;
+  }, [decalagesData, isCommercial, user?.id]);
+
+  const hasCommercialPendingDecalage = !!commercialPendingDecalage;
+
+  const decalageRdvHistorique = useMemo(() => {
+    if (!Array.isArray(decalagesData)) return [];
+    return [...decalagesData]
+      .filter((d) => d.date_prevu)
+      .sort((a, b) => {
+        const ta = a.date_creation ? new Date(a.date_creation).getTime() : 0;
+        const tb = b.date_creation ? new Date(b.date_creation).getTime() : 0;
+        return tb - ta;
+      });
+  }, [decalagesData]);
+
+  const prevDecalagesSignatureRef = useRef(null);
+  useEffect(() => {
+    if (!hash || !Array.isArray(decalagesData)) return;
+    const signature = JSON.stringify(
+      decalagesData.map((d) => ({ id: d.id, id_etat: d.id_etat, date_nouvelle: d.date_nouvelle }))
+    );
+    if (prevDecalagesSignatureRef.current != null && prevDecalagesSignatureRef.current !== signature) {
+      queryClient.invalidateQueries(['fiche', hash]);
+      queryClient.invalidateQueries(['modifica', hash]);
+      queryClient.invalidateQueries(['planning-commercial']);
+    }
+    prevDecalagesSignatureRef.current = signature;
+  }, [decalagesData, hash, queryClient]);
 
   // Initialiser le formulaire de décalage avec la date du RDV de la fiche
   useEffect(() => {
@@ -1245,9 +1287,6 @@ const FicheDetail = ({
       }));
     }
   }, [ficheData?.date_rdv_time]);
-
-  const ID_ETAT_DECALAGE_EN_ATTENTE = 1;
-  const ID_ETAT_DECALAGE_ANNULE = 6;
 
   const canAnnulerDecalageEnAttente = (decalage) => {
     if (!decalage?.id) return false;
@@ -1336,6 +1375,11 @@ const FicheDetail = ({
 
     if (!ficheData.date_rdv_time) {
       alert('Aucune date de RDV disponible pour créer un décalage');
+      return;
+    }
+
+    if (user.fonction === 5 && hasCommercialPendingDecalage) {
+      alert('Une demande de décalage est déjà en attente pour cette fiche. Annulez-la avant d\'en créer une nouvelle.');
       return;
     }
 
@@ -5128,71 +5172,130 @@ const FicheDetail = ({
             }}>
               Demande de décalage
             </h2>
-            
-            {decalagesData && decalagesData.length > 0 && (
-              <div className="decalage-existing-list" style={{ 
-                border: '1px solid #e0e0e0', 
-                borderTop: 'none', 
+
+            {decalageRdvHistorique.length > 0 && (
+              <div className="decalage-rdv-historique" style={{
+                border: '1px solid #e0e0e0',
+                borderTop: 'none',
                 padding: '15px',
-                background: '#f9f9f9',
-                marginBottom: '10px'
+                background: '#fff',
+                marginBottom: '0',
               }}>
-                <h3 style={{ marginTop: '0', marginBottom: '10px', fontSize: '11.9px', fontWeight: 'bold' }}>
-                  Demande de décalage ({decalagesData.length})
+                <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
+                  Historique des heures RDV avant décalage
                 </h3>
-                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                  {decalagesData.map((decalage, index) => (
-                    <div key={decalage.id || index} className="decalage-existing-item" style={{ 
-                      background: '#fff', 
-                      padding: '10px', 
-                      marginBottom: '8px', 
-                      borderRadius: '4px',
-                      border: '1px solid #ddd'
-                    }}>
-                      <div style={{ fontSize: '10.2px', color: '#666' }}>
-                        <strong>Demande #{index + 1}</strong> - 
-                        Créée le: {decalage.date_creation ? new Date(decalage.date_creation).toLocaleString('fr-FR') : 'N/A'}
-                      </div>
-                      <div style={{ fontSize: '10.2px', marginTop: '5px' }}>
-                        <strong>Nouvelle date:</strong> {decalage.date_nouvelle ? formatRdvDateTime(decalage.date_nouvelle) : (decalage.date_prevu ? formatRdvDateTime(decalage.date_prevu) : 'N/A')}
-                      </div>
-                      {decalage.message && (
-                        <div style={{ fontSize: '10.2px', marginTop: '5px', fontStyle: 'italic', color: '#555' }}>
-                          "{decalage.message}"
-                        </div>
-                      )}
-                      {decalage.etat_dec && (
-                        <div style={{ fontSize: '10.2px', marginTop: '5px' }}>
-                          <strong>État:</strong> {decalage.etat_dec}
-                        </div>
-                      )}
-                      {canAnnulerDecalageEnAttente(decalage) && (
-                        <div style={{ marginTop: '8px' }}>
-                          <button
-                            type="button"
-                            className="btn-secondary decalage-annuler-demande-btn"
-                            onClick={() => {
-                              if (!window.confirm('Supprimer définitivement cette demande de décalage ?')) return;
-                              cancelDecalageMutation.mutate(decalage.id);
-                            }}
-                            disabled={cancelDecalageMutation.isLoading}
-                          >
-                            {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginTop: '10px', fontSize: '10.2px', color: '#666', fontStyle: 'italic' }}>
-                  Vous pouvez créer une nouvelle demande de décalage ci-dessous.
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="decalage-rdv-historique-table" style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: '11px',
+                  }}>
+                    <thead>
+                      <tr style={{ background: '#f3f4f6' }}>
+                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Date demande</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Heure RDV avant</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Nouvelle heure</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>État</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {decalageRdvHistorique.map((decalage) => (
+                        <tr key={decalage.id}>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                            {decalage.date_creation
+                              ? new Date(decalage.date_creation).toLocaleString('fr-FR')
+                              : '—'}
+                          </td>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', fontWeight: 600 }}>
+                            {formatRdvDateTime(decalage.date_prevu)}
+                          </td>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                            {decalage.date_nouvelle
+                              ? formatRdvDateTime(decalage.date_nouvelle)
+                              : '—'}
+                          </td>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                            {decalage.etat_dec || '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
             
+            {commercialPendingDecalage && (
+              <div className="decalage-existing-list" style={{ 
+                border: '1px solid #e0e0e0', 
+                borderTop: decalageRdvHistorique.length > 0 ? '1px solid #e0e0e0' : 'none', 
+                padding: '15px',
+                background: '#fff8e1',
+                marginBottom: '0'
+              }}>
+                <h3 style={{ marginTop: '0', marginBottom: '10px', fontSize: '11.9px', fontWeight: 'bold' }}>
+                  Demande en attente
+                </h3>
+                <div className="decalage-existing-item" style={{ 
+                  background: '#fff', 
+                  padding: '10px', 
+                  borderRadius: '4px',
+                  border: '1px solid #f59e0b'
+                }}>
+                  <div style={{ fontSize: '10.2px', color: '#666' }}>
+                    <strong>Créée le :</strong>{' '}
+                    {commercialPendingDecalage.date_creation
+                      ? new Date(commercialPendingDecalage.date_creation).toLocaleString('fr-FR')
+                      : 'N/A'}
+                  </div>
+                  <div style={{ fontSize: '10.2px', marginTop: '5px' }}>
+                    <strong>Heure RDV avant décalage :</strong>{' '}
+                    {commercialPendingDecalage.date_prevu
+                      ? formatRdvDateTime(commercialPendingDecalage.date_prevu)
+                      : 'N/A'}
+                  </div>
+                  <div style={{ fontSize: '10.2px', marginTop: '5px' }}>
+                    <strong>Nouvelle date :</strong>{' '}
+                    {commercialPendingDecalage.date_nouvelle
+                      ? formatRdvDateTime(commercialPendingDecalage.date_nouvelle)
+                      : 'N/A'}
+                  </div>
+                  {commercialPendingDecalage.message && (
+                    <div style={{ fontSize: '10.2px', marginTop: '5px', fontStyle: 'italic', color: '#555' }}>
+                      &quot;{commercialPendingDecalage.message}&quot;
+                    </div>
+                  )}
+                  {commercialPendingDecalage.etat_dec && (
+                    <div style={{ fontSize: '10.2px', marginTop: '5px' }}>
+                      <strong>État :</strong> {commercialPendingDecalage.etat_dec}
+                    </div>
+                  )}
+                  {canAnnulerDecalageEnAttente(commercialPendingDecalage) && (
+                    <div style={{ marginTop: '8px' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary decalage-annuler-demande-btn"
+                        onClick={() => {
+                          if (!window.confirm('Supprimer définitivement cette demande de décalage ?')) return;
+                          cancelDecalageMutation.mutate(commercialPendingDecalage.id);
+                        }}
+                        disabled={cancelDecalageMutation.isLoading}
+                      >
+                        {cancelDecalageMutation.isLoading ? 'Annulation…' : 'Annuler la demande'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div style={{ marginTop: '10px', fontSize: '10.2px', color: '#92400e', fontStyle: 'italic' }}>
+                  Une seule demande de décalage est autorisée à la fois. Attendez la réponse du confirmateur ou annulez la demande.
+                </div>
+              </div>
+            )}
+            
+            {!hasCommercialPendingDecalage && (
             <div className="decalage-new-form" style={{ 
               border: '1px solid #e0e0e0', 
-              borderTop: 'none', 
+              borderTop: (decalageRdvHistorique.length > 0 || commercialPendingDecalage) ? '1px solid #e0e0e0' : 'none', 
               padding: '15px',
               background: '#fff'
             }}>
@@ -5344,6 +5447,7 @@ const FicheDetail = ({
                 </button>
               </div>
             </div>
+            )}
           </div>
         )}
 

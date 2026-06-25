@@ -250,6 +250,22 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
       });
     }
 
+    // Commercial : une seule demande en attente par fiche
+    if (req.user.fonction === 5) {
+      const pendingDecalage = await queryOne(
+        `SELECT id FROM decalages
+         WHERE id_fiche = ? AND expediteur = ? AND id_etat = 1
+         LIMIT 1`,
+        [idFicheNum, req.user.id]
+      );
+      if (pendingDecalage) {
+        return res.status(400).json({
+          success: false,
+          message: 'Une demande de décalage est déjà en attente pour cette fiche. Annulez-la avant d\'en créer une nouvelle.'
+        });
+      }
+    }
+
     // Vérifier que le destinataire existe
     const destinataire = await queryOne(
       'SELECT id, fonction FROM utilisateurs WHERE id = ? AND etat > 0',
@@ -601,6 +617,12 @@ router.put('/:id/statut', authenticate, async (req, res) => {
     // Si le décalage est validé/accepté et qu'il y a une date_nouvelle, mettre à jour la date RDV de la fiche
     if (estValide && decalage.date_nouvelle && decalage.id_fiche) {
       try {
+        const ficheAvant = await queryOne(
+          'SELECT date_rdv_time FROM fiches WHERE id = ?',
+          [decalage.id_fiche]
+        );
+        const ancienneDateRdv = decalage.date_prevu || ficheAvant?.date_rdv_time || '';
+
         // Mettre à jour la date_rdv_time de la fiche avec date_nouvelle
         await query(
           `UPDATE fiches 
@@ -611,6 +633,47 @@ router.put('/:id/statut', authenticate, async (req, res) => {
         );
         
         console.log(`Date RDV de la fiche ${decalage.id_fiche} mise à jour avec la nouvelle date: ${decalage.date_nouvelle}`);
+
+        // Historique modifica date_rdv_time (décalage accepté)
+        try {
+          const tableExists = await queryOne(
+            `SELECT COUNT(*) as count 
+             FROM information_schema.tables 
+             WHERE table_schema = SCHEMA() 
+             AND table_name = 'modifica'`
+          );
+          if (tableExists && tableExists.count > 0) {
+            const columns = await query(
+              `SELECT COLUMN_NAME 
+               FROM information_schema.COLUMNS 
+               WHERE TABLE_SCHEMA = SCHEMA() 
+               AND TABLE_NAME = 'modifica'`
+            );
+            const columnNames = columns.map((col) => col.COLUMN_NAME);
+            const hasNewStructure = columnNames.includes('type') &&
+              columnNames.includes('ancien_valeur') &&
+              columnNames.includes('nouvelle_valeur');
+            const hasOldStructure = columnNames.includes('champ') &&
+              columnNames.includes('last_val') &&
+              columnNames.includes('val');
+            const dateCol = columnNames.includes('date_modif_time') ? 'date_modif_time' : 'date';
+            if (hasNewStructure) {
+              await query(
+                `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, \`${dateCol}\`)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [decalage.id_fiche, req.user.id, 'date_rdv_time', String(ancienneDateRdv), String(decalage.date_nouvelle), now]
+              );
+            } else if (hasOldStructure) {
+              await query(
+                `INSERT INTO modifica (id_fiche, id_user, champ, last_val, val, \`${dateCol}\`)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [decalage.id_fiche, req.user.id, 'date_rdv_time', String(ancienneDateRdv), String(decalage.date_nouvelle), now]
+              );
+            }
+          }
+        } catch (modifRdvErr) {
+          console.log('Impossible d\'enregistrer date_rdv_time (décalage) dans modifica:', modifRdvErr.message);
+        }
         
         // Enregistrer dans l'historique de la fiche
         await query(
@@ -682,7 +745,12 @@ router.put('/:id/statut', authenticate, async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Statut du décalage mis à jour'
+      message: 'Statut du décalage mis à jour',
+      data: {
+        id_fiche: decalage.id_fiche,
+        id_etat,
+        fiche_updated: estValide && !!decalage.date_nouvelle && !!decalage.id_fiche,
+      },
     });
 
     const ficheForWorkflow = await getFicheWorkflowContext(decalage.id_fiche);

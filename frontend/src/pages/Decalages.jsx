@@ -79,8 +79,14 @@ const Decalages = () => {
       return res.data;
     },
     {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['decalages', user?.id]);
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(['decalages']);
+        queryClient.invalidateQueries(['fiche']);
+        queryClient.invalidateQueries(['modifica']);
+        queryClient.invalidateQueries(['planning-commercial']);
+        if (data?.data?.id_fiche) {
+          queryClient.invalidateQueries(['decalages', data.data.id_fiche]);
+        }
         toast.success('Statut du décalage mis à jour avec succès');
       },
       onError: (error) => {
