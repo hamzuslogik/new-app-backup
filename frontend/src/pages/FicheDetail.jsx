@@ -5176,7 +5176,7 @@ const FicheDetail = ({
                 background: '#fff',
                 marginBottom: '0',
               }}>
-                <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '12px', fontWeight: 'bold', color: '#000000' }}>
                   Historique des heures RDV avant décalage
                 </h3>
                 <div style={{ overflowX: 'auto' }}>
@@ -5184,32 +5184,33 @@ const FicheDetail = ({
                     width: '100%',
                     borderCollapse: 'collapse',
                     fontSize: '11px',
+                    color: '#000000',
                   }}>
                     <thead>
-                      <tr style={{ background: '#f3f4f6' }}>
-                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Date demande</th>
-                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Heure RDV avant</th>
-                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Nouvelle heure</th>
-                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>État</th>
+                      <tr style={{ background: '#f3f4f6', color: '#000000' }}>
+                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#000000' }}>Date demande</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#000000' }}>Heure RDV avant</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#000000' }}>Nouvelle heure</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#000000' }}>État</th>
                       </tr>
                     </thead>
                     <tbody>
                       {decalageRdvHistorique.map((decalage) => (
-                        <tr key={decalage.id}>
-                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                        <tr key={decalage.id} style={{ color: '#000000' }}>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#000000' }}>
                             {decalage.date_creation
                               ? new Date(decalage.date_creation).toLocaleString('fr-FR')
                               : '—'}
                           </td>
-                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', fontWeight: 600 }}>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', fontWeight: 600, color: '#000000' }}>
                             {formatRdvDateTime(decalage.date_prevu)}
                           </td>
-                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#000000' }}>
                             {decalage.date_nouvelle
                               ? formatRdvDateTime(decalage.date_nouvelle)
                               : '—'}
                           </td>
-                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#000000' }}>
                             {decalage.etat_dec || '—'}
                           </td>
                         </tr>

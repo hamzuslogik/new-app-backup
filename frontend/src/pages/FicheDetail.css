@@ -3311,3 +3311,11 @@
   color: #6b7280;
 }
 
+.decalage-rdv-historique,
+.decalage-rdv-historique h3,
+.decalage-rdv-historique-table,
+.decalage-rdv-historique-table th,
+.decalage-rdv-historique-table td {
+  color: #000000;
+}
+
