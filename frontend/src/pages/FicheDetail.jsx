@@ -1216,6 +1216,26 @@ const FicheDetail = ({
 
   const commercialCanCreateDecalage = !commercialAlreadyCreatedDecalage;
 
+  const heureRdvAvantDecalage = useMemo(() => {
+    if (!Array.isArray(decalagesData) || decalagesData.length === 0) return null;
+    const currentNorm = String(ficheData?.date_rdv_time || '').trim();
+    if (!currentNorm) return null;
+
+    const candidats = decalagesData
+      .filter((d) => {
+        if (!d.date_prevu) return false;
+        if (Number(d.id_etat) === ID_ETAT_DECALAGE_EN_ATTENTE) return false;
+        return String(d.date_prevu).trim() !== currentNorm;
+      })
+      .sort((a, b) => {
+        const ta = a.date_creation ? new Date(a.date_creation).getTime() : 0;
+        const tb = b.date_creation ? new Date(b.date_creation).getTime() : 0;
+        return tb - ta;
+      });
+
+    return candidats[0]?.date_prevu ?? null;
+  }, [decalagesData, ficheData?.date_rdv_time]);
+
   const decalageRdvHistorique = useMemo(() => {
     if (!Array.isArray(decalagesData)) return [];
     return [...decalagesData]
@@ -4030,6 +4050,12 @@ const FicheDetail = ({
                   } else if (!etatData.from_compte_rendu && etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire confirmateur', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
+                  if (etatData.heure_rdv_avant_decalage) {
+                    items.push({
+                      label: 'Heure RDV avant',
+                      value: formatRdvDateTime(etatData.heure_rdv_avant_decalage),
+                    });
+                  }
                   if (etatData.date_rdv_time) items.push({ label: 'Date RDV', value: formatRdvDateTime(etatData.date_rdv_time) });
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
                   // Champs conf_ (affichés uniquement si non vides)
@@ -4155,6 +4181,7 @@ const FicheDetail = ({
                 conf_zones_ombres: fiche.conf_zones_ombres ?? fiche.zones_ombres ?? null,
                 conf_site_classe: fiche.conf_site_classe ?? fiche.site_classe ?? null,
                 histo_date_rdv_time: currentHistoDateRappelTime,
+                heure_rdv_avant_decalage: heureRdvAvantDecalage,
                 date_rdv_time: currentDateRappelTime || null,
                 date_appel_time: currentDateAppelTime || null,
                 date_sign_time: fiche.date_sign_time || null,
