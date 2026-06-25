@@ -7147,8 +7147,54 @@ router.get('/:id/modifica', authenticate, hashToIdMiddleware, async (req, res) =
   }
 });
 
-// Valider/Dévalider une fiche confirmée
-router.post('/:id/valider', authenticate, hashToIdMiddleware, checkPermissionCode('fiche_validate'), triggerWorkflowOnRdvValidated, async (req, res) => {
+// Valider/Dévalider une fiche confirmée (confirmateurs ou commercial assigné)
+const checkValiderFicheAccess = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Non authentifié' });
+    }
+
+    const canValidate = await hasPermission(req.user.fonction, 'fiche_validate');
+    if (canValidate) return next();
+
+    if (Number(req.user.fonction) !== 5) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé. Permission requise: fiche_validate',
+      });
+    }
+
+    const ficheId = parseInt(req.params.id, 10);
+    if (!ficheId) {
+      return res.status(400).json({ success: false, message: 'ID fiche invalide' });
+    }
+
+    const fiche = await queryOne(
+      'SELECT id_commercial, id_commercial_2 FROM fiches WHERE id = ?',
+      [ficheId]
+    );
+    if (!fiche) {
+      return res.status(404).json({ success: false, message: 'Fiche non trouvée' });
+    }
+
+    const userId = Number(req.user.id);
+    const isAssigned =
+      Number(fiche.id_commercial) === userId || Number(fiche.id_commercial_2) === userId;
+    if (!isAssigned) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé : fiche non assignée à ce commercial',
+      });
+    }
+
+    return next();
+  } catch (error) {
+    console.error('checkValiderFicheAccess:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+router.post('/:id/valider', authenticate, hashToIdMiddleware, checkValiderFicheAccess, triggerWorkflowOnRdvValidated, async (req, res) => {
   try {
     const { id } = req.params;
     const {

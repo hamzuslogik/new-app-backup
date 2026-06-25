@@ -3266,3 +3266,48 @@
   }
 }
 
+.commercial-validation-rdv-select {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-top: none;
+  background: #f9f9f9;
+}
+
+.commercial-validation-rdv-select label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.commercial-validation-rdv-select-input {
+  width: 100%;
+  max-width: 360px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+}
+
+.commercial-validation-rdv-select-input:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.commercial-validation-rdv-select-input:focus {
+  outline: none;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}
+
+.commercial-validation-rdv-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
