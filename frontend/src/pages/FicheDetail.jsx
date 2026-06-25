@@ -1388,11 +1388,6 @@ const FicheDetail = ({
       return;
     }
 
-    if (!decalageFormData.message.trim()) {
-      alert('Veuillez saisir un message pour le décalage');
-      return;
-    }
-
     // Déterminer le destinataire selon la fonction
     let destination = null;
     
@@ -1450,7 +1445,7 @@ const FicheDetail = ({
     decalageMutation.mutate({
       id_fiche: idFicheNum,
       destination: parseInt(destination, 10),
-      message: decalageFormData.message.trim(),
+      message: decalageFormData.message.trim() || '',
       date_prevu: dateRdvOriginale, // Date RDV originale
       date_nouvelle: dateNouvelle    // Nouvelle date après décalage
     });

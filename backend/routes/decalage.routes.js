@@ -194,16 +194,18 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
       user_fonction: req.user.fonction
     });
 
-    if (!id_fiche || !destination || !message || !date_prevu) {
+    const messageNormalized =
+      message != null && String(message).trim() !== '' ? String(message).trim() : '';
+
+    if (!id_fiche || !destination || !date_prevu) {
       console.error('Données manquantes:', {
         id_fiche: !!id_fiche,
         destination: !!destination,
-        message: !!message,
         date_prevu: !!date_prevu
       });
       return res.status(400).json({
         success: false,
-        message: 'id_fiche, destination, message et date_prevu sont requis'
+        message: 'id_fiche, destination et date_prevu sont requis'
       });
     }
 
@@ -327,7 +329,7 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
       `INSERT INTO decalages 
       (id_fiche, date_creation, id_etat, message, expediteur, destination, date_prevu, date_nouvelle, modifie_le)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [idFicheNum, now, id_etat, message, req.user.id, destination, dateRdvOriginale, dateNouvelle, now]
+      [idFicheNum, now, id_etat, messageNormalized, req.user.id, destination, dateRdvOriginale, dateNouvelle, now]
     );
 
     // Enregistrer dans l'historique des modifications
@@ -364,14 +366,14 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
           await query(
             `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, \`${dateCol}\`)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [idFicheNum, req.user.id, 'Creation Decalage', '', message, now]
+            [idFicheNum, req.user.id, 'Creation Decalage', '', messageNormalized, now]
           );
         } else if (hasOldStructure) {
           // Utiliser l'ancienne structure
           await query(
             `INSERT INTO modifica (id_fiche, id_user, champ, last_val, val, \`${dateCol}\`)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [idFicheNum, req.user.id, 'Creation Decalage', '', message, now]
+            [idFicheNum, req.user.id, 'Creation Decalage', '', messageNormalized, now]
           );
         }
       }
@@ -388,7 +390,7 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
       data: { id: result.insertId }
     });
     const decalageMessage =
-      message != null && String(message).trim() !== '' ? String(message).trim() : null;
+      messageNormalized !== '' ? messageNormalized : null;
     const { archive: _a, ko: _k, active: _ac, ...ficheWorkflowPayload } = fiche || {};
     executeWorkflow('decalage_created', {
       fiche: fiche ? ficheWorkflowPayload : null,
