@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
-import { FaCalendarAlt, FaUser, FaFileAlt, FaMapMarkerAlt, FaSearch, FaChevronDown, FaChevronUp, FaExpand, FaCompress } from 'react-icons/fa';
+import { FaCalendarAlt, FaUser, FaFileAlt, FaMapMarkerAlt, FaSearch, FaChevronDown, FaChevronUp, FaExpand, FaCompress, FaCheck } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailModal from '../components/FicheDetailModal';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
@@ -1021,7 +1021,7 @@ const PlanningCommercial = () => {
                     <th>Produit</th>
                     <th>État</th>
                     <th>Compte rendu</th>
-                    <th>Centre</th>
+                    {isCommercial ? <th>Validé</th> : <th>Centre</th>}
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -1122,7 +1122,23 @@ const PlanningCommercial = () => {
                             </span>
                           )}
                         </td>
-                        <td data-label="Centre:">{fiche.centre_titre || '-'}</td>
+                        {isCommercial ? (
+                          <td data-label="Validé:" style={{ textAlign: 'center' }}>
+                            {fiche.valider > 0 ? (
+                              <FaCheck
+                                style={{
+                                  color: '#28a745',
+                                  fontSize: '15.3px',
+                                }}
+                                title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
+                              />
+                            ) : (
+                              <span style={{ color: '#ccc' }}>-</span>
+                            )}
+                          </td>
+                        ) : (
+                          <td data-label="Centre:">{fiche.centre_titre || '-'}</td>
+                        )}
                         <td data-label="">
                           <button
                             onClick={() => openPlanningFicheDetail({ hash: fiche.hash })}
@@ -1190,6 +1206,7 @@ const PlanningCommercial = () => {
             focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats,
             initialTab: ficheDetailModal.initialTab || undefined,
             pinchZoom: isPlanningTouchMobile,
+            allowBackdropClose: true,
           }}
         />
       )}

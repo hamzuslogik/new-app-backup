@@ -4454,8 +4454,8 @@ html.viewport-zoomed .fiche-detail-modal-overlay--viewport-sync {
   pointer-events: auto !important;
 }
 
-/* Autres pages mobile : modal plein écran */
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open:not(.dashboard-page) .fiche-detail-modal-overlay {
+/* Autres pages mobile : modal plein écran (sauf planning commercial en vue tableau) */
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open:not(.dashboard-page):not(.planning-commercial-page--table-desktop-view) .fiche-detail-modal-overlay {
   position: fixed !important;
   inset: 0 !important;
   z-index: 3000 !important;
@@ -4470,7 +4470,7 @@ html:not([data-desktop-viewport]) body.fiche-detail-modal-open:not(.dashboard-pa
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
-html:not([data-desktop-viewport]) body.fiche-detail-modal-open:not(.dashboard-page) .fiche-detail-modal-content {
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open:not(.dashboard-page):not(.planning-commercial-page--table-desktop-view) .fiche-detail-modal-content {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
