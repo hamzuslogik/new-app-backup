@@ -15,6 +15,12 @@ import { differenceInMinutes, differenceInHours, differenceInDays, differenceInM
 import { fr as frLocale } from 'date-fns/locale';
 import './FicheDetail.css';
 import FicheCompletudeSection from '../components/FicheCompletudeSection';
+import {
+  resolveSignerProduitKind,
+  SignerPacSelect,
+  SignerProduitPacPvFields,
+  SignerBonusAnnonceSelect,
+} from '../components/SignerProduitFormFields';
 
 /** Mode de chauffage (VARCHAR en base) : affichage tel quel. */
 function modeChauffageAffiche(confProp, modeProp) {
@@ -5866,18 +5872,13 @@ const FicheDetail = ({
                     </div>
                   )}
 
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_pac_signer">Pac :</label>
-                    <select
-                      id="compte_rendu_etat_ph3_pac_signer"
-                      className="form-control"
+                  {resolveSignerProduitKind(etatFormData.produit, produits) === 'pac' && (
+                    <SignerPacSelect
+                      idPrefix="compte_rendu_etat"
                       value={etatFormData.ph3_pac}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_pac: e.target.value})}
-                    >
-                      <option value="reau">R/EAU</option>
-                      <option value="rr">R/R</option>
-                    </select>
-                  </div>
+                      onChange={(e) => setEtatFormData({ ...etatFormData, ph3_pac: e.target.value })}
+                    />
+                  )}
 
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_ph3_attente_signer">Financement :</label>
@@ -5894,85 +5895,12 @@ const FicheDetail = ({
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_rr_model_signer">Marque Pac :</label>
-                    <input
-                      type="text"
-                      id="compte_rendu_etat_ph3_rr_model_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_rr_model}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_rr_model: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_puissance_signer">Puissance :</label>
-                    <select
-                      id="compte_rendu_etat_ph3_puissance_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_puissance}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_puissance: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="11kw">11kw</option>
-                      <option value="14kw">14kw</option>
-                      <option value="16kw">16kw</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_ballon_signer">Ballon :</label>
-                    <select
-                      id="compte_rendu_etat_ph3_ballon_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_ballon}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_ballon: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="Avec Ballon">Avec Ballon</option>
-                      <option value="Sans Ballon">Sans Ballon</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_marque_ballon_signer">Marque ballon :</label>
-                    <input
-                      type="text"
-                      id="compte_rendu_etat_ph3_marque_ballon_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_marque_ballon}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_marque_ballon: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_alimentation_signer">Alimentation :</label>
-                    <select
-                      id="compte_rendu_etat_ph3_alimentation_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_alimentation}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_alimentation: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="mono">mono</option>
-                      <option value="triphase">triphase</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_type_signer">Type :</label>
-                    <select
-                      id="compte_rendu_etat_ph3_type_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_type}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_type: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="Bizonne">Bizonne</option>
-                      <option value="Basse">Basse</option>
-                      <option value="Haute">Haute</option>
-                    </select>
-                  </div>
+                  <SignerProduitPacPvFields
+                    idPrefix="compte_rendu_etat"
+                    kind={resolveSignerProduitKind(etatFormData.produit, produits)}
+                    etatFormData={etatFormData}
+                    setEtatFormData={setEtatFormData}
+                  />
 
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_ph3_prix_signer">Prix En € :</label>
@@ -6046,20 +5974,12 @@ const FicheDetail = ({
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_etat_ph3_bonus_30_signer">Bonus annoncé :</label>
-                    <select
-                      id="compte_rendu_etat_ph3_bonus_30_signer"
-                      className="form-control"
-                      value={etatFormData.ph3_bonus_30}
-                      onChange={(e) => setEtatFormData({...etatFormData, ph3_bonus_30: e.target.value})}
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="15">15</option>
-                      <option value="30">30</option>
-                      <option value="SANS">SANS</option>
-                    </select>
-                  </div>
+                  <SignerBonusAnnonceSelect
+                    idPrefix="compte_rendu_etat"
+                    kind={resolveSignerProduitKind(etatFormData.produit, produits)}
+                    value={etatFormData.ph3_bonus_30}
+                    onChange={(e) => setEtatFormData({ ...etatFormData, ph3_bonus_30: e.target.value })}
+                  />
 
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_ph3_mensualite_signer">Mensualité du Crédit :</label>
@@ -7160,18 +7080,13 @@ const FicheDetail = ({
                   />
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_pac_signer">Pac :</label>
-                  <select
-                    id="etat_ph3_pac_signer"
-                    className="form-control"
+                {resolveSignerProduitKind(etatFormData.produit, produits) === 'pac' && (
+                  <SignerPacSelect
+                    idPrefix="etat"
                     value={etatFormData.ph3_pac}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_pac: e.target.value})}
-                  >
-                    <option value="reau">R/EAU</option>
-                    <option value="rr">R/R</option>
-                  </select>
-                </div>
+                    onChange={(e) => setEtatFormData({ ...etatFormData, ph3_pac: e.target.value })}
+                  />
+                )}
 
                 <div className="form-group">
                   <label htmlFor="etat_ph3_attente_signer">Financement :</label>
@@ -7188,85 +7103,12 @@ const FicheDetail = ({
                   </select>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_rr_model_signer">Marque Pac :</label>
-                  <input
-                    type="text"
-                    id="etat_ph3_rr_model_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_rr_model}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_rr_model: e.target.value})}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_puissance_signer">Puissance :</label>
-                  <select
-                    id="etat_ph3_puissance_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_puissance}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_puissance: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="11kw">11kw</option>
-                    <option value="14kw">14kw</option>
-                    <option value="16kw">16kw</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_ballon_signer">Ballon :</label>
-                  <select
-                    id="etat_ph3_ballon_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_ballon}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_ballon: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="Avec Ballon">Avec Ballon</option>
-                    <option value="Sans Ballon">Sans Ballon</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_marque_ballon_signer">Marque ballon :</label>
-                  <input
-                    type="text"
-                    id="etat_ph3_marque_ballon_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_marque_ballon}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_marque_ballon: e.target.value})}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_alimentation_signer">Alimentation :</label>
-                  <select
-                    id="etat_ph3_alimentation_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_alimentation}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_alimentation: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="mono">mono</option>
-                    <option value="triphase">triphase</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_type_signer">Type :</label>
-                  <select
-                    id="etat_ph3_type_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_type}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_type: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="Bizonne">Bizonne</option>
-                    <option value="Basse">Basse</option>
-                    <option value="Haute">Haute</option>
-                  </select>
-                </div>
+                <SignerProduitPacPvFields
+                  idPrefix="etat"
+                  kind={resolveSignerProduitKind(etatFormData.produit, produits)}
+                  etatFormData={etatFormData}
+                  setEtatFormData={setEtatFormData}
+                />
 
                 <div className="form-group">
                   <label htmlFor="etat_ph3_prix_signer">Prix En € :</label>
@@ -7340,20 +7182,12 @@ const FicheDetail = ({
                   />
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="etat_ph3_bonus_30_signer">Bonus annoncé :</label>
-                  <select
-                    id="etat_ph3_bonus_30_signer"
-                    className="form-control"
-                    value={etatFormData.ph3_bonus_30}
-                    onChange={(e) => setEtatFormData({...etatFormData, ph3_bonus_30: e.target.value})}
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="15">15</option>
-                    <option value="30">30</option>
-                    <option value="SANS">SANS</option>
-                  </select>
-                </div>
+                <SignerBonusAnnonceSelect
+                  idPrefix="etat"
+                  kind={resolveSignerProduitKind(etatFormData.produit, produits)}
+                  value={etatFormData.ph3_bonus_30}
+                  onChange={(e) => setEtatFormData({ ...etatFormData, ph3_bonus_30: e.target.value })}
+                />
 
                 <div className="form-group">
                   <label htmlFor="etat_ph3_mensualite_signer">Mensualité du Crédit :</label>

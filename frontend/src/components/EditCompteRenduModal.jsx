@@ -5,6 +5,12 @@ import api from '../config/api';
 import { FaTimes } from 'react-icons/fa';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { isCompteRenduSignerEtat } from '../utils/compteRenduSigner';
+import {
+  resolveSignerProduitKind,
+  SignerPacSelect,
+  SignerProduitPacPvFields,
+  SignerBonusAnnonceSelect,
+} from './SignerProduitFormFields';
 import './EditCompteRenduModal.css';
 
 const getLocalTodayDate = () => {
@@ -411,17 +417,27 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                   />
                 </div>
                 <div className="form-group">
-                  <label>PAC :</label>
+                  <label>Signature pour :</label>
                   <select
-                    value={formData.ph3_pac}
-                    onChange={(e) => setFormData({ ...formData, ph3_pac: e.target.value })}
+                    value={formData.produit}
+                    onChange={(e) => setFormData({ ...formData, produit: e.target.value })}
                     disabled={readOnly}
                   >
                     <option value="">Sélectionner</option>
-                    <option value="reau">R/EAU</option>
-                    <option value="rr">R/R</option>
+                    {(produitsData || []).map(prod => (
+                      <option key={prod.id} value={prod.id}>{prod.nom}</option>
+                    ))}
                   </select>
                 </div>
+                {resolveSignerProduitKind(formData.produit, produitsData) === 'pac' && (
+                  <SignerPacSelect
+                    idPrefix="edit_cr"
+                    value={formData.ph3_pac}
+                    onChange={(e) => setFormData({ ...formData, ph3_pac: e.target.value })}
+                    disabled={readOnly}
+                    useFormControlClass={false}
+                  />
+                )}
                 <div className="form-group">
                   <label>Financement :</label>
                   <input
@@ -431,6 +447,14 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                     disabled={readOnly}
                   />
                 </div>
+                <SignerProduitPacPvFields
+                  idPrefix="edit_cr"
+                  kind={resolveSignerProduitKind(formData.produit, produitsData)}
+                  etatFormData={formData}
+                  setEtatFormData={setFormData}
+                  disabled={readOnly}
+                  useFormControlClass={false}
+                />
                 <div className="form-group">
                   <label>Prix :</label>
                   <input
@@ -456,24 +480,6 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                     type="text"
                     value={formData.credit_autre}
                     onChange={(e) => setFormData({ ...formData, credit_autre: e.target.value })}
-                    disabled={readOnly}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Puissance :</label>
-                  <input
-                    type="text"
-                    value={formData.ph3_puissance}
-                    onChange={(e) => setFormData({ ...formData, ph3_puissance: e.target.value })}
-                    disabled={readOnly}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Ballon :</label>
-                  <input
-                    type="text"
-                    value={formData.ph3_ballon}
-                    onChange={(e) => setFormData({ ...formData, ph3_ballon: e.target.value })}
                     disabled={readOnly}
                   />
                 </div>
@@ -510,19 +516,14 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                     disabled={readOnly}
                   />
                 </div>
-                <div className="form-group">
-                  <label>Bonus annoncé :</label>
-                  <select
-                    value={formData.ph3_bonus_30}
-                    onChange={(e) => setFormData({ ...formData, ph3_bonus_30: e.target.value })}
-                    disabled={readOnly}
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="15">15</option>
-                    <option value="30">30</option>
-                    <option value="SANS">SANS</option>
-                  </select>
-                </div>
+                <SignerBonusAnnonceSelect
+                  idPrefix="edit_cr"
+                  kind={resolveSignerProduitKind(formData.produit, produitsData)}
+                  value={formData.ph3_bonus_30}
+                  onChange={(e) => setFormData({ ...formData, ph3_bonus_30: e.target.value })}
+                  disabled={readOnly}
+                  useFormControlClass={false}
+                />
                 <div className="form-group">
                   <label>Mensualité du crédit :</label>
                   <input
@@ -541,41 +542,6 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                     onChange={(e) => setFormData({ ...formData, nbr_annee_finance: e.target.value })}
                     disabled={readOnly}
                   />
-                </div>
-                <div className="form-group">
-                  <label>Alimentation :</label>
-                  <input
-                    type="text"
-                    value={formData.ph3_alimentation}
-                    onChange={(e) => setFormData({ ...formData, ph3_alimentation: e.target.value })}
-                    disabled={readOnly}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Type :</label>
-                  <select
-                    value={formData.ph3_type}
-                    onChange={(e) => setFormData({ ...formData, ph3_type: e.target.value })}
-                    disabled={readOnly}
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="Bizonne">Bizonne</option>
-                    <option value="Basse">Basse</option>
-                    <option value="Haute">Haute</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Signature pour :</label>
-                  <select
-                    value={formData.produit}
-                    onChange={(e) => setFormData({ ...formData, produit: e.target.value })}
-                    disabled={readOnly}
-                  >
-                    <option value="">Sélectionner</option>
-                    {(produitsData || []).map(prod => (
-                      <option key={prod.id} value={prod.id}>{prod.nom}</option>
-                    ))}
-                  </select>
                 </div>
                 <div className="form-group">
                   <label>Date et heure signature :</label>
