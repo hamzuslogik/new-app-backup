@@ -4609,7 +4609,6 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
   width: var(--fiche-modal-width-pct, 88%) !important;
   max-width: var(--fiche-modal-width-pct, 88%) !important;
   max-height: var(--fiche-modal-height-pct, 82%) !important;
-  will-change: transform;
 }
 
 /* Contenu modal : zoom page Safari natif (pas de transform CSS) */

@@ -918,7 +918,6 @@ html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commerc
   width: var(--fiche-modal-width-pct, 88%) !important;
   max-width: var(--fiche-modal-width-pct, 88%) !important;
   max-height: var(--fiche-modal-height-pct, 82%) !important;
-  will-change: transform;
 }
 
 html:not([data-desktop-viewport]) body.planning-commercial-page.planning-commercial-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-close {
