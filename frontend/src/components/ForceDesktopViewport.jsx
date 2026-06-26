@@ -23,6 +23,9 @@ const ForceDesktopViewport = () => {
         pathname === '/rdv-vue' ||
         pathname === '/planning-hebdo-ios')
     ) {
+      if (pathname === '/planning-hebdo-ios') {
+        applyMobileNativeViewport();
+      }
       return undefined;
     }
     applyForceDesktopViewport();

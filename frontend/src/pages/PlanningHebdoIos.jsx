@@ -32,6 +32,7 @@ const PlanningHebdoIos = () => {
     document.documentElement.classList.add(MOBILE_NATIVE_CLASS);
     document.body.classList.add(MOBILE_NATIVE_CLASS);
     applyMobileNativeViewport();
+    window.dispatchEvent(new Event('viewport-layout-change'));
     closeSidebar();
 
     const id = requestAnimationFrame(() => {

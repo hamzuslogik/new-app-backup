@@ -85,3 +85,27 @@ body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll .planning-
 body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll .planning-hebdomadaire-table td {
   white-space: nowrap;
 }
+
+/* Sidebar mobile : hamburger visible, menu au-dessus du contenu */
+html.planning-hebdo-ios-page.planning-hebdo-ios-page--mobile-native:not([data-desktop-viewport]) .menu-toggle,
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--mobile-native:not([data-desktop-viewport]) .menu-toggle {
+  display: flex !important;
+}
+
+html.planning-hebdo-ios-page.planning-hebdo-ios-page--mobile-native:not([data-desktop-viewport]) .sidebar,
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--mobile-native:not([data-desktop-viewport]) .sidebar {
+  position: fixed !important;
+  z-index: 1002 !important;
+}
+
+html.planning-hebdo-ios-page.planning-hebdo-ios-page--mobile-native:not([data-desktop-viewport]) .sidebar-overlay,
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--mobile-native:not([data-desktop-viewport]) .sidebar-overlay {
+  display: block !important;
+  pointer-events: none;
+  z-index: 1001 !important;
+}
+
+html.planning-hebdo-ios-page.planning-hebdo-ios-page--mobile-native:not([data-desktop-viewport]) .sidebar-overlay.active.ready,
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--mobile-native:not([data-desktop-viewport]) .sidebar-overlay.active.ready {
+  pointer-events: auto !important;
+}
