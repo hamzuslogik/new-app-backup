@@ -4,7 +4,6 @@ import PlanningHebdomadaire from './PlanningHebdomadaire';
 import {
   applyForceDesktopViewport,
   applyMobileNativeViewport,
-  isTouchMobileDevice,
 } from '../utils/applyForceDesktopViewport';
 import './PlanningHebdoIos.css';
 
@@ -27,10 +26,12 @@ const PlanningHebdoIos = () => {
   }, []);
 
   useLayoutEffect(() => {
-    if (!isTouchMobileDevice()) return undefined;
-
     document.documentElement.classList.add(MOBILE_NATIVE_CLASS);
     document.body.classList.add(MOBILE_NATIVE_CLASS);
+
+    delete document.documentElement.dataset.desktopViewport;
+    if (document.body) delete document.body.dataset.desktopViewport;
+
     applyMobileNativeViewport();
     window.dispatchEvent(new Event('viewport-layout-change'));
     closeSidebar();
@@ -51,8 +52,6 @@ const PlanningHebdoIos = () => {
   }, [closeSidebar]);
 
   useLayoutEffect(() => {
-    if (!isTouchMobileDevice()) return undefined;
-
     document.documentElement.classList.add(EXTRANET_SCROLL_CLASS);
     document.body.classList.add(EXTRANET_SCROLL_CLASS);
 

@@ -16,16 +16,18 @@ const ForceDesktopViewport = () => {
       applyMobileNativeViewport();
       return undefined;
     }
+    if (pathname === '/planning-hebdo-ios') {
+      delete document.documentElement.dataset.desktopViewport;
+      if (document.body) delete document.body.dataset.desktopViewport;
+      applyMobileNativeViewport();
+      return undefined;
+    }
     if (
       isTouchMobileDevice() &&
       (pathname === '/dashboard' ||
         pathname === '/planning-commercial' ||
-        pathname === '/rdv-vue' ||
-        pathname === '/planning-hebdo-ios')
+        pathname === '/rdv-vue')
     ) {
-      if (pathname === '/planning-hebdo-ios') {
-        applyMobileNativeViewport();
-      }
       return undefined;
     }
     applyForceDesktopViewport();

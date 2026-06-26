@@ -28,12 +28,19 @@ export const SidebarProvider = ({ children }) => {
   );
   const [autoHideEnabled, setAutoHideEnabled] = useState(false);
   const userToggleRef = React.useRef(false);
-  const extranetActive = mobileExtranetActive || isMobileNativeExtranetPage();
+  const extranetActive =
+    mobileExtranetActive ||
+    isMobileNativeExtranetPage() ||
+    document.body?.classList.contains('planning-hebdo-ios-page');
   const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !extranetActive;
+  const resolvedIsMobile = extranetActive || isMobile;
+  const resolvedIsTablet = extranetActive ? false : isTablet;
 
   useEffect(() => {
     const syncExtranetLayout = () => {
-      const extranet = isMobileNativeExtranetPage();
+      const extranet =
+        isMobileNativeExtranetPage() ||
+        document.body?.classList.contains('planning-hebdo-ios-page');
       const wasExtranet = extranetActiveRef.current;
       extranetActiveRef.current = extranet;
       setMobileExtranetActive(extranet);
@@ -90,7 +97,13 @@ export const SidebarProvider = ({ children }) => {
   }, [autoHideEnabled, isDesktop]);
 
   const toggleSidebar = () => {
-    if (FORCE_DESKTOP_VIEWPORT && !isMobileNativeExtranetPage() && !mobileExtranetActive) {
+    const canToggleMobile =
+      !FORCE_DESKTOP_VIEWPORT ||
+      isMobileNativeExtranetPage() ||
+      mobileExtranetActive ||
+      document.body?.classList.contains('planning-hebdo-ios-page');
+
+    if (!canToggleMobile) {
       return;
     }
 
@@ -110,7 +123,13 @@ export const SidebarProvider = ({ children }) => {
   };
 
   const closeSidebar = () => {
-    if (FORCE_DESKTOP_VIEWPORT && !isMobileNativeExtranetPage() && !mobileExtranetActive) {
+    const canToggleMobile =
+      !FORCE_DESKTOP_VIEWPORT ||
+      isMobileNativeExtranetPage() ||
+      mobileExtranetActive ||
+      document.body?.classList.contains('planning-hebdo-ios-page');
+
+    if (!canToggleMobile) {
       return;
     }
     setSidebarCollapsed(true);
@@ -147,11 +166,11 @@ export const SidebarProvider = ({ children }) => {
         closeSidebar,
         openSidebar,
         setAutoHide,
-        isMobile,
-        isTablet,
+        isMobile: resolvedIsMobile,
+        isTablet: resolvedIsTablet,
         isDesktop,
         autoHideEnabled,
-        mobileExtranetActive,
+        mobileExtranetActive: extranetActive,
       }}
     >
       {children}

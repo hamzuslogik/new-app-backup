@@ -23,13 +23,21 @@ function clearDocumentLayoutStyles() {
 export { isTouchMobileDevice };
 
 export function isMobileNativeExtranetPage() {
+  const htmlForced = document.documentElement.dataset.desktopViewport;
+  const bodyForced = document.body?.dataset.desktopViewport;
+  if (htmlForced || bodyForced) return false;
+
+  if (document.body?.classList.contains('planning-hebdo-ios-page')) {
+    return true;
+  }
+
+  if (!isTouchMobileDevice()) return false;
+
   return (
-    isTouchMobileDevice() &&
-    (document.body?.classList.contains('dashboard-page--mobile-native') ||
-      document.body?.classList.contains('planning-commercial-page--mobile-native') ||
-      document.body?.classList.contains('rdv-vue-page--mobile-native') ||
-      document.body?.classList.contains('planning-hebdo-ios-page--mobile-native')) &&
-    !document.documentElement.dataset.desktopViewport
+    document.body?.classList.contains('dashboard-page--mobile-native') ||
+    document.body?.classList.contains('planning-commercial-page--mobile-native') ||
+    document.body?.classList.contains('rdv-vue-page--mobile-native') ||
+    document.body?.classList.contains('planning-hebdo-ios-page--mobile-native')
   );
 }
 
