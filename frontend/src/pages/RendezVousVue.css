@@ -215,6 +215,7 @@ body.rdv-vue-page .rdv-vue .fiches-table-container {
 
 .rdv-vue-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
   border-bottom: 2px solid #e0e0e0;
@@ -265,6 +266,15 @@ body.rdv-vue-page .rdv-vue .fiches-table-container {
   background: #fff;
   border-radius: 8px;
   border: 1px solid #e0e0e0;
+}
+
+.rdv-vue-filters .filter-date-readonly {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 6px 12px;
+  font-weight: 600;
+  color: #333;
 }
 
 .rdv-vue-filters .filter-group {

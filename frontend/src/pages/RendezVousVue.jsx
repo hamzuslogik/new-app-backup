@@ -6,6 +6,8 @@ import {
   FaUserCheck,
   FaUserSlash,
   FaChartLine,
+  FaHistory,
+  FaCalendarPlus,
   FaSearch,
   FaSort,
   FaSortUp,
@@ -37,19 +39,47 @@ const RDV_VUE_MOBILE_NATIVE_CLASS = 'rdv-vue-page--mobile-native';
 const RDV_VUE_EXTRANET_SCROLL_CLASS = 'rdv-vue-page--extranet-scroll';
 const RDV_VUE_OPEN_FICHE_PARAM = 'openFiche';
 
-const VALID_TABS = ['jour', 'affilie', 'non_affilie', 'production_rdv'];
+const VALID_TABS = [
+  'jour',
+  'affilie',
+  'non_affilie',
+  'production_rdv',
+  'confirmer_veille',
+  'confirmer_lendemain',
+];
 
 const TAB_DEFS = [
   { id: 'jour', Icon: FaCalendarDay, label: 'Rendez-vous du jour' },
   { id: 'affilie', Icon: FaUserCheck, label: 'Rendez-vous affiliés' },
   { id: 'non_affilie', Icon: FaUserSlash, label: 'Rendez-vous non affiliés' },
   { id: 'production_rdv', Icon: FaChartLine, label: 'Production RDV' },
+  { id: 'confirmer_veille', Icon: FaHistory, label: 'Confirmer de la veille' },
+  { id: 'confirmer_lendemain', Icon: FaCalendarPlus, label: 'Confirmer de lendemain' },
 ];
 
 const getLocalDateStr = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
+
+const addDaysToDateStr = (dateStr, days) => {
+  const d = new Date(`${dateStr}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const getYesterdayStr = () => addDaysToDateStr(getLocalDateStr(), -1);
+
+/** RDV du lendemain ; vendredi → lundi (comme planning commercial). */
+const getTomorrowRdvStr = () => {
+  const today = new Date();
+  if (today.getDay() === 5) {
+    return addDaysToDateStr(getLocalDateStr(), 3);
+  }
+  return addDaysToDateStr(getLocalDateStr(), 1);
+};
+
+const RELATIVE_DATE_TABS = new Set(['confirmer_veille', 'confirmer_lendemain']);
 
 function getFicheModalStateFromUrl() {
   if (typeof window === 'undefined') return null;
@@ -262,14 +292,30 @@ const RendezVousVue = () => {
     autoRefreshOptions
   );
 
+  const dateVeille = getYesterdayStr();
+  const dateLendemain = getTomorrowRdvStr();
+
+  const { data: dataConfirmerVeille, isLoading: loadingConfirmerVeille } = useQuery(
+    ['rdv-vue', 'production_rdv', dateVeille],
+    () => fetchRdvVue('production_rdv', dateVeille),
+    autoRefreshOptions
+  );
+  const { data: dataConfirmerLendemain, isLoading: loadingConfirmerLendemain } = useQuery(
+    ['rdv-vue', 'jour', dateLendemain],
+    () => fetchRdvVue('jour', dateLendemain),
+    autoRefreshOptions
+  );
+
   const tabCounts = useMemo(
     () => ({
       jour: (dataJour || []).length,
       affilie: (dataAffilie || []).length,
       non_affilie: (dataNonAffilie || []).length,
       production_rdv: (dataProductionRdv || []).length,
+      confirmer_veille: (dataConfirmerVeille || []).length,
+      confirmer_lendemain: (dataConfirmerLendemain || []).length,
     }),
-    [dataJour, dataAffilie, dataNonAffilie, dataProductionRdv]
+    [dataJour, dataAffilie, dataNonAffilie, dataProductionRdv, dataConfirmerVeille, dataConfirmerLendemain]
   );
 
   const list =
@@ -279,12 +325,28 @@ const RendezVousVue = () => {
         ? dataAffilie || []
         : activeTab === 'non_affilie'
           ? dataNonAffilie || []
-          : dataProductionRdv || [];
+          : activeTab === 'production_rdv'
+            ? dataProductionRdv || []
+            : activeTab === 'confirmer_veille'
+              ? dataConfirmerVeille || []
+              : activeTab === 'confirmer_lendemain'
+                ? dataConfirmerLendemain || []
+                : [];
   const isLoading =
     (activeTab === 'jour' && loadingJour) ||
     (activeTab === 'affilie' && loadingAffilie) ||
     (activeTab === 'non_affilie' && loadingNonAffilie) ||
-    (activeTab === 'production_rdv' && loadingProductionRdv);
+    (activeTab === 'production_rdv' && loadingProductionRdv) ||
+    (activeTab === 'confirmer_veille' && loadingConfirmerVeille) ||
+    (activeTab === 'confirmer_lendemain' && loadingConfirmerLendemain);
+
+  const showDatePicker = !RELATIVE_DATE_TABS.has(activeTab);
+  const relativeDateLabel =
+    activeTab === 'confirmer_veille'
+      ? dateVeille
+      : activeTab === 'confirmer_lendemain'
+        ? dateLendemain
+        : '';
 
   const { data: usersData } = useQuery('users-rdv-vue', async () => {
     const res = await api.get('/management/utilisateurs');
@@ -472,13 +534,17 @@ const RendezVousVue = () => {
           </div>
           <div className="rdv-vue-filters rdv-vue-filters--mobile">
             <div className="filter-group">
-              <label>Date (journée)</label>
-              <input
-                type="date"
-                value={dateJour}
-                onChange={(e) => setDateJour(e.target.value)}
-                className="form-control"
-              />
+              <label>{showDatePicker ? 'Date (journée)' : 'Date'}</label>
+              {showDatePicker ? (
+                <input
+                  type="date"
+                  value={dateJour}
+                  onChange={(e) => setDateJour(e.target.value)}
+                  className="form-control"
+                />
+              ) : (
+                <span className="filter-date-readonly">{relativeDateLabel}</span>
+              )}
             </div>
           </div>
         </div>
@@ -499,13 +565,17 @@ const RendezVousVue = () => {
 
           <div className="rdv-vue-filters">
             <div className="filter-group">
-              <label>Date (journée)</label>
-              <input
-                type="date"
-                value={dateJour}
-                onChange={(e) => setDateJour(e.target.value)}
-                className="form-control"
-              />
+              <label>{showDatePicker ? 'Date (journée)' : 'Date'}</label>
+              {showDatePicker ? (
+                <input
+                  type="date"
+                  value={dateJour}
+                  onChange={(e) => setDateJour(e.target.value)}
+                  className="form-control"
+                />
+              ) : (
+                <span className="filter-date-readonly">{relativeDateLabel}</span>
+              )}
             </div>
           </div>
         </>
