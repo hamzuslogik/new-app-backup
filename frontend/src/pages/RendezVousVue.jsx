@@ -97,7 +97,7 @@ const RendezVousVue = () => {
   const { closeSidebar } = useSidebar();
   const isRdvVueTouchMobile = isTouchMobileDevice();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.body.classList.add(RDV_VUE_PAGE_CLASS);
     document.documentElement.classList.add(RDV_VUE_PAGE_CLASS);
     return () => {
