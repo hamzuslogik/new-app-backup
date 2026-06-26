@@ -737,17 +737,6 @@ const FicheDetail = ({
   const [editingCompteRendu, setEditingCompteRendu] = useState(null);
   const [earlyCrVerified, setEarlyCrVerified] = useState(false);
 
-  const needsEarlyCrVerification = useMemo(() => {
-    if (Number(user?.fonction) !== 5) return false;
-    if (!ficheData?.date_rdv_time) return false;
-    if (!isBeforeRdvDateTime(ficheData.date_rdv_time)) return false;
-    return Boolean(compteRenduOption || editingCompteRendu);
-  }, [user?.fonction, ficheData?.date_rdv_time, compteRenduOption, editingCompteRendu]);
-
-  useEffect(() => {
-    setEarlyCrVerified(false);
-  }, [compteRenduOption, editingCompteRendu, ficheData?.date_rdv_time]);
-
   // État pour l'onglet Affectation (un seul commercial)
   const [affectationCommercial, setAffectationCommercial] = useState('');
   const [affectationSaving, setAffectationSaving] = useState(false);
@@ -1042,6 +1031,17 @@ const FicheDetail = ({
       refetchOnReconnect: isModal // Rafraîchir quand la connexion est rétablie (modal uniquement)
     }
   );
+
+  const needsEarlyCrVerification = useMemo(() => {
+    if (Number(user?.fonction) !== 5) return false;
+    if (!ficheData?.date_rdv_time) return false;
+    if (!isBeforeRdvDateTime(ficheData.date_rdv_time)) return false;
+    return Boolean(compteRenduOption || editingCompteRendu);
+  }, [user?.fonction, ficheData?.date_rdv_time, compteRenduOption, editingCompteRendu]);
+
+  useEffect(() => {
+    setEarlyCrVerified(false);
+  }, [compteRenduOption, editingCompteRendu, ficheData?.date_rdv_time]);
 
   const showCompletudeSection =
     isQualiteConfirmation ||
