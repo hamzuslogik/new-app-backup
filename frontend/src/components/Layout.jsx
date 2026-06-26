@@ -6,12 +6,15 @@ import GlobalKeyboardShortcuts from './common/GlobalKeyboardShortcuts';
 import { FicheDetailModalProvider } from '../contexts/FicheDetailModalContext';
 import { SidebarProvider, useSidebar } from '../contexts/SidebarContext';
 import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
+import { isMobileNativeExtranetPage } from '../utils/applyForceDesktopViewport';
 import api from '../config/api';
 import './Layout.css';
 
 const LayoutContent = () => {
   const { sidebarCollapsed, isMobile, isTablet, closeSidebar, mobileExtranetActive } = useSidebar();
-  const useMobileSidebar = !FORCE_DESKTOP_VIEWPORT || mobileExtranetActive;
+  const extranetMobile = mobileExtranetActive || isMobileNativeExtranetPage();
+  const useMobileSidebar = !FORCE_DESKTOP_VIEWPORT || extranetMobile;
+  const mobileLayout = extranetMobile || isMobile || isTablet;
   const location = useLocation();
   const overlayRef = React.useRef(null);
   const [overlayReady, setOverlayReady] = React.useState(false);
@@ -49,7 +52,7 @@ const LayoutContent = () => {
     // Ne fermer que si le pathname a réellement changé et qu'on est sur mobile/tablet
     if (
       useMobileSidebar &&
-      (isMobile || isTablet) &&
+      mobileLayout &&
       location.pathname !== prevPathnameRef.current
     ) {
       closeSidebar();
@@ -61,7 +64,7 @@ const LayoutContent = () => {
 
   // Délai avant que l'overlay ne devienne cliquable pour éviter qu'il capture le clic d'ouverture
   React.useEffect(() => {
-    if (useMobileSidebar && !sidebarCollapsed && (isMobile || isTablet)) {
+    if (useMobileSidebar && !sidebarCollapsed && mobileLayout) {
       // Réinitialiser l'état
       setOverlayReady(false);
       // Activer l'overlay après un court délai
@@ -72,7 +75,7 @@ const LayoutContent = () => {
     } else {
       setOverlayReady(false);
     }
-  }, [sidebarCollapsed, isMobile, isTablet]);
+  }, [sidebarCollapsed, mobileLayout, useMobileSidebar]);
 
   const handleOverlayClick = (e) => {
     // Empêcher le clic si l'overlay n'est pas prêt
@@ -88,7 +91,7 @@ const LayoutContent = () => {
     <FicheDetailModalProvider>
       <div className="app">
         <GlobalKeyboardShortcuts />
-        {useMobileSidebar && !sidebarCollapsed && (isMobile || isTablet) && (
+        {useMobileSidebar && !sidebarCollapsed && mobileLayout && (
           <div 
             ref={overlayRef}
             className={`sidebar-overlay active ${overlayReady ? 'ready' : ''}`} 

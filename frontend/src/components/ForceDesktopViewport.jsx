@@ -21,7 +21,8 @@ const ForceDesktopViewport = () => {
       (pathname === '/dashboard' ||
         pathname === '/planning-commercial' ||
         pathname === '/rdv-vue' ||
-        pathname === '/planning-hebdomadaire')
+        pathname === '/planning-hebdomadaire' ||
+        pathname === '/planning-hebdo-ios')
     ) {
       return undefined;
     }

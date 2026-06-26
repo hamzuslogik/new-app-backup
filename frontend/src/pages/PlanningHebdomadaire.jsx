@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { useSidebar } from '../contexts/SidebarContext';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../config/api';
 import { FaChevronLeft, FaChevronRight, FaTrash } from 'react-icons/fa';
@@ -77,7 +76,6 @@ const getDepartmentSortNumber = (value) => {
 };
 
 const PlanningHebdomadaire = () => {
-  const { closeSidebar } = useSidebar();
   const isTouchMobile = isTouchMobileDevice();
 
   useEffect(() => {
@@ -96,19 +94,14 @@ const PlanningHebdomadaire = () => {
   }, []);
 
   useLayoutEffect(() => {
-    if (!isTouchMobile) return undefined;
+    if (!isTouchMobileDevice()) return undefined;
 
     document.documentElement.classList.add(MOBILE_NATIVE_CLASS);
     document.body.classList.add(MOBILE_NATIVE_CLASS);
     applyMobileNativeViewport();
-    window.dispatchEvent(new Event('viewport-layout-change'));
 
     const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        applyMobileNativeViewport();
-        window.dispatchEvent(new Event('viewport-layout-change'));
-        closeSidebar();
-      });
+      requestAnimationFrame(applyMobileNativeViewport);
     });
 
     return () => {
@@ -117,10 +110,10 @@ const PlanningHebdomadaire = () => {
       document.body.classList.remove(MOBILE_NATIVE_CLASS);
       applyForceDesktopViewport();
     };
-  }, [closeSidebar, isTouchMobile]);
+  }, []);
 
   useLayoutEffect(() => {
-    if (!isTouchMobile) return undefined;
+    if (!isTouchMobileDevice()) return undefined;
 
     document.documentElement.classList.add(EXTRANET_SCROLL_CLASS);
     document.body.classList.add(EXTRANET_SCROLL_CLASS);
@@ -129,7 +122,7 @@ const PlanningHebdomadaire = () => {
       document.documentElement.classList.remove(EXTRANET_SCROLL_CLASS);
       document.body.classList.remove(EXTRANET_SCROLL_CLASS);
     };
-  }, [isTouchMobile]);
+  }, []);
 
   const { user } = useAuth();
   const queryClient = useQueryClient();

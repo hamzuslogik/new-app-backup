@@ -28,7 +28,8 @@ export const SidebarProvider = ({ children }) => {
   );
   const [autoHideEnabled, setAutoHideEnabled] = useState(false);
   const userToggleRef = React.useRef(false);
-  const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !mobileExtranetActive;
+  const extranetActive = mobileExtranetActive || isMobileNativeExtranetPage();
+  const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !extranetActive;
 
   useEffect(() => {
     const syncExtranetLayout = () => {
