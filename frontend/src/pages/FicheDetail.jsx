@@ -30,6 +30,8 @@ import {
   resolveCompteRenduOptionFromCr,
   resolveOptionKey,
 } from '../utils/compteRenduCommercialOptions';
+import CompteRenduEarlyVerification from '../components/CompteRenduEarlyVerification';
+import { isBeforeRdvDateTime } from '../utils/compteRenduEarlyVerification';
 
 /** Mode de chauffage (VARCHAR en base) : affichage tel quel. */
 function modeChauffageAffiche(confProp, modeProp) {
@@ -733,6 +735,18 @@ const FicheDetail = ({
   // État pour le compte rendu commercial
   const [compteRenduOption, setCompteRenduOption] = useState('');
   const [editingCompteRendu, setEditingCompteRendu] = useState(null);
+  const [earlyCrVerified, setEarlyCrVerified] = useState(false);
+
+  const needsEarlyCrVerification = useMemo(() => {
+    if (Number(user?.fonction) !== 5) return false;
+    if (!ficheData?.date_rdv_time) return false;
+    if (!isBeforeRdvDateTime(ficheData.date_rdv_time)) return false;
+    return Boolean(compteRenduOption || editingCompteRendu);
+  }, [user?.fonction, ficheData?.date_rdv_time, compteRenduOption, editingCompteRendu]);
+
+  useEffect(() => {
+    setEarlyCrVerified(false);
+  }, [compteRenduOption, editingCompteRendu, ficheData?.date_rdv_time]);
 
   // État pour l'onglet Affectation (un seul commercial)
   const [affectationCommercial, setAffectationCommercial] = useState('');
@@ -2559,6 +2573,11 @@ const FicheDetail = ({
           alertSignerCompteRenduValidation(signerValidation.missing);
           return;
         }
+      }
+
+      if (needsEarlyCrVerification && !earlyCrVerified) {
+        alert('Veuillez saisir le code à 4 chiffres pour confirmer la rédaction du compte rendu avant le rendez-vous.');
+        return;
       }
 
       // Si on modifie un compte rendu existant
@@ -6018,6 +6037,14 @@ const FicheDetail = ({
                     </>
                   )}
 
+                  {needsEarlyCrVerification && (
+                    <CompteRenduEarlyVerification
+                      key={`${ficheData?.id || 'fiche'}-${compteRenduOption || editingCompteRendu || 'cr'}`}
+                      rdvDateTime={ficheData?.date_rdv_time}
+                      onVerifiedChange={setEarlyCrVerified}
+                    />
+                  )}
+
                   {/* Compte rendu (toujours visible) */}
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_conf_commentaire">Compte rendu :</label>
@@ -6028,12 +6055,19 @@ const FicheDetail = ({
                       value={etatFormData.conf_commentaire_produit}
                       onChange={(e) => setEtatFormData({ ...etatFormData, conf_commentaire_produit: e.target.value })}
                       placeholder="Saisissez votre compte rendu commercial..."
+                      disabled={needsEarlyCrVerification && !earlyCrVerified}
                       required
                     />
                   </div>
 
                   <div className="form-actions">
-                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>{etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+                    <button
+                      className="btn-confirm"
+                      onClick={handleEtatSubmit}
+                      disabled={etatSubmitting || isChangementEtatBloque || (needsEarlyCrVerification && !earlyCrVerified)}
+                    >
+                      {etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}
+                    </button>
                     <button className="btn-cancel" onClick={() => {
                       setSelectedEtat(null);
                       setCompteRenduOption('');
