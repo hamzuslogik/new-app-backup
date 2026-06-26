@@ -4,6 +4,124 @@
   min-height: calc(100vh - 80px);
 }
 
+/* Même principe que dashboard-page : largeur mini 1400px, tableau CRM pleine largeur */
+html.rdv-vue-page,
+body.rdv-vue-page {
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: auto !important;
+  margin: 0 !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+html.rdv-vue-page .rdv-vue-page,
+body.rdv-vue-page .rdv-vue-page {
+  min-width: 1400px !important;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  overflow-x: visible;
+}
+
+html.rdv-vue-page .rdv-vue-page .fiches-table,
+body.rdv-vue-page .rdv-vue-page .fiches-table {
+  min-width: 1400px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+html.rdv-vue-page .rdv-vue-page .fiches-table-container,
+body.rdv-vue-page .rdv-vue-page .fiches-table-container {
+  min-width: 1400px !important;
+  width: 100% !important;
+  max-width: none !important;
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+@media (max-width: 768px) {
+  .rdv-vue-page * {
+    max-width: none !important;
+  }
+
+  html.rdv-vue-page,
+  body.rdv-vue-page {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+
+  html.rdv-vue-page .rdv-vue-page,
+  body.rdv-vue-page .rdv-vue-page {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  html.rdv-vue-page .rdv-vue-page .fiches-table,
+  body.rdv-vue-page .rdv-vue-page .fiches-table {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  html.rdv-vue-page .rdv-vue-page .fiches-table-container,
+  body.rdv-vue-page .rdv-vue-page .fiches-table-container {
+    min-width: 1400px !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .rdv-vue-page * {
+    max-width: none !important;
+  }
+
+  html.rdv-vue-page,
+  body.rdv-vue-page {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+
+  html.rdv-vue-page .rdv-vue-page,
+  body.rdv-vue-page .rdv-vue-page {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  html.rdv-vue-page .rdv-vue-page .fiches-table,
+  body.rdv-vue-page .rdv-vue-page .fiches-table {
+    min-width: 1400px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  html.rdv-vue-page .rdv-vue-page .fiches-table-container,
+  body.rdv-vue-page .rdv-vue-page .fiches-table-container {
+    min-width: 1400px !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+}
+
 .rdv-vue-page .page-header {
   margin-bottom: 16px;
 }
@@ -171,7 +289,7 @@
   background: #fff;
   border-radius: 8px;
   border: 1px solid #e0e0e0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .rdv-vue-content .quick-search-container {
@@ -202,37 +320,44 @@
 }
 
 .fiches-table-container {
-  overflow-x: auto;
+  overflow: visible;
+  margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: auto;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .fiches-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
-  min-width: 1100px;
+  font-size: 11px;
+  min-width: 1400px;
+}
+
+.fiches-table thead {
+  background: #ffffff;
+  color: #333333;
 }
 
 .fiches-table thead th {
-  background: #fafafa;
+  background: #ffffff;
   border-bottom: 1px solid #eee;
-  padding: 10px 12px;
-  font-size: 12px;
+  padding: 6px 6.4px;
+  font-size: 10.2px;
+  font-weight: 800;
   text-align: left;
-  white-space: normal;
-  word-break: keep-all;
-  overflow-wrap: normal;
-  word-wrap: normal;
-  hyphens: none;
+  white-space: nowrap;
   vertical-align: top;
 }
 
 .fiches-table td {
-  padding: 10px 12px;
+  padding: 5px 6.4px;
   border-bottom: 1px solid #eee;
-  font-size: 12px;
+  font-size: 11px;
   white-space: normal;
-  word-break: normal;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   vertical-align: top;
 }
 
@@ -581,6 +706,10 @@ body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-page {
   overflow: visible !important;
 }
 
+body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-content {
+  overflow: visible !important;
+}
+
 body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table-container {
   width: auto !important;
   max-width: none !important;
@@ -595,10 +724,15 @@ body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table-container {
 }
 
 body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table {
-  min-width: 1100px !important;
+  min-width: 1400px !important;
   width: max-content !important;
   max-width: none !important;
   table-layout: fixed !important;
+}
+
+body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table th,
+body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table td {
+  white-space: nowrap;
 }
 
 html.viewport-zoomed.rdv-vue-page.rdv-vue-page--extranet-scroll,
@@ -607,14 +741,14 @@ html.viewport-zoomed body.rdv-vue-page.rdv-vue-page--extranet-scroll {
   overflow-x: scroll !important;
   overflow-y: auto !important;
   touch-action: pan-x pan-y pinch-zoom !important;
-  min-width: 1100px !important;
+  min-width: 1400px !important;
   width: auto !important;
   max-width: none !important;
 }
 
 html.viewport-zoomed.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table,
 html.viewport-zoomed body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table {
-  min-width: 1100px !important;
+  min-width: 1400px !important;
   width: 100% !important;
   table-layout: fixed !important;
 }
@@ -698,7 +832,7 @@ html:not([data-desktop-viewport]) body.rdv-vue-page.rdv-vue-page--table-desktop-
 
 html.rdv-vue-page.rdv-vue-page--table-desktop-view:not([data-desktop-viewport]),
 body.rdv-vue-page.rdv-vue-page--table-desktop-view:not([data-desktop-viewport]) {
-  min-width: 1100px !important;
+  min-width: 1400px !important;
   width: auto !important;
   max-width: none !important;
   overflow: auto !important;
@@ -707,7 +841,7 @@ body.rdv-vue-page.rdv-vue-page--table-desktop-view:not([data-desktop-viewport]) 
 }
 
 body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table {
-  min-width: 1100px !important;
+  min-width: 1400px !important;
   width: max-content !important;
 }
 
