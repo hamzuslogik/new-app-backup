@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -6,7 +6,7 @@ import api from '../config/api';
 import { FaChevronLeft, FaChevronRight, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './PlanningHebdomadaire.css';
-import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+import { applyForceDesktopViewport } from '../utils/applyForceDesktopViewport';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -67,8 +67,22 @@ const getDepartmentSortNumber = (value) => {
   return parseInt(digits, 10);
 };
 
-const PlanningHebdomadaire = () => {
-  useForceDesktopViewport('planning-hebdomadaire-page');
+const DAY_LABELS = {
+  lundi: 'Lundi',
+  mardi: 'Mardi',
+  mercredi: 'Mercredi',
+  jeudi: 'Jeudi',
+  vendredi: 'Vendredi',
+};
+
+const PlanningHebdomadaire = ({ variant }) => {
+  const isIosMobile = variant === 'ios-mobile';
+
+  useEffect(() => {
+    if (isIosMobile) return undefined;
+    applyForceDesktopViewport();
+    return undefined;
+  }, [isIosMobile]);
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -456,8 +470,26 @@ const PlanningHebdomadaire = () => {
     return a.week - b.week;
   });
 
+  const sortedDisponibilites = useMemo(
+    () =>
+      Object.values(disponibilitesGrouped).sort((a, b) => {
+        const aNum = getDepartmentSortNumber(a.departement_code || a.departement_id);
+        const bNum = getDepartmentSortNumber(b.departement_code || b.departement_id);
+        if (aNum !== bNum) return aNum - bNum;
+        return String(a.departement_code || a.departement_id || '').localeCompare(
+          String(b.departement_code || b.departement_id || ''),
+          'fr'
+        );
+      }),
+    [disponibilitesGrouped]
+  );
+
+  const pageClassName = isIosMobile
+    ? 'planning-hebdomadaire-page planning-hebdomadaire-page--ios-mobile'
+    : 'planning-hebdomadaire-page';
+
   return (
-    <div className="planning-hebdomadaire-page">
+    <div className={pageClassName}>
       {/* Header */}
       <div className="planning-hebdomadaire-header">
         <div className="header-left">
@@ -521,6 +553,47 @@ const PlanningHebdomadaire = () => {
         </form>
       </div>
 
+      {isIosMobile && (
+        <div className="planning-hebdomadaire-mobile-list">
+          {isLoading ? (
+            <p className="planning-hebdomadaire-mobile-empty">Chargement...</p>
+          ) : sortedDisponibilites.length === 0 ? (
+            <p className="planning-hebdomadaire-mobile-empty">
+              Aucune disponibilité pour cette semaine
+            </p>
+          ) : (
+            sortedDisponibilites.map((item) => (
+              <article key={item.departement_id} className="planning-hebdomadaire-mobile-card">
+                <div className="mobile-card-header">
+                  <Link
+                    to={`/planning?dp=${item.departement_code || item.departement_id}&w=${week}&y=${year}&mode=availability`}
+                    className="departement-link"
+                  >
+                    {item.departement_nom}
+                  </Link>
+                </div>
+                <div className="mobile-card-days">
+                  {Object.keys(DAY_LABELS).map((dayKey) => (
+                    <div key={dayKey} className="mobile-card-day">
+                      <span className="mobile-card-day-label">{DAY_LABELS[dayKey]}</span>
+                      <span className="mobile-card-day-value">{item[dayKey]}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="btn-delete mobile-card-delete"
+                  onClick={() => deleteMutation.mutate(item.departement_id)}
+                  title="Supprimer l'Aperçu"
+                >
+                  <FaTrash /> Supprimer l&apos;Aperçu
+                </button>
+              </article>
+            ))
+          )}
+        </div>
+      )}
+
       {/* Section Copie planning */}
       <div className="planning-hebdomadaire-copy">
         <h3>Copie planning semaine : {week} ({year})</h3>
@@ -574,7 +647,8 @@ const PlanningHebdomadaire = () => {
         </div>
       </div>
 
-      {/* Tableau des disponibilités */}
+      {/* Tableau des disponibilités (desktop) */}
+      {!isIosMobile && (
       <div className="planning-hebdomadaire-table-container">
         <table className="planning-hebdomadaire-table">
           <thead>
@@ -602,17 +676,7 @@ const PlanningHebdomadaire = () => {
                 </td>
               </tr>
             ) : (
-              Object.values(disponibilitesGrouped)
-                .sort((a, b) => {
-                  const aNum = getDepartmentSortNumber(a.departement_code || a.departement_id);
-                  const bNum = getDepartmentSortNumber(b.departement_code || b.departement_id);
-                  if (aNum !== bNum) return aNum - bNum;
-                  return String(a.departement_code || a.departement_id || '').localeCompare(
-                    String(b.departement_code || b.departement_id || ''),
-                    'fr'
-                  );
-                })
-                .map((item) => (
+              sortedDisponibilites.map((item) => (
                 <tr key={item.departement_id}>
                   <td>
                     <Link 
@@ -642,6 +706,7 @@ const PlanningHebdomadaire = () => {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 };
