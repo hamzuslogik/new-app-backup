@@ -1,10 +1,7 @@
 .rdv-vue-page {
   padding: 16px;
-  min-width: 1400px;
-  width: auto;
-  max-width: none;
-  overflow-x: visible;
-  margin: 0;
+  background: #f5f5f5;
+  min-height: calc(100vh - 80px);
 }
 
 /* Même principe que dashboard-page : largeur mini 1400px, tableau CRM pleine largeur */
@@ -265,8 +262,8 @@ body.rdv-vue-page .rdv-vue-page .fiches-table-container {
   margin-bottom: 16px;
   padding: 12px 16px;
   background: #fff;
-  border-radius: 7px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
 }
 
 .rdv-vue-filters .filter-group {
@@ -290,8 +287,8 @@ body.rdv-vue-page .rdv-vue-page .fiches-table-container {
 
 .rdv-vue-content {
   background: #fff;
-  border-radius: 7px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
   overflow: visible;
 }
 
@@ -707,7 +704,6 @@ body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-page {
   max-width: 100% !important;
   padding: 8px;
   overflow: visible !important;
-  box-sizing: border-box;
 }
 
 body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-content {
