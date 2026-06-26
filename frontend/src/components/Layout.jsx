@@ -6,31 +6,18 @@ import GlobalKeyboardShortcuts from './common/GlobalKeyboardShortcuts';
 import { FicheDetailModalProvider } from '../contexts/FicheDetailModalContext';
 import { SidebarProvider, useSidebar } from '../contexts/SidebarContext';
 import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
-import { isMobileNativeExtranetPage } from '../utils/applyForceDesktopViewport';
 import api from '../config/api';
 import './Layout.css';
 
 const LayoutContent = () => {
   const { sidebarCollapsed, isMobile, isTablet, closeSidebar, mobileExtranetActive } = useSidebar();
+  const useMobileSidebar = !FORCE_DESKTOP_VIEWPORT || mobileExtranetActive;
   const location = useLocation();
-  const [, bumpLayout] = React.useReducer((n) => n + 1, 0);
-  const extranetMobile =
-    mobileExtranetActive ||
-    isMobileNativeExtranetPage() ||
-    location.pathname === '/planning-hebdo-ios';
-  const useMobileSidebar = !FORCE_DESKTOP_VIEWPORT || extranetMobile;
-  const mobileLayout = extranetMobile || isMobile || isTablet;
   const overlayRef = React.useRef(null);
   const [overlayReady, setOverlayReady] = React.useState(false);
   const prevPathnameRef = React.useRef(location.pathname);
   const isInitialMountRef = React.useRef(true);
   const isFirstNavLogRef = React.useRef(true);
-
-  React.useEffect(() => {
-    const onViewportLayoutChange = () => bumpLayout();
-    window.addEventListener('viewport-layout-change', onViewportLayoutChange);
-    return () => window.removeEventListener('viewport-layout-change', onViewportLayoutChange);
-  }, []);
 
   // Journal d’activité : navigation (après le premier rendu, pour ne pas logger l’URL d’entrée deux fois)
   React.useEffect(() => {
@@ -62,7 +49,7 @@ const LayoutContent = () => {
     // Ne fermer que si le pathname a réellement changé et qu'on est sur mobile/tablet
     if (
       useMobileSidebar &&
-      mobileLayout &&
+      (isMobile || isTablet) &&
       location.pathname !== prevPathnameRef.current
     ) {
       closeSidebar();
@@ -74,7 +61,7 @@ const LayoutContent = () => {
 
   // Délai avant que l'overlay ne devienne cliquable pour éviter qu'il capture le clic d'ouverture
   React.useEffect(() => {
-    if (useMobileSidebar && !sidebarCollapsed && mobileLayout) {
+    if (useMobileSidebar && !sidebarCollapsed && (isMobile || isTablet)) {
       // Réinitialiser l'état
       setOverlayReady(false);
       // Activer l'overlay après un court délai
@@ -85,7 +72,7 @@ const LayoutContent = () => {
     } else {
       setOverlayReady(false);
     }
-  }, [sidebarCollapsed, mobileLayout, useMobileSidebar]);
+  }, [sidebarCollapsed, isMobile, isTablet]);
 
   const handleOverlayClick = (e) => {
     // Empêcher le clic si l'overlay n'est pas prêt
@@ -101,7 +88,7 @@ const LayoutContent = () => {
     <FicheDetailModalProvider>
       <div className="app">
         <GlobalKeyboardShortcuts />
-        {useMobileSidebar && !sidebarCollapsed && mobileLayout && (
+        {useMobileSidebar && !sidebarCollapsed && (isMobile || isTablet) && (
           <div 
             ref={overlayRef}
             className={`sidebar-overlay active ${overlayReady ? 'ready' : ''}`} 

@@ -295,35 +295,3 @@ html.viewport-zoomed body.planning-commercial-page .fiches-table-container,
 html.viewport-zoomed body.rdv-vue-page .fiches-table-container {
   touch-action: pan-x pan-y pinch-zoom !important;
 }
-
-/* Planning Hebdo iOS : annuler le mode sidebar desktop forcé */
-html.planning-hebdo-ios-page .sidebar.collapsed,
-body.planning-hebdo-ios-page .sidebar.collapsed {
-  transform: translateX(-100%) !important;
-}
-
-html.planning-hebdo-ios-page .sidebar:not(.collapsed),
-body.planning-hebdo-ios-page .sidebar:not(.collapsed) {
-  transform: translateX(0) !important;
-  top: 60px !important;
-  height: calc(100vh - 60px) !important;
-  height: calc(100dvh - 60px) !important;
-  z-index: 1002 !important;
-}
-
-html.planning-hebdo-ios-page .menu-toggle,
-body.planning-hebdo-ios-page .menu-toggle {
-  display: flex !important;
-}
-
-html.planning-hebdo-ios-page .sidebar-overlay,
-body.planning-hebdo-ios-page .sidebar-overlay.active {
-  display: block !important;
-}
-
-html.planning-hebdo-ios-page .main-content,
-html.planning-hebdo-ios-page .main-content.sidebar-collapsed,
-body.planning-hebdo-ios-page .main-content,
-body.planning-hebdo-ios-page .main-content.sidebar-collapsed {
-  margin-left: 0 !important;
-}

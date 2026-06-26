@@ -118,14 +118,6 @@ const Sidebar = ({ collapsed }) => {
       visible: true,
     },
     {
-      path: '/planning-hebdo-ios',
-      label: 'Planning Hebdo iOS',
-      icon: FaCalendarAlt,
-      permission: null,
-      visible: true,
-      customCheck: (_item, user) => Number(user?.fonction) === 1,
-    },
-    {
       path: '/rdv-vue',
       label: 'Vue Rendez-vous',
       icon: FaCalendarAlt,

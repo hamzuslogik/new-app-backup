@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -6,7 +6,7 @@ import api from '../config/api';
 import { FaChevronLeft, FaChevronRight, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './PlanningHebdomadaire.css';
-import { applyForceDesktopViewport } from '../utils/applyForceDesktopViewport';
+import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -67,14 +67,8 @@ const getDepartmentSortNumber = (value) => {
   return parseInt(digits, 10);
 };
 
-const PlanningHebdomadaire = ({ variant }) => {
-  const isIosMobile = variant === 'ios-mobile';
-
-  useEffect(() => {
-    if (isIosMobile) return undefined;
-    applyForceDesktopViewport();
-    return undefined;
-  }, [isIosMobile]);
+const PlanningHebdomadaire = () => {
+  useForceDesktopViewport('planning-hebdomadaire-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -462,26 +456,8 @@ const PlanningHebdomadaire = ({ variant }) => {
     return a.week - b.week;
   });
 
-  const sortedDisponibilites = useMemo(
-    () =>
-      Object.values(disponibilitesGrouped).sort((a, b) => {
-        const aNum = getDepartmentSortNumber(a.departement_code || a.departement_id);
-        const bNum = getDepartmentSortNumber(b.departement_code || b.departement_id);
-        if (aNum !== bNum) return aNum - bNum;
-        return String(a.departement_code || a.departement_id || '').localeCompare(
-          String(b.departement_code || b.departement_id || ''),
-          'fr'
-        );
-      }),
-    [disponibilitesGrouped]
-  );
-
-  const pageClassName = isIosMobile
-    ? 'planning-hebdomadaire-page planning-hebdomadaire-page--ios-mobile'
-    : 'planning-hebdomadaire-page';
-
   return (
-    <div className={pageClassName}>
+    <div className="planning-hebdomadaire-page">
       {/* Header */}
       <div className="planning-hebdomadaire-header">
         <div className="header-left">
@@ -626,7 +602,17 @@ const PlanningHebdomadaire = ({ variant }) => {
                 </td>
               </tr>
             ) : (
-              sortedDisponibilites.map((item) => (
+              Object.values(disponibilitesGrouped)
+                .sort((a, b) => {
+                  const aNum = getDepartmentSortNumber(a.departement_code || a.departement_id);
+                  const bNum = getDepartmentSortNumber(b.departement_code || b.departement_id);
+                  if (aNum !== bNum) return aNum - bNum;
+                  return String(a.departement_code || a.departement_id || '').localeCompare(
+                    String(b.departement_code || b.departement_id || ''),
+                    'fr'
+                  );
+                })
+                .map((item) => (
                 <tr key={item.departement_id}>
                   <td>
                     <Link 

@@ -16,7 +16,6 @@ const getInitialSidebarState = () => {
 export const SidebarProvider = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarState());
   const [mobileExtranetActive, setMobileExtranetActive] = useState(isMobileNativeExtranetPage());
-  const extranetActiveRef = React.useRef(isMobileNativeExtranetPage());
   const [isMobile, setIsMobile] = useState(
     mobileExtranetActive || (!FORCE_DESKTOP_VIEWPORT && window.innerWidth <= 768)
   );
@@ -28,29 +27,17 @@ export const SidebarProvider = ({ children }) => {
   );
   const [autoHideEnabled, setAutoHideEnabled] = useState(false);
   const userToggleRef = React.useRef(false);
-  const extranetActive =
-    mobileExtranetActive ||
-    isMobileNativeExtranetPage() ||
-    document.body?.classList.contains('planning-hebdo-ios-page');
-  const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !extranetActive;
-  const resolvedIsMobile = extranetActive || isMobile;
-  const resolvedIsTablet = extranetActive ? false : isTablet;
+  const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !mobileExtranetActive;
 
   useEffect(() => {
     const syncExtranetLayout = () => {
-      const extranet =
-        isMobileNativeExtranetPage() ||
-        document.body?.classList.contains('planning-hebdo-ios-page');
-      const wasExtranet = extranetActiveRef.current;
-      extranetActiveRef.current = extranet;
+      const extranet = isMobileNativeExtranetPage();
       setMobileExtranetActive(extranet);
       if (extranet) {
         setIsMobile(true);
         setIsTablet(false);
         setIsDesktop(false);
-        if (!wasExtranet) {
-          setSidebarCollapsed(true);
-        }
+        setSidebarCollapsed(true);
       }
     };
 
@@ -97,13 +84,7 @@ export const SidebarProvider = ({ children }) => {
   }, [autoHideEnabled, isDesktop]);
 
   const toggleSidebar = () => {
-    const canToggleMobile =
-      !FORCE_DESKTOP_VIEWPORT ||
-      isMobileNativeExtranetPage() ||
-      mobileExtranetActive ||
-      document.body?.classList.contains('planning-hebdo-ios-page');
-
-    if (!canToggleMobile) {
+    if (forceDesktopSidebar) {
       return;
     }
 
@@ -123,13 +104,7 @@ export const SidebarProvider = ({ children }) => {
   };
 
   const closeSidebar = () => {
-    const canToggleMobile =
-      !FORCE_DESKTOP_VIEWPORT ||
-      isMobileNativeExtranetPage() ||
-      mobileExtranetActive ||
-      document.body?.classList.contains('planning-hebdo-ios-page');
-
-    if (!canToggleMobile) {
+    if (forceDesktopSidebar) {
       return;
     }
     setSidebarCollapsed(true);
@@ -166,11 +141,11 @@ export const SidebarProvider = ({ children }) => {
         closeSidebar,
         openSidebar,
         setAutoHide,
-        isMobile: resolvedIsMobile,
-        isTablet: resolvedIsTablet,
+        isMobile,
+        isTablet,
         isDesktop,
         autoHideEnabled,
-        mobileExtranetActive: extranetActive,
+        mobileExtranetActive,
       }}
     >
       {children}
