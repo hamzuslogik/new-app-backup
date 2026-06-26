@@ -1,12 +1,6 @@
-.rdv-vue-page {
-  padding: 16px;
-  background: #f5f5f5;
-  min-height: calc(100vh - 80px);
-}
-
-/* Même principe que dashboard-page : largeur mini 1400px (hors mode mobile extranet) */
-html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll),
-body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) {
+/* Même principe que planning-commercial-page : document vs conteneur interne séparés */
+html.rdv-vue-page,
+body.rdv-vue-page {
   min-width: 1400px !important;
   width: auto !important;
   max-width: none !important;
@@ -16,17 +10,26 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
   touch-action: pan-x pan-y pinch-zoom;
 }
 
-html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page,
-body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page {
+.rdv-vue {
+  padding: 16px;
+  background: #f5f5f5;
+  min-height: calc(100vh - 80px);
+  min-width: 1400px;
+  width: auto;
+  max-width: none;
+  overflow-x: visible;
+  margin: 0;
+}
+
+.rdv-vue-page .rdv-vue {
   min-width: 1400px !important;
   width: auto !important;
   max-width: none !important;
   margin: 0 !important;
-  overflow-x: visible;
 }
 
-html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table,
-body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table {
+html.rdv-vue-page .rdv-vue .fiches-table,
+body.rdv-vue-page .rdv-vue .fiches-table {
   min-width: 1400px !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -34,8 +37,8 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
   border-collapse: collapse !important;
 }
 
-html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table-container,
-body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table-container {
+html.rdv-vue-page .rdv-vue .fiches-table-container,
+body.rdv-vue-page .rdv-vue .fiches-table-container {
   min-width: 1400px !important;
   width: 100% !important;
   max-width: none !important;
@@ -45,13 +48,12 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
 }
 
 @media (max-width: 768px) {
-  html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) *,
-  body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) * {
+  .rdv-vue-page * {
     max-width: none !important;
   }
 
-  html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll),
-  body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) {
+  html.rdv-vue-page,
+  body.rdv-vue-page {
     min-width: 1400px !important;
     width: auto !important;
     max-width: none !important;
@@ -60,22 +62,21 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
     touch-action: pan-x pan-y pinch-zoom !important;
   }
 
-  html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page,
-  body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page {
+  .rdv-vue-page .rdv-vue {
     min-width: 1400px !important;
     width: auto !important;
     max-width: none !important;
   }
 
-  html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table,
-  body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table {
+  html.rdv-vue-page .rdv-vue .fiches-table,
+  body.rdv-vue-page .rdv-vue .fiches-table {
     min-width: 1400px !important;
     width: auto !important;
     max-width: none !important;
   }
 
-  html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table-container,
-  body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table-container {
+  html.rdv-vue-page .rdv-vue .fiches-table-container,
+  body.rdv-vue-page .rdv-vue .fiches-table-container {
     min-width: 1400px !important;
     width: 100% !important;
     max-width: none !important;
@@ -85,13 +86,12 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
 }
 
 @media (max-width: 480px) {
-  html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) *,
-  body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) * {
+  .rdv-vue-page * {
     max-width: none !important;
   }
 
-  html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll),
-  body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) {
+  html.rdv-vue-page,
+  body.rdv-vue-page {
     min-width: 1400px !important;
     width: auto !important;
     max-width: none !important;
@@ -100,22 +100,21 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
     touch-action: pan-x pan-y pinch-zoom !important;
   }
 
-  html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page,
-  body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page {
+  .rdv-vue-page .rdv-vue {
     min-width: 1400px !important;
     width: auto !important;
     max-width: none !important;
   }
 
-  html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table,
-  body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table {
+  html.rdv-vue-page .rdv-vue .fiches-table,
+  body.rdv-vue-page .rdv-vue .fiches-table {
     min-width: 1400px !important;
     width: auto !important;
     max-width: none !important;
   }
 
-  html.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table-container,
-  body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-scroll) .rdv-vue-page .fiches-table-container {
+  html.rdv-vue-page .rdv-vue .fiches-table-container,
+  body.rdv-vue-page .rdv-vue .fiches-table-container {
     min-width: 1400px !important;
     width: 100% !important;
     max-width: none !important;
@@ -124,7 +123,7 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
   }
 }
 
-.rdv-vue-page .page-header {
+.rdv-vue .page-header {
   margin-bottom: 16px;
 }
 
@@ -207,7 +206,7 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
   box-sizing: border-box;
 }
 
-.rdv-vue-page .page-header h1 {
+.rdv-vue .page-header h1 {
   color: #333;
   font-size: 1.5rem;
   font-weight: 600;
@@ -291,7 +290,7 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
   background: #fff;
   border-radius: 8px;
   border: 1px solid #e0e0e0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .rdv-vue-content .quick-search-container {
@@ -322,44 +321,37 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
 }
 
 .fiches-table-container {
-  overflow: visible;
-  margin-bottom: 16px;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: auto;
-  touch-action: pan-x pan-y pinch-zoom;
+  overflow-x: auto;
 }
 
 .fiches-table {
   width: 100%;
-  table-layout: fixed;
   border-collapse: collapse;
-  font-size: 11px;
-  min-width: 1400px;
-}
-
-.fiches-table thead {
-  background: #ffffff;
-  color: #333333;
+  min-width: 1100px;
 }
 
 .fiches-table thead th {
-  background: #ffffff;
+  background: #fafafa;
   border-bottom: 1px solid #eee;
-  padding: 6px 6.4px;
-  font-size: 10.2px;
-  font-weight: 800;
+  padding: 10px 12px;
+  font-size: 12px;
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  word-wrap: normal;
+  hyphens: none;
   vertical-align: top;
 }
 
 .fiches-table td {
-  padding: 5px 6.4px;
+  padding: 10px 12px;
   border-bottom: 1px solid #eee;
-  font-size: 11px;
+  font-size: 12px;
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
   vertical-align: top;
 }
 
@@ -438,8 +430,8 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
 }
 
 /* Colonne Validé plus étroite */
-.rdv-vue-page .fiches-table th:nth-child(13),
-.rdv-vue-page .fiches-table td:nth-child(13) {
+.rdv-vue-page .rdv-vue .fiches-table th:nth-child(13),
+.rdv-vue-page .rdv-vue .fiches-table td:nth-child(13) {
   width: 54px;
   min-width: 54px;
   max-width: 54px;
@@ -532,7 +524,7 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
   background: #ffa500;
 }
 
-.rdv-vue-page .btn-detail {
+.rdv-vue-page .rdv-vue .btn-detail {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -546,7 +538,7 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
   cursor: pointer;
 }
 
-.rdv-vue-page .btn-detail:hover {
+.rdv-vue-page .rdv-vue .btn-detail:hover {
   background: #1565c0;
 }
 
@@ -644,9 +636,7 @@ body.rdv-vue-page:not(.rdv-vue-page--mobile-native):not(.rdv-vue-page--extranet-
    ═══════════════════════════════════════════════════════════════════════════ */
 
 html.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]),
-body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]),
-html.rdv-vue-page--mobile-native:not([data-desktop-viewport]),
-body.rdv-vue-page--mobile-native:not([data-desktop-viewport]) {
+body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) {
   min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -664,20 +654,13 @@ html.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) #root
 body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .app,
 body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .main-content,
 body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .content-wrapper,
-body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .rdv-vue-page,
-html.rdv-vue-page--mobile-native:not([data-desktop-viewport]) #root,
-body.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .app,
-body.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .main-content,
-body.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .content-wrapper,
-body.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .rdv-vue-page {
+body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .rdv-vue {
   touch-action: pan-x pan-y pinch-zoom !important;
   overflow: visible !important;
 }
 
 html.rdv-vue-page.rdv-vue-page--extranet-scroll,
-body.rdv-vue-page.rdv-vue-page--extranet-scroll,
-html.rdv-vue-page--extranet-scroll,
-body.rdv-vue-page--extranet-scroll {
+body.rdv-vue-page.rdv-vue-page--extranet-scroll {
   min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -709,25 +692,12 @@ body.rdv-vue-page.rdv-vue-page--extranet-scroll .content-wrapper {
   flex: none !important;
 }
 
-body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-page,
-body.rdv-vue-page--extranet-scroll .rdv-vue-page {
+body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue {
   min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
   padding: 8px;
   overflow: visible !important;
-  box-sizing: border-box;
-}
-
-body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-mobile-controls,
-body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-filters,
-body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-content,
-body.rdv-vue-page--extranet-scroll .rdv-vue-mobile-controls,
-body.rdv-vue-page--extranet-scroll .rdv-vue-filters,
-body.rdv-vue-page--extranet-scroll .rdv-vue-content {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box;
 }
 
 body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-content {

@@ -261,7 +261,8 @@ html.viewport-zoomed .confirmateurs-table-container {
 }
 
 html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .dashboard,
-html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .planning-commercial {
+html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .planning-commercial,
+html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .rdv-vue {
   min-width: 1400px !important;
   width: max-content !important;
   max-width: none !important;
@@ -269,7 +270,8 @@ html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .plann
 
 html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .fiches-table-container,
 html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container,
-html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table-container {
+html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table-container,
+html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .fiches-table-container {
   min-width: 1400px !important;
   width: max-content !important;
   max-width: none !important;
@@ -278,7 +280,8 @@ html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiche
 
 html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .fiches-table,
 html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .confirmateurs-table,
-html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table {
+html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table,
+html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .fiches-table {
   min-width: 1400px !important;
   width: max-content !important;
   max-width: none !important;
@@ -286,7 +289,9 @@ html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiche
 
 html.viewport-zoomed body.dashboard-page,
 html.viewport-zoomed body.planning-commercial-page,
+html.viewport-zoomed body.rdv-vue-page,
 html.viewport-zoomed body.dashboard-page .fiches-table-container,
-html.viewport-zoomed body.planning-commercial-page .fiches-table-container {
+html.viewport-zoomed body.planning-commercial-page .fiches-table-container,
+html.viewport-zoomed body.rdv-vue-page .fiches-table-container {
   touch-action: pan-x pan-y pinch-zoom !important;
 }
