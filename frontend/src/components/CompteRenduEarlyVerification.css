@@ -1,59 +1,87 @@
 .compte-rendu-early-verification {
   margin-bottom: 16px;
   padding: 14px 16px;
-  border: 1px solid #f0ad4e;
+  border: 1px solid #ccc;
   border-radius: 8px;
-  background: #fff8e8;
+  background: #fff;
+  color: #000;
+}
+
+.compte-rendu-early-verification,
+.compte-rendu-early-verification p,
+.compte-rendu-early-verification label,
+.compte-rendu-early-verification strong,
+.compte-rendu-early-verification span,
+.compte-rendu-early-verification div {
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
 }
 
 .early-cr-verification-title {
   margin: 0 0 8px;
   font-weight: 700;
-  color: #8a5a00;
 }
 
 .early-cr-verification-message {
   margin: 0 0 12px;
-  color: #333;
   line-height: 1.45;
 }
 
 .early-cr-code-display {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 120px;
+  width: 100%;
+  box-sizing: border-box;
   margin-bottom: 12px;
-  padding: 10px 18px;
-  border-radius: 8px;
-  background: #fff;
-  border: 2px dashed #f0ad4e;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: 0.35em;
-  color: #333;
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
 }
 
 .early-cr-input-group {
   margin-bottom: 8px;
 }
 
+.early-cr-input-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
 .early-cr-code-input {
-  max-width: 160px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: 0.2em;
   text-align: center;
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
+  background: #fff !important;
+  border: 1px solid #ccc !important;
 }
 
-.early-cr-verification-success {
-  margin: 8px 0 0;
-  color: #2e7d32;
+.early-cr-verification-error {
+  margin: 0 0 10px;
+  color: #c62828 !important;
+  -webkit-text-fill-color: #c62828 !important;
   font-weight: 600;
 }
 
-.early-cr-verification-hint {
-  margin: 8px 0 0;
-  color: #666;
-  font-size: 0.92em;
+.early-cr-actions {
+  margin-top: 4px;
+}
+
+.early-cr-validate-btn {
+  min-width: 120px;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
 }

@@ -2795,6 +2795,39 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
+/* Validation compte rendu avant RDV : texte noir dans le cadre (le bloc compte-rendu impose le blanc). */
+.compte-rendu-section .compte-rendu-early-verification,
+.compte-rendu-section .compte-rendu-early-verification p,
+.compte-rendu-section .compte-rendu-early-verification label,
+.compte-rendu-section .compte-rendu-early-verification strong,
+.compte-rendu-section .compte-rendu-early-verification span,
+.compte-rendu-section .compte-rendu-early-verification div,
+.compte-rendu-section .compte-rendu-early-verification .early-cr-code-display,
+.compte-rendu-section .compte-rendu-early-verification .early-cr-code-input,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-early-verification,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-early-verification p,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-early-verification label,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-early-verification strong,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-early-verification span,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-early-verification div,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-early-verification .early-cr-code-display,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-early-verification .early-cr-code-input {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+.compte-rendu-section .compte-rendu-early-verification .early-cr-verification-error,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-early-verification .early-cr-verification-error {
+  color: #c62828 !important;
+  -webkit-text-fill-color: #c62828 !important;
+}
+
+.compte-rendu-section .compte-rendu-early-verification .early-cr-validate-btn,
+.fiche-detail-modal-content .compte-rendu-section .compte-rendu-early-verification .early-cr-validate-btn {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 .decalage-form .form-group,
 .etat-change-section .form-group,
 .compte-rendu-section .form-group {

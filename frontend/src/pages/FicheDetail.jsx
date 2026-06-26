@@ -1032,16 +1032,17 @@ const FicheDetail = ({
     }
   );
 
-  const needsEarlyCrVerification = useMemo(() => {
+  const requiresEarlyCrGate = useMemo(() => {
     if (Number(user?.fonction) !== 5) return false;
     if (!ficheData?.date_rdv_time) return false;
-    if (!isBeforeRdvDateTime(ficheData.date_rdv_time)) return false;
-    return Boolean(compteRenduOption || editingCompteRendu);
-  }, [user?.fonction, ficheData?.date_rdv_time, compteRenduOption, editingCompteRendu]);
+    return isBeforeRdvDateTime(ficheData.date_rdv_time);
+  }, [user?.fonction, ficheData?.date_rdv_time]);
+
+  const canAccessCompteRenduChoices = !requiresEarlyCrGate || earlyCrVerified;
 
   useEffect(() => {
     setEarlyCrVerified(false);
-  }, [compteRenduOption, editingCompteRendu, ficheData?.date_rdv_time]);
+  }, [ficheData?.id, ficheData?.date_rdv_time]);
 
   const showCompletudeSection =
     isQualiteConfirmation ||
@@ -2575,8 +2576,8 @@ const FicheDetail = ({
         }
       }
 
-      if (needsEarlyCrVerification && !earlyCrVerified) {
-        alert('Veuillez saisir le code à 4 chiffres pour confirmer la rédaction du compte rendu avant le rendez-vous.');
+      if (requiresEarlyCrGate && !earlyCrVerified) {
+        alert('Veuillez valider le code à 4 chiffres pour accéder au compte rendu avant le rendez-vous.');
         return;
       }
 
@@ -5628,32 +5629,53 @@ const FicheDetail = ({
             {/* Section pour créer un nouveau compte rendu (masquée si on édite un compte rendu ou s'il y a déjà un compte rendu en attente) */}
             {!editingCompteRendu && !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending')) && (
               <div className="fiche-section compte-rendu-section">
-                <h2 className="section-title">{editingCompteRendu ? 'Modifier le compte rendu' : 'Compte rendu'}</h2>
-                <div className="compte-rendu-form">
-                  <div className="form-group">
-                    <label htmlFor="compte_rendu_option">Type de compte rendu :</label>
-                  <select
-                    id="compte_rendu_option"
-                    className="form-control"
-                    value={resolveOptionKey(compteRenduOption)}
-                    onChange={(e) => handleCompteRenduOptionChange(e.target.value)}
-                  >
-                    <option value="">Sélectionner une option</option>
-                    {COMPTE_RENDU_COMMERCIAL_OPTIONS.map((opt) => (
-                      <option key={opt.key} value={opt.key}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <h2 className="section-title">Compte rendu</h2>
+                {requiresEarlyCrGate && !earlyCrVerified ? (
+                  <CompteRenduEarlyVerification
+                    key={`early-cr-gate-${ficheData?.id || hash}`}
+                    rdvDateTime={ficheData?.date_rdv_time}
+                    onVerified={() => setEarlyCrVerified(true)}
+                  />
+                ) : (
+                  <div className="compte-rendu-form">
+                    <div className="form-group">
+                      <label htmlFor="compte_rendu_option">Type de compte rendu :</label>
+                      <select
+                        id="compte_rendu_option"
+                        className="form-control"
+                        value={resolveOptionKey(compteRenduOption)}
+                        onChange={(e) => handleCompteRenduOptionChange(e.target.value)}
+                      >
+                        <option value="">Sélectionner une option</option>
+                        {COMPTE_RENDU_COMMERCIAL_OPTIONS.map((opt) => (
+                          <option key={opt.key} value={opt.key}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
             )}
 
             {/* Section pour modifier un compte rendu - Afficher la liste déroulante */}
             {editingCompteRendu && (() => {
               const crToEdit = ficheData?.comptes_rendus?.find(cr => cr.id === editingCompteRendu);
               if (!crToEdit || crToEdit.statut !== 'pending') return null;
+
+              if (requiresEarlyCrGate && !earlyCrVerified) {
+                return (
+                  <div className="fiche-section compte-rendu-section">
+                    <h2 className="section-title">Modifier le compte rendu</h2>
+                    <CompteRenduEarlyVerification
+                      key={`early-cr-gate-edit-${ficheData?.id || hash}`}
+                      rdvDateTime={ficheData?.date_rdv_time}
+                      onVerified={() => setEarlyCrVerified(true)}
+                    />
+                  </div>
+                );
+              }
               
               return (
                 <div className="fiche-section compte-rendu-section">
@@ -5703,7 +5725,7 @@ const FicheDetail = ({
             {/* Formulaire de compte rendu UNIFIÉ pour les commerciaux.
                 - Pseudo et "Compte rendu" sont toujours visibles dès qu'une option est choisie.
                 - Les autres champs (signature, sous-état, dates...) apparaissent selon l'option. */}
-            {[8, 9, 12, 13, 23, 34, 35, 44, 45].includes(selectedEtat) && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
+            {[8, 9, 12, 13, 23, 34, 35, 44, 45].includes(selectedEtat) && canAccessCompteRenduChoices && (editingCompteRendu || !(ficheData?.comptes_rendus && ficheData.comptes_rendus.some(cr => cr.statut === 'pending'))) && (
               <div className="fiche-section etat-change-section" style={{ marginTop: '20px' }}>
                 <div className={`etat-form${[13, 44, 45].includes(selectedEtat) ? ' compte-rendu-signer-form' : ''}`}>
 
@@ -6037,14 +6059,6 @@ const FicheDetail = ({
                     </>
                   )}
 
-                  {needsEarlyCrVerification && (
-                    <CompteRenduEarlyVerification
-                      key={`${ficheData?.id || 'fiche'}-${compteRenduOption || editingCompteRendu || 'cr'}`}
-                      rdvDateTime={ficheData?.date_rdv_time}
-                      onVerifiedChange={setEarlyCrVerified}
-                    />
-                  )}
-
                   {/* Compte rendu (toujours visible) */}
                   <div className="form-group">
                     <label htmlFor="compte_rendu_etat_conf_commentaire">Compte rendu :</label>
@@ -6055,17 +6069,12 @@ const FicheDetail = ({
                       value={etatFormData.conf_commentaire_produit}
                       onChange={(e) => setEtatFormData({ ...etatFormData, conf_commentaire_produit: e.target.value })}
                       placeholder="Saisissez votre compte rendu commercial..."
-                      disabled={needsEarlyCrVerification && !earlyCrVerified}
                       required
                     />
                   </div>
 
                   <div className="form-actions">
-                    <button
-                      className="btn-confirm"
-                      onClick={handleEtatSubmit}
-                      disabled={etatSubmitting || isChangementEtatBloque || (needsEarlyCrVerification && !earlyCrVerified)}
-                    >
+                    <button className="btn-confirm" onClick={handleEtatSubmit} disabled={etatSubmitting || isChangementEtatBloque}>
                       {etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}
                     </button>
                     <button className="btn-cancel" onClick={() => {

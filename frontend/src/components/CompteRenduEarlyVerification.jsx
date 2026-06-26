@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import {
   generateFourDigitCode,
@@ -6,18 +6,31 @@ import {
 } from '../utils/compteRenduEarlyVerification';
 import './CompteRenduEarlyVerification.css';
 
-const CompteRenduEarlyVerification = ({ rdvDateTime, onVerifiedChange }) => {
+const CompteRenduEarlyVerification = ({ rdvDateTime, onVerified }) => {
   const [code] = useState(() => generateFourDigitCode());
   const [input, setInput] = useState('');
+  const [error, setError] = useState('');
 
-  const verified = useMemo(
-    () => normalizeFourDigitInput(input) === code,
-    [input, code]
-  );
+  const handleValidate = () => {
+    const normalized = normalizeFourDigitInput(input);
+    if (normalized.length !== 4) {
+      setError('Veuillez saisir les 4 chiffres du code.');
+      return;
+    }
+    if (normalized !== code) {
+      setError('Code incorrect. Veuillez réessayer.');
+      return;
+    }
+    setError('');
+    onVerified?.();
+  };
 
-  useEffect(() => {
-    onVerifiedChange?.(verified);
-  }, [verified, onVerifiedChange]);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleValidate();
+    }
+  };
 
   return (
     <div className="compte-rendu-early-verification" role="group" aria-labelledby="early-cr-verification-title">
@@ -26,8 +39,7 @@ const CompteRenduEarlyVerification = ({ rdvDateTime, onVerifiedChange }) => {
       </p>
       <p className="early-cr-verification-message">
         Le rendez-vous est prévu le <strong>{formatRdvDateTime(rdvDateTime)}</strong>.
-        Pour rédiger un compte rendu avant cette date et heure, reproduisez le code à 4 chiffres
-        ci-dessous.
+        Pour accéder aux types de compte rendu, reproduisez le code à 4 chiffres ci-dessous.
       </p>
       <div className="early-cr-code-display" aria-hidden="true">
         {code}
@@ -41,16 +53,20 @@ const CompteRenduEarlyVerification = ({ rdvDateTime, onVerifiedChange }) => {
           autoComplete="off"
           maxLength={4}
           className="form-control early-cr-code-input"
-          placeholder="0000"
           value={input}
-          onChange={(e) => setInput(normalizeFourDigitInput(e.target.value))}
+          onChange={(e) => {
+            setInput(normalizeFourDigitInput(e.target.value));
+            if (error) setError('');
+          }}
+          onKeyDown={handleKeyDown}
         />
       </div>
-      {verified ? (
-        <p className="early-cr-verification-success">Code validé — vous pouvez rédiger le compte rendu.</p>
-      ) : (
-        <p className="early-cr-verification-hint">Le champ compte rendu sera débloqué une fois le code saisi.</p>
-      )}
+      {error && <p className="early-cr-verification-error">{error}</p>}
+      <div className="early-cr-actions">
+        <button type="button" className="btn-confirm early-cr-validate-btn" onClick={handleValidate}>
+          Valider
+        </button>
+      </div>
     </div>
   );
 };
