@@ -13,6 +13,7 @@ import Planning from './pages/Planning';
 import PlanningCommercial from './pages/PlanningCommercial';
 import PlanningDep from './pages/PlanningDep';
 import PlanningHebdomadaire from './pages/PlanningHebdomadaire';
+import PlanningHebdoIos from './pages/PlanningHebdoIos';
 import AffectationDep from './pages/AffectationDep';
 import Statistiques from './pages/Statistiques';
 import StatistiquesRDV from './pages/StatistiquesRDV';
@@ -86,6 +87,14 @@ function App() {
           <Route path="planning-dep" element={<ProtectedRoute permission="planning_dep_view"><PlanningDep /></ProtectedRoute>} />
           <Route path="planning-commercial" element={<ProtectedRoute permission="planning_commercial_view"><PlanningCommercial /></ProtectedRoute>} />
           <Route path="planning-hebdomadaire" element={<ProtectedRoute permission="planning_view"><PlanningHebdomadaire /></ProtectedRoute>} />
+          <Route
+            path="planning-hebdo-ios"
+            element={
+              <ProtectedRoute permission={null} customCheck={(_item, user) => Number(user?.fonction) === 1}>
+                <PlanningHebdoIos />
+              </ProtectedRoute>
+            }
+          />
           <Route path="rdv-vue" element={<ProtectedRoute permission="planning_view"><RendezVousVue /></ProtectedRoute>} />
           <Route path="affectation-dep" element={<ProtectedRoute permission="affectation_view"><AffectationDep /></ProtectedRoute>} />
           <Route path="statistiques" element={<ProtectedRoute permission="statistiques_view"><Statistiques /></ProtectedRoute>} />
