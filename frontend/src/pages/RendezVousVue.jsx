@@ -1,29 +1,239 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import api from '../config/api';
-import { FaCalendarDay, FaUserCheck, FaUserSlash, FaChartLine, FaSearch, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
-import FicheDetailLink from '../components/FicheDetailLink';
+import {
+  FaCalendarDay,
+  FaUserCheck,
+  FaUserSlash,
+  FaChartLine,
+  FaSearch,
+  FaSort,
+  FaSortUp,
+  FaSortDown,
+  FaExpand,
+  FaCompress,
+} from 'react-icons/fa';
+import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
+import { useSidebar } from '../contexts/SidebarContext';
 import FicheDetailModal from '../components/FicheDetailModal';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import {
+  applyForceDesktopViewport,
+  applyMobileNativeViewport,
+  applyRdvVueMobileView,
+  applyRdvVueTableDesktopView,
+  applyRdvVueTableDesktopViewForFicheModal,
+  isTouchMobileDevice,
+} from '../utils/applyForceDesktopViewport';
+import {
+  stashPendingRdvVueFicheModal,
+  clearPendingRdvVueFicheModal,
+  resolvePendingRdvVueFicheModal,
+} from '../utils/rdvVueFicheModalSession';
 import './RendezVousVue.css';
-import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+
+const RDV_VUE_PAGE_CLASS = 'rdv-vue-page';
+const RDV_VUE_MOBILE_NATIVE_CLASS = 'rdv-vue-page--mobile-native';
+const RDV_VUE_EXTRANET_SCROLL_CLASS = 'rdv-vue-page--extranet-scroll';
+const RDV_VUE_OPEN_FICHE_PARAM = 'openFiche';
+
+const VALID_TABS = ['jour', 'affilie', 'non_affilie', 'production_rdv'];
+
+const TAB_DEFS = [
+  { id: 'jour', Icon: FaCalendarDay, label: 'Rendez-vous du jour' },
+  { id: 'affilie', Icon: FaUserCheck, label: 'Rendez-vous affiliés' },
+  { id: 'non_affilie', Icon: FaUserSlash, label: 'Rendez-vous non affiliés' },
+  { id: 'production_rdv', Icon: FaChartLine, label: 'Production RDV' },
+];
+
+const getLocalDateStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+function getFicheModalStateFromUrl() {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const openFiche = params.get(RDV_VUE_OPEN_FICHE_PARAM);
+  if (!openFiche) return null;
+  return {
+    hash: openFiche,
+    focusHistoriqueEtats: params.get('ficheFocusHisto') === '1',
+    initialTab: params.get('ficheTab') || undefined,
+  };
+}
+
+function clearFicheModalUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.get(RDV_VUE_OPEN_FICHE_PARAM)) return;
+  params.delete(RDV_VUE_OPEN_FICHE_PARAM);
+  params.delete('tableModal');
+  params.delete('ficheFocusHisto');
+  params.delete('ficheTab');
+  const qs = params.toString();
+  window.history.replaceState(null, '', qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+}
+
+function resolveInitialTab() {
+  if (typeof window === 'undefined') return 'jour';
+  const tab = new URLSearchParams(window.location.search).get('tab');
+  return VALID_TABS.includes(tab) ? tab : 'jour';
+}
+
+function resolveInitialDate() {
+  if (typeof window === 'undefined') return getLocalDateStr();
+  const date = new URLSearchParams(window.location.search).get('date');
+  return date || getLocalDateStr();
+}
 
 const fetchRdvVue = async (type, date) => {
   const res = await api.get('/planning/rdv-vue', {
-    params: { type, date }
+    params: { type, date },
   });
   return res.data.data || [];
 };
 
 const RendezVousVue = () => {
-  useForceDesktopViewport('rendezvous-vue-page');
-  const today = new Date().toISOString().split('T')[0];
-  const [activeTab, setActiveTab] = useState('jour');
-  const [dateJour, setDateJour] = useState(today);
+  const { closeSidebar } = useSidebar();
+  const isRdvVueTouchMobile = isTouchMobileDevice();
+
+  useEffect(() => {
+    document.body.classList.add(RDV_VUE_PAGE_CLASS);
+    document.documentElement.classList.add(RDV_VUE_PAGE_CLASS);
+    return () => {
+      document.body.classList.remove(RDV_VUE_PAGE_CLASS);
+      document.documentElement.classList.remove(RDV_VUE_PAGE_CLASS);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isRdvVueTouchMobile) return undefined;
+
+    const params = new URLSearchParams(window.location.search);
+    const openFiche = params.get(RDV_VUE_OPEN_FICHE_PARAM);
+    if (!openFiche) return undefined;
+
+    applyRdvVueTableDesktopViewForFicheModal();
+    return undefined;
+  }, [isRdvVueTouchMobile]);
+
+  useLayoutEffect(() => {
+    if (!isRdvVueTouchMobile) return undefined;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get(RDV_VUE_OPEN_FICHE_PARAM)) return undefined;
+
+    document.documentElement.classList.add(RDV_VUE_MOBILE_NATIVE_CLASS);
+    document.body.classList.add(RDV_VUE_MOBILE_NATIVE_CLASS);
+
+    applyMobileNativeViewport();
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(applyMobileNativeViewport);
+    });
+
+    return () => {
+      cancelAnimationFrame(id);
+      document.documentElement.classList.remove(RDV_VUE_MOBILE_NATIVE_CLASS);
+      document.body.classList.remove(RDV_VUE_MOBILE_NATIVE_CLASS);
+      applyForceDesktopViewport();
+    };
+  }, [isRdvVueTouchMobile]);
+
+  useLayoutEffect(() => {
+    if (!isRdvVueTouchMobile) return undefined;
+
+    document.documentElement.classList.add(RDV_VUE_EXTRANET_SCROLL_CLASS);
+    document.body.classList.add(RDV_VUE_EXTRANET_SCROLL_CLASS);
+
+    return () => {
+      document.documentElement.classList.remove(RDV_VUE_EXTRANET_SCROLL_CLASS);
+      document.body.classList.remove(RDV_VUE_EXTRANET_SCROLL_CLASS);
+    };
+  }, [isRdvVueTouchMobile]);
+
+  const [activeTab, setActiveTab] = useState(resolveInitialTab);
+  const [dateJour, setDateJour] = useState(resolveInitialDate);
   const [sortConfig, setSortConfig] = useState({ key: 'date_rdv_time', direction: 'asc' });
   const [quickSearchDep, setQuickSearchDep] = useState('');
   const [ficheContextMenu, setFicheContextMenu] = useState(null);
-  const [ficheDetailModal, setFicheDetailModal] = useState(null);
+  const [ficheDetailModal, setFicheDetailModal] = useState(() =>
+    resolvePendingRdvVueFicheModal(getFicheModalStateFromUrl())
+  );
+  const [isTableDesktopView, setIsTableDesktopView] = useState(() => Boolean(getFicheModalStateFromUrl()));
+  const { lastViewedFicheHash, setLastViewedFicheHash } = useFicheDetailModal();
+
+  const switchToMobileView = useCallback(() => {
+    document.documentElement.classList.add(RDV_VUE_MOBILE_NATIVE_CLASS);
+    document.body.classList.add(RDV_VUE_MOBILE_NATIVE_CLASS);
+    applyRdvVueMobileView();
+    window.dispatchEvent(new Event('viewport-layout-change'));
+    closeSidebar();
+    setIsTableDesktopView(false);
+  }, [closeSidebar]);
+
+  const switchToTableDesktopView = useCallback(() => {
+    document.documentElement.classList.remove(RDV_VUE_MOBILE_NATIVE_CLASS);
+    document.body.classList.remove(RDV_VUE_MOBILE_NATIVE_CLASS);
+    applyRdvVueTableDesktopView();
+    setIsTableDesktopView(true);
+  }, []);
+
+  const toggleRdvVueViewport = useCallback(() => {
+    if (isTableDesktopView) switchToMobileView();
+    else switchToTableDesktopView();
+  }, [isTableDesktopView, switchToMobileView, switchToTableDesktopView]);
+
+  const openRdvVueFicheDetail = useCallback(
+    (modalState) => {
+      if (!modalState?.hash) return;
+
+      if (isRdvVueTouchMobile) {
+        stashPendingRdvVueFicheModal(modalState);
+        const params = new URLSearchParams(window.location.search);
+        params.set('tab', activeTab);
+        params.set('date', dateJour);
+        params.set(RDV_VUE_OPEN_FICHE_PARAM, modalState.hash);
+        if (modalState.focusHistoriqueEtats) params.set('ficheFocusHisto', '1');
+        if (modalState.initialTab) params.set('ficheTab', modalState.initialTab);
+        params.set('tableModal', '1');
+        const qs = params.toString();
+        window.location.assign(qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+        return;
+      }
+
+      setFicheDetailModal(modalState);
+      if (modalState.hash) {
+        setLastViewedFicheHash(modalState.hash);
+      }
+    },
+    [isRdvVueTouchMobile, activeTab, dateJour, setLastViewedFicheHash]
+  );
+
+  useEffect(() => {
+    if (!isRdvVueTouchMobile) return undefined;
+
+    const fromUrl = getFicheModalStateFromUrl();
+    const pending = resolvePendingRdvVueFicheModal(fromUrl);
+    if (!pending?.hash) return undefined;
+
+    setIsTableDesktopView(true);
+    setFicheDetailModal(pending);
+    setLastViewedFicheHash(pending.hash);
+    if (fromUrl) clearFicheModalUrlParams();
+
+    return undefined;
+  }, [isRdvVueTouchMobile, setLastViewedFicheHash]);
+
+  const closeRdvVueFicheDetail = useCallback(() => {
+    clearPendingRdvVueFicheModal();
+    setFicheDetailModal(null);
+    if (isRdvVueTouchMobile) {
+      switchToMobileView();
+    } else {
+      closeSidebar();
+    }
+  }, [isRdvVueTouchMobile, switchToMobileView, closeSidebar]);
+
   const autoRefreshOptions = {
     enabled: true,
     refetchInterval: 5000,
@@ -52,22 +262,15 @@ const RendezVousVue = () => {
     autoRefreshOptions
   );
 
-  const countJour = (dataJour || []).length;
-  const countAffilie = (dataAffilie || []).length;
-  const countNonAffilie = (dataNonAffilie || []).length;
-  const countProductionRdv = (dataProductionRdv || []).length;
-  const { data: usersData } = useQuery('users-rdv-vue', async () => {
-    const res = await api.get('/management/utilisateurs');
-    return res.data.data || [];
-  });
-  const { data: centresData } = useQuery('centres-rdv-vue', async () => {
-    const res = await api.get('/management/centres');
-    return res.data.data || [];
-  });
-  const { data: etatsData } = useQuery('etats-rdv-vue', async () => {
-    const res = await api.get('/management/etats');
-    return res.data.data || [];
-  });
+  const tabCounts = useMemo(
+    () => ({
+      jour: (dataJour || []).length,
+      affilie: (dataAffilie || []).length,
+      non_affilie: (dataNonAffilie || []).length,
+      production_rdv: (dataProductionRdv || []).length,
+    }),
+    [dataJour, dataAffilie, dataNonAffilie, dataProductionRdv]
+  );
 
   const list =
     activeTab === 'jour'
@@ -82,6 +285,19 @@ const RendezVousVue = () => {
     (activeTab === 'affilie' && loadingAffilie) ||
     (activeTab === 'non_affilie' && loadingNonAffilie) ||
     (activeTab === 'production_rdv' && loadingProductionRdv);
+
+  const { data: usersData } = useQuery('users-rdv-vue', async () => {
+    const res = await api.get('/management/utilisateurs');
+    return res.data.data || [];
+  });
+  const { data: centresData } = useQuery('centres-rdv-vue', async () => {
+    const res = await api.get('/management/centres');
+    return res.data.data || [];
+  });
+  const { data: etatsData } = useQuery('etats-rdv-vue', async () => {
+    const res = await api.get('/management/etats');
+    return res.data.data || [];
+  });
 
   const getSortValue = (fiche, key) => {
     switch (key) {
@@ -190,13 +406,13 @@ const RendezVousVue = () => {
 
   const openFicheHistoriqueOverlay = () => {
     if (!ficheContextMenu?.fiche?.hash) return;
-    setFicheDetailModal({ hash: ficheContextMenu.fiche.hash, focusHistoriqueEtats: true });
+    openRdvVueFicheDetail({ hash: ficheContextMenu.fiche.hash, focusHistoriqueEtats: true });
     setFicheContextMenu(null);
   };
 
   const openFicheSmsFromMenu = () => {
     if (!ficheContextMenu?.fiche?.hash) return;
-    setFicheDetailModal({ hash: ficheContextMenu.fiche.hash, initialTab: 'sms' });
+    openRdvVueFicheDetail({ hash: ficheContextMenu.fiche.hash, initialTab: 'sms' });
     setFicheContextMenu(null);
   };
 
@@ -214,51 +430,86 @@ const RendezVousVue = () => {
   return (
     <div className="rdv-vue-page">
       <div className="page-header">
-        <h1>Vue Rendez-vous</h1>
-      </div>
-
-      <div className="rdv-vue-tabs">
-        <button
-          type="button"
-          className={`tab-button ${activeTab === 'jour' ? 'active' : ''}`}
-          onClick={() => setActiveTab('jour')}
-        >
-          <FaCalendarDay /> Rendez-vous du jour <span className="tab-count">({countJour})</span>
-        </button>
-        <button
-          type="button"
-          className={`tab-button ${activeTab === 'affilie' ? 'active' : ''}`}
-          onClick={() => setActiveTab('affilie')}
-        >
-          <FaUserCheck /> Rendez-vous affiliés <span className="tab-count">({countAffilie})</span>
-        </button>
-        <button
-          type="button"
-          className={`tab-button ${activeTab === 'non_affilie' ? 'active' : ''}`}
-          onClick={() => setActiveTab('non_affilie')}
-        >
-          <FaUserSlash /> Rendez-vous non affiliés <span className="tab-count">({countNonAffilie})</span>
-        </button>
-        <button
-          type="button"
-          className={`tab-button ${activeTab === 'production_rdv' ? 'active' : ''}`}
-          onClick={() => setActiveTab('production_rdv')}
-        >
-          <FaChartLine /> Production RDV <span className="tab-count">({countProductionRdv})</span>
-        </button>
-      </div>
-
-      <div className="rdv-vue-filters">
-        <div className="filter-group">
-          <label>Date (journée)</label>
-          <input
-            type="date"
-            value={dateJour}
-            onChange={(e) => setDateJour(e.target.value)}
-            className="form-control"
-          />
+        <div className="rdv-vue-header-left">
+          {isRdvVueTouchMobile && (
+            <button
+              type="button"
+              className="btn-rdv-vue-view-toggle"
+              onClick={toggleRdvVueViewport}
+              title={isTableDesktopView ? 'Revenir à la vue mobile' : 'Afficher le tableau en vue desktop'}
+            >
+              {isTableDesktopView ? (
+                <>
+                  <FaCompress /> Vue mobile
+                </>
+              ) : (
+                <>
+                  <FaExpand /> Vue tableau
+                </>
+              )}
+            </button>
+          )}
+          <h1>Vue Rendez-vous</h1>
         </div>
       </div>
+
+      {isRdvVueTouchMobile ? (
+        <div className="rdv-vue-mobile-controls">
+          <div className="rdv-vue-tab-select">
+            <label htmlFor="rdv-vue-tab-select">Vue :</label>
+            <select
+              id="rdv-vue-tab-select"
+              className="rdv-vue-tab-select-input"
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+            >
+              {TAB_DEFS.map(({ id, label }) => (
+                <option key={id} value={id}>
+                  {label} ({tabCounts[id]})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="rdv-vue-filters rdv-vue-filters--mobile">
+            <div className="filter-group">
+              <label>Date (journée)</label>
+              <input
+                type="date"
+                value={dateJour}
+                onChange={(e) => setDateJour(e.target.value)}
+                className="form-control"
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="rdv-vue-tabs">
+            {TAB_DEFS.map(({ id, Icon, label }) => (
+              <button
+                key={id}
+                type="button"
+                className={`tab-button ${activeTab === id ? 'active' : ''}`}
+                onClick={() => setActiveTab(id)}
+              >
+                <Icon /> {label} <span className="tab-count">({tabCounts[id]})</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="rdv-vue-filters">
+            <div className="filter-group">
+              <label>Date (journée)</label>
+              <input
+                type="date"
+                value={dateJour}
+                onChange={(e) => setDateJour(e.target.value)}
+                className="form-control"
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="rdv-vue-content">
         <div className="quick-search-container">
@@ -322,7 +573,35 @@ const RendezVousVue = () => {
                       <div className="fiche-indicators">
                         {f.id_commercial_2 && Number(f.id_commercial_2) > 0 && <span className="indicator r2" title="R2 placé">R2</span>}
                       </div>
-                      <FicheDetailLink ficheId={f.id} className="btn-detail" title="Voir la fiche" />
+                      <button
+                        type="button"
+                        onClick={() => openRdvVueFicheDetail({ hash: f.hash })}
+                        className="btn-detail"
+                        title="Voir la fiche"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      >
+                        <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
+                          {lastViewedFicheHash === f.hash && (
+                            <span
+                              aria-hidden="true"
+                              style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                width: '28px',
+                                height: '28px',
+                                border: '3px solid #9e9e9e',
+                                borderRadius: '1px',
+                                backgroundColor: 'transparent',
+                                boxSizing: 'border-box',
+                                pointerEvents: 'none',
+                              }}
+                            />
+                          )}
+                        </span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -363,10 +642,12 @@ const RendezVousVue = () => {
       {ficheDetailModal && (
         <FicheDetailModal
           ficheHash={ficheDetailModal.hash}
-          onClose={() => setFicheDetailModal(null)}
+          onClose={closeRdvVueFicheDetail}
           options={{
             focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats,
             initialTab: ficheDetailModal.initialTab || undefined,
+            pinchZoom: isRdvVueTouchMobile,
+            allowBackdropClose: true,
           }}
         />
       )}

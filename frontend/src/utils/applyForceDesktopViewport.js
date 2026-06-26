@@ -26,7 +26,8 @@ export function isMobileNativeExtranetPage() {
   return (
     isTouchMobileDevice() &&
     (document.body?.classList.contains('dashboard-page--mobile-native') ||
-      document.body?.classList.contains('planning-commercial-page--mobile-native')) &&
+      document.body?.classList.contains('planning-commercial-page--mobile-native') ||
+      document.body?.classList.contains('rdv-vue-page--mobile-native')) &&
     !document.documentElement.dataset.desktopViewport
   );
 }
@@ -158,6 +159,67 @@ export function applyPlanningCommercialTableDesktopView(width = DESKTOP_VIEWPORT
 
 export function applyPlanningCommercialTableDesktopViewForFicheModal(width = DESKTOP_VIEWPORT_WIDTH) {
   applyPlanningCommercialTableDesktopView(width, DASHBOARD_FICHE_MODAL_SCALE_MULTIPLIER);
+}
+
+export const RDV_VUE_TABLE_DESKTOP_VIEW_CLASS = 'rdv-vue-page--table-desktop-view';
+
+export function isRdvVueTableDesktopView() {
+  return document.body?.classList.contains(RDV_VUE_TABLE_DESKTOP_VIEW_CLASS);
+}
+
+export function applyRdvVueMobileView() {
+  replaceViewportMeta(
+    'width=device-width, initial-scale=1.0, minimum-scale=0.15, maximum-scale=5, user-scalable=yes, viewport-fit=cover'
+  );
+
+  delete document.documentElement.dataset.desktopViewport;
+  if (document.body) delete document.body.dataset.desktopViewport;
+
+  clearDocumentLayoutStyles();
+  document.documentElement.classList.remove(RDV_VUE_TABLE_DESKTOP_VIEW_CLASS);
+  document.body?.classList.remove(RDV_VUE_TABLE_DESKTOP_VIEW_CLASS);
+
+  if (isTouchMobileDevice()) {
+    resetScrollPosition();
+    requestAnimationFrame(() => {
+      resetScrollPosition();
+      notifyViewportLayoutChange();
+      requestAnimationFrame(notifyViewportLayoutChange);
+    });
+  } else {
+    notifyViewportLayoutChange();
+  }
+}
+
+export function applyRdvVueTableDesktopView(width = DESKTOP_VIEWPORT_WIDTH, scaleMultiplier = 1) {
+  const content = buildDesktopViewportContent(width, scaleMultiplier);
+  if (isTouchMobileDevice()) {
+    forceTouchViewportScaleReset(content);
+  } else {
+    replaceViewportMeta(content);
+  }
+
+  delete document.documentElement.dataset.desktopViewport;
+  if (document.body) delete document.body.dataset.desktopViewport;
+
+  clearDocumentLayoutStyles();
+  document.documentElement.classList.add(RDV_VUE_TABLE_DESKTOP_VIEW_CLASS);
+  document.body?.classList.add(RDV_VUE_TABLE_DESKTOP_VIEW_CLASS);
+
+  if (isTouchMobileDevice()) {
+    resetScrollPosition();
+    requestAnimationFrame(() => {
+      resetScrollPosition();
+      notifyViewportLayoutChange();
+      requestAnimationFrame(notifyViewportLayoutChange);
+    });
+  } else {
+    notifyViewportLayoutChange();
+  }
+}
+
+export function applyRdvVueTableDesktopViewForFicheModal(width = DESKTOP_VIEWPORT_WIDTH) {
+  applyRdvVueTableDesktopView(width, DASHBOARD_FICHE_MODAL_SCALE_MULTIPLIER);
 }
 
 function notifyViewportLayoutChange() {

@@ -8,6 +8,85 @@
   margin-bottom: 16px;
 }
 
+.rdv-vue-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-rdv-vue-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #9cbfc8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.btn-rdv-vue-view-toggle:hover {
+  background: #f0f7f9;
+}
+
+/* Liste déroulante des onglets (mobile) */
+.rdv-vue-tab-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  max-width: 100%;
+}
+
+.rdv-vue-tab-select label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+}
+
+.rdv-vue-tab-select .rdv-vue-tab-select-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  background: #fff;
+  cursor: pointer;
+}
+
+.rdv-vue-tab-select .rdv-vue-tab-select-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+}
+
+.rdv-vue-mobile-controls {
+  margin-bottom: 16px;
+}
+
+.rdv-vue-filters--mobile {
+  margin-bottom: 0;
+}
+
+.rdv-vue-filters--mobile .filter-group {
+  width: 100%;
+}
+
+.rdv-vue-filters--mobile .filter-group .form-control {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .rdv-vue-page .page-header h1 {
   color: #333;
   font-size: 1.5rem;
@@ -326,6 +405,24 @@
   background: #ffa500;
 }
 
+.rdv-vue-page .btn-detail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4.8px 9.6px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 10.2px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rdv-vue-page .btn-detail:hover {
+  background: #1565c0;
+}
+
 /* Réutilise le style du menu contextuel dashboard */
 .dashboard-fiche-context-menu {
   min-width: 220px;
@@ -412,4 +509,209 @@
 
 .rdv-vue-table .btn-detail:hover {
   background: #1565c0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Vue RDV mobile extranet (viewport natif, tableau scrollable,
+   modal fiche tableau + pinch zoom Safari)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]),
+body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100%;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+html.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) #root,
+body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .app,
+body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .main-content,
+body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .content-wrapper,
+body.rdv-vue-page.rdv-vue-page--mobile-native:not([data-desktop-viewport]) .rdv-vue-page {
+  touch-action: pan-x pan-y pinch-zoom !important;
+  overflow: visible !important;
+}
+
+html.rdv-vue-page.rdv-vue-page--extranet-scroll,
+body.rdv-vue-page.rdv-vue-page--extranet-scroll {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  height: auto;
+  min-height: 100%;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+@supports (-webkit-touch-callout: none) {
+  html.rdv-vue-page.rdv-vue-page--extranet-scroll,
+  body.rdv-vue-page.rdv-vue-page--extranet-scroll {
+    min-height: -webkit-fill-available;
+  }
+}
+
+body.rdv-vue-page.rdv-vue-page--extranet-scroll #root,
+body.rdv-vue-page.rdv-vue-page--extranet-scroll .app,
+body.rdv-vue-page.rdv-vue-page--extranet-scroll .main-content,
+body.rdv-vue-page.rdv-vue-page--extranet-scroll .content-wrapper {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  overflow: visible !important;
+  overscroll-behavior: none !important;
+  flex: none !important;
+}
+
+body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-page {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 8px;
+  overflow: visible !important;
+}
+
+body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table-container {
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  max-height: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  overscroll-behavior: none !important;
+  isolation: auto !important;
+  touch-action: pan-x pan-y pinch-zoom;
+  margin-bottom: 16px !important;
+}
+
+body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table {
+  min-width: 1100px !important;
+  width: max-content !important;
+  max-width: none !important;
+  table-layout: fixed !important;
+}
+
+html.viewport-zoomed.rdv-vue-page.rdv-vue-page--extranet-scroll,
+html.viewport-zoomed body.rdv-vue-page.rdv-vue-page--extranet-scroll {
+  overflow: auto !important;
+  overflow-x: scroll !important;
+  overflow-y: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  min-width: 1100px !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+html.viewport-zoomed.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table,
+html.viewport-zoomed body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table {
+  min-width: 1100px !important;
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+html.viewport-zoomed.rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open,
+html.viewport-zoomed body.rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open,
+html:not([data-desktop-viewport]) body.rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open,
+html:not([data-desktop-viewport]).rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open {
+  overflow: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html:not([data-desktop-viewport]) body.rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 3000 !important;
+  padding: 48px 24px !important;
+  margin: 0 !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html:not([data-desktop-viewport]) body.rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content {
+  width: 88% !important;
+  max-width: 88% !important;
+  min-width: 0 !important;
+  flex: 0 1 auto !important;
+  min-height: 0 !important;
+  max-height: 82% !important;
+  height: auto !important;
+  margin: 0 auto !important;
+  border-radius: 8px !important;
+  padding: 0 !important;
+  padding-bottom: 12px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35) !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html:not([data-desktop-viewport]) body.rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync {
+  width: var(--fiche-modal-width-pct, 88%) !important;
+  max-width: var(--fiche-modal-width-pct, 88%) !important;
+  max-height: var(--fiche-modal-height-pct, 82%) !important;
+}
+
+html:not([data-desktop-viewport]) body.rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-close {
+  z-index: 10;
+  color: #ffffff !important;
+  font-size: 24px !important;
+}
+
+html:not([data-desktop-viewport]) body.rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-banner {
+  flex: 0 0 72px !important;
+  width: 100% !important;
+  margin: 0 0 10px 0 !important;
+  border-radius: 4px 4px 0 0 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
+}
+
+@supports (-webkit-touch-callout: none) {
+  html:not([data-desktop-viewport]) body.rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-overlay {
+    padding-top: max(48px, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: max(48px, env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: max(24px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(24px, env(safe-area-inset-right, 0px)) !important;
+  }
+}
+
+html.rdv-vue-page.rdv-vue-page--table-desktop-view:not([data-desktop-viewport]),
+body.rdv-vue-page.rdv-vue-page--table-desktop-view:not([data-desktop-viewport]) {
+  min-width: 1100px !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table {
+  min-width: 1100px !important;
+  width: max-content !important;
+}
+
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table-container {
+  overflow: visible !important;
+  touch-action: pan-x pan-y pinch-zoom;
 }

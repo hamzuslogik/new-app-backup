@@ -16,7 +16,10 @@ const ForceDesktopViewport = () => {
       applyMobileNativeViewport();
       return undefined;
     }
-    if (isTouchMobileDevice() && (pathname === '/dashboard' || pathname === '/planning-commercial')) {
+    if (
+      isTouchMobileDevice() &&
+      (pathname === '/dashboard' || pathname === '/planning-commercial' || pathname === '/rdv-vue')
+    ) {
       return undefined;
     }
     applyForceDesktopViewport();
