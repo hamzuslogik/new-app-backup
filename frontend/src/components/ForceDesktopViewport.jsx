@@ -8,9 +8,6 @@ import {
 
 const MOBILE_NATIVE_VIEWPORT_PATHS = new Set(['/login']);
 
-const MOBILE_EXTRANET_PATHS = new Set(['/dashboard', '/planning-commercial', '/rdv-vue']);
-const RDV_VUE_OPEN_FICHE_PARAM = 'openFiche';
-
 const ForceDesktopViewport = () => {
   const { pathname } = useLocation();
 
@@ -19,12 +16,10 @@ const ForceDesktopViewport = () => {
       applyMobileNativeViewport();
       return undefined;
     }
-    if (isTouchMobileDevice() && MOBILE_EXTRANET_PATHS.has(pathname)) {
-      const openFiche = new URLSearchParams(window.location.search).get(RDV_VUE_OPEN_FICHE_PARAM);
-      if (openFiche) {
-        return undefined;
-      }
-      applyMobileNativeViewport();
+    if (
+      isTouchMobileDevice() &&
+      (pathname === '/dashboard' || pathname === '/planning-commercial' || pathname === '/rdv-vue')
+    ) {
       return undefined;
     }
     applyForceDesktopViewport();

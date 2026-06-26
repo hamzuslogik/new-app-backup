@@ -97,7 +97,7 @@ const RendezVousVue = () => {
   const { closeSidebar } = useSidebar();
   const isRdvVueTouchMobile = isTouchMobileDevice();
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     document.body.classList.add(RDV_VUE_PAGE_CLASS);
     document.documentElement.classList.add(RDV_VUE_PAGE_CLASS);
     return () => {
@@ -107,7 +107,7 @@ const RendezVousVue = () => {
   }, []);
 
   useLayoutEffect(() => {
-    if (!isRdvVueTouchMobile) return undefined;
+    if (!isTouchMobileDevice()) return undefined;
 
     const params = new URLSearchParams(window.location.search);
     const openFiche = params.get(RDV_VUE_OPEN_FICHE_PARAM);
@@ -115,10 +115,10 @@ const RendezVousVue = () => {
 
     applyRdvVueTableDesktopViewForFicheModal();
     return undefined;
-  }, [isRdvVueTouchMobile]);
+  }, []);
 
   useLayoutEffect(() => {
-    if (!isRdvVueTouchMobile) return undefined;
+    if (!isTouchMobileDevice()) return undefined;
 
     const params = new URLSearchParams(window.location.search);
     if (params.get(RDV_VUE_OPEN_FICHE_PARAM)) return undefined;
@@ -137,10 +137,10 @@ const RendezVousVue = () => {
       document.body.classList.remove(RDV_VUE_MOBILE_NATIVE_CLASS);
       applyForceDesktopViewport();
     };
-  }, [isRdvVueTouchMobile]);
+  }, []);
 
   useLayoutEffect(() => {
-    if (!isRdvVueTouchMobile) return undefined;
+    if (!isTouchMobileDevice()) return undefined;
 
     document.documentElement.classList.add(RDV_VUE_EXTRANET_SCROLL_CLASS);
     document.body.classList.add(RDV_VUE_EXTRANET_SCROLL_CLASS);
@@ -149,7 +149,7 @@ const RendezVousVue = () => {
       document.documentElement.classList.remove(RDV_VUE_EXTRANET_SCROLL_CLASS);
       document.body.classList.remove(RDV_VUE_EXTRANET_SCROLL_CLASS);
     };
-  }, [isRdvVueTouchMobile]);
+  }, []);
 
   const [activeTab, setActiveTab] = useState(resolveInitialTab);
   const [dateJour, setDateJour] = useState(resolveInitialDate);
@@ -428,7 +428,7 @@ const RendezVousVue = () => {
   };
 
   return (
-    <div className="rdv-vue-page">
+    <div className="rdv-vue">
       <div className="page-header">
         <div className="rdv-vue-header-left">
           {isRdvVueTouchMobile && (
