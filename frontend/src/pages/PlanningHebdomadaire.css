@@ -366,6 +366,8 @@
 
 /* Affichage mobile iOS (route Planning Hebdo iOS) */
 .planning-hebdomadaire-page--ios-mobile {
+  display: flex;
+  flex-direction: column;
   padding: 8px;
   min-height: auto;
 }
@@ -375,6 +377,7 @@
   align-items: stretch;
   gap: 10px;
   padding: 12px;
+  order: 0;
 }
 
 .planning-hebdomadaire-page--ios-mobile .header-left {
@@ -387,6 +390,10 @@
 
 .planning-hebdomadaire-page--ios-mobile .header-right {
   justify-content: center;
+}
+
+.planning-hebdomadaire-page--ios-mobile .planning-hebdomadaire-form {
+  order: 1;
 }
 
 .planning-hebdomadaire-page--ios-mobile .planning-hebdomadaire-form form {
@@ -413,79 +420,29 @@
   font-size: 14px;
 }
 
-.planning-hebdomadaire-mobile-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.planning-hebdomadaire-mobile-empty {
-  text-align: center;
-  padding: 20px 12px;
-  margin: 0;
-  background: white;
-  border-radius: 8px;
-  color: #666;
-  font-size: 14px;
-}
-
-.planning-hebdomadaire-mobile-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-  padding: 12px;
-  border: 1px solid #e8ecef;
-}
-
-.planning-hebdomadaire-mobile-card .mobile-card-header {
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e8ecef;
-}
-
-.planning-hebdomadaire-mobile-card .mobile-card-header .departement-link {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.planning-hebdomadaire-mobile-card .mobile-card-days {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.planning-hebdomadaire-mobile-card .mobile-card-day {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 8px;
-  background: #f8f9fa;
-  border-radius: 5px;
-  font-size: 13px;
-}
-
-.planning-hebdomadaire-mobile-card .mobile-card-day-label {
-  font-weight: 600;
-  color: #9cbfc8;
-}
-
-.planning-hebdomadaire-mobile-card .mobile-card-day-value {
-  font-weight: 700;
-  color: #333;
-  min-width: 28px;
-  text-align: right;
-}
-
-.planning-hebdomadaire-mobile-card .mobile-card-delete {
+.planning-hebdomadaire-page--ios-mobile .planning-hebdomadaire-table-container {
+  order: 2;
   width: 100%;
-  justify-content: center;
-  margin-top: 10px;
-  padding: 10px;
-  font-size: 12px;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+.planning-hebdomadaire-page--ios-mobile .planning-hebdomadaire-table {
+  min-width: 620px;
+  width: max-content;
+}
+
+.planning-hebdomadaire-page--ios-mobile .planning-hebdomadaire-table th,
+.planning-hebdomadaire-page--ios-mobile .planning-hebdomadaire-table td {
+  white-space: nowrap;
+  font-size: 11px;
+  padding: 4px 8px;
 }
 
 .planning-hebdomadaire-page--ios-mobile .planning-hebdomadaire-copy {
+  order: 3;
   margin-top: 4px;
 }
 

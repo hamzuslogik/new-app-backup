@@ -67,14 +67,6 @@ const getDepartmentSortNumber = (value) => {
   return parseInt(digits, 10);
 };
 
-const DAY_LABELS = {
-  lundi: 'Lundi',
-  mardi: 'Mardi',
-  mercredi: 'Mercredi',
-  jeudi: 'Jeudi',
-  vendredi: 'Vendredi',
-};
-
 const PlanningHebdomadaire = ({ variant }) => {
   const isIosMobile = variant === 'ios-mobile';
 
@@ -553,47 +545,6 @@ const PlanningHebdomadaire = ({ variant }) => {
         </form>
       </div>
 
-      {isIosMobile && (
-        <div className="planning-hebdomadaire-mobile-list">
-          {isLoading ? (
-            <p className="planning-hebdomadaire-mobile-empty">Chargement...</p>
-          ) : sortedDisponibilites.length === 0 ? (
-            <p className="planning-hebdomadaire-mobile-empty">
-              Aucune disponibilité pour cette semaine
-            </p>
-          ) : (
-            sortedDisponibilites.map((item) => (
-              <article key={item.departement_id} className="planning-hebdomadaire-mobile-card">
-                <div className="mobile-card-header">
-                  <Link
-                    to={`/planning?dp=${item.departement_code || item.departement_id}&w=${week}&y=${year}&mode=availability`}
-                    className="departement-link"
-                  >
-                    {item.departement_nom}
-                  </Link>
-                </div>
-                <div className="mobile-card-days">
-                  {Object.keys(DAY_LABELS).map((dayKey) => (
-                    <div key={dayKey} className="mobile-card-day">
-                      <span className="mobile-card-day-label">{DAY_LABELS[dayKey]}</span>
-                      <span className="mobile-card-day-value">{item[dayKey]}</span>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="btn-delete mobile-card-delete"
-                  onClick={() => deleteMutation.mutate(item.departement_id)}
-                  title="Supprimer l'Aperçu"
-                >
-                  <FaTrash /> Supprimer l&apos;Aperçu
-                </button>
-              </article>
-            ))
-          )}
-        </div>
-      )}
-
       {/* Section Copie planning */}
       <div className="planning-hebdomadaire-copy">
         <h3>Copie planning semaine : {week} ({year})</h3>
@@ -647,8 +598,7 @@ const PlanningHebdomadaire = ({ variant }) => {
         </div>
       </div>
 
-      {/* Tableau des disponibilités (desktop) */}
-      {!isIosMobile && (
+      {/* Tableau des disponibilités */}
       <div className="planning-hebdomadaire-table-container">
         <table className="planning-hebdomadaire-table">
           <thead>
@@ -706,7 +656,6 @@ const PlanningHebdomadaire = ({ variant }) => {
           </tbody>
         </table>
       </div>
-      )}
     </div>
   );
 };

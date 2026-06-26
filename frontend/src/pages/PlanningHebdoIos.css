@@ -2,7 +2,6 @@ html.planning-hebdo-ios-page,
 body.planning-hebdo-ios-page {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
 }
 
 html.planning-hebdo-ios-page:not([data-desktop-viewport]),
@@ -17,6 +16,72 @@ body.planning-hebdo-ios-page:not([data-desktop-viewport]) .main-content,
 body.planning-hebdo-ios-page:not([data-desktop-viewport]) .content-wrapper {
   width: 100%;
   max-width: 100%;
-  min-height: 0;
+  min-width: 0;
   overflow-x: hidden;
+}
+
+html.planning-hebdo-ios-page.planning-hebdo-ios-page--mobile-native:not([data-desktop-viewport]),
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--mobile-native:not([data-desktop-viewport]) {
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+html.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll,
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  height: auto;
+  min-height: 100%;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+@supports (-webkit-touch-callout: none) {
+  html.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll,
+  body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll {
+    min-height: -webkit-fill-available;
+  }
+}
+
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll #root,
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll .app,
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll .main-content,
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll .content-wrapper {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  overflow: visible !important;
+  overscroll-behavior: none !important;
+  flex: none !important;
+}
+
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll .planning-hebdomadaire-page--ios-mobile {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll .planning-hebdomadaire-table-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom;
+  margin-bottom: 16px !important;
+}
+
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll .planning-hebdomadaire-table {
+  min-width: 620px !important;
+  width: max-content !important;
+  table-layout: auto !important;
+}
+
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll .planning-hebdomadaire-table th,
+body.planning-hebdo-ios-page.planning-hebdo-ios-page--extranet-scroll .planning-hebdomadaire-table td {
+  white-space: nowrap;
 }

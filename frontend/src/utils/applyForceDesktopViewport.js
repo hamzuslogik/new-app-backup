@@ -27,7 +27,8 @@ export function isMobileNativeExtranetPage() {
     isTouchMobileDevice() &&
     (document.body?.classList.contains('dashboard-page--mobile-native') ||
       document.body?.classList.contains('planning-commercial-page--mobile-native') ||
-      document.body?.classList.contains('rdv-vue-page--mobile-native')) &&
+      document.body?.classList.contains('rdv-vue-page--mobile-native') ||
+      document.body?.classList.contains('planning-hebdo-ios-page--mobile-native')) &&
     !document.documentElement.dataset.desktopViewport
   );
 }
