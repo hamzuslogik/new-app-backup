@@ -147,7 +147,7 @@ function App() {
           <Route path="signatures" element={<ProtectedRoute permission="signatures_view"><Signatures /></ProtectedRoute>} />
           <Route path="cq-signatures" element={<ProtectedRoute permission={null} allowFunctions={[1, 11]}><CQSignatures /></ProtectedRoute>} />
           <Route path="system-messages" element={<ProtectedRoute permission="management_view"><SystemMessages /></ProtectedRoute>} />
-          <Route path="mon-profil" element={<ProtectedRoute permission={null} allowFunctions={[1, 2, 5, 6, 7, 8, 9, 11, 12, 13, 14]}><MonProfil /></ProtectedRoute>} />
+          <Route path="mon-profil" element={<ProtectedRoute permission={null} allowFunctions={[1, 2, 6, 7, 8, 9, 11, 12, 13, 14]}><MonProfil /></ProtectedRoute>} />
           <Route
             path="code-secours"
             element={

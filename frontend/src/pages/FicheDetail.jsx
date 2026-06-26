@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
@@ -32,6 +32,7 @@ import {
 } from '../utils/compteRenduCommercialOptions';
 import CompteRenduEarlyVerification from '../components/CompteRenduEarlyVerification';
 import { isBeforeRdvDateTime } from '../utils/compteRenduEarlyVerification';
+import { resolveConfRevenuAfterTypeContratChange } from '../utils/revenuTypeContrat';
 
 /** Mode de chauffage (VARCHAR en base) : affichage tel quel. */
 function modeChauffageAffiche(confProp, modeProp) {
@@ -868,6 +869,19 @@ const FicheDetail = ({
     const res = await api.get('/management/type-contrat');
     return res.data.data || [];
   });
+
+  const applyConfTypeContratChange = useCallback((field, value) => {
+    setConfFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      next.conf_revenu = resolveConfRevenuAfterTypeContratChange(
+        prev.conf_revenu,
+        next.conf_type_contrat_mr,
+        next.conf_type_contrat_madame,
+        typeContrat
+      );
+      return next;
+    });
+  }, [typeContrat]);
 
   const { data: produits } = useQuery('produits', async () => {
     try {
@@ -6469,7 +6483,6 @@ const FicheDetail = ({
                         <input
                           type="text"
                           className="form-control"
-                          placeholder="Saisir une profession..."
                           autoComplete="off"
                           value={confFormData.conf_profession_monsieur || ''}
                           onChange={(e) => setConfFormData({ ...confFormData, conf_profession_monsieur: e.target.value })}
@@ -6483,7 +6496,7 @@ const FicheDetail = ({
                           id="conf_type_contrat_mr"
                           className="form-control"
                           value={confFormData.conf_type_contrat_mr}
-                          onChange={(e) => setConfFormData({...confFormData, conf_type_contrat_mr: e.target.value})}
+                          onChange={(e) => applyConfTypeContratChange('conf_type_contrat_mr', e.target.value)}
                         >
                           <option value="">Sélectionner</option>
                           {(typeContrat || []).map(t => (
@@ -6498,7 +6511,6 @@ const FicheDetail = ({
                         <input
                           type="text"
                           className="form-control"
-                          placeholder="Saisir une profession..."
                           autoComplete="off"
                           value={confFormData.conf_profession_madame || ''}
                           onChange={(e) => setConfFormData({ ...confFormData, conf_profession_madame: e.target.value })}
@@ -6512,7 +6524,7 @@ const FicheDetail = ({
                           id="conf_type_contrat_madame"
                           className="form-control"
                           value={confFormData.conf_type_contrat_madame}
-                          onChange={(e) => setConfFormData({...confFormData, conf_type_contrat_madame: e.target.value})}
+                          onChange={(e) => applyConfTypeContratChange('conf_type_contrat_madame', e.target.value)}
                         >
                           <option value="">Sélectionner</option>
                           {(typeContrat || []).map(t => (
@@ -6530,7 +6542,6 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_revenu}
                           onChange={(e) => setConfFormData({...confFormData, conf_revenu: e.target.value})}
-                          placeholder="Revenu"
                         />
                       </td>
                     </tr>
@@ -6543,7 +6554,6 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_credit}
                           onChange={(e) => setConfFormData({...confFormData, conf_credit: e.target.value})}
-                          placeholder="Crédit"
                         />
                       </td>
                     </tr>
@@ -6556,7 +6566,6 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_consommation_electricite}
                           onChange={(e) => setConfFormData({...confFormData, conf_consommation_electricite: e.target.value})}
-                          placeholder="Ex: 800 €/an"
                         />
                       </td>
                     </tr>
@@ -6569,7 +6578,6 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_consommation_chauffage}
                           onChange={(e) => setConfFormData({...confFormData, conf_consommation_chauffage: e.target.value})}
-                          placeholder="Ex: 1500 €/an"
                         />
                       </td>
                     </tr>
@@ -6582,7 +6590,6 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_mode_chauffage || ''}
                           onChange={(e) => setConfFormData({ ...confFormData, conf_mode_chauffage: e.target.value })}
-                          placeholder="Ex. Gaz, électricité, PAC…"
                           autoComplete="off"
                         />
                       </td>
@@ -6600,7 +6607,6 @@ const FicheDetail = ({
                               className="form-control"
                               value={confFormData.annee_systeme_chauffage}
                               onChange={(e) => setConfFormData({...confFormData, annee_systeme_chauffage: e.target.value})}
-                              placeholder="Ex: 2010"
                               min="1970"
                               max={new Date().getFullYear()}
                             />
@@ -6615,7 +6621,6 @@ const FicheDetail = ({
                               className="form-control"
                               value={confFormData.surface_chauffee}
                               onChange={(e) => setConfFormData({...confFormData, surface_chauffee: e.target.value})}
-                              placeholder="Ex: 100"
                               min="0"
                             />
                           </td>
@@ -6629,7 +6634,6 @@ const FicheDetail = ({
                               className="form-control"
                               value={confFormData.consommation_chauffage}
                               onChange={(e) => setConfFormData({...confFormData, consommation_chauffage: e.target.value})}
-                              placeholder="Ex: 1500 €/an"
                             />
                           </td>
                         </tr>
@@ -6648,7 +6652,6 @@ const FicheDetail = ({
                               className="form-control"
                               value={confFormData.conf_orientation_toiture || ''}
                               onChange={(e) => setConfFormData({...confFormData, conf_orientation_toiture: e.target.value})}
-                              placeholder="Ex: Sud, Nord-Est..."
                             />
                           </td>
                         </tr>
@@ -6661,7 +6664,6 @@ const FicheDetail = ({
                               className="form-control"
                               value={confFormData.conf_zones_ombres}
                               onChange={(e) => setConfFormData({...confFormData, conf_zones_ombres: e.target.value})}
-                              placeholder="Ex: Arbres, cheminée, bâtiment voisin..."
                             />
                           </td>
                         </tr>
@@ -9499,6 +9501,19 @@ const CreateRdvModal = ({
     return res.data?.data || res.data || [];
   });
 
+  const applyRdvTypeContratChange = (field, value) => {
+    setRdvFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      next.conf_revenu = resolveConfRevenuAfterTypeContratChange(
+        prev.conf_revenu,
+        next.conf_type_contrat_mr,
+        next.conf_type_contrat_madame,
+        typeContratRdv
+      );
+      return next;
+    });
+  };
+
   const { data: produits, isLoading: isLoadingProduits, error: produitsError } = useQuery(
     'produits-modal', 
     async () => {
@@ -9881,7 +9896,6 @@ const CreateRdvModal = ({
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="Saisir une profession..."
                       autoComplete="off"
                       value={rdvFormData.conf_profession_monsieur || ''}
                       onChange={(e) => setRdvFormData({ ...rdvFormData, conf_profession_monsieur: e.target.value })}
@@ -9894,7 +9908,7 @@ const CreateRdvModal = ({
                     <select
                       className="form-control"
                       value={rdvFormData.conf_type_contrat_mr || ''}
-                      onChange={(e) => setRdvFormData({...rdvFormData, conf_type_contrat_mr: e.target.value})}
+                      onChange={(e) => applyRdvTypeContratChange('conf_type_contrat_mr', e.target.value)}
                     >
                       <option value="">Sélectionner</option>
                       {(typeContratRdv || []).map(t => (
@@ -9909,7 +9923,6 @@ const CreateRdvModal = ({
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="Saisir une profession..."
                       autoComplete="off"
                       value={rdvFormData.conf_profession_madame || ''}
                       onChange={(e) => setRdvFormData({ ...rdvFormData, conf_profession_madame: e.target.value })}
@@ -9922,7 +9935,7 @@ const CreateRdvModal = ({
                     <select
                       className="form-control"
                       value={rdvFormData.conf_type_contrat_madame || ''}
-                      onChange={(e) => setRdvFormData({...rdvFormData, conf_type_contrat_madame: e.target.value})}
+                      onChange={(e) => applyRdvTypeContratChange('conf_type_contrat_madame', e.target.value)}
                     >
                       <option value="">Sélectionner</option>
                       {(typeContratRdv || []).map(t => (
@@ -9939,7 +9952,6 @@ const CreateRdvModal = ({
                       className="form-control"
                       value={rdvFormData.conf_revenu || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_revenu: e.target.value})}
-                      placeholder="Revenu"
                     />
                   </td>
                 </tr>
@@ -9951,7 +9963,6 @@ const CreateRdvModal = ({
                       className="form-control"
                       value={rdvFormData.conf_credit || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_credit: e.target.value})}
-                      placeholder="Crédit"
                     />
                   </td>
                 </tr>
@@ -9963,7 +9974,6 @@ const CreateRdvModal = ({
                       className="form-control"
                       value={rdvFormData.conf_mode_chauffage || ''}
                       onChange={(e) => setRdvFormData({ ...rdvFormData, conf_mode_chauffage: e.target.value })}
-                      placeholder="Ex. Gaz, électricité, PAC…"
                       autoComplete="off"
                     />
                   </td>
@@ -9976,7 +9986,6 @@ const CreateRdvModal = ({
                       className="form-control"
                       value={rdvFormData.conf_consommation_electricite || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_electricite: e.target.value})}
-                      placeholder="Ex: 800 €/an"
                     />
                   </td>
                 </tr>
@@ -9988,7 +9997,6 @@ const CreateRdvModal = ({
                       className="form-control"
                       value={rdvFormData.conf_consommation_chauffage || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_chauffage: e.target.value})}
-                      placeholder="Ex: 1500 €/an"
                     />
                   </td>
                 </tr>
@@ -10009,7 +10017,6 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.surface_chauffee || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, surface_chauffee: e.target.value})}
-                            placeholder="Ex: 100"
                           />
                         </td>
                       </tr>
@@ -10022,7 +10029,6 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.consommation_chauffage || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, consommation_chauffage: e.target.value})}
-                            placeholder="Ex: 1500 €/an"
                           />
                         </td>
                       </tr>
@@ -10035,7 +10041,6 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.annee_systeme_chauffage || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, annee_systeme_chauffage: e.target.value})}
-                            placeholder="Ex: 2010"
                           />
                         </td>
                       </tr>
@@ -10058,7 +10063,6 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.conf_orientation_toiture || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_orientation_toiture: e.target.value})}
-                            placeholder="Ex: Sud, Nord-Est..."
                           />
                         </td>
                       </tr>
@@ -10071,7 +10075,6 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.conf_zones_ombres}
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_zones_ombres: e.target.value})}
-                            placeholder="Ex: Arbres, cheminée, bâtiment voisin..."
                           />
                         </td>
                       </tr>
@@ -10084,7 +10087,6 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.conf_site_classe || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_site_classe: e.target.value})}
-                            placeholder="Ex: Oui, Non, précisions..."
                           />
                         </td>
                       </tr>
