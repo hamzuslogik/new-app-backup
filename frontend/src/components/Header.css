@@ -535,19 +535,102 @@ header.header .user-info span {
     padding: 4.8px;
   }
 
+  .notification-container {
+    position: static;
+  }
+
   .notifications-dropdown {
-    width: calc(100vw - 40px);
-    max-width: 320px;
-    right: 10px;
-    left: auto;
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 52px);
+    left: max(8px, env(safe-area-inset-left, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
+    width: auto;
+    max-width: none;
+    max-height: min(70vh, 520px);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+    z-index: 1100;
+  }
+
+  .notifications-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .notifications-header h3 {
+    font-size: 14px;
+  }
+
+  .notifications-header-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .view-all-notifications-btn,
+  .mark-all-read-btn {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+    font-size: 11px;
+    padding: 7px 8px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .notifications-list {
+    max-height: min(58vh, 420px);
+    -webkit-overflow-scrolling: touch;
   }
 
   .notification-item {
-    padding: 8px 9.6px;
+    padding: 10px 12px;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .notification-content {
+    min-width: 0;
+    width: 100%;
   }
 
   .notification-message {
+    font-size: 13px;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .notification-date {
     font-size: 11px;
+    margin-top: 4px;
+  }
+
+  .notification-metadata {
+    font-size: 11px !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .notification-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .accept-btn,
+  .refuse-btn {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .mark-read-btn {
+    flex-shrink: 0;
+    align-self: flex-end;
   }
 }
 
@@ -579,9 +662,20 @@ header.header .user-info span {
   }
 
   .notifications-dropdown {
-    width: calc(100vw - 20px);
-    right: 10px;
-    left: auto;
+    top: calc(env(safe-area-inset-top, 0px) + 48px);
+    left: max(6px, env(safe-area-inset-left, 0px));
+    right: max(6px, env(safe-area-inset-right, 0px));
+    max-height: min(75vh, 500px);
+  }
+
+  .notifications-header-actions {
+    flex-direction: column;
+  }
+
+  .view-all-notifications-btn,
+  .mark-all-read-btn {
+    flex: 1 1 auto;
+    width: 100%;
   }
 }
 
