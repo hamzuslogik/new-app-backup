@@ -1,12 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
+import { useSidebar } from '../contexts/SidebarContext';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../config/api';
 import { FaChevronLeft, FaChevronRight, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import {
+  applyForceDesktopViewport,
+  applyMobileNativeViewport,
+  isTouchMobileDevice,
+} from '../utils/applyForceDesktopViewport';
 import './PlanningHebdomadaire.css';
-import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+
+const PAGE_CLASS = 'planning-hebdomadaire-page';
+const MOBILE_NATIVE_CLASS = 'planning-hebdomadaire-page--mobile-native';
+const EXTRANET_SCROLL_CLASS = 'planning-hebdomadaire-page--extranet-scroll';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -68,7 +77,60 @@ const getDepartmentSortNumber = (value) => {
 };
 
 const PlanningHebdomadaire = () => {
-  useForceDesktopViewport('planning-hebdomadaire-page');
+  const { closeSidebar } = useSidebar();
+  const isTouchMobile = isTouchMobileDevice();
+
+  useEffect(() => {
+    if (!isTouchMobile) {
+      applyForceDesktopViewport();
+    }
+  }, [isTouchMobile]);
+
+  useLayoutEffect(() => {
+    document.documentElement.classList.add(PAGE_CLASS);
+    document.body.classList.add(PAGE_CLASS);
+    return () => {
+      document.documentElement.classList.remove(PAGE_CLASS);
+      document.body.classList.remove(PAGE_CLASS);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isTouchMobile) return undefined;
+
+    document.documentElement.classList.add(MOBILE_NATIVE_CLASS);
+    document.body.classList.add(MOBILE_NATIVE_CLASS);
+    applyMobileNativeViewport();
+    window.dispatchEvent(new Event('viewport-layout-change'));
+
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        applyMobileNativeViewport();
+        window.dispatchEvent(new Event('viewport-layout-change'));
+        closeSidebar();
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(id);
+      document.documentElement.classList.remove(MOBILE_NATIVE_CLASS);
+      document.body.classList.remove(MOBILE_NATIVE_CLASS);
+      applyForceDesktopViewport();
+    };
+  }, [closeSidebar, isTouchMobile]);
+
+  useLayoutEffect(() => {
+    if (!isTouchMobile) return undefined;
+
+    document.documentElement.classList.add(EXTRANET_SCROLL_CLASS);
+    document.body.classList.add(EXTRANET_SCROLL_CLASS);
+
+    return () => {
+      document.documentElement.classList.remove(EXTRANET_SCROLL_CLASS);
+      document.body.classList.remove(EXTRANET_SCROLL_CLASS);
+    };
+  }, [isTouchMobile]);
+
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -457,7 +519,7 @@ const PlanningHebdomadaire = () => {
   });
 
   return (
-    <div className="planning-hebdomadaire-page">
+    <div className="planning-hebdomadaire">
       {/* Header */}
       <div className="planning-hebdomadaire-header">
         <div className="header-left">

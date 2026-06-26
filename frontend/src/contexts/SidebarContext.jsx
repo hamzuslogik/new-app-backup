@@ -16,6 +16,7 @@ const getInitialSidebarState = () => {
 export const SidebarProvider = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarState());
   const [mobileExtranetActive, setMobileExtranetActive] = useState(isMobileNativeExtranetPage());
+  const extranetActiveRef = React.useRef(isMobileNativeExtranetPage());
   const [isMobile, setIsMobile] = useState(
     mobileExtranetActive || (!FORCE_DESKTOP_VIEWPORT && window.innerWidth <= 768)
   );
@@ -32,12 +33,16 @@ export const SidebarProvider = ({ children }) => {
   useEffect(() => {
     const syncExtranetLayout = () => {
       const extranet = isMobileNativeExtranetPage();
+      const wasExtranet = extranetActiveRef.current;
+      extranetActiveRef.current = extranet;
       setMobileExtranetActive(extranet);
       if (extranet) {
         setIsMobile(true);
         setIsTablet(false);
         setIsDesktop(false);
-        setSidebarCollapsed(true);
+        if (!wasExtranet) {
+          setSidebarCollapsed(true);
+        }
       }
     };
 
