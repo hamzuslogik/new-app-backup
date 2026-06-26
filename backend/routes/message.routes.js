@@ -375,6 +375,13 @@ router.post('/', authenticate, async (req, res) => {
       [req.user.id]
     );
 
+    if (currentUser && Number(currentUser.fonction) === 5) {
+      return res.status(403).json({
+        success: false,
+        message: 'Les commerciaux peuvent uniquement recevoir des messages, pas en envoyer.'
+      });
+    }
+
     // Récupérer l'utilisateur destination avec toutes ses informations
     const destUser = await queryOne(
       `SELECT fonction, chef_equipe, id_rp_qualif FROM utilisateurs WHERE id = ? AND etat > 0`,

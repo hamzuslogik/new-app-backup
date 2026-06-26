@@ -484,6 +484,15 @@
   gap: 8px;
 }
 
+.chat-readonly-notice {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  background: var(--input-bg, #f5f5f5);
+  color: var(--text-muted, #555);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 .chat-input {
   flex: 1;
   padding: 9.6px 12px;

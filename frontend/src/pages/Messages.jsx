@@ -55,6 +55,7 @@ const Messages = () => {
   useForceDesktopViewport('messages-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const isCommercialReceiveOnly = Number(user?.fonction) === 5;
   const [selectedUser, setSelectedUser] = useState(null);
   const [messageText, setMessageText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -100,6 +101,7 @@ const Messages = () => {
       return res.data.data || [];
     },
     {
+      enabled: !isCommercialReceiveOnly,
       refetchInterval: 10000, // Rafraîchir toutes les 10 secondes pour mettre à jour le statut
     }
   );
@@ -146,7 +148,7 @@ const Messages = () => {
     conv.pseudo?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  // Filtrer les utilisateurs pour nouvelle conversation
+  // Filtrer les utilisateurs pour nouvelle conversation (hors commercial en lecture seule)
   const filteredUsers = allUsers?.filter(u =>
     u.pseudo?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
@@ -176,6 +178,7 @@ const Messages = () => {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
+    if (isCommercialReceiveOnly) return;
     if (!messageText.trim() || !selectedUser) return;
 
     sendMessageMutation.mutate({
@@ -230,12 +233,14 @@ const Messages = () => {
         </div>
 
         <div className="conversations-list">
-          {loadingConversations && loadingUsers ? (
+          {loadingConversations && !isCommercialReceiveOnly && loadingUsers ? (
+            <div className="loading">Chargement...</div>
+          ) : loadingConversations ? (
             <div className="loading">Chargement...</div>
           ) : (
             <>
               {/* Bouton pour afficher/masquer tous les utilisateurs */}
-              {!searchTerm && (
+              {!searchTerm && !isCommercialReceiveOnly && (
                 <button
                   className="toggle-users-button"
                   onClick={() => setShowAllUsers(!showAllUsers)}
@@ -246,6 +251,53 @@ const Messages = () => {
 
               {/* Liste des contacts */}
               {searchTerm ? (
+                isCommercialReceiveOnly ? (
+                  filteredConversations.length === 0 ? (
+                    <div className="no-conversations">Aucune conversation trouvée</div>
+                  ) : (
+                    filteredConversations.map((conv) => (
+                      <div
+                        key={conv.id}
+                        className={`conversation-item ${selectedUser?.id === conv.id ? 'active' : ''}`}
+                        onClick={() => handleSelectUser(conv)}
+                      >
+                        <div className="conversation-avatar">
+                          <img
+                            src={conv.photo || getDefaultAvatar(conv.genre)}
+                            alt={conv.pseudo}
+                            onError={(e) => {
+                              e.target.src = getDefaultAvatar(conv.genre);
+                            }}
+                          />
+                          <PresenceDot presence={conv.presence} lastActivity={conv.last_activity} />
+                          {conv.unread_count > 0 && (
+                            <span className="unread-badge">{conv.unread_count}</span>
+                          )}
+                        </div>
+                        <div className="conversation-info">
+                          <div className="conversation-header">
+                            <span className="conversation-name">
+                              {conv.pseudo}
+                              <PresenceCaption presence={conv.presence} lastActivity={conv.last_activity} />
+                            </span>
+                            {conv.last_message_date && (
+                              <span className="conversation-time">{formatDate(conv.last_message_date)}</span>
+                            )}
+                          </div>
+                          <div className="conversation-preview">
+                            {conv.last_message && (
+                              <span className="last-message">
+                                {conv.last_message.length > 50
+                                  ? `${conv.last_message.substring(0, 50)}...`
+                                  : conv.last_message}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )
+                ) : (
                 // Mode recherche : afficher les résultats filtrés
                 filteredUsers.length === 0 ? (
                   <div className="no-conversations">Aucun résultat</div>
@@ -305,6 +357,7 @@ const Messages = () => {
                       </div>
                     );
                   })
+                )
                 )
               ) : (
                 // Mode normal : afficher les conversations + optionnellement tous les utilisateurs
@@ -459,7 +512,9 @@ const Messages = () => {
                 <div className="loading">Chargement des messages...</div>
               ) : messages?.length === 0 ? (
                 <div className="no-messages">
-                  Aucun message. Commencez la conversation !
+                  {isCommercialReceiveOnly
+                    ? 'Aucun message reçu pour le moment.'
+                    : 'Aucun message. Commencez la conversation !'}
                 </div>
               ) : (
                 messages.map((msg) => {
@@ -497,23 +552,29 @@ const Messages = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            <form className="chat-input-form" onSubmit={handleSendMessage}>
-              <input
-                type="text"
-                className="chat-input"
-                placeholder="Tapez votre message..."
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                disabled={sendMessageMutation.isLoading}
-              />
-              <button
-                type="submit"
-                className="chat-send-button"
-                disabled={!messageText.trim() || sendMessageMutation.isLoading}
-              >
-                <FaPaperPlane />
-              </button>
-            </form>
+            {isCommercialReceiveOnly ? (
+              <div className="chat-readonly-notice">
+                En tant que commercial, vous pouvez uniquement recevoir des messages.
+              </div>
+            ) : (
+              <form className="chat-input-form" onSubmit={handleSendMessage}>
+                <input
+                  type="text"
+                  className="chat-input"
+                  placeholder="Tapez votre message..."
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  disabled={sendMessageMutation.isLoading}
+                />
+                <button
+                  type="submit"
+                  className="chat-send-button"
+                  disabled={!messageText.trim() || sendMessageMutation.isLoading}
+                >
+                  <FaPaperPlane />
+                </button>
+              </form>
+            )}
           </>
         )}
       </div>
