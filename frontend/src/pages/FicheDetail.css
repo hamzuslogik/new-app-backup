@@ -3369,3 +3369,159 @@
   }
 }
 
+/*
+ * Page plein écran /fiches/:id (sans modal).
+ * Le modal applique display:block sur .fiche-sections via Dashboard.css ;
+ * en page directe, le flex + order réordonnait les blocs et min-height:600px
+ * créait des espaces vides. Typo alignée sur le modal (14–16px).
+ */
+.fiche-detail.fiche-detail-page {
+  font-size: 14px;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+.fiche-detail-page .fiche-detail-header-title h1 {
+  font-size: 20px;
+}
+
+.fiche-detail-page .fiche-tab {
+  font-size: 14px;
+  padding: 8px 14px;
+}
+
+.fiche-detail-page .fiche-sections {
+  display: block;
+  gap: 0;
+}
+
+.fiche-detail-page .fiche-sections > .etat-current-history-section,
+.fiche-detail-page .fiche-sections > .etat-change-section,
+.fiche-detail-page .fiche-sections > .decalage-form,
+.fiche-detail-page .fiche-sections > .fiche-completude-section {
+  order: unset;
+}
+
+.fiche-detail-page .fiche-sections > .etat-current-history-section {
+  min-height: 0;
+}
+
+.fiche-detail-page .fiche-section {
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.fiche-detail-page .fiche-section:last-child {
+  margin-bottom: 0;
+}
+
+.fiche-detail-page .section-title {
+  font-size: 17px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  line-height: 1.25;
+}
+
+.fiche-detail-page .field-label,
+.fiche-detail-page .field-value,
+.fiche-detail-page .field-display {
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 8px 10px;
+}
+
+.fiche-detail-page .field-label {
+  font-weight: 600;
+}
+
+.fiche-detail-page .edit-controls .form-control,
+.fiche-detail-page .etat-change-form .form-control,
+.fiche-detail-page .decalage-form .form-control,
+.fiche-detail-page .sms-form .form-control,
+.fiche-detail-page .nrp-form .form-control,
+.fiche-detail-page .etat-form .form-control,
+.fiche-detail-page .compte-rendu-form .form-control,
+.fiche-detail-page textarea.form-control,
+.fiche-detail-page input.form-control,
+.fiche-detail-page select.form-control {
+  font-size: 14px;
+}
+
+.fiche-detail-page .form-group > label,
+.fiche-detail-page .etat-change-form label,
+.fiche-detail-page .decalage-form .form-group label,
+.fiche-detail-page .compte-rendu-form label,
+.fiche-detail-page .nrp-form .form-group label,
+.fiche-detail-page .etat-form .form-group label,
+.fiche-detail-page .sms-form .form-group label,
+.fiche-detail-page .confirmation-form .rdv-form-table td:first-child,
+.fiche-detail-page .confirmation-form .rdv-form-table td:first-child label {
+  font-size: 14px;
+}
+
+.fiche-detail-page .confirmation-form .rdv-form-table .autocomplete-wrap .autocomplete-input,
+.fiche-detail-page input[type="date"],
+.fiche-detail-page input[type="time"],
+.fiche-detail-page input[type="datetime-local"],
+.fiche-detail-page input[type="text"],
+.fiche-detail-page input[type="email"],
+.fiche-detail-page input[type="tel"],
+.fiche-detail-page input[type="number"],
+.fiche-detail-page textarea,
+.fiche-detail-page .confirmation-form .rdv-form-table textarea.form-control {
+  font-size: 14px;
+}
+
+.fiche-detail-page .compte-rendu-signer-form {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.fiche-detail-page .compte-rendu-signer-form .form-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fiche-detail-page .compte-rendu-signer-form .form-group > label {
+  flex: 0 0 220px;
+  margin-bottom: 0;
+  text-align: left;
+  font-size: 14px;
+}
+
+.fiche-detail-page .compte-rendu-signer-form .form-group > .form-control,
+.fiche-detail-page .compte-rendu-signer-form .form-group > input,
+.fiche-detail-page .compte-rendu-signer-form .form-group > select,
+.fiche-detail-page .compte-rendu-signer-form .form-group > textarea {
+  width: 360px;
+  min-width: 360px;
+  max-width: 360px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .fiche-detail-page .section-title {
+    font-size: 16px;
+  }
+
+  .fiche-detail-page .compte-rendu-signer-form .form-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fiche-detail-page .compte-rendu-signer-form .form-group > label {
+    flex: 0 0 auto;
+  }
+
+  .fiche-detail-page .compte-rendu-signer-form .form-group > .form-control,
+  .fiche-detail-page .compte-rendu-signer-form .form-group > input,
+  .fiche-detail-page .compte-rendu-signer-form .form-group > select,
+  .fiche-detail-page .compte-rendu-signer-form .form-group > textarea {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+

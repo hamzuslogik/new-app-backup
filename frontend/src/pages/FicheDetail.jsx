@@ -3098,7 +3098,7 @@ const FicheDetail = ({
 
   return (
     <div 
-      className="fiche-detail"
+      className={`fiche-detail${!isModal ? ' fiche-detail-page' : ''}`}
       style={{
         border: `8px solid ${etatColor}`,
         borderRadius: '8px',
