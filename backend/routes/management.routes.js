@@ -2777,6 +2777,131 @@ router.put('/global-settings/phone-url-search-enabled', authenticate, checkPermi
   }
 });
 
+/** Règles de fermeture du modal détail fiche (doc paramètres globaux). */
+function ficheModalCloseRulesForFonction(fonctionId) {
+  const isCommercial = Number(fonctionId) === 5;
+  return {
+    standard: {
+      buttonX: true,
+      backdrop: !isCommercial,
+      escape: true,
+      summary: isCommercial
+        ? 'Bouton × oui — clic fond gris et Échap non (commercial)'
+        : 'Bouton ×, clic fond gris et Échap oui'
+    },
+    locked: {
+      buttonX: true,
+      backdrop: false,
+      escape: false,
+      summary: 'Bouton × oui — clic fond gris et Échap non (URL ?overlay=1&close=0)'
+    }
+  };
+}
+
+router.get('/global-settings/fiche-modal-help', authenticate, async (req, res) => {
+  try {
+    await ensureGlobalSettingsTable();
+    const phoneRow = await queryOne(
+      'SELECT setting_value FROM global_settings WHERE setting_key = ?',
+      ['phone_url_search_enabled']
+    );
+    const phoneRaw = phoneRow?.setting_value;
+    const phoneUrlSearchEnabled = phoneRaw === undefined || phoneRaw === null
+      ? true
+      : !(String(phoneRaw).toLowerCase() === '0' || String(phoneRaw).toLowerCase() === 'false');
+
+    const fonctions = await query(
+      'SELECT id, titre, page_accueil, etat FROM fonctions ORDER BY id ASC'
+    );
+
+    let fichesDetailPermissionId = null;
+    try {
+      const perm = await queryOne(
+        `SELECT id FROM permissions WHERE code = 'fiches_detail' AND etat = 1 LIMIT 1`
+      );
+      fichesDetailPermissionId = perm?.id ?? null;
+    } catch (e) {
+      if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
+    }
+
+    const accessByFonction = {};
+    if (fichesDetailPermissionId) {
+      try {
+        const rows = await query(
+          `SELECT id_fonction, COALESCE(autorise, 1) AS autorise
+           FROM fonction_permissions
+           WHERE id_permission = ?`,
+          [fichesDetailPermissionId]
+        );
+        for (const row of rows || []) {
+          accessByFonction[row.id_fonction] = Number(row.autorise) === 1;
+        }
+      } catch (e) {
+        if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
+      }
+    }
+
+    const urlModes = [
+      {
+        id: 'page',
+        label: 'Page plein écran (sans modal)',
+        pathExample: '/fiches/{identifiant}',
+        query: '',
+        opensModal: false,
+        closeSummary: 'Navigation classique (pas de modal)'
+      },
+      {
+        id: 'overlay_auto',
+        label: 'Modal standard',
+        pathExample: '/fiches/{identifiant}',
+        query: 'overlay=auto',
+        opensModal: true,
+        closeSummary: 'Fermeture selon la fonction (voir tableau ci-dessous)'
+      },
+      {
+        id: 'overlay_locked',
+        label: 'Modal verrouillé (intégrations / Vicidial)',
+        pathExample: '/fiches/{identifiant}',
+        query: 'overlay=1&close=0',
+        opensModal: true,
+        closeSummary: 'Clic fond gris et Échap désactivés ; bouton × actif pour toutes les fonctions'
+      }
+    ];
+
+    const identifiantHelp = phoneUrlSearchEnabled
+      ? '{hash} ou numéro de téléphone (tel, gsm1, gsm2)'
+      : '{hash} de la fiche uniquement';
+
+    res.json({
+      success: true,
+      data: {
+        phoneUrlSearchEnabled,
+        identifiantHelp,
+        urlSyntaxNote:
+          'Le premier paramètre d’URL commence par ? (ex. ?overlay=auto). Les suivants par & (ex. ?overlay=1&close=0). Ne pas écrire &overlay=… sans ? — cela corrompt l’identifiant.',
+        urlModes,
+        fonctions: (fonctions || []).map((f) => {
+          const canOpen =
+            fichesDetailPermissionId == null
+              ? true
+              : accessByFonction[f.id] !== false;
+          return {
+            id: f.id,
+            titre: f.titre,
+            page_accueil: f.page_accueil || '/dashboard',
+            active: Number(f.etat) > 0,
+            canOpenFicheModal: canOpen,
+            closeRules: ficheModalCloseRulesForFonction(f.id)
+          };
+        })
+      }
+    });
+  } catch (error) {
+    console.error('Erreur GET /global-settings/fiche-modal-help:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // =====================================================
 // RÈGLES D'AUTORISATION (doublons fiches)
 // =====================================================
