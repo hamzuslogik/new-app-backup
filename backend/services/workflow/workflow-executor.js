@@ -41,6 +41,19 @@ async function enrichWorkflowEventData(triggerType, eventData) {
       };
     }
 
+    if (triggerType === 'message_recu' && eventData.message) {
+      const expediteur = await loadUser(eventData.message.id_expediteur);
+      const destinataire = await loadUser(eventData.message.id_destinataire);
+      return {
+        ...eventData,
+        message: {
+          ...eventData.message,
+          expediteur_pseudo: expediteur?.pseudo ?? null,
+          destinataire_pseudo: destinataire?.pseudo ?? null
+        }
+      };
+    }
+
     if (
       (triggerType === 'alerte_ko_created' || triggerType === 'alerte_controle_qualite_created') &&
       eventData.alerte_ko &&
@@ -934,6 +947,12 @@ async function executeNotificationAction(config, eventData) {
   } else if (destination === 'remarque_expediteur' && eventData.remarque?.id_expediteur) {
     destId = eventData.remarque.id_expediteur;
     console.log('[WORKFLOW] Destination résolue depuis remarque_expediteur:', destId);
+  } else if (destination === 'message_destinataire' && eventData.message?.id_destinataire) {
+    destId = eventData.message.id_destinataire;
+    console.log('[WORKFLOW] Destination résolue depuis message_destinataire:', destId);
+  } else if (destination === 'message_expediteur' && eventData.message?.id_expediteur) {
+    destId = eventData.message.id_expediteur;
+    console.log('[WORKFLOW] Destination résolue depuis message_expediteur:', destId);
   } else if (destination === 'alerte_ko_agent' && eventData.alerte_ko?.id_agent) {
     destId = eventData.alerte_ko.id_agent;
     console.log('[WORKFLOW] Destination résolue depuis alerte_ko_agent:', destId);

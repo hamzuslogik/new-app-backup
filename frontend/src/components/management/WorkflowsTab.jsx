@@ -139,6 +139,11 @@ const TRIGGER_VARIABLES = {
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.id_agent}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
+  message_recu: [
+    '{message.id}', '{message.id_expediteur}', '{message.id_destinataire}', '{message.texte}', '{message.date_modif}',
+    '{message.expediteur_pseudo}', '{message.destinataire_pseudo}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
   completude_created: [
     '{completude.id}', '{completude.id_fiche}', '{completude.motif}', '{completude.completes}',
     '{completude.statut}', '{completude.id_created_by}', '{completude.created_by_pseudo}', '{completude.date_creation}',
@@ -232,6 +237,8 @@ const DYNAMIC_RECIPIENT_OPTIONS = [
   { value: '{fiche.id_superviseur_qualif_agent}', label: "Superviseur qualif de l'agent de la fiche ({fiche.id_superviseur_qualif_agent})" },
   { value: '{remarque.id_destinataire}', label: 'Destinataire de la remarque ({remarque.id_destinataire})' },
   { value: '{remarque.id_expediteur}', label: 'Expéditeur de la remarque ({remarque.id_expediteur})' },
+  { value: '{message.id_destinataire}', label: 'Destinataire du message ({message.id_destinataire})' },
+  { value: '{message.id_expediteur}', label: 'Expéditeur du message ({message.id_expediteur})' },
   { value: '{alerte_ko.id_agent}', label: "Agent destinataire de l'alerte qualité / notification ({alerte_ko.id_agent})" },
   { value: '{decalage.expediteur}', label: 'Expéditeur du décalage ({decalage.expediteur})' },
   { value: '{decalage.destination}', label: 'Confirmateur (destination du décalage) ({decalage.destination})' },
@@ -799,6 +806,7 @@ const WorkflowsTab = () => {
                         <option value="decalage_refused">Décalage refusé</option>
                         <option value="demande_decalage_annulee">Demande de décalage annulée</option>
                         <option value="remarque_created">Remarque créée</option>
+                        <option value="message_recu">Message reçu</option>
                         <option value="completude_created">Complétude créée</option>
                         <option value="completude_accepted">Complétude acceptée</option>
                         <option value="alerte_ko_created">Alerte qualité (sans KO fiche ; aussi depuis Contrôle Qualité)</option>
@@ -1204,6 +1212,8 @@ const WorkflowsTab = () => {
                             <option value="id_superviseur_qualif_agent">Superviseur qualif de l&apos;agent de la fiche ({'{fiche.id_superviseur_qualif_agent}'})</option>
                             <option value="remarque_destinataire">Destinataire de la remarque (déclencheur remarque)</option>
                             <option value="remarque_expediteur">Expéditeur de la remarque (déclencheur remarque)</option>
+                            <option value="message_destinataire">Destinataire du message (déclencheur message reçu)</option>
+                            <option value="message_expediteur">Expéditeur du message (déclencheur message reçu)</option>
                             <option value="alerte_ko_agent">Agent destinataire de l&apos;alerte qualité (notification, pas KO fiche)</option>
                             <option value="decalage_expediteur">Expéditeur du décalage (ex. commercial)</option>
                             <option value="decalage_destination">Confirmateur du décalage (destination)</option>
@@ -1608,6 +1618,8 @@ const WorkflowsTab = () => {
                               <option value="{fiche.id_superviseur_qualif_agent}">Superviseur qualif de l&apos;agent de la fiche ({'{fiche.id_superviseur_qualif_agent}'})</option>
                               <option value="{remarque.id_destinataire}">Destinataire de la remarque ({'{remarque.id_destinataire}'})</option>
                               <option value="{remarque.id_expediteur}">Expéditeur de la remarque ({'{remarque.id_expediteur}'})</option>
+                              <option value="{message.id_destinataire}">Destinataire du message ({'{message.id_destinataire}'})</option>
+                              <option value="{message.id_expediteur}">Expéditeur du message ({'{message.id_expediteur}'})</option>
                               <option value="{alerte_ko.id_agent}">Agent destinataire alerte qualité ({'{alerte_ko.id_agent}'})</option>
                               <option value="{decalage.expediteur}">Expéditeur du décalage ({'{decalage.expediteur}'})</option>
                               <option value="{decalage.destination}">Confirmateur du décalage ({'{decalage.destination}'})</option>

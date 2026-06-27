@@ -11,6 +11,7 @@ const {
 const { getSecuritySettings } = require('../utils/globalSettingsHelper');
 const { sessionLifetimeToIdleMs } = require('../utils/userActivitySession');
 const { lastActivityToUtcMs, nowUtcMysqlString } = require('../utils/userActivityDateTime');
+const { executeWorkflow } = require('../services/workflow/workflow-executor');
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
@@ -495,6 +496,19 @@ router.post('/', authenticate, async (req, res) => {
       success: true,
       message: 'Message envoyé',
       data: { id: result.insertId }
+    });
+
+    executeWorkflow('message_recu', {
+      user: req.user,
+      message: {
+        id: result.insertId,
+        id_expediteur: req.user.id,
+        id_destinataire: parseInt(destination, 10),
+        texte: message,
+        date_modif: now
+      }
+    }).catch((wfError) => {
+      console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (message_recu):', wfError);
     });
   } catch (error) {
     console.error('Erreur lors de l\'envoi du message:', error);
