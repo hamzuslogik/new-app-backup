@@ -2878,7 +2878,8 @@ router.get('/global-settings/fiche-modal-help', authenticate, async (req, res) =
         phoneUrlSearchEnabled,
         identifiantHelp,
         urlSyntaxNote:
-          'Le premier paramètre d’URL commence par ? (ex. ?overlay=auto). Les suivants par & (ex. ?overlay=1&close=0). Ne pas écrire &overlay=… sans ? — cela corrompt l’identifiant.',
+          'Le premier paramètre d’URL commence par ? (ex. ?overlay=auto). Les suivants par & (ex. ?overlay=1&close=0). ' +
+          'Certaines apps externes envoient /fiches/PHONE&overlay=1 (sans ?) : l’application corrige automatiquement et extrait overlay/close.',
         urlModes,
         fonctions: (fonctions || []).map((f) => {
           const canOpen =

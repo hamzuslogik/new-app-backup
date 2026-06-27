@@ -282,6 +282,10 @@ const encodeFicheId = (id) => {
 // Fonction pour décoder un hash en ID
 const decodeFicheId = (hash) => {
   if (!hash) return null;
+  // Paramètres collés au path (ex. 0612345678&overlay=1) : ne pas tenter le décodage base64
+  if (/[&?]/.test(String(hash))) {
+    return null;
+  }
   try {
     // Si le hash est trop court, ce n'est pas un format valide
     if (hash.length < 17) {
@@ -333,6 +337,16 @@ const decodeFicheId = (hash) => {
 // Middleware pour convertir le hash en ID dans les paramètres
 const hashToIdMiddleware = async (req, res, next) => {
   try {
+    const { parseFicheRouteIdentifier } = require('../utils/ficheRouteIdentifier');
+    if (req.params.id) {
+      const parsed = parseFicheRouteIdentifier(req.params.id);
+      req.params.id = parsed.identifier;
+    }
+    if (req.params.hash) {
+      const parsed = parseFicheRouteIdentifier(req.params.hash);
+      req.params.hash = parsed.identifier;
+    }
+
     // Cache court pour éviter une requête DB à chaque hit
     if (!global.__phoneUrlSearchSettingCache) {
       global.__phoneUrlSearchSettingCache = { value: true, expiresAt: 0 };

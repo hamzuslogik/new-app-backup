@@ -4,9 +4,14 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getHomePage } from '../utils/getHomePage';
 import FicheDetail from '../pages/FicheDetail';
+import {
+  parseFicheRouteIdentifier,
+  mergeFicheRouteQueries,
+  buildCanonicalFichePath
+} from '../utils/ficheRouteIdentifier';
 
 const FicheDetailRoute = () => {
-  const { id } = useParams();
+  const { id: rawRouteId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { openFicheDetail } = useFicheDetailModal();
@@ -14,71 +19,73 @@ const FicheDetailRoute = () => {
   const lastHandledRef = useRef('');
   const [isDirectAccess, setIsDirectAccess] = useState(false);
 
+  const { identifier: ficheId, embeddedQuery } = parseFicheRouteIdentifier(rawRouteId);
+  const routeSearchKey = mergeFicheRouteQueries(embeddedQuery, location.search).toString();
+
   useEffect(() => {
-    if (id) {
-      const routeKey = `${id}|${location.search || ''}`;
-      if (lastHandledRef.current === routeKey) return;
-      lastHandledRef.current = routeKey;
+    if (!ficheId) return;
 
-      // Si l'URL contient ?overlay=1 ou ?overlay=auto, ouvrir en modal et revenir a la page precedente (ou dashboard si refresh)
-      // overlay=1&close=0: mode manuel verrouille (pas de fermeture par clic exterieur/Echap)
-      // overlay=auto: mode standard genere automatiquement par l'app
-      const searchParams = new URLSearchParams(location.search);
-      const overlayMode = searchParams.get('overlay');
-      if (overlayMode === '1' || overlayMode === 'auto') {
-        const closeMode = searchParams.get('close');
-        openFicheDetail(id, { closeMode });
-        // IMPORTANT:
-        // Ne pas faire navigate(-1) ici, sinon en ouverture via webform (Vicidial),
-        // on peut revenir a l'ancien hash et bloquer URL/contenu sur la fiche precedente.
-        // On garde l'URL courante /fiches/:id?overlay=... et on laisse le modal s'afficher.
-        return;
-      }
+    const routeKey = `${ficheId}|${routeSearchKey}`;
+    if (lastHandledRef.current === routeKey) return;
+    lastHandledRef.current = routeKey;
 
-      // Vérifier si on accède directement à l'URL (tape dans la barre d'adresse ou lien externe)
-      // vs depuis un lien dans l'application
-      const referrer = document.referrer;
-      const currentOrigin = window.location.origin;
+    const routeSearchParams = new URLSearchParams(routeSearchKey);
 
-      // Si pas de referrer OU referrer externe OU referrer ne contient pas de route de l'app
-      // => accès direct (page plein écran)
-      const directAccess = !referrer ||
-                          !referrer.startsWith(currentOrigin) ||
-                          (referrer.startsWith(currentOrigin) &&
-                           !referrer.match(/\/(dashboard|fiches|planning|statistiques|kpis|compte-rendu|validation|notifications|signatures)/));
-
-      setIsDirectAccess(directAccess);
-
-      if (directAccess) {
-        // Si accès direct, ne pas ouvrir le modal, afficher directement la page
-        // L'URL reste /fiches/:id et la page s'affiche normalement
-        return;
-      } else {
-        // Si accès depuis une autre page de l'app (clic sur lien),
-        // ouvrir le modal puis naviguer en arrière
-        openFicheDetail(id);
-        setTimeout(() => {
-          if (window.history.length > 1) {
-            navigate(-1);
-          } else {
-            // Pas d'historique : revenir à la page d'accueil de l'utilisateur
-            // (commercial -> /planning-commercial) pour éviter "Accès refusé" sur /dashboard.
-            const home = getHomePage(user) || '/dashboard';
-            navigate(home, { replace: true });
-          }
-        }, 100);
+    // Corriger /fiches/PHONE&overlay=1 → /fiches/PHONE?overlay=1 (intégrations externes)
+    if (embeddedQuery && rawRouteId !== ficheId) {
+      const canonical = buildCanonicalFichePath(ficheId, routeSearchParams);
+      if (`${location.pathname}${location.search}` !== canonical) {
+        navigate(canonical, { replace: true });
       }
     }
-  }, [id, openFicheDetail, navigate, location.search, user]);
 
-  // Si accès direct (sans overlay=1), afficher la page FicheDetail directement (pas en modal)
-  if (isDirectAccess && id) {
-    return <FicheDetail ficheHash={id} isModal={false} />;
+    const overlayMode = routeSearchParams.get('overlay');
+    if (overlayMode === '1' || overlayMode === 'auto') {
+      const closeMode = routeSearchParams.get('close');
+      openFicheDetail(ficheId, { closeMode });
+      return;
+    }
+
+    const referrer = document.referrer;
+    const currentOrigin = window.location.origin;
+
+    const directAccess = !referrer ||
+                        !referrer.startsWith(currentOrigin) ||
+                        (referrer.startsWith(currentOrigin) &&
+                         !referrer.match(/\/(dashboard|fiches|planning|statistiques|kpis|compte-rendu|validation|notifications|signatures)/));
+
+    setIsDirectAccess(directAccess);
+
+    if (directAccess) {
+      return;
+    }
+
+    openFicheDetail(ficheId);
+    setTimeout(() => {
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        const home = getHomePage(user) || '/dashboard';
+        navigate(home, { replace: true });
+      }
+    }, 100);
+  }, [
+    ficheId,
+    rawRouteId,
+    embeddedQuery,
+    openFicheDetail,
+    navigate,
+    location.pathname,
+    location.search,
+    routeSearchKey,
+    user
+  ]);
+
+  if (isDirectAccess && ficheId) {
+    return <FicheDetail ficheHash={ficheId} isModal={false} />;
   }
 
-  // Sinon, ne rien afficher - le modal sera rendu par le contexte (ou on redirige)
   return null;
 };
 
 export default FicheDetailRoute;
-
