@@ -1,12 +1,39 @@
-.login-container {
+html.login-page,
+body.login-page {
   min-height: 100vh;
-  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+  height: 100%;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background-color: #1e4d5c;
+}
+
+html.login-page #root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.login-container {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
+  background-color: #1e4d5c;
   background-image: url('/admin-bg.png');
   background-size: cover;
-  background-position: center;
+  background-position: center center;
   background-repeat: no-repeat;
   padding: 16px;
   box-sizing: border-box;
@@ -19,6 +46,8 @@
   width: 100%;
   max-width: 400px;
   padding: 32px;
+  margin: auto;
+  flex-shrink: 0;
 }
 
 .login-header {
@@ -133,7 +162,25 @@ body.login-page:not([data-desktop-viewport]) #root {
   max-width: 100% !important;
 }
 
-/* Media queries pour responsive */
+/* PC desktop : annuler min-width 1400px si encore présent */
+html.login-page[data-desktop-viewport],
+body.login-page[data-desktop-viewport] {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+@media (min-width: 769px) {
+  .login-container {
+    padding: 24px;
+  }
+
+  .login-box {
+    max-width: 420px;
+    padding: 36px 40px;
+  }
+}
+
 @media (max-width: 768px) {
   .login-container {
     padding: 12px;
@@ -150,7 +197,7 @@ body.login-page:not([data-desktop-viewport]) #root {
 
   .form-group input {
     padding: 9.6px 11.2px 9.6px 28px;
-    font-size: 13.6px; /* Évite le zoom automatique sur iOS */
+    font-size: 13.6px;
   }
 
   .login-btn {
@@ -176,4 +223,3 @@ body.login-page:not([data-desktop-viewport]) #root {
     gap: 12px;
   }
 }
-

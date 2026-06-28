@@ -308,6 +308,19 @@ export function applyMobileNativeViewport() {
   applyDashboardMobileView();
 }
 
+/** Page connexion PC : viewport natif, fond plein écran (pas de layout 1400px). */
+export function applyLoginDesktopViewport() {
+  replaceViewportMeta(
+    'width=device-width, initial-scale=1.0, minimum-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover'
+  );
+
+  delete document.documentElement.dataset.desktopViewport;
+  if (document.body) delete document.body.dataset.desktopViewport;
+
+  clearDocumentLayoutStyles();
+  notifyViewportLayoutChange();
+}
+
 /** Layout desktop 1400px — toute l'application, y compris la page de connexion */
 export function applyForceDesktopViewport(width = DESKTOP_VIEWPORT_WIDTH) {
   replaceViewportMeta(buildDesktopViewportContent(width));
@@ -316,9 +329,6 @@ export function applyForceDesktopViewport(width = DESKTOP_VIEWPORT_WIDTH) {
   if (document.body) {
     document.body.dataset.desktopViewport = String(width);
   }
-
-  document.documentElement.classList.remove('login-page');
-  if (document.body) document.body.classList.remove('login-page');
 
   document.documentElement.style.minWidth = `${width}px`;
   document.documentElement.style.width = 'auto';
