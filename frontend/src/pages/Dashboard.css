@@ -1285,15 +1285,24 @@ html.dashboard-page[data-desktop-viewport] .fiches-table-container,
 html.dashboard-page[data-desktop-viewport] .confirmateurs-table-container,
 body.dashboard-page[data-desktop-viewport] .fiches-table-container,
 body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
-  overflow: visible !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
   overscroll-behavior: auto !important;
   touch-action: pan-x pan-y pinch-zoom !important;
+  scrollbar-gutter: stable;
 }
 
 body.dashboard-page[data-desktop-viewport] .fiches-table,
 body.dashboard-page[data-desktop-viewport] .confirmateurs-table,
 html.dashboard-page[data-desktop-viewport] .fiches-table,
 html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
+  width: max-content !important;
+  min-width: 1400px !important;
+  max-width: none !important;
+  table-layout: auto !important;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
@@ -4734,15 +4743,19 @@ body.dashboard-page.dashboard-page--table-desktop-view:not([data-desktop-viewpor
 body.dashboard-page.dashboard-page--table-desktop-view .fiches-table,
 body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table {
   min-width: 1400px !important;
-  width: 100% !important;
-  table-layout: fixed !important;
+  width: max-content !important;
+  max-width: none !important;
+  table-layout: auto !important;
 }
 
 body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container,
 body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table-container {
-  min-width: 1400px !important;
+  min-width: 0 !important;
   width: 100% !important;
-  overflow: visible !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  scrollbar-gutter: stable;
 }
 
 body.dashboard-page.dashboard-page--table-desktop-view .search-panel .search-form-two-columns {
@@ -4753,4 +4766,37 @@ body.dashboard-page.dashboard-page--table-desktop-view .search-panel .form-group
 body.dashboard-page.dashboard-page--table-desktop-view .search-panel .form-group select {
   width: 200px !important;
   max-width: 200px !important;
+}
+
+/* Dashboard desktop : barre de défilement horizontale visible sous les tableaux */
+body.dashboard-page[data-desktop-viewport] .fiches-table-container::-webkit-scrollbar,
+body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container::-webkit-scrollbar,
+body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container::-webkit-scrollbar,
+body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table-container::-webkit-scrollbar {
+  height: 12px;
+}
+
+body.dashboard-page[data-desktop-viewport] .fiches-table-container::-webkit-scrollbar-track,
+body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container::-webkit-scrollbar-track,
+body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container::-webkit-scrollbar-track,
+body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table-container::-webkit-scrollbar-track {
+  background: #e8ecf0;
+  border-radius: 6px;
+}
+
+body.dashboard-page[data-desktop-viewport] .fiches-table-container::-webkit-scrollbar-thumb,
+body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container::-webkit-scrollbar-thumb,
+body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container::-webkit-scrollbar-thumb,
+body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table-container::-webkit-scrollbar-thumb {
+  background: #6b7c8f;
+  border-radius: 6px;
+  border: 2px solid #e8ecf0;
+  min-width: 48px;
+}
+
+body.dashboard-page[data-desktop-viewport] .fiches-table-container::-webkit-scrollbar-thumb:hover,
+body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container::-webkit-scrollbar-thumb:hover,
+body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container::-webkit-scrollbar-thumb:hover,
+body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table-container::-webkit-scrollbar-thumb:hover {
+  background: #3d4f63;
 }
