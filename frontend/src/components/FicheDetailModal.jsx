@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from 'react-query';
@@ -7,6 +7,7 @@ import FicheDetail from '../pages/FicheDetail';
 import { FaTimes } from 'react-icons/fa';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useSidebar } from '../contexts/SidebarContext';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { useIosNestedScrollChain } from '../hooks/useIosNestedScrollChain';
 import { useFicheDetailModalVisualViewport } from '../hooks/useFicheDetailModalVisualViewport';
@@ -15,6 +16,7 @@ import '../pages/Dashboard.css';
 
 const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const { user } = useAuth();
+  const { closeSidebar } = useSidebar();
   const navigate = useNavigate();
   const location = useLocation();
   const previousPath = React.useRef(`${location.pathname}${location.search}`);
@@ -37,6 +39,15 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const pinchZoomEnabled = options?.pinchZoom === true;
   const backdropCloseReadyRef = useRef(false);
 
+  const handleClose = useCallback(() => {
+    closeSidebar();
+    onClose();
+  }, [closeSidebar, onClose]);
+
+  useEffect(() => {
+    if (ficheHash) closeSidebar();
+  }, [ficheHash, closeSidebar]);
+
   useEffect(() => {
     if (!ficheHash) return undefined;
     backdropCloseReadyRef.current = false;
@@ -48,7 +59,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
 
   const handleBackdropClick = () => {
     if (isBackdropCloseLocked || !backdropCloseReadyRef.current) return;
-    onClose();
+    handleClose();
   };
 
   useModalScrollLock(!!ficheHash, { lockDocumentOverflow: !pinchZoomEnabled });
@@ -154,7 +165,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && ficheHash && !isOverlayLocked) {
-        onClose();
+        handleClose();
       }
     };
 
@@ -165,7 +176,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [ficheHash, onClose, isOverlayLocked]);
+  }, [ficheHash, handleClose, isOverlayLocked]);
 
   // Déterminer la couleur du border selon l'état de la fiche
   // Applique aussi la logique "Signer Complet" (état SIGNER + sous-état COMPLETE → couleur de l'état 45)
@@ -196,7 +207,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
           ['--etat-color']: etatColor,
         }}
       >
-        <button className="fiche-detail-modal-close" onClick={onClose} aria-label="Fermer">
+        <button className="fiche-detail-modal-close" onClick={handleClose} aria-label="Fermer">
           <FaTimes />
         </button>
         <div className="fiche-detail-modal-zoom-inner">
@@ -210,7 +221,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
           <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
             <FicheDetail
               ficheHash={ficheHash}
-              onClose={onClose}
+              onClose={handleClose}
               isModal={true}
               initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
               initialTab={options?.initialTab || null}
