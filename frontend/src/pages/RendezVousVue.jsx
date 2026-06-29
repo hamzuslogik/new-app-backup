@@ -612,12 +612,15 @@ const RendezVousVue = () => {
                   <th>Centre</th>
                   <th className="produit-col">Produit</th>
                   <th>Validé</th>
-                  <th>Détails</th>
+                  <th className="rdv-vue-col-details">Détails</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredList.map((f) => (
-                  <tr key={f.id} className="fiche-row-by-etat" onContextMenu={(e) => openFicheContextMenu(e, f)} style={{ backgroundColor: `${getEtatColor(f)}40`, borderLeft: `4px solid ${getEtatColor(f)}` }}>
+                {filteredList.map((f) => {
+                  const rowBackgroundColor = `${getEtatColor(f)}40`;
+                  const rowBorderColor = getEtatColor(f);
+                  return (
+                  <tr key={f.id} className="fiche-row-by-etat" onContextMenu={(e) => openFicheContextMenu(e, f)} style={{ backgroundColor: rowBackgroundColor, borderLeft: `4px solid ${rowBorderColor}` }}>
                     <td>{f.nom || ''}</td>
                     <td>{f.prenom || ''}</td>
                     <td>{f.tel || ''}</td>
@@ -639,7 +642,7 @@ const RendezVousVue = () => {
                       </span>
                     </td>
                     <td>{Number(f.valider) > 0 ? '✓' : ''}</td>
-                    <td>
+                    <td className="rdv-vue-col-details" style={{ backgroundColor: rowBackgroundColor }}>
                       <div className="fiche-indicators">
                         {f.id_commercial_2 && Number(f.id_commercial_2) > 0 && <span className="indicator r2" title="R2 placé">R2</span>}
                       </div>
@@ -674,7 +677,8 @@ const RendezVousVue = () => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -303,6 +303,12 @@ body.rdv-vue-page .rdv-vue .fiches-table-container {
   overflow: hidden;
 }
 
+/* overflow visible requis pour position:sticky sur la colonne Détails */
+html.rdv-vue-page .rdv-vue-content,
+body.rdv-vue-page .rdv-vue-content {
+  overflow-x: visible !important;
+}
+
 .rdv-vue-content .quick-search-container {
   display: flex;
   align-items: center;
@@ -373,12 +379,31 @@ body.rdv-vue-page .rdv-vue .fiches-table-container {
 .fiches-table th:nth-child(14),
 .fiches-table td:nth-child(14),
 .fiches-table th:last-child,
-.fiches-table td:last-child {
+.fiches-table td:last-child,
+.fiches-table th.rdv-vue-col-details,
+.fiches-table td.rdv-vue-col-details {
   white-space: nowrap !important;
   word-break: keep-all !important;
   overflow-wrap: normal !important;
   word-wrap: normal !important;
   hyphens: none !important;
+}
+
+/* Colonne Détails épinglée à droite — bouton fiche toujours visible au scroll horizontal */
+html.rdv-vue-page .rdv-vue .fiches-table th.rdv-vue-col-details,
+html.rdv-vue-page .rdv-vue .fiches-table td.rdv-vue-col-details,
+body.rdv-vue-page .rdv-vue .fiches-table th.rdv-vue-col-details,
+body.rdv-vue-page .rdv-vue .fiches-table td.rdv-vue-col-details {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  box-shadow: -6px 0 10px -4px rgba(0, 0, 0, 0.12);
+}
+
+html.rdv-vue-page .rdv-vue .fiches-table thead th.rdv-vue-col-details,
+body.rdv-vue-page .rdv-vue .fiches-table thead th.rdv-vue-col-details {
+  z-index: 4;
+  background: #fafafa !important;
 }
 
 .fiches-table th.produit-col,
