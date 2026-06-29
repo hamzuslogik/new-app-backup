@@ -124,7 +124,7 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
   min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: visible !important;
   overscroll-behavior: auto !important;
   -webkit-overflow-scrolling: touch !important;
@@ -136,9 +136,9 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
 body.dashboard-page[data-desktop-viewport] .fiches-table,
 body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   min-width: 1400px !important;
-  width: max-content !important;
+  width: 100% !important;
   max-width: none !important;
-  table-layout: auto !important;
+  table-layout: fixed !important;
 }
 
 body.dashboard-page[data-desktop-viewport] .dashboard {
@@ -217,7 +217,7 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
 
   body.dashboard-page[data-desktop-viewport] .fiches-table-container,
   body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
-    overflow-x: auto !important;
+    overflow-x: scroll !important;
     overflow-y: visible !important;
     overscroll-behavior: auto !important;
   }
@@ -276,7 +276,7 @@ html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .confirmateurs-t
   min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: visible !important;
 }
 
@@ -289,7 +289,13 @@ html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .fiches-table-cont
 }
 
 html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .fiches-table,
-html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .confirmateurs-table,
+html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
+  min-width: 1400px !important;
+  width: 100% !important;
+  max-width: none !important;
+  table-layout: fixed !important;
+}
+
 html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table,
 html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .fiches-table {
   min-width: 1400px !important;

@@ -1288,7 +1288,7 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
   min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: visible !important;
   overscroll-behavior: auto !important;
   touch-action: pan-x pan-y pinch-zoom !important;
@@ -1299,10 +1299,10 @@ body.dashboard-page[data-desktop-viewport] .fiches-table,
 body.dashboard-page[data-desktop-viewport] .confirmateurs-table,
 html.dashboard-page[data-desktop-viewport] .fiches-table,
 html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
-  width: max-content !important;
+  width: 100% !important;
   min-width: 1400px !important;
   max-width: none !important;
-  table-layout: auto !important;
+  table-layout: fixed !important;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
@@ -4743,9 +4743,9 @@ body.dashboard-page.dashboard-page--table-desktop-view:not([data-desktop-viewpor
 body.dashboard-page.dashboard-page--table-desktop-view .fiches-table,
 body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table {
   min-width: 1400px !important;
-  width: max-content !important;
+  width: 100% !important;
   max-width: none !important;
-  table-layout: auto !important;
+  table-layout: fixed !important;
 }
 
 body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container,
@@ -4753,7 +4753,7 @@ body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table-cont
   min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: visible !important;
   scrollbar-gutter: stable;
 }
