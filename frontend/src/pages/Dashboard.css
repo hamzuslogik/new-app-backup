@@ -11,47 +11,24 @@ body.dashboard-page {
   touch-action: pan-x pan-y pinch-zoom;
 }
 
-/* Tableau dashboard : largeur minimale 1400px, défilement dans .fiches-table-container */
+/* Forcer les tableaux CRM à prendre toute la largeur dans Dashboard */
 .dashboard-page .fiches-table,
 .dashboard-page .confirmateurs-table {
-  min-width: 1400px;
-  width: max-content;
-  max-width: none;
-  table-layout: auto;
+  min-width: 1400px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
   border-collapse: collapse !important;
 }
 
 .dashboard-page .fiches-table-container,
 .dashboard-page .confirmateurs-table-container {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  overscroll-behavior: auto;
-  touch-action: pan-x pan-y pinch-zoom;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* PC desktop (viewport 1400px) : scroll horizontal dans le conteneur tableau */
-html[data-desktop-viewport] .dashboard-page .fiches-table-container,
-html[data-desktop-viewport] .dashboard-page .confirmateurs-table-container,
-body.dashboard-page[data-desktop-viewport] .fiches-table-container,
-body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
-  overflow-x: auto !important;
-  overflow-y: visible !important;
-  min-width: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-html[data-desktop-viewport] .dashboard-page .fiches-table,
-html[data-desktop-viewport] .dashboard-page .confirmateurs-table,
-body.dashboard-page[data-desktop-viewport] .fiches-table,
-body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   min-width: 1400px !important;
-  width: max-content !important;
+  width: 100% !important;
   max-width: none !important;
-  table-layout: auto !important;
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 /* Désactiver toute règle responsive mobile existante */
@@ -85,10 +62,10 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   
   .dashboard-page .fiches-table-container,
   .dashboard-page .confirmateurs-table-container {
+    min-width: 1400px !important;
     width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    overflow-x: auto !important;
+    max-width: none !important;
+    overflow: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
@@ -123,10 +100,10 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   
   .dashboard-page .fiches-table-container,
   .dashboard-page .confirmateurs-table-container {
+    min-width: 1400px !important;
     width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    overflow-x: auto !important;
+    max-width: none !important;
+    overflow: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
@@ -1290,13 +1267,11 @@ button.stat-card.stat-card-clickable {
 
 /* Tableau des fiches (autres pages : scroll dans le conteneur) */
 .fiches-table-container {
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: auto;
   margin-bottom: 16px;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: auto;
+  overscroll-behavior: none;
   touch-action: pan-x pan-y pinch-zoom;
-  max-width: 100%;
 }
 
 .dashboard-page .fiches-table,
@@ -1304,7 +1279,23 @@ button.stat-card.stat-card-clickable {
   touch-action: pan-x pan-y pinch-zoom;
 }
 
-/* Règles desktop-viewport : voir desktop-viewport.css + bloc en tête de Dashboard.css */
+html[data-desktop-viewport] .dashboard-page .fiches-table-container,
+html[data-desktop-viewport] .dashboard-page .confirmateurs-table-container,
+html.dashboard-page[data-desktop-viewport] .fiches-table-container,
+html.dashboard-page[data-desktop-viewport] .confirmateurs-table-container,
+body.dashboard-page[data-desktop-viewport] .fiches-table-container,
+body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+body.dashboard-page[data-desktop-viewport] .fiches-table,
+body.dashboard-page[data-desktop-viewport] .confirmateurs-table,
+html.dashboard-page[data-desktop-viewport] .fiches-table,
+html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
 
 .fiches-table {
   width: 100%;
@@ -1313,12 +1304,16 @@ button.stat-card.stat-card-clickable {
   font-size: 11px;
 }
 
-/* En version desktop large : tableau peut dépasser → scroll dans le conteneur */
+/* En version desktop, forcer les tableaux à prendre toute la largeur */
 @media (min-width: 1400px) {
+  .dashboard-page .fiches-table,
+  .dashboard-page .confirmateurs-table {
+    width: 100% !important;
+  }
+  
   .dashboard-page .fiches-table-container,
   .dashboard-page .confirmateurs-table-container {
     width: 100% !important;
-    max-width: 100% !important;
   }
 }
 
@@ -4736,16 +4731,15 @@ body.dashboard-page.dashboard-page--table-desktop-view:not([data-desktop-viewpor
 body.dashboard-page.dashboard-page--table-desktop-view .fiches-table,
 body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table {
   min-width: 1400px !important;
-  width: max-content !important;
-  table-layout: auto !important;
+  width: 100% !important;
+  table-layout: fixed !important;
 }
 
 body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container,
 body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table-container {
-  min-width: 0 !important;
+  min-width: 1400px !important;
   width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: auto !important;
+  overflow: visible !important;
 }
 
 body.dashboard-page.dashboard-page--table-desktop-view .search-panel .search-form-two-columns {
