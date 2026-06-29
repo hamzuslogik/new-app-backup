@@ -109,7 +109,7 @@ body[data-desktop-viewport] .content-wrapper {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    overflow-x: auto !important;
+    overflow-x: scroll !important;
     overflow-y: visible;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y pinch-zoom;
@@ -129,7 +129,7 @@ body[class*='--extranet-scroll'] .confirmateurs-table-container {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: visible !important;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;

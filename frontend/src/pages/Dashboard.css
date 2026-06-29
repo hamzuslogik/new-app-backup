@@ -2836,7 +2836,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     max-height: calc(100dvh - 2vh) !important;
     height: auto !important;
     min-height: 0 !important;
-    overflow-x: auto !important;
+    overflow-x: scroll !important;
     overflow-y: auto !important;
     overscroll-behavior: none !important;
     -webkit-overflow-scrolling: touch !important;
@@ -2859,7 +2859,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     height: auto !important;
     min-height: 0 !important;
     border-radius: 0 !important; /* Pas de border-radius sur très petits écrans pour maximiser l'espace */
-    overflow-x: auto !important;
+    overflow-x: scroll !important;
     overflow-y: auto !important;
     overscroll-behavior: none !important;
     -webkit-overflow-scrolling: touch !important;
@@ -4265,7 +4265,7 @@ body.dashboard-page.dashboard-page--mobile-native:not([data-desktop-viewport]) {
   width: 100% !important;
   max-width: 100% !important;
   overflow: auto !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: auto !important;
   height: auto !important;
   min-height: 100%;
@@ -4288,7 +4288,7 @@ body.dashboard-page.dashboard-page--extranet-scroll {
   min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: auto !important;
   height: auto;
   min-height: 100%;
@@ -4331,7 +4331,7 @@ body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table-contain
   min-width: 0 !important;
   max-height: none !important;
   height: auto !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: visible !important;
   overscroll-behavior: auto !important;
   isolation: isolate !important;
