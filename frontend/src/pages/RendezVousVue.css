@@ -627,6 +627,23 @@ body.rdv-vue-page .rdv-vue .fiches-table thead th.rdv-vue-col-details {
   background: #f3f6fb;
 }
 
+body.rdv-vue-page--mobile-native .fiche-row-by-etat {
+  -webkit-touch-callout: none;
+}
+
+body.rdv-vue-page--mobile-native .fiche-row-lead-label {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.rdv-vue-page .rdv-vue .btn-detail--mobile-lead {
+  background: #1976d2;
+}
+
+.rdv-vue-page .rdv-vue .btn-detail--mobile-lead:hover {
+  background: #1565c0;
+}
+
 .rdv-vue-table {
   width: 100%;
   border-collapse: collapse;

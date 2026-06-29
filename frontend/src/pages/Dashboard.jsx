@@ -32,6 +32,11 @@ import {
   clearPendingDashboardFicheModal,
   resolvePendingDashboardFicheModal,
 } from '../utils/dashboardFicheModalSession';
+import {
+  useFicheRowContextMenuTouch,
+  useFicheContextMenuDismiss,
+} from '../utils/ficheRowContextMenuTouch';
+import FicheTableMobileDetailButton from '../components/FicheTableMobileDetailButton';
 import './Dashboard.css';
 
 const DASHBOARD_MOBILE_NATIVE_CLASS = 'dashboard-page--mobile-native';
@@ -444,6 +449,14 @@ const Dashboard = () => {
     resolvePendingDashboardFicheModal(getFicheModalStateFromUrl())
   );
   const [ficheContextMenu, setFicheContextMenu] = useState(null);
+  const openFicheContextMenu = useCallback((e, fiche) => {
+    if (!canFicheContextMenu) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setFicheContextMenu({ x: e.clientX, y: e.clientY, fiche, openedAt: Date.now() });
+  }, [canFicheContextMenu]);
+  const { bindFicheRowContextMenu } = useFicheRowContextMenuTouch(openFicheContextMenu);
+  useFicheContextMenuDismiss(ficheContextMenu, setFicheContextMenu);
   const [auditFiche, setAuditFiche] = useState(null);
   const [etatModalFiche, setEtatModalFiche] = useState(null);
   const [etatModalNewId, setEtatModalNewId] = useState('');
@@ -879,23 +892,6 @@ const Dashboard = () => {
   if (etatsError) {
     console.error('Erreur lors du chargement des états:', etatsError);
   }
-
-  useEffect(() => {
-    if (!ficheContextMenu) return undefined;
-    const onMouseDown = (ev) => {
-      if (ev.target.closest?.('.dashboard-fiche-context-menu')) return;
-      setFicheContextMenu(null);
-    };
-    const onKey = (ev) => {
-      if (ev.key === 'Escape') setFicheContextMenu(null);
-    };
-    document.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onMouseDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [ficheContextMenu]);
 
   const sousEtatsForEtatModal = (sousEtatsData || []).filter(
     (s) => etatModalNewId && Number(s.id_etat) === Number(etatModalNewId)
@@ -1419,13 +1415,6 @@ const Dashboard = () => {
       });
 
   const fiches = filteredFiches;
-
-  const openFicheContextMenu = (e, fiche) => {
-    if (!canFicheContextMenu) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setFicheContextMenu({ x: e.clientX, y: e.clientY, fiche });
-  };
 
   const copyFicheTelFromMenu = (tel) => {
     const t = (tel || '').trim();
@@ -2256,14 +2245,23 @@ const Dashboard = () => {
                       <tr 
                         key={fiche.hash}
                         className="fiche-row-by-etat"
-                        onContextMenu={(e) => openFicheContextMenu(e, fiche)}
+                        {...bindFicheRowContextMenu(fiche, { enabled: canFicheContextMenu })}
                         style={{ 
                           backgroundColor: `${etatColor}40`,
                           borderLeft: `4px solid ${etatColor}`
                         }}
                         title={getTooltipComment(fiche) || undefined}
                       >
-                        <td data-label="">{fiche.nom || ''}</td>
+                        <td data-label="" className="fiche-row-lead-cell">
+                          <div className="fiche-row-lead-cell-inner">
+                            <FicheTableMobileDetailButton
+                              show={isDashboardTouchMobile}
+                              onClick={() => openDashboardFicheDetail({ hash: fiche.hash })}
+                              isLastViewed={lastViewedFicheHash === fiche.hash}
+                            />
+                            <span className="fiche-row-lead-label">{fiche.nom || ''}</span>
+                          </div>
+                        </td>
                         <td data-label="Prénom:">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>

@@ -32,6 +32,11 @@ import {
   clearPendingRdvVueFicheModal,
   resolvePendingRdvVueFicheModal,
 } from '../utils/rdvVueFicheModalSession';
+import {
+  useFicheRowContextMenuTouch,
+  useFicheContextMenuDismiss,
+} from '../utils/ficheRowContextMenuTouch';
+import FicheTableMobileDetailButton from '../components/FicheTableMobileDetailButton';
 import './RendezVousVue.css';
 
 const RDV_VUE_PAGE_CLASS = 'rdv-vue-page';
@@ -186,6 +191,13 @@ const RendezVousVue = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'date_rdv_time', direction: 'asc' });
   const [quickSearchDep, setQuickSearchDep] = useState('');
   const [ficheContextMenu, setFicheContextMenu] = useState(null);
+  const openFicheContextMenu = useCallback((e, fiche) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFicheContextMenu({ x: e.clientX, y: e.clientY, fiche, openedAt: Date.now() });
+  }, []);
+  const { bindFicheRowContextMenu } = useFicheRowContextMenuTouch(openFicheContextMenu);
+  useFicheContextMenuDismiss(ficheContextMenu, setFicheContextMenu);
   const [ficheDetailModal, setFicheDetailModal] = useState(() =>
     resolvePendingRdvVueFicheModal(getFicheModalStateFromUrl())
   );
@@ -423,17 +435,6 @@ const RendezVousVue = () => {
     return sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />;
   };
 
-  useEffect(() => {
-    if (!ficheContextMenu) return undefined;
-    const close = () => setFicheContextMenu(null);
-    window.addEventListener('click', close);
-    window.addEventListener('contextmenu', close);
-    return () => {
-      window.removeEventListener('click', close);
-      window.removeEventListener('contextmenu', close);
-    };
-  }, [ficheContextMenu]);
-
   const getUserName = (id) => {
     if (!id || !usersData) return '';
     const found = usersData.find((u) => Number(u.id) === Number(id));
@@ -453,12 +454,6 @@ const RendezVousVue = () => {
 
   const getProduitName = (produit) => (Number(produit) === 1 ? 'PAC' : Number(produit) === 2 ? 'PV' : '');
   const getProduitColor = (produit) => (Number(produit) === 1 ? '#66D5D4' : Number(produit) === 2 ? '#FFE441' : '#cccccc');
-
-  const openFicheContextMenu = (e, fiche) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setFicheContextMenu({ x: e.clientX, y: e.clientY, fiche });
-  };
 
   const copyFicheTelFromMenu = (tel) => {
     const t = (tel || '').trim();
@@ -620,8 +615,23 @@ const RendezVousVue = () => {
                   const rowBackgroundColor = `${getEtatColor(f)}40`;
                   const rowBorderColor = getEtatColor(f);
                   return (
-                  <tr key={f.id} className="fiche-row-by-etat" onContextMenu={(e) => openFicheContextMenu(e, f)} style={{ backgroundColor: rowBackgroundColor, borderLeft: `4px solid ${rowBorderColor}` }}>
-                    <td>{f.nom || ''}</td>
+                  <tr
+                    key={f.id}
+                    className="fiche-row-by-etat"
+                    {...bindFicheRowContextMenu(f)}
+                    style={{ backgroundColor: rowBackgroundColor, borderLeft: `4px solid ${rowBorderColor}` }}
+                  >
+                    <td className="fiche-row-lead-cell">
+                      <div className="fiche-row-lead-cell-inner">
+                        <FicheTableMobileDetailButton
+                          show={isRdvVueTouchMobile}
+                          onClick={() => openRdvVueFicheDetail({ hash: f.hash })}
+                          isLastViewed={lastViewedFicheHash === f.hash}
+                          iconSize="13.6px"
+                        />
+                        <span className="fiche-row-lead-label">{f.nom || ''}</span>
+                      </div>
+                    </td>
                     <td>{f.prenom || ''}</td>
                     <td>{f.tel || ''}</td>
                     <td>{f.cp || '—'}</td>
