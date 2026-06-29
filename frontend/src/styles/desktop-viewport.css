@@ -436,3 +436,100 @@ body.planning-hebdomadaire-page.planning-hebdomadaire-page--extranet-scroll .pla
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch;
 }
+
+/*
+ * Extranet mobile iOS/Android : menu en tiroir.
+ * Priorité sur html[data-desktop-viewport] .sidebar { transform: translateX(0) }.
+ */
+html.dashboard-page.dashboard-page--mobile-native .sidebar.collapsed,
+body.dashboard-page.dashboard-page--mobile-native .sidebar.collapsed,
+html.planning-commercial-page.planning-commercial-page--mobile-native .sidebar.collapsed,
+body.planning-commercial-page.planning-commercial-page--mobile-native .sidebar.collapsed,
+html.rdv-vue-page.rdv-vue-page--mobile-native .sidebar.collapsed,
+body.rdv-vue-page.rdv-vue-page--mobile-native .sidebar.collapsed,
+html.dashboard-page.dashboard-page--table-desktop-view .sidebar.collapsed,
+body.dashboard-page.dashboard-page--table-desktop-view .sidebar.collapsed,
+html.planning-commercial-page.planning-commercial-page--table-desktop-view .sidebar.collapsed,
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .sidebar.collapsed,
+html.rdv-vue-page.rdv-vue-page--table-desktop-view .sidebar.collapsed,
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .sidebar.collapsed {
+  transform: translateX(-100%) !important;
+}
+
+html.dashboard-page.dashboard-page--mobile-native .sidebar:not(.collapsed),
+body.dashboard-page.dashboard-page--mobile-native .sidebar:not(.collapsed),
+html.planning-commercial-page.planning-commercial-page--mobile-native .sidebar:not(.collapsed),
+body.planning-commercial-page.planning-commercial-page--mobile-native .sidebar:not(.collapsed),
+html.rdv-vue-page.rdv-vue-page--mobile-native .sidebar:not(.collapsed),
+body.rdv-vue-page.rdv-vue-page--mobile-native .sidebar:not(.collapsed),
+html.dashboard-page.dashboard-page--table-desktop-view .sidebar:not(.collapsed),
+body.dashboard-page.dashboard-page--table-desktop-view .sidebar:not(.collapsed),
+html.planning-commercial-page.planning-commercial-page--table-desktop-view .sidebar:not(.collapsed),
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .sidebar:not(.collapsed),
+html.rdv-vue-page.rdv-vue-page--table-desktop-view .sidebar:not(.collapsed),
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .sidebar:not(.collapsed) {
+  transform: translateX(0) !important;
+  top: 60px !important;
+  height: calc(100vh - 60px) !important;
+  height: calc(100dvh - 60px) !important;
+  width: 200px !important;
+  z-index: 1002 !important;
+}
+
+html.dashboard-page.dashboard-page--mobile-native .menu-toggle,
+body.dashboard-page.dashboard-page--mobile-native .menu-toggle,
+html.planning-commercial-page.planning-commercial-page--mobile-native .menu-toggle,
+body.planning-commercial-page.planning-commercial-page--mobile-native .menu-toggle,
+html.rdv-vue-page.rdv-vue-page--mobile-native .menu-toggle,
+body.rdv-vue-page.rdv-vue-page--mobile-native .menu-toggle,
+html.dashboard-page.dashboard-page--table-desktop-view .menu-toggle,
+body.dashboard-page.dashboard-page--table-desktop-view .menu-toggle,
+html.planning-commercial-page.planning-commercial-page--table-desktop-view .menu-toggle,
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .menu-toggle,
+html.rdv-vue-page.rdv-vue-page--table-desktop-view .menu-toggle,
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .menu-toggle {
+  display: flex !important;
+}
+
+html.dashboard-page.dashboard-page--mobile-native .main-content,
+html.dashboard-page.dashboard-page--mobile-native .main-content.sidebar-collapsed,
+body.dashboard-page.dashboard-page--mobile-native .main-content,
+body.dashboard-page.dashboard-page--mobile-native .main-content.sidebar-collapsed,
+html.planning-commercial-page.planning-commercial-page--mobile-native .main-content,
+html.planning-commercial-page.planning-commercial-page--mobile-native .main-content.sidebar-collapsed,
+body.planning-commercial-page.planning-commercial-page--mobile-native .main-content,
+body.planning-commercial-page.planning-commercial-page--mobile-native .main-content.sidebar-collapsed,
+html.rdv-vue-page.rdv-vue-page--mobile-native .main-content,
+html.rdv-vue-page.rdv-vue-page--mobile-native .main-content.sidebar-collapsed,
+body.rdv-vue-page.rdv-vue-page--mobile-native .main-content,
+body.rdv-vue-page.rdv-vue-page--mobile-native .main-content.sidebar-collapsed,
+html.dashboard-page.dashboard-page--table-desktop-view .main-content,
+html.dashboard-page.dashboard-page--table-desktop-view .main-content.sidebar-collapsed,
+body.dashboard-page.dashboard-page--table-desktop-view .main-content,
+body.dashboard-page.dashboard-page--table-desktop-view .main-content.sidebar-collapsed,
+html.planning-commercial-page.planning-commercial-page--table-desktop-view .main-content,
+html.planning-commercial-page.planning-commercial-page--table-desktop-view .main-content.sidebar-collapsed,
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .main-content,
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .main-content.sidebar-collapsed,
+html.rdv-vue-page.rdv-vue-page--table-desktop-view .main-content,
+html.rdv-vue-page.rdv-vue-page--table-desktop-view .main-content.sidebar-collapsed,
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .main-content,
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .main-content.sidebar-collapsed {
+  margin-left: 0 !important;
+}
+
+html.dashboard-page.dashboard-page--mobile-native .sidebar-overlay.active,
+body.dashboard-page.dashboard-page--mobile-native .sidebar-overlay.active,
+html.planning-commercial-page.planning-commercial-page--mobile-native .sidebar-overlay.active,
+body.planning-commercial-page.planning-commercial-page--mobile-native .sidebar-overlay.active,
+html.rdv-vue-page.rdv-vue-page--mobile-native .sidebar-overlay.active,
+body.rdv-vue-page.rdv-vue-page--mobile-native .sidebar-overlay.active,
+html.dashboard-page.dashboard-page--table-desktop-view .sidebar-overlay.active,
+body.dashboard-page.dashboard-page--table-desktop-view .sidebar-overlay.active,
+html.planning-commercial-page.planning-commercial-page--table-desktop-view .sidebar-overlay.active,
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .sidebar-overlay.active,
+html.rdv-vue-page.rdv-vue-page--table-desktop-view .sidebar-overlay.active,
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .sidebar-overlay.active {
+  display: block !important;
+  pointer-events: auto !important;
+}

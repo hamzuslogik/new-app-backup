@@ -1,17 +1,18 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect } from 'react';
 import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
 import {
   isMobileNativeExtranetPage,
   isTouchExtranetMobileLayout,
+  isTouchMobileDevice,
 } from '../utils/applyForceDesktopViewport';
 
 const SidebarContext = createContext(null);
 
 const isForceDesktopSidebarLocked = () =>
-  FORCE_DESKTOP_VIEWPORT && !isTouchExtranetMobileLayout();
+  FORCE_DESKTOP_VIEWPORT && !isTouchExtranetMobileLayout() && !isTouchMobileDevice();
 
 const getInitialSidebarState = () => {
-  if (isTouchExtranetMobileLayout()) {
+  if (isTouchMobileDevice()) {
     return true;
   }
   if (FORCE_DESKTOP_VIEWPORT && !isMobileNativeExtranetPage()) {
@@ -21,6 +22,30 @@ const getInitialSidebarState = () => {
   const isDesktop = width > 1024;
   return !isDesktop;
 };
+
+function syncExtranetSidebarLayout({
+  setMobileExtranetActive,
+  setIsMobile,
+  setIsTablet,
+  setIsDesktop,
+  setSidebarCollapsed,
+  extranetActiveRef,
+}) {
+  const extranet = isTouchExtranetMobileLayout();
+  const wasExtranet = extranetActiveRef.current;
+  extranetActiveRef.current = extranet;
+  setMobileExtranetActive(extranet);
+  if (extranet) {
+    setIsMobile(true);
+    setIsTablet(false);
+    setIsDesktop(false);
+    if (!wasExtranet) {
+      setSidebarCollapsed(true);
+    }
+  } else if (isTouchMobileDevice()) {
+    setSidebarCollapsed(true);
+  }
+}
 
 export const SidebarProvider = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarState());
@@ -38,32 +63,29 @@ export const SidebarProvider = ({ children }) => {
   const [autoHideEnabled, setAutoHideEnabled] = useState(false);
   const userToggleRef = React.useRef(false);
   const extranetActive = mobileExtranetActive || isTouchExtranetMobileLayout();
-  const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !extranetActive;
+  const forceDesktopSidebar =
+    FORCE_DESKTOP_VIEWPORT && !extranetActive && !isTouchMobileDevice();
 
-  useEffect(() => {
-    const syncExtranetLayout = () => {
-      const extranet = isTouchExtranetMobileLayout();
-      const wasExtranet = extranetActiveRef.current;
-      extranetActiveRef.current = extranet;
-      setMobileExtranetActive(extranet);
-      if (extranet) {
-        setIsMobile(true);
-        setIsTablet(false);
-        setIsDesktop(false);
-        if (!wasExtranet) {
-          setSidebarCollapsed(true);
-        }
-      }
-    };
-
-    syncExtranetLayout();
-    window.addEventListener('viewport-layout-change', syncExtranetLayout);
-    window.addEventListener('resize', syncExtranetLayout);
-    return () => {
-      window.removeEventListener('viewport-layout-change', syncExtranetLayout);
-      window.removeEventListener('resize', syncExtranetLayout);
-    };
+  const runExtranetSync = React.useCallback(() => {
+    syncExtranetSidebarLayout({
+      setMobileExtranetActive,
+      setIsMobile,
+      setIsTablet,
+      setIsDesktop,
+      setSidebarCollapsed,
+      extranetActiveRef,
+    });
   }, []);
+
+  useLayoutEffect(() => {
+    runExtranetSync();
+    window.addEventListener('viewport-layout-change', runExtranetSync);
+    window.addEventListener('resize', runExtranetSync);
+    return () => {
+      window.removeEventListener('viewport-layout-change', runExtranetSync);
+      window.removeEventListener('resize', runExtranetSync);
+    };
+  }, [runExtranetSync]);
 
   useEffect(() => {
     if (forceDesktopSidebar) {

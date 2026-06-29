@@ -162,6 +162,8 @@ const RendezVousVue = () => {
     document.body.classList.add(RDV_VUE_MOBILE_NATIVE_CLASS);
 
     applyMobileNativeViewport();
+    window.dispatchEvent(new Event('viewport-layout-change'));
+    closeSidebar();
     const id = requestAnimationFrame(() => {
       requestAnimationFrame(applyMobileNativeViewport);
     });
@@ -170,9 +172,11 @@ const RendezVousVue = () => {
       cancelAnimationFrame(id);
       document.documentElement.classList.remove(RDV_VUE_MOBILE_NATIVE_CLASS);
       document.body.classList.remove(RDV_VUE_MOBILE_NATIVE_CLASS);
-      applyForceDesktopViewport();
+      if (!isTouchMobileDevice()) {
+        applyForceDesktopViewport();
+      }
     };
-  }, []);
+  }, [closeSidebar]);
 
   useLayoutEffect(() => {
     if (!isTouchMobileDevice()) return undefined;
