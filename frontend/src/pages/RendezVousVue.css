@@ -47,6 +47,31 @@ body.rdv-vue-page .rdv-vue .fiches-table-container {
   touch-action: pan-x pan-y pinch-zoom;
 }
 
+html[data-desktop-viewport] .rdv-vue-page .rdv-vue .fiches-table-container,
+html.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container,
+html.rdv-vue-page[data-desktop-viewport] .fiches-table-container,
+body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container,
+body.rdv-vue-page[data-desktop-viewport] .fiches-table-container {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
+  overscroll-behavior: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  scrollbar-gutter: stable;
+}
+
+html[data-desktop-viewport] .rdv-vue-page .rdv-vue .fiches-table,
+html.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table,
+body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table,
+body.rdv-vue-page[data-desktop-viewport] .fiches-table {
+  width: 100% !important;
+  min-width: 1400px !important;
+  max-width: none !important;
+  table-layout: fixed !important;
+}
+
 @media (max-width: 768px) {
   .rdv-vue-page * {
     max-width: none !important;
@@ -745,18 +770,19 @@ body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table-container {
   min-width: 0 !important;
   max-height: none !important;
   height: auto !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: visible !important;
   overscroll-behavior: auto !important;
   isolation: isolate !important;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;
+  scrollbar-gutter: stable;
   margin-bottom: 16px !important;
 }
 
 body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table {
   min-width: 1400px !important;
-  width: max-content !important;
+  width: 100% !important;
   max-width: none !important;
   table-layout: fixed !important;
 }
@@ -780,7 +806,7 @@ html.viewport-zoomed body.rdv-vue-page.rdv-vue-page--extranet-scroll {
 html.viewport-zoomed.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table,
 html.viewport-zoomed body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table {
   min-width: 1400px !important;
-  width: max-content !important;
+  width: 100% !important;
   max-width: none !important;
   table-layout: fixed !important;
 }
@@ -874,10 +900,46 @@ body.rdv-vue-page.rdv-vue-page--table-desktop-view:not([data-desktop-viewport]) 
 
 body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table {
   min-width: 1400px !important;
-  width: max-content !important;
+  width: 100% !important;
+  max-width: none !important;
+  table-layout: fixed !important;
 }
 
 body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table-container {
-  overflow: visible !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
+  scrollbar-gutter: stable;
   touch-action: pan-x pan-y pinch-zoom;
+}
+
+/* Vue RDV desktop : barre de défilement horizontale visible sous le tableau */
+body.rdv-vue-page[data-desktop-viewport] .fiches-table-container::-webkit-scrollbar,
+body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container::-webkit-scrollbar,
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table-container::-webkit-scrollbar {
+  height: 12px;
+}
+
+body.rdv-vue-page[data-desktop-viewport] .fiches-table-container::-webkit-scrollbar-track,
+body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container::-webkit-scrollbar-track,
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table-container::-webkit-scrollbar-track {
+  background: #e8ecf0;
+  border-radius: 6px;
+}
+
+body.rdv-vue-page[data-desktop-viewport] .fiches-table-container::-webkit-scrollbar-thumb,
+body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container::-webkit-scrollbar-thumb,
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table-container::-webkit-scrollbar-thumb {
+  background: #6b7c8f;
+  border-radius: 6px;
+  border: 2px solid #e8ecf0;
+  min-width: 48px;
+}
+
+body.rdv-vue-page[data-desktop-viewport] .fiches-table-container::-webkit-scrollbar-thumb:hover,
+body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container::-webkit-scrollbar-thumb:hover,
+body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table-container::-webkit-scrollbar-thumb:hover {
+  background: #3d4f63;
 }

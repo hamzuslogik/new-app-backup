@@ -149,6 +149,44 @@ body.dashboard-page[data-desktop-viewport] .dashboard {
   box-sizing: border-box;
 }
 
+/* Vue RDV desktop : barre de défilement horizontale sous le tableau */
+body.rdv-vue-page[data-desktop-viewport],
+html.rdv-vue-page[data-desktop-viewport] {
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+body.rdv-vue-page[data-desktop-viewport] .fiches-table-container,
+body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
+  overscroll-behavior: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  isolation: isolate !important;
+  scrollbar-gutter: stable;
+}
+
+body.rdv-vue-page[data-desktop-viewport] .fiches-table,
+body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table {
+  min-width: 1400px !important;
+  width: 100% !important;
+  max-width: none !important;
+  table-layout: fixed !important;
+}
+
+body.rdv-vue-page[data-desktop-viewport] .rdv-vue {
+  overflow: visible !important;
+  min-width: 1400px !important;
+  max-width: none !important;
+  width: auto !important;
+  box-sizing: border-box;
+}
+
 /* Sidebar toujours visible */
 html[data-desktop-viewport] .sidebar,
 html[data-desktop-viewport] .sidebar.collapsed {
@@ -222,6 +260,13 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
     overscroll-behavior: auto !important;
   }
 
+  body.rdv-vue-page[data-desktop-viewport] .fiches-table-container,
+  body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container {
+    overflow-x: scroll !important;
+    overflow-y: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
   html[data-desktop-viewport] .sidebar,
   html[data-desktop-viewport] .sidebar.collapsed {
     transform: translateX(0) !important;
@@ -280,12 +325,20 @@ html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .confirmateurs-t
   overflow-y: visible !important;
 }
 
-html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table-container,
-html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .fiches-table-container {
+html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table-container {
   min-width: 1400px !important;
   width: max-content !important;
   max-width: none !important;
   overflow: visible !important;
+}
+
+html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .fiches-table-container,
+html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
 }
 
 html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .fiches-table,
@@ -296,11 +349,18 @@ html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .confirmateurs-t
   table-layout: fixed !important;
 }
 
-html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table,
-html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .fiches-table {
+html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table {
   min-width: 1400px !important;
   width: max-content !important;
   max-width: none !important;
+}
+
+html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .fiches-table,
+html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table {
+  min-width: 1400px !important;
+  width: 100% !important;
+  max-width: none !important;
+  table-layout: fixed !important;
 }
 
 html.viewport-zoomed body.dashboard-page,
