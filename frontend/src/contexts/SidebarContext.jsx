@@ -1,20 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useLayoutEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
-import {
-  isMobileNativeExtranetPage,
-  isTouchExtranetMobileLayout,
-  isTouchMobileDevice,
-} from '../utils/applyForceDesktopViewport';
+import { isMobileNativeExtranetPage } from '../utils/applyForceDesktopViewport';
 
 const SidebarContext = createContext(null);
 
-const isForceDesktopSidebarLocked = () =>
-  FORCE_DESKTOP_VIEWPORT && !isTouchExtranetMobileLayout() && !isTouchMobileDevice();
-
 const getInitialSidebarState = () => {
-  if (isTouchMobileDevice()) {
-    return true;
-  }
   if (FORCE_DESKTOP_VIEWPORT && !isMobileNativeExtranetPage()) {
     return false;
   }
@@ -23,34 +13,10 @@ const getInitialSidebarState = () => {
   return !isDesktop;
 };
 
-function syncExtranetSidebarLayout({
-  setMobileExtranetActive,
-  setIsMobile,
-  setIsTablet,
-  setIsDesktop,
-  setSidebarCollapsed,
-  extranetActiveRef,
-}) {
-  const extranet = isTouchExtranetMobileLayout();
-  const wasExtranet = extranetActiveRef.current;
-  extranetActiveRef.current = extranet;
-  setMobileExtranetActive(extranet);
-  if (extranet) {
-    setIsMobile(true);
-    setIsTablet(false);
-    setIsDesktop(false);
-    if (!wasExtranet) {
-      setSidebarCollapsed(true);
-    }
-  } else if (isTouchMobileDevice()) {
-    setSidebarCollapsed(true);
-  }
-}
-
 export const SidebarProvider = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarState());
-  const [mobileExtranetActive, setMobileExtranetActive] = useState(isTouchExtranetMobileLayout());
-  const extranetActiveRef = React.useRef(isTouchExtranetMobileLayout());
+  const [mobileExtranetActive, setMobileExtranetActive] = useState(isMobileNativeExtranetPage());
+  const extranetActiveRef = React.useRef(isMobileNativeExtranetPage());
   const [isMobile, setIsMobile] = useState(
     mobileExtranetActive || (!FORCE_DESKTOP_VIEWPORT && window.innerWidth <= 768)
   );
@@ -62,30 +28,33 @@ export const SidebarProvider = ({ children }) => {
   );
   const [autoHideEnabled, setAutoHideEnabled] = useState(false);
   const userToggleRef = React.useRef(false);
-  const extranetActive = mobileExtranetActive || isTouchExtranetMobileLayout();
-  const forceDesktopSidebar =
-    FORCE_DESKTOP_VIEWPORT && !extranetActive && !isTouchMobileDevice();
+  const extranetActive = mobileExtranetActive || isMobileNativeExtranetPage();
+  const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !extranetActive;
 
-  const runExtranetSync = React.useCallback(() => {
-    syncExtranetSidebarLayout({
-      setMobileExtranetActive,
-      setIsMobile,
-      setIsTablet,
-      setIsDesktop,
-      setSidebarCollapsed,
-      extranetActiveRef,
-    });
-  }, []);
-
-  useLayoutEffect(() => {
-    runExtranetSync();
-    window.addEventListener('viewport-layout-change', runExtranetSync);
-    window.addEventListener('resize', runExtranetSync);
-    return () => {
-      window.removeEventListener('viewport-layout-change', runExtranetSync);
-      window.removeEventListener('resize', runExtranetSync);
+  useEffect(() => {
+    const syncExtranetLayout = () => {
+      const extranet = isMobileNativeExtranetPage();
+      const wasExtranet = extranetActiveRef.current;
+      extranetActiveRef.current = extranet;
+      setMobileExtranetActive(extranet);
+      if (extranet) {
+        setIsMobile(true);
+        setIsTablet(false);
+        setIsDesktop(false);
+        if (!wasExtranet) {
+          setSidebarCollapsed(true);
+        }
+      }
     };
-  }, [runExtranetSync]);
+
+    syncExtranetLayout();
+    window.addEventListener('viewport-layout-change', syncExtranetLayout);
+    window.addEventListener('resize', syncExtranetLayout);
+    return () => {
+      window.removeEventListener('viewport-layout-change', syncExtranetLayout);
+      window.removeEventListener('resize', syncExtranetLayout);
+    };
+  }, []);
 
   useEffect(() => {
     if (forceDesktopSidebar) {
@@ -121,7 +90,7 @@ export const SidebarProvider = ({ children }) => {
   }, [autoHideEnabled, isDesktop]);
 
   const toggleSidebar = () => {
-    if (isForceDesktopSidebarLocked()) {
+    if (forceDesktopSidebar) {
       return;
     }
 
@@ -141,7 +110,7 @@ export const SidebarProvider = ({ children }) => {
   };
 
   const closeSidebar = () => {
-    if (isForceDesktopSidebarLocked()) {
+    if (forceDesktopSidebar) {
       return;
     }
     setSidebarCollapsed(true);

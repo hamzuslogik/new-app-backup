@@ -192,8 +192,6 @@ const PlanningCommercial = () => {
     document.body.classList.add(PLANNING_MOBILE_NATIVE_CLASS);
 
     applyMobileNativeViewport();
-    window.dispatchEvent(new Event('viewport-layout-change'));
-    closeSidebar();
     const id = requestAnimationFrame(() => {
       requestAnimationFrame(applyMobileNativeViewport);
     });
@@ -202,11 +200,9 @@ const PlanningCommercial = () => {
       cancelAnimationFrame(id);
       document.documentElement.classList.remove(PLANNING_MOBILE_NATIVE_CLASS);
       document.body.classList.remove(PLANNING_MOBILE_NATIVE_CLASS);
-      if (!isTouchMobileDevice()) {
-        applyForceDesktopViewport();
-      }
+      applyForceDesktopViewport();
     };
-  }, [closeSidebar]);
+  }, []);
 
   /** Mobile : scroll page unique, tableau desktop (max-content) */
   useLayoutEffect(() => {

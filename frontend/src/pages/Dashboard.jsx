@@ -235,8 +235,6 @@ const Dashboard = () => {
     document.body.classList.add(DASHBOARD_MOBILE_NATIVE_CLASS);
 
     applyMobileNativeViewport();
-    window.dispatchEvent(new Event('viewport-layout-change'));
-    closeSidebar();
     const id = requestAnimationFrame(() => {
       requestAnimationFrame(applyMobileNativeViewport);
     });
@@ -245,11 +243,9 @@ const Dashboard = () => {
       cancelAnimationFrame(id);
       document.documentElement.classList.remove(DASHBOARD_MOBILE_NATIVE_CLASS);
       document.body.classList.remove(DASHBOARD_MOBILE_NATIVE_CLASS);
-      if (!isTouchMobileDevice()) {
-        applyForceDesktopViewport();
-      }
+      applyForceDesktopViewport();
     };
-  }, [closeSidebar]);
+  }, []);
 
   /** Mobile : scroll page unique, tableau desktop (max-content) */
   useLayoutEffect(() => {

@@ -6,16 +6,12 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import App from './App';
 import './index.css';
-import { applyForceDesktopViewport, isTouchMobileDevice, applyMobileNativeViewport } from './utils/applyForceDesktopViewport';
+import { applyForceDesktopViewport } from './utils/applyForceDesktopViewport';
 import { initTableScrollContainment } from './utils/tableScrollContainment';
 import { initMainContentIosScrollChain } from './utils/iosNestedScrollChain';
 import { initViewportZoomScrollFix } from './utils/viewportZoomScrollFix';
 
-if (isTouchMobileDevice()) {
-  applyMobileNativeViewport();
-} else {
-  applyForceDesktopViewport();
-}
+applyForceDesktopViewport();
 initTableScrollContainment();
 initMainContentIosScrollChain();
 initViewportZoomScrollFix();

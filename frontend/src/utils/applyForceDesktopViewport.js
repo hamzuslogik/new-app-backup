@@ -33,19 +33,6 @@ export function isMobileNativeExtranetPage() {
   );
 }
 
-/** iOS/Android extranet : vue mobile native ou vue tableau (viewport 1400px sans data-desktop-viewport). */
-export function isTouchExtranetMobileLayout() {
-  if (!isTouchMobileDevice() || document.documentElement.dataset.desktopViewport) {
-    return false;
-  }
-  return (
-    isMobileNativeExtranetPage() ||
-    document.body?.classList.contains(DASHBOARD_TABLE_DESKTOP_VIEW_CLASS) ||
-    document.body?.classList.contains(PLANNING_COMMERCIAL_TABLE_DESKTOP_VIEW_CLASS) ||
-    document.body?.classList.contains(RDV_VUE_TABLE_DESKTOP_VIEW_CLASS)
-  );
-}
-
 export const DASHBOARD_TABLE_DESKTOP_VIEW_CLASS = 'dashboard-page--table-desktop-view';
 
 export function isDashboardTableDesktopView() {
