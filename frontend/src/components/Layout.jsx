@@ -6,13 +6,13 @@ import GlobalKeyboardShortcuts from './common/GlobalKeyboardShortcuts';
 import { FicheDetailModalProvider } from '../contexts/FicheDetailModalContext';
 import { SidebarProvider, useSidebar } from '../contexts/SidebarContext';
 import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
-import { isMobileNativeExtranetPage } from '../utils/applyForceDesktopViewport';
+import { isMobileNativeExtranetPage, isTouchExtranetMobileLayout } from '../utils/applyForceDesktopViewport';
 import api from '../config/api';
 import './Layout.css';
 
 const LayoutContent = () => {
   const { sidebarCollapsed, isMobile, isTablet, closeSidebar, mobileExtranetActive } = useSidebar();
-  const extranetMobile = mobileExtranetActive || isMobileNativeExtranetPage();
+  const extranetMobile = mobileExtranetActive || isTouchExtranetMobileLayout();
   const useMobileSidebar = !FORCE_DESKTOP_VIEWPORT || extranetMobile;
   const mobileLayout = extranetMobile || isMobile || isTablet;
   const location = useLocation();

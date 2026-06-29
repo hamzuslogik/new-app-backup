@@ -1,10 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
-import { isMobileNativeExtranetPage } from '../utils/applyForceDesktopViewport';
+import {
+  isMobileNativeExtranetPage,
+  isTouchExtranetMobileLayout,
+} from '../utils/applyForceDesktopViewport';
 
 const SidebarContext = createContext(null);
 
+const isForceDesktopSidebarLocked = () =>
+  FORCE_DESKTOP_VIEWPORT && !isTouchExtranetMobileLayout();
+
 const getInitialSidebarState = () => {
+  if (isTouchExtranetMobileLayout()) {
+    return true;
+  }
   if (FORCE_DESKTOP_VIEWPORT && !isMobileNativeExtranetPage()) {
     return false;
   }
@@ -15,8 +24,8 @@ const getInitialSidebarState = () => {
 
 export const SidebarProvider = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarState());
-  const [mobileExtranetActive, setMobileExtranetActive] = useState(isMobileNativeExtranetPage());
-  const extranetActiveRef = React.useRef(isMobileNativeExtranetPage());
+  const [mobileExtranetActive, setMobileExtranetActive] = useState(isTouchExtranetMobileLayout());
+  const extranetActiveRef = React.useRef(isTouchExtranetMobileLayout());
   const [isMobile, setIsMobile] = useState(
     mobileExtranetActive || (!FORCE_DESKTOP_VIEWPORT && window.innerWidth <= 768)
   );
@@ -28,12 +37,12 @@ export const SidebarProvider = ({ children }) => {
   );
   const [autoHideEnabled, setAutoHideEnabled] = useState(false);
   const userToggleRef = React.useRef(false);
-  const extranetActive = mobileExtranetActive || isMobileNativeExtranetPage();
+  const extranetActive = mobileExtranetActive || isTouchExtranetMobileLayout();
   const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !extranetActive;
 
   useEffect(() => {
     const syncExtranetLayout = () => {
-      const extranet = isMobileNativeExtranetPage();
+      const extranet = isTouchExtranetMobileLayout();
       const wasExtranet = extranetActiveRef.current;
       extranetActiveRef.current = extranet;
       setMobileExtranetActive(extranet);
@@ -90,7 +99,7 @@ export const SidebarProvider = ({ children }) => {
   }, [autoHideEnabled, isDesktop]);
 
   const toggleSidebar = () => {
-    if (forceDesktopSidebar) {
+    if (isForceDesktopSidebarLocked()) {
       return;
     }
 
@@ -110,7 +119,7 @@ export const SidebarProvider = ({ children }) => {
   };
 
   const closeSidebar = () => {
-    if (forceDesktopSidebar) {
+    if (isForceDesktopSidebarLocked()) {
       return;
     }
     setSidebarCollapsed(true);

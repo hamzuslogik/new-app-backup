@@ -266,3 +266,34 @@
   }
 }
 
+/*
+ * iOS vue tableau : viewport meta 1400px — les @media (max-width) ne s'appliquent pas.
+ * Le menu doit respecter collapsed et rester masqué pendant le modal fiche.
+ */
+html:not([data-desktop-viewport]) body.dashboard-page--table-desktop-view .sidebar.collapsed,
+html:not([data-desktop-viewport]) body.planning-commercial-page--table-desktop-view .sidebar.collapsed,
+html:not([data-desktop-viewport]) body.rdv-vue-page--table-desktop-view .sidebar.collapsed {
+  transform: translateX(-100%) !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page--table-desktop-view .sidebar:not(.collapsed),
+html:not([data-desktop-viewport]) body.planning-commercial-page--table-desktop-view .sidebar:not(.collapsed),
+html:not([data-desktop-viewport]) body.rdv-vue-page--table-desktop-view .sidebar:not(.collapsed) {
+  transform: translateX(0) !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page--table-desktop-view.fiche-detail-modal-open .sidebar,
+html:not([data-desktop-viewport]) body.planning-commercial-page--table-desktop-view.fiche-detail-modal-open .sidebar,
+html:not([data-desktop-viewport]) body.rdv-vue-page--table-desktop-view.fiche-detail-modal-open .sidebar,
+html:not([data-desktop-viewport]) body.dashboard-page--mobile-native.fiche-detail-modal-open .sidebar,
+html:not([data-desktop-viewport]) body.planning-commercial-page--mobile-native.fiche-detail-modal-open .sidebar,
+html:not([data-desktop-viewport]) body.rdv-vue-page--mobile-native.fiche-detail-modal-open .sidebar {
+  transform: translateX(-100%) !important;
+}
+
+html:not([data-desktop-viewport]) body.fiche-detail-modal-open .sidebar-overlay.active {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+

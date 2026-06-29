@@ -40,8 +40,8 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const backdropCloseReadyRef = useRef(false);
 
   const handleClose = useCallback(() => {
-    closeSidebar();
     onClose();
+    closeSidebar();
   }, [closeSidebar, onClose]);
 
   useEffect(() => {
