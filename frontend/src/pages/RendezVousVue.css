@@ -740,14 +740,16 @@ body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-content {
 }
 
 body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table-container {
-  width: auto !important;
-  max-width: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
   min-width: 0 !important;
   max-height: none !important;
   height: auto !important;
-  overflow: visible !important;
-  overscroll-behavior: none !important;
-  isolation: auto !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  overscroll-behavior: auto !important;
+  isolation: isolate !important;
+  -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;
   margin-bottom: 16px !important;
 }
@@ -778,7 +780,8 @@ html.viewport-zoomed body.rdv-vue-page.rdv-vue-page--extranet-scroll {
 html.viewport-zoomed.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table,
 html.viewport-zoomed body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table {
   min-width: 1400px !important;
-  width: 100% !important;
+  width: max-content !important;
+  max-width: none !important;
   table-layout: fixed !important;
 }
 
