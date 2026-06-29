@@ -6,7 +6,6 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import App from './App';
 import './index.css';
-import './styles/fiches-table-scroll.css';
 import { applyForceDesktopViewport } from './utils/applyForceDesktopViewport';
 import { initTableScrollContainment } from './utils/tableScrollContainment';
 import { initMainContentIosScrollChain } from './utils/iosNestedScrollChain';
