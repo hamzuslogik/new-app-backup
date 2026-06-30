@@ -48,7 +48,10 @@ const COMMERCIAL_SESSION_READONLY_FIELDS = new Set([
   'motif_qualif',
   'commentaire',
   'etude',
+  'details_etude',
   'conf_deja_etude',
+  'conf_deja_fait_etude',
+  'conf_details_etude',
   'etude_raison',
   'date_rdv_time',
 ]);
@@ -287,6 +290,8 @@ const EMPTY_CONF_FORM_BASE = {
   conf_rdv_avec: '',
   conf_appel_tunisie_avec: '',
   conf_deja_etude: '',
+  conf_deja_fait_etude: '',
+  conf_details_etude: '',
   conf_profession_monsieur: '',
   conf_type_contrat_mr: '',
   conf_profession_madame: '',
@@ -379,7 +384,9 @@ function buildConfFormStateFromFiche(ficheData, user) {
     conf_rdv_time: rdvTime,
     conf_rdv_avec: ficheData.conf_rdv_avec || '',
     conf_appel_tunisie_avec: confAppelTunisie,
-    conf_deja_etude: ficheData.conf_deja_etude || '',
+    conf_deja_etude: ficheData.conf_deja_etude || ficheData.conf_deja_fait_etude || ficheData.etude || '',
+    conf_deja_fait_etude: ficheData.conf_deja_fait_etude || ficheData.conf_deja_etude || ficheData.etude || '',
+    conf_details_etude: ficheData.conf_details_etude || ficheData.details_etude || '',
     conf_profession_monsieur: ficheData.conf_profession_monsieur != null ? String(ficheData.conf_profession_monsieur) : '',
     conf_type_contrat_mr: ficheData.conf_type_contrat_mr != null ? String(ficheData.conf_type_contrat_mr) : '',
     conf_profession_madame: ficheData.conf_profession_madame != null ? String(ficheData.conf_profession_madame) : '',
@@ -605,6 +612,8 @@ const FicheDetail = ({
     conf_rdv_avec: '',
     conf_appel_tunisie_avec: '',
     conf_deja_etude: '',
+    conf_deja_fait_etude: '',
+    conf_details_etude: '',
     conf_profession_monsieur: '',
     conf_type_contrat_mr: '',
     conf_profession_madame: '',
@@ -644,6 +653,8 @@ const FicheDetail = ({
     conf_rdv_avec: '',
     conf_appel_tunisie_avec: '',
     conf_deja_etude: '',
+    conf_deja_fait_etude: '',
+    conf_details_etude: '',
     conf_profession_monsieur: '',
     conf_type_contrat_mr: '',
     conf_profession_madame: '',
@@ -1864,7 +1875,9 @@ const FicheDetail = ({
         if (u === 'MADAME' || e === 'MME') return 'MME';
         return '';
       })(),
-      conf_deja_etude: ficheData?.conf_deja_etude || '',
+      conf_deja_etude: ficheData?.conf_deja_etude || ficheData?.conf_deja_fait_etude || ficheData?.etude || '',
+      conf_deja_fait_etude: ficheData?.conf_deja_fait_etude || ficheData?.conf_deja_etude || ficheData?.etude || '',
+      conf_details_etude: ficheData?.conf_details_etude || ficheData?.details_etude || '',
       conf_profession_monsieur:
         ficheData?.conf_profession_monsieur != null ? String(ficheData.conf_profession_monsieur) : '',
       conf_type_contrat_mr:
@@ -2043,7 +2056,12 @@ const FicheDetail = ({
         id_confirmateur_3: data.id_confirmateur_3 ? parseInt(data.id_confirmateur_3) : null,
         conf_rdv_avec: data.conf_rdv_avec || null,
         conf_appel_tunisie_avec: data.conf_appel_tunisie_avec || null,
-        conf_deja_etude: data.conf_deja_etude || null,
+        conf_deja_etude: data.conf_deja_etude || data.conf_deja_fait_etude || null,
+        conf_deja_fait_etude: data.conf_deja_fait_etude || data.conf_deja_etude || null,
+        conf_details_etude:
+          (data.conf_deja_etude === 'OUI' || data.conf_deja_fait_etude === 'OUI')
+            ? (data.conf_details_etude || data.details_etude || null)
+            : null,
         conf_profession_monsieur: data.conf_profession_monsieur || null,
         conf_type_contrat_mr: data.conf_type_contrat_mr ? parseInt(data.conf_type_contrat_mr) : null,
         conf_profession_madame: data.conf_profession_madame || null,
@@ -2129,6 +2147,8 @@ const FicheDetail = ({
           conf_rdv_avec: '',
           conf_appel_tunisie_avec: '',
           conf_deja_etude: '',
+          conf_deja_fait_etude: '',
+          conf_details_etude: '',
           conf_profession_monsieur: '',
           conf_type_contrat_mr: '',
           conf_profession_madame: '',
@@ -2400,7 +2420,12 @@ const FicheDetail = ({
         date_rdv_time: dateRdvTime,
         conf_rdv_avec: confFormData.conf_rdv_avec || null,
         conf_appel_tunisie_avec: confFormData.conf_appel_tunisie_avec || null,
-        conf_deja_etude: confFormData.conf_deja_etude || null,
+        conf_deja_etude: confFormData.conf_deja_etude || confFormData.conf_deja_fait_etude || null,
+        conf_deja_fait_etude: confFormData.conf_deja_fait_etude || confFormData.conf_deja_etude || null,
+        conf_details_etude:
+          (confFormData.conf_deja_fait_etude || confFormData.conf_deja_etude) === 'OUI'
+            ? (confFormData.conf_details_etude || null)
+            : null,
         conf_profession_monsieur: confFormData.conf_profession_monsieur || null,
         conf_type_contrat_mr: confFormData.conf_type_contrat_mr ? parseInt(confFormData.conf_type_contrat_mr) : null,
         conf_profession_madame: confFormData.conf_profession_madame || null,
@@ -2450,6 +2475,8 @@ const FicheDetail = ({
           conf_rdv_avec: '',
           conf_appel_tunisie_avec: '',
           conf_deja_etude: '',
+          conf_deja_fait_etude: '',
+          conf_details_etude: '',
           conf_profession_monsieur: '',
           conf_type_contrat_mr: '',
           conf_profession_madame: '',
@@ -3283,8 +3310,8 @@ const FicheDetail = ({
               {hasConfValue(fiche.conf_commentaire_produit)
                 ? renderField('Commentaire', 'conf_commentaire_produit', fiche.conf_commentaire_produit || '-', 'textarea')
                 : renderField('Commentaire', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')}
-              {hasConfValue(fiche.conf_deja_etude)
-                ? renderField('A déjà fait une étude', 'conf_deja_etude', fiche.conf_deja_etude || 'NON', 'select', [
+              {hasConfValue(fiche.conf_deja_etude) || hasConfValue(fiche.conf_deja_fait_etude)
+                ? renderField('A déjà fait une étude', 'conf_deja_fait_etude', fiche.conf_deja_fait_etude || fiche.conf_deja_etude || 'NON', 'select', [
                     { value: 'OUI', label: 'Oui' },
                     { value: 'NON', label: 'Non' }
                   ])
@@ -3292,6 +3319,10 @@ const FicheDetail = ({
                     { value: 'OUI', label: 'Oui' },
                     { value: 'NON', label: 'Non' }
                   ])}
+              {(fiche.etude === 'OUI' || hasConfValue(fiche.details_etude)) &&
+                renderField('Détails étude', 'details_etude', fiche.details_etude || '-', 'textarea')}
+              {((fiche.conf_deja_fait_etude || fiche.conf_deja_etude) === 'OUI' || hasConfValue(fiche.conf_details_etude)) &&
+                renderField('Détails étude (confirmation)', 'conf_details_etude', fiche.conf_details_etude || '-', 'textarea')}
               {renderField('Détail de l\'étude', 'etude_raison', fiche.etude_raison || '-', 'textarea')}
               {renderField(
                 'Mode de chauffage',
@@ -4157,7 +4188,10 @@ const FicheDetail = ({
                   if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
                   // Champs conf_ (affichés uniquement si non vides)
                   if (etatData.conf_rdv_avec) items.push({ label: 'RDV pris avec', value: etatData.conf_rdv_avec });
-                  if (etatData.conf_deja_etude) items.push({ label: 'A déjà fait une étude', value: etatData.conf_deja_etude });
+                  if (etatData.conf_deja_etude || etatData.conf_deja_fait_etude) {
+                    items.push({ label: 'A déjà fait une étude', value: etatData.conf_deja_fait_etude || etatData.conf_deja_etude });
+                  }
+                  if (etatData.conf_details_etude) items.push({ label: 'Détails étude', value: etatData.conf_details_etude });
                   if (etatData.conf_rdv_annule_precedent) items.push({ label: 'RDV déjà annulé précédemment', value: etatData.conf_rdv_annule_precedent });
                   if (etatData.conf_presence_couple) items.push({ label: 'Présence du couple ou célibataire', value: etatData.conf_presence_couple });
                   const profMrId = etatData.conf_profession_monsieur ?? etatData.profession_mr;
@@ -4262,7 +4296,9 @@ const FicheDetail = ({
                 commentaire_commercial: fiche.commentaire_commercial || null,
                 conf_rdv_avec: fiche.conf_rdv_avec || null,
                 conf_appel_tunisie_avec: fiche.conf_appel_tunisie_avec || null,
-                conf_deja_etude: fiche.conf_deja_etude || null,
+                conf_deja_etude: fiche.conf_deja_etude || fiche.conf_deja_fait_etude || null,
+                conf_deja_fait_etude: fiche.conf_deja_fait_etude || fiche.conf_deja_etude || null,
+                conf_details_etude: fiche.conf_details_etude || fiche.details_etude || null,
                 conf_profession_monsieur: fiche.conf_profession_monsieur ?? fiche.profession_mr ?? null,
                 conf_type_contrat_mr: fiche.conf_type_contrat_mr ?? fiche.type_contrat_mr ?? null,
                 conf_profession_madame: fiche.conf_profession_madame ?? fiche.profession_madame ?? null,
@@ -6438,7 +6474,15 @@ const FicheDetail = ({
                           id="conf_deja_etude"
                           className="form-control"
                           value={confFormData.conf_deja_etude}
-                          onChange={(e) => setConfFormData({...confFormData, conf_deja_etude: e.target.value})}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setConfFormData({
+                              ...confFormData,
+                              conf_deja_etude: value,
+                              conf_deja_fait_etude: value,
+                              conf_details_etude: value === 'OUI' ? confFormData.conf_details_etude : ''
+                            });
+                          }}
                         >
                           <option value="">Sélectionner</option>
                           <option value="OUI">OUI</option>
@@ -6446,6 +6490,20 @@ const FicheDetail = ({
                         </select>
                       </td>
                     </tr>
+                    {(confFormData.conf_deja_etude === 'OUI' || confFormData.conf_deja_fait_etude === 'OUI') && (
+                    <tr>
+                      <td><label htmlFor="conf_details_etude">Détails étude :</label></td>
+                      <td>
+                        <input
+                          type="text"
+                          id="conf_details_etude"
+                          className="form-control"
+                          value={confFormData.conf_details_etude || ''}
+                          onChange={(e) => setConfFormData({ ...confFormData, conf_details_etude: e.target.value })}
+                        />
+                      </td>
+                    </tr>
+                    )}
                     <tr>
                       <td><label htmlFor="conf_rdv_annule_precedent">RDV déjà annulé précédemment :</label></td>
                       <td>
@@ -8043,6 +8101,10 @@ const MODIFICA_TYPE_LABELS = {
   // Confirmation
   conf_rdv_avec: 'RDV pris avec',
   conf_appel_tunisie_avec: 'Appel Tunisie avec',
+  etude: 'Déjà fait une étude',
+  details_etude: 'Détails étude',
+  conf_deja_fait_etude: 'A déjà fait une étude',
+  conf_details_etude: 'Détails étude',
   conf_deja_etude: 'A déjà fait une étude',
   conf_rdv_annule_precedent: 'RDV déjà annulé précédemment',
   conf_presence_couple: 'Présence du couple',
@@ -9853,7 +9915,15 @@ const CreateRdvModal = ({
                     <select
                       className="form-control"
                       value={rdvFormData.conf_deja_etude || ''}
-                      onChange={(e) => setRdvFormData({...rdvFormData, conf_deja_etude: e.target.value})}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setRdvFormData({
+                          ...rdvFormData,
+                          conf_deja_etude: value,
+                          conf_deja_fait_etude: value,
+                          conf_details_etude: value === 'OUI' ? rdvFormData.conf_details_etude : ''
+                        });
+                      }}
                     >
                       <option value="">Sélectionner</option>
                       <option value="OUI">OUI</option>
@@ -9861,6 +9931,19 @@ const CreateRdvModal = ({
                     </select>
                   </td>
                 </tr>
+                {(rdvFormData.conf_deja_etude === 'OUI' || rdvFormData.conf_deja_fait_etude === 'OUI') && (
+                <tr>
+                  <td><label>Détails étude</label></td>
+                  <td>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={rdvFormData.conf_details_etude || ''}
+                      onChange={(e) => setRdvFormData({ ...rdvFormData, conf_details_etude: e.target.value })}
+                    />
+                  </td>
+                </tr>
+                )}
                 <tr>
                   <td><label>Présence du couple ou célibataire</label></td>
                   <td>

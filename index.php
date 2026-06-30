@@ -369,37 +369,38 @@ function sanitizeInput($data) {
     return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
 }
 
-// Fonction pour vérifier si un agent existe dans Vicidial
-function verifyAgentInVicidial($agentPseudo) {
-    global $VICIDIAL_CONFIG;
-    
-    if (empty($agentPseudo)) {
+// Fonction d'authentification agent Vicidial (pseudo + mot de passe)
+function authenticateAgentInVicidial($agentPseudo, $agentPass) {
+    if (empty($agentPseudo) || $agentPass === null || $agentPass === '') {
         return false;
     }
-    
+
     try {
         $conn = connectVicidialDB();
-        
-        // Vérifier si l'agent existe dans la table vicidial_users
-        $sql = "SELECT user FROM vicidial_users WHERE user = ? LIMIT 1";
+
+        $sql = "SELECT user, pass FROM vicidial_users WHERE user = ? LIMIT 1";
         $stmt = $conn->prepare($sql);
-        
+
         if ($stmt === false) {
             $conn->close();
             return false;
         }
-        
+
         $stmt->bind_param("s", $agentPseudo);
         $stmt->execute();
         $result = $stmt->get_result();
-        $exists = $result->num_rows > 0;
-        
+        $row = $result->fetch_assoc();
+
         $stmt->close();
         $conn->close();
-        
-        return $exists;
+
+        if (!$row || !isset($row['pass'])) {
+            return false;
+        }
+
+        return hash_equals((string) $row['pass'], (string) $agentPass);
     } catch (Exception $e) {
-        writeLog("ERREUR verification agent: " . $e->getMessage());
+        writeLog("ERREUR authentification agent: " . $e->getMessage());
         return false;
     }
 }
@@ -409,24 +410,24 @@ function verifyAgentInVicidial($agentPseudo) {
 // ============================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     writeLog("Tentative de connexion");
-    
+
     $loginAgent = isset($_POST['agent']) ? trim($_POST['agent']) : '';
-    
+    $loginPass = isset($_POST['agent_pass']) ? (string) $_POST['agent_pass'] : '';
+
     if (empty($loginAgent)) {
         $loginError = "Le pseudo agent est requis";
         writeLog("ERREUR: Pseudo agent vide");
+    } elseif ($loginPass === '') {
+        $loginError = "Le mot de passe agent est requis";
+        writeLog("ERREUR: Mot de passe agent vide pour: " . $loginAgent);
+    } elseif (authenticateAgentInVicidial($loginAgent, $loginPass)) {
+        $_SESSION['agent'] = $loginAgent;
+        writeLog("Connexion reussie pour agent: " . $loginAgent);
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
     } else {
-        // Vérifier si l'agent existe dans Vicidial
-        if (verifyAgentInVicidial($loginAgent)) {
-            $_SESSION['agent'] = $loginAgent;
-            writeLog("Connexion reussie pour agent: " . $loginAgent);
-            // Rediriger pour éviter la resoumission du formulaire
-            header('Location: ' . $_SERVER['PHP_SELF']);
-            exit;
-        } else {
-            $loginError = "Agent non trouve dans Vicidial. Verifiez votre pseudo.";
-            writeLog("ERREUR: Agent non trouve: " . $loginAgent);
-        }
+        $loginError = "Pseudo ou mot de passe incorrect.";
+        writeLog("ERREUR: Echec authentification agent: " . $loginAgent);
     }
 }
 
@@ -493,7 +494,8 @@ if (empty($agent)) {
             font-weight: bold; 
             color: #2c3e50; 
         }
-        input[type="text"] { 
+        input[type="text"],
+        input[type="password"] { 
             width: 100%; 
             padding: 12px; 
             border: 2px solid #ddd; 
@@ -502,7 +504,8 @@ if (empty($agent)) {
             font-size: 16px;
             transition: border-color 0.3s;
         }
-        input[type="text"]:focus {
+        input[type="text"]:focus,
+        input[type="password"]:focus {
             outline: none;
             border-color: #3498db;
         }
@@ -547,14 +550,22 @@ if (empty($agent)) {
                 <label for="agent">Pseudo Agent <span style="color: #e74c3c;">*</span></label>
                 <input type="text" id="agent" name="agent" required autofocus 
                        placeholder="Entrez votre pseudo agent" 
-                       value="<?php echo isset($_POST['agent']) ? htmlspecialchars($_POST['agent']) : ''; ?>">
+                       value="<?php echo isset($_POST['agent']) ? htmlspecialchars($_POST['agent']) : ''; ?>"
+                       autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="agent_pass">Mot de passe <span style="color: #e74c3c;">*</span></label>
+                <input type="password" id="agent_pass" name="agent_pass" required
+                       placeholder="Mot de passe Vicidial"
+                       autocomplete="current-password">
             </div>
             
             <button type="submit" class="btn btn-primary">Se connecter</button>
         </form>
         
         <p class="info-text">
-            Entrez votre pseudo agent pour accéder au système de création de fiches CRM.
+            Identifiants Vicidial (table vicidial_users) : pseudo et mot de passe agent.
         </p>
     </div>
 </body>
@@ -730,14 +741,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'proprietaire_maison' => !empty($_POST['proprietaire_maison']) ? sanitizeInput($_POST['proprietaire_maison']) : null,
             'revenu_foyer' => !empty($_POST['revenu_foyer']) ? sanitizeInput($_POST['revenu_foyer']) : null,
             'etude' => !empty($_POST['etude']) ? sanitizeInput($_POST['etude']) : null,
-            'mode_chauffage' => !empty(trim($_POST['mode_chauffage'] ?? '')) ? sanitizeInput(trim($_POST['mode_chauffage'])) : null,
-            'annee_systeme_chauffage' => !empty($_POST['annee_systeme_chauffage']) ? sanitizeInput($_POST['annee_systeme_chauffage']) : null,
-            'surface_habitable' => !empty($_POST['surface_habitable']) ? sanitizeInput($_POST['surface_habitable']) : null,
-            'surface_chauffee' => !empty($_POST['surface_chauffee']) ? sanitizeInput($_POST['surface_chauffee']) : null,
-            'nb_pans' => !empty($_POST['nb_pans']) ? intval($_POST['nb_pans']) : null,
-            'consommation_chauffage' => !empty($_POST['consommation_chauffage']) ? sanitizeInput($_POST['consommation_chauffage']) : null,
+            'details_etude' => (!empty($_POST['etude']) && strtoupper($_POST['etude']) === 'OUI' && !empty(trim($_POST['details_etude'] ?? '')))
+                ? sanitizeInput($_POST['details_etude']) : null,
             'consommation_electricite' => !empty($_POST['consommation_electricite']) ? sanitizeInput($_POST['consommation_electricite']) : null,
-            'nb_pieces' => !empty($_POST['nb_pieces']) ? intval($_POST['nb_pieces']) : null,
             'commentaire' => !empty($_POST['commentaire_agent']) ? sanitizeInput($_POST['commentaire_agent']) : null,
             // Produit
             'produit' => !empty($_POST['produit']) ? intval($_POST['produit']) : null,
@@ -1126,50 +1132,18 @@ if (isset($_SESSION['error_message'])) {
                     </div>
                     <div class="form-group">
                         <label>Déjà fait une étude</label>
-                        <select name="etude">
+                        <select name="etude" id="etude" onchange="toggleEtudeDetails()">
                             <option value="">-- Sélectionner --</option>
                             <option value="OUI">OUI</option>
                             <option value="NON">NON</option>
                         </select>
                     </div>
-                    
-                    <!-- Champs communs -->
-                    <div class="form-group champ-pac" style="display: none;">
-                        <label>Surface Habitable (m²)</label>
-                        <input type="text" name="surface_habitable" placeholder="Ex: 120">
-                    </div>
-                    <div class="form-group champ-commun champ-pac">
-                        <label>Nombre de Pièces</label>
-                        <input type="number" name="nb_pieces" min="1">
-                    </div>
-                    
-                    <!-- Champs spécifiques PAC -->
-                    <div class="form-group champ-pac" style="display: none;">
-                        <label>Mode de Chauffage</label>
-                        <input type="text" name="mode_chauffage" maxlength="255" placeholder="Ex. : gaz, fioul, PAC air-eau, électrique…">
-                    </div>
-                    <div class="form-group champ-pac" style="display: none;">
-                        <label>Année Système Chauffage</label>
-                        <input type="text" name="annee_systeme_chauffage" placeholder="Ex: 2015, récent, avant 2010, ne sait pas">
-                    </div>
-                    <div class="form-group champ-pac" style="display: none;">
-                        <label>Surface Chauffée (m²)</label>
-                        <input type="text" name="surface_chauffee" placeholder="Ex: 100">
-                    </div>
-                    <div class="form-group champ-pac" style="display: none;">
-                        <label>Consommation Chauffage (€)</label>
-                        <input type="text" name="consommation_chauffage" placeholder="Ex: 1500 €/an">
+                    <div class="form-group champ-etude-details" style="display: none;">
+                        <label>Détails étude</label>
+                        <input type="text" name="details_etude" placeholder="Préciser les détails de l'étude...">
                     </div>
                     
                     <!-- Champs spécifiques PV -->
-                    <div class="form-group champ-pv" style="display: none;">
-                        <label>Surface Bâtie au Sol (m²)</label>
-                        <input type="text" name="surface_habitable" placeholder="Ex: 120">
-                    </div>
-                    <div class="form-group champ-pv" style="display: none;">
-                        <label>Nombre de Pans</label>
-                        <input type="number" name="nb_pans" min="1">
-                    </div>
                     <div class="form-group champ-pv" style="display: none;">
                         <label>Consommation Électricité (€)</label>
                         <input type="text" name="consommation_electricite" placeholder="Ex: 800 €/an">
@@ -1213,6 +1187,18 @@ if (isset($_SESSION['error_message'])) {
                 el.removeAttribute('required');
             });
         }
+        function toggleEtudeDetails() {
+            const etudeSelect = document.getElementById('etude');
+            const detailsBlock = document.querySelector('.champ-etude-details');
+            if (!etudeSelect || !detailsBlock) return;
+            const isOui = etudeSelect.value === 'OUI';
+            detailsBlock.style.display = isOui ? 'block' : 'none';
+            if (!isOui) {
+                const input = detailsBlock.querySelector('input[name="details_etude"]');
+                if (input) input.value = '';
+            }
+        }
+
         function toggleProductFields() {
             const produitSelect = document.getElementById('produit');
             if (!produitSelect) return;
@@ -1221,34 +1207,14 @@ if (isset($_SESSION['error_message'])) {
             const produitNom = selectedOption ? selectedOption.getAttribute('data-nom') : '';
             
             const champsPV = document.querySelectorAll('.champ-pv');
-            const champsPAC = document.querySelectorAll('.champ-pac');
-            const champsCommuns = document.querySelectorAll('.champ-commun');
             
-            // Masquer tous et retirer required des champs masqués
             champsPV.forEach(function(champ) {
-                champ.style.display = 'none';
-                setRequiredInContainer(champ, false);
-            });
-            champsPAC.forEach(function(champ) {
-                champ.style.display = 'none';
-                setRequiredInContainer(champ, false);
-            });
-            champsCommuns.forEach(function(champ) {
                 champ.style.display = 'none';
                 setRequiredInContainer(champ, false);
             });
             
             if (produitNom === 'PV') {
                 champsPV.forEach(function(champ) {
-                    champ.style.display = 'block';
-                    setRequiredInContainer(champ, true);
-                });
-            } else if (produitNom === 'PAC') {
-                champsPAC.forEach(function(champ) {
-                    champ.style.display = 'block';
-                    setRequiredInContainer(champ, true);
-                });
-                champsCommuns.forEach(function(champ) {
                     champ.style.display = 'block';
                     setRequiredInContainer(champ, true);
                 });
@@ -1267,6 +1233,7 @@ if (isset($_SESSION['error_message'])) {
         // Appeler la fonction au chargement de la page si un produit est déjà sélectionné
         document.addEventListener('DOMContentLoaded', function() {
             toggleProductFields();
+            toggleEtudeDetails();
             updateRequiredCoupleFields();
             var sitSelect = document.getElementById('situation_conjugale');
             if (sitSelect) sitSelect.addEventListener('change', updateRequiredCoupleFields);

@@ -7,12 +7,13 @@ const FICHES_HISTO_CONF_COLUMNS = [
   'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur', 'conf_profession_madame',
   'conf_presence_couple', 'conf_produit', 'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
   'conf_consommation_electricite', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
+  'conf_deja_fait_etude', 'conf_details_etude',
   'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
   'conf_type_contrat_mr', 'conf_type_contrat_madame',
 ];
 
 const VALID_FICHE_COLUMNS = [
-  'civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville', 'etude',
+  'civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville', 'etude', 'details_etude',
   'consommation_chauffage', 'surface_habitable', 'annee_systeme_chauffage', 'surface_chauffee',
   'proprietaire_maison', 'nb_pieces', 'nb_pans', 'age_maison', 'orientation_toiture', 'produit',
   'site_classe', 'zones_ombres',
@@ -27,6 +28,7 @@ const VALID_FICHE_COLUMNS = [
   'conf_profession_monsieur', 'conf_profession_madame', 'conf_presence_couple',
   'conf_produit', 'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
   'conf_consommation_electricite', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
+  'conf_deja_fait_etude', 'conf_details_etude',
   'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
   'conf_type_contrat_mr', 'conf_type_contrat_madame',
   'cq_etat', 'cq_dossier',

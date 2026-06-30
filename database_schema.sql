@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS `fiches` (
   `cp` varchar(20) DEFAULT NULL,
   `ville` varchar(150) CHARACTER SET utf8 DEFAULT NULL,
   `etude` varchar(10) DEFAULT NULL,
+  `details_etude` text DEFAULT NULL,
   `consommation_chauffage` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   `surface_habitable` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   `annee_systeme_chauffage` int(11) DEFAULT NULL,

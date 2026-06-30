@@ -48,6 +48,7 @@ const FICHES_HISTO_CONF_COLUMNS = [
   'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur', 'conf_profession_madame',
   'conf_presence_couple', 'conf_produit', 'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
   'conf_consommation_electricite', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
+  'conf_deja_fait_etude', 'conf_details_etude',
   'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
   'conf_type_contrat_mr', 'conf_type_contrat_madame'
 ];
@@ -3916,6 +3917,8 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           conf_rdv_avec: fiche.conf_rdv_avec || null,
           conf_appel_tunisie_avec: fiche.conf_appel_tunisie_avec || null,
           conf_deja_etude: fiche.conf_deja_etude || null,
+          conf_deja_fait_etude: fiche.conf_deja_fait_etude || fiche.conf_deja_etude || fiche.etude || null,
+          conf_details_etude: fiche.conf_details_etude || fiche.details_etude || null,
           conf_profession_monsieur: fiche.conf_profession_monsieur ?? fiche.profession_mr ?? null,
           conf_type_contrat_mr: fiche.conf_type_contrat_mr ?? fiche.type_contrat_mr ?? null,
           conf_profession_madame: fiche.conf_profession_madame ?? fiche.profession_madame ?? null,
@@ -4306,8 +4309,9 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage', 'complement_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
-      'produit', 'etude', 'etude_raison', 'orientation_toiture', 'site_classe', 'zones_ombres',
+      'produit', 'etude', 'etude_raison', 'details_etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
       'isolation', 'conf_commentaire_produit', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
+      'conf_deja_fait_etude', 'conf_details_etude',
       'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
       'conf_presence_couple', 'conf_profession_monsieur', 'conf_profession_madame',
       'conf_produit', 'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
@@ -4334,6 +4338,9 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'commentaire',
       'etude',
       'conf_deja_etude',
+      'conf_deja_fait_etude',
+      'details_etude',
+      'conf_details_etude',
       'etude_raison',
       'date_rdv_time',
     ]);
@@ -4770,7 +4777,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
 
     // Liste des colonnes valides dans la table fiches (basée sur database_schema.sql)
     const validColumns = [
-      'civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville', 'etude', 'etude_raison',
+      'civ', 'nom', 'prenom', 'tel', 'gsm1', 'gsm2', 'adresse', 'cp', 'ville', 'etude', 'etude_raison', 'details_etude',
       'consommation_chauffage', 'surface_habitable', 'annee_systeme_chauffage', 'surface_chauffee',
           'proprietaire_maison', 'nb_pieces', 'nb_pans', 'age_maison', 'orientation_toiture', 'produit',
           'site_classe', 'zones_ombres',
@@ -4785,6 +4792,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       'conf_profession_monsieur', 'conf_profession_madame', 'conf_presence_couple',
       'conf_produit', 'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
       'conf_consommation_electricite', 'conf_rdv_avec', 'conf_appel_tunisie_avec', 'conf_deja_etude',
+      'conf_deja_fait_etude', 'conf_details_etude',
       'conf_revenu', 'conf_credit', 'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
       'conf_type_contrat_mr', 'conf_type_contrat_madame',
       'cq_etat', 'cq_dossier',
@@ -5825,14 +5833,14 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
         'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage', 'complement_chauffage',
         'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
-        'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
+        'produit', 'etude', 'details_etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
         'date_rdv_time', 'date_appel_time', 'id_centre', 'id_commercial',
         'id_commercial_2', 'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'observation_qualite', 'id_qualite_confirmation', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
         'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
         'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
         'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
         'conf_consommation_electricite', 'conf_rdv_avec',
-        'conf_appel_tunisie_avec', 'conf_deja_etude', 'conf_revenu', 'conf_credit',
+        'conf_appel_tunisie_avec', 'conf_deja_etude', 'conf_deja_fait_etude', 'conf_details_etude', 'conf_revenu', 'conf_credit',
         'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
         'conf_type_contrat_mr', 'conf_type_contrat_madame'
       ];
@@ -6229,7 +6237,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       'revenu_foyer', 'credit_foyer', 'nb_enfants', 'proprietaire_maison',
       'surface_habitable', 'surface_chauffee', 'annee_systeme_chauffage', 'mode_chauffage', 'complement_chauffage',
       'consommation_chauffage', 'consommation_electricite', 'circuit_eau', 'nb_pieces', 'nb_pans',
-      'produit', 'etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
+      'produit', 'etude', 'details_etude', 'orientation_toiture', 'site_classe', 'zones_ombres',
       'date_rdv_time', 'date_appel_time', 'date_modif_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final', 'id_sous_etat',
       'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'observation_qualite', 'id_qualite_confirmation', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
@@ -6238,7 +6246,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
       'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
       'conf_consommation_electricite', 'conf_rdv_avec',
-      'conf_appel_tunisie_avec', 'conf_deja_etude', 'conf_revenu', 'conf_credit',
+      'conf_appel_tunisie_avec', 'conf_deja_etude', 'conf_deja_fait_etude', 'conf_details_etude', 'conf_revenu', 'conf_credit',
       'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
       'conf_type_contrat_mr', 'conf_type_contrat_madame',
       'surface_chauffee', 'consommation_chauffage', 'mode_chauffage', 'annee_systeme_chauffage'
@@ -7174,6 +7182,8 @@ router.post('/:id/valider', authenticate, hashToIdMiddleware, checkPermissionCod
       conf_presence_couple,
       conf_appel_tunisie_avec,
       conf_deja_etude,
+      conf_deja_fait_etude,
+      conf_details_etude,
       conf_profession_monsieur,
       conf_type_contrat_mr,
       conf_profession_madame,
@@ -7222,6 +7232,10 @@ router.post('/:id/valider', authenticate, hashToIdMiddleware, checkPermissionCod
     // Mettre à jour la fiche (tous les champs conf_ pour la validation)
     const confAppelTunisie = conf_appel_tunisie_avec ? String(conf_appel_tunisie_avec).trim().toUpperCase().slice(0, 10) : null;
     const confDejaEtude = conf_deja_etude ? String(conf_deja_etude).toUpperCase() : null;
+    const confDejaFaitEtude = conf_deja_fait_etude
+      ? String(conf_deja_fait_etude).toUpperCase()
+      : confDejaEtude;
+    const confDetailsEtude = conf_details_etude ? String(conf_details_etude).trim() : null;
     const confRdvAnnule = conf_rdv_annule_precedent ? String(conf_rdv_annule_precedent).toUpperCase() : null;
 
     if (valider === 0) {
@@ -7234,13 +7248,16 @@ router.post('/:id/valider', authenticate, hashToIdMiddleware, checkPermissionCod
       // Valider : mettre à jour tous les champs conf_ envoyés
       await query(
         `UPDATE fiches SET valider = ?, conf_rdv_avec = ?, conf_presence_couple = ?,
-         conf_appel_tunisie_avec = ?, conf_deja_etude = ?, conf_profession_monsieur = ?, conf_type_contrat_mr = ?,
+         conf_appel_tunisie_avec = ?, conf_deja_etude = ?, conf_deja_fait_etude = ?, conf_details_etude = ?,
+         conf_profession_monsieur = ?, conf_type_contrat_mr = ?,
          conf_profession_madame = ?, conf_type_contrat_madame = ?, conf_revenu = ?, conf_credit = ?,
          conf_mode_chauffage = ?, conf_consommation_electricite = ?, conf_consommation_chauffage = ?, conf_rdv_annule_precedent = ?
          WHERE id = ?`,
         [
           valider, confRdvAvec, confPresenceCouple,
-          confAppelTunisie, confDejaEtude, conf_profession_monsieur || null, conf_type_contrat_mr || null,
+          confAppelTunisie, confDejaEtude, confDejaFaitEtude,
+          confDejaFaitEtude === 'OUI' ? confDetailsEtude : null,
+          conf_profession_monsieur || null, conf_type_contrat_mr || null,
           conf_profession_madame || null, conf_type_contrat_madame || null, conf_revenu || null, conf_credit || null,
           conf_mode_chauffage || null, conf_consommation_electricite || null, conf_consommation_chauffage || null, confRdvAnnule,
           parseInt(id)

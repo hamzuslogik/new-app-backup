@@ -1460,6 +1460,7 @@ const FicheFormModal = ({
     circuit_eau: fiche?.circuit_eau || '',
     nb_pieces: fiche?.nb_pieces || '',
     etude: fiche?.etude || 'NON',
+    details_etude: fiche?.details_etude || '',
     etude_raison: fiche?.etude_raison || '',
     date_appel: formatDateAppelForInput(fiche),
     entretien: fiche?.entretien || '',
@@ -1838,6 +1839,18 @@ const FicheFormModal = ({
                     <option value="OUI">OUI</option>
                   </select>
                 </div>
+                {formData.etude === 'OUI' && (
+                  <div className="form-group">
+                    <label>Détails étude</label>
+                    <input
+                      type="text"
+                      name="details_etude"
+                      value={formData.details_etude || ''}
+                      onChange={handleChange}
+                      placeholder="Préciser les détails de l'étude..."
+                    />
+                  </div>
+                )}
                 {formData.etude === 'OUI' && (
                   <div className="form-group">
                     <label>Raison de l'étude</label>
