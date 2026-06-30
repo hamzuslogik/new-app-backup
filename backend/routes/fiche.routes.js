@@ -884,6 +884,12 @@ router.get('/', authenticate, async (req, res) => {
         include_confirmateur_2 === true ||
         include_confirmateur_2 === 'true');
 
+    const includeConfirmateurMultiSlot =
+      include_confirmateur_2 === '1' ||
+      include_confirmateur_2 === 1 ||
+      include_confirmateur_2 === true ||
+      include_confirmateur_2 === 'true';
+
     const parsedConfIdForHisto =
       id_confirmateur && id_confirmateur !== 'all' ? parseInt(String(id_confirmateur), 10) : NaN;
     const histoTargetUserId =
@@ -891,16 +897,10 @@ router.get('/', authenticate, async (req, res) => {
         ? parsedConfIdForHisto
         : req.user.id;
 
-    const excludeHistoSecondaire =
-      include_confirmateur_2 === '0' ||
-      include_confirmateur_2 === 0 ||
-      include_confirmateur_2 === false ||
-      include_confirmateur_2 === 'false';
-
-    /** Mes actions (fiches_histo) : 2e/3e colonnes sur la ligne d’historique si case cochée ou session conf. avec case cochée */
+    /** Mes actions (fiches_histo) : 2e/3e colonnes sur la ligne d'historique uniquement si case cochée (include_confirmateur_2=1). */
     const includeHistoMultiSlot =
       id_confirmateur && id_confirmateur !== 'all'
-        ? !excludeHistoSecondaire
+        ? includeConfirmateurMultiSlot
         : req.user.fonction === 6 && includeConfSlots;
 
     if (hasKoFilter) {
@@ -1199,7 +1199,7 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('1 = 0');
       }
     // Filtre par confirmateur : pour toutes les sessions Dashboard sauf confirmateur (fonction 6).
-    // include_confirmateur_2=0 : uniquement 1er confirmateur ; sinon (défaut) inclure aussi 2ème et 3ème.
+    // include_confirmateur_2=1 : inclure 2ème et 3ème slots ; sinon uniquement 1er confirmateur.
     // Pas de filtre sur les slots fiche si « Mes actions » : le JOIN fiches_histo ci-dessous fait foi.
     } else if (
       id_confirmateur &&
@@ -1207,13 +1207,12 @@ router.get('/', authenticate, async (req, res) => {
       req.user.fonction !== 6 &&
       String(date_champ) !== 'fiches_histo'
     ) {
-      const excludeConfirmateur2 = include_confirmateur_2 === '0' || include_confirmateur_2 === 0 || include_confirmateur_2 === false || include_confirmateur_2 === 'false';
-      if (excludeConfirmateur2) {
-        whereConditions.push('fiche.id_confirmateur = ?');
-        params.push(id_confirmateur);
-      } else {
+      if (includeConfirmateurMultiSlot) {
         whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
         params.push(id_confirmateur, id_confirmateur, id_confirmateur);
+      } else {
+        whereConditions.push('fiche.id_confirmateur = ?');
+        params.push(id_confirmateur);
       }
     }
     if (id_centre && !(statsDrillHandled && statsDrill?.entityField === 'id_centre')) {

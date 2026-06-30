@@ -179,7 +179,11 @@ function filtersToUrlParams(f) {
   set('prenom', f.prenom);
   set('ko', f.ko);
   set('include_archive', !!f.include_archive);
-  set('include_confirmateur_2', !!f.include_confirmateur_2);
+  if (f.id_confirmateur) {
+    out.include_confirmateur_2 = f.include_confirmateur_2 ? '1' : '0';
+  } else {
+    set('include_confirmateur_2', !!f.include_confirmateur_2);
+  }
   set('stats_drill', f.stats_drill);
   set('stats_drill_source', f.stats_drill_source);
   set('stats_drill_etat', f.stats_drill_etat);
@@ -310,7 +314,7 @@ const Dashboard = () => {
     id_centre: '',
     id_sous_etat: '',
     annuler_repro_type: '', // '' = tous, 'compte_rendu' ou 'repro_confirmateurs' (visible si état = Annuler à reprogrammer ou Client honoré à suivre)
-    include_confirmateur_2: true,
+    include_confirmateur_2: false,
   });
 
   /** Filtres initiaux : confirmateur (6) — case « inclure 2e confirmateur » décochée (réservée à une recherche explicite). */
@@ -620,7 +624,7 @@ const Dashboard = () => {
           }
           return;
         }
-        // include_confirmateur_2 : autre profil = avec id_confirmateur ; confirmateur (6) = uniquement si coché (recherche), sinon ne pas envoyer (défaut API inchangé)
+        // include_confirmateur_2 : avec id_confirmateur → toujours 0 ou 1 ; confirmateur (6) sans filtre → uniquement si coché
         if (key === 'include_confirmateur_2') {
           if (searchParams.id_confirmateur) {
             searchParams.include_confirmateur_2 = searchParams.include_confirmateur_2 ? 1 : 0;
@@ -628,7 +632,7 @@ const Dashboard = () => {
             if (searchParams.include_confirmateur_2) {
               searchParams.include_confirmateur_2 = 1;
             } else {
-              delete searchParams.include_confirmateur_2;
+              searchParams.include_confirmateur_2 = 0;
             }
           } else {
             delete searchParams.include_confirmateur_2;
@@ -905,6 +909,9 @@ const Dashboard = () => {
       ...prev,
       [key]: nextValue,
       ...(key === 'id_etat_final' ? { id_sous_etat: '', annuler_repro_type: '' } : {}),
+      ...(key === 'id_confirmateur'
+        ? { include_confirmateur_2: false }
+        : {}),
       page: key === 'page' ? value : 1
     }));
     // Pagination et limite : mettre à jour appliedFilters pour lancer la requête
