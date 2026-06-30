@@ -1289,6 +1289,25 @@ const Dashboard = () => {
   const errorList = error;
   const refetchList = refetch;
   const isFetchingList = isLoading || isFetching || isSearching;
+  const fichesQueryEnabled = !!appliedFilters.fiche_search || statsListOverride === 'upcoming';
+  const [pageGenerationMs, setPageGenerationMs] = useState(null);
+  const fetchStartRef = useRef(null);
+
+  useEffect(() => {
+    if (!fichesQueryEnabled) return undefined;
+
+    if (isFetchingList) {
+      if (fetchStartRef.current == null) {
+        fetchStartRef.current = performance.now();
+        setPageGenerationMs(null);
+      }
+    } else if (fetchStartRef.current != null) {
+      setPageGenerationMs(performance.now() - fetchStartRef.current);
+      fetchStartRef.current = null;
+    }
+
+    return undefined;
+  }, [isFetchingList, fichesQueryEnabled]);
 
   if (errorList) {
     return (
@@ -3242,6 +3261,17 @@ const Dashboard = () => {
       )}
 
       <ScrollToTopButton />
+
+      {fichesQueryEnabled && pageGenerationMs != null && !isFetchingList && (
+        <p className="dashboard-page-generation-time" aria-live="polite">
+          Page générée en{' '}
+          {(pageGenerationMs / 1000).toLocaleString('fr-FR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}{' '}
+          secondes
+        </p>
+      )}
     </div>
   );
 };

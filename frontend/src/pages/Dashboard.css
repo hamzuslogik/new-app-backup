@@ -2207,6 +2207,15 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   animation: fadeIn 0.8s ease-in-out;
 }
 
+.dashboard-page-generation-time {
+  margin: 24px 0 16px;
+  padding: 10px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+  border-top: 1px solid #e5e7eb;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .dashboard {
