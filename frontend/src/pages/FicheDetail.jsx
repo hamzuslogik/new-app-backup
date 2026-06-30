@@ -60,6 +60,20 @@ function hasConfValue(v) {
   return v != null && String(v).trim() !== '';
 }
 
+function resolveDetailsEtudeForFiche(fiche) {
+  const agent = String(fiche?.details_etude ?? '').trim();
+  if (agent) return agent;
+  return String(fiche?.conf_details_etude ?? '').trim() || null;
+}
+
+function shouldShowDetailsEtudeInFiche(fiche) {
+  const dejaEtude =
+    fiche?.etude === 'OUI' ||
+    fiche?.conf_deja_etude === 'OUI' ||
+    fiche?.conf_deja_fait_etude === 'OUI';
+  return dejaEtude || hasConfValue(fiche?.details_etude) || hasConfValue(fiche?.conf_details_etude);
+}
+
 function normalizeDetailItemLabel(s) {
   return String(s ?? '')
     .replace(/\u00a0/g, ' ')
@@ -3319,10 +3333,13 @@ const FicheDetail = ({
                     { value: 'OUI', label: 'Oui' },
                     { value: 'NON', label: 'Non' }
                   ])}
-              {(fiche.etude === 'OUI' || hasConfValue(fiche.details_etude)) &&
-                renderField('Détails étude', 'details_etude', fiche.details_etude || '-', 'textarea')}
-              {((fiche.conf_deja_fait_etude || fiche.conf_deja_etude) === 'OUI' || hasConfValue(fiche.conf_details_etude)) &&
-                renderField('Détails étude (confirmation)', 'conf_details_etude', fiche.conf_details_etude || '-', 'textarea')}
+              {shouldShowDetailsEtudeInFiche(fiche) &&
+                renderField(
+                  'Détails étude',
+                  'details_etude',
+                  resolveDetailsEtudeForFiche(fiche) || '-',
+                  'textarea'
+                )}
               {renderField('Détail de l\'étude', 'etude_raison', fiche.etude_raison || '-', 'textarea')}
               {renderField(
                 'Mode de chauffage',
@@ -4191,7 +4208,9 @@ const FicheDetail = ({
                   if (etatData.conf_deja_etude || etatData.conf_deja_fait_etude) {
                     items.push({ label: 'A déjà fait une étude', value: etatData.conf_deja_fait_etude || etatData.conf_deja_etude });
                   }
-                  if (etatData.conf_details_etude) items.push({ label: 'Détails étude', value: etatData.conf_details_etude });
+                  if (etatData.conf_details_etude != null && String(etatData.conf_details_etude).trim() !== '') {
+                    items.push({ label: 'Détails étude', value: etatData.conf_details_etude, fullWidth: true });
+                  }
                   if (etatData.conf_rdv_annule_precedent) items.push({ label: 'RDV déjà annulé précédemment', value: etatData.conf_rdv_annule_precedent });
                   if (etatData.conf_presence_couple) items.push({ label: 'Présence du couple ou célibataire', value: etatData.conf_presence_couple });
                   const profMrId = etatData.conf_profession_monsieur ?? etatData.profession_mr;
@@ -4298,7 +4317,12 @@ const FicheDetail = ({
                 conf_appel_tunisie_avec: fiche.conf_appel_tunisie_avec || null,
                 conf_deja_etude: fiche.conf_deja_etude || fiche.conf_deja_fait_etude || null,
                 conf_deja_fait_etude: fiche.conf_deja_fait_etude || fiche.conf_deja_etude || null,
-                conf_details_etude: fiche.conf_details_etude || fiche.details_etude || null,
+                conf_details_etude:
+                  lastHistoEtatActuel?.conf_details_etude != null && String(lastHistoEtatActuel.conf_details_etude).trim() !== ''
+                    ? lastHistoEtatActuel.conf_details_etude
+                    : (fiche.conf_details_etude != null && String(fiche.conf_details_etude).trim() !== ''
+                      ? fiche.conf_details_etude
+                      : null),
                 conf_profession_monsieur: fiche.conf_profession_monsieur ?? fiche.profession_mr ?? null,
                 conf_type_contrat_mr: fiche.conf_type_contrat_mr ?? fiche.type_contrat_mr ?? null,
                 conf_profession_madame: fiche.conf_profession_madame ?? fiche.profession_madame ?? null,
