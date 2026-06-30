@@ -369,16 +369,16 @@ function sanitizeInput($data) {
     return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
 }
 
-// Fonction d'authentification agent Vicidial (pseudo + mot de passe)
-function authenticateAgentInVicidial($agentPseudo, $agentPass) {
-    if (empty($agentPseudo) || $agentPass === null || $agentPass === '') {
+// Fonction pour vérifier si un agent existe dans Vicidial
+function verifyAgentInVicidial($agentPseudo) {
+    if (empty($agentPseudo)) {
         return false;
     }
 
     try {
         $conn = connectVicidialDB();
 
-        $sql = "SELECT user, pass FROM vicidial_users WHERE user = ? LIMIT 1";
+        $sql = "SELECT user FROM vicidial_users WHERE user = ? LIMIT 1";
         $stmt = $conn->prepare($sql);
 
         if ($stmt === false) {
@@ -389,18 +389,14 @@ function authenticateAgentInVicidial($agentPseudo, $agentPass) {
         $stmt->bind_param("s", $agentPseudo);
         $stmt->execute();
         $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
+        $exists = $result->num_rows > 0;
 
         $stmt->close();
         $conn->close();
 
-        if (!$row || !isset($row['pass'])) {
-            return false;
-        }
-
-        return hash_equals((string) $row['pass'], (string) $agentPass);
+        return $exists;
     } catch (Exception $e) {
-        writeLog("ERREUR authentification agent: " . $e->getMessage());
+        writeLog("ERREUR verification agent: " . $e->getMessage());
         return false;
     }
 }
@@ -412,22 +408,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     writeLog("Tentative de connexion");
 
     $loginAgent = isset($_POST['agent']) ? trim($_POST['agent']) : '';
-    $loginPass = isset($_POST['agent_pass']) ? (string) $_POST['agent_pass'] : '';
 
     if (empty($loginAgent)) {
         $loginError = "Le pseudo agent est requis";
         writeLog("ERREUR: Pseudo agent vide");
-    } elseif ($loginPass === '') {
-        $loginError = "Le mot de passe agent est requis";
-        writeLog("ERREUR: Mot de passe agent vide pour: " . $loginAgent);
-    } elseif (authenticateAgentInVicidial($loginAgent, $loginPass)) {
+    } elseif (verifyAgentInVicidial($loginAgent)) {
         $_SESSION['agent'] = $loginAgent;
         writeLog("Connexion reussie pour agent: " . $loginAgent);
         header('Location: ' . $_SERVER['PHP_SELF']);
         exit;
     } else {
-        $loginError = "Pseudo ou mot de passe incorrect.";
-        writeLog("ERREUR: Echec authentification agent: " . $loginAgent);
+        $loginError = "Agent non trouvé. Vérifiez votre pseudo.";
+        writeLog("ERREUR: Agent non trouve: " . $loginAgent);
     }
 }
 
@@ -494,8 +486,7 @@ if (empty($agent)) {
             font-weight: bold; 
             color: #2c3e50; 
         }
-        input[type="text"],
-        input[type="password"] { 
+        input[type="text"] { 
             width: 100%; 
             padding: 12px; 
             border: 2px solid #ddd; 
@@ -504,8 +495,7 @@ if (empty($agent)) {
             font-size: 16px;
             transition: border-color 0.3s;
         }
-        input[type="text"]:focus,
-        input[type="password"]:focus {
+        input[type="text"]:focus {
             outline: none;
             border-color: #3498db;
         }
@@ -525,12 +515,6 @@ if (empty($agent)) {
         }
         .btn-primary:hover { 
             background: #2980b9; 
-        }
-        .info-text {
-            text-align: center;
-            color: #7f8c8d;
-            font-size: 14px;
-            margin-top: 20px;
         }
     </style>
 </head>
@@ -553,20 +537,9 @@ if (empty($agent)) {
                        value="<?php echo isset($_POST['agent']) ? htmlspecialchars($_POST['agent']) : ''; ?>"
                        autocomplete="username">
             </div>
-
-            <div class="form-group">
-                <label for="agent_pass">Mot de passe <span style="color: #e74c3c;">*</span></label>
-                <input type="password" id="agent_pass" name="agent_pass" required
-                       placeholder="Mot de passe Vicidial"
-                       autocomplete="current-password">
-            </div>
             
             <button type="submit" class="btn btn-primary">Se connecter</button>
         </form>
-        
-        <p class="info-text">
-            Identifiants Vicidial (table vicidial_users) : pseudo et mot de passe agent.
-        </p>
     </div>
 </body>
 </html>
@@ -890,7 +863,7 @@ if (isset($_SESSION['error_message'])) {
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Création Fiche CRM - Vicidial</title>
+    <title>INSERTION FICHE CRM - Vicidial</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
         .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -924,12 +897,9 @@ if (isset($_SESSION['error_message'])) {
     <div class="container">
         <div class="header-actions">
             <div>
-                <h1 style="margin: 0; border: none; padding: 0;">Création de Fiche CRM</h1>
+                <h1 style="margin: 0; border: none; padding: 0;">INSERTION FICHE CRM</h1>
                 <p style="margin: 5px 0 0 0;">
                     Agent: <strong><?php echo htmlspecialchars($agent); ?></strong>
-                    <?php if ($agentUser && isset($agentUser['id'])): ?>
-                        <span style="color: #7f8c8d; font-size: 0.95em;">(ID CRM: <?php echo (int) $agentUser['id']; ?>)</span>
-                    <?php endif; ?>
                 </p>
             </div>
             <div style="display: flex; gap: 10px;">
