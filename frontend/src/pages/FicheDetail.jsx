@@ -3340,7 +3340,6 @@ const FicheDetail = ({
                   resolveDetailsEtudeForFiche(fiche) || '-',
                   'textarea'
                 )}
-              {renderField('Détail de l\'étude', 'etude_raison', fiche.etude_raison || '-', 'textarea')}
               {renderField(
                 'Mode de chauffage',
                 'mode_chauffage',
