@@ -373,24 +373,54 @@ const RendezVousVue = () => {
     return res.data.data || [];
   });
 
+  const getUserName = (id) => {
+    if (!id || !usersData) return '';
+    const found = usersData.find((u) => Number(u.id) === Number(id));
+    return found?.pseudo || '';
+  };
+
+  const getConfirmateursFormatted = (fiche) => {
+    const c = [getUserName(fiche.id_confirmateur), getUserName(fiche.id_confirmateur_2), getUserName(fiche.id_confirmateur_3)].filter(Boolean);
+    return c.join(' | ');
+  };
+
+  const getCentreName = (id) => {
+    if (!id || !centresData) return '';
+    const found = centresData.find((c) => Number(c.id) === Number(id));
+    return found?.titre || '';
+  };
+
+  const getProduitName = (produit) => (Number(produit) === 1 ? 'PAC' : Number(produit) === 2 ? 'PV' : '');
+  const getProduitColor = (produit) => (Number(produit) === 1 ? '#66D5D4' : Number(produit) === 2 ? '#FFE441' : '#cccccc');
+
   const getSortValue = (fiche, key) => {
     switch (key) {
-      case 'fiche':
-        return `${fiche.nom || ''} ${fiche.prenom || ''}`.trim().toLowerCase();
-      case 'adresse':
-        return `${fiche.adresse || ''} ${fiche.cp || ''} ${fiche.ville || ''}`.trim().toLowerCase();
+      case 'nom':
+        return String(fiche.nom || '').toLowerCase();
+      case 'prenom':
+        return String(fiche.prenom || '').toLowerCase();
+      case 'tel':
+        return String(fiche.tel || '').toLowerCase();
       case 'cp':
         return String(fiche.cp || '').toLowerCase();
       case 'ville':
         return String(fiche.ville || '').toLowerCase();
-      case 'date_rdv_time':
-        return fiche.date_rdv_time ? new Date(fiche.date_rdv_time).getTime() : 0;
-      case 'commerciaux':
-        return `${fiche.commercial_pseudo || ''} ${fiche.commercial2_pseudo || ''}`.trim().toLowerCase();
-      case 'etat':
-        return `${fiche.etat_titre || fiche.id_etat_final || ''}`.toString().toLowerCase();
       case 'date_insert_time':
         return fiche.date_insert_time ? new Date(fiche.date_insert_time).getTime() : 0;
+      case 'date_rdv_time':
+        return fiche.date_rdv_time ? new Date(fiche.date_rdv_time).getTime() : 0;
+      case 'etat':
+        return `${fiche.etat_titre || fiche.id_etat_final || ''}`.toString().toLowerCase();
+      case 'confirmateur':
+        return getConfirmateursFormatted(fiche).toLowerCase();
+      case 'commerciaux':
+        return `${fiche.commercial_pseudo || ''} ${fiche.commercial2_pseudo || ''}`.trim().toLowerCase();
+      case 'centre':
+        return getCentreName(fiche.id_centre).toLowerCase();
+      case 'produit':
+        return getProduitName(fiche.produit).toLowerCase();
+      case 'valider':
+        return Number(fiche.valider) > 0 ? 1 : 0;
       default:
         return '';
     }
@@ -434,26 +464,6 @@ const RendezVousVue = () => {
     if (sortConfig.key !== key) return <FaSort />;
     return sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />;
   };
-
-  const getUserName = (id) => {
-    if (!id || !usersData) return '';
-    const found = usersData.find((u) => Number(u.id) === Number(id));
-    return found?.pseudo || '';
-  };
-
-  const getConfirmateursFormatted = (fiche) => {
-    const c = [getUserName(fiche.id_confirmateur), getUserName(fiche.id_confirmateur_2), getUserName(fiche.id_confirmateur_3)].filter(Boolean);
-    return c.join(' | ');
-  };
-
-  const getCentreName = (id) => {
-    if (!id || !centresData) return '';
-    const found = centresData.find((c) => Number(c.id) === Number(id));
-    return found?.titre || '';
-  };
-
-  const getProduitName = (produit) => (Number(produit) === 1 ? 'PAC' : Number(produit) === 2 ? 'PV' : '');
-  const getProduitColor = (produit) => (Number(produit) === 1 ? '#66D5D4' : Number(produit) === 2 ? '#FFE441' : '#cccccc');
 
   const copyFicheTelFromMenu = (tel) => {
     const t = (tel || '').trim();
@@ -594,19 +604,19 @@ const RendezVousVue = () => {
             <table className="fiches-table">
               <thead>
                 <tr>
-                  <th className="sortable-header" onClick={() => handleSort('fiche')}>Nom {getSortIndicator('fiche')}</th>
-                  <th>Prénom</th>
-                  <th>Téléphone</th>
+                  <th className="sortable-header" onClick={() => handleSort('nom')}>Nom {getSortIndicator('nom')}</th>
+                  <th className="sortable-header" onClick={() => handleSort('prenom')}>Prénom {getSortIndicator('prenom')}</th>
+                  <th className="sortable-header" onClick={() => handleSort('tel')}>Téléphone {getSortIndicator('tel')}</th>
                   <th className="sortable-header" onClick={() => handleSort('cp')}>CP {getSortIndicator('cp')}</th>
                   <th className="sortable-header" onClick={() => handleSort('ville')}>Ville {getSortIndicator('ville')}</th>
                   <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date Insertion {getSortIndicator('date_insert_time')}</th>
                   <th className="sortable-header" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
                   <th className="sortable-header" onClick={() => handleSort('etat')}>État actuel {getSortIndicator('etat')}</th>
-                  <th>Confirmateur</th>
+                  <th className="sortable-header" onClick={() => handleSort('confirmateur')}>Confirmateur {getSortIndicator('confirmateur')}</th>
                   <th className="sortable-header" onClick={() => handleSort('commerciaux')}>Commercial {getSortIndicator('commerciaux')}</th>
-                  <th>Centre</th>
-                  <th className="produit-col">Produit</th>
-                  <th>Validé</th>
+                  <th className="sortable-header" onClick={() => handleSort('centre')}>Centre {getSortIndicator('centre')}</th>
+                  <th className="sortable-header produit-col" onClick={() => handleSort('produit')}>Produit {getSortIndicator('produit')}</th>
+                  <th className="sortable-header" onClick={() => handleSort('valider')}>Validé {getSortIndicator('valider')}</th>
                   <th className="rdv-vue-col-details">Détails</th>
                 </tr>
               </thead>
