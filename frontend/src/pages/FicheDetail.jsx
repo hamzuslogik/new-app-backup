@@ -8092,7 +8092,7 @@ const MODIFICA_TYPE_LABELS = {
   zones_ombres: "Zones d'ombre",
   // Étude / produit
   produit: 'Produit',
-  etude: 'Étude',
+  etude: 'Déjà fait une étude',
   etude_raison: "Raison de l'étude",
   // Affectations
   id_centre: 'Centre',
@@ -8124,7 +8124,6 @@ const MODIFICA_TYPE_LABELS = {
   // Confirmation
   conf_rdv_avec: 'RDV pris avec',
   conf_appel_tunisie_avec: 'Appel Tunisie avec',
-  etude: 'Déjà fait une étude',
   details_etude: 'Détails étude',
   conf_deja_fait_etude: 'A déjà fait une étude',
   conf_details_etude: 'Détails étude',

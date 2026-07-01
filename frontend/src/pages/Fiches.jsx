@@ -673,8 +673,8 @@ const Fiches = () => {
             className={`tab-button ${appliedFilters.fiche_source === 'qualif' ? 'active' : ''}`}
             onClick={() => handleSourceTabChange('qualif')}
           >
-            <span className="tab-count">{qualifTabCount ?? '…'}</span>
             Fiches qualif
+            <span className="tab-count">{qualifTabCount ?? '…'}</span>
           </button>
           <button
             type="button"
@@ -683,8 +683,8 @@ const Fiches = () => {
             className={`tab-button ${appliedFilters.fiche_source === 'backoffice' ? 'active' : ''}`}
             onClick={() => handleSourceTabChange('backoffice')}
           >
-            <span className="tab-count">{backofficeTabCount ?? '…'}</span>
             Fiches backoffice
+            <span className="tab-count">{backofficeTabCount ?? '…'}</span>
           </button>
         </div>
       )}
