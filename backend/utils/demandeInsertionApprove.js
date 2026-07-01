@@ -94,6 +94,9 @@ function prepareDonneesFicheForInsert(donneesFiche, { id_agent, id_centre_fallba
     data.id_centre = id_centre_fallback;
   }
 
+  // id_insert réservé à l'import en masse
+  delete data.id_insert;
+
   return data;
 }
 

@@ -369,16 +369,16 @@ function sanitizeInput($data) {
     return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
 }
 
-// Fonction pour vérifier si un agent existe dans Vicidial
-function verifyAgentInVicidial($agentPseudo) {
-    if (empty($agentPseudo)) {
+// Fonction d'authentification agent Vicidial (pseudo + mot de passe)
+function authenticateAgentInVicidial($agentPseudo, $agentPass) {
+    if (empty($agentPseudo) || $agentPass === null || $agentPass === '') {
         return false;
     }
 
     try {
         $conn = connectVicidialDB();
 
-        $sql = "SELECT user FROM vicidial_users WHERE user = ? LIMIT 1";
+        $sql = "SELECT user, pass FROM vicidial_users WHERE user = ? LIMIT 1";
         $stmt = $conn->prepare($sql);
 
         if ($stmt === false) {
@@ -389,14 +389,18 @@ function verifyAgentInVicidial($agentPseudo) {
         $stmt->bind_param("s", $agentPseudo);
         $stmt->execute();
         $result = $stmt->get_result();
-        $exists = $result->num_rows > 0;
+        $row = $result->fetch_assoc();
 
         $stmt->close();
         $conn->close();
 
-        return $exists;
+        if (!$row || !isset($row['pass'])) {
+            return false;
+        }
+
+        return hash_equals((string) $row['pass'], (string) $agentPass);
     } catch (Exception $e) {
-        writeLog("ERREUR verification agent: " . $e->getMessage());
+        writeLog("ERREUR authentification agent: " . $e->getMessage());
         return false;
     }
 }
@@ -408,18 +412,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     writeLog("Tentative de connexion");
 
     $loginAgent = isset($_POST['agent']) ? trim($_POST['agent']) : '';
+    $loginPass = isset($_POST['agent_pass']) ? (string) $_POST['agent_pass'] : '';
 
     if (empty($loginAgent)) {
         $loginError = "Le pseudo agent est requis";
         writeLog("ERREUR: Pseudo agent vide");
-    } elseif (verifyAgentInVicidial($loginAgent)) {
+    } elseif ($loginPass === '') {
+        $loginError = "Le mot de passe agent est requis";
+        writeLog("ERREUR: Mot de passe agent vide pour: " . $loginAgent);
+    } elseif (authenticateAgentInVicidial($loginAgent, $loginPass)) {
         $_SESSION['agent'] = $loginAgent;
         writeLog("Connexion reussie pour agent: " . $loginAgent);
         header('Location: ' . $_SERVER['PHP_SELF']);
         exit;
     } else {
-        $loginError = "Agent non trouvé. Vérifiez votre pseudo.";
-        writeLog("ERREUR: Agent non trouve: " . $loginAgent);
+        $loginError = "Pseudo ou mot de passe incorrect.";
+        writeLog("ERREUR: Echec authentification agent: " . $loginAgent);
     }
 }
 
@@ -486,7 +494,8 @@ if (empty($agent)) {
             font-weight: bold; 
             color: #2c3e50; 
         }
-        input[type="text"] { 
+        input[type="text"],
+        input[type="password"] { 
             width: 100%; 
             padding: 12px; 
             border: 2px solid #ddd; 
@@ -495,7 +504,8 @@ if (empty($agent)) {
             font-size: 16px;
             transition: border-color 0.3s;
         }
-        input[type="text"]:focus {
+        input[type="text"]:focus,
+        input[type="password"]:focus {
             outline: none;
             border-color: #3498db;
         }
@@ -536,6 +546,13 @@ if (empty($agent)) {
                        placeholder="Entrez votre pseudo agent" 
                        value="<?php echo isset($_POST['agent']) ? htmlspecialchars($_POST['agent']) : ''; ?>"
                        autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="agent_pass">Mot de passe <span style="color: #e74c3c;">*</span></label>
+                <input type="password" id="agent_pass" name="agent_pass" required
+                       placeholder="Mot de passe Vicidial"
+                       autocomplete="current-password">
             </div>
             
             <button type="submit" class="btn btn-primary">Se connecter</button>
@@ -629,6 +646,7 @@ $startTime = microtime(true);
 
 $typeContrats = getListFromAPIWithCache('type-contrat');
 $produits = getListFromAPIWithCache('produits');
+$modeChauffages = getListFromAPIWithCache('mode-chauffage');
 
 $apiTime = round((microtime(true) - $startTime) * 1000, 2);
 writeLog("Temps total API/cache: " . $apiTime . "ms");
@@ -636,8 +654,9 @@ writeLog("Temps total API/cache: " . $apiTime . "ms");
 // Vérifier si les données sont valides
 if (!is_array($typeContrats)) $typeContrats = [];
 if (!is_array($produits)) $produits = [];
+if (!is_array($modeChauffages)) $modeChauffages = [];
 
-writeLog("Resultats: Contrats=" . count($typeContrats) . ", Produits=" . count($produits));
+writeLog("Resultats: Contrats=" . count($typeContrats) . ", Produits=" . count($produits) . ", Chauffages=" . count($modeChauffages));
 
 // Récupérer l'utilisateur par pseudo depuis l'API CRM
 if (!empty($agent)) {
@@ -717,9 +736,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'details_etude' => (!empty($_POST['etude']) && strtoupper($_POST['etude']) === 'OUI' && !empty(trim($_POST['details_etude'] ?? '')))
                 ? sanitizeInput($_POST['details_etude']) : null,
             'consommation_electricite' => !empty($_POST['consommation_electricite']) ? sanitizeInput($_POST['consommation_electricite']) : null,
+            'mode_chauffage' => !empty($_POST['mode_chauffage']) ? sanitizeInput($_POST['mode_chauffage']) : null,
+            'surface_chauffee' => !empty($_POST['surface_chauffee']) ? sanitizeInput($_POST['surface_chauffee']) : null,
+            'consommation_chauffage' => !empty($_POST['consommation_chauffage']) ? sanitizeInput($_POST['consommation_chauffage']) : null,
             'commentaire' => !empty($_POST['commentaire_agent']) ? sanitizeInput($_POST['commentaire_agent']) : null,
             // Produit
             'produit' => !empty($_POST['produit']) ? intval($_POST['produit']) : null,
+            // Champs PAC
             // Champs PV
             'orientation_toiture' => !empty($_POST['orientation_toiture']) ? sanitizeInput($_POST['orientation_toiture']) : null,
             'zones_ombres' => !empty($_POST['zones_ombres']) ? sanitizeInput($_POST['zones_ombres']) : null,
@@ -1113,6 +1136,27 @@ if (isset($_SESSION['error_message'])) {
                         <input type="text" name="details_etude" placeholder="Préciser les détails de l'étude...">
                     </div>
                     
+                    <!-- Champs spécifiques PAC -->
+                    <div class="form-group champ-pac" style="display: none;">
+                        <label>Mode de Chauffage</label>
+                        <select name="mode_chauffage">
+                            <option value="">-- Sélectionner --</option>
+                            <?php foreach ($modeChauffages as $mode): ?>
+                                <option value="<?php echo htmlspecialchars($mode['nom'] ?? ''); ?>">
+                                    <?php echo htmlspecialchars($mode['nom'] ?? ''); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group champ-pac" style="display: none;">
+                        <label>Surface Chauffée (m²)</label>
+                        <input type="text" name="surface_chauffee" placeholder="Ex: 100">
+                    </div>
+                    <div class="form-group champ-pac" style="display: none;">
+                        <label>Consommation Chauffage (€)</label>
+                        <input type="text" name="consommation_chauffage" placeholder="Ex: 1500 €/an">
+                    </div>
+                    
                     <!-- Champs spécifiques PV -->
                     <div class="form-group champ-pv" style="display: none;">
                         <label>Consommation Électricité (€)</label>
@@ -1177,14 +1221,24 @@ if (isset($_SESSION['error_message'])) {
             const produitNom = selectedOption ? selectedOption.getAttribute('data-nom') : '';
             
             const champsPV = document.querySelectorAll('.champ-pv');
+            const champsPAC = document.querySelectorAll('.champ-pac');
             
             champsPV.forEach(function(champ) {
+                champ.style.display = 'none';
+                setRequiredInContainer(champ, false);
+            });
+            champsPAC.forEach(function(champ) {
                 champ.style.display = 'none';
                 setRequiredInContainer(champ, false);
             });
             
             if (produitNom === 'PV') {
                 champsPV.forEach(function(champ) {
+                    champ.style.display = 'block';
+                    setRequiredInContainer(champ, true);
+                });
+            } else if (produitNom === 'PAC') {
+                champsPAC.forEach(function(champ) {
                     champ.style.display = 'block';
                     setRequiredInContainer(champ, true);
                 });

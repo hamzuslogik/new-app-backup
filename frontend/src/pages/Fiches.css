@@ -404,6 +404,47 @@
   margin: 0;
 }
 
+.fiches-source-tabs {
+  display: flex;
+  gap: 8px;
+  margin: -8px 0 20px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.fiches-source-tabs .tab-button {
+  padding: 9.6px 19.2px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #666;
+  font-weight: 600;
+  font-size: 13.6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: -2px;
+}
+
+.fiches-source-tabs .tab-button:hover {
+  color: #9cbfc8;
+  background: #f5f5f5;
+}
+
+.fiches-source-tabs .tab-button.active {
+  color: #f7a219;
+  border-bottom-color: #f7a219;
+  background: transparent;
+}
+
+.fiches-source-tabs .tab-button .tab-count {
+  margin-left: 6px;
+  font-weight: 500;
+  color: #888;
+}
+
+.fiches-source-tabs .tab-button.active .tab-count {
+  color: #f7a219;
+}
+
 
 .btn-primary {
   display: flex;

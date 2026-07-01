@@ -38,6 +38,7 @@ const Fiches = () => {
     page: 1,
     limit: 500,
     fiche_search: false,
+    fiche_source: 'qualif', // qualif : id_agent agent qualif (f.3) | backoffice : import masse (id_insert)
     include_archive: false,
     id_centre: '',
     id_sous_etat: '',
@@ -153,6 +154,9 @@ const Fiches = () => {
         if (key === 'page' || key === 'limit' || key === 'fiche_search') {
           return; // Ne pas supprimer ces paramètres
         }
+        if (key === 'fiche_source' && !isAgentQualif && searchParams.fiche_source) {
+          return;
+        }
         // include_archive: n'envoyer au backend que si activé
         if (key === 'include_archive') {
           if (searchParams.include_archive) {
@@ -215,6 +219,9 @@ const Fiches = () => {
 
     if (src.include_archive) {
       defaultParams.include_archive = 1;
+    }
+    if (!isAgentQualif && src.fiche_source) {
+      defaultParams.fiche_source = src.fiche_source;
     }
     if (src.id_centre) {
       defaultParams.id_centre = src.id_centre;
@@ -451,6 +458,13 @@ const Fiches = () => {
     setAppliedFilters(initial);
   };
 
+  const handleSourceTabChange = (source) => {
+    if (source === appliedFilters.fiche_source) return;
+    setIsSearching(true);
+    setFilters((prev) => ({ ...prev, fiche_source: source, page: 1 }));
+    setAppliedFilters((prev) => ({ ...prev, fiche_source: source, page: 1 }));
+  };
+
   const handleArchive = (fiche, archive) => {
     if (window.confirm(`Êtes-vous sûr de vouloir ${archive ? 'archiver' : 'désarchiver'} cette fiche ?`)) {
       archiveMutation.mutate({ id: fiche.id, archive });
@@ -612,6 +626,35 @@ const Fiches = () => {
           </button>
         )}
       </div>
+
+      {!isAgentQualif && (
+        <div className="fiches-source-tabs" role="tablist" aria-label="Type de fiches">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={appliedFilters.fiche_source === 'qualif'}
+            className={`tab-button ${appliedFilters.fiche_source === 'qualif' ? 'active' : ''}`}
+            onClick={() => handleSourceTabChange('qualif')}
+          >
+            Fiches qualif
+            {appliedFilters.fiche_source === 'qualif' && (
+              <span className="tab-count">({pagination.total})</span>
+            )}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={appliedFilters.fiche_source === 'backoffice'}
+            className={`tab-button ${appliedFilters.fiche_source === 'backoffice' ? 'active' : ''}`}
+            onClick={() => handleSourceTabChange('backoffice')}
+          >
+            Fiches backoffice
+            {appliedFilters.fiche_source === 'backoffice' && (
+              <span className="tab-count">({pagination.total})</span>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Cards de production du mois pour Agent Qualification */}
       {isAgentQualif && statsMoisResponse && (
@@ -1106,7 +1149,9 @@ const Fiches = () => {
                 ? `Résultats de la recherche rapide: ${fiches.length} fiche${fiches.length > 1 ? 's' : ''}`
                 : filters.fiche_search 
                   ? `Résultats de la recherche ${pagination.total}` 
-                  : 'Fiches créées aujourd\'hui'}
+                  : appliedFilters.fiche_source === 'backoffice'
+                    ? 'Fiches backoffice créées aujourd\'hui'
+                    : 'Fiches qualif créées aujourd\'hui'}
             </h2>
             <p className="results-count">
               {quickSearch.trim() !== '' 

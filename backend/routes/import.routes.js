@@ -1162,6 +1162,8 @@ const insertFiche = async (contact, mapping, userId, idCentre, produitId = null,
   // Valeurs par défaut obligatoires
   // Utiliser l'agent sélectionné (id_agent) si fourni, sinon l'utilisateur connecté
   ficheData.id_agent = idAgent != null && idAgent > 0 ? parseInt(idAgent, 10) : userId;
+  // id_insert = utilisateur ayant lancé l'import en masse (NULL pour saisie agent / API standard)
+  ficheData.id_insert = userId != null && userId > 0 ? parseInt(userId, 10) : null;
   // Toujours utiliser le centre sélectionné
   ficheData.id_centre = idCentre;
   // Utiliser le produit sélectionné si fourni et si le mapping ne contient pas déjà un produit

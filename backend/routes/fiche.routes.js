@@ -749,6 +749,7 @@ router.get('/', authenticate, async (req, res) => {
       id_re,
       id_centre,
       id_agent,
+      fiche_source,
       date_debut,
       date_fin,
       time_debut,
@@ -813,6 +814,7 @@ router.get('/', authenticate, async (req, res) => {
         qNarrow(id_re) ||
         qNarrow(id_centre) ||
         qNarrow(id_agent) ||
+        qNarrow(fiche_source) ||
         qNarrow(affectation) ||
         qNarrow(suivi) ||
         qNarrow(day_rdv) ||
@@ -1244,6 +1246,19 @@ router.get('/', authenticate, async (req, res) => {
     } else if (id_agent) {
       whereConditions.push('fiche.id_agent = ?');
       params.push(id_agent);
+    }
+    // fiche_source : qualif = id_agent renseigné et agent qualification (fonction 3), hors import masse
+    // backoffice = import en masse (id_insert renseigné)
+    if (fiche_source === 'qualif') {
+      whereConditions.push('fiche.id_agent IS NOT NULL AND fiche.id_agent > 0');
+      whereConditions.push(`EXISTS (
+        SELECT 1 FROM utilisateurs u_fiche_source
+        WHERE u_fiche_source.id = fiche.id_agent
+          AND u_fiche_source.fonction = 3
+      )`);
+      whereConditions.push('(fiche.id_insert IS NULL OR fiche.id_insert = 0)');
+    } else if (fiche_source === 'backoffice') {
+      whereConditions.push('fiche.id_insert IS NOT NULL AND fiche.id_insert > 0');
     }
     // ko : filtre déjà appliqué en début de route (lignes 393-396)
     if (hc !== undefined && hc !== '') {
@@ -4623,6 +4638,9 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       }
       delete ficheData.entretien_avec;
     }
+
+    // id_insert réservé à l'import en masse (voir import.routes.js insertFiche)
+    delete ficheData.id_insert;
 
     // Normaliser le téléphone AVANT de vérifier les doublons
     // Fonction pour normaliser un numéro de téléphone

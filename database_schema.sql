@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS `fiches` (
   `commentaire` text CHARACTER SET utf8 DEFAULT NULL,
   `id_agent` int(11) DEFAULT NULL,
   `id_centre` int(11) DEFAULT NULL,
-  `id_insert` int(11) DEFAULT NULL,
+  `id_insert` int(11) DEFAULT NULL COMMENT 'Utilisateur ayant lancé l''import en masse ; NULL = autre canal',
   `id_confirmateur` int(11) DEFAULT NULL,
   `id_confirmateur_2` int(11) DEFAULT NULL,
   `id_confirmateur_3` int(11) DEFAULT NULL,
