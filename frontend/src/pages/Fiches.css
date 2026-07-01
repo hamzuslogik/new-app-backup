@@ -436,12 +436,22 @@
 }
 
 .fiches-source-tabs .tab-button .tab-count {
-  margin-left: 6px;
-  font-weight: 500;
-  color: #888;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  margin-right: 8px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  background: #eee;
+  color: #666;
 }
 
 .fiches-source-tabs .tab-button.active .tab-count {
+  background: rgba(247, 162, 25, 0.15);
   color: #f7a219;
 }
 

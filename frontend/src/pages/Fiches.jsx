@@ -257,6 +257,12 @@ const Fiches = () => {
       : 1;
 
   // Récupérer les fiches : chargement auto agent qualif / superviseur qualif / backoffice (jour courant) ; sinon au clic Recherche
+  const fichesListEnabled =
+    appliedFilters.fiche_search === true ||
+    isAgentQualif ||
+    isSuperviseurQualif ||
+    isBackoffice;
+
   const { data, isLoading, isFetching, error, refetch } = useQuery(
     ['fiches', appliedFilters, debouncedQuickSearch],
     async () => {
@@ -266,11 +272,32 @@ const Fiches = () => {
     },
     {
       keepPreviousData: true,
-      enabled:
-        appliedFilters.fiche_search === true ||
-        isAgentQualif ||
-        isSuperviseurQualif ||
-        isBackoffice
+      enabled: fichesListEnabled
+    }
+  );
+
+  const { data: sourceCountsData } = useQuery(
+    ['fiches-source-counts', appliedFilters, debouncedQuickSearch],
+    async () => {
+      const fetchSourceTotal = async (source) => {
+        const params = getQueryParams({
+          ...appliedFilters,
+          fiche_source: source,
+          page: 1,
+          limit: 1,
+        });
+        const response = await api.get('/fiches', { params });
+        return response.data?.pagination?.total ?? 0;
+      };
+      const [qualif, backoffice] = await Promise.all([
+        fetchSourceTotal('qualif'),
+        fetchSourceTotal('backoffice'),
+      ]);
+      return { qualif, backoffice };
+    },
+    {
+      keepPreviousData: true,
+      enabled: !isAgentQualif && fichesListEnabled,
     }
   );
 
@@ -289,6 +316,7 @@ const Fiches = () => {
     {
       onSuccess: (data) => {
         queryClient.invalidateQueries('fiches');
+        queryClient.invalidateQueries('fiches-source-counts');
         if (isAgentQualif) {
           queryClient.invalidateQueries(['fiches-stats-mois']);
         }
@@ -322,6 +350,7 @@ const Fiches = () => {
     {
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries('fiches');
+        queryClient.invalidateQueries('fiches-source-counts');
         // Si la date du RDV a été modifiée, invalider toutes les queries de planning
         if (variables.data && variables.data.date_rdv_time !== undefined) {
           queryClient.invalidateQueries(['planning-week']);
@@ -347,6 +376,7 @@ const Fiches = () => {
     {
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries('fiches');
+        queryClient.invalidateQueries('fiches-source-counts');
         toast.success(variables.archive ? 'Fiche archivée avec succès' : 'Fiche désarchivée avec succès');
       },
       onError: (error) => {
@@ -369,6 +399,7 @@ const Fiches = () => {
     {
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries('fiches');
+        queryClient.invalidateQueries('fiches-source-counts');
         toast.success(variables.ko ? 'Fiche mise en KO avec succès' : 'Fiche retirée du KO avec succès');
         setKoModal({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' });
         if (isAgentQualif) {
@@ -579,6 +610,12 @@ const Fiches = () => {
 
   const allFiches = data?.data || [];
   const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
+  const qualifTabCount =
+    sourceCountsData?.qualif ??
+    (appliedFilters.fiche_source === 'qualif' ? pagination.total : null);
+  const backofficeTabCount =
+    sourceCountsData?.backoffice ??
+    (appliedFilters.fiche_source === 'backoffice' ? pagination.total : null);
   const isFetchingList = isLoading || isFetching || isSearching;
 
   // Filtrer les fiches selon la recherche rapide
@@ -636,10 +673,8 @@ const Fiches = () => {
             className={`tab-button ${appliedFilters.fiche_source === 'qualif' ? 'active' : ''}`}
             onClick={() => handleSourceTabChange('qualif')}
           >
+            <span className="tab-count">{qualifTabCount ?? '…'}</span>
             Fiches qualif
-            {appliedFilters.fiche_source === 'qualif' && (
-              <span className="tab-count">({pagination.total})</span>
-            )}
           </button>
           <button
             type="button"
@@ -648,10 +683,8 @@ const Fiches = () => {
             className={`tab-button ${appliedFilters.fiche_source === 'backoffice' ? 'active' : ''}`}
             onClick={() => handleSourceTabChange('backoffice')}
           >
+            <span className="tab-count">{backofficeTabCount ?? '…'}</span>
             Fiches backoffice
-            {appliedFilters.fiche_source === 'backoffice' && (
-              <span className="tab-count">({pagination.total})</span>
-            )}
           </button>
         </div>
       )}
