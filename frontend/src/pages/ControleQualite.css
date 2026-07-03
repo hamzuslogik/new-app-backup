@@ -279,6 +279,16 @@ body[data-desktop-viewport].controle-qualite-page .controle-qualite .fiches-tabl
   margin-top: 4px;
 }
 
+.cq-etat-panel-btn-valider {
+  background: #4CAF50 !important;
+  color: #fff !important;
+  margin-top: 4px;
+}
+
+.cq-etat-panel-btn-valider:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
 .fiches-table tbody tr.cq-row-selected {
   outline: 2px solid #16a34a;
   outline-offset: -2px;
@@ -353,7 +363,7 @@ body[data-desktop-viewport].controle-qualite-page .controle-qualite .fiches-tabl
   vertical-align: middle;
 }
 
-/* Colonne Actions : largeur des deux boutons Détails + Valider uniquement */
+/* Colonne Détails : bouton ouvrir la fiche uniquement */
 .fiches-table th.actions-col,
 .fiches-table td.actions-col {
   width: 1%;

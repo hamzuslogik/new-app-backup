@@ -386,11 +386,11 @@ const ControleQualite = () => {
     });
   };
 
-  // Quand on choisit HC dans la liste : ouvrir le modal HC (le KO n'est pas un état final)
+  // Quand on choisit HC dans la liste : ouvrir le modal HC (KO → modal motif)
   const handleNouvelEtatSelect = (fiche, newEtatId) => {
     const id = newEtatId ? parseInt(newEtatId, 10) : null;
     if (id === ETAT_KO_ID) {
-      toast.info('Utilisez « Mettre en KO » pour enregistrer un motif (ko = 1).');
+      openKoModalForFiche(fiche);
       return;
     }
     if (id === ETAT_HC_ID) {
@@ -621,6 +621,19 @@ const ControleQualite = () => {
     });
   };
 
+  const openKoModalForFiche = (fiche) => {
+    if (!fiche) return;
+    if (isFicheLockedForUser(fiche)) {
+      toast.warning(getLockMessage(fiche));
+      return;
+    }
+    if (fiche.ko === 1 || fiche.ko === '1') {
+      toast.info('Cette fiche est déjà en KO.');
+      return;
+    }
+    openKoModal(fiche);
+  };
+
   const closeKoModal = () => {
     setKoModal({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' });
   };
@@ -643,16 +656,7 @@ const ControleQualite = () => {
     if (!contextMenu?.fiche) return;
     const fiche = contextMenu.fiche;
     closeContextMenu();
-    if (isFicheLockedForUser(fiche)) {
-      toast.warning(getLockMessage(fiche));
-      return;
-    }
-    if (!requireCommentaireQualite(fiche)) return;
-    if (fiche.ko === 1 || fiche.ko === '1') {
-      toast.info('Cette fiche est déjà en KO.');
-      return;
-    }
-    openKoModal(fiche);
+    openKoModalForFiche(fiche);
   };
 
   // Fonctions pour gérer le modal HC
@@ -989,7 +993,7 @@ const ControleQualite = () => {
                   <th>Agent qualité</th>
                   <th className="commentaire-qualite-col">Commentaire qualité</th>
                   <th className="etat-actuel-col">État actuel</th>
-                  <th className="actions-col">Actions</th>
+                  <th className="actions-col">Détails</th>
                 </tr>
               </thead>
               <tbody>
@@ -1090,25 +1094,6 @@ const ControleQualite = () => {
                           className="btn-detail-icon"
                           title="Détails fiche"
                         />
-                        <button
-                          type="button"
-                          className="btn-validate-icon"
-                          onClick={() => handleValidateQualite(fiche)}
-                          disabled={
-                            validateQualiteMutation.isLoading ||
-                            isFicheLockedForUser(fiche) ||
-                            !hasCommentaireQualiteRenseigne(fiche)
-                          }
-                          title={
-                            isFicheLockedForUser(fiche)
-                              ? getLockMessage(fiche)
-                              : !hasCommentaireQualiteRenseigne(fiche)
-                                ? MSG_COMMENTAIRE_QUALITE_REQUIS
-                                : 'Valider et passer en En-Attente'
-                          }
-                        >
-                          <FaCheckCircle />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1167,6 +1152,33 @@ const ControleQualite = () => {
               })}
               <button
                 type="button"
+                className="cq-etat-panel-btn cq-etat-panel-btn-valider"
+                disabled={
+                  !etatsPanelActive ||
+                  validateQualiteMutation.isLoading ||
+                  !hasCommentaireQualiteRenseigne(selectedFiche)
+                }
+                title={
+                  !selectedFiche
+                    ? 'Sélectionnez une fiche (double-clic)'
+                    : isFicheLockedForUser(selectedFiche)
+                      ? getLockMessage(selectedFiche)
+                      : !hasCommentaireQualiteRenseigne(selectedFiche)
+                        ? MSG_COMMENTAIRE_QUALITE_REQUIS
+                        : 'Valider et passer en En-Attente'
+                }
+                onClick={() => {
+                  if (!selectedFiche) return;
+                  handleValidateQualite(selectedFiche);
+                }}
+              >
+                <span className="cq-etat-panel-btn-icon" aria-hidden="true">
+                  <FaCheckCircle />
+                </span>
+                <span className="cq-etat-panel-btn-label">Valider</span>
+              </button>
+              <button
+                type="button"
                 className="cq-etat-panel-btn cq-etat-panel-btn-ko"
                 disabled={
                   !etatsPanelActive ||
@@ -1181,14 +1193,7 @@ const ControleQualite = () => {
                       ? 'Déjà en KO'
                       : 'Mettre en KO'
                 }
-                onClick={() => {
-                  if (!selectedFiche || isFicheLockedForUser(selectedFiche)) {
-                    if (selectedFiche) toast.warning(getLockMessage(selectedFiche));
-                    return;
-                  }
-                  if (!requireCommentaireQualite(selectedFiche)) return;
-                  openKoModal(selectedFiche);
-                }}
+                onClick={() => openKoModalForFiche(selectedFiche)}
               >
                 <span className="cq-etat-panel-btn-icon" aria-hidden="true">
                   <FaBan />
