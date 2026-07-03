@@ -145,6 +145,13 @@ const ControleQualite = () => {
     nbAlertes: null
   });
 
+  // Modal commentaire qualité (avant validation si commentaire manquant)
+  const [commentQualiteModal, setCommentQualiteModal] = useState({
+    isOpen: false,
+    ficheHash: null,
+    commentaire: '',
+  });
+
   // Modal Remarques (envoyer / consulter les remarques qualité → agents qualification)
   const [remarquesModalOpen, setRemarquesModalOpen] = useState(false);
   const [remarquesFicheContext, setRemarquesFicheContext] = useState(null);
@@ -508,8 +515,42 @@ const ControleQualite = () => {
   };
 
   const handleValidateQualite = (fiche) => {
-    if (!requireCommentaireQualite(fiche)) return;
+    if (!fiche) return;
+    if (isFicheLockedForUser(fiche)) {
+      toast.warning(getLockMessage(fiche));
+      return;
+    }
+    if (!hasCommentaireQualiteRenseigne(fiche)) {
+      setCommentQualiteModal({
+        isOpen: true,
+        ficheHash: fiche.hash,
+        commentaire: fiche.commentaire_qualite || '',
+      });
+      return;
+    }
     validateQualiteMutation.mutate(fiche.hash);
+  };
+
+  const closeCommentQualiteModal = () => {
+    setCommentQualiteModal({ isOpen: false, ficheHash: null, commentaire: '' });
+  };
+
+  const handleCommentQualiteModalSubmit = () => {
+    const commentaire = String(commentQualiteModal.commentaire ?? '').trim();
+    if (!commentaire) {
+      toast.warning('Veuillez saisir un commentaire qualité');
+      return;
+    }
+    const ficheHash = commentQualiteModal.ficheHash;
+    updateCommentaireQualiteMutation.mutate(
+      { hash: ficheHash, commentaire_qualite: commentaire },
+      {
+        onSuccess: () => {
+          closeCommentQualiteModal();
+          validateQualiteMutation.mutate(ficheHash);
+        },
+      }
+    );
   };
 
   const pagination = fichesData?.pagination || { page: 1, limit: PAGE_SIZE_MULTI_DAY, total: 0, pages: 1 };
@@ -1156,16 +1197,14 @@ const ControleQualite = () => {
                 disabled={
                   !etatsPanelActive ||
                   validateQualiteMutation.isLoading ||
-                  !hasCommentaireQualiteRenseigne(selectedFiche)
+                  updateCommentaireQualiteMutation.isLoading
                 }
                 title={
                   !selectedFiche
                     ? 'Sélectionnez une fiche (double-clic)'
                     : isFicheLockedForUser(selectedFiche)
                       ? getLockMessage(selectedFiche)
-                      : !hasCommentaireQualiteRenseigne(selectedFiche)
-                        ? MSG_COMMENTAIRE_QUALITE_REQUIS
-                        : 'Valider et passer en En-Attente'
+                      : 'Valider et passer en En-Attente'
                 }
                 onClick={() => {
                   if (!selectedFiche) return;
@@ -1303,6 +1342,55 @@ const ControleQualite = () => {
         onSubmit={handleKoModalSubmit}
         onClose={closeKoModal}
       />
+
+      {/* Modal commentaire qualité (requis avant validation) */}
+      {commentQualiteModal.isOpen && (
+        <div className="modal-overlay" onClick={closeCommentQualiteModal}>
+          <div className="modal-content commentaire-qualite-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3><FaCommentDots /> Commentaire qualité</h3>
+              <button type="button" className="modal-close-btn" onClick={closeCommentQualiteModal}>
+                <FaTimes />
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="commentaire-qualite-modal-hint">
+                Un commentaire qualité est obligatoire pour valider la fiche et la passer en En-Attente.
+              </p>
+              <div className="form-group">
+                <label>Commentaire qualité <span className="required">*</span></label>
+                <textarea
+                  value={commentQualiteModal.commentaire}
+                  onChange={(e) => setCommentQualiteModal((m) => ({ ...m, commentaire: e.target.value }))}
+                  className="commentaire-qualite-modal-textarea"
+                  placeholder="Saisissez le commentaire qualité…"
+                  rows={5}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn-cancel" onClick={closeCommentQualiteModal}>
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="btn-confirm-valider"
+                onClick={handleCommentQualiteModalSubmit}
+                disabled={
+                  updateCommentaireQualiteMutation.isLoading ||
+                  validateQualiteMutation.isLoading ||
+                  !String(commentQualiteModal.commentaire ?? '').trim()
+                }
+              >
+                {updateCommentaireQualiteMutation.isLoading || validateQualiteMutation.isLoading
+                  ? 'Enregistrement…'
+                  : 'Enregistrer et valider'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal HC */}
       {hcModal.isOpen && (

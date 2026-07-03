@@ -289,6 +289,65 @@ body[data-desktop-viewport].controle-qualite-page .controle-qualite .fiches-tabl
   filter: brightness(0.92);
 }
 
+/* Modal commentaire qualité */
+.modal-content.commentaire-qualite-modal {
+  border-top: 4px solid #4CAF50;
+}
+
+.commentaire-qualite-modal .modal-header h3 {
+  color: #2e7d32;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.commentaire-qualite-modal-hint {
+  font-size: 13px;
+  color: #555;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.commentaire-qualite-modal-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 120px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.commentaire-qualite-modal-textarea:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
+}
+
+.btn-confirm-valider {
+  padding: 10px 20px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-confirm-valider:hover:not(:disabled) {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
+.btn-confirm-valider:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .fiches-table tbody tr.cq-row-selected {
   outline: 2px solid #16a34a;
   outline-offset: -2px;
