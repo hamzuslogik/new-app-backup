@@ -146,6 +146,127 @@
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+.cq-table-with-etats {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cq-etats-panel {
+  flex: 0 0 220px;
+  width: 220px;
+  background: #f0f0f0;
+  border: 1px solid #d8d8d8;
+  border-radius: 8px;
+  padding: 10px 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.cq-etats-panel-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.cq-etats-panel-hint {
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+  margin: 0 4px 10px;
+  line-height: 1.35;
+}
+
+.cq-etats-panel-fiche {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e40af;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin-bottom: 10px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.cq-etats-panel-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cq-etat-panel-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+  line-height: 1.2;
+}
+
+.cq-etat-panel-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  filter: brightness(0.95);
+}
+
+.cq-etat-panel-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.25);
+}
+
+.cq-etat-panel-btn-current {
+  outline: 2px solid #1e40af;
+  outline-offset: 1px;
+}
+
+.cq-etat-panel-btn-icon {
+  flex: 0 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.cq-etat-panel-btn-label {
+  flex: 1;
+  word-break: break-word;
+}
+
+.cq-etat-panel-btn-ko {
+  background: #dc3545 !important;
+  color: #fff !important;
+  margin-top: 4px;
+}
+
+.fiches-table tbody tr.cq-row-selected {
+  outline: 2px solid #16a34a;
+  outline-offset: -2px;
+  background-color: #f0fdf4 !important;
+}
+
+.fiches-table tbody tr.cq-row-selected td {
+  background-color: inherit;
 }
 
 .fiches-table {

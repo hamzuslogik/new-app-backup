@@ -2,7 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaChevronDown, FaChevronUp, FaCheckCircle, FaFilter, FaUserCheck, FaTimes, FaBan, FaBell, FaCommentDots } from 'react-icons/fa';
+import {
+  FaChevronDown,
+  FaChevronUp,
+  FaCheckCircle,
+  FaFilter,
+  FaUserCheck,
+  FaTimes,
+  FaBan,
+  FaBell,
+  FaCommentDots,
+  FaHeadphones,
+  FaHeadset,
+  FaQuestionCircle,
+  FaThumbsDown,
+  FaMicrophoneSlash,
+  FaClone,
+  FaPhoneSlash,
+  FaTrash,
+  FaHourglassHalf,
+  FaFlag,
+  FaMinusCircle,
+  FaSearch,
+  FaExclamationTriangle,
+} from 'react-icons/fa';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { toast } from 'react-toastify';
@@ -18,6 +41,26 @@ import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 const ETAT_KO_ID = 54;
 const ETAT_HC_ID = 55;
 const PAGE_SIZE_MULTI_DAY = 50;
+
+const getEtatIcon = (etat) => {
+  const t = (etat?.titre || '').toLowerCase();
+  if (Number(etat?.id) === ETAT_HC_ID || t.includes('hors cible') || t.includes('hc ')) return FaThumbsDown;
+  if (t.includes('debrif')) return FaHeadset;
+  if (t.includes('ecoute')) return FaHeadphones;
+  if (t.includes('verifier') || t.includes('vérifier')) return FaQuestionCircle;
+  if (t.includes('manque') || t.includes('enregistrement')) return FaMicrophoneSlash;
+  if (t.includes('doublon')) return FaClone;
+  if (t.includes('nrp') || t.includes('injoignable')) return FaPhoneSlash;
+  if (t.includes('poubelle') || t.includes('archive')) return FaTrash;
+  if (t.includes('attente')) return FaHourglassHalf;
+  if (t.includes('ko')) return FaTimes;
+  if (t.includes('valid')) return FaCheckCircle;
+  if (t.includes('rappel')) return FaBell;
+  if (t.includes('negatif') || t.includes('négatif')) return FaMinusCircle;
+  if (t.includes('alerte')) return FaExclamationTriangle;
+  if (t.includes('a verifier') || t.includes('à verifier')) return FaSearch;
+  return FaFlag;
+};
 
 const isSingleDayDateRange = (dateDebut, dateFin) =>
   Boolean(dateDebut && dateFin && dateDebut === dateFin);
@@ -100,6 +143,9 @@ const ControleQualite = () => {
   // Modal Remarques (envoyer / consulter les remarques qualité → agents qualification)
   const [remarquesModalOpen, setRemarquesModalOpen] = useState(false);
   const [remarquesFicheContext, setRemarquesFicheContext] = useState(null);
+
+  // Fiche sélectionnée (double-clic) pour activer le panneau d'états à droite
+  const [selectedFicheHash, setSelectedFicheHash] = useState(null);
 
   // Récupérer les agents qualification
   const { data: agentsData } = useQuery('agents-qualif-list', async () => {
@@ -496,6 +542,15 @@ const ControleQualite = () => {
       ? 'Cette fiche est validée et verrouillée pour tout le monde.'
       : 'Cette fiche est déjà assignée à un autre agent qualité. Seul l\'agent assigné peut la modifier, sauf si l\'état est "Debrief" ou "À vérifier".';
 
+  const selectedFiche = selectedFicheHash ? fiches.find((f) => f.hash === selectedFicheHash) : null;
+  const etatsPanelActive = Boolean(selectedFiche && !isFicheLockedForUser(selectedFiche));
+
+  useEffect(() => {
+    if (selectedFicheHash && !fiches.some((f) => f.hash === selectedFicheHash)) {
+      setSelectedFicheHash(null);
+    }
+  }, [fiches, selectedFicheHash]);
+
   // Fonctions pour gérer le modal KO
   const openKoModal = (fiche) => {
     setKoModal({
@@ -611,6 +666,31 @@ const ControleQualite = () => {
       document.removeEventListener('keydown', onKey);
     };
   }, [contextMenu]);
+
+  useEffect(() => {
+    const onKey = (ev) => {
+      if (ev.key === 'Escape' && selectedFicheHash) {
+        setSelectedFicheHash(null);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [selectedFicheHash]);
+
+  const handleRowDoubleClick = (e, fiche) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedFicheHash((prev) => (prev === fiche.hash ? null : fiche.hash));
+  };
+
+  const handleEtatPanelClick = (etat) => {
+    if (!selectedFiche) return;
+    if (isFicheLockedForUser(selectedFiche)) {
+      toast.warning(getLockMessage(selectedFiche));
+      return;
+    }
+    handleNouvelEtatSelect(selectedFiche, String(etat.id));
+  };
 
   const openRowContextMenu = (e, fiche) => {
     e.preventDefault();
@@ -836,6 +916,7 @@ const ControleQualite = () => {
         <div className="no-results">Aucune fiche trouvée</div>
       ) : (
         <>
+          <div className="cq-table-with-etats">
           <div className="fiches-table-container">
             <table className="fiches-table">
               <thead>
@@ -859,9 +940,11 @@ const ControleQualite = () => {
                       isFicheLockedForUser(fiche) ? 'fiche-row-locked' : '',
                       (fiche.archive === 1 || fiche.archive === '1') ? 'fiche-row-archive' : '',
                       contextMenu?.fiche?.hash === fiche.hash ? 'cq-row-context-active' : '',
+                      selectedFicheHash === fiche.hash ? 'cq-row-selected' : '',
                     ].filter(Boolean).join(' ')}
                     onContextMenu={(e) => openRowContextMenu(e, fiche)}
-                    title="Clic droit : menu d'actions sur cette ligne"
+                    onDoubleClick={(e) => handleRowDoubleClick(e, fiche)}
+                    title="Double-clic : sélectionner pour changer l'état · Clic droit : menu d'actions"
                   >
                     <td>{fiche.nom || '-'}</td>
                     <td>{fiche.prenom || '-'}</td>
@@ -972,6 +1055,83 @@ const ControleQualite = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <aside className="cq-etats-panel" aria-label="Changer l'état de la fiche sélectionnée">
+            <div className="cq-etats-panel-header">États</div>
+            {selectedFiche ? (
+              <div className="cq-etats-panel-fiche" title="Fiche sélectionnée (double-clic pour désélectionner)">
+                {[selectedFiche.nom, selectedFiche.prenom].filter(Boolean).join(' ') || 'Fiche'}
+                {selectedFiche.tel ? ` · ${selectedFiche.tel}` : ''}
+              </div>
+            ) : (
+              <p className="cq-etats-panel-hint">Double-cliquez sur une fiche pour activer les boutons</p>
+            )}
+            <div className="cq-etats-panel-buttons">
+              {etatsPhase0SansKo.map((etat) => {
+                const EtatIcon = getEtatIcon(etat);
+                const isCurrentEtat = Number(selectedFiche?.id_etat_final) === Number(etat.id);
+                return (
+                  <button
+                    key={etat.id}
+                    type="button"
+                    className={[
+                      'cq-etat-panel-btn',
+                      isCurrentEtat ? 'cq-etat-panel-btn-current' : '',
+                    ].filter(Boolean).join(' ')}
+                    style={{
+                      backgroundColor: getEtatColor(etat),
+                      color: '#fff',
+                    }}
+                    disabled={!etatsPanelActive || updateEtatMutation.isLoading}
+                    title={
+                      !selectedFiche
+                        ? 'Sélectionnez une fiche (double-clic)'
+                        : isFicheLockedForUser(selectedFiche)
+                          ? getLockMessage(selectedFiche)
+                          : `Passer en ${etat.titre}`
+                    }
+                    onClick={() => handleEtatPanelClick(etat)}
+                  >
+                    <span className="cq-etat-panel-btn-icon" aria-hidden="true">
+                      <EtatIcon />
+                    </span>
+                    <span className="cq-etat-panel-btn-label">{etat.titre}</span>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                className="cq-etat-panel-btn cq-etat-panel-btn-ko"
+                disabled={
+                  !etatsPanelActive ||
+                  validateQualiteKoMutation.isLoading ||
+                  selectedFiche?.ko === 1 ||
+                  selectedFiche?.ko === '1'
+                }
+                title={
+                  !selectedFiche
+                    ? 'Sélectionnez une fiche (double-clic)'
+                    : selectedFiche?.ko === 1 || selectedFiche?.ko === '1'
+                      ? 'Déjà en KO'
+                      : 'Mettre en KO'
+                }
+                onClick={() => {
+                  if (!selectedFiche || isFicheLockedForUser(selectedFiche)) {
+                    if (selectedFiche) toast.warning(getLockMessage(selectedFiche));
+                    return;
+                  }
+                  if (!requireCommentaireQualite(selectedFiche)) return;
+                  openKoModal(selectedFiche);
+                }}
+              >
+                <span className="cq-etat-panel-btn-icon" aria-hidden="true">
+                  <FaBan />
+                </span>
+                <span className="cq-etat-panel-btn-label">Mettre en KO</span>
+              </button>
+            </div>
+          </aside>
           </div>
 
           {showPagination && (
