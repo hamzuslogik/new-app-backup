@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -99,6 +99,11 @@ const ControleQualite = () => {
     // setAutoHide / closeSidebar : refs stables ; ne pas ré-exécuter au toggle (évite de re-bloquer le menu)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDesktop]);
+
+  useEffect(() => {
+    document.body.classList.add('controle-qualite-page');
+    return () => document.body.classList.remove('controle-qualite-page');
+  }, []);
   const [showFilters, setShowFilters] = useState(true);
   const [contextMenu, setContextMenu] = useState(null);
   const [filters, setFilters] = useState({
@@ -146,6 +151,8 @@ const ControleQualite = () => {
 
   // Fiche sélectionnée (double-clic) pour activer le panneau d'états à droite
   const [selectedFicheHash, setSelectedFicheHash] = useState(null);
+  const panelAnchorRef = useRef(null);
+  const panelRef = useRef(null);
 
   // Récupérer les agents qualification
   const { data: agentsData } = useQuery('agents-qualif-list', async () => {
@@ -514,6 +521,59 @@ const ControleQualite = () => {
   const sousEtatsHc = sousEtatsHcData || [];
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(allEtats);
   const etatsPhase0SansKo = etatsPhase0.filter((e) => Number(e.id) !== ETAT_KO_ID);
+
+  const syncEtatsPanelPosition = useCallback(() => {
+    const anchor = panelAnchorRef.current;
+    const panel = panelRef.current;
+    if (!anchor || !panel) return;
+
+    const rect = anchor.getBoundingClientRect();
+    const margin = 16;
+    const vh = window.innerHeight;
+    const panelHeight = panel.offsetHeight;
+    const top = Math.max(margin, vh - panelHeight - margin);
+
+    panel.style.top = `${top}px`;
+    panel.style.left = `${rect.left}px`;
+    panel.style.width = `${rect.width}px`;
+  }, []);
+
+  useEffect(() => {
+    syncEtatsPanelPosition();
+    const onScrollOrResize = () => syncEtatsPanelPosition();
+
+    window.addEventListener('scroll', onScrollOrResize, { passive: true, capture: true });
+    window.addEventListener('resize', onScrollOrResize);
+    window.addEventListener('viewport-layout-change', onScrollOrResize);
+
+    const scrollParents = [
+      document.documentElement,
+      document.body,
+      document.querySelector('.content-wrapper'),
+      document.querySelector('.controle-qualite .fiches-table-container'),
+    ].filter(Boolean);
+
+    scrollParents.forEach((el) => {
+      el.addEventListener('scroll', onScrollOrResize, { passive: true });
+    });
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(onScrollOrResize)
+      : null;
+    if (resizeObserver && panelRef.current) {
+      resizeObserver.observe(panelRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, { capture: true });
+      window.removeEventListener('resize', onScrollOrResize);
+      window.removeEventListener('viewport-layout-change', onScrollOrResize);
+      scrollParents.forEach((el) => {
+        el.removeEventListener('scroll', onScrollOrResize);
+      });
+      resizeObserver?.disconnect();
+    };
+  }, [syncEtatsPanelPosition, fiches.length, showFilters, etatsPhase0SansKo.length, selectedFicheHash]);
 
   // IDs des états pour lesquels tout agent qualité peut modifier (Debrief, À vérifier)
   const etatsQualiteOuverts = React.useMemo(() => {
@@ -1057,8 +1117,12 @@ const ControleQualite = () => {
             </table>
           </div>
 
-          <div className="cq-etats-panel-sticky">
-          <aside className="cq-etats-panel" aria-label="Changer l'état de la fiche sélectionnée">
+          <div className="cq-etats-panel-sticky" ref={panelAnchorRef}>
+          <aside
+            ref={panelRef}
+            className="cq-etats-panel cq-etats-panel--floating"
+            aria-label="Changer l'état de la fiche sélectionnée"
+          >
             <div className="cq-etats-panel-header">États</div>
             {selectedFiche ? (
               <div className="cq-etats-panel-fiche" title="Fiche sélectionnée (double-clic pour désélectionner)">
