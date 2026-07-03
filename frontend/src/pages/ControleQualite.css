@@ -1,7 +1,7 @@
 .controle-qualite {
   padding: 16px;
   max-width: 100%;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .page-header {
@@ -154,20 +154,31 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  overflow: visible;
+}
+
+.cq-etats-panel-sticky {
+  flex: 0 0 220px;
+  width: 220px;
+  align-self: flex-start;
 }
 
 .cq-etats-panel {
-  flex: 0 0 220px;
-  width: 220px;
+  width: 100%;
   background: #f0f0f0;
   border: 1px solid #d8d8d8;
   border-radius: 8px;
   padding: 10px 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   position: sticky;
-  top: 12px;
-  max-height: calc(100vh - 120px);
+  /* Colle le bas du panneau au bas du viewport pendant le scroll */
+  top: calc(100vh - 16px);
+  top: calc(100dvh - 16px);
+  transform: translateY(-100%);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
+  z-index: 5;
 }
 
 .cq-etats-panel-header {

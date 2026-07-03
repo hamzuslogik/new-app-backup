@@ -1057,6 +1057,7 @@ const ControleQualite = () => {
             </table>
           </div>
 
+          <div className="cq-etats-panel-sticky">
           <aside className="cq-etats-panel" aria-label="Changer l'état de la fiche sélectionnée">
             <div className="cq-etats-panel-header">États</div>
             {selectedFiche ? (
@@ -1132,6 +1133,7 @@ const ControleQualite = () => {
               </button>
             </div>
           </aside>
+          </div>
           </div>
 
           {showPagination && (
