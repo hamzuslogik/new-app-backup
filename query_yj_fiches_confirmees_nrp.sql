@@ -6,12 +6,15 @@
 -- Colonne état : hf.etat (majuscules : 'NRP', 'CONFIRMER', etc.)
 -- Date historique : hf.date_heure_mod
 --
--- Date du jour : CURDATE() — remplacer par 'YYYY-MM-DD' si besoin
+-- Période (requêtes 1, 1b, 1c) : modifier les dates dans le HAVING
+--   DATE(MIN(...)) >= 'YYYY-MM-DD' AND DATE(MIN(...)) <= 'YYYY-MM-DD'
+-- Autres requêtes : CURDATE() — remplacer par 'YYYY-MM-DD' si besoin
 -- =====================================================
 
 
 -- =====================================================
--- 1) Confirmées aujourd'hui + plus de 3 NRP dans l'historique
+-- 1) 1ère confirmation sur la période + plus de 3 NRP dans l'historique
+--    (jamais confirmées avant le début de la période)
 -- =====================================================
 
 SELECT
@@ -38,8 +41,9 @@ INNER JOIN (
     AND TRIM(hf.`etat`) = 'CONFIRMER'
     AND hf.`date_heure_mod` IS NOT NULL
     AND hf.`date_heure_mod` != '0000-00-00 00:00:00'
-    AND DATE(hf.`date_heure_mod`) = CURDATE()
   GROUP BY hf.`id_fiche`
+  HAVING DATE(MIN(hf.`date_heure_mod`)) >= '2026-06-01'
+     AND DATE(MIN(hf.`date_heure_mod`)) <= '2026-06-30'
 ) conf ON conf.`id_fiche` = y.`id`
 INNER JOIN (
   SELECT
@@ -54,6 +58,118 @@ INNER JOIN (
 WHERE TRIM(y.`etat_final`) = 'CONFIRMER'
   AND (y.`archive` IS NULL OR y.`archive` = 0)
 ORDER BY nrp.`nb_nrp` DESC, conf.`premiere_confirmation` DESC;
+
+
+-- =====================================================
+-- 1b) 1ère occurrence de chaque état sur la période + plus de 3 NRP
+--     (tous statuts : CONFIRMER, NRP, RAPPEL POUR BUREAU, etc.)
+--     Une fiche peut apparaître plusieurs fois si plusieurs états
+--     ont été atteints pour la 1ère fois dans la période.
+-- =====================================================
+
+SELECT
+  y.id,
+  y.nom,
+  y.prenom,
+  y.tel,
+  y.cp,
+  y.ville,
+  y.etat_final,
+  stat.etat_atteint,
+  y.date_heure_playning AS date_rdv,
+  y.date_insertion,
+  y.nom_agent,
+  y.nom_confirmateur,
+  stat.premiere_occurrence,
+  nrp.nb_nrp
+FROM yj_fiche y
+INNER JOIN (
+  SELECT
+    t.id_fiche,
+    t.etat_atteint,
+    t.premiere_occurrence
+  FROM (
+    SELECT
+      hf.id_fiche AS id_fiche,
+      TRIM(hf.etat) AS etat_atteint,
+      MIN(hf.date_heure_mod) AS premiere_occurrence
+    FROM yj_histo_fiche hf
+    WHERE hf.id_fiche IS NOT NULL
+      AND TRIM(COALESCE(hf.etat, '')) != ''
+      AND hf.date_heure_mod IS NOT NULL
+      AND hf.date_heure_mod != '0000-00-00 00:00:00'
+    GROUP BY hf.id_fiche, TRIM(hf.etat)
+  ) t
+  WHERE DATE(t.premiere_occurrence) >= '2026-06-01'
+    AND DATE(t.premiere_occurrence) <= '2026-06-30'
+) stat ON stat.id_fiche = y.id
+INNER JOIN (
+  SELECT
+    hf.id_fiche AS id_fiche,
+    COUNT(*) AS nb_nrp
+  FROM yj_histo_fiche hf
+  WHERE hf.id_fiche IS NOT NULL
+    AND TRIM(hf.etat) = 'NRP'
+  GROUP BY hf.id_fiche
+  HAVING COUNT(*) > 3
+) nrp ON nrp.id_fiche = y.id
+WHERE (y.archive IS NULL OR y.archive = 0)
+ORDER BY stat.etat_atteint, nrp.nb_nrp DESC, stat.premiere_occurrence DESC;
+
+
+-- =====================================================
+-- 1c) Variante : 1ère fois que l'état ACTUEL a été atteint sur la période
+--     (1 ligne par fiche, etat_atteint = etat_final)
+-- =====================================================
+
+SELECT
+  y.id,
+  y.nom,
+  y.prenom,
+  y.tel,
+  y.cp,
+  y.ville,
+  y.etat_final,
+  y.date_heure_playning AS date_rdv,
+  y.date_insertion,
+  y.nom_agent,
+  y.nom_confirmateur,
+  stat.premiere_occurrence,
+  nrp.nb_nrp
+FROM yj_fiche y
+INNER JOIN (
+  SELECT
+    t.id_fiche,
+    t.etat_atteint,
+    t.premiere_occurrence
+  FROM (
+    SELECT
+      hf.id_fiche AS id_fiche,
+      TRIM(hf.etat) AS etat_atteint,
+      MIN(hf.date_heure_mod) AS premiere_occurrence
+    FROM yj_histo_fiche hf
+    WHERE hf.id_fiche IS NOT NULL
+      AND TRIM(COALESCE(hf.etat, '')) != ''
+      AND hf.date_heure_mod IS NOT NULL
+      AND hf.date_heure_mod != '0000-00-00 00:00:00'
+    GROUP BY hf.id_fiche, TRIM(hf.etat)
+  ) t
+  WHERE DATE(t.premiere_occurrence) >= '2026-06-01'
+    AND DATE(t.premiere_occurrence) <= '2026-06-30'
+) stat ON stat.id_fiche = y.id
+      AND stat.etat_atteint = TRIM(y.etat_final)
+INNER JOIN (
+  SELECT
+    hf.id_fiche AS id_fiche,
+    COUNT(*) AS nb_nrp
+  FROM yj_histo_fiche hf
+  WHERE hf.id_fiche IS NOT NULL
+    AND TRIM(hf.etat) = 'NRP'
+  GROUP BY hf.id_fiche
+  HAVING COUNT(*) > 3
+) nrp ON nrp.id_fiche = y.id
+WHERE (y.archive IS NULL OR y.archive = 0)
+ORDER BY stat.etat_atteint, nrp.nb_nrp DESC, stat.premiere_occurrence DESC;
 
 
 -- =====================================================

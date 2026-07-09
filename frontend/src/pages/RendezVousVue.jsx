@@ -308,13 +308,13 @@ const RendezVousVue = () => {
   const dateLendemain = getTomorrowRdvStr();
 
   const { data: dataConfirmerVeille, isLoading: loadingConfirmerVeille } = useQuery(
-    ['rdv-vue', 'production_rdv', dateVeille],
-    () => fetchRdvVue('production_rdv', dateVeille),
+    ['rdv-vue', 'confirme_date_rdv', dateVeille],
+    () => fetchRdvVue('confirme_date_rdv', dateVeille),
     autoRefreshOptions
   );
   const { data: dataConfirmerLendemain, isLoading: loadingConfirmerLendemain } = useQuery(
-    ['rdv-vue', 'jour', dateLendemain],
-    () => fetchRdvVue('jour', dateLendemain),
+    ['rdv-vue', 'confirme_date_rdv', dateLendemain],
+    () => fetchRdvVue('confirme_date_rdv', dateLendemain),
     autoRefreshOptions
   );
 
