@@ -30,10 +30,8 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const isOverlayLocked =
     lockedFromOption ||
     (searchParams.get('overlay') === '1' && searchParams.get('close') === '0');
-  // Session commercial : éviter la fermeture accidentelle sauf si la page parente l'autorise
-  const isBackdropCloseLocked =
-    isOverlayLocked ||
-    (Number(user?.fonction) === 5 && options?.allowBackdropClose !== true);
+  // Fermeture au clic sur le fond : autorisée sauf mode verrouillé (close=0)
+  const isBackdropCloseLocked = isOverlayLocked;
   const pinchZoomEnabled = options?.pinchZoom === true;
   const backdropCloseReadyRef = useRef(false);
 
