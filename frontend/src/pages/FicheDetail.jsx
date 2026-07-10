@@ -2622,8 +2622,12 @@ const FicheDetail = ({
         }
       }
 
-      // HHC FINANCEMENT A VERIFIER (34) : "Appel avec qui" obligatoire
-      if (selectedEtat === 34 && !(etatFormData.conf_rdv_avec || '').trim()) {
+      // HHC FINANCEMENT A VERIFIER (34) : "Appel avec qui" obligatoire (hors session commercial)
+      if (
+        selectedEtat === 34 &&
+        Number(user?.fonction) !== 5 &&
+        !(etatFormData.conf_rdv_avec || '').trim()
+      ) {
         alert('Veuillez renseigner "Appel avec qui".');
         return;
       }
