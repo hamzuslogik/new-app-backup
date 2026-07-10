@@ -1242,6 +1242,12 @@ const FicheDetail = ({
     (Number(ficheData.id_commercial) === Number(user?.id) ||
       Number(ficheData.id_commercial_2) === Number(user?.id));
 
+  const canCommercialValidateRdv =
+    isCommercial &&
+    ficheData &&
+    (Number(ficheData.id_commercial) === Number(user?.id) ||
+      Number(ficheData.id_commercial_2) === Number(user?.id));
+
   const getCommercialDisplayName = (id) => {
     if (!id) return '';
     const found = (commerciaux || []).find((c) => String(c.id) === String(id));
@@ -4843,7 +4849,7 @@ const FicheDetail = ({
                       {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
                         renderQualiteConfirmationBackofficePanel()}
 
-                      {hasPermission('fiche_validate') && Number(fiche.id_etat_final) === 7 && (
+                      {(hasPermission('fiche_validate') || canCommercialValidateRdv) && Number(fiche.id_etat_final) === 7 && (
                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
                           {fiche.valider > 0 && (
                             <div
@@ -4946,44 +4952,12 @@ const FicheDetail = ({
                                   background: '#ffffff',
                                   border: '1px solid #d1d5db',
                                   borderRadius: '8px',
-                                  width: validationDropdownPosition.width,
+                                  width: Math.max(validationDropdownPosition.width || 0, 220),
                                   boxShadow: '0 6px 18px rgba(0,0,0,0.14)',
                                   zIndex: 100000,
                                   overflow: 'hidden',
                                 }}
                               >
-                                <button
-                                  type="button"
-                                  disabled={validateMutation.isLoading}
-                                  onClick={() => {
-                                    const message = fiche.valider > 0
-                                      ? 'Annuler la validation de cette fiche ?'
-                                      : 'Marquer cette fiche comme NON VALIDÉ ?';
-                                    if (window.confirm(message)) {
-                                      validateMutation.mutate({
-                                        type_valid: '0',
-                                        conf_rdv_avec: null,
-                                        conf_presence_couple: null,
-                                      });
-                                      setValidationDropdownOpen(false);
-                                    }
-                                  }}
-                                  style={{
-                                    display: 'block',
-                                    width: '100%',
-                                    padding: '12px 16px',
-                                    textAlign: 'left',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    borderBottom: '1px solid #e5e7eb',
-                                    cursor: validateMutation.isLoading ? 'wait' : 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: 600,
-                                    color: '#111827',
-                                  }}
-                                >
-                                  NON VALIDÉ
-                                </button>
                                 <button
                                   type="button"
                                   disabled={validateMutation.isLoading}
@@ -5011,7 +4985,7 @@ const FicheDetail = ({
                                     color: '#111827',
                                   }}
                                 >
-                                  VALIDÉ AVEC MR
+                                  {isCommercial ? 'VALIDE avec MR' : 'VALIDÉ AVEC MR'}
                                 </button>
                                 <button
                                   type="button"
@@ -5033,13 +5007,47 @@ const FicheDetail = ({
                                     textAlign: 'left',
                                     background: 'transparent',
                                     border: 'none',
+                                    borderBottom: '1px solid #e5e7eb',
                                     cursor: validateMutation.isLoading ? 'wait' : 'pointer',
                                     fontSize: '14px',
                                     fontWeight: 600,
                                     color: '#111827',
                                   }}
                                 >
-                                  VALIDÉ AVEC MME
+                                  {isCommercial ? 'VALIDE avec MME' : 'VALIDÉ AVEC MME'}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={validateMutation.isLoading}
+                                  onClick={() => {
+                                    const message = isCommercial
+                                      ? 'Marquer cette fiche comme NRP (non validé) ?'
+                                      : (fiche.valider > 0
+                                        ? 'Annuler la validation de cette fiche ?'
+                                        : 'Marquer cette fiche comme NON VALIDÉ ?');
+                                    if (window.confirm(message)) {
+                                      validateMutation.mutate({
+                                        type_valid: '0',
+                                        conf_rdv_avec: null,
+                                        conf_presence_couple: null,
+                                      });
+                                      setValidationDropdownOpen(false);
+                                    }
+                                  }}
+                                  style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    textAlign: 'left',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: validateMutation.isLoading ? 'wait' : 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    color: '#111827',
+                                  }}
+                                >
+                                  {isCommercial ? 'NRP (non validé)' : 'NON VALIDÉ'}
                                 </button>
                               </div>
                             </>,
