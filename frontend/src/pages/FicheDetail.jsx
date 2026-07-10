@@ -2605,14 +2605,17 @@ const FicheDetail = ({
       }
 
       // Validation : commentaire obligatoire lorsque le formulaire le propose (11 et 12 : commentaire facultatif)
-      const etatsAvecCommentaire = [2, 8, 9, 19, 23, 34, 13, 44, 45, 16, 38];
+      // Session commercial : le champ « Compte rendu » alimente conf_commentaire_produit
+      const etatsAvecCommentaire = [2, 8, 9, 19, 23, 34, 13, 44, 45, 16, 38, 35];
       if (etatsAvecCommentaire.includes(selectedEtat)) {
         const comment =
           selectedEtat === 2
             ? (nrpFormData.conf_commentaire_produit || '').trim()
-            : [19, 23, 34].includes(selectedEtat)
-              ? (etatFormData.motif_qualif || '').trim()
-              : (etatFormData.conf_commentaire_produit || '').trim();
+            : (
+                etatFormData.conf_commentaire_produit ||
+                etatFormData.motif_qualif ||
+                ''
+              ).trim();
         if (!comment) {
           alert('Veuillez saisir un commentaire.');
           return;
@@ -2658,11 +2661,13 @@ const FicheDetail = ({
           modifications.compte_rendu_option = resolveOptionKey(compteRenduOption);
         }
         const commentaireEtat =
-          ETATS_MOTIF_QUALIF_REQUIS.includes(selectedEtat)
-            ? (etatFormData.motif_qualif || etatFormData.conf_commentaire_produit || '')
-            : (selectedEtat === 2
-              ? (nrpFormData.conf_commentaire_produit || '')
-              : (etatFormData.conf_commentaire_produit || ''));
+          selectedEtat === 2
+            ? (nrpFormData.conf_commentaire_produit || '')
+            : (
+                etatFormData.conf_commentaire_produit ||
+                etatFormData.motif_qualif ||
+                ''
+              );
 
         const updateData = {
           id_etat_final: selectedEtat,
@@ -5674,13 +5679,22 @@ const FicheDetail = ({
                                   conf_commentaire_produit: cr.commentaire || ''
                                 });
                               } else if (cr.id_etat_final === 9) {
-                                setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || ''});
+                                setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || '', motif_qualif: ''});
                               } else if (cr.id_etat_final === 12) {
-                                setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: cr.commentaire || ''});
+                                setEtatFormData({
+                                  ...etatFormData,
+                                  conf_commentaire_produit: cr.commentaire || '',
+                                  motif_qualif: cr.commentaire || '',
+                                });
                               } else if (cr.id_etat_final === 34) {
-                                setEtatFormData({...etatFormData, conf_commentaire_produit: '', motif_qualif: cr.commentaire || ''});
+                                setEtatFormData({
+                                  ...etatFormData,
+                                  conf_commentaire_produit: cr.commentaire || '',
+                                  motif_qualif: cr.commentaire || '',
+                                  conf_rdv_avec: cr.modifications?.conf_rdv_avec || etatFormData.conf_rdv_avec || '',
+                                });
                               } else if (cr.id_etat_final === 35) {
-                                setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || ''});
+                                setEtatFormData({...etatFormData, conf_commentaire_produit: cr.commentaire || '', motif_qualif: ''});
                               } else if (cr.id_etat_final === 8) {
                                 // Extraire date et heure si disponibles
                                 let dateRdv = '';

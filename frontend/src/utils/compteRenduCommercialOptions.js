@@ -165,5 +165,29 @@ export function applyCompteRenduOptionChange(
     splitDateTimeForInput,
   });
   setSelectedEtat(selectedEtat);
-  setEtatFormData({ ...etatFormData, ...patch });
+
+  // Conserver le compte rendu déjà saisi lors d'un changement d'option / d'état
+  const preservedComment = String(
+    etatFormData?.conf_commentaire_produit || etatFormData?.motif_qualif || ''
+  ).trim();
+  const nextPatch = { ...patch };
+  if (preservedComment) {
+    if (
+      Object.prototype.hasOwnProperty.call(nextPatch, 'conf_commentaire_produit') &&
+      !String(nextPatch.conf_commentaire_produit || '').trim()
+    ) {
+      nextPatch.conf_commentaire_produit = preservedComment;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(nextPatch, 'motif_qualif') &&
+      !String(nextPatch.motif_qualif || '').trim()
+    ) {
+      nextPatch.motif_qualif = preservedComment;
+    }
+    if (!Object.prototype.hasOwnProperty.call(nextPatch, 'conf_commentaire_produit')) {
+      nextPatch.conf_commentaire_produit = preservedComment;
+    }
+  }
+
+  setEtatFormData({ ...etatFormData, ...nextPatch });
 }
