@@ -1806,13 +1806,15 @@ const FicheDetail = ({
   }, [rdvFormData.date_rdv_time, showRdvModal]);
 
   const handleEditField = (field, currentValue) => {
+    if (Number(user?.fonction) === 5 && COMMERCIAL_SESSION_READONLY_FIELDS.has(field)) {
+      return;
+    }
     setEditingField(field);
     setEditValue(currentValue || '');
   };
 
   const handleSaveField = async (field) => {
-    if (canCommercialEditFiche && COMMERCIAL_SESSION_READONLY_FIELDS.has(field)) {
-      alert('Ce champ ne peut pas être modifié depuis la session commercial.');
+    if (Number(user?.fonction) === 5 && COMMERCIAL_SESSION_READONLY_FIELDS.has(field)) {
       handleCancelEdit();
       return;
     }
@@ -2988,6 +2990,7 @@ const FicheDetail = ({
     const isQualiteQualif = userFonction == 2 || userFonction == 8 || userFonction == 12;
     const isAdmin = userFonction == 1 || userFonction == 7;
     const isAgent = userFonction == 3 && user.centre === ficheData.id_centre;
+    const isCommercialSession = userFonction == 5;
     const isCommercialEditor = canCommercialEditFiche;
     const isConfirmateur = userFonction == 6;
     const isREConfirmation = userFonction == 14; // RE confirmation : modification rapide
@@ -2995,17 +2998,24 @@ const FicheDetail = ({
     const isBackoffice = userFonction == 11; // Backoffice : modification rapide
     const canEditModificationRapide = isREConfirmation || isRPConfirmation || isBackoffice || (typeof hasPermission === 'function' && hasPermission('fiche_quick_edit'));
 
+    // Session commercial : ces champs sont toujours en lecture seule (pas de bouton Modifier)
     const isCommercialFieldBlocked =
-      isCommercialEditor && COMMERCIAL_SESSION_READONLY_FIELDS.has(field);
-    const effectiveReadOnly = (readOnly || isCommercialFieldBlocked) && !canEditModificationRapide;
-    const canEditField = !effectiveReadOnly && userFonction != null && (isAdmin || isQualiteQualif || isAgent || isCommercialEditor || isConfirmateur || canEditModificationRapide);
-    
+      isCommercialSession && COMMERCIAL_SESSION_READONLY_FIELDS.has(field);
+    const effectiveReadOnly =
+      isCommercialFieldBlocked || ((readOnly || false) && !canEditModificationRapide);
+    const canEditField =
+      !effectiveReadOnly &&
+      userFonction != null &&
+      (isAdmin || isQualiteQualif || isAgent || isCommercialEditor || isConfirmateur || (!isCommercialSession && canEditModificationRapide));
+
+    // Si un commercial était déjà en édition sur un champ bloqué, forcer l'affichage lecture seule
+    const showEditControls = isEditing && canEditField && !isCommercialFieldBlocked;
 
     return (
       <tr>
         <td className="field-label">{label}</td>
         <td className="field-value">
-          {isEditing ? (
+          {showEditControls ? (
             <div className="edit-controls">
               {type === 'select' && options ? (
                 <select
@@ -3063,10 +3073,10 @@ const FicheDetail = ({
           )}
         </td>
         <td className="field-actions">
-          {canEditField && !isEditing && (
+          {canEditField && !isEditing && !isCommercialFieldBlocked && (
             <button
               className="btn-edit"
-              onClick={() => handleEditField(field, value)}
+              onClick={() => handleEditField(field, valueForEdit !== undefined ? valueForEdit : value)}
               title="Modifier"
             >
               <FaEdit />
