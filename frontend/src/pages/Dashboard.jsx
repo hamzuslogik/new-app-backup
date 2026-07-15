@@ -286,6 +286,15 @@ const Dashboard = () => {
     setIsTableDesktopView(false);
   }, [closeSidebar]);
 
+  // Téléphone : sidebar masquée par défaut à l'arrivée sur le dashboard
+  useEffect(() => {
+    if (isDashboardTouchMobile || isMobile) {
+      closeSidebar();
+    }
+    // Uniquement au montage : ne pas re-fermer si l'utilisateur rouvre le menu
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const switchToTableDesktopView = useCallback(() => {
     document.documentElement.classList.remove(DASHBOARD_MOBILE_NATIVE_CLASS);
     document.body.classList.remove(DASHBOARD_MOBILE_NATIVE_CLASS);
