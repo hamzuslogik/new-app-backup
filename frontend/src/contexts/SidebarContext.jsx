@@ -1,8 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
-import { isMobileNativeExtranetPage } from '../utils/applyForceDesktopViewport';
+import { isMobileNativeExtranetPage, isTouchMobileDevice } from '../utils/applyForceDesktopViewport';
 
 const SidebarContext = createContext(null);
+
+/** Téléphone en mode « tableau desktop » sur le dashboard : sidebar repliable, masquée par défaut */
+const isMobileTableDesktopPage = () =>
+  isTouchMobileDevice() &&
+  document.body?.classList.contains('dashboard-page--table-desktop-view');
 
 const getInitialSidebarState = () => {
   if (FORCE_DESKTOP_VIEWPORT && !isMobileNativeExtranetPage()) {
@@ -27,9 +32,12 @@ export const SidebarProvider = ({ children }) => {
     FORCE_DESKTOP_VIEWPORT && !mobileExtranetActive ? true : window.innerWidth > 1024
   );
   const [autoHideEnabled, setAutoHideEnabled] = useState(false);
+  const [mobileTableDesktopActive, setMobileTableDesktopActive] = useState(isMobileTableDesktopPage());
+  const tableDesktopActiveRef = React.useRef(isMobileTableDesktopPage());
   const userToggleRef = React.useRef(false);
   const extranetActive = mobileExtranetActive || isMobileNativeExtranetPage();
-  const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !extranetActive;
+  const tableDesktopActive = mobileTableDesktopActive || isMobileTableDesktopPage();
+  const forceDesktopSidebar = FORCE_DESKTOP_VIEWPORT && !extranetActive && !tableDesktopActive;
 
   useEffect(() => {
     const syncExtranetLayout = () => {
@@ -37,6 +45,12 @@ export const SidebarProvider = ({ children }) => {
       const wasExtranet = extranetActiveRef.current;
       extranetActiveRef.current = extranet;
       setMobileExtranetActive(extranet);
+
+      const tableDesktop = isMobileTableDesktopPage();
+      const wasTableDesktop = tableDesktopActiveRef.current;
+      tableDesktopActiveRef.current = tableDesktop;
+      setMobileTableDesktopActive(tableDesktop);
+
       if (extranet) {
         setIsMobile(true);
         setIsTablet(false);
@@ -44,6 +58,9 @@ export const SidebarProvider = ({ children }) => {
         if (!wasExtranet) {
           setSidebarCollapsed(true);
         }
+      } else if (tableDesktop && !wasTableDesktop) {
+        // Téléphone en vue tableau desktop : menu masqué par défaut
+        setSidebarCollapsed(true);
       }
     };
 
@@ -73,7 +90,10 @@ export const SidebarProvider = ({ children }) => {
       setIsDesktop(desktop);
 
       if (desktop) {
-        setSidebarCollapsed(prev => autoHideEnabled);
+        // Téléphone en vue tableau desktop : ne pas rouvrir automatiquement le menu
+        if (!isMobileTableDesktopPage()) {
+          setSidebarCollapsed(prev => autoHideEnabled);
+        }
         userToggleRef.current = false;
       } else if (mobile || tablet) {
         if (autoHideEnabled) {
