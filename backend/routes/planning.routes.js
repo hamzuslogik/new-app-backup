@@ -1974,8 +1974,7 @@ router.get('/departements', authenticate, async (req, res) => {
 // =====================================================
 // GET /planning/rdv-vue
 // Afficher les RDV du jour choisi (confirmés à cette date).
-// - type confirme_date_rdv : confirmés filtrés par DATE(date_rdv_time) dans confirmations, état actuel depuis fiches.
-//   Si date RDV passée ou aujourd'hui : compte rendu approuvé requis (RDV visité).
+// - type confirme_date_rdv : fiches actuellement CONFIRMER, filtrées par leur date RDV.
 // - Date >= aujourd'hui : source fiches (id_etat_final=7, date_rdv_time du jour).
 // - Date passée : uniquement l'onglet "Rendez-vous du jour" utilise la table confirmations ;
 //   les onglets "affiliés" et "non affiliés" renvoient une liste vide.
@@ -2015,42 +2014,25 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
           com2.pseudo AS commercial2_pseudo,
           e.titre AS etat_titre`;
 
-    // Onglets « Confirmer veille / lendemain » : confirmés par date RDV, état actuel affiché
+    // Onglet « Confirmer de la veille » : état actuel CONFIRMER + date RDV demandée
     if (type === 'confirme_date_rdv') {
-      const requireVisite = d <= today;
-      const visiteClause = requireVisite
-        ? `AND EXISTS (
-            SELECT 1
-            FROM compte_rendu_pending cr
-            WHERE cr.id_fiche = f.id
-              AND cr.statut = 'approved'
-              AND DATE(COALESCE(cr.date_visite, c.date_rdv_time, f.date_rdv_time)) = DATE(COALESCE(c.date_rdv_time, f.date_rdv_time))
-          )`
-        : '';
       rows = await query(
-        `SELECT 
+        `SELECT
           ${ficheSelectFields},
-          COALESCE(c.date_rdv_time, f.date_rdv_time) AS date_rdv_time
-        FROM confirmations c
-        INNER JOIN fiches f ON f.id = c.id_fiche
+          f.date_rdv_time
+        FROM fiches f
         LEFT JOIN utilisateurs com ON com.id = f.id_commercial
         LEFT JOIN utilisateurs com2 ON com2.id = f.id_commercial_2
         LEFT JOIN etats e ON f.id_etat_final = e.id
         WHERE (f.archive = 0 OR f.archive IS NULL)
           AND (f.ko = 0 OR f.ko IS NULL)
-          AND COALESCE(c.date_rdv_time, f.date_rdv_time) IS NOT NULL
-          AND DATE(COALESCE(c.date_rdv_time, f.date_rdv_time)) = ?
-          ${visiteClause}
-        ORDER BY COALESCE(c.date_rdv_time, f.date_rdv_time) ASC`,
+          AND CAST(f.id_etat_final AS UNSIGNED) = 7
+          AND f.date_rdv_time IS NOT NULL
+          AND DATE(f.date_rdv_time) = ?
+        ORDER BY f.date_rdv_time ASC`,
         [d]
       );
-      console.log(
-        '[rdv-vue] Source: confirmations (filtre date_rdv)',
-        requireVisite ? '+ compte rendu approuvé (visité)' : '',
-        '— état actuel.',
-        rows?.length ?? 0,
-        'lignes'
-      );
+      console.log('[rdv-vue] Source: fiches actuellement CONFIRMER, filtre date RDV.', rows?.length ?? 0, 'lignes');
     } else if (type === 'production_rdv') {
       rows = await query(
         `SELECT 

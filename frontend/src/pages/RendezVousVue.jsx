@@ -313,8 +313,8 @@ const RendezVousVue = () => {
     autoRefreshOptions
   );
   const { data: dataConfirmerLendemain, isLoading: loadingConfirmerLendemain } = useQuery(
-    ['rdv-vue', 'confirme_date_rdv', dateLendemain],
-    () => fetchRdvVue('confirme_date_rdv', dateLendemain),
+    ['rdv-vue', 'jour', dateLendemain],
+    () => fetchRdvVue('jour', dateLendemain),
     autoRefreshOptions
   );
 

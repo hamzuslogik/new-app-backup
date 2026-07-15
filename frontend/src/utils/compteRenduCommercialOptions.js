@@ -3,52 +3,52 @@
  * Aucun nouvel état en BDD : uniquement la traduction côté interface.
  */
 export const COMPTE_RENDU_COMMERCIAL_OPTIONS = [
-  { key: 'signer', label: 'Signé', etatId: 13 },
+  { key: 'signer', label: 'Visité : Signé', etatId: 13 },
   {
     key: 'honore_veut_reflechir',
-    label: 'Honoré veut réfléchir',
+    label: 'Visité : Veut réfléchir (R2 potentiel)',
     etatId: 9,
     legacyKeys: ['deballé_réfléchir'],
   },
   {
     key: 'honore_pas_interesse',
-    label: 'Honoré pas intéressé',
+    label: 'Visité : Pas intéressé',
     etatId: 12,
     legacyKeys: ['deballé_sans_suite'],
   },
   {
     key: 'honore_infinancable',
-    label: 'Honoré infinançable',
+    label: 'Visité : Infinançable',
     etatId: 34,
     legacyKeys: ['infinançable'],
   },
   {
     key: 'honore_infaisabilite_technique',
-    label: 'Honoré infaisabilité technique',
+    label: 'Visité : Infaisabilité technique',
     etatId: 35,
     legacyKeys: ['infaisabilité_technique'],
   },
   {
     key: 'porte',
-    label: 'Porte',
+    label: 'Visité : Porte, client absent',
     etatId: 8,
     annulerReproSimple: true,
   },
   {
     key: 'telephone_imprevu_annuler',
-    label: 'Téléphone: Imprévu/Annuler',
+    label: 'Appel : Imprévu / Annulation',
     etatId: 8,
     annulerReproSimple: true,
   },
   {
     key: 'nrp',
-    label: 'NRP',
+    label: 'RDV non validé : toujours NRP',
     etatId: 8,
     annulerReproSimple: true,
   },
   {
     key: 'rdv_valide_non_faisable',
-    label: 'RDV validé non faisable',
+    label: 'RDV validé : pas faisable',
     etatId: 8,
     annulerReproSimple: true,
   },
@@ -73,10 +73,10 @@ export function getCompteRenduOptionByKey(optionKey) {
 export function getCompteRenduOptionLabel(optionKey, etatId = null) {
   const opt = getCompteRenduOptionByKey(optionKey);
   if (opt) return opt.label;
-  if ([13, 44, 45].includes(Number(etatId))) return 'Signé';
+  if ([13, 44, 45].includes(Number(etatId))) return 'Visité : Signé';
   const byEtat = COMPTE_RENDU_COMMERCIAL_OPTIONS.find((o) => o.etatId === Number(etatId) && !o.annulerReproSimple);
   if (byEtat) return byEtat.label;
-  if (Number(etatId) === 8) return 'Porte';
+  if (Number(etatId) === 8) return 'Visité : Porte, client absent';
   return null;
 }
 
