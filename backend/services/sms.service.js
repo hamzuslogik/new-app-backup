@@ -142,7 +142,7 @@ async function getDefaultSMSProvider() {
  * @param {Object} ficheData - Données optionnelles de la fiche (nom, prenom, etc.)
  * @returns {Promise<Object>} Résultat de l'envoi
  */
-async function sendSMSViaProvider(provider, tel, message, from = 'RAPPEL', ficheData = null) {
+async function sendSMSViaProvider(provider, tel, message, from = '58629', ficheData = null) {
   try {
     // Formater le numéro de téléphone en format international +33
     let formattedTel = tel;
