@@ -142,7 +142,7 @@ async function getDefaultSMSProvider() {
  * @param {Object} ficheData - Données optionnelles de la fiche (nom, prenom, etc.)
  * @returns {Promise<Object>} Résultat de l'envoi
  */
-async function sendSMSViaProvider(provider, tel, message, from = '58629', ficheData = null) {
+async function sendSMSViaProvider(provider, tel, message, from = 'RAPPEL', ficheData = null) {
   try {
     // Formater le numéro de téléphone en format international +33
     let formattedTel = tel;
@@ -421,7 +421,7 @@ async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
     const requestBody = {
       recipients: [recipient],
       text: processedMessage, // Le message avec mention STOP si nécessaire
-      sender: from || '58629'
+      sender: from || 'RAPPEL'
     };
 
     // Log détaillé pour vérifier que la mention STOP est bien présente
