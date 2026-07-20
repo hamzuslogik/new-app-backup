@@ -421,7 +421,7 @@ async function sendViaOctopush(provider, tel, message, from, ficheData = null) {
     const requestBody = {
       recipients: [recipient],
       text: processedMessage, // Le message avec mention STOP si nécessaire
-      sender: from || 'RAPPEL'
+      sender: from || '58629'
     };
 
     // Log détaillé pour vérifier que la mention STOP est bien présente
