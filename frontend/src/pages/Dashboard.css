@@ -2717,6 +2717,12 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   text-overflow: ellipsis !important;
 }
 
+/* Cellules planning : laisser visible le bouton + (position absolute) */
+.fiche-detail-modal-content .planning-table td.planning-cell {
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
 /* Sur mobile, permettre aux cellules de garder leur contenu visible */
 @media (max-width: 768px) {
   .fiche-detail-modal-content .planning-table th,
@@ -2939,6 +2945,23 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   width: auto !important;
   min-width: auto !important;
   font-weight: 600 !important;
+}
+
+/* Bouton + du planning : ne pas écraser largeur/hauteur/cercle (sinon invisible / déformé) */
+.fiche-detail-modal-content button.planning-create-btn {
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  max-width: 34px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: #8BC34A !important;
+  color: #000 !important;
+  font-size: 24px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  z-index: 12 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
 }
 
 .fiche-detail-modal-content:focus {

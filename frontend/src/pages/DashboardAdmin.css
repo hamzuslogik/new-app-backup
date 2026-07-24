@@ -1831,12 +1831,18 @@ body.dashboard-admin-page {
 
 
 
-/* Ajuster les colonnes pour qu'elles s'adaptent Ã  la largeur */
+/* Ajuster les colonnes pour qu'elles s'adaptent à la largeur */
 .fiche-detail-modal-content .planning-table th,
 .fiche-detail-modal-content .planning-table td {
   box-sizing: border-box !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+}
+
+/* Cellules planning : laisser visible le bouton + */
+.fiche-detail-modal-content .planning-table td.planning-cell {
+  overflow: visible !important;
+  text-overflow: clip !important;
 }
 
 /* Sur mobile, permettre aux cellules de garder leur contenu visible */
@@ -2000,6 +2006,23 @@ body.dashboard-admin-page {
   width: auto !important;
   min-width: auto !important;
   font-weight: 600 !important;
+}
+
+/* Bouton + du planning : ne pas écraser largeur/hauteur/cercle */
+.fiche-detail-modal-content button.planning-create-btn {
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  max-width: 34px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: #8BC34A !important;
+  color: #000 !important;
+  font-size: 24px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  z-index: 12 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
 }
 
 .fiche-detail-modal-content:focus {
