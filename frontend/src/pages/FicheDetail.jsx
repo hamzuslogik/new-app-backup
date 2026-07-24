@@ -66,14 +66,6 @@ function resolveDetailsEtudeForFiche(fiche) {
   return String(fiche?.conf_details_etude ?? '').trim() || null;
 }
 
-function shouldShowDetailsEtudeInFiche(fiche) {
-  const dejaEtude =
-    fiche?.etude === 'OUI' ||
-    fiche?.conf_deja_etude === 'OUI' ||
-    fiche?.conf_deja_fait_etude === 'OUI';
-  return dejaEtude || hasConfValue(fiche?.details_etude) || hasConfValue(fiche?.conf_details_etude);
-}
-
 function normalizeDetailItemLabel(s) {
   return String(s ?? '')
     .replace(/\u00a0/g, ' ')
@@ -3358,13 +3350,13 @@ const FicheDetail = ({
                     { value: 'OUI', label: 'Oui' },
                     { value: 'NON', label: 'Non' }
                   ])}
-              {shouldShowDetailsEtudeInFiche(fiche) &&
-                renderField(
-                  'Détails étude',
-                  'details_etude',
-                  resolveDetailsEtudeForFiche(fiche) || '-',
-                  'textarea'
-                )}
+              {/* Visible pour toutes les sessions (modal / page détail fiche) */}
+              {renderField(
+                'Détails étude',
+                'details_etude',
+                resolveDetailsEtudeForFiche(fiche) || '-',
+                'textarea'
+              )}
               {renderField(
                 'Mode de chauffage',
                 'mode_chauffage',
