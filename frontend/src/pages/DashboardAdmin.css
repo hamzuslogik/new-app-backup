@@ -1835,10 +1835,18 @@ body.dashboard-admin-page {
   text-overflow: ellipsis !important;
 }
 
-/* Cellules planning : laisser visible le bouton + */
+/* Cellules planning : clipper le contenu absolute pour qu'il suive le scroll */
 .fiche-detail-modal-content .planning-table td.planning-cell {
-  overflow: visible !important;
+  position: relative !important;
+  overflow: hidden !important;
   text-overflow: clip !important;
+  contain: paint !important;
+}
+
+.fiche-detail-modal-content .planning-table td.planning-cell .availability-info,
+.fiche-detail-modal-content .planning-table td.planning-cell .planning-slot-dashboard-link,
+.fiche-detail-modal-content .planning-table td.planning-cell .planning-create-btn {
+  position: absolute !important;
 }
 
 /* Sur mobile, permettre aux cellules de garder leur contenu visible */

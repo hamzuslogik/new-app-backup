@@ -2728,28 +2728,47 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   text-overflow: ellipsis !important;
 }
 
-/* Cellules planning : laisser visible le bouton + (position absolute) */
+/* Cellules planning : clipper le contenu absolute pour qu'il suive le scroll */
 .fiche-detail-modal-content .planning-table td.planning-cell {
-  overflow: visible !important;
+  position: relative !important;
+  overflow: hidden !important;
   text-overflow: clip !important;
+  contain: paint !important;
 }
 
-/* Sur mobile, permettre aux cellules de garder leur contenu visible */
+.fiche-detail-modal-content .planning-table td.planning-cell .availability-info,
+.fiche-detail-modal-content .planning-table td.planning-cell .planning-slot-dashboard-link,
+.fiche-detail-modal-content .planning-table td.planning-cell .planning-create-btn {
+  position: absolute !important;
+}
+
 @media (max-width: 768px) {
   .fiche-detail-modal-content .planning-table th,
   .fiche-detail-modal-content .planning-table td {
-    overflow: visible !important; /* Permettre le contenu de déborder pour le scroll horizontal */
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .fiche-detail-modal-content .planning-table td.planning-cell {
+    overflow: hidden !important;
     text-overflow: clip !important;
-    white-space: nowrap !important; /* Empêcher le texte de se couper en plusieurs lignes */
+    white-space: normal !important;
   }
 }
 
 @media (max-width: 480px) {
   .fiche-detail-modal-content .planning-table th,
   .fiche-detail-modal-content .planning-table td {
-    overflow: visible !important; /* Permettre le contenu de déborder pour le scroll horizontal */
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .fiche-detail-modal-content .planning-table td.planning-cell {
+    overflow: hidden !important;
     text-overflow: clip !important;
-    white-space: nowrap !important; /* Empêcher le texte de se couper en plusieurs lignes */
+    white-space: normal !important;
   }
 }
 

@@ -760,7 +760,7 @@
   position: absolute;
   top: 4px;
   right: 4px;
-  z-index: 12;
+  z-index: 7;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -773,6 +773,12 @@
   line-height: 1;
   font-size: 13px;
   text-decoration: none;
+}
+
+.planning-view .planning-cell,
+.planning-table td.planning-cell {
+  position: relative;
+  overflow: hidden;
 }
 .planning-slot-dashboard-link:hover {
   color: #084298;
@@ -922,13 +928,19 @@
   position: absolute;
   top: 5px;
   left: 5px;
-  right: 5px;
-  z-index: 10;
+  right: auto;
+  z-index: 6;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
+  max-width: calc(100% - 28px);
+  pointer-events: none;
+}
+
+.availability-info .availability-badge {
+  pointer-events: auto;
 }
 
 .availability-r2-star {
