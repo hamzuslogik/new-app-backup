@@ -1797,32 +1797,28 @@ body.dashboard-admin-page {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+  overflow: hidden !important;
 }
-
-/* Sur mobile, permettre le scroll horizontal pour afficher la largeur complÃ¨te du tableau */
-
-
-
 
 .fiche-detail-modal-content .planning-table-container {
+  overflow: auto !important;
   overflow-x: auto !important;
+  overflow-y: auto !important;
   width: 100% !important;
   max-width: 100% !important;
+  max-height: min(65dvh, 560px) !important;
   box-sizing: border-box !important;
-  -webkit-overflow-scrolling: touch !important; /* Smooth scrolling sur iOS */
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
-/* Sur mobile, assurer que le conteneur permet le scroll horizontal */
-
-
-
-
-/* Forcer le tableau Ã  s'adapter Ã  la largeur disponible */
+/* Tableau plus large → scroll horizontal interne */
 .fiche-detail-modal-content .planning-table {
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
-  table-layout: fixed !important;
+  width: max-content !important;
+  max-width: none !important;
+  min-width: 900px !important;
+  table-layout: auto !important;
   box-sizing: border-box !important;
 }
 

@@ -2634,78 +2634,89 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+  min-height: 0 !important;
+}
+
+.fiche-detail-modal-content .planning-tab-body {
+  min-height: 0 !important;
 }
 
 .fiche-detail-modal-content .planning-view {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-  overflow: visible !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
   overscroll-behavior: none !important;
 }
 
+/* Grille planning : scroll H + V à l'intérieur du conteneur */
 .fiche-detail-modal-content .planning-table-container {
   overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
+  max-height: min(65dvh, 560px) !important;
   box-sizing: border-box !important;
-  overscroll-behavior: none !important;
+  overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 @media (max-width: 768px) {
   .fiche-detail-modal-content .planning-view {
-    overflow: visible !important;
+    overflow: hidden !important;
     overscroll-behavior: none !important;
   }
 
   .fiche-detail-modal-content .planning-table-container {
     overflow: auto !important;
-    overscroll-behavior: none !important;
+    max-height: min(60dvh, 520px) !important;
+    overscroll-behavior: contain !important;
     touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
 
 @media (max-width: 480px) {
   .fiche-detail-modal-content .planning-view {
-    overflow: visible !important;
+    overflow: hidden !important;
     overscroll-behavior: none !important;
   }
 
   .fiche-detail-modal-content .planning-table-container {
     overflow: auto !important;
-    overscroll-behavior: none !important;
+    max-height: min(55dvh, 480px) !important;
+    overscroll-behavior: contain !important;
     touch-action: pan-x pan-y pinch-zoom !important;
   }
 }
 
-/* Forcer le tableau à s'adapter à la largeur disponible */
+/* Tableau plus large que le modal → scroll horizontal interne */
 .fiche-detail-modal-content .planning-table {
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
-  table-layout: fixed !important;
+  width: max-content !important;
+  min-width: 900px !important;
+  max-width: none !important;
+  table-layout: auto !important;
   box-sizing: border-box !important;
 }
 
-/* Sur mobile, permettre au tableau de garder sa largeur minimale pour afficher selon la largeur du tableau */
 @media (max-width: 768px) {
   .fiche-detail-modal-content .planning-table {
-    min-width: 800px !important; /* Garder la largeur minimale du tableau comme en desktop */
-    width: auto !important; /* Ne pas forcer 100%, laisser le tableau garder sa largeur naturelle */
-    max-width: none !important; /* Pas de limite de largeur maximale */
-    table-layout: auto !important; /* Permettre au tableau de s'adapter à son contenu */
+    min-width: 900px !important;
+    width: max-content !important;
+    max-width: none !important;
+    table-layout: auto !important;
   }
 }
 
 @media (max-width: 480px) {
   .fiche-detail-modal-content .planning-table {
-    min-width: 800px !important; /* Garder la largeur minimale du tableau comme en desktop */
-    width: auto !important; /* Ne pas forcer 100%, laisser le tableau garder sa largeur naturelle */
-    max-width: none !important; /* Pas de limite de largeur maximale */
-    table-layout: auto !important; /* Permettre au tableau de s'adapter à son contenu */
+    min-width: 900px !important;
+    width: max-content !important;
+    max-width: none !important;
+    table-layout: auto !important;
   }
 }
 
@@ -4656,10 +4667,24 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-nat
 }
 
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content .fiche-sections,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content .planning-tab,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content .planning-view {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content .planning-tab {
   overflow: visible !important;
   max-height: none !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content .planning-view {
+  overflow: hidden !important;
+  max-height: none !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--mobile-native:not(.dashboard-page--table-desktop-view).fiche-detail-modal-open .fiche-detail-modal-content .planning-table-container {
+  max-height: min(55dvh, 480px) !important;
+  overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 /* Vue tableau iOS : conteneur margé, scroll interne */
@@ -4736,14 +4761,29 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
 
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .planning-table,
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .planning-table-container {
-  min-width: 0 !important;
+  min-width: 900px !important;
+  width: max-content !important;
+  max-width: none !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .planning-table-container {
   width: 100% !important;
   max-width: 100% !important;
-  overflow-x: hidden !important;
+  min-width: 0 !important;
+  max-height: min(65dvh, 560px) !important;
+  overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .planning-table {
-  table-layout: fixed !important;
+  table-layout: auto !important;
+  min-width: 900px !important;
+  width: max-content !important;
+  max-width: none !important;
 }
 
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content--viewport-sync .planning-table th,
@@ -4776,10 +4816,24 @@ html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desk
 }
 
 html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content .fiche-sections,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content .planning-tab,
-html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content .planning-view {
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content .planning-tab {
   overflow: visible !important;
   max-height: none !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content .planning-view {
+  overflow: hidden !important;
+  max-height: none !important;
+}
+
+html:not([data-desktop-viewport]) body.dashboard-page.dashboard-page--table-desktop-view.fiche-detail-modal-open .fiche-detail-modal-content .planning-table-container {
+  max-height: min(65dvh, 560px) !important;
+  overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 @supports (-webkit-touch-callout: none) {
