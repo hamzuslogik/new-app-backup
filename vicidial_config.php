@@ -40,6 +40,9 @@ return [
     ],
     
     // Configuration CRM (conservée pour compatibilité)
+    // api_token DOIT être un token permanent (sans claim "exp") généré via :
+    //   POST /api/auth/generate-permanent-token  ou  node backend/scripts/generate-permanent-token.js
+    // Un token "Générer un token" (session, souvent 7d) expirera — ne pas l'utiliser ici.
     'crm' => [
         'api_url' => getenv('CRM_API_URL') ?: 'https://crm.jwsgroup.fr/api',
         'api_token' => getenv('CRM_API_TOKEN') ?: ''

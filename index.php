@@ -114,6 +114,88 @@ function writeLog($message) {
     error_log("[CRM_INTEGRATION] " . $cleanMessage);
 }
 
+/**
+ * Décode le payload JWT (sans vérifier la signature) pour diagnostiquer permanent vs expire.
+ * @return array|null
+ */
+function decodeJwtPayload($jwt) {
+    if (!is_string($jwt) || $jwt === '') {
+        return null;
+    }
+    $parts = explode('.', $jwt);
+    if (count($parts) < 2) {
+        return null;
+    }
+    $payload = $parts[1];
+    $payload = strtr($payload, '-_', '+/');
+    $pad = strlen($payload) % 4;
+    if ($pad > 0) {
+        $payload .= str_repeat('=', 4 - $pad);
+    }
+    $json = base64_decode($payload, true);
+    if ($json === false) {
+        return null;
+    }
+    $data = json_decode($json, true);
+    return is_array($data) ? $data : null;
+}
+
+/**
+ * Log le type de token CRM configuré (permanent / expire / idle).
+ */
+function logConfiguredApiTokenInfo() {
+    global $CRM_CONFIG;
+    $token = $CRM_CONFIG['api_token'] ?? '';
+    if ($token === '') {
+        writeLog("TOKEN API: vide — configurez CRM_API_TOKEN ou crm.api_token dans vicidial_config.php");
+        return;
+    }
+    $payload = decodeJwtPayload($token);
+    if ($payload === null) {
+        writeLog("TOKEN API: format JWT invalide");
+        return;
+    }
+    $kind = $payload['token_kind'] ?? null;
+    $hasExp = isset($payload['exp']);
+    $bypassIdle = !empty($payload['bypass_idle_timeout']);
+    $userId = $payload['userId'] ?? ($payload['sub'] ?? '?');
+
+    if ($hasExp) {
+        $expTs = (int) $payload['exp'];
+        $expDate = date('Y-m-d H:i:s', $expTs);
+        $remaining = $expTs - time();
+        $remainingDays = round($remaining / 86400, 1);
+        writeLog(
+            "TOKEN API: EXPIRANT userId={$userId} exp={$expDate} restant≈{$remainingDays}j " .
+            "(ce n'est PAS un token permanent — utiliser /auth/generate-permanent-token)"
+        );
+        if ($remaining <= 0) {
+            writeLog("TOKEN API: DEJA EXPIRE depuis le {$expDate}");
+        }
+    } elseif ($kind === 'permanent' || $bypassIdle || !$hasExp) {
+        writeLog(
+            "TOKEN API: PERMANENT userId={$userId} token_kind=" . ($kind ?: 'absent') .
+            " bypass_idle=" . ($bypassIdle || !$hasExp ? 'oui' : 'non')
+        );
+    }
+}
+
+/**
+ * Extrait un message d'erreur utile depuis une réponse API JSON.
+ */
+function extractApiErrorMessage($responseBody, $httpCode) {
+    $data = @json_decode((string) $responseBody, true);
+    if (is_array($data)) {
+        $msg = $data['message'] ?? $data['error'] ?? null;
+        $code = $data['code'] ?? null;
+        if ($msg) {
+            return $code ? "{$msg} [code={$code}]" : $msg;
+        }
+    }
+    $snippet = substr(preg_replace('/\s+/', ' ', (string) $responseBody), 0, 200);
+    return $snippet !== '' ? $snippet : ("HTTP {$httpCode}");
+}
+
 function connectVicidialDB() {
     global $VICIDIAL_CONFIG;
     
@@ -226,7 +308,7 @@ function getListFromAPI($endpoint) {
         CURLOPT_SSL_VERIFYHOST => 2,
         CURLOPT_TIMEOUT => 10,
         CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_FAILONERROR => true
+        CURLOPT_FAILONERROR => false
     ]);
     
     $response = curl_exec($ch);
@@ -244,7 +326,7 @@ function getListFromAPI($endpoint) {
     writeLog("Reponse HTTP: " . $httpCode);
     
     if ($httpCode !== 200) {
-        writeLog("ERREUR: Code HTTP " . $httpCode);
+        writeLog("ERREUR API {$endpoint}: HTTP {$httpCode} — " . extractApiErrorMessage($response, $httpCode));
         return [];
     }
     
@@ -309,7 +391,7 @@ function getUserByPseudo($pseudo) {
         CURLOPT_SSL_VERIFYHOST => 2,
         CURLOPT_TIMEOUT => 10,
         CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_FAILONERROR => true
+        CURLOPT_FAILONERROR => false
     ]);
     
     $response = curl_exec($ch);
@@ -327,7 +409,7 @@ function getUserByPseudo($pseudo) {
     writeLog("Reponse HTTP getUserByPseudo: " . $httpCode);
     
     if ($httpCode !== 200) {
-        writeLog("ERREUR: Code HTTP " . $httpCode . " pour getUserByPseudo");
+        writeLog("ERREUR getUserByPseudo: HTTP {$httpCode} — " . extractApiErrorMessage($response, $httpCode));
         return null;
     }
     
@@ -404,6 +486,9 @@ function authenticateAgentInVicidial($agentPseudo, $agentPass) {
         return false;
     }
 }
+
+// Diagnostic du token API (permanent vs expire) — une fois les helpers disponibles
+logConfiguredApiTokenInfo();
 
 // ============================================
 // 5. TRAITEMENT DE LA CONNEXION
@@ -782,7 +867,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             CURLOPT_SSL_VERIFYPEER => true, // Sécurité
             CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_TIMEOUT => 30,
-            CURLOPT_FAILONERROR => true
+            CURLOPT_FAILONERROR => false
         ]);
         
         $response = curl_exec($ch);
@@ -796,6 +881,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         curl_close($ch);
         
         writeLog("Reponse HTTP creation fiche: " . $httpCode);
+        if ($httpCode === 401 || $httpCode === 403) {
+            writeLog("ERREUR AUTH creation fiche: " . extractApiErrorMessage($response, $httpCode));
+        }
         
         $responseData = @json_decode($response, true);
         

@@ -89,7 +89,12 @@ const authenticate = async (req, res, next) => {
     }
 
     // Inactivité : même durée que session_lifetime, sauf tokens permanents (API)
-    const isPermanentToken = decoded?.token_kind === 'permanent' || decoded?.bypass_idle_timeout === true;
+    // - token_kind / bypass_idle_timeout : tokens générés via /generate-permanent-token
+    // - absence de claim `exp` : anciens tokens « sans expiration » (rétrocompatibilité)
+    const isPermanentToken =
+      decoded?.token_kind === 'permanent' ||
+      decoded?.bypass_idle_timeout === true ||
+      decoded?.exp == null;
     if (!isPermanentToken) {
       await ensureUserActivityTable();
       const sec = await getSecuritySettings();
