@@ -731,7 +731,6 @@ $startTime = microtime(true);
 
 $typeContrats = getListFromAPIWithCache('type-contrat');
 $produits = getListFromAPIWithCache('produits');
-$modeChauffages = getListFromAPIWithCache('mode-chauffage');
 
 $apiTime = round((microtime(true) - $startTime) * 1000, 2);
 writeLog("Temps total API/cache: " . $apiTime . "ms");
@@ -739,9 +738,8 @@ writeLog("Temps total API/cache: " . $apiTime . "ms");
 // Vérifier si les données sont valides
 if (!is_array($typeContrats)) $typeContrats = [];
 if (!is_array($produits)) $produits = [];
-if (!is_array($modeChauffages)) $modeChauffages = [];
 
-writeLog("Resultats: Contrats=" . count($typeContrats) . ", Produits=" . count($produits) . ", Chauffages=" . count($modeChauffages));
+writeLog("Resultats: Contrats=" . count($typeContrats) . ", Produits=" . count($produits));
 
 // Récupérer l'utilisateur par pseudo depuis l'API CRM
 if (!empty($agent)) {
@@ -1227,14 +1225,7 @@ if (isset($_SESSION['error_message'])) {
                     <!-- Champs spécifiques PAC -->
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Mode de Chauffage</label>
-                        <select name="mode_chauffage">
-                            <option value="">-- Sélectionner --</option>
-                            <?php foreach ($modeChauffages as $mode): ?>
-                                <option value="<?php echo htmlspecialchars($mode['nom'] ?? ''); ?>">
-                                    <?php echo htmlspecialchars($mode['nom'] ?? ''); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <textarea name="mode_chauffage" rows="3" placeholder="Ex: Gaz, électrique, fioul..."></textarea>
                     </div>
                     <div class="form-group champ-pac" style="display: none;">
                         <label>Surface Chauffée (m²)</label>
