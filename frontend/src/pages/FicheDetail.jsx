@@ -1566,7 +1566,7 @@ const FicheDetail = ({
         date_appel_date: `${yyyy}-${mm}-${dd}`,
         date_appel_time: `${hh}:${min}`,
         id_sous_etat: '',
-        conf_commentaire_produit: ficheData.conf_commentaire_produit || '',
+        conf_commentaire_produit: '',
       });
     }
   }, [ficheData, selectedEtat]);
@@ -2368,6 +2368,8 @@ const FicheDetail = ({
         ...prev,
         date_appel_date: `${yyyy}-${mm}-${dd}`,
         date_appel_time: `${hh}:${min}`,
+        id_sous_etat: '',
+        conf_commentaire_produit: '',
       }));
     }
     // Si l'état est 7 (confirmer), initialiser les valeurs du formulaire depuis la fiche (tous les conf_*)
@@ -6877,13 +6879,9 @@ const FicheDetail = ({
                     value={nrpFormData.id_sous_etat}
                     onChange={(e) => {
                       const selectedId = e.target.value;
-                      const selectedSousEtat = sousEtats.find(se => String(se.id) === String(selectedId));
                       setNrpFormData({
                         ...nrpFormData,
                         id_sous_etat: selectedId,
-                        // Préremplit le commentaire avec le sous-état choisi.
-                        // Le confirmateur peut ensuite le modifier librement.
-                        conf_commentaire_produit: selectedSousEtat?.titre || ''
                       });
                     }}
                   >
