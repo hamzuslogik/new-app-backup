@@ -1023,26 +1023,29 @@ const FicheDetail = ({
     }
   }, [sousEtats, compteRenduOption, selectedEtat]);
 
-  // NRP (2) : sous-état et commentaire par défaut = "Appel raccroché"
+  // NRP (2) : sous-état par défaut = "Répondeur"
   useEffect(() => {
     if (selectedEtat !== 2 || !Array.isArray(sousEtats) || sousEtats.length === 0) return;
 
+    const normalize = (s) =>
+      String(s || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
     const defaultSousEtat = sousEtats.find((se) =>
-      (se?.titre || '').toLowerCase().includes('raccroch')
+      normalize(se?.titre).includes('repondeur')
     );
 
     if (!defaultSousEtat) return;
 
     setNrpFormData((prev) => {
-      // Ne pas écraser un choix/saisie déjà fait
+      // Ne pas écraser un choix déjà fait
       if ((prev.id_sous_etat || '').toString().trim()) return prev;
 
       return {
         ...prev,
         id_sous_etat: String(defaultSousEtat.id),
-        conf_commentaire_produit: (prev.conf_commentaire_produit || '').trim()
-          ? prev.conf_commentaire_produit
-          : (defaultSousEtat.titre || 'Appel raccroché')
       };
     });
   }, [selectedEtat, sousEtats]);
@@ -2596,18 +2599,17 @@ const FicheDetail = ({
         }
       }
 
-      // Validation : commentaire obligatoire lorsque le formulaire le propose (11 et 12 : commentaire facultatif)
+      // Validation : commentaire obligatoire lorsque le formulaire le propose
+      // (11 et 12 : commentaire facultatif ; NRP (2) : commentaire facultatif)
       // Session commercial : le champ « Compte rendu » alimente conf_commentaire_produit
-      const etatsAvecCommentaire = [2, 8, 9, 19, 23, 34, 13, 44, 45, 16, 38, 35];
+      const etatsAvecCommentaire = [8, 9, 19, 23, 34, 13, 44, 45, 16, 38, 35];
       if (etatsAvecCommentaire.includes(selectedEtat)) {
         const comment =
-          selectedEtat === 2
-            ? (nrpFormData.conf_commentaire_produit || '').trim()
-            : (
-                etatFormData.conf_commentaire_produit ||
-                etatFormData.motif_qualif ||
-                ''
-              ).trim();
+          (
+            etatFormData.conf_commentaire_produit ||
+            etatFormData.motif_qualif ||
+            ''
+          ).trim();
         if (!comment) {
           alert('Veuillez saisir un commentaire.');
           return;
