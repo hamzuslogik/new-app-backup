@@ -13,6 +13,49 @@ function formatAgentQualificationDisplayName(u) {
 }
 
 /**
+ * Normalise les alias ID fiche pour les templates ({fiche_id}, {id_fiche}, {fiche.id}).
+ */
+function resolveFicheIdFromEvent(eventData) {
+  if (!eventData || typeof eventData !== 'object') return null;
+  const raw =
+    eventData.fiche?.id ??
+    eventData.fiche_id ??
+    eventData.id_fiche ??
+    null;
+  if (raw == null || raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : raw;
+}
+
+/**
+ * Ajoute fiche_id / id_fiche en racine (alias) et charge la fiche si seul l'ID est fourni.
+ */
+async function ensureFicheOnEventData(eventData) {
+  if (!eventData || typeof eventData !== 'object') return eventData;
+
+  let fiche = eventData.fiche || null;
+  let ficheId = resolveFicheIdFromEvent(eventData);
+
+  if (!fiche && ficheId != null) {
+    fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [ficheId]);
+    if (fiche) {
+      ficheId = resolveFicheIdFromEvent({ fiche }) ?? ficheId;
+    }
+  }
+
+  if (fiche && (ficheId == null || ficheId === '')) {
+    ficheId = resolveFicheIdFromEvent({ fiche });
+  }
+
+  return {
+    ...eventData,
+    fiche: fiche || eventData.fiche,
+    fiche_id: ficheId,
+    id_fiche: ficheId
+  };
+}
+
+/**
  * Ajoute pseudo / nom affichage pour l'agent qualification selon le déclencheur
  * (remarque → destinataire ; alerte KO → id_agent fiche ; fiche KO → id_agent fiche).
  */
@@ -28,6 +71,9 @@ async function enrichWorkflowEventData(triggerType, eventData) {
   };
 
   try {
+    // Toujours exposer fiche_id / id_fiche (utilisés dans SQL / templates PHP historiques)
+    eventData = await ensureFicheOnEventData(eventData);
+
     if (triggerType === 'remarque_created' && eventData.remarque && eventData.remarque.id_destinataire) {
       const u = await loadUser(eventData.remarque.id_destinataire);
       const nomAff = formatAgentQualificationDisplayName(u);
@@ -1291,21 +1337,23 @@ async function executeSQLAction(config, eventData) {
     throw new Error('La requête SQL est requise pour l\'action execute_sql');
   }
 
-  if (!eventData.fiche && eventData.fiche_id) {
-    eventData.fiche = await queryOne('SELECT * FROM fiches WHERE id = ?', [eventData.fiche_id]);
-  }
+  eventData = await ensureFicheOnEventData(eventData);
 
   const sqlTrimmed = sqlTemplate.trim();
   const regex = /\{([^}]+)\}/g;
   const parts = [];
   const params = [];
+  const resolvedVars = [];
   let lastIndex = 0;
   let m;
 
   while ((m = regex.exec(sqlTrimmed)) !== null) {
     parts.push(sqlTrimmed.slice(lastIndex, m.index));
-    const value = getSQLVariableValue(m[1].trim(), eventData);
-    params.push(value !== null && value !== undefined ? value : null);
+    const varName = m[1].trim();
+    const value = getSQLVariableValue(varName, eventData);
+    const param = value !== null && value !== undefined ? value : null;
+    params.push(param);
+    resolvedVars.push({ var: varName, value: param });
     lastIndex = regex.lastIndex;
   }
   parts.push(sqlTrimmed.slice(lastIndex));
@@ -1317,7 +1365,29 @@ async function executeSQLAction(config, eventData) {
   }
 
   console.log('[WORKFLOW] execute_sql - Requête exécutée:', sql);
+  console.log('[WORKFLOW] execute_sql - Variables résolues:', JSON.stringify(resolvedVars));
   console.log('[WORKFLOW] execute_sql - Paramètres:', JSON.stringify(params));
+  console.log('[WORKFLOW] execute_sql - Contexte fiche:', {
+    has_fiche: !!eventData.fiche,
+    fiche_id: eventData.fiche_id,
+    fiche_dot_id: eventData.fiche?.id
+  });
+
+  const nullVars = resolvedVars.filter((v) => v.value === null || v.value === undefined);
+  if (nullVars.length > 0) {
+    const names = nullVars.map((v) => v.var).join(', ');
+    console.error(`[WORKFLOW] execute_sql - variable(s) null: ${names}`);
+    // Empêcher UPDATE/DELETE avec un ID fiche manquant (ex. WHERE id = {fiche_id})
+    const isWrite = /^\s*(UPDATE|DELETE|INSERT)\b/i.test(sqlTrimmed);
+    const touchesFicheId = nullVars.some((v) =>
+      /^(fiche_id|id_fiche|fiche\.id)$/i.test(String(v.var).trim())
+    );
+    if (isWrite && touchesFicheId) {
+      throw new Error(
+        `execute_sql annulé: variable(s) fiche ID null (${names}). Utilisez {fiche.id} ou {fiche_id} avec une fiche présente.`
+      );
+    }
+  }
 
   const result = await dbQuery(sql, params);
   const isArray = Array.isArray(result);
@@ -1454,29 +1524,48 @@ function evaluateCondition(fieldValue, operator, compareValue) {
  */
 function getFieldValue(field, eventData) {
   console.log(`[WORKFLOW] getFieldValue - Champ demandé:`, field);
-  
+
+  if (!field || typeof field !== 'string') {
+    return null;
+  }
+
+  const trimmed = field.trim();
+
+  // Alias historiques / PHP : {fiche_id}, {id_fiche} → même valeur que fiche.id
+  if (trimmed === 'fiche_id' || trimmed === 'id_fiche') {
+    const id = resolveFicheIdFromEvent(eventData);
+    console.log(`[WORKFLOW] getFieldValue - alias ${trimmed} →`, id);
+    return id;
+  }
+
   // Support pour notation pointée (ex: fiche.id_etat_final)
-  const parts = field.split('.');
+  const parts = trimmed.split('.');
   console.log(`[WORKFLOW] getFieldValue - Parties du champ:`, parts);
-  
+
   let value = eventData;
   console.log(`[WORKFLOW] getFieldValue - Valeur initiale (eventData):`, {
-    has_fiche: !!eventData.fiche,
-    fiche_id: eventData.fiche?.id,
-    has_user: !!eventData.user,
-    user_id: eventData.user?.id,
-    has_changes: !!eventData.changes
+    has_fiche: !!eventData?.fiche,
+    fiche_id: eventData?.fiche_id ?? eventData?.fiche?.id,
+    has_user: !!eventData?.user,
+    user_id: eventData?.user?.id,
+    has_changes: !!eventData?.changes
   });
-  
+
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     console.log(`[WORKFLOW] getFieldValue - Partie ${i + 1}/${parts.length}:`, part);
     console.log(`[WORKFLOW] getFieldValue - Valeur actuelle:`, value, `(type: ${typeof value})`);
-    
+
     if (value && typeof value === 'object' && part in value) {
       value = value[part];
       console.log(`[WORKFLOW] getFieldValue - Valeur après accès à "${part}":`, value, `(type: ${typeof value})`);
     } else {
+      // Fallback: fiche.id si fiche_id racine existe mais objet fiche absent/incomplet
+      if (i === 0 && part === 'fiche' && resolveFicheIdFromEvent(eventData) != null && parts[1] === 'id') {
+        const id = resolveFicheIdFromEvent(eventData);
+        console.log(`[WORKFLOW] getFieldValue - fallback fiche.id via fiche_id →`, id);
+        return id;
+      }
       console.log(`[WORKFLOW] getFieldValue - ❌ Impossible d'accéder à "${part}" - retourne null`);
       console.log(`[WORKFLOW] getFieldValue - Valeur actuelle:`, value);
       console.log(`[WORKFLOW] getFieldValue - Type de valeur:`, typeof value);
@@ -1485,7 +1574,7 @@ function getFieldValue(field, eventData) {
       return null;
     }
   }
-  
+
   console.log(`[WORKFLOW] getFieldValue - ✅ Valeur finale pour "${field}":`, value, `(type: ${typeof value})`);
   return value;
 }

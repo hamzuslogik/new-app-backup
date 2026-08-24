@@ -1663,6 +1663,7 @@ const WorkflowsTab = () => {
                           <strong>Variables disponibles (utiliser entre accolades) :</strong>
                           <ul style={{ margin: '8px 0 0 16px', padding: 0 }}>
                             <li><code>{'{fiche.id}'}</code> — ID de la fiche</li>
+                            <li><code>{'{fiche_id}'}</code> / <code>{'{id_fiche}'}</code> — alias de l&apos;ID fiche</li>
                             <li><code>{'{fiche.id_confirmateur}'}</code> — Confirmateur principal</li>
                             <li><code>{'{fiche.id_confirmateur_2}'}</code> — Confirmateur 2</li>
                             <li><code>{'{fiche.id_confirmateur_3}'}</code> — Confirmateur 3</li>

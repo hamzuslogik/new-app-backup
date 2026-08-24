@@ -123,6 +123,8 @@ const triggerWorkflowOnFicheUpdated = async (req, res, next) => {
             }
             executeWorkflow('etat_changed', {
               fiche,
+              fiche_id: fiche.id,
+              id_fiche: fiche.id,
               user: req.user,
               old_etat: oldEtatNum, // Passer en nombre
               new_etat: newEtatNum, // Passer en nombre
@@ -206,6 +208,8 @@ const triggerWorkflowOnEtatChanged = async (req, res, next) => {
           }
           executeWorkflow('etat_changed', {
             fiche,
+            fiche_id: fiche.id,
+            id_fiche: fiche.id,
             user: req.user,
             old_etat: oldEtatNum, // Passer en nombre
             new_etat: newEtatNum, // Passer en nombre
