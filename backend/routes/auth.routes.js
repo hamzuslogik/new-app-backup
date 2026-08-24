@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { query, queryOne } = require('../config/database');
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
@@ -20,11 +19,11 @@ const {
   normalizeBackupCodeInput,
   verifyAndConsumeBackupCode
 } = require('../utils/codesSecoursHelper');
-
-// Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
-const hashPassword = (password) => {
-  return crypto.createHash('sha256').update(password).digest('hex');
-};
+const {
+  hashPassword,
+  verifyPassword,
+  verifyPasswordAndUpgrade
+} = require('../utils/passwordHash');
 
 async function sendLoginSuccess(res, user, req, { bypassIpCheck = false } = {}) {
   const securitySettings = await getSecuritySettings();
@@ -150,9 +149,8 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Vérifier le mot de passe (hashé avec SHA-256)
-    const hashedPassword = hashPassword(password);
-    const isPasswordValid = user.mdp === hashedPassword;
+    // Vérifier le mot de passe (bcrypt PHP password_hash OU ancien SHA-256)
+    const isPasswordValid = await verifyPasswordAndUpgrade(password, user.mdp, user.id, query);
 
     if (!isPasswordValid) {
       await logConnexionEchouee({
@@ -428,14 +426,14 @@ router.post('/change-password', authenticate, async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
     }
-    const currentHashed = hashPassword(currentPassword);
-    if (user.mdp !== currentHashed) {
+    const currentOk = await verifyPassword(currentPassword, user.mdp);
+    if (!currentOk.ok) {
       return res.status(400).json({
         success: false,
         message: 'Mot de passe actuel incorrect'
       });
     }
-    const newHashed = hashPassword(newPassword);
+    const newHashed = await hashPassword(newPassword);
     await query('UPDATE utilisateurs SET mdp = ? WHERE id = ?', [newHashed, req.user.id]);
     res.json({
       success: true,

@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
@@ -8,6 +7,7 @@ const XLSX = require('xlsx');
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const { query, queryOne, transaction } = require('../config/database');
 const { isValidIpRuleString } = require('../utils/ipAllowlist');
+const { hashPassword } = require('../utils/passwordHash');
 const {
   ensureGlobalSettingsTable,
   getSecuritySettings,
@@ -20,11 +20,6 @@ const {
 
 const upload = multer({ storage: multer.memoryStorage() });
 const { processKoImportFromBuffer, applyKoImportRows } = require('../utils/fichesKoImport');
-
-// Fonction pour hasher un mot de passe avec SHA-256 (compatible avec SHA2 de MySQL)
-const hashPassword = (password) => {
-  return crypto.createHash('sha256').update(password).digest('hex');
-};
 
 function parseIpRulesFromBody(body) {
   const raw = body.ips_autorisees;
@@ -718,8 +713,8 @@ router.post('/utilisateurs', authenticate, checkPermission(1, 2, 7, 11), async (
       });
     }
 
-    // Hasher le mot de passe avec SHA-256
-    const hashedPassword = hashPassword(mdp);
+    // Hasher le mot de passe (bcrypt, compatible password_verify PHP)
+    const hashedPassword = await hashPassword(mdp);
 
     // Pour la fonction 9, utiliser le premier centre de la liste si centres est fourni, sinon utiliser centre
     const centreValue = (fonction === 9 && centres && Array.isArray(centres) && centres.length > 0) 
@@ -789,8 +784,8 @@ router.put('/utilisateurs/:id', authenticate, checkPermission(1, 2, 7, 11), asyn
     if (pseudo !== undefined) { updates.push('pseudo = ?'); values.push(pseudo); }
     if (login !== undefined) { updates.push('login = ?'); values.push(login); }
     if (mdp !== undefined) { 
-      // Hasher le mot de passe avec SHA-256
-      const hashedPassword = hashPassword(mdp);
+      // Hasher le mot de passe (bcrypt, compatible password_verify PHP)
+      const hashedPassword = await hashPassword(mdp);
       updates.push('mdp = ?'); 
       values.push(hashedPassword); 
     }
