@@ -410,7 +410,7 @@ const Sidebar = ({ collapsed }) => {
       visible: true,
       // Visible pour Admin (1, 7) et Backoffice (11) ; Superviseur qualification (2) uniquement si permission accordée
       customCheck: (item, user, hasPermission) => {
-        if ([1, 7, 11].includes(user?.fonction)) return true;
+        if ([1, 7, 11].includes(Number(user?.fonction))) return true;
         return hasPermission(item.permission);
       },
     },
@@ -421,7 +421,7 @@ const Sidebar = ({ collapsed }) => {
       permission: 'management_view',
       visible: true,
       customCheck: (item, user, hasPermission) => {
-        if ([1, 7, 11].includes(user?.fonction)) return true;
+        if ([1, 7, 11].includes(Number(user?.fonction))) return true;
         return hasPermission(item.permission);
       },
     },
@@ -432,7 +432,7 @@ const Sidebar = ({ collapsed }) => {
       permission: 'config_permissions',
       visible: true,
       customCheck: (item, user, hasPermission) => {
-        if ([1, 7, 11].includes(user?.fonction)) return true;
+        if ([1, 7, 11].includes(Number(user?.fonction))) return true;
         return hasPermission(item.permission);
       },
     },

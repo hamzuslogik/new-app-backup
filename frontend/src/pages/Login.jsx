@@ -20,6 +20,11 @@ const Login = () => {
     if (reason === 'idle') {
       sessionStorage.removeItem('logoutReason');
       toast.info('Session expirée pour inactivité. Veuillez vous reconnecter.');
+    } else if (reason === 'ip') {
+      sessionStorage.removeItem('logoutReason');
+      toast.warning(
+        'Accès refusé depuis cette adresse IP. Reconnectez-vous (code de secours si demandé).'
+      );
     }
   }, []);
 
