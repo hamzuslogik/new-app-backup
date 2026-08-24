@@ -130,12 +130,6 @@ export const AuthProvider = ({ children }) => {
 
   // Helper pour vérifier une permission
   const hasPermission = (code) => {
-    // Administrateur (1) et Admin technique (7) : accès complet même si la matrice
-    // fonction_permissions a été vidée / mal configurée.
-    const f = Number(user?.fonction);
-    if (f === 1 || f === 7) {
-      return true;
-    }
     // Si les permissions ne sont pas chargées, autoriser par défaut (rétrocompatibilité)
     if (!permissions || Object.keys(permissions).length === 0) {
       return true;

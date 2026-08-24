@@ -51,18 +51,13 @@ const authenticate = async (req, res, next) => {
     }
 
     // Vérifier que la fonction et le centre sont actifs
-    // Attention: Number(null) === 0 — ne pas bloquer un LEFT JOIN null (pas de centre).
-    if (
-      (user.fonction_etat != null && Number(user.fonction_etat) === 0) ||
-      (user.centre_etat != null && Number(user.centre_etat) === 0)
-    ) {
+    if (user.fonction_etat === 0 || user.centre_etat === 0) {
       return res.status(403).json({
         success: false,
         message: 'Votre compte, fonction ou centre est désactivé'
       });
     }
 
-    const fonctionId = Number(user.fonction);
     const allowAllIp =
       user.fonction_ip_acces_tous == null || Number(user.fonction_ip_acces_tous) === 1;
     let ipRules = [];
@@ -73,15 +68,7 @@ const authenticate = async (req, res, next) => {
         ])
       ).map((r) => r.ip_rule);
     }
-    // Liste vide + mode restreint = mauvaise config (souvent après cocher « pas toutes les IP »
-    // sans saisir de règle) — ne pas verrouiller toute la fonction, surtout les admins.
-    let ipAllowed = isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req);
-    if (!allowAllIp && ipRules.length === 0) {
-      console.warn(
-        `[auth/middleware] ip_acces_tous=0 sans règle pour fonction=${fonctionId} (userId=${user.id}) — accès IP autorisé (fail-open)`
-      );
-      ipAllowed = true;
-    }
+    const ipAllowed = isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req);
     const bypassIpFromBackupCode = decoded?.bypass_ip_check === true;
 
     if (!ipAllowed && !bypassIpFromBackupCode) {
@@ -97,7 +84,6 @@ const authenticate = async (req, res, next) => {
       });
       return res.status(403).json({
         success: false,
-        code: 'IP_NON_AUTORISEE',
         message: 'Accès non autorisé depuis cette adresse IP pour votre fonction.'
       });
     }
@@ -134,12 +120,12 @@ const authenticate = async (req, res, next) => {
       await touchUserActivity(user.id);
     }
 
-    // Ajouter l'utilisateur à la requête (fonction en Number pour les contrôles includes())
+    // Ajouter l'utilisateur à la requête
     req.user = {
       id: user.id,
       login: user.login,
       pseudo: user.pseudo,
-      fonction: Number.isFinite(fonctionId) ? fonctionId : user.fonction,
+      fonction: user.fonction,
       fonction_titre: user.fonction_titre,
       centre: user.centre,
       centre_titre: user.centre_titre,
@@ -179,9 +165,7 @@ const checkPermission = (...allowedFunctions) => {
       });
     }
 
-    const userFonction = Number(req.user.fonction);
-    const allowed = allowedFunctions.map(Number);
-    if (!allowed.includes(userFonction)) {
+    if (!allowedFunctions.includes(req.user.fonction)) {
       return res.status(403).json({
         success: false,
         message: 'Accès refusé. Permissions insuffisantes.'

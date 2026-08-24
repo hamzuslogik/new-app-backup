@@ -52,7 +52,6 @@ async function sendLoginSuccess(res, user, req, { bypassIpCheck = false } = {}) 
     console.error('[auth/login] touchUserActivity:', e.message);
   }
 
-  const fonctionId = Number(user.fonction);
   res.json({
     success: true,
     message: bypassIpCheck
@@ -64,7 +63,7 @@ async function sendLoginSuccess(res, user, req, { bypassIpCheck = false } = {}) 
       id: user.id,
       login: user.login,
       pseudo: user.pseudo,
-      fonction: Number.isFinite(fonctionId) ? fonctionId : user.fonction,
+      fonction: user.fonction,
       fonction_titre: user.fonction_titre,
       centre: user.centre,
       centre_titre: user.centre_titre,
@@ -166,12 +165,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Vérifier que l'utilisateur, sa fonction et son centre sont actifs
-    // Attention: Number(null) === 0 en JS — ne pas caster un LEFT JOIN null.
-    if (
-      Number(user.etat) === 0 ||
-      (user.fonction_etat != null && Number(user.fonction_etat) === 0) ||
-      (user.centre_etat != null && Number(user.centre_etat) === 0)
-    ) {
+    if (user.etat === 0 || user.fonction_etat === 0 || user.centre_etat === 0) {
       await logConnexionEchouee({
         login,
         idUtilisateur: user.id,
@@ -194,14 +188,7 @@ router.post('/login', async (req, res) => {
         ])
       ).map((r) => r.ip_rule);
     }
-    let ipAllowed = isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req);
-    // Mode restreint sans aucune règle = mauvaise config → ne pas bloquer la connexion
-    if (!allowAllIp && ipRules.length === 0) {
-      console.warn(
-        `[auth/login] ip_acces_tous=0 sans règle pour fonction=${user.fonction} login=${user.login} — accès IP autorisé (fail-open)`
-      );
-      ipAllowed = true;
-    }
+    const ipAllowed = isClientIpAllowedForFonction(allowAllIp ? 1 : 0, ipRules, req);
 
     if (!ipAllowed) {
       const codeSecours = normalizeBackupCodeInput(codeSecoursRaw);

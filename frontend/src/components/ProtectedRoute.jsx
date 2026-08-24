@@ -21,10 +21,8 @@ const ProtectedRoute = ({ children, permission, excludeFunctions = [], allowFunc
     return <Navigate to="/login" replace />;
   }
 
-  const userFonction = user?.fonction != null ? Number(user.fonction) : null;
-
   // Vérifier si l'utilisateur a une fonction exclue
-  if (excludeFunctions.length > 0 && userFonction != null && excludeFunctions.map(Number).includes(userFonction)) {
+  if (excludeFunctions.length > 0 && user?.fonction && excludeFunctions.includes(user.fonction)) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -43,10 +41,10 @@ const ProtectedRoute = ({ children, permission, excludeFunctions = [], allowFunc
 
   // Si une permission est requise, vérifier qu'elle est accordée
   // Admin (1, 7) et Backoffice (11) ont accès aux pages permissions/gestion ; Superviseur qualification (2) uniquement si permission accordée
-  const isAdminOrBackoffice = [1, 7, 11].includes(userFonction);
+  const isAdminOrBackoffice = [1, 7, 11].includes(user?.fonction);
   const isPermissionsOrManagementPage = permission === 'config_permissions' || permission === 'management_view';
   // allowFunctions : accès direct pour certains rôles (ex. Mes rappels pour Confirmateur 6, RE Confirmation 14, RP Confirmation 13)
-  const isAllowedByFunction = allowFunctions.length > 0 && userFonction != null && allowFunctions.map(Number).includes(userFonction);
+  const isAllowedByFunction = allowFunctions.length > 0 && user?.fonction != null && allowFunctions.includes(Number(user.fonction));
 
   if (typeof customCheck === 'function' && !customCheck(null, user)) {
     return (

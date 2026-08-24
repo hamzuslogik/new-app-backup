@@ -28,19 +28,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const status = error.response?.status;
-    const code = error.response?.data?.code;
-    if (status === 401) {
+    if (error.response?.status === 401) {
+      const code = error.response?.data?.code;
       if (code === 'SESSION_IDLE_EXPIRED') {
         sessionStorage.setItem('logoutReason', 'idle');
       }
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('permissions');
-      window.location.href = '/login';
-    } else if (status === 403 && code === 'IP_NON_AUTORISEE') {
-      // Session encore valide mais IP hors liste (changement réseau / VPN) — forcer reconnexion
-      sessionStorage.setItem('logoutReason', 'ip');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('permissions');
