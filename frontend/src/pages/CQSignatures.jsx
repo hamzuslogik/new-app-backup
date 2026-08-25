@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
-import { FaCheckCircle, FaSearch } from 'react-icons/fa';
+import { FaCheckCircle, FaSearch, FaFileExcel, FaFileCsv } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import api from '../config/api';
 import FicheDetailModal from '../components/FicheDetailModal';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
@@ -8,6 +9,7 @@ import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { cleanObservationCQ } from '../utils/cleanObservationCQ';
 import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
+import { exportToCSV, exportToExcel } from '../utils/exportUtils';
 import './CQSignatures.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -75,6 +77,7 @@ const CQSignatures = () => {
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState('date_planning');
   const [sortDir, setSortDir] = useState('desc');
+  const [exporting, setExporting] = useState(false);
   const [ficheDetailModal, setFicheDetailModal] = useState(null);
   const { lastViewedFicheHash, setLastViewedFicheHash } = useFicheDetailModal();
   const limit = 100;
@@ -235,10 +238,137 @@ const CQSignatures = () => {
     return c1 || c2 || '-';
   };
 
+  const buildExportRows = (list) =>
+    (list || []).map((sig) => ({
+      nom: sig.nom || '',
+      prenom: sig.prenom || '',
+      telephone: sig.tel || sig.fiche_tel || '',
+      cp: sig.cp || '',
+      date_rdv: sig.date_planning ? formatRdvDateTime(sig.date_planning) : '',
+      etat: getEtatTitle(sig) || '',
+      confirmateur: sig.confirmateur_pseudo || '',
+      commercial: getCommercialsFormatted(sig) === '-' ? '' : getCommercialsFormatted(sig),
+      centre: sig.centre_titre || '',
+      installateur: sig.installateur_nom || '',
+      produit: getProduitLabel(sig.produit) === '-' ? '' : getProduitLabel(sig.produit),
+      date_signature: sig.date_heure ? formatRdvDateTime(sig.date_heure) : '',
+      cq_etat: sig.cq_etat_titre || '',
+      cq_dossier: sig.cq_dossier_titre || '',
+      observation: cleanObservationCQ(sig.observations_cq) || '',
+      id_fiche: sig.id_fiche || '',
+    }));
+
+  const exportColumns = [
+    { key: 'nom', label: 'Nom' },
+    { key: 'prenom', label: 'Prénom' },
+    { key: 'telephone', label: 'Téléphone' },
+    { key: 'cp', label: 'CP' },
+    { key: 'date_rdv', label: 'Date RDV' },
+    { key: 'etat', label: 'État' },
+    { key: 'confirmateur', label: 'Confirmateur' },
+    { key: 'commercial', label: 'Commercial' },
+    { key: 'centre', label: 'Centre' },
+    { key: 'installateur', label: 'Installateur' },
+    { key: 'produit', label: 'Produit' },
+    { key: 'date_signature', label: 'Date signature' },
+    { key: 'cq_etat', label: 'CQ État' },
+    { key: 'cq_dossier', label: 'CQ Dossier' },
+    { key: 'observation', label: 'Observation' },
+    { key: 'id_fiche', label: 'ID fiche' },
+  ];
+
+  const fetchAllFilteredSignatures = async () => {
+    const baseParams = {
+      date_debut: activeRange.dateDebut,
+      date_fin: activeRange.dateFin,
+      page: 1,
+      limit: 5000,
+      sort_by: 'date_planning',
+      sort_order: 'desc',
+      ...(activeEtatFinal !== null ? { id_etat_final: activeEtatFinal } : {}),
+    };
+    const first = await api.get('/signature', { params: baseParams });
+    let all = first.data?.data || [];
+    const total = Number(first.data?.pagination?.total || all.length);
+    const totalPages = Math.max(1, Number(first.data?.pagination?.totalPages || 1));
+
+    if (totalPages > 1) {
+      for (let p = 2; p <= totalPages; p += 1) {
+        const res = await api.get('/signature', {
+          params: { ...baseParams, page: p },
+        });
+        all = all.concat(res.data?.data || []);
+      }
+    }
+
+    // Trier comme l'affichage courant
+    const copied = [...all];
+    copied.sort((a, b) => {
+      const va = getSortValue(a, sortKey);
+      const vb = getSortValue(b, sortKey);
+      if (typeof va === 'number' && typeof vb === 'number') {
+        return sortDir === 'asc' ? va - vb : vb - va;
+      }
+      const cmp = String(va).localeCompare(String(vb), 'fr', { sensitivity: 'base' });
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+
+    return { rows: copied, total };
+  };
+
+  const handleExport = async (format) => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const { rows: allRows } = await fetchAllFilteredSignatures();
+      const exportData = buildExportRows(allRows);
+      if (!exportData.length) {
+        toast.warning('Aucune donnée à exporter pour cette période / filtre');
+        return;
+      }
+      const etatLabel =
+        etatFiltersResolved.find((f) => f.key === activeEtatKey)?.label || 'TOUS';
+      const filename = `cq-signatures_${activeRange.dateDebut}_${activeRange.dateFin}_${etatLabel}`;
+      if (format === 'csv') {
+        exportToCSV(exportData, exportColumns, filename);
+      } else {
+        exportToExcel(exportData, exportColumns, filename);
+      }
+      toast.success(`${exportData.length} ligne(s) exportée(s)`);
+    } catch (err) {
+      console.error('Export CQ Signatures:', err);
+      toast.error('Erreur lors de l\'export');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="cq-signatures-page">
       <div className="page-header">
         <h1><FaCheckCircle /> CQ Signatures</h1>
+        <div className="header-actions">
+          <div className="export-buttons">
+            <button
+              type="button"
+              className="btn-export"
+              title="Exporter en CSV"
+              onClick={() => handleExport('csv')}
+              disabled={exporting || isLoading}
+            >
+              <FaFileCsv /> {exporting ? 'Export...' : 'CSV'}
+            </button>
+            <button
+              type="button"
+              className="btn-export"
+              title="Exporter en Excel"
+              onClick={() => handleExport('excel')}
+              disabled={exporting || isLoading}
+            >
+              <FaFileExcel /> {exporting ? 'Export...' : 'Excel'}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="cq-filters-row">

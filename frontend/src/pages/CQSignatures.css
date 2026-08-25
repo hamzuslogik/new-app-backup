@@ -2,6 +2,57 @@
   padding: 20px;
 }
 
+.cq-signatures-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.cq-signatures-page .page-header h1 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cq-signatures-page .header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.cq-signatures-page .export-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.cq-signatures-page .btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid #9cbfc8;
+  border-radius: 6px;
+  background: #fff;
+  color: #1a2529;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cq-signatures-page .btn-export:hover:not(:disabled) {
+  background: #f0f7f8;
+  border-color: #7aa8b2;
+}
+
+.cq-signatures-page .btn-export:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .cq-filters-row {
   display: flex;
   justify-content: space-between;
