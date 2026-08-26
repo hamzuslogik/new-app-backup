@@ -51,6 +51,60 @@
   color: #fff;
 }
 
+.quick-search-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 9.6px 12px;
+  background: #fff8ee;
+  border: 1px solid #f7c878;
+  border-radius: 8px;
+}
+
+.quick-search-container > svg {
+  color: #f7a219;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.quick-search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #f7c878;
+  border-radius: 5px;
+  font-size: 13px;
+  background: #fff;
+  color: #333;
+}
+
+.quick-search-input::placeholder {
+  color: #888;
+}
+
+.quick-search-input:focus {
+  outline: none;
+  border-color: #f7a219;
+  box-shadow: 0 0 0 2px rgba(247, 162, 25, 0.15);
+}
+
+.quick-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.quick-search-clear:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.05);
+}
+
 .modal-content.remarques-modal {
   max-width: 900px;
   width: 95%;

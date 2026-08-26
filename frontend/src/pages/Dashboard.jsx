@@ -587,9 +587,9 @@ const Dashboard = () => {
     const limitParam = isQuickSearchActive ? 999999 : (src.limit === 999999 ? 999999 : src.limit);
     const pageParam = isQuickSearchActive ? 1 : (src.page || 1);
 
-    /* Carte « RDV à venir » : même requête qu’avant (état 7, date_rdv >= aujourd’hui), sans modifier filtres UI */
+    /* Carte « RDV à venir » : état 7, date_rdv >= aujourd’hui ; confirmateur = id_confirmateur uniquement (pas 2/3) */
     if (statsListOverride === 'upcoming') {
-      return {
+      const upcomingParams = {
         fiche_search: 1,
         page: pageParam,
         limit: limitParam,
@@ -597,7 +597,16 @@ const Dashboard = () => {
         date_champ: 'date_rdv_time',
         date_debut: dateStr,
         time_debut: '00:00:00',
+        include_confirmateur_2: 0,
       };
+      if (src.id_confirmateur) {
+        upcomingParams.id_confirmateur = src.id_confirmateur;
+      }
+      // RE Confirmation : limiter aux fiches dont le 1er confirmateur appartient à son équipe
+      if (user?.fonction === 14) {
+        upcomingParams.re_equipe_confirmateur_primary = 1;
+      }
+      return upcomingParams;
     }
     
     if (src.fiche_search) {
@@ -2443,9 +2452,9 @@ const Dashboard = () => {
         )}
 
         {/* Tableau des confirmateurs avec leurs RDV - Affichage conditionnel selon la permission */}
-        {/* Masquer pour Confirmateur (fonction 6) et RE Confirmation (fonction 7) selon les exigences */}
-        {hasPermission('dashboard_view_confirmateurs_tabs') && 
-         !isConfirmateurOrRE && // Masquer pour Confirmateur et RE Confirmation
+        {/* Masquer pour Confirmateur (fonction 6) ; visible pour RE Confirmation (14) et les autres rôles autorisés */}
+        {(hasPermission('dashboard_view_confirmateurs_tabs') || isREConfirmation) &&
+         !isConfirmateur &&
          !isLoadingStats && dashboardStats && (
           <div className="confirmateurs-table-section">
             <div className="confirmateurs-table-header">

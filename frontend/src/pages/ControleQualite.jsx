@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
@@ -42,9 +42,28 @@ const ETAT_KO_ID = 54;
 const ETAT_HC_ID = 55;
 const PAGE_SIZE_MULTI_DAY = 50;
 
+const normalizeEtatTitre = (titre) =>
+  String(titre || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+/** Trouve l'état « BRUT » (état initial qualification) dans la liste des états. */
+const findEtatBrut = (etats) => {
+  if (!Array.isArray(etats)) return null;
+  return (
+    etats.find((e) => normalizeEtatTitre(e.titre) === 'brut') ||
+    etats.find((e) => normalizeEtatTitre(e.abbreviation) === 'brut') ||
+    etats.find((e) => normalizeEtatTitre(e.titre).includes('brut')) ||
+    null
+  );
+};
+
 const getEtatIcon = (etat) => {
   const t = (etat?.titre || '').toLowerCase();
   if (Number(etat?.id) === ETAT_HC_ID || t.includes('hors cible') || t.includes('hc ')) return FaThumbsDown;
+  if (t.includes('brut')) return FaFlag;
   if (t.includes('debrif')) return FaHeadset;
   if (t.includes('ecoute')) return FaHeadphones;
   if (t.includes('verifier') || t.includes('vérifier')) return FaQuestionCircle;
@@ -106,6 +125,7 @@ const ControleQualite = () => {
   }, []);
   const [showFilters, setShowFilters] = useState(true);
   const [contextMenu, setContextMenu] = useState(null);
+  const [quickSearch, setQuickSearch] = useState('');
   const [filters, setFilters] = useState({
     page: 1,
     id_agent: '',
@@ -113,6 +133,7 @@ const ControleQualite = () => {
     date_debut: new Date().toISOString().split('T')[0], // Date du jour par défaut
     date_fin: new Date().toISOString().split('T')[0] // Date du jour par défaut
   });
+  const brutDefaultAppliedRef = useRef(false);
   
   // État pour gérer l'édition du commentaire qualité
   const [editingComment, setEditingComment] = useState({ hash: null, value: '' });
@@ -178,6 +199,18 @@ const ControleQualite = () => {
       return isGroupe0 && !isEnAttente;
     }) || [];
   });
+
+  // Par défaut : filtre État = BRUT (dès que la liste des états est dispo)
+  useEffect(() => {
+    if (brutDefaultAppliedRef.current || !etatsData?.length) return;
+    const etatBrut = findEtatBrut(etatsData);
+    brutDefaultAppliedRef.current = true;
+    if (!etatBrut) return;
+    setFilters((prev) => {
+      if (prev.id_etat_final) return prev;
+      return { ...prev, id_etat_final: String(etatBrut.id), page: 1 };
+    });
+  }, [etatsData]);
 
   // Récupérer tous les états pour vérifier si un état est groupe 0 ou non
   const { data: allEtatsData } = useQuery('all-etats', async () => {
@@ -496,7 +529,30 @@ const ControleQualite = () => {
     }
   };
 
-  const fiches = fichesData?.data || [];
+  const fichesRaw = fichesData?.data || [];
+
+  const fiches = useMemo(() => {
+    const term = quickSearch.trim().toLowerCase();
+    if (!term) return fichesRaw;
+    return fichesRaw.filter((fiche) => {
+      const haystack = [
+        fiche.nom,
+        fiche.prenom,
+        fiche.tel,
+        fiche.cp,
+        fiche.ville,
+        fiche.agent_pseudo,
+        fiche.qualite_assignee_pseudo,
+        fiche.qualite_user_pseudo,
+        fiche.etat_titre,
+        fiche.commentaire_qualite,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [fichesRaw, quickSearch]);
 
   const MSG_COMMENTAIRE_QUALITE_REQUIS =
     'Veuillez renseigner et enregistrer le commentaire qualité (colonne du tableau) avant de valider la fiche.';
@@ -990,11 +1046,43 @@ const ControleQualite = () => {
 
       <div className="results-info">
         <p>
-          Total: <strong>{pagination.total}</strong> fiches
-          {showPagination && (
+          {quickSearch.trim()
+            ? (
+              <>
+                Recherche rapide : <strong>{fiches.length}</strong> fiche{fiches.length > 1 ? 's' : ''}
+                {' '}(sur {fichesRaw.length} chargée{fichesRaw.length > 1 ? 's' : ''})
+              </>
+            )
+            : (
+              <>
+                Total: <strong>{pagination.total}</strong> fiches
+              </>
+            )}
+          {showPagination && !quickSearch.trim() && (
             <> | Page <strong>{pagination.page}</strong> sur <strong>{pagination.pages}</strong></>
           )}
         </p>
+      </div>
+
+      <div className="quick-search-container">
+        <FaSearch />
+        <input
+          type="text"
+          className="quick-search-input"
+          placeholder="Recherche rapide (nom, prénom, téléphone, CP, agent, état, commentaire)…"
+          value={quickSearch}
+          onChange={(e) => setQuickSearch(e.target.value)}
+        />
+        {quickSearch && (
+          <button
+            type="button"
+            className="quick-search-clear"
+            onClick={() => setQuickSearch('')}
+            title="Effacer la recherche"
+          >
+            <FaTimes />
+          </button>
+        )}
       </div>
 
       {isLoading ? (

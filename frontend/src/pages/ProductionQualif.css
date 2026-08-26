@@ -309,6 +309,12 @@
   font-weight: 700;
 }
 
+.stat-cell.total-inserted {
+  color: #1a2529;
+  font-weight: 700;
+  background: #eef5f6;
+}
+
 .total-cell {
   text-align: center;
   font-weight: 700;

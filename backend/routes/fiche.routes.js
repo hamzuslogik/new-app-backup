@@ -750,6 +750,7 @@ router.get('/', authenticate, async (req, res) => {
       id_centre,
       id_agent,
       fiche_source,
+      re_equipe_confirmateur_primary,
       date_debut,
       date_fin,
       time_debut,
@@ -1216,6 +1217,28 @@ router.get('/', authenticate, async (req, res) => {
       } else {
         whereConditions.push('fiche.id_confirmateur = ?');
         params.push(id_confirmateur);
+      }
+    }
+
+    // RE Confirmation — RDV à venir : uniquement id_confirmateur (1er) parmi les confirmateurs de son équipe
+    if (
+      req.user.fonction === 14 &&
+      (re_equipe_confirmateur_primary === '1' ||
+        re_equipe_confirmateur_primary === 1 ||
+        re_equipe_confirmateur_primary === true ||
+        re_equipe_confirmateur_primary === 'true')
+    ) {
+      const confsEquipe = await query(
+        'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
+        [req.user.id]
+      );
+      const idsConf = (confsEquipe || []).map((c) => c.id);
+      if (idsConf.length > 0) {
+        const ph = idsConf.map(() => '?').join(',');
+        whereConditions.push(`fiche.id_confirmateur IN (${ph})`);
+        params.push(...idsConf);
+      } else {
+        whereConditions.push('1 = 0');
       }
     }
     if (id_centre && !(statsDrillHandled && statsDrill?.entityField === 'id_centre')) {
@@ -4464,6 +4487,26 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       }
     }
 
+    // Commentaire confirmateur : même sync sur la dernière ligne d'historique de l'état actuel
+    if (dbField === 'conf_commentaire_produit' && fiche.id_etat_final != null) {
+      try {
+        const lastHistoMatch = await queryOne(
+          `SELECT id FROM fiches_histo
+           WHERE id_fiche = ? AND id_etat = ?
+           ORDER BY id DESC LIMIT 1`,
+          [id, fiche.id_etat_final]
+        );
+        if (lastHistoMatch && lastHistoMatch.id) {
+          await query(
+            `UPDATE fiches_histo SET conf_commentaire_produit = ? WHERE id = ?`,
+            [dbValue, lastHistoMatch.id]
+          );
+        }
+      } catch (syncErr) {
+        console.error('Erreur synchronisation fiches_histo.conf_commentaire_produit:', syncErr);
+      }
+    }
+
     // Enregistrer la modification dans modifica (nom logique du champ pour l'audit)
     await logModification(
       id,
@@ -5984,8 +6027,18 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       //
       // Pour confirmateur (6) uniquement : ne peut pas assigner un autre confirmateur, uniquement s'ajouter lui-même.
       // Source de vérité = fiches_histo (id_etat=7) pour ne pas écraser l'ancien confirmateur.
+      // Exception : si la fiche est en REFUSER / SIGNER RETRACTER, traiter comme une nouvelle confirmation
+      // (confirmateur 1 = créateur du RDV uniquement, pas de 2e/3e).
       if (req.user.fonction === 6 && ficheData && (ficheData.id_confirmateur !== undefined || ficheData.id_confirmateur_2 !== undefined || ficheData.id_confirmateur_3 !== undefined)) {
         const uid = Number(req.user.id);
+        const prevEtatId = Number(fiche.id_etat_final);
+        const isNouvelleConfirmationConf1Seul = [12, 16, 25, 38].includes(prevEtatId);
+
+        if (isNouvelleConfirmationConf1Seul) {
+          ficheData.id_confirmateur = uid;
+          ficheData.id_confirmateur_2 = null;
+          ficheData.id_confirmateur_3 = null;
+        } else {
         let current = [
           fiche.id_confirmateur ? Number(fiche.id_confirmateur) : null,
           fiche.id_confirmateur_2 ? Number(fiche.id_confirmateur_2) : null,
@@ -6035,6 +6088,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           ficheData.id_confirmateur = current[0] ?? fiche.id_confirmateur;
           ficheData.id_confirmateur_2 = current[1] ?? fiche.id_confirmateur_2;
           ficheData.id_confirmateur_3 = current[2] ?? fiche.id_confirmateur_3;
+        }
         }
       }
     }

@@ -89,9 +89,9 @@ const Remarques = () => {
   );
 
   const { data: agentsSendData } = useQuery(
-    'alertes-agents-list',
+    'remarques-agents-send-list',
     async () => {
-      const res = await api.get('/alertes/agents');
+      const res = await api.get('/remarques/agents', { params: { for_send: 1 } });
       return res.data.data || [];
     },
     { enabled: canSend, staleTime: 60000 }

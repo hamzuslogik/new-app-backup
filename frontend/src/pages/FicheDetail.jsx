@@ -352,7 +352,8 @@ function buildConfFormStateFromFiche(ficheData, user) {
   if (Number(user?.fonction) === 6 && user?.id) {
     const uid = String(user.id);
     const alreadyConfirmed = !!(histoConf && histoConf.length > 0);
-    if (!alreadyConfirmed) {
+    // REFUSER / SIGNER RETRACTER : nouvelle confirmation → confirmateur 1 seul
+    if (isNouvelleConfirmationConf1Seul(ficheData) || !alreadyConfirmed) {
       idConf1 = uid;
       idConf2 = '';
       idConf3 = '';
@@ -361,6 +362,9 @@ function buildConfFormStateFromFiche(ficheData, user) {
       idConf2 = histoConf[0] || '';
       idConf3 = histoConf[1] || '';
     }
+  } else if (isNouvelleConfirmationConf1Seul(ficheData)) {
+    idConf2 = '';
+    idConf3 = '';
   }
 
   const confAppelTunisie = (() => {
@@ -445,6 +449,27 @@ const TIME_SLOTS = [
 // États sans transition possible (aligné sur backend management.routes.js) : pas de « nouvel état »
 const ETATS_SANS_NOUVEL_ETAT = [22, 25, 26, 34, 35]; // ANNULER 2 FOIS, REFUSER 2 FOIS, RDV ANNULER 2 FOIS, HHC FINANCEMENT, HHC TECHNIQUE
 const ETATS_AUTORISES_VERS_CONFIRMER_PLANNING = [1, 2, 5, 8, 9, 11, 12, 19];
+
+/** REFUSER / SIGNER RETRACTER (+ variantes 2×) : à la (re)confirmation, uniquement le confirmateur 1 (créateur du RDV). */
+const ETATS_NOUVELLE_CONFIRMATION_CONF1_SEUL = [12, 16, 25, 38];
+
+function isNouvelleConfirmationConf1Seul(ficheOrEtatId) {
+  const id =
+    typeof ficheOrEtatId === 'object' && ficheOrEtatId != null
+      ? Number(ficheOrEtatId.id_etat_final)
+      : Number(ficheOrEtatId);
+  if (ETATS_NOUVELLE_CONFIRMATION_CONF1_SEUL.includes(id)) return true;
+  if (typeof ficheOrEtatId === 'object' && ficheOrEtatId) {
+    const t = String(ficheOrEtatId.etat_titre || ficheOrEtatId.etat_final || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+    if (t === 'refuser' || t.startsWith('refuser ')) return true;
+    if (t.includes('signer') && t.includes('retract')) return true;
+  }
+  return false;
+}
 
 /** Commentaire (motif_qualif) en détails fiche : annuler, annuler 2×, RDV annuler, RDV annuler 2×, refuser, refuser 2×, hors cible air air, âge/doublon/locataire, financement, HC confirmateur, HHC financement à vérifier. */
 const ETATS_AVEC_COMMENTAIRE_MOTIF = [5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34];
@@ -801,6 +826,8 @@ const FicheDetail = ({
   // Édition inline de Date RDV dans le bloc « État Actuel CONFIRMER »
   const [dateRdvInlineEdit, setDateRdvInlineEdit] = useState('');
   const [showDateRdvHistory, setShowDateRdvHistory] = useState(false);
+  /** Édition inline du commentaire dans la carte État actuel (double-clic) */
+  const [etatActuelCommentEdit, setEtatActuelCommentEdit] = useState(null); // { field, value } | null
   // Liste déroulante de validation RDV (état actuel CONFIRMER)
   const [validationDropdownOpen, setValidationDropdownOpen] = useState(false);
   // Référence vers le bouton qui ouvre la liste pour calculer la position du menu (rendu via portail
@@ -1001,6 +1028,25 @@ const FicheDetail = ({
       ...prev,
       conf_rdv_date: prev.conf_rdv_date || today,
       conf_rdv_time: prev.conf_rdv_time || currentTime
+    }));
+  }, [selectedEtat]);
+
+  // Pré-remplir "A Rappeler le" avec la date/heure actuelles pour l'état 19 (RAPPEL POUR BUREAU)
+  useEffect(() => {
+    if (selectedEtat !== 19) return;
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const today = `${yyyy}-${mm}-${dd}`;
+    const currentTime = `${hh}:${min}`;
+
+    setEtatFormData((prev) => ({
+      ...prev,
+      date_rappel_date: prev.date_rappel_date || today,
+      date_rappel_time: prev.date_rappel_time || currentTime
     }));
   }, [selectedEtat]);
 
@@ -1935,7 +1981,15 @@ const FicheDetail = ({
     };
 
     // Session confirmateur (fonction 6) : confirmateur connecté = toujours conf1 ; si conf1 existait → décaler en conf2 ; si conf1 et conf2 existaient → décaler (conf1→conf2, conf2→conf3).
-    if (Number(user?.fonction) === 6 && user?.id) {
+    // Exception REFUSER / SIGNER RETRACTER : traité comme une nouvelle confirmation (conf1 = créateur uniquement).
+    const nouvelleConfSeul = isNouvelleConfirmationConf1Seul(ficheData);
+    if (nouvelleConfSeul) {
+      if (Number(user?.fonction) === 6 && user?.id) {
+        nextRdvFormData.id_confirmateur = String(user.id);
+      }
+      nextRdvFormData.id_confirmateur_2 = '';
+      nextRdvFormData.id_confirmateur_3 = '';
+    } else if (Number(user?.fonction) === 6 && user?.id) {
       const uid = String(user.id);
       const alreadyConfirmed = !!(confFromHisto && confFromHisto.length > 0);
       if (!alreadyConfirmed) {
@@ -2104,6 +2158,12 @@ const FicheDetail = ({
         annee_systeme_chauffage: data.annee_systeme_chauffage ? parseInt(data.annee_systeme_chauffage) : null,
         conf_commentaire_produit: data.conf_commentaire_produit || null
       };
+
+      // REFUSER / SIGNER RETRACTER : nouvelle confirmation → pas de 2e/3e confirmateur
+      if (isNouvelleConfirmationConf1Seul(ficheData)) {
+        updateData.id_confirmateur_2 = null;
+        updateData.id_confirmateur_3 = null;
+      }
 
       if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
         if (!data.id_commercial_2 || String(data.id_commercial_2).trim() === '') {
@@ -2322,37 +2382,22 @@ const FicheDetail = ({
     if ([5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34].includes(newEtatId)) {
       setEtatFormData(prev => ({ ...prev, motif_qualif: '' }));
     }
-    // Si l'état est 19 (Rappel pour Bureau) : si déjà en 19, reprendre la date/heure de la fiche ; sinon date/heure actuelles
+    // État 19 (RAPPEL POUR BUREAU) : toujours date/heure actuelles (comme NRP)
     if (newEtatId === 19) {
-      if (Number(ficheData?.id_etat_final) === 19 && ficheData?.date_rdv_time) {
-        const raw = String(ficheData.date_rdv_time);
-        const parts = raw.split(/[\sT]/);
-        const dateRappelStr = parts[0] || '';
-        const timePart = parts[1] || '09:00:00';
-        const dateRappelTime = timePart.substring(0, 5);
-        setEtatFormData(prev => ({
-          ...prev,
-          date_rappel_date: dateRappelStr,
-          date_rappel_time: dateRappelTime,
-          id_sous_etat: '',
-          conf_commentaire_produit: '',
-          motif_qualif: ''
-        }));
-      } else {
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const min = String(now.getMinutes()).padStart(2, '0');
-        setEtatFormData(prev => ({
-          ...prev,
-          date_rappel_date: `${yyyy}-${mm}-${dd}`,
-          date_rappel_time: `${hh}:${min}`,
-          conf_commentaire_produit: '',
-          motif_qualif: ''
-        }));
-      }
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      setEtatFormData(prev => ({
+        ...prev,
+        date_rappel_date: `${yyyy}-${mm}-${dd}`,
+        date_rappel_time: `${hh}:${min}`,
+        id_sous_etat: '',
+        conf_commentaire_produit: '',
+        motif_qualif: ''
+      }));
     }
     // NRP (2) : date/heure d'appel TOUJOURS forcées à « maintenant » lors d'un
     // changement d'état vers NRP (on n'utilise jamais la valeur précédente afin
@@ -2467,6 +2512,11 @@ const FicheDetail = ({
         consommation_chauffage: confFormData.consommation_chauffage || null,
         conf_commentaire_produit: confFormData.conf_commentaire_produit || null
       };
+
+      if (isNouvelleConfirmationConf1Seul(ficheData)) {
+        updateData.id_confirmateur_2 = null;
+        updateData.id_confirmateur_3 = null;
+      }
 
       if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
         updateData.id_commercial_2 = parseInt(confFormData.id_commercial_2, 10);
@@ -4403,7 +4453,26 @@ const FicheDetail = ({
               const isCurrentStateFromCR = lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.from_compte_rendu;
               const crPseudoEtatActuel = isCurrentStateFromCR ? (lastHisto.cr_commercial_pseudo || '') : '';
               
-              const detailItemsActuel = renderEtatDetails(etatActuel, { isCurrent: true });
+              const detailItemsActuelRaw = renderEtatDetails(etatActuel, { isCurrent: true });
+              // Sessions confirmateur / RE / RP / backoffice / admin : permettre d'éditer même sans commentaire affiché
+              const canEditEtatActuelComment = [1, 6, 7, 11, 13, 14].includes(Number(user?.fonction));
+              const detailItemsActuel = (() => {
+                const items = [...detailItemsActuelRaw];
+                if (!canEditEtatActuelComment) return items;
+                // NRP : commentaire volontairement masqué dans l'état actuel
+                if (Number(etatActuel.id_etat) === 2) return items;
+                const hasCommentItem = items.some((it) =>
+                  /commentaire/i.test(String(it.label || ''))
+                );
+                if (!hasCommentItem) {
+                  items.push({
+                    label: 'Commentaire',
+                    value: etatActuel.conf_commentaire_produit || '',
+                    fullWidth: true,
+                  });
+                }
+                return items;
+              })();
               const normalizeEtatTitle = (v) =>
                 String(v || '')
                   .toLowerCase()
@@ -4829,18 +4898,154 @@ const FicheDetail = ({
                                       </>
                                     ) : (
                                       <>
+                                      {(() => {
+                                        const isCommentItem = /commentaire/i.test(String(item.label || ''));
+                                        const commentField =
+                                          /commentaire commercial/i.test(String(item.label || ''))
+                                            ? 'commentaire_commercial'
+                                            : 'conf_commentaire_produit';
+                                        const isEditingComment =
+                                          canEditEtatActuelComment &&
+                                          isCommentItem &&
+                                          etatActuelCommentEdit?.field === commentField;
+
+                                        if (isEditingComment) {
+                                          const saveComment = async () => {
+                                            const next = etatActuelCommentEdit?.value ?? '';
+                                            const prev = item.value || '';
+                                            if (String(next) === String(prev)) {
+                                              setEtatActuelCommentEdit(null);
+                                              return;
+                                            }
+                                            try {
+                                              await updateFieldMutation.mutateAsync({
+                                                field: commentField,
+                                                value: next,
+                                              });
+                                              setEtatActuelCommentEdit(null);
+                                            } catch {
+                                              /* erreur déjà gérée par la mutation */
+                                            }
+                                          };
+                                          return (
+                                            <span style={{ display: 'inline-flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '100%' }}>
+                                              <textarea
+                                                autoFocus
+                                                value={etatActuelCommentEdit.value}
+                                                disabled={updateFieldMutation.isLoading}
+                                                onChange={(e) =>
+                                                  setEtatActuelCommentEdit({
+                                                    field: commentField,
+                                                    value: e.target.value,
+                                                  })
+                                                }
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Escape') {
+                                                    e.preventDefault();
+                                                    setEtatActuelCommentEdit(null);
+                                                  } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                                    e.preventDefault();
+                                                    saveComment();
+                                                  }
+                                                }}
+                                                rows={3}
+                                                style={{
+                                                  width: '100%',
+                                                  boxSizing: 'border-box',
+                                                  fontSize: '14px',
+                                                  fontFamily: 'inherit',
+                                                  padding: '8px 10px',
+                                                  borderRadius: '6px',
+                                                  border: '1px solid #9cbfc8',
+                                                  color: '#1a2529',
+                                                  background: '#fff',
+                                                  resize: 'vertical',
+                                                }}
+                                              />
+                                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                                <button
+                                                  type="button"
+                                                  onClick={saveComment}
+                                                  disabled={updateFieldMutation.isLoading}
+                                                  title="Valider"
+                                                  style={{
+                                                    width: '28px',
+                                                    height: '28px',
+                                                    borderRadius: '50%',
+                                                    border: '2px solid #15803d',
+                                                    backgroundColor: '#dcfce7',
+                                                    color: '#15803d',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
+                                                    padding: 0,
+                                                    fontSize: '13px',
+                                                  }}
+                                                >
+                                                  <FaCheck />
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setEtatActuelCommentEdit(null)}
+                                                  disabled={updateFieldMutation.isLoading}
+                                                  title="Annuler"
+                                                  style={{
+                                                    width: '28px',
+                                                    height: '28px',
+                                                    borderRadius: '50%',
+                                                    border: '2px solid #b91c1c',
+                                                    backgroundColor: '#fee2e2',
+                                                    color: '#b91c1c',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
+                                                    padding: 0,
+                                                    fontSize: '13px',
+                                                  }}
+                                                >
+                                                  <FaTimes />
+                                                </button>
+                                              </span>
+                                            </span>
+                                          );
+                                        }
+
+                                        return (
+                                          <>
                                       <span
                                         className={hi?.className}
                                         style={{
                                           color: '#ffffff',
                                           fontWeight: 'bold',
                                           ...(hi?.style || {}),
+                                          ...(canEditEtatActuelComment && isCommentItem
+                                            ? { cursor: 'text', borderBottom: '1px dashed rgba(255,255,255,0.45)' }
+                                            : {}),
                                         }}
                                         data-confirmer-hl={hi?.dataHl || undefined}
+                                        title={
+                                          canEditEtatActuelComment && isCommentItem
+                                            ? 'Double-clic pour modifier le commentaire'
+                                            : undefined
+                                        }
+                                        onDoubleClick={(e) => {
+                                          if (!canEditEtatActuelComment || !isCommentItem) return;
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setEtatActuelCommentEdit({
+                                            field: commentField,
+                                            value: item.value || '',
+                                          });
+                                        }}
                                       >
-                                        {item.value || '-'}
+                                        {item.value || (canEditEtatActuelComment && isCommentItem ? '—' : '-')}
                                       </span>
                                       {item.label === 'Date RDV' && renderHeureRdvAvantBadge(heureRdvAvantDecalage)}
+                                          </>
+                                        );
+                                      })()}
                                       </>
                                     )}
                                   </span>
@@ -8755,6 +8960,20 @@ const SMSTab = ({ ficheHash, ficheData }) => {
     return messages;
   }, [smsCategories, replaceVariables]);
 
+  const handleCategoryChange = (categoryId) => {
+    setSelectedCategory(categoryId);
+    if (categoryId === '0') {
+      setCustomMessage('');
+      return;
+    }
+    // Préremplir le texte du modèle (variables déjà remplacées) — toujours modifiable ensuite
+    const selectedCat = smsCategories?.find((cat) => String(cat.id) === String(categoryId));
+    const fromTemplate = selectedCat
+      ? replaceVariables(selectedCat.message)
+      : predefinedMessages[String(categoryId)] || '';
+    setCustomMessage(fromTemplate || '');
+  };
+
   const handleSendSMS = () => {
     if (!selectedTel || selectedTel.trim() === '') {
       alert('Veuillez sélectionner un numéro de téléphone');
@@ -8764,18 +8983,7 @@ const SMSTab = ({ ficheHash, ficheData }) => {
       alert('Utilisateur non connecté');
       return;
     }
-    let message = '';
-    if (selectedCategory === '0') {
-      message = customMessage;
-    } else {
-      // Trouver la catégorie sélectionnée
-      const selectedCat = smsCategories?.find(cat => String(cat.id) === selectedCategory);
-      if (selectedCat) {
-        message = replaceVariables(selectedCat.message);
-      } else {
-        message = predefinedMessages[selectedCategory] || '';
-      }
-    }
+    const message = customMessage;
     
     if (!message || message.trim() === '') {
       alert('Veuillez saisir un message');
@@ -8864,10 +9072,7 @@ const SMSTab = ({ ficheHash, ficheData }) => {
           <label>Catégorie de message :</label>
           <select
             value={selectedCategory}
-            onChange={(e) => {
-              setSelectedCategory(e.target.value);
-              setCustomMessage('');
-            }}
+            onChange={(e) => handleCategoryChange(e.target.value)}
             className="form-control"
           >
             <option value="0">Message personnalisé</option>
@@ -8878,22 +9083,23 @@ const SMSTab = ({ ficheHash, ficheData }) => {
         </div>
         <div className="form-group">
           <label>Message :</label>
-          {selectedCategory === '0' ? (
-            <textarea
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-              className="form-control"
-              rows="6"
-              placeholder="Saisissez votre message personnalisé"
-            />
-          ) : (
-            <textarea
-              value={predefinedMessages[selectedCategory] || ''}
-              readOnly
-              className="form-control"
-              rows="6"
-              placeholder={loadingCategories ? 'Chargement des catégories...' : 'Message de la catégorie sélectionnée'}
-            />
+          <textarea
+            value={customMessage}
+            onChange={(e) => setCustomMessage(e.target.value)}
+            className="form-control"
+            rows="6"
+            placeholder={
+              selectedCategory === '0'
+                ? 'Saisissez votre message personnalisé'
+                : loadingCategories
+                  ? 'Chargement des catégories...'
+                  : 'Modèle chargé — vous pouvez modifier le texte avant l\'envoi'
+            }
+          />
+          {selectedCategory !== '0' && (
+            <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
+              Texte du modèle modifiable avant envoi
+            </div>
           )}
         </div>
         <div className="form-actions">
@@ -9554,6 +9760,7 @@ const CreateRdvModal = ({
 }) => {
   const isConfirmateurSession = Number(user?.fonction) === 6;
   const isHonoreASuivre = ficheHonoreASuivreViaCompteRendu(ficheData);
+  const nouvelleConfConf1Seul = isNouvelleConfirmationConf1Seul(ficheData);
   const [showRdvConfFields, setShowRdvConfFields] = useState(false);
 
   const getConfirmateurLabel = (id) => {
@@ -9563,6 +9770,7 @@ const CreateRdvModal = ({
   };
 
   // En session confirmateur : priorité confirmateurs_from_histo (source de vérité) ; première confirmation => conf1 = connecté ; déjà confirmée => garder tous les confirmateurs existants et ajouter connecté en conf2/conf3
+  // Exception REFUSER / SIGNER RETRACTER : conf1 = créateur uniquement (pas de décalage conf2/conf3).
   useEffect(() => {
     if (!isConfirmateurSession || !user?.id) return;
     const uid = String(user.id);
@@ -9571,6 +9779,9 @@ const CreateRdvModal = ({
       : null;
 
     setRdvFormData((prev) => {
+      if (isNouvelleConfirmationConf1Seul(ficheData)) {
+        return { ...prev, id_confirmateur: uid, id_confirmateur_2: '', id_confirmateur_3: '' };
+      }
       let a = prev?.id_confirmateur || '';
       let b = prev?.id_confirmateur_2 || '';
       let c = prev?.id_confirmateur_3 || '';
@@ -9588,7 +9799,7 @@ const CreateRdvModal = ({
       // Connecté = conf1 ; ancien conf1 → conf2 ; ancien conf2 → conf3
       return { ...prev, id_confirmateur: uid, id_confirmateur_2: a, id_confirmateur_3: b };
     });
-  }, [isConfirmateurSession, user?.id, setRdvFormData, ficheData?.confirmateurs_from_histo]);
+  }, [isConfirmateurSession, user?.id, setRdvFormData, ficheData?.confirmateurs_from_histo, ficheData?.id_etat_final]);
 
   // Préremplir les champs PV depuis ficheData si ils sont vides dans rdvFormData
   useEffect(() => {
@@ -9906,8 +10117,14 @@ const CreateRdvModal = ({
                         ))
                       )}
                     </select>
+                    {nouvelleConfConf1Seul && (
+                      <small style={{ display: 'block', marginTop: 4, color: '#666', fontSize: '11px' }}>
+                        Après refus / rétractation : seule la confirmation du créateur du RDV est enregistrée (pas de 2ᵉ confirmateur).
+                      </small>
+                    )}
                   </td>
                 </tr>
+                {!nouvelleConfConf1Seul && (
                 <tr>
                   <td><label htmlFor="rdv_confirmateur_2">Confirmateur 2 (optionnel)</label></td>
                   <td>
@@ -9935,6 +10152,8 @@ const CreateRdvModal = ({
                     </select>
                   </td>
                 </tr>
+                )}
+                {!nouvelleConfConf1Seul && (
                 <tr>
                   <td><label htmlFor="rdv_confirmateur_3">Confirmateur 3 (optionnel)</label></td>
                   <td>
@@ -9962,6 +10181,7 @@ const CreateRdvModal = ({
                     </select>
                   </td>
                 </tr>
+                )}
                 {showRdvConfFields && (
                   <>
                 <tr>

@@ -291,6 +291,8 @@ router.post('/', authenticate, async (req, res) => {
 
 /**
  * Agents qualification filtrables (même périmètre que la liste des remarques).
+ * Query for_send=1 : liste complète des agents actifs (fonction 3) pour le formulaire d'envoi
+ * (qualité / admin). Sans ce flag, le filtre reste limité au périmètre (ex. déjà destinataires).
  */
 router.get('/agents', authenticate, async (req, res) => {
   try {
@@ -299,6 +301,15 @@ router.get('/agents', authenticate, async (req, res) => {
     const hasControleQualite = await hasPermission(fonction, 'controle_qualite_view');
     const isAdmin = [1, 7].includes(fonction);
     const isQualiteQualif = isQualiteQualificationAgent(fonction, hasControleQualite, isAdmin);
+    const forSend = String(req.query.for_send || '') === '1' || String(req.query.for_send || '').toLowerCase() === 'true';
+
+    // Formulaire d'envoi : tous les agents qualification actifs
+    if (forSend && (hasControleQualite || isAdmin)) {
+      const agents = await query(
+        'SELECT id, pseudo FROM utilisateurs WHERE fonction = 3 AND (etat > 0 OR etat IS NULL) ORDER BY pseudo ASC'
+      );
+      return res.json({ success: true, data: agents || [] });
+    }
 
     if (isQualiteQualif) {
       try {

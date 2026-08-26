@@ -308,12 +308,14 @@ const ProductionQualif = () => {
     } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Superviseur + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation);
       
       // Créer les colonnes
       const columns = [
         { key: 'superviseur', label: 'Superviseur' },
-        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
+        ...etatLabels.map(label => ({ key: `etat_${label}`, label })),
+        { key: 'total', label: 'Total' },
+        { key: 'etat_Validé', label: 'Validé' }
       ];
       
       // Créer les lignes (une par superviseur)
@@ -329,7 +331,8 @@ const ProductionQualif = () => {
           const label = etat.titre || etat.abbreviation;
           row[`etat_${label}`] = superviseurStat.stats[etat.id]?.count || 0;
         });
-        
+
+        row.total = superviseurStat.total || 0;
         // Ajouter la valeur "Validé"
         row['etat_Validé'] = superviseurStat.stats['validated']?.count || 0;
         
@@ -377,12 +380,14 @@ const ProductionQualif = () => {
     } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Superviseur + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation);
       
       // Créer les colonnes
       const columns = [
         { key: 'superviseur', label: 'Superviseur' },
-        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
+        ...etatLabels.map(label => ({ key: `etat_${label}`, label })),
+        { key: 'total', label: 'Total' },
+        { key: 'etat_Validé', label: 'Validé' }
       ];
       
       // Créer les lignes (une par superviseur)
@@ -398,7 +403,8 @@ const ProductionQualif = () => {
           const label = etat.titre || etat.abbreviation;
           row[`etat_${label}`] = superviseurStat.stats[etat.id]?.count || 0;
         });
-        
+
+        row.total = superviseurStat.total || 0;
         // Ajouter la valeur "Validé"
         row['etat_Validé'] = superviseurStat.stats['validated']?.count || 0;
         
@@ -447,12 +453,14 @@ const ProductionQualif = () => {
     } else if (viewMode === 'stats' && stats.superviseurs && stats.superviseurs.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Superviseur + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
+      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation);
       
       // Créer les colonnes
       const columns = [
         { key: 'superviseur', label: 'Superviseur' },
-        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
+        ...etatLabels.map(label => ({ key: `etat_${label}`, label })),
+        { key: 'total', label: 'Total' },
+        { key: 'etat_Validé', label: 'Validé' }
       ];
       
       // Créer les lignes (une par superviseur)
@@ -468,7 +476,8 @@ const ProductionQualif = () => {
           const label = etat.titre || etat.abbreviation;
           row[`etat_${label}`] = superviseurStat.stats[etat.id]?.count || 0;
         });
-        
+
+        row.total = superviseurStat.total || 0;
         // Ajouter la valeur "Validé"
         row['etat_Validé'] = superviseurStat.stats['validated']?.count || 0;
         
@@ -932,6 +941,7 @@ const ProductionQualif = () => {
                         {etat.abbreviation || etat.titre}
                       </th>
                     ))}
+                    <th style={{ color: '#ffffff' }}>Total</th>
                     <th style={{ color: '#ffffff' }}>Validé</th>
                   </tr>
                 </thead>
@@ -962,6 +972,9 @@ const ProductionQualif = () => {
                           </td>
                         );
                       })}
+                      <td className="stat-cell total-inserted" title="Total fiches insérées">
+                        <strong>{superviseurStat.total || 0}</strong>
+                      </td>
                       <td className="stat-cell validated">
                         {superviseurStat.stats['validated']?.count || 0}
                       </td>
@@ -982,6 +995,13 @@ const ProductionQualif = () => {
                         </td>
                       );
                     })}
+                    <td className="total-cell">
+                      <strong>
+                        {stats.superviseurs.reduce((sum, supStat) =>
+                          sum + (Number(supStat.total) || 0), 0
+                        )}
+                      </strong>
+                    </td>
                     <td className="total-cell">
                       <strong>
                         {stats.superviseurs.reduce((sum, supStat) => 
