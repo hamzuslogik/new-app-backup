@@ -1162,6 +1162,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
 
     // 4. Liste des confirmateurs actifs avec RDV aujourd'hui (fiches_histo) et à venir (fiches)
     // RDV à venir : uniquement le 1er confirmateur (id_confirmateur), pas les slots 2/3
+    // RE Confirmation : tous les confirmateurs actifs (pas seulement son équipe)
     const confirmateursWithRdv = await query(`
       SELECT 
         u.id,
@@ -1190,11 +1191,8 @@ router.get('/dashboard', authenticate, async (req, res) => {
       AND u.etat > 0
       AND (f.etat > 0 OR f.etat IS NULL)
       AND (c.etat > 0 OR c.etat IS NULL)
-      ${isREConfirmation ? 'AND u.chef_equipe = ?' : ''}
       ORDER BY rdv_today DESC, rdv_upcoming DESC, u.pseudo ASC
-    `, isREConfirmation
-      ? [todayStart, todayEnd, todayStart, req.user.id]
-      : [todayStart, todayEnd, todayStart]);
+    `, [todayStart, todayEnd, todayStart]);
 
     res.json({
       success: true,
