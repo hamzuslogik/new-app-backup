@@ -4021,9 +4021,18 @@ const FicheDetail = ({
                     : (confirmateursList !== '-' ? confirmateursList : '-');
                 /** Confirmer, Honoré à suivre, Signer : afficher confirmateurs 1, 2 et 3 s'ils existent ; sinon repli sur l'auteur. */
                 const ETATS_AVEC_CONF123 = [7, 9, 13, 16, 44, 45];
-                const valeurConfirmateurEtatListe = ETATS_AVEC_CONF123.includes(Number(etatId))
-                  ? (confirmateursList !== '-' ? confirmateursList : valeurConfirmateurAffichee)
-                  : valeurConfirmateurAffichee;
+                /** CONFIRMER en historique : confirmateur(s) de la ligne fiches_histo (pas la fiche courante). */
+                const valeurConfirmateurEtatListe = (() => {
+                  if (Number(etatId) === 7 && !isCurrent) {
+                    if (confirmateursList !== '-') return confirmateursList;
+                    if (auteurChangementEtat !== '') return auteurChangementEtat;
+                    return '-';
+                  }
+                  if (ETATS_AVEC_CONF123.includes(Number(etatId))) {
+                    return confirmateursList !== '-' ? confirmateursList : valeurConfirmateurAffichee;
+                  }
+                  return valeurConfirmateurAffichee;
+                })();
                 const hasAnyConfirmateurAssigne =
                   !!(etatData.confirmateur_pseudo || etatData.confirmateur_2_pseudo || etatData.confirmateur_3_pseudo);
                 
@@ -4380,7 +4389,11 @@ const FicheDetail = ({
                 confirmateur_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur)?.pseudo || null,
                 confirmateur_2_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_2)?.pseudo || null,
                 confirmateur_3_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_3)?.pseudo || null,
-                conf_commentaire_produit: lastHistoEtatActuel?.conf_commentaire_produit || fiche.conf_commentaire_produit || null,
+                conf_commentaire_produit:
+                  lastHistoEtatActuel?.conf_commentaire_produit ||
+                  fiche.conf_commentaire_produit ||
+                  fiche.motif_qualif ||
+                  null,
                 commentaire_qualite: fiche.commentaire_qualite || null,
                 commentaire_commercial: fiche.commentaire_commercial || null,
                 conf_rdv_avec: fiche.conf_rdv_avec || null,
@@ -4467,12 +4480,43 @@ const FicheDetail = ({
                 if (!hasCommentItem) {
                   items.push({
                     label: 'Commentaire',
-                    value: etatActuel.conf_commentaire_produit || '',
+                    value:
+                      etatActuel.conf_commentaire_produit ||
+                      fiche.conf_commentaire_produit ||
+                      fiche.motif_qualif ||
+                      '',
                     fullWidth: true,
                   });
                 }
                 return items;
               })();
+
+              /** Texte à préremplir dans le textarea d'édition du commentaire (État actuel). */
+              const resolveEtatActuelCommentForEdit = (commentField, itemValue) => {
+                const pick = (...candidates) => {
+                  for (const c of candidates) {
+                    if (c == null) continue;
+                    const s = String(c);
+                    if (s.trim() !== '' && s !== '-' && s !== '—') return s;
+                  }
+                  return '';
+                };
+                if (commentField === 'commentaire_commercial') {
+                  return pick(
+                    itemValue,
+                    etatActuel.commentaire_commercial,
+                    fiche.commentaire_commercial
+                  );
+                }
+                return pick(
+                  itemValue,
+                  etatActuel.conf_commentaire_produit,
+                  lastHistoEtatActuel?.conf_commentaire_produit,
+                  fiche.conf_commentaire_produit,
+                  fiche.motif_qualif,
+                  fiche.commentaire
+                );
+              };
               const normalizeEtatTitle = (v) =>
                 String(v || '')
                   .toLowerCase()
@@ -4931,7 +4975,7 @@ const FicheDetail = ({
                                             <span style={{ display: 'inline-flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '100%' }}>
                                               <textarea
                                                 autoFocus
-                                                value={etatActuelCommentEdit.value}
+                                                value={etatActuelCommentEdit.value ?? ''}
                                                 disabled={updateFieldMutation.isLoading}
                                                 onChange={(e) =>
                                                   setEtatActuelCommentEdit({
@@ -5036,7 +5080,7 @@ const FicheDetail = ({
                                           e.stopPropagation();
                                           setEtatActuelCommentEdit({
                                             field: commentField,
-                                            value: item.value || '',
+                                            value: resolveEtatActuelCommentForEdit(commentField, item.value),
                                           });
                                         }}
                                       >

@@ -3935,18 +3935,69 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       );
       
       // Enrichir chaque entrée de l'historique avec les données de la fiche actuelle
+      // Exception CONFIRMER (7) : confirmateur(s) depuis la ligne fiches_histo, pas la fiche courante
       if (historique && historique.length > 0 && fiche) {
-        historique = historique.map(histo => ({
+        // Pseudos conf2/conf3 éventuels sur les lignes histo (colonnes optionnelles)
+        const histoConf2Ids = [...new Set(
+          (historique || [])
+            .map((h) => (h.id_confirmateur_2 != null ? Number(h.id_confirmateur_2) : null))
+            .filter((id) => id && id > 0)
+        )];
+        const histoConf3Ids = [...new Set(
+          (historique || [])
+            .map((h) => (h.id_confirmateur_3 != null ? Number(h.id_confirmateur_3) : null))
+            .filter((id) => id && id > 0)
+        )];
+        const extraConfIds = [...new Set([...histoConf2Ids, ...histoConf3Ids])];
+        let confPseudoById = {};
+        if (extraConfIds.length > 0) {
+          try {
+            const rows = await query(
+              `SELECT id, pseudo FROM utilisateurs WHERE id IN (${extraConfIds.map(() => '?').join(',')})`,
+              extraConfIds
+            );
+            for (const r of rows || []) {
+              confPseudoById[Number(r.id)] = r.pseudo || null;
+            }
+          } catch (_) { /* colonnes absentes ou erreur : ignorer */ }
+        }
+
+        historique = historique.map(histo => {
+          const isConfirmerHisto = Number(histo.id_etat) === 7;
+          const conf1Id = isConfirmerHisto
+            ? (histo.id_confirmateur != null ? Number(histo.id_confirmateur) : null)
+            : fiche.id_confirmateur;
+          const conf2Id = isConfirmerHisto
+            ? (histo.id_confirmateur_2 != null ? Number(histo.id_confirmateur_2) : null)
+            : fiche.id_confirmateur_2;
+          const conf3Id = isConfirmerHisto
+            ? (histo.id_confirmateur_3 != null ? Number(histo.id_confirmateur_3) : null)
+            : fiche.id_confirmateur_3;
+
+          let confirmateur_pseudo;
+          let confirmateur_2_pseudo;
+          let confirmateur_3_pseudo;
+          if (isConfirmerHisto) {
+            confirmateur_pseudo = histo.histo_confirmateur_pseudo || null;
+            confirmateur_2_pseudo = conf2Id ? (confPseudoById[conf2Id] || null) : null;
+            confirmateur_3_pseudo = conf3Id ? (confPseudoById[conf3Id] || null) : null;
+          } else {
+            confirmateur_pseudo = confirmateur?.pseudo || null;
+            confirmateur_2_pseudo = confirmateur2?.pseudo || null;
+            confirmateur_3_pseudo = confirmateur3?.pseudo || null;
+          }
+
+          return {
           ...histo,
           histo_id_confirmateur: histo.id_confirmateur,
           from_compte_rendu: histo.from_compte_rendu === 1 || (histo.id_etat === 8 && !histo.id_confirmateur),
           cr_commercial_pseudo: histo.cr_commercial_pseudo || null,
-          id_confirmateur: fiche.id_confirmateur,
-          id_confirmateur_2: fiche.id_confirmateur_2,
-          id_confirmateur_3: fiche.id_confirmateur_3,
-          confirmateur_pseudo: confirmateur?.pseudo || null,
-          confirmateur_2_pseudo: confirmateur2?.pseudo || null,
-          confirmateur_3_pseudo: confirmateur3?.pseudo || null,
+          id_confirmateur: conf1Id,
+          id_confirmateur_2: conf2Id,
+          id_confirmateur_3: conf3Id,
+          confirmateur_pseudo,
+          confirmateur_2_pseudo,
+          confirmateur_3_pseudo,
           // Historique: conserver le commentaire au moment du passage d'état
           conf_commentaire_produit: histo.conf_commentaire_produit || null,
           // Valeur date_rdv_time PROPRE à la ligne fiches_histo (sans repli sur la fiche courante),
@@ -4021,7 +4072,8 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           ph3_alimentation: fiche.ph3_alimentation || null,
           date_sign_time: fiche.date_sign_time || null,
           valeur_mensualite: fiche.valeur_mensualite || null
-        }));
+        };
+        });
 
         // Pour les entrées issues d'un compte rendu (from_compte_rendu), remplacer commentaire_commercial par le commentaire du CR (compte_rendu_pending)
         try {
