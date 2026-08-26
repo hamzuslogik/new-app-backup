@@ -31,16 +31,38 @@ const {
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
 
-/** Retourne l'id_confirmateur à enregistrer dans fiches_histo : body.histo_id_confirmateur (RE/RP/admin/backoffice), sinon id utilisateur connecté (assignation automatique à chaque modification d'état) */
+/** Retourne les id_confirmateur / _2 / _3 à enregistrer dans fiches_histo.
+ * - Si histo_id_confirmateur(_2/_3) est envoyé dans le body (sessions admin/RE/RP/backoffice) :
+ *   utiliser ces valeurs (null si vide) — ne PAS forcer l'utilisateur connecté.
+ * - Sinon (ex. confirmateur) : id_confirmateur = utilisateur connecté ; _2/_3 = null sauf envoyés.
+ */
+function getHistoConfirmateurIds(req) {
+  const body = req.body || {};
+  const parseOpt = (key) => {
+    if (!Object.prototype.hasOwnProperty.call(body, key)) return undefined;
+    const raw = body[key];
+    if (raw === '' || raw === null || raw === undefined) return null;
+    const v = parseInt(raw, 10);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  };
+
+  const id1Sent = parseOpt('histo_id_confirmateur');
+  const id2Sent = parseOpt('histo_id_confirmateur_2');
+  const id3Sent = parseOpt('histo_id_confirmateur_3');
+
+  const id1 =
+    id1Sent !== undefined
+      ? id1Sent
+      : (req.user && req.user.id ? Number(req.user.id) : null);
+  const id2 = id2Sent !== undefined ? id2Sent : null;
+  const id3 = id3Sent !== undefined ? id3Sent : null;
+
+  return { id1, id2, id3 };
+}
+
+/** @deprecated utiliser getHistoConfirmateurIds — conservé pour les appels existants */
 function getHistoConfirmateur(req, fiche = null) {
-  const sent = req.body && req.body.histo_id_confirmateur !== undefined && req.body.histo_id_confirmateur !== null && req.body.histo_id_confirmateur !== '';
-  if (sent) {
-    const v = parseInt(req.body.histo_id_confirmateur, 10);
-    return Number.isFinite(v) ? v : null;
-  }
-  // À chaque changement d'état : assigner automatiquement l'id utilisateur connecté
-  if (req.user && req.user.id) return req.user.id;
-  return null;
+  return getHistoConfirmateurIds(req).id1;
 }
 
 /** Colonnes conf_* de fiches_histo (alignées sur add_fiches_histo_conf_columns.sql) pour enregistrer la confirmation (état 7) */
@@ -6279,8 +6301,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         }
       }
 
-      // Créer une entrée dans l'historique (id_confirmateur, id_sous_etat) + champs conf_* si état 7 + champs utiles pour les autres états
-      const histoConf = getHistoConfirmateur(req, fiche);
+      // Créer une entrée dans l'historique (id_confirmateur, id_confirmateur_2/3, id_sous_etat) + champs conf_* si état 7
+      const { id1: histoConf, id2: histoConf2, id3: histoConf3 } = getHistoConfirmateurIds(req);
       const histoSousEtat = Object.prototype.hasOwnProperty.call(ficheData, 'id_sous_etat')
         ? ficheData.id_sous_etat
         : (fiche && fiche.id_sous_etat != null ? fiche.id_sous_etat : null);
@@ -6301,6 +6323,10 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         histoCols.push(col);
         histoValues.push(val);
       };
+
+      // Confirmateurs 2 et 3 (colonnes optionnelles sur fiches_histo)
+      pushHistoCol('id_confirmateur_2', histoConf2);
+      pushHistoCol('id_confirmateur_3', histoConf3);
 
       if (!isEtat7) {
         // Historique: enregistrer le commentaire dans conf_commentaire_produit.
@@ -6334,10 +6360,31 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
 
       const histoPlaceholders = histoCols.map(() => '?').join(', ');
-      await query(
-        `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
-        histoValues
-      );
+      try {
+        await query(
+          `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
+          histoValues
+        );
+      } catch (histoInsertErr) {
+        // Bases sans colonnes id_confirmateur_2/3 : retenter sans ces colonnes
+        if (histoInsertErr && histoInsertErr.code === 'ER_BAD_FIELD_ERROR') {
+          const drop = new Set(['id_confirmateur_2', 'id_confirmateur_3']);
+          const cols2 = [];
+          const vals2 = [];
+          histoCols.forEach((col, i) => {
+            if (!drop.has(col)) {
+              cols2.push(col);
+              vals2.push(histoValues[i]);
+            }
+          });
+          await query(
+            `INSERT INTO fiches_histo (${cols2.join(', ')}) VALUES (${cols2.map(() => '?').join(', ')})`,
+            vals2
+          );
+        } else {
+          throw histoInsertErr;
+        }
+      }
     }
 
     // Calculer la consommation si surface_chauffee ou consommation_chauffage change

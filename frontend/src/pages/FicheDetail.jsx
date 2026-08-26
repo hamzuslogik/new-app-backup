@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { FaEdit, FaCheck, FaTimes, FaCalendar, FaUser, FaUserPlus, FaPhone, FaMapMarkerAlt, FaHome, FaBriefcase, FaFileAlt, FaHistory, FaArrowLeft, FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaReplyAll, FaSms, FaListAlt, FaInfoCircle, FaFilePdf } from 'react-icons/fa';
+import { FaEdit, FaCheck, FaTimes, FaCalendar, FaUser, FaUserPlus, FaPhone, FaMapMarkerAlt, FaHome, FaBriefcase, FaFileAlt, FaHistory, FaArrowLeft, FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaReplyAll, FaSms, FaListAlt, FaInfoCircle, FaFilePdf, FaPlus } from 'react-icons/fa';
 import api from '../config/api';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { useAuth } from '../contexts/AuthContext';
@@ -674,6 +674,10 @@ const FicheDetail = ({
   // État pour le formulaire de confirmation
   const [selectedEtat, setSelectedEtat] = useState(null);
   const [histoConfirmateurId, setHistoConfirmateurId] = useState('');
+  const [histoConfirmateur2Id, setHistoConfirmateur2Id] = useState('');
+  const [histoConfirmateur3Id, setHistoConfirmateur3Id] = useState('');
+  const [showHistoConfirmateur2, setShowHistoConfirmateur2] = useState(false);
+  const [showHistoConfirmateur3, setShowHistoConfirmateur3] = useState(false);
   const [confFormData, setConfFormData] = useState({
     produit: '',
     id_confirmateur: '',
@@ -2518,6 +2522,22 @@ const FicheDetail = ({
         updateData.id_confirmateur_3 = null;
       }
 
+      if (showHistoConfirmateurDropdown) {
+        // Historique : IDs choisis (picker ou formulaire Confirmer), pas l'utilisateur connecté
+        updateData.histo_id_confirmateur =
+          histoConfirmateurId !== '' && histoConfirmateurId != null
+            ? parseInt(histoConfirmateurId, 10)
+            : (confFormData.id_confirmateur ? parseInt(confFormData.id_confirmateur, 10) : null);
+        updateData.histo_id_confirmateur_2 =
+          showHistoConfirmateur2 && histoConfirmateur2Id !== '' && histoConfirmateur2Id != null
+            ? parseInt(histoConfirmateur2Id, 10)
+            : (confFormData.id_confirmateur_2 ? parseInt(confFormData.id_confirmateur_2, 10) : null);
+        updateData.histo_id_confirmateur_3 =
+          showHistoConfirmateur3 && histoConfirmateur3Id !== '' && histoConfirmateur3Id != null
+            ? parseInt(histoConfirmateur3Id, 10)
+            : (confFormData.id_confirmateur_3 ? parseInt(confFormData.id_confirmateur_3, 10) : null);
+      }
+
       if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
         updateData.id_commercial_2 = parseInt(confFormData.id_commercial_2, 10);
       }
@@ -2801,8 +2821,21 @@ const FicheDetail = ({
       if (Number(user?.fonction) === 5 && compteRenduOption) {
         updateData.compte_rendu_option = resolveOptionKey(compteRenduOption);
       }
-      if (showHistoConfirmateurDropdown && histoConfirmateurId !== '' && histoConfirmateurId != null) {
-        updateData.histo_id_confirmateur = parseInt(histoConfirmateurId, 10);
+      if (showHistoConfirmateurDropdown) {
+        // Toujours envoyer les IDs sélectionnés (y compris vide → null côté API) :
+        // ne pas laisser le backend retomber sur l'utilisateur connecté.
+        updateData.histo_id_confirmateur =
+          histoConfirmateurId !== '' && histoConfirmateurId != null
+            ? parseInt(histoConfirmateurId, 10)
+            : null;
+        updateData.histo_id_confirmateur_2 =
+          showHistoConfirmateur2 && histoConfirmateur2Id !== '' && histoConfirmateur2Id != null
+            ? parseInt(histoConfirmateur2Id, 10)
+            : null;
+        updateData.histo_id_confirmateur_3 =
+          showHistoConfirmateur3 && histoConfirmateur3Id !== '' && histoConfirmateur3Id != null
+            ? parseInt(histoConfirmateur3Id, 10)
+            : null;
       }
 
       // Ajouter les champs spécifiques selon l'état sélectionné
@@ -4021,11 +4054,11 @@ const FicheDetail = ({
                     : (confirmateursList !== '-' ? confirmateursList : '-');
                 /** Confirmer, Honoré à suivre, Signer : afficher confirmateurs 1, 2 et 3 s'ils existent ; sinon repli sur l'auteur. */
                 const ETATS_AVEC_CONF123 = [7, 9, 13, 16, 44, 45];
-                /** CONFIRMER en historique : confirmateur(s) de la ligne fiches_histo (pas la fiche courante). */
+                /** CONFIRMER en historique : uniquement le confirmateur qui a mis en Confirmer (ligne fiches_histo.id_confirmateur), pas 2/3. */
                 const valeurConfirmateurEtatListe = (() => {
                   if (Number(etatId) === 7 && !isCurrent) {
-                    if (confirmateursList !== '-') return confirmateursList;
                     if (auteurChangementEtat !== '') return auteurChangementEtat;
+                    if (etatData.confirmateur_pseudo) return String(etatData.confirmateur_pseudo);
                     return '-';
                   }
                   if (ETATS_AVEC_CONF123.includes(Number(etatId))) {
@@ -4034,7 +4067,9 @@ const FicheDetail = ({
                   return valeurConfirmateurAffichee;
                 })();
                 const hasAnyConfirmateurAssigne =
-                  !!(etatData.confirmateur_pseudo || etatData.confirmateur_2_pseudo || etatData.confirmateur_3_pseudo);
+                  Number(etatId) === 7 && !isCurrent
+                    ? !!(auteurChangementEtat || etatData.confirmateur_pseudo)
+                    : !!(etatData.confirmateur_pseudo || etatData.confirmateur_2_pseudo || etatData.confirmateur_3_pseudo);
                 
                 const items = [];
 
@@ -6544,20 +6579,116 @@ const FicheDetail = ({
             </div>
 
             {showHistoConfirmateurDropdown && (
-              <div className="form-group">
+              <div className="form-group histo-confirmateurs-picker">
                 <label htmlFor="histo_confirmateur">Confirmateur (historique)</label>
                 <select
                   id="histo_confirmateur"
                   className="form-control"
                   value={histoConfirmateurId}
                   onChange={(e) => setHistoConfirmateurId(e.target.value)}
-                  title="Confirmateur enregistré dans l'historique lors du changement d'état"
+                  title="Confirmateur 1 enregistré dans l'historique lors du changement d'état"
                 >
-                  <option value="">Tout</option>
+                  <option value="">— Sélectionner —</option>
                   {(confirmateurs || []).map(c => (
                     <option key={c.id} value={c.id}>{c.pseudo || `Utilisateur ${c.id}`}</option>
                   ))}
                 </select>
+
+                {showHistoConfirmateur2 && (
+                  <div style={{ marginTop: '10px' }}>
+                    <label htmlFor="histo_confirmateur_2">Confirmateur 2 (historique)</label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <select
+                        id="histo_confirmateur_2"
+                        className="form-control"
+                        value={histoConfirmateur2Id}
+                        onChange={(e) => setHistoConfirmateur2Id(e.target.value)}
+                        title="Confirmateur 2 enregistré dans l'historique"
+                      >
+                        <option value="">— Sélectionner —</option>
+                        {(confirmateurs || []).map(c => (
+                          <option key={c.id} value={c.id}>{c.pseudo || `Utilisateur ${c.id}`}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn-cancel"
+                        title="Retirer le confirmateur 2"
+                        onClick={() => {
+                          setShowHistoConfirmateur2(false);
+                          setHistoConfirmateur2Id('');
+                          setShowHistoConfirmateur3(false);
+                          setHistoConfirmateur3Id('');
+                        }}
+                        style={{ padding: '6px 10px', flexShrink: 0 }}
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {showHistoConfirmateur3 && (
+                  <div style={{ marginTop: '10px' }}>
+                    <label htmlFor="histo_confirmateur_3">Confirmateur 3 (historique)</label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <select
+                        id="histo_confirmateur_3"
+                        className="form-control"
+                        value={histoConfirmateur3Id}
+                        onChange={(e) => setHistoConfirmateur3Id(e.target.value)}
+                        title="Confirmateur 3 enregistré dans l'historique"
+                      >
+                        <option value="">— Sélectionner —</option>
+                        {(confirmateurs || []).map(c => (
+                          <option key={c.id} value={c.id}>{c.pseudo || `Utilisateur ${c.id}`}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn-cancel"
+                        title="Retirer le confirmateur 3"
+                        onClick={() => {
+                          setShowHistoConfirmateur3(false);
+                          setHistoConfirmateur3Id('');
+                        }}
+                        style={{ padding: '6px 10px', flexShrink: 0 }}
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!showHistoConfirmateur3 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!showHistoConfirmateur2) {
+                        setShowHistoConfirmateur2(true);
+                      } else {
+                        setShowHistoConfirmateur3(true);
+                      }
+                    }}
+                    title={showHistoConfirmateur2 ? 'Ajouter un 3ᵉ confirmateur' : 'Ajouter un 2ᵉ confirmateur'}
+                    style={{
+                      marginTop: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#0b6e99',
+                      cursor: 'pointer',
+                      padding: 0,
+                      fontSize: '13px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <FaPlus size={12} />
+                    {showHistoConfirmateur2 ? 'Ajouter un 3ᵉ confirmateur' : 'Ajouter un 2ᵉ confirmateur'}
+                  </button>
+                )}
               </div>
             )}
 
