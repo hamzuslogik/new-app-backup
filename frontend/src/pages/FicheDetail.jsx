@@ -4975,6 +4975,7 @@ const FicheDetail = ({
                                             <span style={{ display: 'inline-flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '100%' }}>
                                               <textarea
                                                 autoFocus
+                                                className="etat-actuel-comment-edit-textarea"
                                                 value={etatActuelCommentEdit.value ?? ''}
                                                 disabled={updateFieldMutation.isLoading}
                                                 onChange={(e) =>
@@ -5001,7 +5002,6 @@ const FicheDetail = ({
                                                   padding: '8px 10px',
                                                   borderRadius: '6px',
                                                   border: '1px solid #9cbfc8',
-                                                  color: '#1a2529',
                                                   background: '#fff',
                                                   resize: 'vertical',
                                                 }}

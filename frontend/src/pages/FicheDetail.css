@@ -2504,6 +2504,15 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
+/* Édition commentaire (double-clic) : texte sombre sur fond blanc du textarea */
+.etat-actuel-card textarea.etat-actuel-comment-edit-textarea,
+.etat-actuel-card span textarea.etat-actuel-comment-edit-textarea {
+  color: #1a2529 !important;
+  -webkit-text-fill-color: #1a2529 !important;
+  caret-color: #1a2529 !important;
+  background-color: #ffffff !important;
+}
+
 /* Badge d'etat pour NRP / EN-ATTENTE : texte sombre #333333 (fond clair) */
 .etat-actuel-card span.etat-actuel-badge--dark-text,
 .etat-actuel-card span.etat-actuel-badge--dark-text span,
