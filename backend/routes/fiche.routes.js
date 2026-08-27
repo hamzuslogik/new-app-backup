@@ -37,16 +37,18 @@ const {
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
 
 /** Retourne les id_confirmateur / _2 / _3 à enregistrer dans fiches_histo.
- * - Admin (1, 7), Backoffice (11), Confirmateur (6), RP Confirmation (13), RE Confirmation (14) :
+ * - Admin (1, 7), Backoffice (11), RP Confirmation (13), RE Confirmation (14) :
  *   utiliser histo_id_confirmateur(_2/_3) ou à défaut id_confirmateur du body / fiche —
  *   JAMAIS l'id de l'utilisateur connecté.
- * - Autres fonctions : id_confirmateur = utilisateur connecté si non envoyé.
+ * - Confirmateur (6) et autres : si histo_id_* / id_confirmateur envoyés → les utiliser ;
+ *   sinon id_confirmateur = utilisateur connecté (autres états auto).
  */
 function getHistoConfirmateurIds(req, fiche = null) {
   const body = req.body || {};
   const fonction = Number(req.user?.fonction);
   // Sessions qui choisissent le confirmateur manuellement (jamais l'utilisateur connecté en fallback)
-  const isManualConfirmateurSelect = [1, 6, 7, 11, 13, 14].includes(fonction);
+  // Confirmateur (6) exclu : hors CONFIRMER, histo = utilisateur connecté ; en CONFIRMER le front envoie les IDs.
+  const isManualConfirmateurSelect = [1, 7, 11, 13, 14].includes(fonction);
 
   const parseOpt = (key) => {
     if (!Object.prototype.hasOwnProperty.call(body, key)) return undefined;
@@ -351,7 +353,13 @@ function shouldInsertFichesHistoPut(ficheData, fiche) {
     ficheData.date_rdv_time !== undefined ||
     ficheData.date_sign_time !== undefined ||
     ficheData.conf_rdv_avec !== undefined ||
-    ficheData.id_commercial !== undefined
+    ficheData.id_commercial !== undefined ||
+    ficheData.id_confirmateur !== undefined ||
+    ficheData.id_confirmateur_2 !== undefined ||
+    ficheData.id_confirmateur_3 !== undefined ||
+    ficheData.histo_id_confirmateur !== undefined ||
+    ficheData.histo_id_confirmateur_2 !== undefined ||
+    ficheData.histo_id_confirmateur_3 !== undefined
   );
 }
 
@@ -6568,6 +6576,25 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
 
       // Créer une entrée dans l'historique (id_confirmateur, id_confirmateur_2/3, id_sous_etat) + champs conf_* si état 7
       const { id1: histoConf, id2: histoConf2, id3: histoConf3 } = getHistoConfirmateurIds(req, fiche);
+
+      // Synchroniser fiches.id_confirmateur(_2/_3) avec la sélection (même valeurs que fiches_histo)
+      // dès que le body envoie des slots fiche et/ou histo_id_* avec au moins un conf1.
+      const bodyHasFicheConfSlots =
+        Object.prototype.hasOwnProperty.call(ficheData, 'id_confirmateur') ||
+        Object.prototype.hasOwnProperty.call(ficheData, 'id_confirmateur_2') ||
+        Object.prototype.hasOwnProperty.call(ficheData, 'id_confirmateur_3');
+      const bodyHasHistoConfSlots =
+        Object.prototype.hasOwnProperty.call(ficheData, 'histo_id_confirmateur') ||
+        Object.prototype.hasOwnProperty.call(ficheData, 'histo_id_confirmateur_2') ||
+        Object.prototype.hasOwnProperty.call(ficheData, 'histo_id_confirmateur_3');
+      if (bodyHasFicheConfSlots) {
+        // Valeurs déjà dans ficheData → UPDATE fiches les prendra telles quelles
+      } else if (bodyHasHistoConfSlots && histoConf != null) {
+        ficheData.id_confirmateur = histoConf;
+        ficheData.id_confirmateur_2 = histoConf2;
+        ficheData.id_confirmateur_3 = histoConf3;
+      }
+
       const histoSousEtat = Object.prototype.hasOwnProperty.call(ficheData, 'id_sous_etat')
         ? ficheData.id_sous_etat
         : (fiche && fiche.id_sous_etat != null ? fiche.id_sous_etat : null);

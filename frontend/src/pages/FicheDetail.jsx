@@ -348,9 +348,11 @@ function buildConfFormStateFromFiche(ficheData, user) {
   let idConf1 = '';
   let idConf2 = '';
   let idConf3 = '';
-  // Session confirmateur (6) : plus de remplissage automatique (reprise / self) —
-  // sélection manuelle dans le formulaire. Autres sessions : préremplir depuis la fiche / histo.
-  if (Number(user?.fonction) !== 6) {
+  // Session confirmateur (6) : conf1 = soi-même uniquement (prérempli) ; 2/3 manuels via +.
+  // Autres sessions : préremplir depuis la fiche / histo.
+  if (Number(user?.fonction) === 6) {
+    idConf1 = user?.id ? String(user.id) : '';
+  } else {
     idConf1 = ficheData.id_confirmateur ? String(ficheData.id_confirmateur) : (histoConf ? (histoConf[0] || '') : '');
     idConf2 = ficheData.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : (histoConf ? (histoConf[1] || '') : '');
     idConf3 = ficheData.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : (histoConf ? (histoConf[2] || '') : '');
@@ -939,8 +941,20 @@ const FicheDetail = ({
     return (res.data.data || []).filter(u => u.fonction === 6 && (u.etat > 0 || u.etat == null));
   });
 
-  // Admin (1, 7), Backoffice (11), Confirmateur (6), RP Confirmation (13), RE Confirmation (14)
-  const showHistoConfirmateurDropdown = [1, 6, 7, 11, 13, 14].includes(Number(user?.fonction));
+  // Admin (1, 7), Backoffice (11), RP Confirmation (13), RE Confirmation (14)
+  // Confirmateur (6) : pas de picker histo — auto (soi) sauf formulaire CONFIRMER
+  const showHistoConfirmateurDropdown = [1, 7, 11, 13, 14].includes(Number(user?.fonction));
+
+  // Session confirmateur : conf1 = uniquement soi ; conf2/3 = liste complète
+  const confirmateur1SelectOptions = useMemo(() => {
+    if (isConfirmateurSession && user?.id) {
+      const self = (confirmateurs || []).find((c) => Number(c.id) === Number(user.id));
+      return self
+        ? [self]
+        : [{ id: user.id, pseudo: user.pseudo || `ID: ${user.id}` }];
+    }
+    return confirmateurs || [];
+  }, [isConfirmateurSession, user?.id, user?.pseudo, confirmateurs]);
 
   const { data: professions } = useQuery('professions', async () => {
     const res = await api.get('/management/professions');
@@ -2022,17 +2036,14 @@ const FicheDetail = ({
       annee_systeme_chauffage: ficheData?.annee_systeme_chauffage || '',
       conf_commentaire_produit: ficheData?.conf_commentaire_produit || ficheData?.commentaire || '',
       id_commercial_2:
-        ficheHonoreASuivreViaCompteRendu(ficheData) &&
-        ficheData?.id_commercial_2 != null &&
-        Number(ficheData.id_commercial_2) > 0
+        ficheData?.id_commercial_2 != null && Number(ficheData.id_commercial_2) > 0
           ? String(ficheData.id_commercial_2)
           : ''
     };
 
-    // Confirmateur (6) : pas de préremplissage auto — sélection manuelle dans le modal.
-    // Autres sessions : garder slots fiche ; après REFUSER / RETRACT → pas de conf 2/3.
+    // Confirmateur (6) : conf1 = soi ; 2/3 vides (ajout manuel). Autres sessions : slots fiche.
     if (Number(user?.fonction) === 6) {
-      nextRdvFormData.id_confirmateur = '';
+      nextRdvFormData.id_confirmateur = user?.id ? String(user.id) : '';
       nextRdvFormData.id_confirmateur_2 = '';
       nextRdvFormData.id_confirmateur_3 = '';
     } else if (isNouvelleConfirmationConf1Seul(ficheData)) {
@@ -2155,6 +2166,10 @@ const FicheDetail = ({
 
       // Préparer les données de mise à jour
       // RDV_URGENT doit être en état CONFIRMER (7) avec la qualification RDV_URGENT
+      const conf1Id =
+        Number(user?.fonction) === 6 && user?.id
+          ? parseInt(user.id, 10)
+          : (data.id_confirmateur ? parseInt(data.id_confirmateur) : null);
       const updateData = {
         date_rdv_time: data.date_rdv_time.includes(':') 
           ? data.date_rdv_time 
@@ -2162,7 +2177,7 @@ const FicheDetail = ({
         id_etat_final: 7, // Toujours CONFIRMER (7) - RDV_URGENT est géré via id_qualif
         produit: data.produit ? parseInt(data.produit) : null,
         conf_produit: data.produit ? parseInt(data.produit) : null,
-        id_confirmateur: data.id_confirmateur ? parseInt(data.id_confirmateur) : null,
+        id_confirmateur: conf1Id,
         id_confirmateur_2: data.id_confirmateur_2 ? parseInt(data.id_confirmateur_2) : null,
         id_confirmateur_3: data.id_confirmateur_3 ? parseInt(data.id_confirmateur_3) : null,
         conf_rdv_avec: data.conf_rdv_avec || null,
@@ -2210,13 +2225,11 @@ const FicheDetail = ({
       updateData.histo_id_confirmateur_2 = updateData.id_confirmateur_2;
       updateData.histo_id_confirmateur_3 = updateData.id_confirmateur_3;
 
-      if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
-        // Commercial 2 (R2) optionnel — peut rester vide
-        updateData.id_commercial_2 =
-          data.id_commercial_2 && String(data.id_commercial_2).trim() !== ''
-            ? parseInt(data.id_commercial_2, 10)
-            : null;
-      }
+      // Commercial 2 (R2) optionnel
+      updateData.id_commercial_2 =
+        data.id_commercial_2 && String(data.id_commercial_2).trim() !== ''
+          ? parseInt(data.id_commercial_2, 10)
+          : null;
 
       // Vérifier si le RDV est pour aujourd'hui ou demain
       const rdvDate = new Date(updateData.date_rdv_time);
@@ -2515,10 +2528,13 @@ const FicheDetail = ({
       }
 
       // Préparer les données à envoyer
+      const conf1Id = isConfirmateurSession && user?.id
+        ? parseInt(user.id, 10)
+        : (confFormData.id_confirmateur ? parseInt(confFormData.id_confirmateur) : null);
       const updateData = {
         id_etat_final: 7,
         produit: confFormData.produit ? parseInt(confFormData.produit) : null,
-        id_confirmateur: confFormData.id_confirmateur ? parseInt(confFormData.id_confirmateur) : null,
+        id_confirmateur: conf1Id,
         id_confirmateur_2: confFormData.id_confirmateur_2 ? parseInt(confFormData.id_confirmateur_2) : null,
         id_confirmateur_3: confFormData.id_confirmateur_3 ? parseInt(confFormData.id_confirmateur_3) : null,
         date_rdv_time: dateRdvTime,
@@ -2852,6 +2868,7 @@ const FicheDetail = ({
       if (showHistoConfirmateurDropdown) {
         // Toujours envoyer les IDs sélectionnés (y compris vide → null côté API) :
         // ne pas laisser le backend retomber sur l'utilisateur connecté.
+        // Écriture dans fiches_histo (histo_id_*) et fiches (id_confirmateur*) quand conf1 est choisi.
         const conf1 =
           histoConfirmateurId !== '' && histoConfirmateurId != null
             ? parseInt(histoConfirmateurId, 10)
@@ -2864,9 +2881,17 @@ const FicheDetail = ({
           showHistoConfirmateur3 && histoConfirmateur3Id !== '' && histoConfirmateur3Id != null
             ? parseInt(histoConfirmateur3Id, 10)
             : null;
-        updateData.histo_id_confirmateur = Number.isFinite(conf1) && conf1 > 0 ? conf1 : null;
-        updateData.histo_id_confirmateur_2 = Number.isFinite(conf2) && conf2 > 0 ? conf2 : null;
-        updateData.histo_id_confirmateur_3 = Number.isFinite(conf3) && conf3 > 0 ? conf3 : null;
+        const c1 = Number.isFinite(conf1) && conf1 > 0 ? conf1 : null;
+        const c2 = Number.isFinite(conf2) && conf2 > 0 ? conf2 : null;
+        const c3 = Number.isFinite(conf3) && conf3 > 0 ? conf3 : null;
+        updateData.histo_id_confirmateur = c1;
+        updateData.histo_id_confirmateur_2 = c2;
+        updateData.histo_id_confirmateur_3 = c3;
+        if (c1 != null) {
+          updateData.id_confirmateur = c1;
+          updateData.id_confirmateur_2 = c2;
+          updateData.id_confirmateur_3 = c3;
+        }
       }
 
       // Ajouter les champs spécifiques selon l'état sélectionné
@@ -6807,8 +6832,8 @@ const FicheDetail = ({
                           onChange={(e) => setConfFormData({...confFormData, id_confirmateur: e.target.value})}
                           required
                         >
-                          <option value="">Sélectionner</option>
-                          {confirmateurs?.map(conf => (
+                          {!isConfirmateurSession && <option value="">Sélectionner</option>}
+                          {confirmateur1SelectOptions.map(conf => (
                             <option key={conf.id} value={conf.id}>
                               {conf.pseudo}
                             </option>
@@ -10019,9 +10044,19 @@ const CreateRdvModal = ({
   onSubmit,
   rdvSubmitting = false
 }) => {
-  const isHonoreASuivre = ficheHonoreASuivreViaCompteRendu(ficheData);
+  const isConfirmateurSession = Number(user?.fonction) === 6;
   const nouvelleConfConf1Seul = isNouvelleConfirmationConf1Seul(ficheData);
   const [showRdvConfFields, setShowRdvConfFields] = useState(false);
+
+  const confirmateur1Options = (() => {
+    if (isConfirmateurSession && user?.id) {
+      const self = (confirmateurs || []).find((c) => Number(c.id) === Number(user.id));
+      return self
+        ? [self]
+        : [{ id: user.id, pseudo: user.pseudo || `ID: ${user.id}` }];
+    }
+    return confirmateurs || [];
+  })();
 
   // Préremplir les champs PV depuis ficheData si ils sont vides dans rdvFormData
   useEffect(() => {
@@ -10286,32 +10321,30 @@ const CreateRdvModal = ({
                     )}
                   </td>
                 </tr>
-                {isHonoreASuivre && (
-                  <tr>
-                    <td>
-                      <label htmlFor="rdv_id_commercial_2">Commercial secondaire (R2) (optionnel)</label>
-                    </td>
-                    <td>
-                      <select
-                        id="rdv_id_commercial_2"
-                        className="form-control"
-                        value={rdvFormData.id_commercial_2 || ''}
-                        onChange={(e) =>
-                          setRdvFormData({ ...rdvFormData, id_commercial_2: e.target.value })
-                        }
-                      >
-                        <option value="">Sélectionner</option>
-                        {(commerciaux || [])
-                          .filter((u) => u.etat > 0 || u.etat == null)
-                          .map((com) => (
-                            <option key={com.id} value={com.id}>
-                              {com.pseudo}
-                            </option>
-                          ))}
-                      </select>
-                    </td>
-                  </tr>
-                )}
+                <tr>
+                  <td>
+                    <label htmlFor="rdv_id_commercial_2">Commercial 2 (optionnel)</label>
+                  </td>
+                  <td>
+                    <select
+                      id="rdv_id_commercial_2"
+                      className="form-control"
+                      value={rdvFormData.id_commercial_2 || ''}
+                      onChange={(e) =>
+                        setRdvFormData({ ...rdvFormData, id_commercial_2: e.target.value })
+                      }
+                    >
+                      <option value="">Aucun</option>
+                      {(commerciaux || [])
+                        .filter((u) => u.etat > 0 || u.etat == null)
+                        .map((com) => (
+                          <option key={com.id} value={com.id}>
+                            {com.pseudo}
+                          </option>
+                        ))}
+                    </select>
+                  </td>
+                </tr>
                 <tr>
                   <td><label htmlFor="rdv_confirmateur">Confirmateur *</label></td>
                   <td>
@@ -10322,8 +10355,8 @@ const CreateRdvModal = ({
                       onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur: e.target.value})}
                       required
                     >
-                      <option value="">Sélectionner</option>
-                      {confirmateurs?.map(conf => (
+                      {!isConfirmateurSession && <option value="">Sélectionner</option>}
+                      {confirmateur1Options.map(conf => (
                         <option key={conf.id} value={conf.id}>
                           {conf.pseudo}
                         </option>
