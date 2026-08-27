@@ -28,6 +28,17 @@ function formatDateLocal(date) {
   return `${year}-${month}-${day}`;
 }
 
+/** DATETIME → "YYYY-MM-DD HH:mm:ss" en heure locale (jamais toISOString / UTC). */
+function formatMysqlLocalDateTime(value) {
+  if (value == null || value === '') return '';
+  if (typeof value === 'string') return value;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
+  }
+  return String(value);
+}
+
 // Helper pour obtenir les jours de la semaine (Lundi à Vendredi)
 function getWeekDays(year, week) {
   const monday = getMondayOfWeek(year, week);
@@ -308,11 +319,7 @@ router.get('/week', authenticate, async (req, res) => {
       // car DATE() retourne la date selon le fuseau horaire de MySQL, pas nécessairement l'heure locale
       if (fiche.date_rdv_time) {
         // Utiliser date_rdv_time complet pour extraire la date en heure locale
-        let dateTimeStr = typeof fiche.date_rdv_time === 'string' 
-          ? fiche.date_rdv_time 
-          : (fiche.date_rdv_time instanceof Date 
-              ? fiche.date_rdv_time.toISOString().replace('T', ' ').substring(0, 19)
-              : String(fiche.date_rdv_time || ''));
+        let dateTimeStr = formatMysqlLocalDateTime(fiche.date_rdv_time);
         
         if (dateTimeStr) {
           // Parser la date/heure complète et extraire la date en heure locale
@@ -337,11 +344,7 @@ router.get('/week', authenticate, async (req, res) => {
       } else if (fiche.date_rdv_time) {
         // Fallback : utiliser date_rdv_time si date_rdv_date n'est pas disponible
         // Convertir en chaîne si nécessaire (peut être un objet Date ou une chaîne)
-        let dateStr = typeof fiche.date_rdv_time === 'string' 
-          ? fiche.date_rdv_time 
-          : (fiche.date_rdv_time instanceof Date 
-              ? fiche.date_rdv_time.toISOString().replace('T', ' ').substring(0, 19)
-              : String(fiche.date_rdv_time || ''));
+        let dateStr = formatMysqlLocalDateTime(fiche.date_rdv_time);
         
         if (dateStr) {
           // Extraire la date et l'heure

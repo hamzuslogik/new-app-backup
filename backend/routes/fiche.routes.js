@@ -4115,6 +4115,9 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       ...fiche,
       // Sérialiser les DATETIME en chaîne LOCALE pour éviter un décalage UTC côté front
       // lorsque ces champs sont utilisés en repli (« Date d'appel » via formatDateNoSeconds).
+      // date_rdv_time : critique — sans ça, JSON.stringify(Date) → ISO UTC (−1h affichée).
+      date_rdv_time: toLocalDatetimeString(fiche.date_rdv_time),
+      date_sign_time: toLocalDatetimeString(fiche.date_sign_time),
       date_appel_time: toLocalDatetimeString(fiche.date_appel_time),
       date_modif_time: toLocalDatetimeString(fiche.date_modif_time),
       date_insert_time: toLocalDatetimeString(fiche.date_insert_time),
@@ -4315,13 +4318,15 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           conf_rdv_annule_precedent: fiche.conf_rdv_annule_precedent || null,
           conf_presence_couple: fiche.conf_presence_couple || null,
           // Pour l'historique, priorité aux valeurs historisées de la ligne (sinon repli fiche courante)
-          date_rdv_time: (histo.date_rdv_time ?? fiche.date_rdv_time) || null,
+          // Toujours sérialiser en chaîne locale (même bug UTC que sur la fiche).
+          date_rdv_time: toLocalDatetimeString(histo.date_rdv_time ?? fiche.date_rdv_time),
           // date_appel_time : DATETIME MySQL → mysql2 renvoie un Date local → JSON.stringify
           // le convertit en ISO UTC, ce qui décale l'heure côté front (« Date d'appel » affichée
           // via new Date(...).toLocaleString). On sérialise en chaîne locale pour éviter le décalage.
           date_appel_time: toLocalDatetimeString(histo.date_appel_time ?? fiche.date_appel_time),
           // Même problématique pour date_creation (utilisée comme fallback de « Date d'appel »).
           date_creation: toLocalDatetimeString(histo.date_creation),
+          date_sign_time: toLocalDatetimeString(histo.date_sign_time ?? fiche.date_sign_time),
           profession_mr: fiche.profession_mr || null,
           profession_madame: fiche.profession_madame || null,
           type_contrat_mr: fiche.type_contrat_mr || null,

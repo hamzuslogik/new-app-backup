@@ -12,7 +12,10 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  charset: 'utf8mb4'
+  charset: 'utf8mb4',
+  // DATETIME/TIMESTAMP renvoyés comme chaînes "YYYY-MM-DD HH:mm:ss" (pas d'objet Date).
+  // Évite le décalage d'1h : Date → JSON.stringify → ISO UTC (ex. 09:30 → 08:30Z).
+  dateStrings: true,
 };
 
 // Créer le pool de connexions
