@@ -8,6 +8,10 @@ const {
   isAuditQualiteRdvTableAvailable,
   fetchAuditQualiteRdvStats,
 } = require('../utils/auditQualiteRdv');
+const {
+  resolveProductionQualifDateRange,
+  buildProductionQualifFicheConditions,
+} = require('../utils/productionQualif');
 
 // Dates en heure locale : 1er du mois / aujourd'hui (évite UTC qui peut donner le 31 du mois précédent)
 function getFirstOfMonthLocal() {
@@ -90,62 +94,6 @@ function resolveKpiDateRangeFromQuery(req) {
     endDateTime: `${end} ${timeFin}`,
     dateChamp: resolveKpiDateChamp(req.query?.date_champ),
     dateChampKey: req.query?.date_champ === 'date_rdv_time' ? 'date_rdv_time' : 'date_insert_time',
-  };
-}
-
-/** Parse date + heure pour Production Qualif (date_insert_time). */
-function resolveProductionQualifDateRange(query) {
-  const { date_debut, date_fin, time_debut, time_fin } = query || {};
-  let start =
-    typeof date_debut === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date_debut)
-      ? date_debut.slice(0, 10)
-      : getTodayLocal();
-  let end =
-    typeof date_fin === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date_fin)
-      ? date_fin.slice(0, 10)
-      : getTodayLocal();
-  if (start > end) {
-    const tmp = start;
-    start = end;
-    end = tmp;
-  }
-  const timeDebut =
-    time_debut && /^\d{2}:\d{2}/.test(String(time_debut))
-      ? `${String(time_debut).slice(0, 5)}:00`
-      : '00:00:00';
-  const timeFin =
-    time_fin && /^\d{2}:\d{2}/.test(String(time_fin))
-      ? `${String(time_fin).slice(0, 5)}:00`
-      : '23:59:59';
-  return {
-    start,
-    end,
-    timeDebut,
-    timeFin,
-    startDateTime: `${start} ${timeDebut}`,
-    endDateTime: `${end} ${timeFin}`,
-  };
-}
-
-/** Filtres communs production qualif (alignés onglet Statistiques / Fiches). */
-const PRODUCTION_QUALIF_FICHE_FILTERS = [
-  'f.active = 1',
-  'f.archive = 0',
-  'f.date_insert_time IS NOT NULL',
-  "f.date_insert_time != ''",
-];
-
-function buildProductionQualifFicheConditions(agentIds, startDateTime, endDateTime, alias = 'f') {
-  const f = alias;
-  const filters = PRODUCTION_QUALIF_FICHE_FILTERS.map((c) => c.replace(/\bf\./g, `${f}.`));
-  return {
-    sql: [
-      `${f}.id_agent IN (${agentIds.map(() => '?').join(',')})`,
-      ...filters,
-      `${f}.date_insert_time >= ?`,
-      `${f}.date_insert_time <= ?`,
-    ].join(' AND '),
-    params: [...agentIds, startDateTime, endDateTime],
   };
 }
 

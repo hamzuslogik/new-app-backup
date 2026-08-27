@@ -27,6 +27,11 @@ const {
   confirmateurDerniereLigneHistoJoin,
   fichesHistoLastInRangeJoin,
 } = require('../utils/fichesHistoJoinSql');
+const {
+  resolveProductionQualifDateRange,
+  buildProductionQualifFicheConditions,
+  isProductionQualifContext,
+} = require('../utils/productionQualif');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -2927,19 +2932,29 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
     }
 
     // Construire les conditions
-    let whereConditions = [
-      'fiche.archive = 0',
-      'fiche.active = 1',
-      `fiche.id_agent IN (${agentIds.map(() => '?').join(',')})`
-    ];
-    let params = [...agentIds];
+    const productionQualifMode = isProductionQualifContext(req.query);
+    let whereConditions;
+    let params;
+
+    if (productionQualifMode) {
+      const { startDateTime, endDateTime } = resolveProductionQualifDateRange(req.query);
+      const built = buildProductionQualifFicheConditions(agentIds, startDateTime, endDateTime, 'fiche');
+      whereConditions = [built.sql];
+      params = [...built.params];
+    } else {
+      whereConditions = [
+        '(fiche.archive = 0 OR fiche.archive IS NULL)',
+        'fiche.active = 1',
+        `fiche.id_agent IN (${agentIds.map(() => '?').join(',')})`,
+        'fiche.date_insert_time IS NOT NULL',
+        'fiche.date_insert_time != ""',
+      ];
+      params = [...agentIds];
+    }
 
     // Pour RP / backoffice / admin : inclure tous les états (groupe 0 + validé)
-    // Pour RE Qualification : filtrer groupe 0 + EN-ATTENTE + fiches validées (groupe 1, 2 ou 3)
-    if (fonction === 12 || isBackofficeOrAdmin) {
-      // Pour RP Qualification : inclure tous les états (pas de filtre sur les états)
-      // Le filtre par état se fera côté frontend si nécessaire
-    } else {
+    // Pour RE Qualification : filtrer groupe 0 + EN-ATTENTE + fiches validées (sauf page Production Qualif)
+    if (!productionQualifMode && fonction !== 12 && !isBackofficeOrAdmin) {
       // Pour RE Qualification : filtrer les états du groupe 0 + EN-ATTENTE + fiches validées (hors groupe 0)
       whereConditions.push(`EXISTS (
         SELECT 1 FROM etats e 
@@ -3067,30 +3082,30 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       }
     }
 
-    // Pour la production, utiliser date_insert_time (date de création) au lieu de date_appel_time
-    // S'assurer que date_insert_time n'est pas NULL ou vide
-    whereConditions.push('fiche.date_insert_time IS NOT NULL');
-    whereConditions.push('fiche.date_insert_time != ""');
-    
-    // Filtrer par dates si fournies (date_insert_time, avec heure optionnelle)
-    if (date_debut) {
-      const timeDebut =
-        time_debut && /^\d{2}:\d{2}/.test(String(time_debut))
-          ? `${String(time_debut).slice(0, 5)}:00`
-          : '00:00:00';
-      const datePart = String(date_debut).slice(0, 10);
-      whereConditions.push('fiche.date_insert_time >= ?');
-      params.push(`${datePart} ${timeDebut}`);
-    }
+    if (!productionQualifMode) {
+      // Pour la production, utiliser date_insert_time (date de création) au lieu de date_appel_time
+      whereConditions.push('fiche.date_insert_time IS NOT NULL');
+      whereConditions.push('fiche.date_insert_time != ""');
 
-    if (date_fin) {
-      const timeFin =
-        time_fin && /^\d{2}:\d{2}/.test(String(time_fin))
-          ? `${String(time_fin).slice(0, 5)}:00`
-          : '23:59:59';
-      const datePart = String(date_fin).slice(0, 10);
-      whereConditions.push('fiche.date_insert_time <= ?');
-      params.push(`${datePart} ${timeFin}`);
+      if (date_debut) {
+        const timeDebut =
+          time_debut && /^\d{2}:\d{2}/.test(String(time_debut))
+            ? `${String(time_debut).slice(0, 5)}:00`
+            : '00:00:00';
+        const datePart = String(date_debut).slice(0, 10);
+        whereConditions.push('fiche.date_insert_time >= ?');
+        params.push(`${datePart} ${timeDebut}`);
+      }
+
+      if (date_fin) {
+        const timeFin =
+          time_fin && /^\d{2}:\d{2}/.test(String(time_fin))
+            ? `${String(time_fin).slice(0, 5)}:00`
+            : '23:59:59';
+        const datePart = String(date_fin).slice(0, 10);
+        whereConditions.push('fiche.date_insert_time <= ?');
+        params.push(`${datePart} ${timeFin}`);
+      }
     }
 
     const whereClause = whereConditions.join(' AND ');

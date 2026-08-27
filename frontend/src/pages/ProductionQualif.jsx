@@ -157,7 +157,8 @@ const ProductionQualif = () => {
     ['fiches-production-qualif', filters, viewMode],
     async () => {
       const params = {
-        page: 1
+        page: 1,
+        production_qualif: '1',
       };
       if (filters.date_debut) params.date_debut = filters.date_debut;
       if (filters.date_fin) params.date_fin = filters.date_fin;
