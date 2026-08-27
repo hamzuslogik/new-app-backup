@@ -6006,13 +6006,8 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
     if (!fiche) {
       return res.status(404).json({ success: false, message: 'Fiche non trouvée' });
     }
-    const canModifyAlerte = await canQualiteModifierFiche(fiche, req.user.id, req.user.fonction);
-    if (!canModifyAlerte) {
-      return res.status(403).json({
-        success: false,
-        message: 'Cette fiche est verrouillée et ne peut pas être modifiée.'
-      });
-    }
+    // Qualité qualification (2/8/12) : alerte autorisée même si fiche verrouillée CQ
+    // ou date d'insertion antérieure (pas de contrôle canQualiteModifierFiche).
     if (!fiche.id_agent) {
       return res.status(400).json({ success: false, message: 'Cette fiche n\'a pas d\'agent assigné' });
     }

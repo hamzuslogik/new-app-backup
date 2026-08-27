@@ -906,10 +906,7 @@ const ControleQualite = () => {
     if (!contextMenu?.fiche) return;
     const fiche = contextMenu.fiche;
     closeContextMenu();
-    if (isFicheLockedForUser(fiche)) {
-      toast.warning(getLockMessage(fiche));
-      return;
-    }
+    // Alerte autorisée même si fiche verrouillée / date d'insertion antérieure
     openAlertModal(fiche);
   };
 
@@ -1419,8 +1416,7 @@ const ControleQualite = () => {
             className="cq-fiche-context-menu-item"
             disabled={
               sendAlerteKoMutation.isLoading ||
-              (contextMenu.fiche.nb_alertes ?? 0) >= 1 ||
-              isFicheLockedForUser(contextMenu.fiche)
+              (contextMenu.fiche.nb_alertes ?? 0) >= 1
             }
             onClick={openAlertFromMenu}
           >
