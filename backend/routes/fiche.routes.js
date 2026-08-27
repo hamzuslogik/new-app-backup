@@ -2881,10 +2881,30 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         );
         agentIds = (agentsSousResponsabilite || []).map((a) => a.id);
       } else {
-        const allAgents = await query(
-          `SELECT id FROM utilisateurs WHERE fonction = 3 AND etat > 0`
+        // Aligné stats production-qualif : agents rattachés à un superviseur ayant des agents qualif
+        const superviseursWithAgents = await query(
+          `SELECT DISTINCT u.id
+           FROM utilisateurs u
+           WHERE u.etat > 0
+           AND EXISTS (
+             SELECT 1 FROM utilisateurs agents
+             WHERE agents.chef_equipe = u.id
+             AND agents.fonction = 3
+             AND agents.etat > 0
+           )`
         );
-        agentIds = (allAgents || []).map((a) => a.id);
+        const superviseurIds = (superviseursWithAgents || []).map((s) => s.id);
+        if (superviseurIds.length === 0) {
+          agentIds = [];
+        } else {
+          const agentsSousResponsabilite = await query(
+            `SELECT id FROM utilisateurs
+             WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')})
+             AND fonction = 3 AND etat > 0`,
+            superviseurIds
+          );
+          agentIds = (agentsSousResponsabilite || []).map((a) => a.id);
+        }
       }
     } else if (fonction === 2) {
       // RE Qualification : agents sous la responsabilité du superviseur connecté

@@ -127,6 +127,28 @@ function resolveProductionQualifDateRange(query) {
   };
 }
 
+/** Filtres communs production qualif (alignés onglet Statistiques / Fiches). */
+const PRODUCTION_QUALIF_FICHE_FILTERS = [
+  'f.active = 1',
+  'f.archive = 0',
+  'f.date_insert_time IS NOT NULL',
+  "f.date_insert_time != ''",
+];
+
+function buildProductionQualifFicheConditions(agentIds, startDateTime, endDateTime, alias = 'f') {
+  const f = alias;
+  const filters = PRODUCTION_QUALIF_FICHE_FILTERS.map((c) => c.replace(/\bf\./g, `${f}.`));
+  return {
+    sql: [
+      `${f}.id_agent IN (${agentIds.map(() => '?').join(',')})`,
+      ...filters,
+      `${f}.date_insert_time >= ?`,
+      `${f}.date_insert_time <= ?`,
+    ].join(' AND '),
+    params: [...agentIds, startDateTime, endDateTime],
+  };
+}
+
 /** Décale une datetime MySQL (YYYY-MM-DD HH:mm:ss) d'un nombre de jours. */
 function shiftMysqlDateTimeByDays(dateTimeStr, days) {
   const normalized = String(dateTimeStr || '').trim().replace(' ', 'T');
@@ -195,30 +217,26 @@ async function computeProductionQualifPeriodTotals(agentIds, startDateTime, endD
     };
   }
   const placeholders = agentIds.map(() => '?').join(',');
-  const baseConditions = [
-    `f.id_agent IN (${placeholders})`,
-    'f.date_insert_time >= ?',
-    'f.date_insert_time <= ?',
-    '(f.archive = 0 OR f.archive IS NULL)',
-    'f.date_insert_time IS NOT NULL',
-    '(f.id_etat_final != 61 OR f.id_etat_final IS NULL)',
-  ];
-  const baseParams = [...agentIds, startDateTime, endDateTime];
+  const { sql: baseWhere, params: baseParams } = buildProductionQualifFicheConditions(
+    agentIds,
+    startDateTime,
+    endDateTime
+  );
 
   const totalResult = await queryOne(
-    `SELECT COUNT(*) AS total FROM fiches f WHERE ${baseConditions.join(' AND ')}`,
+    `SELECT COUNT(*) AS total FROM fiches f WHERE ${baseWhere}`,
     baseParams
   );
   const total = Number(totalResult?.total) || 0;
 
   const koResult = await queryOne(
-    `SELECT COUNT(*) AS count FROM fiches f WHERE ${baseConditions.join(' AND ')} AND f.ko = 1`,
+    `SELECT COUNT(*) AS count FROM fiches f WHERE ${baseWhere} AND f.ko = 1`,
     baseParams
   );
   const nb_ko = Number(koResult?.count) || 0;
 
   const hcResult = await queryOne(
-    `SELECT COUNT(*) AS count FROM fiches f WHERE ${baseConditions.join(' AND ')} AND f.id_etat_final = ?`,
+    `SELECT COUNT(*) AS count FROM fiches f WHERE ${baseWhere} AND f.id_etat_final = ?`,
     [...baseParams, ID_ETAT_HC]
   );
   const nb_hc = Number(hcResult?.count) || 0;
@@ -1831,14 +1849,11 @@ router.get('/production-qualif', authenticate, async (req, res) => {
           };
         });
 
-        const fichesConditions = [
-          `f.id_agent IN (${agentIds.map(() => '?').join(',')})`,
-          'f.date_insert_time >= ?',
-          'f.date_insert_time <= ?',
-          '(f.archive = 0 OR f.archive IS NULL)',
-          'f.date_insert_time IS NOT NULL'
-        ];
-        const fichesParams = [...agentIds, startDate, endDate];
+        const { sql: fichesWhere, params: fichesParams } = buildProductionQualifFicheConditions(
+          agentIds,
+          startDate,
+          endDate
+        );
 
         if (koEtatId != null) {
           const fichesStatsRows = await query(
@@ -1847,7 +1862,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
               COUNT(*) AS count
             FROM fiches f
             LEFT JOIN etats e ON f.id_etat_final = e.id
-            WHERE ${fichesConditions.join(' AND ')}
+            WHERE ${fichesWhere}
             AND (
               f.ko = 1
               OR (
@@ -1869,7 +1884,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
             `SELECT f.id_etat_final AS etat_key, COUNT(*) AS count
              FROM fiches f
              INNER JOIN etats e ON f.id_etat_final = e.id
-             WHERE ${fichesConditions.join(' AND ')}
+             WHERE ${fichesWhere}
              AND (f.ko = 0 OR f.ko IS NULL)
              AND ((e.groupe = '0' OR e.groupe = 0) OR f.id_etat_final = ?)
              GROUP BY f.id_etat_final`,
@@ -1884,7 +1899,10 @@ router.get('/production-qualif', authenticate, async (req, res) => {
         }
 
         if (!id_etat_final || id_etat_final === 'validated') {
-          const validatedConditions = [...fichesConditions, '(f.ko = 0 OR f.ko IS NULL)'];
+          const validatedConditions = [
+            fichesWhere,
+            '(f.ko = 0 OR f.ko IS NULL)',
+          ];
           const validatedParams = [...fichesParams];
           const idsEtatsQualif = etatsListe.map((e) => e.id);
           if (idsEtatsQualif.length > 0) {
@@ -1909,16 +1927,10 @@ router.get('/production-qualif', authenticate, async (req, res) => {
           };
         }
 
-        // Calculer le total (BRUT) : toutes les fiches avec date de création dans la période, indépendamment de l'état actuel
+        // Total (BRUT) : mêmes filtres que l'onglet Fiches
         const totalResult = await queryOne(
-          `SELECT COUNT(*) as total
-           FROM fiches f
-           WHERE f.id_agent IN (${agentIds.map(() => '?').join(',')})
-           AND f.date_insert_time >= ?
-           AND f.date_insert_time <= ?
-           AND (f.archive = 0 OR f.archive IS NULL)
-           AND f.date_insert_time IS NOT NULL`,
-          [...agentIds, startDate, endDate]
+          `SELECT COUNT(*) as total FROM fiches f WHERE ${fichesWhere}`,
+          fichesParams
         );
 
         const total = totalResult?.total || 0;
