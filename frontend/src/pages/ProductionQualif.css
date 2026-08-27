@@ -1056,3 +1056,117 @@
   cursor: not-allowed;
 }
 
+.production-filters input[type="datetime-local"] {
+  min-width: 210px;
+}
+
+.production-comparison {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f8fafb;
+  border: 1px solid #d8e4e8;
+  border-radius: 10px;
+}
+
+.production-comparison-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  color: #2c3e50;
+}
+
+.production-comparison-subtitle {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #666;
+}
+
+.production-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.comparison-card {
+  background: #fff;
+  border: 1px solid #e0e8ec;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.comparison-card-previous {
+  border-color: #b8d4dc;
+  background: #f3f8fa;
+}
+
+.comparison-card-delta {
+  border-color: #9cbfc8;
+  background: #eef5f7;
+}
+
+.comparison-card-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #607d8b;
+  margin-bottom: 6px;
+}
+
+.comparison-card-period {
+  font-size: 13px;
+  color: #444;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.comparison-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comparison-metric-label {
+  display: block;
+  font-size: 12px;
+  color: #777;
+  margin-bottom: 4px;
+}
+
+.comparison-metric-value {
+  font-size: 24px;
+  color: #222;
+  line-height: 1.2;
+}
+
+.comparison-metric-detail {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.delta-positive {
+  color: #28a745;
+}
+
+.delta-negative {
+  color: #dc3545;
+}
+
+.delta-neutral {
+  color: #666;
+}
+
+@media (max-width: 900px) {
+  .production-comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .production-comparison {
+    break-inside: avoid;
+    margin-top: 16px;
+  }
+}
+

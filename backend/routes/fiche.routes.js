@@ -2792,7 +2792,9 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       id_etat_final,
       id_superviseur,
       date_debut,
-      date_fin
+      date_fin,
+      time_debut,
+      time_fin,
     } = req.query;
 
     const parsedPage = parseInt(page, 10) || 1;
@@ -3050,15 +3052,25 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
     whereConditions.push('fiche.date_insert_time IS NOT NULL');
     whereConditions.push('fiche.date_insert_time != ""');
     
-    // Filtrer par dates si fournies (pas de date par défaut pour permettre toutes les fiches)
+    // Filtrer par dates si fournies (date_insert_time, avec heure optionnelle)
     if (date_debut) {
+      const timeDebut =
+        time_debut && /^\d{2}:\d{2}/.test(String(time_debut))
+          ? `${String(time_debut).slice(0, 5)}:00`
+          : '00:00:00';
+      const datePart = String(date_debut).slice(0, 10);
       whereConditions.push('fiche.date_insert_time >= ?');
-      params.push(`${date_debut} 00:00:00`);
+      params.push(`${datePart} ${timeDebut}`);
     }
 
     if (date_fin) {
+      const timeFin =
+        time_fin && /^\d{2}:\d{2}/.test(String(time_fin))
+          ? `${String(time_fin).slice(0, 5)}:00`
+          : '23:59:59';
+      const datePart = String(date_fin).slice(0, 10);
       whereConditions.push('fiche.date_insert_time <= ?');
-      params.push(`${date_fin} 23:59:59`);
+      params.push(`${datePart} ${timeFin}`);
     }
 
     const whereClause = whereConditions.join(' AND ');

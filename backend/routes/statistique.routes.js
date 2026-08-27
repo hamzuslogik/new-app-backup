@@ -93,6 +93,113 @@ function resolveKpiDateRangeFromQuery(req) {
   };
 }
 
+/** Parse date + heure pour Production Qualif (date_insert_time). */
+function resolveProductionQualifDateRange(query) {
+  const { date_debut, date_fin, time_debut, time_fin } = query || {};
+  const todayStr = getTodayLocal();
+  let start =
+    typeof date_debut === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date_debut)
+      ? date_debut.slice(0, 10)
+      : getFirstOfMonthLocal();
+  let end =
+    typeof date_fin === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date_fin)
+      ? date_fin.slice(0, 10)
+      : todayStr;
+  if (start > end) {
+    const tmp = start;
+    start = end;
+    end = tmp;
+  }
+  const timeDebut =
+    time_debut && /^\d{2}:\d{2}/.test(String(time_debut))
+      ? `${String(time_debut).slice(0, 5)}:00`
+      : '00:00:00';
+  const timeFin =
+    time_fin && /^\d{2}:\d{2}/.test(String(time_fin))
+      ? `${String(time_fin).slice(0, 5)}:00`
+      : '23:59:59';
+  return {
+    start,
+    end,
+    timeDebut,
+    timeFin,
+    startDateTime: `${start} ${timeDebut}`,
+    endDateTime: `${end} ${timeFin}`,
+  };
+}
+
+/** Décale une datetime MySQL (YYYY-MM-DD HH:mm:ss) d'un nombre de jours. */
+function shiftMysqlDateTimeByDays(dateTimeStr, days) {
+  const normalized = String(dateTimeStr || '').trim().replace(' ', 'T');
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return dateTimeStr;
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  const sec = String(d.getSeconds()).padStart(2, '0');
+  return `${y}-${m}-${day} ${h}:${min}:${sec}`;
+}
+
+/** Veille : même créneau horaire (ex. 09:00–10:00 hier). */
+function getPreviousDaySameTimeWindow(startDateTime, endDateTime) {
+  return {
+    startDateTime: shiftMysqlDateTimeByDays(startDateTime, -1),
+    endDateTime: shiftMysqlDateTimeByDays(endDateTime, -1),
+  };
+}
+
+async function computeProductionQualifPeriodTotals(agentIds, startDateTime, endDateTime) {
+  const ID_ETAT_HC = 55;
+  if (!agentIds || agentIds.length === 0) {
+    return {
+      total: 0,
+      nb_ko: 0,
+      nb_hc: 0,
+      taux_ko: 0,
+      taux_hc: 0,
+      performance: 0,
+    };
+  }
+  const placeholders = agentIds.map(() => '?').join(',');
+  const baseConditions = [
+    `f.id_agent IN (${placeholders})`,
+    'f.date_insert_time >= ?',
+    'f.date_insert_time <= ?',
+    '(f.archive = 0 OR f.archive IS NULL)',
+    'f.date_insert_time IS NOT NULL',
+    '(f.id_etat_final != 61 OR f.id_etat_final IS NULL)',
+  ];
+  const baseParams = [...agentIds, startDateTime, endDateTime];
+
+  const totalResult = await queryOne(
+    `SELECT COUNT(*) AS total FROM fiches f WHERE ${baseConditions.join(' AND ')}`,
+    baseParams
+  );
+  const total = Number(totalResult?.total) || 0;
+
+  const koResult = await queryOne(
+    `SELECT COUNT(*) AS count FROM fiches f WHERE ${baseConditions.join(' AND ')} AND f.ko = 1`,
+    baseParams
+  );
+  const nb_ko = Number(koResult?.count) || 0;
+
+  const hcResult = await queryOne(
+    `SELECT COUNT(*) AS count FROM fiches f WHERE ${baseConditions.join(' AND ')} AND f.id_etat_final = ?`,
+    [...baseParams, ID_ETAT_HC]
+  );
+  const nb_hc = Number(hcResult?.count) || 0;
+
+  const taux_ko = total > 0 ? Math.round((nb_ko / total) * 1000) / 10 : 0;
+  const taux_hc = total > 0 ? Math.round((nb_hc / total) * 1000) / 10 : 0;
+  const nb_conformes = Math.max(0, total - nb_ko - nb_hc);
+  const performance = total > 0 ? Math.round((nb_conformes / total) * 1000) / 10 : 0;
+
+  return { total, nb_ko, nb_hc, taux_ko, taux_hc, performance };
+}
+
 /** Période précédente de même durée (fin = veille du début actuel). */
 function getPreviousPeriodComparisonRange(startDateStr, endDateStr) {
   const start = new Date(`${startDateStr}T12:00:00`);
@@ -1499,19 +1606,18 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
 router.get('/production-qualif', authenticate, async (req, res) => {
   try {
     const { 
-      date_debut, 
-      date_fin,
       id_superviseur,
       id_etat_final
     } = req.query;
 
-    // Valeurs par défaut : mois en cours
-    const today = new Date();
-    const startDateStr = date_debut || getFirstOfMonthLocal();
-    const endDateStr = date_fin || getTodayLocal();
-
-    const startDate = `${startDateStr} 00:00:00`;
-    const endDate = `${endDateStr} 23:59:59`;
+    const {
+      start: startDateStr,
+      end: endDateStr,
+      timeDebut,
+      timeFin,
+      startDateTime: startDate,
+      endDateTime: endDate,
+    } = resolveProductionQualifDateRange(req.query);
 
     const fonction = Number(req.user?.fonction);
     const isBackofficeOrAdmin = fonction === 11 || fonction === 1;
@@ -1580,8 +1686,13 @@ router.get('/production-qualif', authenticate, async (req, res) => {
           etats: [],
           period: {
             date_debut: startDateStr,
-            date_fin: endDateStr
-          }
+            date_fin: endDateStr,
+            time_debut: timeDebut,
+            time_fin: timeFin,
+            start_datetime: startDate,
+            end_datetime: endDate,
+          },
+          comparison: null,
         }
       });
     }
@@ -1658,6 +1769,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
     }
 
     // Pour chaque superviseur, calculer les stats
+    const allAgentIdsSet = new Set();
     const superviseursStats = await Promise.all(
       superviseurs.map(async (superviseur) => {
         // Récupérer les agents sous ce superviseur
@@ -1668,6 +1780,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
         );
 
         const agentIds = agents.map(a => a.id);
+        agentIds.forEach((id) => allAgentIdsSet.add(id));
 
         if (agentIds.length === 0) {
           return {
@@ -1787,6 +1900,25 @@ router.get('/production-qualif', authenticate, async (req, res) => {
       })
     );
 
+    const allAgentIds = [...allAgentIdsSet];
+    const currentTotals = await computeProductionQualifPeriodTotals(
+      allAgentIds,
+      startDate,
+      endDate
+    );
+
+    const previousWindow = getPreviousDaySameTimeWindow(startDate, endDate);
+    const previousTotals = await computeProductionQualifPeriodTotals(
+      allAgentIds,
+      previousWindow.startDateTime,
+      previousWindow.endDateTime
+    );
+
+    const deltaFiches = currentTotals.total - previousTotals.total;
+    const deltaPerformance = Math.round((currentTotals.performance - previousTotals.performance) * 10) / 10;
+    const deltaKo = currentTotals.nb_ko - previousTotals.nb_ko;
+    const deltaHc = currentTotals.nb_hc - previousTotals.nb_hc;
+
     res.json({
       success: true,
       data: {
@@ -1794,8 +1926,28 @@ router.get('/production-qualif', authenticate, async (req, res) => {
         etats: etatsListe,
         period: {
           date_debut: startDateStr,
-          date_fin: endDateStr
-        }
+          date_fin: endDateStr,
+          time_debut: timeDebut,
+          time_fin: timeFin,
+          start_datetime: startDate,
+          end_datetime: endDate,
+        },
+        comparison: {
+          current: currentTotals,
+          previous: {
+            ...previousTotals,
+            period: {
+              start_datetime: previousWindow.startDateTime,
+              end_datetime: previousWindow.endDateTime,
+            },
+          },
+          delta: {
+            total: deltaFiches,
+            nb_ko: deltaKo,
+            nb_hc: deltaHc,
+            performance: deltaPerformance,
+          },
+        },
       }
     });
   } catch (error) {

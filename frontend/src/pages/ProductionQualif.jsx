@@ -8,7 +8,7 @@ import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import SystemMessageBanner from '../components/SystemMessageBanner';
-import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
+import { getFirstOfMonthLocal, getTodayLocal, toDateTimeLocalValue, splitDateTimeLocalValue, formatDateTimeFr } from '../utils/dateUtils';
 import './ProductionQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -28,6 +28,24 @@ const getFicheEtatDisplay = (fiche) => {
   return { label: 'Validée', color: '#4CAF50' };
 };
 
+const formatDelta = (value, suffix = '') => {
+  const n = Number(value) || 0;
+  if (n > 0) return { text: `+${n}${suffix}`, className: 'delta-positive' };
+  if (n < 0) return { text: `${n}${suffix}`, className: 'delta-negative' };
+  return { text: `0${suffix}`, className: 'delta-neutral' };
+};
+
+const formatPeriodRange = (period) => {
+  if (!period) return '—';
+  const start = period.start_datetime
+    ? formatDateTimeFr(period.start_datetime)
+    : `${period.date_debut || ''} ${(period.time_debut || '').slice(0, 5)}`.trim();
+  const end = period.end_datetime
+    ? formatDateTimeFr(period.end_datetime)
+    : `${period.date_fin || ''} ${(period.time_fin || '').slice(0, 5)}`.trim();
+  return `${start} → ${end}`;
+};
+
 const ProductionQualif = () => {
   useForceDesktopViewport('production-qualif-page');
   const { user } = useAuth();
@@ -41,6 +59,8 @@ const ProductionQualif = () => {
   const [filters, setFilters] = useState({
     date_debut: getFirstOfMonthLocal(),
     date_fin: getTodayLocal(),
+    time_debut: '00:00',
+    time_fin: '23:59',
     id_superviseur: '',
     id_etat_final: [] // Tableau pour multi-select
   });
@@ -103,6 +123,8 @@ const ProductionQualif = () => {
       const params = {};
       if (filters.date_debut) params.date_debut = filters.date_debut;
       if (filters.date_fin) params.date_fin = filters.date_fin;
+      if (filters.time_debut) params.time_debut = filters.time_debut;
+      if (filters.time_fin) params.time_fin = filters.time_fin;
       if (filters.id_superviseur) params.id_superviseur = filters.id_superviseur;
       // Pour les statistiques, on peut envoyer le premier état ou filtrer côté backend
       if (filters.id_etat_final && filters.id_etat_final.length > 0) {
@@ -139,6 +161,8 @@ const ProductionQualif = () => {
       };
       if (filters.date_debut) params.date_debut = filters.date_debut;
       if (filters.date_fin) params.date_fin = filters.date_fin;
+      if (filters.time_debut) params.time_debut = filters.time_debut;
+      if (filters.time_fin) params.time_fin = filters.time_fin;
       // Filtrer par superviseur côté backend
       if (filters.id_superviseur) {
         params.id_superviseur = filters.id_superviseur;
@@ -249,6 +273,15 @@ const ProductionQualif = () => {
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleDateTimeFilterChange = (bound, value) => {
+    const { date, time } = splitDateTimeLocalValue(value);
+    if (bound === 'debut') {
+      setFilters((prev) => ({ ...prev, date_debut: date, time_debut: time }));
+    } else {
+      setFilters((prev) => ({ ...prev, date_fin: date, time_fin: time }));
+    }
   };
 
   // Fermer le dropdown multi-select quand on clique en dehors
@@ -549,19 +582,19 @@ const ProductionQualif = () => {
       {showFilters && (
         <div className="production-filters noprint">
           <div className="filter-group">
-            <label>Date début</label>
+            <label>Date début (heure incluse)</label>
             <input
-              type="date"
-              value={filters.date_debut}
-              onChange={(e) => handleFilterChange('date_debut', e.target.value)}
+              type="datetime-local"
+              value={toDateTimeLocalValue(filters.date_debut, filters.time_debut)}
+              onChange={(e) => handleDateTimeFilterChange('debut', e.target.value)}
             />
           </div>
           <div className="filter-group">
-            <label>Date fin</label>
+            <label>Date fin (heure incluse)</label>
             <input
-              type="date"
-              value={filters.date_fin}
-              onChange={(e) => handleFilterChange('date_fin', e.target.value)}
+              type="datetime-local"
+              value={toDateTimeLocalValue(filters.date_fin, filters.time_fin)}
+              onChange={(e) => handleDateTimeFilterChange('fin', e.target.value)}
             />
           </div>
           <div className="filter-group">
@@ -761,7 +794,12 @@ const ProductionQualif = () => {
           ) : fiches && fiches.length > 0 ? (
             <div className="fiches-table-container">
               <div className="period-info print-period">
-                Période : {filters.date_debut} au {filters.date_fin}
+                Période : {formatPeriodRange(stats.period || {
+                  date_debut: filters.date_debut,
+                  date_fin: filters.date_fin,
+                  time_debut: filters.time_debut,
+                  time_fin: filters.time_fin,
+                })}
               </div>
               <div className="results-info noprint">
                 {searchTerm || filters.id_superviseur || (filters.id_etat_final && filters.id_etat_final.length > 0) ? (
@@ -800,7 +838,7 @@ const ProductionQualif = () => {
                 <tbody>
                   {fiches.map((fiche) => (
                       <tr key={fiche.id || fiche.hash}>
-                        <td className="col-date">{fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : '-'}</td>
+                        <td className="col-date">{formatDateTimeFr(fiche.date_insert_time)}</td>
                         <td className="col-agent">{fiche.agent_pseudo || '-'}</td>
                         <td className="col-nom">{fiche.nom || '-'}</td>
                         <td className="col-prenom">{fiche.prenom || '-'}</td>
@@ -925,11 +963,14 @@ const ProductionQualif = () => {
           <>
             <div className="period-info print-period">
               Période :{' '}
-              {stats.period?.date_debut && stats.period?.date_fin
-                ? `${stats.period.date_debut} au ${stats.period.date_fin}`
-                : filters.date_debut && filters.date_fin
-                  ? `${filters.date_debut} au ${filters.date_fin}`
-                  : '—'}
+              {stats.period?.start_datetime && stats.period?.end_datetime
+                ? formatPeriodRange(stats.period)
+                : formatPeriodRange({
+                    date_debut: filters.date_debut,
+                    date_fin: filters.date_fin,
+                    time_debut: filters.time_debut,
+                    time_fin: filters.time_fin,
+                  })}
             </div>
             <div className="table-container">
               <table className="production-table">
@@ -1013,6 +1054,82 @@ const ProductionQualif = () => {
                 </tfoot>
               </table>
             </div>
+
+            {stats.comparison && (
+              <div className="production-comparison noprint">
+                <h2 className="production-comparison-title">Comparatif vs veille (même créneau horaire)</h2>
+                <p className="production-comparison-subtitle">
+                  Production agents qualification · filtre sur la <strong>date/heure d&apos;insertion</strong>
+                  {filters.id_superviseur ? ' · superviseur sélectionné' : ''}
+                </p>
+                <div className="production-comparison-grid">
+                  <div className="comparison-card">
+                    <div className="comparison-card-label">Période actuelle</div>
+                    <div className="comparison-card-period">{formatPeriodRange(stats.period)}</div>
+                    <div className="comparison-metrics">
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Fiches insérées</span>
+                        <strong className="comparison-metric-value">{stats.comparison.current.total}</strong>
+                      </div>
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Performance (conformité)</span>
+                        <strong className="comparison-metric-value">{stats.comparison.current.performance}%</strong>
+                        <span className="comparison-metric-detail">
+                          KO : {stats.comparison.current.nb_ko} ({stats.comparison.current.taux_ko}%)
+                          {' · '}
+                          HC : {stats.comparison.current.nb_hc} ({stats.comparison.current.taux_hc}%)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="comparison-card comparison-card-previous">
+                    <div className="comparison-card-label">Veille (même créneau)</div>
+                    <div className="comparison-card-period">
+                      {formatPeriodRange(stats.comparison.previous.period)}
+                    </div>
+                    <div className="comparison-metrics">
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Fiches insérées</span>
+                        <strong className="comparison-metric-value">{stats.comparison.previous.total}</strong>
+                      </div>
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Performance (conformité)</span>
+                        <strong className="comparison-metric-value">{stats.comparison.previous.performance}%</strong>
+                        <span className="comparison-metric-detail">
+                          KO : {stats.comparison.previous.nb_ko} ({stats.comparison.previous.taux_ko}%)
+                          {' · '}
+                          HC : {stats.comparison.previous.nb_hc} ({stats.comparison.previous.taux_hc}%)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="comparison-card comparison-card-delta">
+                    <div className="comparison-card-label">Évolution</div>
+                    <div className="comparison-metrics">
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Δ Fiches</span>
+                        <strong className={`comparison-metric-value ${formatDelta(stats.comparison.delta.total).className}`}>
+                          {formatDelta(stats.comparison.delta.total).text}
+                        </strong>
+                      </div>
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Δ Performance</span>
+                        <strong className={`comparison-metric-value ${formatDelta(stats.comparison.delta.performance, ' pts').className}`}>
+                          {formatDelta(stats.comparison.delta.performance, ' pts').text}
+                        </strong>
+                        <span className="comparison-metric-detail">
+                          Δ KO : {formatDelta(stats.comparison.delta.nb_ko).text}
+                          {' · '}
+                          Δ HC : {formatDelta(stats.comparison.delta.nb_hc).text}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="no-data">Aucune donnée disponible pour cette période</div>
