@@ -345,18 +345,19 @@ function buildConfFormStateFromFiche(ficheData, user) {
   const histoConf = Array.isArray(ficheData.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo.length > 0
     ? ficheData.confirmateurs_from_histo.map((id) => String(id))
     : null;
-  let idConf1 = ficheData.id_confirmateur ? String(ficheData.id_confirmateur) : (histoConf ? (histoConf[0] || '') : '');
-  let idConf2 = ficheData.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : (histoConf ? (histoConf[1] || '') : '');
-  let idConf3 = ficheData.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : (histoConf ? (histoConf[2] || '') : '');
-
-  if (Number(user?.fonction) === 6 && user?.id) {
-    const shifted = applyConfirmateurRepriseFromFiche(user.id, ficheData);
-    idConf1 = shifted.id_confirmateur;
-    idConf2 = shifted.id_confirmateur_2;
-    idConf3 = shifted.id_confirmateur_3;
-  } else if (isNouvelleConfirmationConf1Seul(ficheData)) {
-    idConf2 = '';
-    idConf3 = '';
+  let idConf1 = '';
+  let idConf2 = '';
+  let idConf3 = '';
+  // Session confirmateur (6) : plus de remplissage automatique (reprise / self) —
+  // sélection manuelle dans le formulaire. Autres sessions : préremplir depuis la fiche / histo.
+  if (Number(user?.fonction) !== 6) {
+    idConf1 = ficheData.id_confirmateur ? String(ficheData.id_confirmateur) : (histoConf ? (histoConf[0] || '') : '');
+    idConf2 = ficheData.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : (histoConf ? (histoConf[1] || '') : '');
+    idConf3 = ficheData.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : (histoConf ? (histoConf[2] || '') : '');
+    if (isNouvelleConfirmationConf1Seul(ficheData)) {
+      idConf2 = '';
+      idConf3 = '';
+    }
   }
 
   const confAppelTunisie = (() => {
@@ -706,6 +707,10 @@ const FicheDetail = ({
   const [histoConfirmateur3Id, setHistoConfirmateur3Id] = useState('');
   const [showHistoConfirmateur2, setShowHistoConfirmateur2] = useState(false);
   const [showHistoConfirmateur3, setShowHistoConfirmateur3] = useState(false);
+  const [showConfConfirmateur2, setShowConfConfirmateur2] = useState(false);
+  const [showConfConfirmateur3, setShowConfConfirmateur3] = useState(false);
+  const [showRdvConfirmateur2, setShowRdvConfirmateur2] = useState(false);
+  const [showRdvConfirmateur3, setShowRdvConfirmateur3] = useState(false);
   const [confFormData, setConfFormData] = useState({
     produit: '',
     id_confirmateur: '',
@@ -934,7 +939,8 @@ const FicheDetail = ({
     return (res.data.data || []).filter(u => u.fonction === 6 && (u.etat > 0 || u.etat == null));
   });
 
-  const showHistoConfirmateurDropdown = [1, 7, 13, 14].includes(Number(user?.fonction));
+  // Admin (1, 7), Backoffice (11), Confirmateur (6), RP Confirmation (13), RE Confirmation (14)
+  const showHistoConfirmateurDropdown = [1, 6, 7, 11, 13, 14].includes(Number(user?.fonction));
 
   const { data: professions } = useQuery('professions', async () => {
     const res = await api.get('/management/professions');
@@ -1214,6 +1220,8 @@ const FicheDetail = ({
   useEffect(() => {
     if (selectedEtat !== 7 || !confFormHydratePendingRef.current || !ficheData?.id) return;
     setConfFormData(buildConfFormStateFromFiche(ficheData, user));
+    setShowConfConfirmateur2(false);
+    setShowConfConfirmateur3(false);
     confFormHydratePendingRef.current = false;
   }, [selectedEtat, ficheData, user]);
 
@@ -2021,19 +2029,20 @@ const FicheDetail = ({
           : ''
     };
 
-    // Session confirmateur (fonction 6) : connecté = conf1 ; reprise → décalage slots actuels (1→2, 2→3).
-    // Exception REFUSER / SIGNER RETRACTER : conf1 seul.
-    if (Number(user?.fonction) === 6 && user?.id) {
-      const shifted = applyConfirmateurRepriseFromFiche(user.id, ficheData);
-      nextRdvFormData.id_confirmateur = shifted.id_confirmateur;
-      nextRdvFormData.id_confirmateur_2 = shifted.id_confirmateur_2;
-      nextRdvFormData.id_confirmateur_3 = shifted.id_confirmateur_3;
+    // Confirmateur (6) : pas de préremplissage auto — sélection manuelle dans le modal.
+    // Autres sessions : garder slots fiche ; après REFUSER / RETRACT → pas de conf 2/3.
+    if (Number(user?.fonction) === 6) {
+      nextRdvFormData.id_confirmateur = '';
+      nextRdvFormData.id_confirmateur_2 = '';
+      nextRdvFormData.id_confirmateur_3 = '';
     } else if (isNouvelleConfirmationConf1Seul(ficheData)) {
       nextRdvFormData.id_confirmateur_2 = '';
       nextRdvFormData.id_confirmateur_3 = '';
     }
 
     setRdvFormData(nextRdvFormData);
+    setShowRdvConfirmateur2(false);
+    setShowRdvConfirmateur3(false);
     
     setSelectedSlot({ date, hour });
     setShowRdvModal(true);
@@ -2080,6 +2089,8 @@ const FicheDetail = ({
       conf_rdv_date: dateStr,
       conf_rdv_time: timeStr
     });
+    setShowConfConfirmateur2(false);
+    setShowConfConfirmateur3(false);
     confFormHydratePendingRef.current = false;
 
     setTimeout(() => {
@@ -2194,15 +2205,17 @@ const FicheDetail = ({
         updateData.id_confirmateur_3 = null;
       }
 
+      // Historique = sélection manuelle du modal (sessions confirmateur / staff)
+      updateData.histo_id_confirmateur = updateData.id_confirmateur;
+      updateData.histo_id_confirmateur_2 = updateData.id_confirmateur_2;
+      updateData.histo_id_confirmateur_3 = updateData.id_confirmateur_3;
+
       if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
-        if (!data.id_commercial_2 || String(data.id_commercial_2).trim() === '') {
-          alert(
-            'Veuillez sélectionner le commercial secondaire (R2) : la fiche est passée par « honoré à suivre » via compte rendu.'
-          );
-          setRdvSubmitting(false);
-          return;
-        }
-        updateData.id_commercial_2 = parseInt(data.id_commercial_2, 10);
+        // Commercial 2 (R2) optionnel — peut rester vide
+        updateData.id_commercial_2 =
+          data.id_commercial_2 && String(data.id_commercial_2).trim() !== ''
+            ? parseInt(data.id_commercial_2, 10)
+            : null;
       }
 
       // Vérifier si le RDV est pour aujourd'hui ou demain
@@ -2449,9 +2462,13 @@ const FicheDetail = ({
     // Si l'état est 7 (confirmer), initialiser les valeurs du formulaire depuis la fiche (tous les conf_*)
     if (newEtatId === 7) {
       setConfFormData(buildConfFormStateFromFiche(ficheData, user));
+      setShowConfConfirmateur2(false);
+      setShowConfConfirmateur3(false);
       confFormHydratePendingRef.current = !ficheData?.id;
     } else {
       setConfFormData({ ...EMPTY_CONF_FORM_BASE });
+      setShowConfConfirmateur2(false);
+      setShowConfConfirmateur3(false);
       setConfProfMrDisplay('');
       setConfProfMmeDisplay('');
       setShowSuggestionsMr(false);
@@ -2466,12 +2483,6 @@ const FicheDetail = ({
       if (!(confFormData.conf_commentaire_produit || '').trim()) {
         alert('Veuillez saisir un commentaire.');
         return;
-      }
-      if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
-        if (!confFormData.id_commercial_2 || String(confFormData.id_commercial_2).trim() === '') {
-          alert('Veuillez sélectionner le commercial secondaire (R2).');
-          return;
-        }
       }
 
       // Construire la date/heure du RDV
@@ -2547,24 +2558,16 @@ const FicheDetail = ({
         updateData.id_confirmateur_3 = null;
       }
 
-      if (showHistoConfirmateurDropdown) {
-        // Historique : IDs choisis (picker ou formulaire Confirmer), pas l'utilisateur connecté
-        updateData.histo_id_confirmateur =
-          histoConfirmateurId !== '' && histoConfirmateurId != null
-            ? parseInt(histoConfirmateurId, 10)
-            : (confFormData.id_confirmateur ? parseInt(confFormData.id_confirmateur, 10) : null);
-        updateData.histo_id_confirmateur_2 =
-          showHistoConfirmateur2 && histoConfirmateur2Id !== '' && histoConfirmateur2Id != null
-            ? parseInt(histoConfirmateur2Id, 10)
-            : (confFormData.id_confirmateur_2 ? parseInt(confFormData.id_confirmateur_2, 10) : null);
-        updateData.histo_id_confirmateur_3 =
-          showHistoConfirmateur3 && histoConfirmateur3Id !== '' && histoConfirmateur3Id != null
-            ? parseInt(histoConfirmateur3Id, 10)
-            : (confFormData.id_confirmateur_3 ? parseInt(confFormData.id_confirmateur_3, 10) : null);
-      }
+      // Historique confirmateurs = sélection du formulaire CONFIRMER (jamais l'utilisateur connecté en auto)
+      updateData.histo_id_confirmateur = updateData.id_confirmateur;
+      updateData.histo_id_confirmateur_2 = updateData.id_confirmateur_2;
+      updateData.histo_id_confirmateur_3 = updateData.id_confirmateur_3;
 
       if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
-        updateData.id_commercial_2 = parseInt(confFormData.id_commercial_2, 10);
+        updateData.id_commercial_2 =
+          confFormData.id_commercial_2 && String(confFormData.id_commercial_2).trim() !== ''
+            ? parseInt(confFormData.id_commercial_2, 10)
+            : null;
       }
 
       // Appeler l'API pour mettre à jour
@@ -2849,18 +2852,21 @@ const FicheDetail = ({
       if (showHistoConfirmateurDropdown) {
         // Toujours envoyer les IDs sélectionnés (y compris vide → null côté API) :
         // ne pas laisser le backend retomber sur l'utilisateur connecté.
-        updateData.histo_id_confirmateur =
+        const conf1 =
           histoConfirmateurId !== '' && histoConfirmateurId != null
             ? parseInt(histoConfirmateurId, 10)
             : null;
-        updateData.histo_id_confirmateur_2 =
+        const conf2 =
           showHistoConfirmateur2 && histoConfirmateur2Id !== '' && histoConfirmateur2Id != null
             ? parseInt(histoConfirmateur2Id, 10)
             : null;
-        updateData.histo_id_confirmateur_3 =
+        const conf3 =
           showHistoConfirmateur3 && histoConfirmateur3Id !== '' && histoConfirmateur3Id != null
             ? parseInt(histoConfirmateur3Id, 10)
             : null;
+        updateData.histo_id_confirmateur = Number.isFinite(conf1) && conf1 > 0 ? conf1 : null;
+        updateData.histo_id_confirmateur_2 = Number.isFinite(conf2) && conf2 > 0 ? conf2 : null;
+        updateData.histo_id_confirmateur_3 = Number.isFinite(conf3) && conf3 > 0 ? conf3 : null;
       }
 
       // Ajouter les champs spécifiques selon l'état sélectionné
@@ -4930,6 +4936,7 @@ const FicheDetail = ({
                                               </button>
                                               {showDateRdvHistory && (
                                                 <div
+                                                  className="etat-actuel-rdv-heure-historique"
                                                   style={{
                                                     marginTop: '8px',
                                                     background: '#ffffff',
@@ -4941,6 +4948,7 @@ const FicheDetail = ({
                                                   }}
                                                 >
                                                   <table
+                                                    className="etat-actuel-rdv-heure-historique-table"
                                                     style={{
                                                       width: '100%',
                                                       borderCollapse: 'collapse',
@@ -4950,10 +4958,10 @@ const FicheDetail = ({
                                                   >
                                                     <thead>
                                                       <tr style={{ background: '#f3f4f6' }}>
-                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Quand</th>
-                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Qui</th>
-                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Ancienne valeur</th>
-                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db' }}>Nouvelle valeur</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#111827' }}>Quand</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#111827' }}>Qui</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#111827' }}>Ancienne valeur</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#111827' }}>Nouvelle valeur</th>
                                                       </tr>
                                                     </thead>
                                                     <tbody>
@@ -4966,22 +4974,22 @@ const FicheDetail = ({
                                                         })
                                                         .map((mod) => (
                                                           <tr key={mod.id}>
-                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap', color: '#1f2937' }}>
                                                               {mod.date_modif_time
                                                                 ? new Date(mod.date_modif_time).toLocaleString('fr-FR')
                                                                 : '-'}
                                                             </td>
-                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#1f2937' }}>
                                                               {mod.user_pseudo || '-'}
                                                             </td>
-                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#1f2937' }}>
                                                               {modificaValueDisplay(
                                                                 mod.ancien_valeur,
                                                                 mod.type || 'date_rdv_time',
                                                                 mod.ancien_valeur_label
                                                               )}
                                                             </td>
-                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#1f2937' }}>
                                                               {modificaValueDisplay(
                                                                 mod.nouvelle_valeur,
                                                                 mod.type || 'date_rdv_time',
@@ -6600,7 +6608,7 @@ const FicheDetail = ({
                 )}
             </div>
 
-            {showHistoConfirmateurDropdown && (
+            {showHistoConfirmateurDropdown && selectedEtat !== 7 && (
               <div className="form-group histo-confirmateurs-picker">
                 <label htmlFor="histo_confirmateur">Confirmateur (historique)</label>
                 <select
@@ -6724,7 +6732,11 @@ const FicheDetail = ({
                       className="btn-cancel"
                       onClick={() => {
                         setShowConfirmConfFields(true);
-                        if (ficheData) setConfFormData(buildConfFormStateFromFiche(ficheData, user));
+                        if (ficheData) {
+                          setConfFormData(buildConfFormStateFromFiche(ficheData, user));
+                          setShowConfConfirmateur2(false);
+                          setShowConfConfirmateur3(false);
+                        }
                       }}
                       title="Afficher les champs conf_"
                     >
@@ -6762,7 +6774,7 @@ const FicheDetail = ({
                     {ficheHonoreASuivreViaCompteRendu(ficheData) && (
                       <tr>
                         <td>
-                          <label htmlFor="conf_id_commercial_2">Commercial secondaire (R2) *</label>
+                          <label htmlFor="conf_id_commercial_2">Commercial secondaire (R2) (optionnel)</label>
                         </td>
                         <td>
                           <select
@@ -6772,7 +6784,6 @@ const FicheDetail = ({
                             onChange={(e) =>
                               setConfFormData({ ...confFormData, id_commercial_2: e.target.value })
                             }
-                            required
                           >
                             <option value="">Sélectionner</option>
                             {(commerciaux || [])
@@ -6787,86 +6798,131 @@ const FicheDetail = ({
                       </tr>
                     )}
                     <tr>
-                      <td><label htmlFor="conf_id_confirmateur">Confirmateur :</label></td>
+                      <td><label htmlFor="conf_id_confirmateur">Confirmateur *</label></td>
                       <td>
                         <select
                           id="conf_id_confirmateur"
                           className="form-control"
                           value={confFormData.id_confirmateur}
                           onChange={(e) => setConfFormData({...confFormData, id_confirmateur: e.target.value})}
-                          disabled={isConfirmateurSession}
+                          required
                         >
-                          <option value="">{isConfirmateurSession ? '—' : 'Sélectionner'}</option>
-                          {isConfirmateurSession ? (
-                            confFormData.id_confirmateur ? (
-                              <option value={confFormData.id_confirmateur}>
-                                {getConfirmateurLabel(confFormData.id_confirmateur)}
-                              </option>
-                            ) : null
-                          ) : (
-                            confirmateurs?.map(conf => (
-                              <option key={conf.id} value={conf.id}>
-                                {conf.pseudo}
-                              </option>
-                            ))
-                          )}
+                          <option value="">Sélectionner</option>
+                          {confirmateurs?.map(conf => (
+                            <option key={conf.id} value={conf.id}>
+                              {conf.pseudo}
+                            </option>
+                          ))}
                         </select>
                       </td>
                     </tr>
+                    {(showConfConfirmateur2 || confFormData.id_confirmateur_2) && (
                     <tr>
                       <td><label htmlFor="conf_id_confirmateur_2">Confirmateur 2 (optionnel) :</label></td>
                       <td>
-                        <select
-                          id="conf_id_confirmateur_2"
-                          className="form-control"
-                          value={confFormData.id_confirmateur_2}
-                          onChange={(e) => setConfFormData({...confFormData, id_confirmateur_2: e.target.value})}
-                          disabled={isConfirmateurSession}
-                        >
-                          <option value="">Aucun</option>
-                          {isConfirmateurSession ? (
-                            confFormData.id_confirmateur_2 ? (
-                              <option value={confFormData.id_confirmateur_2}>
-                                {getConfirmateurLabel(confFormData.id_confirmateur_2)}
-                              </option>
-                            ) : null
-                          ) : (
-                            confirmateurs?.map(conf => (
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <select
+                            id="conf_id_confirmateur_2"
+                            className="form-control"
+                            value={confFormData.id_confirmateur_2}
+                            onChange={(e) => setConfFormData({...confFormData, id_confirmateur_2: e.target.value})}
+                          >
+                            <option value="">Aucun</option>
+                            {confirmateurs?.map(conf => (
                               <option key={conf.id} value={conf.id}>
                                 {conf.pseudo}
                               </option>
-                            ))
-                          )}
-                        </select>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="btn-cancel"
+                            title="Retirer le confirmateur 2"
+                            onClick={() => {
+                              setShowConfConfirmateur2(false);
+                              setShowConfConfirmateur3(false);
+                              setConfFormData((prev) => ({ ...prev, id_confirmateur_2: '', id_confirmateur_3: '' }));
+                            }}
+                            style={{ padding: '6px 10px', flexShrink: 0 }}
+                          >
+                            <FaTimes />
+                          </button>
+                        </div>
                       </td>
                     </tr>
+                    )}
+                    {(showConfConfirmateur3 || confFormData.id_confirmateur_3) && (
                     <tr>
                       <td><label htmlFor="conf_id_confirmateur_3">Confirmateur 3 (optionnel) :</label></td>
                       <td>
-                        <select
-                          id="conf_id_confirmateur_3"
-                          className="form-control"
-                          value={confFormData.id_confirmateur_3}
-                          onChange={(e) => setConfFormData({...confFormData, id_confirmateur_3: e.target.value})}
-                          disabled={isConfirmateurSession}
-                        >
-                          <option value="">Aucun</option>
-                          {isConfirmateurSession ? (
-                            confFormData.id_confirmateur_3 ? (
-                              <option value={confFormData.id_confirmateur_3}>
-                                {getConfirmateurLabel(confFormData.id_confirmateur_3)}
-                              </option>
-                            ) : null
-                          ) : (
-                            confirmateurs?.map(conf => (
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <select
+                            id="conf_id_confirmateur_3"
+                            className="form-control"
+                            value={confFormData.id_confirmateur_3}
+                            onChange={(e) => setConfFormData({...confFormData, id_confirmateur_3: e.target.value})}
+                          >
+                            <option value="">Aucun</option>
+                            {confirmateurs?.map(conf => (
                               <option key={conf.id} value={conf.id}>
                                 {conf.pseudo}
                               </option>
-                            ))
-                          )}
-                        </select>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="btn-cancel"
+                            title="Retirer le confirmateur 3"
+                            onClick={() => {
+                              setShowConfConfirmateur3(false);
+                              setConfFormData((prev) => ({ ...prev, id_confirmateur_3: '' }));
+                            }}
+                            style={{ padding: '6px 10px', flexShrink: 0 }}
+                          >
+                            <FaTimes />
+                          </button>
+                        </div>
                       </td>
                     </tr>
+                    )}
+                    {!showConfConfirmateur3 && (
+                    <tr>
+                      <td colSpan={2}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!showConfConfirmateur2 && !confFormData.id_confirmateur_2) {
+                              setShowConfConfirmateur2(true);
+                            } else {
+                              setShowConfConfirmateur3(true);
+                            }
+                          }}
+                          title={
+                            showConfConfirmateur2 || confFormData.id_confirmateur_2
+                              ? 'Ajouter un 3ᵉ confirmateur'
+                              : 'Ajouter un 2ᵉ confirmateur'
+                          }
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#0b6e99',
+                            cursor: 'pointer',
+                            padding: 0,
+                            fontSize: '13px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <FaPlus />
+                          {showConfConfirmateur2 || confFormData.id_confirmateur_2
+                            ? 'Ajouter un 3ᵉ confirmateur'
+                            : 'Ajouter un 2ᵉ confirmateur'}
+                        </button>
+                      </td>
+                    </tr>
+                    )}
                     <tr>
                       <td><label htmlFor="conf_rdv_date">Date RDV :</label></td>
                       <td>
@@ -8465,6 +8521,10 @@ const FicheDetail = ({
           setRdvFormData={setRdvFormData}
           confirmateurs={confirmateurs}
           commerciaux={commerciaux}
+          showRdvConfirmateur2={showRdvConfirmateur2}
+          setShowRdvConfirmateur2={setShowRdvConfirmateur2}
+          showRdvConfirmateur3={showRdvConfirmateur3}
+          setShowRdvConfirmateur3={setShowRdvConfirmateur3}
           onClose={() => {
             setShowRdvModal(false);
             setSelectedSlot(null);
@@ -9951,50 +10011,17 @@ const CreateRdvModal = ({
   setRdvFormData, 
   confirmateurs,
   commerciaux,
+  showRdvConfirmateur2 = false,
+  setShowRdvConfirmateur2 = () => {},
+  showRdvConfirmateur3 = false,
+  setShowRdvConfirmateur3 = () => {},
   onClose, 
   onSubmit,
   rdvSubmitting = false
 }) => {
-  const isConfirmateurSession = Number(user?.fonction) === 6;
   const isHonoreASuivre = ficheHonoreASuivreViaCompteRendu(ficheData);
   const nouvelleConfConf1Seul = isNouvelleConfirmationConf1Seul(ficheData);
   const [showRdvConfFields, setShowRdvConfFields] = useState(false);
-
-  const getConfirmateurLabel = (id) => {
-    if (!id) return '';
-    const found = confirmateurs?.find(c => String(c.id) === String(id));
-    return found?.pseudo || `ID: ${id}`;
-  };
-
-  // Session confirmateur : reprise = conf1 = connecté ; slots actuels décalés ; REFUSER/SIGNER RETRACTER = conf1 seul.
-  useEffect(() => {
-    if (!isConfirmateurSession || !user?.id) return;
-    setRdvFormData((prev) => {
-      const shifted = applyConfirmateurRepriseFromFiche(user.id, ficheData);
-      if (
-        prev?.id_confirmateur === shifted.id_confirmateur &&
-        prev?.id_confirmateur_2 === shifted.id_confirmateur_2 &&
-        prev?.id_confirmateur_3 === shifted.id_confirmateur_3
-      ) {
-        return prev;
-      }
-      return {
-        ...prev,
-        id_confirmateur: shifted.id_confirmateur,
-        id_confirmateur_2: shifted.id_confirmateur_2,
-        id_confirmateur_3: shifted.id_confirmateur_3
-      };
-    });
-  }, [
-    isConfirmateurSession,
-    user?.id,
-    setRdvFormData,
-    ficheData?.id_confirmateur,
-    ficheData?.id_confirmateur_2,
-    ficheData?.id_confirmateur_3,
-    ficheData?.id_etat_final,
-    ficheData?.confirmateurs_from_histo
-  ]);
 
   // Préremplir les champs PV depuis ficheData si ils sont vides dans rdvFormData
   useEffect(() => {
@@ -10262,7 +10289,7 @@ const CreateRdvModal = ({
                 {isHonoreASuivre && (
                   <tr>
                     <td>
-                      <label htmlFor="rdv_id_commercial_2">Commercial secondaire (R2) *</label>
+                      <label htmlFor="rdv_id_commercial_2">Commercial secondaire (R2) (optionnel)</label>
                     </td>
                     <td>
                       <select
@@ -10272,7 +10299,6 @@ const CreateRdvModal = ({
                         onChange={(e) =>
                           setRdvFormData({ ...rdvFormData, id_commercial_2: e.target.value })
                         }
-                        required
                       >
                         <option value="">Sélectionner</option>
                         {(commerciaux || [])
@@ -10294,23 +10320,14 @@ const CreateRdvModal = ({
                       className="form-control"
                       value={rdvFormData.id_confirmateur}
                       onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur: e.target.value})}
-                      disabled={isConfirmateurSession}
                       required
                     >
-                      <option value="">{isConfirmateurSession ? '—' : 'Sélectionner'}</option>
-                      {isConfirmateurSession ? (
-                        rdvFormData.id_confirmateur ? (
-                          <option value={rdvFormData.id_confirmateur}>
-                            {getConfirmateurLabel(rdvFormData.id_confirmateur)}
-                          </option>
-                        ) : null
-                      ) : (
-                        confirmateurs?.map(conf => (
-                          <option key={conf.id} value={conf.id}>
-                            {conf.pseudo}
-                          </option>
-                        ))
-                      )}
+                      <option value="">Sélectionner</option>
+                      {confirmateurs?.map(conf => (
+                        <option key={conf.id} value={conf.id}>
+                          {conf.pseudo}
+                        </option>
+                      ))}
                     </select>
                     {nouvelleConfConf1Seul && (
                       <small style={{ display: 'block', marginTop: 4, color: '#666', fontSize: '11px' }}>
@@ -10319,61 +10336,110 @@ const CreateRdvModal = ({
                     )}
                   </td>
                 </tr>
-                {!nouvelleConfConf1Seul && (
+                {!nouvelleConfConf1Seul && (showRdvConfirmateur2 || rdvFormData.id_confirmateur_2) && (
                 <tr>
                   <td><label htmlFor="rdv_confirmateur_2">Confirmateur 2 (optionnel)</label></td>
                   <td>
-                    <select
-                      id="rdv_confirmateur_2"
-                      className="form-control"
-                      value={rdvFormData.id_confirmateur_2}
-                      onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur_2: e.target.value})}
-                      disabled={isConfirmateurSession}
-                    >
-                      <option value="">Aucun</option>
-                      {isConfirmateurSession ? (
-                        rdvFormData.id_confirmateur_2 ? (
-                          <option value={rdvFormData.id_confirmateur_2}>
-                            {getConfirmateurLabel(rdvFormData.id_confirmateur_2)}
-                          </option>
-                        ) : null
-                      ) : (
-                        confirmateurs?.map(conf => (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <select
+                        id="rdv_confirmateur_2"
+                        className="form-control"
+                        value={rdvFormData.id_confirmateur_2}
+                        onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur_2: e.target.value})}
+                      >
+                        <option value="">Aucun</option>
+                        {confirmateurs?.map(conf => (
                           <option key={conf.id} value={conf.id}>
                             {conf.pseudo}
                           </option>
-                        ))
-                      )}
-                    </select>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn-cancel"
+                        title="Retirer le confirmateur 2"
+                        onClick={() => {
+                          setShowRdvConfirmateur2(false);
+                          setShowRdvConfirmateur3(false);
+                          setRdvFormData((prev) => ({ ...prev, id_confirmateur_2: '', id_confirmateur_3: '' }));
+                        }}
+                        style={{ padding: '6px 10px', flexShrink: 0 }}
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
                   </td>
                 </tr>
                 )}
-                {!nouvelleConfConf1Seul && (
+                {!nouvelleConfConf1Seul && (showRdvConfirmateur3 || rdvFormData.id_confirmateur_3) && (
                 <tr>
                   <td><label htmlFor="rdv_confirmateur_3">Confirmateur 3 (optionnel)</label></td>
                   <td>
-                    <select
-                      id="rdv_confirmateur_3"
-                      className="form-control"
-                      value={rdvFormData.id_confirmateur_3}
-                      onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur_3: e.target.value})}
-                      disabled={isConfirmateurSession}
-                    >
-                      <option value="">Aucun</option>
-                      {isConfirmateurSession ? (
-                        rdvFormData.id_confirmateur_3 ? (
-                          <option value={rdvFormData.id_confirmateur_3}>
-                            {getConfirmateurLabel(rdvFormData.id_confirmateur_3)}
-                          </option>
-                        ) : null
-                      ) : (
-                        confirmateurs?.map(conf => (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <select
+                        id="rdv_confirmateur_3"
+                        className="form-control"
+                        value={rdvFormData.id_confirmateur_3}
+                        onChange={(e) => setRdvFormData({...rdvFormData, id_confirmateur_3: e.target.value})}
+                      >
+                        <option value="">Aucun</option>
+                        {confirmateurs?.map(conf => (
                           <option key={conf.id} value={conf.id}>
                             {conf.pseudo}
                           </option>
-                        ))
-                      )}
-                    </select>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn-cancel"
+                        title="Retirer le confirmateur 3"
+                        onClick={() => {
+                          setShowRdvConfirmateur3(false);
+                          setRdvFormData((prev) => ({ ...prev, id_confirmateur_3: '' }));
+                        }}
+                        style={{ padding: '6px 10px', flexShrink: 0 }}
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                )}
+                {!nouvelleConfConf1Seul && !showRdvConfirmateur3 && !rdvFormData.id_confirmateur_3 && (
+                <tr>
+                  <td colSpan={2}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!showRdvConfirmateur2 && !rdvFormData.id_confirmateur_2) {
+                          setShowRdvConfirmateur2(true);
+                        } else {
+                          setShowRdvConfirmateur3(true);
+                        }
+                      }}
+                      title={
+                        showRdvConfirmateur2 || rdvFormData.id_confirmateur_2
+                          ? 'Ajouter un 3ᵉ confirmateur'
+                          : 'Ajouter un 2ᵉ confirmateur'
+                      }
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#0b6e99',
+                        cursor: 'pointer',
+                        padding: 0,
+                        fontSize: '13px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <FaPlus />
+                      {showRdvConfirmateur2 || rdvFormData.id_confirmateur_2
+                        ? 'Ajouter un 3ᵉ confirmateur'
+                        : 'Ajouter un 2ᵉ confirmateur'}
+                    </button>
                   </td>
                 </tr>
                 )}

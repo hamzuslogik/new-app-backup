@@ -2521,6 +2521,35 @@
   -webkit-text-fill-color: #333333 !important;
 }
 
+/* Historique modifications heure RDV : texte sombre lisible sur fond blanc
+   (sinon .etat-actuel-card force color:#fff !important) */
+.etat-actuel-card .etat-actuel-rdv-heure-historique,
+.etat-actuel-card .etat-actuel-rdv-heure-historique *,
+.etat-actuel-card .etat-actuel-rdv-heure-historique table,
+.etat-actuel-card .etat-actuel-rdv-heure-historique th,
+.etat-actuel-card .etat-actuel-rdv-heure-historique td,
+.etat-actuel-card .etat-actuel-rdv-heure-historique span,
+.etat-actuel-card .etat-actuel-rdv-heure-historique strong,
+.fiche-detail-modal-content .etat-actuel-card .etat-actuel-rdv-heure-historique,
+.fiche-detail-modal-content .etat-actuel-card .etat-actuel-rdv-heure-historique * {
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
+}
+.etat-actuel-card .etat-actuel-rdv-heure-historique,
+.fiche-detail-modal-content .etat-actuel-card .etat-actuel-rdv-heure-historique {
+  background-color: #ffffff !important;
+}
+.etat-actuel-card .etat-actuel-rdv-heure-historique thead tr,
+.fiche-detail-modal-content .etat-actuel-card .etat-actuel-rdv-heure-historique thead tr {
+  background-color: #f3f4f6 !important;
+}
+.etat-actuel-card .etat-actuel-rdv-heure-historique th,
+.fiche-detail-modal-content .etat-actuel-card .etat-actuel-rdv-heure-historique th {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  font-weight: 700 !important;
+}
+
 .etat-actuel-card h4,
 .etat-actuel-card strong,
 .etat-actuel-card b {

@@ -37,12 +37,17 @@ const {
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
 
 /** Retourne les id_confirmateur / _2 / _3 à enregistrer dans fiches_histo.
- * - Si histo_id_confirmateur(_2/_3) est envoyé dans le body (sessions admin/RE/RP/backoffice) :
- *   utiliser ces valeurs (null si vide) — ne PAS forcer l'utilisateur connecté.
- * - Sinon (ex. confirmateur) : id_confirmateur = utilisateur connecté ; _2/_3 = null sauf envoyés.
+ * - Admin (1, 7), Backoffice (11), Confirmateur (6), RP Confirmation (13), RE Confirmation (14) :
+ *   utiliser histo_id_confirmateur(_2/_3) ou à défaut id_confirmateur du body / fiche —
+ *   JAMAIS l'id de l'utilisateur connecté.
+ * - Autres fonctions : id_confirmateur = utilisateur connecté si non envoyé.
  */
-function getHistoConfirmateurIds(req) {
+function getHistoConfirmateurIds(req, fiche = null) {
   const body = req.body || {};
+  const fonction = Number(req.user?.fonction);
+  // Sessions qui choisissent le confirmateur manuellement (jamais l'utilisateur connecté en fallback)
+  const isManualConfirmateurSelect = [1, 6, 7, 11, 13, 14].includes(fonction);
+
   const parseOpt = (key) => {
     if (!Object.prototype.hasOwnProperty.call(body, key)) return undefined;
     const raw = body[key];
@@ -55,19 +60,49 @@ function getHistoConfirmateurIds(req) {
   const id2Sent = parseOpt('histo_id_confirmateur_2');
   const id3Sent = parseOpt('histo_id_confirmateur_3');
 
-  const id1 =
-    id1Sent !== undefined
-      ? id1Sent
-      : (req.user && req.user.id ? Number(req.user.id) : null);
-  const id2 = id2Sent !== undefined ? id2Sent : null;
-  const id3 = id3Sent !== undefined ? id3Sent : null;
+  const fromFicheOrBody = (bodyKey, ficheKey) => {
+    const fromBody = parseOpt(bodyKey);
+    if (fromBody !== undefined) return fromBody;
+    if (fiche && fiche[ficheKey] != null && Number(fiche[ficheKey]) > 0) {
+      return Number(fiche[ficheKey]);
+    }
+    return null;
+  };
+
+  let id1;
+  let id2;
+  let id3;
+
+  if (id1Sent !== undefined) {
+    id1 = id1Sent;
+  } else if (isManualConfirmateurSelect) {
+    id1 = fromFicheOrBody('id_confirmateur', 'id_confirmateur');
+  } else {
+    id1 = req.user && req.user.id ? Number(req.user.id) : null;
+  }
+
+  if (id2Sent !== undefined) {
+    id2 = id2Sent;
+  } else if (isManualConfirmateurSelect) {
+    id2 = fromFicheOrBody('id_confirmateur_2', 'id_confirmateur_2');
+  } else {
+    id2 = null;
+  }
+
+  if (id3Sent !== undefined) {
+    id3 = id3Sent;
+  } else if (isManualConfirmateurSelect) {
+    id3 = fromFicheOrBody('id_confirmateur_3', 'id_confirmateur_3');
+  } else {
+    id3 = null;
+  }
 
   return { id1, id2, id3 };
 }
 
 /** @deprecated utiliser getHistoConfirmateurIds — conservé pour les appels existants */
 function getHistoConfirmateur(req, fiche = null) {
-  return getHistoConfirmateurIds(req).id1;
+  return getHistoConfirmateurIds(req, fiche).id1;
 }
 
 /** REFUSER / SIGNER RETRACTER (+ variantes) : nouvelle confirmation = conf1 seul. */
@@ -4138,7 +4173,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       // - par défaut : uniquement le confirmateur auteur (fiches_histo.id_confirmateur)
       // - exception SIGNER / Honoré à suivre (compte rendu) : confirmateurs 1/2/3
       if (historique && historique.length > 0 && fiche) {
-        // Pseudos conf2/conf3 éventuels sur les lignes histo (colonnes optionnelles)
+        // Pseudos conf2/conf3 + commerciaux historisés sur les lignes histo (colonnes optionnelles)
         const histoConf2Ids = [...new Set(
           (historique || [])
             .map((h) => (h.id_confirmateur_2 != null ? Number(h.id_confirmateur_2) : null))
@@ -4149,7 +4184,16 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
             .map((h) => (h.id_confirmateur_3 != null ? Number(h.id_confirmateur_3) : null))
             .filter((id) => id && id > 0)
         )];
-        const extraConfIds = [...new Set([...histoConf2Ids, ...histoConf3Ids])];
+        const histoComIds = [...new Set(
+          (historique || [])
+            .flatMap((h) => [
+              h.id_commercial != null ? Number(h.id_commercial) : null,
+              h.id_commercial_2 != null ? Number(h.id_commercial_2) : null,
+              h.id_commercial_cr != null ? Number(h.id_commercial_cr) : null
+            ])
+            .filter((id) => id && id > 0)
+        )];
+        const extraConfIds = [...new Set([...histoConf2Ids, ...histoConf3Ids, ...histoComIds])];
         let confPseudoById = {};
         if (extraConfIds.length > 0) {
           try {
@@ -4184,37 +4228,22 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           let confirmateur_3_pseudo;
 
           if (showAllConfirmateurs) {
-            conf1Id =
-              authorId ||
-              (fiche.id_confirmateur != null ? Number(fiche.id_confirmateur) : null);
+            // SIGNER / Honoré CR : ne jamais reprendre les slots actuels de la fiche
+            // (après Signer → Retracter → re-Confirmer, la fiche a un nouveau conf1).
+            conf1Id = authorId;
             conf2Id =
-              histo.id_confirmateur_2 != null
-                ? Number(histo.id_confirmateur_2)
-                : (fiche.id_confirmateur_2 != null ? Number(fiche.id_confirmateur_2) : null);
+              histo.id_confirmateur_2 != null ? Number(histo.id_confirmateur_2) : null;
             conf3Id =
-              histo.id_confirmateur_3 != null
-                ? Number(histo.id_confirmateur_3)
-                : (fiche.id_confirmateur_3 != null ? Number(fiche.id_confirmateur_3) : null);
+              histo.id_confirmateur_3 != null ? Number(histo.id_confirmateur_3) : null;
+            // Honoré CR sans confirmateur historisé : laisser vide (commercial CR ailleurs)
+            if (isHonoreASuivreCr && !conf1Id && !conf2Id && !conf3Id) {
+              conf1Id = null;
+            }
             confirmateur_pseudo =
               histo.histo_confirmateur_pseudo ||
-              (conf1Id ? (confPseudoById[conf1Id] || null) : null) ||
-              (conf1Id && Number(conf1Id) === Number(fiche.id_confirmateur)
-                ? (confirmateur?.pseudo || null)
-                : null);
-            confirmateur_2_pseudo =
-              conf2Id
-                ? (confPseudoById[conf2Id] ||
-                  (Number(conf2Id) === Number(fiche.id_confirmateur_2)
-                    ? (confirmateur2?.pseudo || null)
-                    : null))
-                : null;
-            confirmateur_3_pseudo =
-              conf3Id
-                ? (confPseudoById[conf3Id] ||
-                  (Number(conf3Id) === Number(fiche.id_confirmateur_3)
-                    ? (confirmateur3?.pseudo || null)
-                    : null))
-                : null;
+              (conf1Id ? (confPseudoById[conf1Id] || null) : null);
+            confirmateur_2_pseudo = conf2Id ? (confPseudoById[conf2Id] || null) : null;
+            confirmateur_3_pseudo = conf3Id ? (confPseudoById[conf3Id] || null) : null;
           } else {
             conf1Id = authorId;
             conf2Id = null;
@@ -4222,6 +4251,26 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
             confirmateur_pseudo = histo.histo_confirmateur_pseudo || null;
             confirmateur_2_pseudo = null;
             confirmateur_3_pseudo = null;
+          }
+
+          // Commercial affiché pour SIGNER : snapshot histo (id_commercial / id_commercial_cr), pas la fiche courante
+          let commercialPseudoHisto = commercial?.pseudo || null;
+          let commercial2PseudoHisto = null;
+          if (isSignerEtat) {
+            const histoComId =
+              histo.id_commercial != null && Number(histo.id_commercial) > 0
+                ? Number(histo.id_commercial)
+                : (histo.id_commercial_cr != null && Number(histo.id_commercial_cr) > 0
+                  ? Number(histo.id_commercial_cr)
+                  : null);
+            const histoCom2Id =
+              histo.id_commercial_2 != null && Number(histo.id_commercial_2) > 0
+                ? Number(histo.id_commercial_2)
+                : null;
+            commercialPseudoHisto = histoComId
+              ? (confPseudoById[histoComId] || null)
+              : (histo.cr_commercial_pseudo || null);
+            commercial2PseudoHisto = histoCom2Id ? (confPseudoById[histoCom2Id] || null) : null;
           }
 
           return {
@@ -4292,7 +4341,8 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           observations_cq: fiche.observations_cq || null,
           commentaire_commercial: fiche.commentaire_commercial || null,
           installeur_nom: installeur || null,
-          commercial_pseudo: commercial?.pseudo || null,
+          commercial_pseudo: isSignerEtat ? commercialPseudoHisto : (commercial?.pseudo || null),
+          commercial_2_pseudo: isSignerEtat ? commercial2PseudoHisto : null,
           // Champs Phase 3 pour SIGNER
           ph3_financement: fiche.ph3_type || null,
           ph3_phase: null, // À déterminer selon la logique métier
@@ -4311,6 +4361,53 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           valeur_mensualite: fiche.valeur_mensualite || null
         };
         });
+
+        // Anciennes lignes SIGNER sans confirmateur historisé : repli sur la 1re signature (propriétaire d'origine)
+        try {
+          const signerSansConf = (historique || []).filter(
+            (h) =>
+              [13, 16, 38, 44, 45].includes(Number(h.id_etat)) &&
+              !h.confirmateur_pseudo &&
+              !h.id_confirmateur
+          );
+          if (signerSansConf.length > 0) {
+            const sigRows = await query(
+              `SELECT s.confirmateur, u.pseudo
+               FROM signature s
+               LEFT JOIN utilisateurs u ON u.id = s.confirmateur
+               WHERE s.id_fiche = ?
+               ORDER BY s.id ASC
+               LIMIT 3`,
+              [id]
+            );
+            if (sigRows && sigRows.length > 0) {
+              const confs = sigRows
+                .map((r) => ({
+                  id: r.confirmateur != null ? Number(r.confirmateur) : null,
+                  pseudo: r.pseudo || null
+                }))
+                .filter((r) => r.id && r.id > 0);
+              historique = historique.map((histo) => {
+                if (
+                  ![13, 16, 38, 44, 45].includes(Number(histo.id_etat)) ||
+                  histo.confirmateur_pseudo ||
+                  histo.id_confirmateur
+                ) {
+                  return histo;
+                }
+                return {
+                  ...histo,
+                  id_confirmateur: confs[0]?.id || null,
+                  id_confirmateur_2: confs[1]?.id || null,
+                  id_confirmateur_3: confs[2]?.id || null,
+                  confirmateur_pseudo: confs[0]?.pseudo || null,
+                  confirmateur_2_pseudo: confs[1]?.pseudo || null,
+                  confirmateur_3_pseudo: confs[2]?.pseudo || null
+                };
+              });
+            }
+          }
+        } catch (_) { /* ignore */ }
 
         // Pour les entrées issues d'un compte rendu (from_compte_rendu), remplacer commentaire_commercial par le commentaire du CR (compte_rendu_pending)
         try {
@@ -6335,51 +6432,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         }
       });
     } else if (req.user.fonction === 6 || req.user.fonction === 14 || req.user.fonction === 13 || req.user.fonction === 11) {
-      // Confirmateurs (6), RE Confirmation (14), RP Confirmation (13), Backoffice (11) : peuvent modifier toutes les fiches (y compris changer l'état même si déjà confirmé)
-      // Pas de vérification d'assignation nécessaire
-      //
-      // Pour confirmateur (6) uniquement : ne peut pas assigner un autre confirmateur, uniquement s'ajouter lui-même.
-      // Reprise : connecté = conf1 ; ancien conf1 → conf2 ; ancien conf2 → conf3 (slots actuels de la fiche).
-      // Exception REFUSER / SIGNER RETRACTER : nouvelle confirmation (conf1 seul, 2 et 3 vidés).
-      if (req.user.fonction === 6 && ficheData && (ficheData.id_confirmateur !== undefined || ficheData.id_confirmateur_2 !== undefined || ficheData.id_confirmateur_3 !== undefined)) {
-        const uid = Number(req.user.id);
-        const prevEtatId = Number(fiche.id_etat_final);
-        let prevEtatTitre = null;
-        try {
-          const etatRow = await queryOne('SELECT titre FROM etats WHERE id = ?', [prevEtatId]);
-          prevEtatTitre = etatRow?.titre || null;
-        } catch (_) { /* ignore */ }
-        const nouvelleConfSeul = isNouvelleConfirmationConf1SeulEtat(prevEtatId, prevEtatTitre);
-
-        // Slots actuels sur la fiche (pas l'ordre chronologique histo ASC)
-        let slots = [
-          fiche.id_confirmateur ? Number(fiche.id_confirmateur) : null,
-          fiche.id_confirmateur_2 ? Number(fiche.id_confirmateur_2) : null,
-          fiche.id_confirmateur_3 ? Number(fiche.id_confirmateur_3) : null
-        ];
-        let hasPriorConfirmation = slots.some((id) => id && id > 0);
-        if (!hasPriorConfirmation) {
-          try {
-            const histoAny = await queryOne(
-              'SELECT id FROM fiches_histo WHERE id_fiche = ? AND id_etat = 7 LIMIT 1',
-              [id]
-            );
-            hasPriorConfirmation = !!histoAny;
-          } catch (_) { /* ignore */ }
-        }
-
-        const next = applyConfirmateurRepriseSlots(uid, slots, {
-          nouvelleConfSeul,
-          hasPriorConfirmation
-        });
-        ficheData.id_confirmateur = next.id1;
-        ficheData.id_confirmateur_2 = next.id2;
-        ficheData.id_confirmateur_3 = next.id3;
-        // Aligner fiches_histo sur les mêmes slots (getHistoConfirmateurIds lit le body)
-        ficheData.histo_id_confirmateur = next.id1;
-        ficheData.histo_id_confirmateur_2 = next.id2;
-        ficheData.histo_id_confirmateur_3 = next.id3;
-      }
+      // Confirmateurs (6), RE Confirmation (14), RP Confirmation (13), Backoffice (11) : peuvent modifier toutes les fiches
+      // Confirmateur (6) : slots id_confirmateur(_2/_3) / histo_* = valeurs envoyées (sélection manuelle), plus de reprise auto.
     }
 
     // Changement d'état: stocker le commentaire métier dans motif_qualif côté fiches
@@ -6513,7 +6567,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
 
       // Créer une entrée dans l'historique (id_confirmateur, id_confirmateur_2/3, id_sous_etat) + champs conf_* si état 7
-      const { id1: histoConf, id2: histoConf2, id3: histoConf3 } = getHistoConfirmateurIds(req);
+      const { id1: histoConf, id2: histoConf2, id3: histoConf3 } = getHistoConfirmateurIds(req, fiche);
       const histoSousEtat = Object.prototype.hasOwnProperty.call(ficheData, 'id_sous_etat')
         ? ficheData.id_sous_etat
         : (fiche && fiche.id_sous_etat != null ? fiche.id_sous_etat : null);
@@ -6562,6 +6616,26 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         const ic = ficheData.id_commercial;
         const n = ic === '' || ic === undefined || ic === null ? NaN : parseInt(ic, 10);
         pushHistoCol('id_commercial', Number.isFinite(n) ? n : null);
+      } else if ([13, 16, 38, 44, 45].includes(newEtatId) && fiche.id_commercial) {
+        // SIGNER / RETRACTER : figer le commercial propriétaire au moment du passage d'état
+        pushHistoCol('id_commercial', Number(fiche.id_commercial));
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial_2')) {
+        const ic2 = ficheData.id_commercial_2;
+        const n2 = ic2 === '' || ic2 === undefined || ic2 === null ? NaN : parseInt(ic2, 10);
+        pushHistoCol('id_commercial_2', Number.isFinite(n2) ? n2 : null);
+      } else if ([13, 16, 38, 44, 45].includes(newEtatId) && fiche.id_commercial_2) {
+        pushHistoCol('id_commercial_2', Number(fiche.id_commercial_2));
+      }
+      // Confirmateurs déjà poussés via histoConf* ; pour SIGNER sans body, s'assurer qu'ils sont figés
+      if ([13, 16, 38, 44, 45].includes(newEtatId)) {
+        if (histoConf == null && fiche.id_confirmateur) {
+          // histoConf déjà dans histoValues[2] — remplacer si null
+          const confIdx = histoCols.indexOf('id_confirmateur');
+          if (confIdx >= 0 && (histoValues[confIdx] == null || histoValues[confIdx] === '')) {
+            histoValues[confIdx] = Number(fiche.id_confirmateur);
+          }
+        }
       }
       {
         const complementSnap = Object.prototype.hasOwnProperty.call(ficheData, 'complement_chauffage')

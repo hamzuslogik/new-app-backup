@@ -17,9 +17,10 @@ const Alertes = () => {
   const hasControleQualite = hasPermission('controle_qualite_view');
   // Agent qualification (fonction 3) : alertes reçues
   const isAgentQualif = fonction === 3;
-  // Agent qualité qualification (fonction 8, etc.) : alertes qu'il a envoyées
+  // Agent qualité qualification (fonction 8) : alertes qu'il a envoyées — pas backoffice (11)
   const isQualiteQualifSession =
-    fonction === 8 || (hasControleQualite && !isAdmin && ![2, 3, 12].includes(fonction));
+    fonction === 8 ||
+    (hasControleQualite && !isAdmin && ![2, 3, 11, 12].includes(fonction));
   const hideIdQualite = isAgentQualif || isQualiteQualifSession;
   const [filters, setFilters] = useState({
     page: 1,

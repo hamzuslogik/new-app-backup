@@ -6,11 +6,22 @@ const { query, queryOne } = require('../config/database');
 const ficheRoutes = require('./fiche.routes');
 const encodeFicheId = ficheRoutes.encodeFicheId;
 
-/** Session agent qualité qualification (fonction 8 ou CQ hors admin/RE/RP/agent qualif). */
+/** Session agent qualité qualification (fonction 8).
+ * Backoffice (11) et admins voient toutes les alertes — ne pas les traiter comme « qualité ».
+ */
 function isQualiteQualificationAgent(fonction, hasControleQualite, isAdmin) {
   if (isAdmin) return false;
-  if (Number(fonction) === 8) return true;
-  return Boolean(hasControleQualite && ![2, 3, 12].includes(Number(fonction)));
+  const f = Number(fonction);
+  if (f === 11) return false; // Backoffice : toutes les alertes
+  if (f === 8) return true;
+  return Boolean(hasControleQualite && ![2, 3, 12].includes(f));
+}
+
+/** Voir toutes les alertes (admin, backoffice, CQ hors qualité qualification). */
+function canSeeAllAlertes(fonction, hasControleQualite, isAdmin, isQualiteQualif) {
+  if (isQualiteQualif) return false;
+  const f = Number(fonction);
+  return isAdmin || f === 11 || Boolean(hasControleQualite);
 }
 
 /**
@@ -43,7 +54,7 @@ router.get('/agents', authenticate, async (req, res) => {
       }
     }
 
-    if (hasControleQualite && !isQualiteQualif) {
+    if (canSeeAllAlertes(fonction, hasControleQualite, isAdmin, isQualiteQualif)) {
       const agents = await query(
         'SELECT id, pseudo FROM utilisateurs WHERE fonction = 3 AND (etat > 0 OR etat IS NULL) ORDER BY pseudo ASC'
       );
@@ -87,7 +98,7 @@ router.get('/agents', authenticate, async (req, res) => {
  * - RE qualification (fonction 2) : alertes des agents de son équipe (id_agent IN (agents où chef_equipe = user.id))
  * - RP qualification (fonction 12) : alertes des agents par RE (id_agent IN (agents sous les RE dont id_rp_qualif = user.id))
  * - Qualité qualification (fonction 8, etc.) : alertes qu'il a envoyées (id_qualite = user.id)
- * - Contrôle qualité / admin : toutes les alertes
+ * - Contrôle qualité / admin / backoffice (11) : toutes les alertes
  */
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -97,12 +108,12 @@ router.get('/', authenticate, async (req, res) => {
     const isAdmin = [1, 7].includes(fonction);
     const isQualiteQualif = isQualiteQualificationAgent(fonction, hasControleQualite, isAdmin);
 
-    let agentIds = null; // null = tous les agents (contrôle qualité)
+    let agentIds = null; // null = tous les agents (contrôle qualité / backoffice / admin)
     let qualiteScopeId = null; // qualité qualification : ses envois uniquement
 
     if (isQualiteQualif) {
       qualiteScopeId = user.id;
-    } else if (hasControleQualite || isAdmin) {
+    } else if (canSeeAllAlertes(fonction, hasControleQualite, isAdmin, isQualiteQualif)) {
       agentIds = null;
     } else if (fonction === 3) {
       // Agent qualification : uniquement ses alertes
@@ -133,7 +144,7 @@ router.get('/', authenticate, async (req, res) => {
     } else {
       return res.status(403).json({
         success: false,
-        message: 'Accès refusé. Réservé aux agents qualification, RE qualification, RP qualification et contrôle qualité.'
+        message: 'Accès refusé. Réservé aux agents qualification, RE qualification, RP qualification, backoffice et contrôle qualité.'
       });
     }
 

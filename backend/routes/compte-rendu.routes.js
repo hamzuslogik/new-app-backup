@@ -936,9 +936,12 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       );
     }
 
-    // Annuler l'affectation de la fiche au commercial après validation du compte rendu
-    // et annuler la validation RDV (valider = 0) pour que, si un nouveau RDV est pris depuis la fiche, il faille revalider
-    const ficheAvantDesaffectation = await queryOne('SELECT id_commercial, id_commercial_2, valider FROM fiches WHERE id = ?', [compteRendu.id_fiche]);
+    // Snapshot confirmateurs + commerciaux AVANT désaffectation (propriétaire signature / historique SIGNER)
+    const ficheAvantDesaffectation = await queryOne(
+      `SELECT id_commercial, id_commercial_2, id_confirmateur, id_confirmateur_2, id_confirmateur_3, valider
+       FROM fiches WHERE id = ?`,
+      [compteRendu.id_fiche]
+    );
     if (ficheAvantDesaffectation && (ficheAvantDesaffectation.id_commercial != null || ficheAvantDesaffectation.id_commercial_2 != null)) {
       await logModification(compteRendu.id_fiche, user.id, 'id_commercial', ficheAvantDesaffectation.id_commercial, null, now);
       await logModification(compteRendu.id_fiche, user.id, 'id_commercial_2', ficheAvantDesaffectation.id_commercial_2, null, now);
@@ -951,20 +954,68 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       [now, compteRendu.id_fiche]
     );
 
-    // Enregistrer l'historique si l'état a changé (avec from_compte_rendu et id_commercial_cr pour affichage <CR> + commercial)
+    // Enregistrer l'historique si l'état a changé — figer confirmateurs/commerciaux du moment
+    // (ne pas dépendre de la fiche après re-Confirmer / nouvelle affectation).
     if (nouveauEtat && nouveauEtat !== ancienEtat) {
-      await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr) VALUES (?, ?, ?, 1, ?)`,
-        [compteRendu.id_fiche, nouveauEtat, now, compteRendu.id_commercial || null]
-      );
+      const snapConf1 =
+        ficheAvantDesaffectation?.id_confirmateur != null && Number(ficheAvantDesaffectation.id_confirmateur) > 0
+          ? Number(ficheAvantDesaffectation.id_confirmateur)
+          : null;
+      const snapConf2 =
+        ficheAvantDesaffectation?.id_confirmateur_2 != null && Number(ficheAvantDesaffectation.id_confirmateur_2) > 0
+          ? Number(ficheAvantDesaffectation.id_confirmateur_2)
+          : null;
+      const snapConf3 =
+        ficheAvantDesaffectation?.id_confirmateur_3 != null && Number(ficheAvantDesaffectation.id_confirmateur_3) > 0
+          ? Number(ficheAvantDesaffectation.id_confirmateur_3)
+          : null;
+      const snapCom =
+        ficheAvantDesaffectation?.id_commercial != null && Number(ficheAvantDesaffectation.id_commercial) > 0
+          ? Number(ficheAvantDesaffectation.id_commercial)
+          : (compteRendu.id_commercial ? Number(compteRendu.id_commercial) : null);
+      const snapCom2 =
+        ficheAvantDesaffectation?.id_commercial_2 != null && Number(ficheAvantDesaffectation.id_commercial_2) > 0
+          ? Number(ficheAvantDesaffectation.id_commercial_2)
+          : null;
+      const idCommercialCr = compteRendu.id_commercial || snapCom || null;
+
+      try {
+        await query(
+          `INSERT INTO fiches_histo (
+             id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr,
+             id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial, id_commercial_2
+           ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`,
+          [
+            compteRendu.id_fiche,
+            nouveauEtat,
+            now,
+            idCommercialCr,
+            snapConf1,
+            snapConf2,
+            snapConf3,
+            snapCom,
+            snapCom2
+          ]
+        );
+      } catch (histoErr) {
+        // Bases sans toutes les colonnes : insert minimal
+        if (histoErr && histoErr.code === 'ER_BAD_FIELD_ERROR') {
+          await query(
+            `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr) VALUES (?, ?, ?, 1, ?)`,
+            [compteRendu.id_fiche, nouveauEtat, now, idCommercialCr]
+          );
+        } else {
+          throw histoErr;
+        }
+      }
     }
 
     // Récupérer la fiche mise à jour pour vérifier les confirmateurs
     const ficheMiseAJour = await queryOne('SELECT * FROM fiches WHERE id = ?', [compteRendu.id_fiche]);
 
-    // Si le nouvel état est un état signé (13, 16, 44, 45), ajouter dans la table signature.
-    // date_heure = date d'acceptation du compte rendu ; date_planning = date RDV de la fiche.
-    const etatsSignes = [13, 16, 44, 45];
+    // États qui créent une entrée signature (propriétaire = confirmateurs au moment de la signature).
+    // SIGNER RETRACTER (16) : ne pas créer / écraser — conserve le propriétaire de la signature SIGNER.
+    const etatsSignes = [13, 44, 45];
     if (nouveauEtat && etatsSignes.includes(nouveauEtat) && ficheMiseAJour) {
       const dateAcceptation = now; // date d'acceptation du compte rendu
       const datePlanning = ficheMiseAJour.date_rdv_time || null; // date planning de la fiche
@@ -979,15 +1030,34 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
         [compteRendu.id_fiche, dateAcceptation]
       );
 
-      // Si aucune signature n'existe, créer les entrées selon le nombre de confirmateurs
-      if (!signatureExistante || signatureExistante.count === 0) {
-        const idConfirmateur = ficheMiseAJour.id_confirmateur;
-        const idConfirmateur2 = ficheMiseAJour.id_confirmateur_2;
-        const idConfirmateur3 = ficheMiseAJour.id_confirmateur_3;
+      // Confirmateurs figés avant désaffectation (pas les slots éventuellement vidés plus tard)
+      const idConfirmateur =
+        (ficheAvantDesaffectation?.id_confirmateur != null && Number(ficheAvantDesaffectation.id_confirmateur) > 0
+          ? Number(ficheAvantDesaffectation.id_confirmateur)
+          : null) ||
+        (ficheMiseAJour.id_confirmateur != null && Number(ficheMiseAJour.id_confirmateur) > 0
+          ? Number(ficheMiseAJour.id_confirmateur)
+          : null);
+      const idConfirmateur2 =
+        (ficheAvantDesaffectation?.id_confirmateur_2 != null && Number(ficheAvantDesaffectation.id_confirmateur_2) > 0
+          ? Number(ficheAvantDesaffectation.id_confirmateur_2)
+          : null) ||
+        (ficheMiseAJour.id_confirmateur_2 != null && Number(ficheMiseAJour.id_confirmateur_2) > 0
+          ? Number(ficheMiseAJour.id_confirmateur_2)
+          : null);
+      const idConfirmateur3 =
+        (ficheAvantDesaffectation?.id_confirmateur_3 != null && Number(ficheAvantDesaffectation.id_confirmateur_3) > 0
+          ? Number(ficheAvantDesaffectation.id_confirmateur_3)
+          : null) ||
+        (ficheMiseAJour.id_confirmateur_3 != null && Number(ficheMiseAJour.id_confirmateur_3) > 0
+          ? Number(ficheMiseAJour.id_confirmateur_3)
+          : null);
 
+      // Si aucune signature n'existe pour cette acceptation, créer selon le nb de confirmateurs
+      if (!signatureExistante || signatureExistante.count === 0) {
         // Cas 1 : Un seul confirmateur
-        if (idConfirmateur && idConfirmateur > 0 && 
-            (!idConfirmateur2 || idConfirmateur2 === 0) && 
+        if (idConfirmateur && idConfirmateur > 0 &&
+            (!idConfirmateur2 || idConfirmateur2 === 0) &&
             (!idConfirmateur3 || idConfirmateur3 === 0)) {
           const existing = await queryOne(
             `SELECT 1 FROM signature s
@@ -1005,8 +1075,8 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
           }
         }
         // Cas 2 : Deux confirmateurs
-        else if (idConfirmateur && idConfirmateur > 0 && 
-                 idConfirmateur2 && idConfirmateur2 > 0 && 
+        else if (idConfirmateur && idConfirmateur > 0 &&
+                 idConfirmateur2 && idConfirmateur2 > 0 &&
                  (!idConfirmateur3 || idConfirmateur3 === 0)) {
           // Confirmateur 1
           const existing1 = await queryOne(
