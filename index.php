@@ -804,6 +804,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $optionalFields = [
             'date_appel' => !empty($_POST['date_appel']) ? date('c', strtotime($_POST['date_appel'])) : null,
+            // DATETIME MySQL pour date_appel_time (création Vicidial)
+            'date_appel_time' => !empty($_POST['date_appel'])
+                ? date('Y-m-d H:i:s', strtotime($_POST['date_appel']))
+                : date('Y-m-d H:i:s'),
             'situation_conjugale' => !empty($_POST['situation_conjugale']) ? sanitizeInput($_POST['situation_conjugale']) : null,
             'age_mr' => !empty($_POST['age_mr']) ? sanitizeInput($_POST['age_mr']) : null,
             'age_madame' => !empty($_POST['age_madame']) ? sanitizeInput($_POST['age_madame']) : null,
@@ -891,6 +895,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = $responseData['message'] ?? 'Fiche acceptee automatiquement (regle d\'autorisation).';
             writeLog('AUTO APPROBATION: ' . $message);
             $_SESSION['success_message'] = $message;
+            header('Location: ' . $_SERVER['PHP_SELF'] . '?reload=1');
+            exit;
+        }
+
+        // Fiche déjà insérée aujourd'hui (même téléphone) → pas de réinsertion
+        if (isset($responseData['success']) && $responseData['success'] &&
+            !empty($responseData['data']['alreadyInsertedToday'])) {
+            $message = $responseData['message'] ?? "Fiche deja inseree aujourd'hui, pas de reinsertion.";
+            writeLog("DEJA INSEREE AUJOURDHUI: " . $message . " (existingFicheId=" . ($responseData['data']['existingFicheId'] ?? 'N/A') . ")");
+            $_SESSION['notice_message'] = $message;
             header('Location: ' . $_SERVER['PHP_SELF'] . '?reload=1');
             exit;
         }

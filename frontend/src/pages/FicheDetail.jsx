@@ -4072,29 +4072,27 @@ const FicheDetail = ({
                   etatData.histo_confirmateur_pseudo != null && String(etatData.histo_confirmateur_pseudo).trim() !== ''
                     ? String(etatData.histo_confirmateur_pseudo).trim()
                     : '';
-                /** Libellé fixe « Confirmateur » ; la valeur = auteur du passage d'état (sinon repli liste assignés pour anciennes lignes). */
+                const isHonoreASuivreCompteRendu =
+                  Number(etatId) === 9 &&
+                  (etatData.from_compte_rendu === true || etatData.from_compte_rendu === 1);
+                /** Historique : un seul confirmateur (auteur du changement d'état), sauf SIGNER et Honoré à suivre (CR). */
+                const showConfirmateurs123 =
+                  isEtatSigner(etatId) ||
+                  isHonoreASuivreCompteRendu ||
+                  (isCurrent && [7, 9, 13, 16, 44, 45].includes(Number(etatId)));
+                /** Libellé « Confirmateur » : auteur du passage d'état (pas la liste conf 2/3). */
                 const valeurConfirmateurAffichee =
                   auteurChangementEtat !== ''
                     ? auteurChangementEtat
-                    : (confirmateursList !== '-' ? confirmateursList : '-');
-                /** Confirmer, Honoré à suivre, Signer : afficher confirmateurs 1, 2 et 3 s'ils existent ; sinon repli sur l'auteur. */
-                const ETATS_AVEC_CONF123 = [7, 9, 13, 16, 44, 45];
-                /** CONFIRMER en historique : uniquement le confirmateur qui a mis en Confirmer (ligne fiches_histo.id_confirmateur), pas 2/3. */
-                const valeurConfirmateurEtatListe = (() => {
-                  if (Number(etatId) === 7 && !isCurrent) {
-                    if (auteurChangementEtat !== '') return auteurChangementEtat;
-                    if (etatData.confirmateur_pseudo) return String(etatData.confirmateur_pseudo);
-                    return '-';
-                  }
-                  if (ETATS_AVEC_CONF123.includes(Number(etatId))) {
-                    return confirmateursList !== '-' ? confirmateursList : valeurConfirmateurAffichee;
-                  }
-                  return valeurConfirmateurAffichee;
-                })();
-                const hasAnyConfirmateurAssigne =
-                  Number(etatId) === 7 && !isCurrent
-                    ? !!(auteurChangementEtat || etatData.confirmateur_pseudo)
-                    : !!(etatData.confirmateur_pseudo || etatData.confirmateur_2_pseudo || etatData.confirmateur_3_pseudo);
+                    : (etatData.confirmateur_pseudo
+                      ? String(etatData.confirmateur_pseudo)
+                      : '-');
+                const valeurConfirmateurEtatListe = showConfirmateurs123
+                  ? (confirmateursList !== '-' ? confirmateursList : valeurConfirmateurAffichee)
+                  : valeurConfirmateurAffichee;
+                const hasAnyConfirmateurAssigne = showConfirmateurs123
+                  ? !!(etatData.confirmateur_pseudo || etatData.confirmateur_2_pseudo || etatData.confirmateur_3_pseudo || auteurChangementEtat)
+                  : !!(auteurChangementEtat || etatData.confirmateur_pseudo);
                 
                 const items = [];
 
@@ -6514,11 +6512,10 @@ const FicheDetail = ({
 
         {/* Permissions pour changer l'état :
             - Admins (1, 2, 7), Backoffice (11) : peuvent changer vers tous les états (y compris fiche confirmée)
-            - Superviseur Qualification (2) : peuvent changer les fiches des agents sous leur responsabilité
-            - RP Qualification (12) : peuvent changer les fiches des agents sous la responsabilité de leurs superviseurs
+            - Superviseur / Qualité / RP Qualification (2, 8, 12) : y compris depuis le modal détails (fiche verrouillée CQ / date antérieure)
             - Agents (3) : peuvent changer les fiches de leur centre
             - Confirmateurs (6), RE Confirmation (14), RP Confirmation (13) : peuvent changer l'état (y compris si fiche déjà confirmée) */}
-        {!(isModal && isQualiteQualif) && ((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 8 || Number(user?.fonction) === 11 || Number(user?.fonction) === 12) ||
+        {((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 8 || Number(user?.fonction) === 11 || Number(user?.fonction) === 12) ||
           (Number(user?.fonction) === 3 && user?.centre === ficheData?.id_centre) ||
           (Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13)) && (
           <div ref={etatChangeSectionRef} className="fiche-section etat-change-section">

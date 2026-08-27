@@ -4134,8 +4134,9 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         [id]
       );
       
-      // Enrichir chaque entrée de l'historique avec les données de la fiche actuelle
-      // Exception CONFIRMER (7) : confirmateur(s) depuis la ligne fiches_histo, pas la fiche courante
+      // Enrichir chaque entrée de l'historique :
+      // - par défaut : uniquement le confirmateur auteur (fiches_histo.id_confirmateur)
+      // - exception SIGNER / Honoré à suivre (compte rendu) : confirmateurs 1/2/3
       if (historique && historique.length > 0 && fiche) {
         // Pseudos conf2/conf3 éventuels sur les lignes histo (colonnes optionnelles)
         const histoConf2Ids = [...new Set(
@@ -4163,34 +4164,70 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         }
 
         historique = historique.map(histo => {
-          const isConfirmerHisto = Number(histo.id_etat) === 7;
-          const conf1Id = isConfirmerHisto
-            ? (histo.id_confirmateur != null ? Number(histo.id_confirmateur) : null)
-            : fiche.id_confirmateur;
-          const conf2Id = isConfirmerHisto
-            ? (histo.id_confirmateur_2 != null ? Number(histo.id_confirmateur_2) : null)
-            : fiche.id_confirmateur_2;
-          const conf3Id = isConfirmerHisto
-            ? (histo.id_confirmateur_3 != null ? Number(histo.id_confirmateur_3) : null)
-            : fiche.id_confirmateur_3;
+          const etatIdNum = Number(histo.id_etat);
+          const fromCr =
+            histo.from_compte_rendu === 1 ||
+            histo.from_compte_rendu === true ||
+            (etatIdNum === 8 && !histo.id_confirmateur);
+          // Historique : uniquement le confirmateur auteur du passage d'état.
+          // Exception : SIGNER + Honoré à suivre issu d'un compte rendu → conf 1/2/3.
+          const isSignerEtat = [13, 16, 38, 44, 45].includes(etatIdNum);
+          const isHonoreASuivreCr = etatIdNum === 9 && fromCr;
+          const showAllConfirmateurs = isSignerEtat || isHonoreASuivreCr;
 
+          const authorId = histo.id_confirmateur != null ? Number(histo.id_confirmateur) : null;
+          let conf1Id;
+          let conf2Id;
+          let conf3Id;
           let confirmateur_pseudo;
           let confirmateur_2_pseudo;
           let confirmateur_3_pseudo;
-          if (isConfirmerHisto) {
-            confirmateur_pseudo = histo.histo_confirmateur_pseudo || null;
-            confirmateur_2_pseudo = conf2Id ? (confPseudoById[conf2Id] || null) : null;
-            confirmateur_3_pseudo = conf3Id ? (confPseudoById[conf3Id] || null) : null;
+
+          if (showAllConfirmateurs) {
+            conf1Id =
+              authorId ||
+              (fiche.id_confirmateur != null ? Number(fiche.id_confirmateur) : null);
+            conf2Id =
+              histo.id_confirmateur_2 != null
+                ? Number(histo.id_confirmateur_2)
+                : (fiche.id_confirmateur_2 != null ? Number(fiche.id_confirmateur_2) : null);
+            conf3Id =
+              histo.id_confirmateur_3 != null
+                ? Number(histo.id_confirmateur_3)
+                : (fiche.id_confirmateur_3 != null ? Number(fiche.id_confirmateur_3) : null);
+            confirmateur_pseudo =
+              histo.histo_confirmateur_pseudo ||
+              (conf1Id ? (confPseudoById[conf1Id] || null) : null) ||
+              (conf1Id && Number(conf1Id) === Number(fiche.id_confirmateur)
+                ? (confirmateur?.pseudo || null)
+                : null);
+            confirmateur_2_pseudo =
+              conf2Id
+                ? (confPseudoById[conf2Id] ||
+                  (Number(conf2Id) === Number(fiche.id_confirmateur_2)
+                    ? (confirmateur2?.pseudo || null)
+                    : null))
+                : null;
+            confirmateur_3_pseudo =
+              conf3Id
+                ? (confPseudoById[conf3Id] ||
+                  (Number(conf3Id) === Number(fiche.id_confirmateur_3)
+                    ? (confirmateur3?.pseudo || null)
+                    : null))
+                : null;
           } else {
-            confirmateur_pseudo = confirmateur?.pseudo || null;
-            confirmateur_2_pseudo = confirmateur2?.pseudo || null;
-            confirmateur_3_pseudo = confirmateur3?.pseudo || null;
+            conf1Id = authorId;
+            conf2Id = null;
+            conf3Id = null;
+            confirmateur_pseudo = histo.histo_confirmateur_pseudo || null;
+            confirmateur_2_pseudo = null;
+            confirmateur_3_pseudo = null;
           }
 
           return {
           ...histo,
           histo_id_confirmateur: histo.id_confirmateur,
-          from_compte_rendu: histo.from_compte_rendu === 1 || (histo.id_etat === 8 && !histo.id_confirmateur),
+          from_compte_rendu: fromCr,
           cr_commercial_pseudo: histo.cr_commercial_pseudo || null,
           id_confirmateur: conf1Id,
           id_confirmateur_2: conf2Id,
@@ -4454,59 +4491,10 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       // RE Confirmation (14), RP Confirmation (13), Backoffice (11) : peuvent modifier les champs des fiches (modification rapide)
       // Pas de vérification d'assignation nécessaire
     } else if (user.fonction === 2) {
-      // Superviseur Qualification : peuvent modifier les fiches des agents sous leur responsabilité
-      // Récupérer les agents sous la responsabilité du superviseur
-      const agentsSousResponsabilite = await query(
-        `SELECT id FROM utilisateurs 
-         WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
-        [user.id]
-      );
-      
-      const agentIds = agentsSousResponsabilite.map(a => a.id);
-      
-      // Vérifier que la fiche appartient à un de ces agents
-      // Si le superviseur n'a pas d'agents ou si la fiche n'appartient pas à un de ses agents, refuser
-      if (agentIds.length === 0 || !agentIds.includes(fiche.id_agent)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Vous n\'avez pas la permission de modifier cette fiche. Seules les fiches de vos agents peuvent être modifiées.'
-        });
-      }
+      // Superviseur Qualification : détail fiche — peuvent modifier toute fiche (y compris date antérieure / verrouillée CQ).
+      // (Le verrouillage CQ reste sur etat-rapide / valider-qualite / KO / HC.)
     } else if (user.fonction === 12) {
-      // RP Qualification : peuvent modifier les fiches des agents sous la responsabilité de leurs superviseurs
-      // Récupérer les superviseurs assignés au RP
-      const superviseursAssignes = await query(
-        `SELECT id FROM utilisateurs 
-         WHERE id_rp_qualif = ? AND fonction = 2 AND etat > 0`,
-        [user.id]
-      );
-      
-      if (!superviseursAssignes || superviseursAssignes.length === 0) {
-        return res.status(403).json({
-          success: false,
-          message: 'Vous n\'avez pas la permission de modifier cette fiche'
-        });
-      }
-      
-      const superviseurIds = superviseursAssignes.map(s => s.id);
-      
-      // Récupérer les agents de ces superviseurs
-      const agentsSousResponsabilite = await query(
-        `SELECT id FROM utilisateurs 
-         WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')}) 
-         AND fonction = 3 AND etat > 0`,
-        superviseurIds
-      );
-      
-      const agentIds = agentsSousResponsabilite.map(a => a.id);
-      
-      // Vérifier que la fiche appartient à un de ces agents
-      if (!agentIds.includes(fiche.id_agent)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Vous n\'avez pas la permission de modifier cette fiche'
-        });
-      }
+      // RP Qualification : détail fiche — peuvent modifier toute fiche (aligné qualité / superviseur).
     } else if (user.fonction === 8) {
       // Qualité Qualification (fonction 8) : peuvent modifier toutes les fiches (pas de restriction)
       // Pas de vérification d'assignation nécessaire
@@ -4521,9 +4509,11 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     }
     // Admins (1, 2, 7) : peuvent tout modifier, pas de vérification supplémentaire
 
-    // Contrôle qualité : si un agent qualité modifie le commentaire qualité sur une fiche déjà assignée à un autre, bloquer (sauf états Debrief / À vérifier)
+    // Contrôle qualité (page CQ) : commentaire_qualite verrouillé si fiche validée / autre agent.
+    // Depuis le détail fiche, les qualités (2, 8, 12) peuvent toujours modifier — y compris fiche
+    // verrouillée ou date d'insertion antérieure (pas de contrôle canQualiteModifierFiche ici).
     const isQualiteUserField = user.fonction === 2 || user.fonction === 8 || user.fonction === 12;
-    if (isQualiteUserField && field === 'commentaire_qualite') {
+    if (isQualiteUserField && field === 'commentaire_qualite' && req.body?.from_controle_qualite) {
       const canModifyField = await canQualiteModifierFiche(fiche, user.id, user.fonction);
       if (!canModifyField) {
         return res.status(403).json({
@@ -5007,6 +4997,39 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
     if (allVariations.length > 0) {
       // Créer les placeholders pour la requête
       const placeholders = allVariations.map(() => '?').join(',');
+      const phoneParams = [...allVariations, ...allVariations, ...allVariations];
+
+      // Fiche déjà insérée aujourd'hui (même téléphone) → ne pas réinsérer ni créer de demande
+      const todayLocal = toMysqlLocalDateTime().slice(0, 10);
+      const existingToday = await queryOne(
+        `SELECT id, id_etat_final, id_centre, date_insert_time, date_appel, date_appel_time,
+                date_modif_time, nom, prenom, tel, hash
+         FROM fiches
+         WHERE (
+           tel IN (${placeholders})
+           OR gsm1 IN (${placeholders})
+           OR gsm2 IN (${placeholders})
+         )
+         AND (archive = 0 OR archive IS NULL)
+         AND date_insert_time >= ?
+         AND date_insert_time <= ?
+         ORDER BY date_insert_time DESC
+         LIMIT 1`,
+        [...phoneParams, `${todayLocal} 00:00:00`, `${todayLocal} 23:59:59`]
+      );
+
+      if (existingToday) {
+        return res.status(200).json({
+          success: true,
+          message: "Fiche deja inseree aujourd'hui, pas de reinsertion.",
+          data: {
+            alreadyInsertedToday: true,
+            existingFicheId: existingToday.id,
+            hash: existingToday.hash || encodeFicheId(existingToday.id),
+            date_insert_time: existingToday.date_insert_time,
+          },
+        });
+      }
       
       existingFiche = await queryOne(
         `SELECT id, id_etat_final, id_centre, date_insert_time, date_appel, date_appel_time,
@@ -5018,8 +5041,9 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
            OR gsm2 IN (${placeholders})
          )
          AND (archive = 0 OR archive IS NULL)
+         ORDER BY date_insert_time DESC
          LIMIT 1`,
-        [...allVariations, ...allVariations, ...allVariations]
+        phoneParams
       );
     }
     
@@ -5072,6 +5096,20 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
     ficheData.date_insert_time = now;
     ficheData.date_modif_time = now;
     ficheData.date_insert = Math.floor(Date.now() / 1000);
+    // date_appel_time à la création (Vicidial / formulaire) — défaut = maintenant
+    if (!ficheData.date_appel_time) {
+      ficheData.date_appel_time = now;
+    } else {
+      const s = String(ficheData.date_appel_time).trim().replace('T', ' ');
+      if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(s)) {
+        ficheData.date_appel_time = `${s}:00`;
+      } else if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(s)) {
+        ficheData.date_appel_time = s.slice(0, 19);
+      } else {
+        const parsed = new Date(ficheData.date_appel_time);
+        ficheData.date_appel_time = Number.isNaN(parsed.getTime()) ? now : toMysqlLocalDateTime(parsed);
+      }
+    }
     
     // Utiliser id_agent envoyé dans la requête si présent, sinon utiliser l'utilisateur connecté
     if (!ficheData.id_agent) {
@@ -5109,7 +5147,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       'revenu_foyer', 'credit_foyer', 'situation_conjugale', 'entretien', 'nb_enfants', 'profession_mr',
       'profession_madame', 'type_contrat_mr', 'type_contrat_madame', 'commentaire', 'id_agent', 'id_centre', 'id_insert', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_qualite', 'id_qualite_confirmation', 'id_qualif', 'id_commercial',
-      'id_commercial_2', 'id_etat_final', 'id_sous_etat', 'date_appel', 'date_insert', 'date_insert_time',
+      'id_commercial_2', 'id_etat_final', 'id_sous_etat',       'date_appel', 'date_insert', 'date_insert_time', 'date_appel_time',
       'date_audit', 'date_confirmation', 'date_qualif', 'date_rdv', 'date_rdv_time',
       'date_affect', 'date_sign', 'date_sign_time', 'date_modif_time', 'archive', 'ko', 'hc',
       'active', 'valider', 'conf_commentaire_produit', 'conf_consommations',

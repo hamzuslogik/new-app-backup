@@ -387,7 +387,8 @@ const ControleQualite = () => {
     async ({ hash, commentaire_qualite }) => {
       const res = await api.patch(`/fiches/${hash}/field`, {
         field: 'commentaire_qualite',
-        value: commentaire_qualite
+        value: commentaire_qualite,
+        from_controle_qualite: true
       });
       return res.data;
     },
