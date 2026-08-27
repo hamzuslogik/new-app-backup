@@ -4184,7 +4184,12 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       // - par défaut : uniquement le confirmateur auteur (fiches_histo.id_confirmateur)
       // - exception SIGNER / Honoré à suivre (compte rendu) : confirmateurs 1/2/3
       if (historique && historique.length > 0 && fiche) {
-        // Pseudos conf2/conf3 + commerciaux historisés sur les lignes histo (colonnes optionnelles)
+        // Pseudos conf1/conf2/conf3 + commerciaux historisés sur les lignes histo (colonnes optionnelles)
+        const histoConf1Ids = [...new Set(
+          (historique || [])
+            .map((h) => (h.id_confirmateur != null ? Number(h.id_confirmateur) : null))
+            .filter((id) => id && id > 0)
+        )];
         const histoConf2Ids = [...new Set(
           (historique || [])
             .map((h) => (h.id_confirmateur_2 != null ? Number(h.id_confirmateur_2) : null))
@@ -4204,7 +4209,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
             ])
             .filter((id) => id && id > 0)
         )];
-        const extraConfIds = [...new Set([...histoConf2Ids, ...histoConf3Ids, ...histoComIds])];
+        const extraConfIds = [...new Set([...histoConf1Ids, ...histoConf2Ids, ...histoConf3Ids, ...histoComIds])];
         let confPseudoById = {};
         if (extraConfIds.length > 0) {
           try {
@@ -4225,10 +4230,11 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
             histo.from_compte_rendu === true ||
             (etatIdNum === 8 && !histo.id_confirmateur);
           // Historique : uniquement le confirmateur auteur du passage d'état.
-          // Exception : SIGNER + Honoré à suivre issu d'un compte rendu → conf 1/2/3.
+          // Exception : CONFIRMER + SIGNER + Honoré à suivre (CR) → conf 1/2/3 depuis fiches_histo.
+          const isConfirmerEtat = etatIdNum === 7;
           const isSignerEtat = [13, 16, 38, 44, 45].includes(etatIdNum);
           const isHonoreASuivreCr = etatIdNum === 9 && fromCr;
-          const showAllConfirmateurs = isSignerEtat || isHonoreASuivreCr;
+          const showAllConfirmateurs = isConfirmerEtat || isSignerEtat || isHonoreASuivreCr;
 
           const authorId = histo.id_confirmateur != null ? Number(histo.id_confirmateur) : null;
           let conf1Id;
@@ -4239,8 +4245,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           let confirmateur_3_pseudo;
 
           if (showAllConfirmateurs) {
-            // SIGNER / Honoré CR : ne jamais reprendre les slots actuels de la fiche
-            // (après Signer → Retracter → re-Confirmer, la fiche a un nouveau conf1).
+            // CONFIRMER / SIGNER / Honoré CR : lire uniquement les IDs de la ligne fiches_histo
             conf1Id = authorId;
             conf2Id =
               histo.id_confirmateur_2 != null ? Number(histo.id_confirmateur_2) : null;
@@ -4259,7 +4264,9 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
             conf1Id = authorId;
             conf2Id = null;
             conf3Id = null;
-            confirmateur_pseudo = histo.histo_confirmateur_pseudo || null;
+            confirmateur_pseudo =
+              histo.histo_confirmateur_pseudo ||
+              (authorId ? (confPseudoById[authorId] || null) : null);
             confirmateur_2_pseudo = null;
             confirmateur_3_pseudo = null;
           }

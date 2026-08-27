@@ -4106,12 +4106,13 @@ const FicheDetail = ({
                 const isHonoreASuivreCompteRendu =
                   Number(etatId) === 9 &&
                   (etatData.from_compte_rendu === true || etatData.from_compte_rendu === 1);
-                /** Historique : un seul confirmateur (auteur du changement d'état), sauf SIGNER et Honoré à suivre (CR). */
+                /** Historique : un seul confirmateur (auteur), sauf CONFIRMER / SIGNER / Honoré à suivre (CR) → conf 1/2/3 depuis fiches_histo. */
                 const showConfirmateurs123 =
+                  Number(etatId) === 7 ||
                   isEtatSigner(etatId) ||
                   isHonoreASuivreCompteRendu ||
-                  (isCurrent && [7, 9, 13, 16, 44, 45].includes(Number(etatId)));
-                /** Libellé « Confirmateur » : auteur du passage d'état (pas la liste conf 2/3). */
+                  (isCurrent && [9, 13, 16, 44, 45].includes(Number(etatId)));
+                /** Libellé « Confirmateur » : priorité fiches_histo (histo_confirmateur_pseudo / confirmateur_pseudo). */
                 const valeurConfirmateurAffichee =
                   auteurChangementEtat !== ''
                     ? auteurChangementEtat
@@ -4353,9 +4354,22 @@ const FicheDetail = ({
                     if (observationCQ) items.push({ label: 'Observation', value: observationCQ, fullWidth: true });
                   }
                 }
-                // CONFIRMER (7) — afficher tous les champs conf_ remplis (non null) ; si entrée CR : commentaire commercial uniquement
-                else if (etatId === 7) {
-                  if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurEtatListe });
+                // CONFIRMER (7) — confirmateur(s) depuis fiches_histo ; champs conf_ remplis
+                else if (Number(etatId) === 7) {
+                  const confsConfirmer = [
+                    etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo,
+                    etatData.confirmateur_2_pseudo,
+                    etatData.confirmateur_3_pseudo,
+                  ].filter((p) => p != null && String(p).trim() !== '');
+                  if (confsConfirmer.length >= 2) {
+                    confsConfirmer.forEach((pseudo, idx) => {
+                      items.push({ label: `Confirmateur ${idx + 1}`, value: pseudo });
+                    });
+                  } else if (confsConfirmer.length === 1) {
+                    items.push({ label: 'Confirmateur', value: confsConfirmer[0] });
+                  } else if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) {
+                    items.push({ label: 'Confirmateur', value: valeurConfirmateurEtatListe });
+                  }
                   if (etatData.from_compte_rendu && etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial (compte rendu)', value: etatData.commentaire_commercial, fullWidth: true });
                   } else if (!etatData.from_compte_rendu && etatData.conf_commentaire_produit) {
@@ -4473,11 +4487,24 @@ const FicheDetail = ({
                 etat_color: etatActuelBaseColor,
                 sous_etat_titre: fiche.sous_etat_titre || null,
                 // Pseudo utilisateur ayant enregistré le passage à cet état (colonne id_confirmateur de la ligne fiches_histo)
-                histo_confirmateur_pseudo: lastHistoEtatActuel?.histo_confirmateur_pseudo || null,
-                // Utiliser les données actuelles de la fiche
-                confirmateur_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur)?.pseudo || null,
-                confirmateur_2_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_2)?.pseudo || null,
-                confirmateur_3_pseudo: confirmateurs?.find(c => c.id === fiche.id_confirmateur_3)?.pseudo || null,
+                histo_confirmateur_pseudo:
+                  lastHistoEtatActuel?.histo_confirmateur_pseudo ||
+                  lastHistoEtatActuel?.confirmateur_pseudo ||
+                  null,
+                // Confirmateurs : priorité à la ligne fiches_histo de l'état actuel, sinon slots fiche
+                confirmateur_pseudo:
+                  lastHistoEtatActuel?.confirmateur_pseudo ||
+                  lastHistoEtatActuel?.histo_confirmateur_pseudo ||
+                  confirmateurs?.find(c => Number(c.id) === Number(fiche.id_confirmateur))?.pseudo ||
+                  null,
+                confirmateur_2_pseudo:
+                  lastHistoEtatActuel?.confirmateur_2_pseudo ||
+                  confirmateurs?.find(c => Number(c.id) === Number(fiche.id_confirmateur_2))?.pseudo ||
+                  null,
+                confirmateur_3_pseudo:
+                  lastHistoEtatActuel?.confirmateur_3_pseudo ||
+                  confirmateurs?.find(c => Number(c.id) === Number(fiche.id_confirmateur_3))?.pseudo ||
+                  null,
                 conf_commentaire_produit:
                   lastHistoEtatActuel?.conf_commentaire_produit ||
                   fiche.conf_commentaire_produit ||
