@@ -2535,8 +2535,25 @@ router.get('/controle-qualite', authenticate, async (req, res) => {
     }
 
     if (id_etat_final) {
-      whereConditions.push('fiche.id_etat_final = ?');
-      params.push(parseInt(id_etat_final));
+      if (id_etat_final === 'validated') {
+        const etatsGroupe0 = await query(`
+          SELECT id FROM etats WHERE (groupe = '0' OR groupe = 0)
+        `);
+        const idsGroupe0 = etatsGroupe0.map(e => e.id);
+        whereConditions.push('(fiche.ko = 0 OR fiche.ko IS NULL)');
+        if (idsGroupe0.length > 0) {
+          whereConditions.push(`fiche.id_etat_final NOT IN (${idsGroupe0.map(() => '?').join(',')})`);
+          params.push(...idsGroupe0);
+        }
+      } else if (id_etat_final === 'ko' || id_etat_final === '54' || id_etat_final === 54) {
+        whereConditions.push('fiche.ko = 1');
+      } else {
+        const parsedId = parseInt(id_etat_final, 10);
+        if (!Number.isNaN(parsedId)) {
+          whereConditions.push('fiche.id_etat_final = ?');
+          params.push(parsedId);
+        }
+      }
     }
 
     if (date_debut) {

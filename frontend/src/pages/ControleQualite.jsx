@@ -545,6 +545,7 @@ const ControleQualite = () => {
         fiche.qualite_assignee_pseudo,
         fiche.qualite_user_pseudo,
         fiche.etat_titre,
+        fiche.commentaire,
         fiche.commentaire_qualite,
       ]
         .filter(Boolean)
@@ -999,11 +1000,17 @@ const ControleQualite = () => {
                 onChange={(e) => handleFilterChange('id_etat_final', e.target.value)}
               >
                 <option value="">Tous les états</option>
-                {etatsPhase0.map(etat => (
+                {etatsPhase0SansKo.map(etat => (
                   <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc' }}>
                     {etat.titre}
                   </option>
                 ))}
+                <option value="validated" style={{ backgroundColor: '#28a745' }}>
+                  Validé
+                </option>
+                <option value="ko" style={{ backgroundColor: '#dc3545' }}>
+                  KO
+                </option>
               </select>
             </div>
 
@@ -1069,7 +1076,7 @@ const ControleQualite = () => {
         <input
           type="text"
           className="quick-search-input"
-          placeholder="Recherche rapide (nom, prénom, téléphone, CP, agent, état, commentaire)…"
+          placeholder="Recherche rapide (nom, prénom, téléphone, CP, agent, état, commentaire agent, commentaire qualité)…"
           value={quickSearch}
           onChange={(e) => setQuickSearch(e.target.value)}
         />
@@ -1119,6 +1126,7 @@ const ControleQualite = () => {
                   <th>Téléphone</th>
                   <th>CP</th>
                   <th>Agent</th>
+                  <th className="commentaire-agent-col">Commentaire agent</th>
                   <th>Agent qualité</th>
                   <th className="commentaire-qualite-col">Commentaire qualité</th>
                   <th className="etat-actuel-col">État actuel</th>
@@ -1144,6 +1152,11 @@ const ControleQualite = () => {
                     <td>{fiche.tel || '-'}</td>
                     <td>{fiche.cp || '-'}</td>
                     <td>{fiche.agent_pseudo || '-'}</td>
+                    <td className="commentaire-agent-col" title={fiche.commentaire || undefined}>
+                      <div className="commentaire-agent-text">
+                        {fiche.commentaire || '-'}
+                      </div>
+                    </td>
                     <td className="agent-qualite-cell" title={getQualiteAgentLabel(fiche) !== '-' ? `Agent qualité : ${getQualiteAgentLabel(fiche)}` : undefined}>
                       {getQualiteAgentLabel(fiche)}
                     </td>

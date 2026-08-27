@@ -489,11 +489,32 @@ body[data-desktop-viewport].controle-qualite-page .controle-qualite .fiches-tabl
   box-sizing: border-box;
 }
 
+/* Colonne Commentaire agent : lecture seule */
+.fiches-table th.commentaire-agent-col,
+.fiches-table td.commentaire-agent-col {
+  width: 18%;
+  min-width: 160px;
+  max-width: 280px;
+}
+
+.fiches-table td.commentaire-agent-col .commentaire-agent-text {
+  max-height: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* Colonne Commentaire qualité : priorité d'espace horizontal */
 .fiches-table th.commentaire-qualite-col,
 .fiches-table td.commentaire-qualite-col {
-  width: 48%;
-  min-width: 480px;
+  width: 36%;
+  min-width: 360px;
 }
 
 .fiches-table td.commentaire-qualite-col .comment-quick-edit-container {
