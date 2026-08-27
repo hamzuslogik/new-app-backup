@@ -96,15 +96,14 @@ function resolveKpiDateRangeFromQuery(req) {
 /** Parse date + heure pour Production Qualif (date_insert_time). */
 function resolveProductionQualifDateRange(query) {
   const { date_debut, date_fin, time_debut, time_fin } = query || {};
-  const todayStr = getTodayLocal();
   let start =
     typeof date_debut === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date_debut)
       ? date_debut.slice(0, 10)
-      : getFirstOfMonthLocal();
+      : getTodayLocal();
   let end =
     typeof date_fin === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date_fin)
       ? date_fin.slice(0, 10)
-      : todayStr;
+      : getTodayLocal();
   if (start > end) {
     const tmp = start;
     start = end;
@@ -146,9 +145,41 @@ function shiftMysqlDateTimeByDays(dateTimeStr, days) {
 /** Veille : même créneau horaire (ex. 09:00–10:00 hier). */
 function getPreviousDaySameTimeWindow(startDateTime, endDateTime) {
   return {
+    mode: 'previous_day',
     startDateTime: shiftMysqlDateTimeByDays(startDateTime, -1),
     endDateTime: shiftMysqlDateTimeByDays(endDateTime, -1),
   };
+}
+
+/** Du 1er du mois à une date de fin (même mois) → mois précédent, même jour de fin. */
+function isMonthToDatePeriod(startDateStr, endDateStr) {
+  if (!/-01$/.test(String(startDateStr))) return false;
+  return startDateStr.slice(0, 7) === endDateStr.slice(0, 7);
+}
+
+function getPreviousMonthSamePeriod(startDateStr, endDateStr, timeDebut, timeFin) {
+  const startD = new Date(`${startDateStr}T12:00:00`);
+  const endD = new Date(`${endDateStr}T12:00:00`);
+  const prevStart = new Date(startD.getFullYear(), startD.getMonth() - 1, 1);
+  const endDay = endD.getDate();
+  const lastDayPrevMonth = new Date(endD.getFullYear(), endD.getMonth(), 0).getDate();
+  const prevEnd = new Date(
+    endD.getFullYear(),
+    endD.getMonth() - 1,
+    Math.min(endDay, lastDayPrevMonth)
+  );
+  return {
+    mode: 'previous_month',
+    startDateTime: `${formatDateLocal(prevStart)} ${timeDebut}`,
+    endDateTime: `${formatDateLocal(prevEnd)} ${timeFin}`,
+  };
+}
+
+function resolveProductionQualifComparisonWindow(startDateStr, endDateStr, startDateTime, endDateTime, timeDebut, timeFin) {
+  if (isMonthToDatePeriod(startDateStr, endDateStr)) {
+    return getPreviousMonthSamePeriod(startDateStr, endDateStr, timeDebut, timeFin);
+  }
+  return getPreviousDaySameTimeWindow(startDateTime, endDateTime);
 }
 
 async function computeProductionQualifPeriodTotals(agentIds, startDateTime, endDateTime) {
@@ -1907,7 +1938,14 @@ router.get('/production-qualif', authenticate, async (req, res) => {
       endDate
     );
 
-    const previousWindow = getPreviousDaySameTimeWindow(startDate, endDate);
+    const previousWindow = resolveProductionQualifComparisonWindow(
+      startDateStr,
+      endDateStr,
+      startDate,
+      endDate,
+      timeDebut,
+      timeFin
+    );
     const previousTotals = await computeProductionQualifPeriodTotals(
       allAgentIds,
       previousWindow.startDateTime,
@@ -1933,6 +1971,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
           end_datetime: endDate,
         },
         comparison: {
+          mode: previousWindow.mode,
           current: currentTotals,
           previous: {
             ...previousTotals,

@@ -8,7 +8,7 @@ import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import SystemMessageBanner from '../components/SystemMessageBanner';
-import { getFirstOfMonthLocal, getTodayLocal, toDateTimeLocalValue, splitDateTimeLocalValue, formatDateTimeFr } from '../utils/dateUtils';
+import { getTodayLocal, toDateTimeLocalValue, splitDateTimeLocalValue, formatDateTimeFr } from '../utils/dateUtils';
 import './ProductionQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -57,7 +57,7 @@ const ProductionQualif = () => {
   const multiSelectRef = useRef(null);
 
   const [filters, setFilters] = useState({
-    date_debut: getFirstOfMonthLocal(),
+    date_debut: getTodayLocal(),
     date_fin: getTodayLocal(),
     time_debut: '00:00',
     time_fin: '23:59',
@@ -1057,7 +1057,11 @@ const ProductionQualif = () => {
 
             {stats.comparison && (
               <div className="production-comparison noprint">
-                <h2 className="production-comparison-title">Comparatif vs veille (même créneau horaire)</h2>
+                <h2 className="production-comparison-title">
+                  {stats.comparison.mode === 'previous_month'
+                    ? 'Comparatif vs mois précédent (même période)'
+                    : 'Comparatif vs veille (même créneau horaire)'}
+                </h2>
                 <p className="production-comparison-subtitle">
                   Production agents qualification · filtre sur la <strong>date/heure d&apos;insertion</strong>
                   {filters.id_superviseur ? ' · superviseur sélectionné' : ''}
@@ -1084,7 +1088,11 @@ const ProductionQualif = () => {
                   </div>
 
                   <div className="comparison-card comparison-card-previous">
-                    <div className="comparison-card-label">Veille (même créneau)</div>
+                    <div className="comparison-card-label">
+                      {stats.comparison.mode === 'previous_month'
+                        ? 'Mois précédent (même période)'
+                        : 'Veille (même créneau)'}
+                    </div>
                     <div className="comparison-card-period">
                       {formatPeriodRange(stats.comparison.previous.period)}
                     </div>
