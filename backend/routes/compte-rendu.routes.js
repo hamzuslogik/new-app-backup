@@ -973,18 +973,14 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
         ficheAvantDesaffectation?.id_commercial != null && Number(ficheAvantDesaffectation.id_commercial) > 0
           ? Number(ficheAvantDesaffectation.id_commercial)
           : (compteRendu.id_commercial ? Number(compteRendu.id_commercial) : null);
-      const snapCom2 =
-        ficheAvantDesaffectation?.id_commercial_2 != null && Number(ficheAvantDesaffectation.id_commercial_2) > 0
-          ? Number(ficheAvantDesaffectation.id_commercial_2)
-          : null;
       const idCommercialCr = compteRendu.id_commercial || snapCom || null;
 
       try {
         await query(
           `INSERT INTO fiches_histo (
              id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr,
-             id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial, id_commercial_2
-           ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`,
+             id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial
+           ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)`,
           [
             compteRendu.id_fiche,
             nouveauEtat,
@@ -993,8 +989,7 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
             snapConf1,
             snapConf2,
             snapConf3,
-            snapCom,
-            snapCom2
+            snapCom
           ]
         );
       } catch (histoErr) {

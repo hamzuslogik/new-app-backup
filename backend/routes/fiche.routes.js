@@ -6652,13 +6652,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         // SIGNER / RETRACTER : figer le commercial propriétaire au moment du passage d'état
         pushHistoCol('id_commercial', Number(fiche.id_commercial));
       }
-      if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial_2')) {
-        const ic2 = ficheData.id_commercial_2;
-        const n2 = ic2 === '' || ic2 === undefined || ic2 === null ? NaN : parseInt(ic2, 10);
-        pushHistoCol('id_commercial_2', Number.isFinite(n2) ? n2 : null);
-      } else if ([13, 16, 38, 44, 45].includes(newEtatId) && fiche.id_commercial_2) {
-        pushHistoCol('id_commercial_2', Number(fiche.id_commercial_2));
-      }
+      // id_commercial_2 : uniquement sur table fiches (pas fiches_histo pour l'instant)
       // Confirmateurs déjà poussés via histoConf* ; pour SIGNER sans body, s'assurer qu'ils sont figés
       if ([13, 16, 38, 44, 45].includes(newEtatId)) {
         if (histoConf == null && fiche.id_confirmateur) {
@@ -6683,9 +6677,17 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           histoValues
         );
       } catch (histoInsertErr) {
-        // Bases sans colonnes id_confirmateur_2/3 : retenter sans ces colonnes
+        // Bases sans certaines colonnes optionnelles : retenter sans elles
         if (histoInsertErr && histoInsertErr.code === 'ER_BAD_FIELD_ERROR') {
-          const drop = new Set(['id_confirmateur_2', 'id_confirmateur_3']);
+          const drop = new Set([
+            'id_confirmateur_2',
+            'id_confirmateur_3',
+            'id_commercial_2',
+            'complement_chauffage',
+            'conf_complement_chauffage',
+          ]);
+          const unknownCol = String(histoInsertErr.message || '').match(/Unknown column '([^']+)'/i);
+          if (unknownCol && unknownCol[1]) drop.add(unknownCol[1]);
           const cols2 = [];
           const vals2 = [];
           histoCols.forEach((col, i) => {
