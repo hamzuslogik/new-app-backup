@@ -115,7 +115,7 @@ function App() {
           <Route path="alerte-planning" element={<AlertePlanningGate />} />
           <Route path="remarques" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[2, 12]}><Remarques /></ProtectedRoute>} />
           <Route path="audit-rdv" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[4, 13]}><AuditRDV /></ProtectedRoute>} />
-          <Route path="liste-completudes" element={<ProtectedRoute permission={null} allowFunctions={[4, 13, 14]}><ListeCompletudes /></ProtectedRoute>} />
+          <Route path="liste-completudes" element={<ProtectedRoute permission={null} allowFunctions={[4, 11, 13, 14]}><ListeCompletudes /></ProtectedRoute>} />
           <Route path="compte-rendu" element={<ProtectedRoute permission="compte_rendu_view"><CompteRendu /></ProtectedRoute>} />
           <Route
             path="tracking"

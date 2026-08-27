@@ -10,6 +10,7 @@ import './ListeCompletudes.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
 const FONCTION_QC = 4;
+const FONCTION_BACKOFFICE = 11;
 const FONCTION_RP = 13;
 const FONCTION_RE = 14;
 const FONCTION_CONFIRMATEUR = 6;
@@ -27,9 +28,12 @@ const ListeCompletudes = () => {
   const queryClient = useQueryClient();
   const userFonction = Number(user?.fonction);
   const isQC = userFonction === FONCTION_QC;
+  const isBackoffice = userFonction === FONCTION_BACKOFFICE;
   const isRE = userFonction === FONCTION_RE;
   const isRP = userFonction === FONCTION_RP;
-  const allowed = isQC || isRE || isRP;
+  const allowed = isQC || isBackoffice || isRE || isRP;
+  /** Filtre confirmateur sur tous les confirmateurs (QC, Backoffice, RE) */
+  const canFilterAllConfirmateurs = isQC || isBackoffice || isRE;
 
   const [showFilters, setShowFilters] = useState(true);
   const [reponseById, setReponseById] = useState({});
@@ -39,7 +43,7 @@ const ListeCompletudes = () => {
     statut: 'en_attente',
     date_debut: '',
     date_fin: '',
-    id_confirmateur: isRE ? 'all' : '',
+    id_confirmateur: isRE || isBackoffice ? 'all' : '',
     id_re: isRP ? 'all' : '',
     search: ''
   });
@@ -50,18 +54,8 @@ const ListeCompletudes = () => {
       const res = await api.get('/management/utilisateurs');
       return res.data?.data || [];
     },
-    { enabled: isRE || isRP }
+    { enabled: isRP }
   );
-
-  const confirmateursEquipe =
-    isRE && usersData
-      ? usersData.filter(
-          (u) =>
-            Number(u.chef_equipe) === Number(user?.id) &&
-            Number(u.fonction) === FONCTION_CONFIRMATEUR &&
-            (u.etat > 0 || u.etat == null)
-        )
-      : [];
 
   const reSousRP =
     isRP && usersData
@@ -90,16 +84,16 @@ const ListeCompletudes = () => {
       : [];
 
   const { data: allConfirmateurs } = useQuery(
-    'confirmateurs-liste-completudes-qc',
+    'confirmateurs-liste-completudes-all',
     async () => {
       const res = await api.get('/management/utilisateurs');
       return (
         res.data?.data?.filter(
-          (u) => u.fonction === FONCTION_CONFIRMATEUR && (u.etat > 0 || u.etat == null)
+          (u) => Number(u.fonction) === FONCTION_CONFIRMATEUR && (u.etat > 0 || u.etat == null)
         ) || []
       );
     },
-    { enabled: isQC }
+    { enabled: canFilterAllConfirmateurs }
   );
 
   const { data, isLoading, error, refetch } = useQuery(
@@ -242,7 +236,7 @@ const ListeCompletudes = () => {
           </div>
 
           <div className="filter-row">
-            {isRE && (
+            {canFilterAllConfirmateurs && (
               <div className="filter-group">
                 <label htmlFor="lc-conf">Confirmateur</label>
                 <select
@@ -251,8 +245,8 @@ const ListeCompletudes = () => {
                   value={filters.id_confirmateur}
                   onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
                 >
-                  <option value="all">Tous les confirmateurs</option>
-                  {confirmateursEquipe.map((c) => (
+                  <option value={isQC ? '' : 'all'}>Tous les confirmateurs</option>
+                  {(allConfirmateurs || []).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.pseudo}
                     </option>
@@ -297,25 +291,6 @@ const ListeCompletudes = () => {
                   </select>
                 </div>
               </>
-            )}
-
-            {isQC && (
-              <div className="filter-group">
-                <label htmlFor="lc-conf-qc">Confirmateur</label>
-                <select
-                  id="lc-conf-qc"
-                  className="form-control"
-                  value={filters.id_confirmateur}
-                  onChange={(e) => handleFilterChange('id_confirmateur', e.target.value)}
-                >
-                  <option value="">Tous</option>
-                  {(allConfirmateurs || []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.pseudo}
-                    </option>
-                  ))}
-                </select>
-              </div>
             )}
 
             <div className="filter-actions">

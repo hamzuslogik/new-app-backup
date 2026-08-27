@@ -265,7 +265,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaListAlt,
       permission: null,
       visible: true,
-      customCheck: (item, user) => [4, 13, 14].includes(Number(user?.fonction)),
+      customCheck: (item, user) => [4, 11, 13, 14].includes(Number(user?.fonction)),
     },
     {
       path: '/alertes',

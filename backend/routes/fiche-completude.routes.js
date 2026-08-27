@@ -1,17 +1,23 @@
 /**
  * Routes complétude fiche — montées sur le routeur /api/fiches (avant GET /:id).
  * Création : Qualité Confirmation (4).
- * Consultation / traitement : tous les confirmateurs (6), RE (14), RP (13).
+ * Liste : Qualité Confirmation (4), Backoffice (11), RP (13), RE (14 — toutes les complétudes).
+ * Consultation / traitement fiche : confirmateurs (6), RE (14), RP (13), QC (4), Backoffice (11).
  */
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 
 const FONCTION_QUALITE_CONFIRMATION = 4;
 const FONCTION_CONFIRMATEUR = 6;
+const FONCTION_BACKOFFICE = 11;
 const FONCTION_RP_CONFIRMATION = 13;
 const FONCTION_RE_CONFIRMATION = 14;
 
 function isQualiteConfirmation(fonction) {
   return Number(fonction) === FONCTION_QUALITE_CONFIRMATION;
+}
+
+function isBackoffice(fonction) {
+  return Number(fonction) === FONCTION_BACKOFFICE;
 }
 
 function isREConfirmation(fonction) {
@@ -41,7 +47,7 @@ function isConfirmateur(fonction) {
 function canViewCompletude(user, fiche) {
   if (!user) return false;
   const fn = Number(user.fonction);
-  if (isQualiteConfirmation(fn)) return true;
+  if (isQualiteConfirmation(fn) || isBackoffice(fn)) return true;
   if (isREConfirmation(fn) || isRPConfirmation(fn)) return true;
   if (isConfirmateur(fn)) return true;
   return false;
@@ -66,51 +72,28 @@ function statutLabel(statut) {
 }
 
 function canAccessListeCompletudes(fonction) {
-  return isQualiteConfirmation(fonction) || isREConfirmation(fonction) || isRPConfirmation(fonction);
+  return (
+    isQualiteConfirmation(fonction) ||
+    isBackoffice(fonction) ||
+    isREConfirmation(fonction) ||
+    isRPConfirmation(fonction)
+  );
 }
 
-/** Périmètre fiches (confirmateur 1) pour RE / RP / filtre QC. */
+/** Périmètre fiches (confirmateur 1) pour RE / RP / filtre QC / backoffice. */
 async function buildFicheScopeForListe(query, queryOne, user, { id_confirmateur, id_re }) {
   const fn = Number(user.fonction);
   const conditions = [];
   const params = [];
 
-  if (isQualiteConfirmation(fn)) {
-    if (id_confirmateur) {
+  // QC, Backoffice, RE : toutes les complétudes (filtre confirmateur optionnel)
+  if (isQualiteConfirmation(fn) || isBackoffice(fn) || isREConfirmation(fn)) {
+    if (id_confirmateur && id_confirmateur !== 'all') {
       const cid = parseInt(id_confirmateur, 10);
       if (!Number.isNaN(cid) && cid > 0) {
         conditions.push('f.id_confirmateur = ?');
         params.push(cid);
       }
-    }
-    return { conditions, params };
-  }
-
-  if (isREConfirmation(fn)) {
-    if (id_confirmateur && id_confirmateur !== 'all') {
-      const confCheck = await queryOne(
-        `SELECT id FROM utilisateurs WHERE id = ? AND chef_equipe = ? AND fonction = ?
-         AND (etat > 0 OR etat IS NULL)`,
-        [id_confirmateur, user.id, FONCTION_CONFIRMATEUR]
-      );
-      if (!confCheck) {
-        return { conditions: ['1 = 0'], params: [] };
-      }
-      conditions.push('f.id_confirmateur = ?');
-      params.push(parseInt(id_confirmateur, 10));
-    } else {
-      const confs = await query(
-        `SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = ?
-         AND (etat > 0 OR etat IS NULL)`,
-        [user.id, FONCTION_CONFIRMATEUR]
-      );
-      const confIds = (confs || []).map((c) => c.id);
-      if (confIds.length === 0) {
-        return { conditions: ['1 = 0'], params: [] };
-      }
-      const ph = confIds.map(() => '?').join(',');
-      conditions.push(`f.id_confirmateur IN (${ph})`);
-      params.push(...confIds);
     }
     return { conditions, params };
   }
@@ -210,7 +193,7 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
       if (!canAccessListeCompletudes(req.user.fonction)) {
         return res.status(403).json({
           success: false,
-          message: 'Accès réservé à la Qualité Confirmation, au RE et au RP'
+          message: 'Accès réservé à la Qualité Confirmation, au Backoffice, au RE et au RP'
         });
       }
 

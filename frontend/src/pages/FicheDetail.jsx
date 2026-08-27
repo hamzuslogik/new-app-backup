@@ -345,23 +345,15 @@ function buildConfFormStateFromFiche(ficheData, user) {
   const histoConf = Array.isArray(ficheData.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo.length > 0
     ? ficheData.confirmateurs_from_histo.map((id) => String(id))
     : null;
-  let idConf1 = histoConf ? (histoConf[0] || '') : (ficheData.id_confirmateur ? String(ficheData.id_confirmateur) : '');
-  let idConf2 = histoConf ? (histoConf[1] || '') : (ficheData.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : '');
-  let idConf3 = histoConf ? (histoConf[2] || '') : (ficheData.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : '');
+  let idConf1 = ficheData.id_confirmateur ? String(ficheData.id_confirmateur) : (histoConf ? (histoConf[0] || '') : '');
+  let idConf2 = ficheData.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : (histoConf ? (histoConf[1] || '') : '');
+  let idConf3 = ficheData.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : (histoConf ? (histoConf[2] || '') : '');
 
   if (Number(user?.fonction) === 6 && user?.id) {
-    const uid = String(user.id);
-    const alreadyConfirmed = !!(histoConf && histoConf.length > 0);
-    // REFUSER / SIGNER RETRACTER : nouvelle confirmation → confirmateur 1 seul
-    if (isNouvelleConfirmationConf1Seul(ficheData) || !alreadyConfirmed) {
-      idConf1 = uid;
-      idConf2 = '';
-      idConf3 = '';
-    } else {
-      idConf1 = uid;
-      idConf2 = histoConf[0] || '';
-      idConf3 = histoConf[1] || '';
-    }
+    const shifted = applyConfirmateurRepriseFromFiche(user.id, ficheData);
+    idConf1 = shifted.id_confirmateur;
+    idConf2 = shifted.id_confirmateur_2;
+    idConf3 = shifted.id_confirmateur_3;
   } else if (isNouvelleConfirmationConf1Seul(ficheData)) {
     idConf2 = '';
     idConf3 = '';
@@ -469,6 +461,42 @@ function isNouvelleConfirmationConf1Seul(ficheOrEtatId) {
     if (t.includes('signer') && t.includes('retract')) return true;
   }
   return false;
+}
+
+/**
+ * Slots confirmateur actuels de la fiche (pas l'ordre chronologique histo).
+ * Reprise : nouveau = conf1 ; ancien conf1 → conf2 ; ancien conf2 → conf3.
+ * REFUSER / SIGNER RETRACTER : conf1 seul.
+ */
+function applyConfirmateurRepriseFromFiche(userId, ficheData) {
+  const uid = userId != null ? String(userId) : '';
+  if (!uid) {
+    return { id_confirmateur: '', id_confirmateur_2: '', id_confirmateur_3: '' };
+  }
+  if (isNouvelleConfirmationConf1Seul(ficheData)) {
+    return { id_confirmateur: uid, id_confirmateur_2: '', id_confirmateur_3: '' };
+  }
+  const a = ficheData?.id_confirmateur ? String(ficheData.id_confirmateur) : '';
+  const b = ficheData?.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : '';
+  const c = ficheData?.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : '';
+  const histoLen = Array.isArray(ficheData?.confirmateurs_from_histo)
+    ? ficheData.confirmateurs_from_histo.length
+    : 0;
+  const hasPrior = !!(a || b || c || histoLen > 0 || Number(ficheData?.id_etat_final) === 7);
+  if (!hasPrior) {
+    return { id_confirmateur: uid, id_confirmateur_2: '', id_confirmateur_3: '' };
+  }
+  if (a === uid) {
+    const id2 = b && b !== uid ? b : '';
+    const id3 = c && c !== uid && c !== id2 ? c : '';
+    return { id_confirmateur: uid, id_confirmateur_2: id2, id_confirmateur_3: id3 };
+  }
+  const prev = [a, b, c].filter((id) => id && id !== uid);
+  return {
+    id_confirmateur: uid,
+    id_confirmateur_2: prev[0] || '',
+    id_confirmateur_3: prev[1] || ''
+  };
 }
 
 /** Commentaire (motif_qualif) en détails fiche : annuler, annuler 2×, RDV annuler, RDV annuler 2×, refuser, refuser 2×, hors cible air air, âge/doublon/locataire, financement, HC confirmateur, HHC financement à vérifier. */
@@ -1914,13 +1942,22 @@ const FicheDetail = ({
     // Ne pas utiliser new Date() car cela peut causer des problèmes de timezone
     const dateTime = `${dateStr} ${timeStr}`;
     
-    // Confirmateurs : priorité à fiches_histo (source de vérité) pour ne pas écraser l'ancien confirmateur
-    const confFromHisto = Array.isArray(ficheData?.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo.length > 0
-      ? ficheData.confirmateurs_from_histo.map((id) => String(id))
-      : null;
-    const baseConf1 = confFromHisto ? (confFromHisto[0] || '') : (ficheData?.id_confirmateur ? String(ficheData.id_confirmateur) : '');
-    const baseConf2 = confFromHisto ? (confFromHisto[1] || '') : (ficheData?.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : '');
-    const baseConf3 = confFromHisto ? (confFromHisto[2] || '') : (ficheData?.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : '');
+    // Confirmateurs : slots actuels de la fiche (conf1/2/3)
+    const baseConf1 = ficheData?.id_confirmateur
+      ? String(ficheData.id_confirmateur)
+      : (Array.isArray(ficheData?.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo[0]
+        ? String(ficheData.confirmateurs_from_histo[0])
+        : '');
+    const baseConf2 = ficheData?.id_confirmateur_2
+      ? String(ficheData.id_confirmateur_2)
+      : (Array.isArray(ficheData?.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo[1]
+        ? String(ficheData.confirmateurs_from_histo[1])
+        : '');
+    const baseConf3 = ficheData?.id_confirmateur_3
+      ? String(ficheData.id_confirmateur_3)
+      : (Array.isArray(ficheData?.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo[2]
+        ? String(ficheData.confirmateurs_from_histo[2])
+        : '');
 
     // Initialiser le formulaire avec les données de la fiche
     const nextRdvFormData = {
@@ -1984,28 +2021,16 @@ const FicheDetail = ({
           : ''
     };
 
-    // Session confirmateur (fonction 6) : confirmateur connecté = toujours conf1 ; si conf1 existait → décaler en conf2 ; si conf1 et conf2 existaient → décaler (conf1→conf2, conf2→conf3).
-    // Exception REFUSER / SIGNER RETRACTER : traité comme une nouvelle confirmation (conf1 = créateur uniquement).
-    const nouvelleConfSeul = isNouvelleConfirmationConf1Seul(ficheData);
-    if (nouvelleConfSeul) {
-      if (Number(user?.fonction) === 6 && user?.id) {
-        nextRdvFormData.id_confirmateur = String(user.id);
-      }
+    // Session confirmateur (fonction 6) : connecté = conf1 ; reprise → décalage slots actuels (1→2, 2→3).
+    // Exception REFUSER / SIGNER RETRACTER : conf1 seul.
+    if (Number(user?.fonction) === 6 && user?.id) {
+      const shifted = applyConfirmateurRepriseFromFiche(user.id, ficheData);
+      nextRdvFormData.id_confirmateur = shifted.id_confirmateur;
+      nextRdvFormData.id_confirmateur_2 = shifted.id_confirmateur_2;
+      nextRdvFormData.id_confirmateur_3 = shifted.id_confirmateur_3;
+    } else if (isNouvelleConfirmationConf1Seul(ficheData)) {
       nextRdvFormData.id_confirmateur_2 = '';
       nextRdvFormData.id_confirmateur_3 = '';
-    } else if (Number(user?.fonction) === 6 && user?.id) {
-      const uid = String(user.id);
-      const alreadyConfirmed = !!(confFromHisto && confFromHisto.length > 0);
-      if (!alreadyConfirmed) {
-        nextRdvFormData.id_confirmateur = uid;
-        nextRdvFormData.id_confirmateur_2 = '';
-        nextRdvFormData.id_confirmateur_3 = '';
-      } else {
-        // Connecté = conf1 ; ancien conf1 → conf2 ; ancien conf2 → conf3
-        nextRdvFormData.id_confirmateur = uid;
-        nextRdvFormData.id_confirmateur_2 = baseConf1 || '';
-        nextRdvFormData.id_confirmateur_3 = baseConf2 || '';
-      }
     }
 
     setRdvFormData(nextRdvFormData);
@@ -9944,37 +9969,35 @@ const CreateRdvModal = ({
     return found?.pseudo || `ID: ${id}`;
   };
 
-  // En session confirmateur : priorité confirmateurs_from_histo (source de vérité) ; première confirmation => conf1 = connecté ; déjà confirmée => garder tous les confirmateurs existants et ajouter connecté en conf2/conf3
-  // Exception REFUSER / SIGNER RETRACTER : conf1 = créateur uniquement (pas de décalage conf2/conf3).
+  // Session confirmateur : reprise = conf1 = connecté ; slots actuels décalés ; REFUSER/SIGNER RETRACTER = conf1 seul.
   useEffect(() => {
     if (!isConfirmateurSession || !user?.id) return;
-    const uid = String(user.id);
-    const histoConf = Array.isArray(ficheData?.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo.length > 0
-      ? ficheData.confirmateurs_from_histo.map((id) => String(id))
-      : null;
-
     setRdvFormData((prev) => {
-      if (isNouvelleConfirmationConf1Seul(ficheData)) {
-        return { ...prev, id_confirmateur: uid, id_confirmateur_2: '', id_confirmateur_3: '' };
+      const shifted = applyConfirmateurRepriseFromFiche(user.id, ficheData);
+      if (
+        prev?.id_confirmateur === shifted.id_confirmateur &&
+        prev?.id_confirmateur_2 === shifted.id_confirmateur_2 &&
+        prev?.id_confirmateur_3 === shifted.id_confirmateur_3
+      ) {
+        return prev;
       }
-      let a = prev?.id_confirmateur || '';
-      let b = prev?.id_confirmateur_2 || '';
-      let c = prev?.id_confirmateur_3 || '';
-      if (histoConf && histoConf.length > 0 && !a && !b && !c) {
-        a = histoConf[0] || '';
-        b = histoConf[1] || '';
-        c = histoConf[2] || '';
-      }
-      const alreadyConfirmed = !!(histoConf && histoConf.length > 0);
-
-      if ([a, b, c].includes(uid)) return histoConf && histoConf.length > 0 && !prev?.id_confirmateur ? { ...prev, id_confirmateur: uid, id_confirmateur_2: a, id_confirmateur_3: b } : prev;
-      if (!alreadyConfirmed) {
-        return { ...prev, id_confirmateur: uid, id_confirmateur_2: '', id_confirmateur_3: '' };
-      }
-      // Connecté = conf1 ; ancien conf1 → conf2 ; ancien conf2 → conf3
-      return { ...prev, id_confirmateur: uid, id_confirmateur_2: a, id_confirmateur_3: b };
+      return {
+        ...prev,
+        id_confirmateur: shifted.id_confirmateur,
+        id_confirmateur_2: shifted.id_confirmateur_2,
+        id_confirmateur_3: shifted.id_confirmateur_3
+      };
     });
-  }, [isConfirmateurSession, user?.id, setRdvFormData, ficheData?.confirmateurs_from_histo, ficheData?.id_etat_final]);
+  }, [
+    isConfirmateurSession,
+    user?.id,
+    setRdvFormData,
+    ficheData?.id_confirmateur,
+    ficheData?.id_confirmateur_2,
+    ficheData?.id_confirmateur_3,
+    ficheData?.id_etat_final,
+    ficheData?.confirmateurs_from_histo
+  ]);
 
   // Préremplir les champs PV depuis ficheData si ils sont vides dans rdvFormData
   useEffect(() => {

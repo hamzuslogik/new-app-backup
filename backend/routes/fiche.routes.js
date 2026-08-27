@@ -65,6 +65,49 @@ function getHistoConfirmateur(req, fiche = null) {
   return getHistoConfirmateurIds(req).id1;
 }
 
+/** REFUSER / SIGNER RETRACTER (+ variantes) : nouvelle confirmation = conf1 seul. */
+function isNouvelleConfirmationConf1SeulEtat(etatId, titre) {
+  if ([12, 16, 25, 38].includes(Number(etatId))) return true;
+  const t = String(titre || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+  if (t === 'refuser' || t.startsWith('refuser ')) return true;
+  if (t.includes('signer') && t.includes('retract')) return true;
+  return false;
+}
+
+/**
+ * Reprise confirmation : nouveau confirmateur = conf1 ; anciens décalés (1→2, 2→3).
+ * REFUSER / SIGNER RETRACTER : reset (conf1 seul).
+ */
+function applyConfirmateurRepriseSlots(uid, slots, { nouvelleConfSeul, hasPriorConfirmation }) {
+  const userId = Number(uid);
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return { id1: null, id2: null, id3: null };
+  }
+  if (nouvelleConfSeul) {
+    return { id1: userId, id2: null, id3: null };
+  }
+  const cur = (slots || []).map((x) => {
+    const n = x != null && x !== '' ? Number(x) : null;
+    return Number.isFinite(n) && n > 0 ? n : null;
+  });
+  while (cur.length < 3) cur.push(null);
+  const hasAny = cur.some(Boolean) || !!hasPriorConfirmation;
+  if (!hasAny) {
+    return { id1: userId, id2: null, id3: null };
+  }
+  if (cur[0] === userId) {
+    const id2 = cur[1] && cur[1] !== userId ? cur[1] : null;
+    const id3 = cur[2] && cur[2] !== userId && cur[2] !== id2 ? cur[2] : null;
+    return { id1: userId, id2, id3 };
+  }
+  const prev = cur.filter((id) => id && id !== userId);
+  return { id1: userId, id2: prev[0] || null, id3: prev[1] || null };
+}
+
 /** Colonnes conf_* de fiches_histo (alignées sur add_fiches_histo_conf_columns.sql) pour enregistrer la confirmation (état 7) */
 const FICHES_HISTO_CONF_COLUMNS = [
   'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur', 'conf_profession_madame',
@@ -96,6 +139,66 @@ function parseEtatId(v) {
   if (v === undefined || v === null || v === '') return NaN;
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? n : NaN;
+}
+
+/**
+ * Horodatage MySQL DATETIME à l'heure locale du système (pas UTC).
+ * Évite le décalage de toISOString() (UTC) visible dans fiches_histo / confirmations.
+ */
+function toMysqlLocalDateTime(d = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/**
+ * Alimente la table confirmations au passage CONFIRMER (7) avec l'heure système locale.
+ * Source historique : scripts SQL copiant fiches_histo.date_creation (souvent écrite en UTC).
+ */
+async function upsertConfirmationForEtat7({
+  id_fiche,
+  date_rdv_time,
+  date_confirmation,
+  id_confirmateur,
+  id_commercial,
+  commentaire,
+}) {
+  if (!id_fiche || date_rdv_time == null || date_rdv_time === '') return;
+  const when = date_confirmation || toMysqlLocalDateTime();
+  const confId = id_confirmateur != null && Number(id_confirmateur) > 0 ? Number(id_confirmateur) : null;
+  const comId = id_commercial != null && Number(id_commercial) > 0 ? Number(id_commercial) : null;
+  const comment = commentaire === '' || commentaire === undefined ? null : commentaire;
+
+  try {
+    const existing = await queryOne(
+      'SELECT id FROM confirmations WHERE id_fiche = ? AND date_rdv_time <=> ? LIMIT 1',
+      [id_fiche, date_rdv_time]
+    );
+    if (existing?.id) {
+      await query(
+        `UPDATE confirmations
+         SET date_confirmation = ?, date_creation = ?,
+             id_confirmateur = COALESCE(?, id_confirmateur),
+             id_commercial = COALESCE(?, id_commercial),
+             commentaire = COALESCE(?, commentaire)
+         WHERE id = ?`,
+        [when, when, confId, comId, comment, existing.id]
+      );
+      return;
+    }
+    await query(
+      `INSERT INTO confirmations
+        (id_fiche, date_rdv_time, date_confirmation, id_confirmateur, id_commercial, date_creation, commentaire)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id_fiche, date_rdv_time, when, confId, comId, when, comment]
+    );
+  } catch (err) {
+    // Schéma partiel / table absente : ne pas bloquer la confirmation
+    if (err && (err.code === 'ER_NO_SUCH_TABLE' || err.code === 'ER_BAD_FIELD_ERROR')) {
+      console.warn('[confirmations] upsert ignoré:', err.message);
+      return;
+    }
+    console.warn('[confirmations] upsert échoué:', err.message);
+  }
 }
 
 const MSG_COMMENTAIRE_QUALITE_REQUIS =
@@ -233,7 +336,7 @@ async function insertControleQualiteAudit(params) {
     date_audit,
     date_fiche = null
   } = params;
-  const now = date_audit || new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const now = date_audit || toMysqlLocalDateTime();
   try {
     await query(
       `INSERT INTO controle_qualite (id_fiche, id_qualite, id_etat, id_sous_etat, commentaire, ko, hc, id_etat_precedent, id_sous_etat_precedent, id_agent_fiche, id_centre, date_audit, date_fiche, updated_at)
@@ -717,7 +820,7 @@ const logModification = async (idFiche, userId, userPseudo, field, oldValue, new
     
     // Ne logger que si les valeurs sont différentes
     if (oldValStr !== newValStr) {
-      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const now = toMysqlLocalDateTime();
       
       if (hasNewStructure) {
         // Utiliser la nouvelle structure
@@ -3497,7 +3600,7 @@ router.put('/demandes-insertion/:id', authenticate, checkPermissionCode('demande
       [demande.id_fiche_existante]
     );
     
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
     const ficheHash = ficheExistante?.hash || (ficheExistante?.id ? encodeFicheId(ficheExistante.id) : null);
     const traitantPseudo = req.user.pseudo || 'Administrateur';
     
@@ -3829,22 +3932,33 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       if (lastCr && lastCr.pseudo) compte_rendu_commercial_pseudo = lastCr.pseudo;
     }
 
-    // Confirmateurs issus de fiches_histo (id_etat=7) : source de vérité pour ne pas écraser l'ancien confirmateur
+    // Confirmateurs : slots actuels de la fiche (conf1/2/3), repli sur l'historique état 7
     let confirmateurs_from_histo = [];
-    try {
-      const histoConfRows = await query(
-        `SELECT id_confirmateur FROM fiches_histo WHERE id_fiche = ? AND id_etat = 7 ORDER BY id ASC`,
-        [id]
-      );
-      const seen = new Set();
-      for (const row of histoConfRows || []) {
-        const cid = row.id_confirmateur ? Number(row.id_confirmateur) : null;
-        if (cid && cid > 0 && !seen.has(cid) && confirmateurs_from_histo.length < 3) {
-          seen.add(cid);
-          confirmateurs_from_histo.push(cid);
-        }
+    {
+      const fromFiche = [
+        fiche.id_confirmateur ? Number(fiche.id_confirmateur) : null,
+        fiche.id_confirmateur_2 ? Number(fiche.id_confirmateur_2) : null,
+        fiche.id_confirmateur_3 ? Number(fiche.id_confirmateur_3) : null
+      ].filter((cid) => cid && cid > 0);
+      if (fromFiche.length > 0) {
+        confirmateurs_from_histo = fromFiche;
+      } else {
+        try {
+          const histoConfRows = await query(
+            `SELECT id_confirmateur FROM fiches_histo WHERE id_fiche = ? AND id_etat = 7 ORDER BY id DESC`,
+            [id]
+          );
+          const seen = new Set();
+          for (const row of histoConfRows || []) {
+            const cid = row.id_confirmateur ? Number(row.id_confirmateur) : null;
+            if (cid && cid > 0 && !seen.has(cid) && confirmateurs_from_histo.length < 3) {
+              seen.add(cid);
+              confirmateurs_from_histo.push(cid);
+            }
+          }
+        } catch (_) { /* ignore */ }
       }
-    } catch (_) { }
+    }
 
     // Récupérer "Validé par qui" pour fiches confirmées et validées (dernière validation avec valider=1)
     let validateur_pseudo = null;
@@ -4357,7 +4471,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     
     // Si modification de l'état final, créer une entrée dans l'historique (comparaison numérique : 7 et "7" = même état)
     if (field === 'id_etat_final' && value != null && value !== '' && parseEtatId(value) !== parseEtatId(fiche.id_etat_final)) {
-      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const now = toMysqlLocalDateTime();
       
       // Attribuer id_qualite si c'est un utilisateur qualité et que c'est la première modification
       const isQualiteUser = user.fonction === 2 || user.fonction === 8 || user.fonction === 12;
@@ -4381,6 +4495,17 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
         `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
         [id, parseInt(value, 10), histoConf, histoSousEtat, dateRdvHisto, now]
       );
+
+      if (parseInt(value, 10) === 7) {
+        await upsertConfirmationForEtat7({
+          id_fiche: id,
+          date_rdv_time: dateRdvHisto,
+          date_confirmation: now,
+          id_confirmateur: histoConf,
+          id_commercial: fiche.id_commercial || null,
+          commentaire: fiche.conf_commentaire_produit || fiche.motif_qualif || null,
+        });
+      }
       
       // Si on passe de l'état CONFIRMER (7) à un état du groupe 2, supprimer la date du RDV
       const oldEtatId = fiche.id_etat_final;
@@ -4516,7 +4641,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     }
 
     // Mettre à jour le champ sur fiches (source de vérité affichage fiche + stats)
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
     await query(
       `UPDATE fiches SET \`${dbField}\` = ?, date_modif_time = ? WHERE id = ?`,
       [dbValue, now, id]
@@ -4711,7 +4836,7 @@ router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req
       });
     }
 
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
     const cqEtatVal = cq_etat !== undefined && cq_etat !== '' ? parseInt(cq_etat) || null : fiche.cq_etat;
     const cqDossierVal = cq_dossier !== undefined && cq_dossier !== '' ? parseInt(cq_dossier) || null : fiche.cq_dossier;
     const observationsVal = observations_cq !== undefined ? cleanObservationCQ(observations_cq) : (fiche.observations_cq ?? null);
@@ -4879,7 +5004,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
     }
 
     // Ajouter les champs par défaut
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
     ficheData.date_insert_time = now;
     ficheData.date_modif_time = now;
     ficheData.date_insert = Math.floor(Date.now() / 1000);
@@ -4993,13 +5118,18 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
         `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
         histoValues
       );
+      if (isEtat7) {
+        const confCommentIdx = confCols.indexOf('conf_commentaire_produit');
+        await upsertConfirmationForEtat7({
+          id_fiche: insertId,
+          date_rdv_time: dateRdvHisto,
+          date_confirmation: now,
+          id_confirmateur: histoConf,
+          id_commercial: ficheData.id_commercial || null,
+          commentaire: confCommentIdx >= 0 ? confVals[confCommentIdx] : null,
+        });
+      }
     }
-
-    res.status(201).json({
-      success: true,
-      message: 'Fiche créée avec succès',
-      data: { id: insertId }
-    });
   } catch (error) {
     console.error('Erreur lors de la création de la fiche:', error);
     res.status(500).json({
@@ -5070,7 +5200,7 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
 
     const oldEtatId = fiche.id_etat_final;
     const newEtatId = parseInt(id_etat_final);
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
 
     // Attribuer id_qualite au nouvel agent qualité qui modifie l'état (fiche non verrouillée)
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
@@ -5118,6 +5248,18 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
         `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
         histoValues
       );
+
+      if (newEtatId === 7) {
+        const confCommentIdx = confCols.indexOf('conf_commentaire_produit');
+        await upsertConfirmationForEtat7({
+          id_fiche: id,
+          date_rdv_time: dateRdvHisto,
+          date_confirmation: now,
+          id_confirmateur: histoConf,
+          id_commercial: null,
+          commentaire: confCommentIdx >= 0 ? confVals[confCommentIdx] : null,
+        });
+      }
 
       // Logger la modification
       const userPseudo = req.user.pseudo || 'Utilisateur';
@@ -5244,7 +5386,7 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
 
     const oldEtatId = fiche.id_etat_final;
     const newEtatId = etatEnAttente.id;
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
 
     // Attribuer id_qualite au nouvel agent qualité qui modifie l'état (fiche non verrouillée)
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
@@ -5421,7 +5563,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     const oldEtatId = fiche.id_etat_final;
     const oldSousEtatId = fiche.id_sous_etat;
     const newEtatId = etatEnAttente.id;
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
     if (isQualiteUser) {
       await query('UPDATE fiches SET id_qualite = ? WHERE id = ?', [req.user.id, id]);
@@ -5608,7 +5750,7 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
     const oldEtatId = fiche.id_etat_final;
     const oldSousEtatId = fiche.id_sous_etat;
     const newEtatId = ID_ETAT_HC;
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
     if (isQualiteUser) {
       await query('UPDATE fiches SET id_qualite = ? WHERE id = ?', [req.user.id, id]);
@@ -5810,7 +5952,7 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
       });
     }
     const num_alerte = nb_alertes + 1;
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
     let insertAlertHeader;
     try {
       insertAlertHeader = await query(
@@ -6031,7 +6173,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
 
       // Créer un compte rendu au lieu de modifier directement
       
-      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const now = toMysqlLocalDateTime();
       const dateVisite = ficheData?.date_rdv_time || fiche?.date_rdv_time || null;
       const compteRenduResult = await query(
         `INSERT INTO compte_rendu_pending 
@@ -6100,70 +6242,46 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       // Pas de vérification d'assignation nécessaire
       //
       // Pour confirmateur (6) uniquement : ne peut pas assigner un autre confirmateur, uniquement s'ajouter lui-même.
-      // Source de vérité = fiches_histo (id_etat=7) pour ne pas écraser l'ancien confirmateur.
-      // Exception : si la fiche est en REFUSER / SIGNER RETRACTER, traiter comme une nouvelle confirmation
-      // (confirmateur 1 = créateur du RDV uniquement, pas de 2e/3e).
+      // Reprise : connecté = conf1 ; ancien conf1 → conf2 ; ancien conf2 → conf3 (slots actuels de la fiche).
+      // Exception REFUSER / SIGNER RETRACTER : nouvelle confirmation (conf1 seul, 2 et 3 vidés).
       if (req.user.fonction === 6 && ficheData && (ficheData.id_confirmateur !== undefined || ficheData.id_confirmateur_2 !== undefined || ficheData.id_confirmateur_3 !== undefined)) {
         const uid = Number(req.user.id);
         const prevEtatId = Number(fiche.id_etat_final);
-        const isNouvelleConfirmationConf1Seul = [12, 16, 25, 38].includes(prevEtatId);
+        let prevEtatTitre = null;
+        try {
+          const etatRow = await queryOne('SELECT titre FROM etats WHERE id = ?', [prevEtatId]);
+          prevEtatTitre = etatRow?.titre || null;
+        } catch (_) { /* ignore */ }
+        const nouvelleConfSeul = isNouvelleConfirmationConf1SeulEtat(prevEtatId, prevEtatTitre);
 
-        if (isNouvelleConfirmationConf1Seul) {
-          ficheData.id_confirmateur = uid;
-          ficheData.id_confirmateur_2 = null;
-          ficheData.id_confirmateur_3 = null;
-        } else {
-        let current = [
+        // Slots actuels sur la fiche (pas l'ordre chronologique histo ASC)
+        let slots = [
           fiche.id_confirmateur ? Number(fiche.id_confirmateur) : null,
           fiche.id_confirmateur_2 ? Number(fiche.id_confirmateur_2) : null,
           fiche.id_confirmateur_3 ? Number(fiche.id_confirmateur_3) : null
         ];
-        try {
-          const histoConfRows = await query(
-            `SELECT id_confirmateur FROM fiches_histo WHERE id_fiche = ? AND id_etat = 7 ORDER BY id ASC`,
-            [id]
-          );
-          const seen = new Set();
-          const fromHisto = [];
-          for (const row of histoConfRows || []) {
-            const cid = row.id_confirmateur ? Number(row.id_confirmateur) : null;
-            if (cid && cid > 0 && !seen.has(cid) && fromHisto.length < 3) {
-              seen.add(cid);
-              fromHisto.push(cid);
-            }
-          }
-          if (fromHisto.length > 0) {
-            current = [fromHisto[0] || null, fromHisto[1] || null, fromHisto[2] || null];
-          } else {
-            // Pas d'historique confirmation pour cette fiche => première confirmation, confirmateur connecté = confirmateur 1
-            current = [null, null, null];
-          }
-        } catch (_) { }
+        let hasPriorConfirmation = slots.some((id) => id && id > 0);
+        if (!hasPriorConfirmation) {
+          try {
+            const histoAny = await queryOne(
+              'SELECT id FROM fiches_histo WHERE id_fiche = ? AND id_etat = 7 LIMIT 1',
+              [id]
+            );
+            hasPriorConfirmation = !!histoAny;
+          } catch (_) { /* ignore */ }
+        }
 
-        const already = current.includes(uid);
-        if (!already) {
-          const requested = [
-            ficheData.id_confirmateur != null ? Number(ficheData.id_confirmateur) : null,
-            ficheData.id_confirmateur_2 != null ? Number(ficheData.id_confirmateur_2) : null,
-            ficheData.id_confirmateur_3 != null ? Number(ficheData.id_confirmateur_3) : null
-          ];
-          const wantsSelf = requested.includes(uid);
-          if (wantsSelf) {
-            // Confirmateur connecté = toujours confirmateur 1 ; anciens décalés : ancien conf1 → conf2, ancien conf2 → conf3
-            ficheData.id_confirmateur = uid;
-            ficheData.id_confirmateur_2 = current[0] || null;
-            ficheData.id_confirmateur_3 = current[1] || null;
-          } else {
-            ficheData.id_confirmateur = current[0] ?? fiche.id_confirmateur;
-            ficheData.id_confirmateur_2 = current[1] ?? fiche.id_confirmateur_2;
-            ficheData.id_confirmateur_3 = current[2] ?? fiche.id_confirmateur_3;
-          }
-        } else {
-          ficheData.id_confirmateur = current[0] ?? fiche.id_confirmateur;
-          ficheData.id_confirmateur_2 = current[1] ?? fiche.id_confirmateur_2;
-          ficheData.id_confirmateur_3 = current[2] ?? fiche.id_confirmateur_3;
-        }
-        }
+        const next = applyConfirmateurRepriseSlots(uid, slots, {
+          nouvelleConfSeul,
+          hasPriorConfirmation
+        });
+        ficheData.id_confirmateur = next.id1;
+        ficheData.id_confirmateur_2 = next.id2;
+        ficheData.id_confirmateur_3 = next.id3;
+        // Aligner fiches_histo sur les mêmes slots (getHistoConfirmateurIds lit le body)
+        ficheData.histo_id_confirmateur = next.id1;
+        ficheData.histo_id_confirmateur_2 = next.id2;
+        ficheData.histo_id_confirmateur_3 = next.id3;
       }
     }
 
@@ -6179,10 +6297,6 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     }
 
     // Mettre à jour la date de modification avec l'heure système locale (pas UTC).
-    const toMysqlLocalDateTime = (d = new Date()) => {
-      const pad = (n) => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-    };
     const now = toMysqlLocalDateTime();
     ficheData.date_modif_time = now;
 
@@ -6385,6 +6499,23 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           throw histoInsertErr;
         }
       }
+
+      if (isEtat7) {
+        const confCommentIdx = confCols.indexOf('conf_commentaire_produit');
+        const confComment =
+          confCommentIdx >= 0 ? confVals[confCommentIdx] : (ficheData.conf_commentaire_produit ?? fiche.motif_qualif ?? null);
+        const commercialId = Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial')
+          ? (ficheData.id_commercial === '' || ficheData.id_commercial == null ? null : parseInt(ficheData.id_commercial, 10))
+          : (fiche.id_commercial ?? null);
+        await upsertConfirmationForEtat7({
+          id_fiche: id,
+          date_rdv_time: dateRdvHisto,
+          date_confirmation: now,
+          id_confirmateur: histoConf,
+          id_commercial: Number.isFinite(commercialId) ? commercialId : null,
+          commentaire: confComment,
+        });
+      }
     }
 
     // Calculer la consommation si surface_chauffee ou consommation_chauffage change
@@ -6481,7 +6612,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
       const updatedForAudit = await queryOne('SELECT * FROM fiches WHERE id = ?', [id]);
       if (updatedForAudit) {
-        const auditNow = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const auditNow = toMysqlLocalDateTime();
         await insertAuditQualiteRdv({
           id_fiche: parseInt(id, 10),
           id_qualite_confirmation:
@@ -6778,7 +6909,7 @@ router.patch('/:id/archive', authenticate, hashToIdMiddleware, async (req, res) 
       });
     }
 
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
     await query(
       `UPDATE fiches SET archive = ?, date_modif_time = ? WHERE id = ?`,
       [archive ? 1 : 0, now, id]
@@ -6825,7 +6956,7 @@ router.patch('/:id/ko', authenticate, hashToIdMiddleware, async (req, res) => {
       });
     }
 
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
     const oldKoVal = fiche.ko != null ? Number(fiche.ko) : 0;
     const newKoVal = ko ? 1 : 0;
     let resolvedMotif = null;
@@ -7081,7 +7212,7 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
 
     if (smsResult.success) {
       // Enregistrer le SMS dans la base
-      const dateModif = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const dateModif = toMysqlLocalDateTime();
       await query(
         `INSERT INTO sms (id_fiche, id_confirmateur, tel, message, statut, date_modif_time)
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -7369,7 +7500,7 @@ router.post('/:id/valider', authenticate, hashToIdMiddleware, triggerWorkflowOnR
     } = req.body; // type_valid: "0" pour annuler, "1-Y" pour valider avec Y = conf_rdv_avec
     const userId = req.user.id;
     const dateValider = Math.floor(Date.now() / 1000);
-    const dateValiderTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const dateValiderTime = toMysqlLocalDateTime();
 
     // Vérifier que la fiche existe et est confirmée (état 7)
     const fiche = await queryOne(
