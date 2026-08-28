@@ -1101,10 +1101,11 @@ router.get('/', authenticate, async (req, res) => {
                           req.query.id_confirmateur || req.query.id_re || req.query.id_centre ||
                           statsDrillHandled;
 
-    /** Confirmateur : recherche par critère ou tel → résultats globaux, sans filtre « dernier histo / moi » */
+    /** Confirmateur : recherche par critère, tel ou département → résultats globaux, sans filtre « dernier histo / moi » */
     const hasCritereOuTelSearch =
       (critere !== undefined && critere !== null && String(critere).trim() !== '') ||
-      (tel !== undefined && tel !== null && String(tel).trim() !== '');
+      (tel !== undefined && tel !== null && String(tel).trim() !== '') ||
+      (cp !== undefined && cp !== null && String(cp).trim() !== '');
 
     if (!isActiveSearch && !statsDrillHandled) {
       if (req.user.fonction === 5) {
@@ -1151,7 +1152,7 @@ router.get('/', authenticate, async (req, res) => {
     // Pour les confirmateurs (6) en recherche par critère ou texte (tel, nom, prénom, etc.), ne pas filtrer par état : afficher l'état de la fiche même s'il est hors droit confirmateur
     const hasRechercheParCritereConfirmateur =
       req.user.fonction === 6 &&
-      !!(req.query.tel || req.query.critere || qNarrow(nom) || qNarrow(prenom));
+      !!(req.query.tel || req.query.critere || qNarrow(nom) || qNarrow(prenom) || qNarrow(cp));
     const shouldApplyPermissionFilter = !(req.user.fonction === 3 && !req.query.fiche_search && !req.query.affectation && !req.query.suivi)
       && !hasRechercheParCritereConfirmateur;
 

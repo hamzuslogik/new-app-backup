@@ -1039,7 +1039,7 @@ const Dashboard = () => {
     setIsSearching(true);
     const newFilters = { ...filters, fiche_search: true, page: 1 };
     
-    if (newFilters.critere) {
+    if (newFilters.critere || (newFilters.cp || '').trim()) {
       const today = new Date().toISOString().split('T')[0];
       if (newFilters.date_debut === today && newFilters.date_fin === today) {
         delete newFilters.date_debut;
@@ -1812,7 +1812,7 @@ const Dashboard = () => {
               {/* Colonne de gauche */}
               <div className="search-form-left">
                 {/* Département */}
-                {(user?.fonction !== 5 && user?.fonction !== 6 && user?.fonction !== 3) && (
+                {(user?.fonction !== 5 && user?.fonction !== 3) && (
                   <div className="form-group">
                     <label>Département(s) / code postal</label>
                     <input
@@ -2622,7 +2622,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* Département */}
-                {(user?.fonction !== 5 && user?.fonction !== 6 && user?.fonction !== 3) && (
+                {(user?.fonction !== 5 && user?.fonction !== 3) && (
                   <div className="form-group">
                     <label>Département(s) / code postal</label>
                     <input
