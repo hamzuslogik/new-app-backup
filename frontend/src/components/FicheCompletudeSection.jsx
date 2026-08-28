@@ -11,7 +11,7 @@ const STATUT_LABELS = {
 
 /**
  * Complétude fiche :
- * - Qualité Confirmation (4) : création uniquement
+ * - Qualité Confirmation (4) : création + modification (en attente)
  * - Tous les confirmateurs (6), RE (14), RP (13) : consultation + bouton « Traité »
  */
 const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTreat = false }) => {
@@ -19,6 +19,9 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
   const [motif, setMotif] = useState('');
   const [completes, setCompletes] = useState('');
   const [showForm, setShowForm] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [editMotif, setEditMotif] = useState('');
+  const [editCompletes, setEditCompletes] = useState('');
   const queryKey = ['fiche-completude', ficheHash];
 
   const { data, isLoading } = useQuery(
@@ -36,6 +39,7 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
   const list = data?.list || [];
   const permissions = data?.permissions || {};
   const allowCreate = canCreate && (permissions.can_create !== false);
+  const allowEdit = canCreate && (permissions.can_edit !== false);
   /** canTreat côté page (RE/RP/confirmateur) ; permissions API en renfort si présentes */
   const allowTreat =
     Boolean(canTreat) &&
@@ -57,6 +61,30 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
       },
       onError: (err) => {
         toast.error(err.response?.data?.message || 'Erreur lors de la création');
+      }
+    }
+  );
+
+  const updateMutation = useMutation(
+    async ({ id, motif: m, completes: c }) => {
+      const res = await api.put(`/fiches/${ficheHash}/completude/${id}`, {
+        motif: m,
+        completes: c
+      });
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        toast.success('Complétude modifiée');
+        setEditingId(null);
+        setEditMotif('');
+        setEditCompletes('');
+        queryClient.invalidateQueries(queryKey);
+        queryClient.invalidateQueries(['fiche-completude-indicator', ficheHash]);
+        queryClient.invalidateQueries(['liste-completudes']);
+      },
+      onError: (err) => {
+        toast.error(err.response?.data?.message || 'Erreur lors de la modification');
       }
     }
   );
@@ -89,6 +117,27 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
     setMotif('');
     setCompletes('');
     setShowForm(false);
+  };
+
+  const handleStartEdit = (item) => {
+    setEditingId(item.id);
+    setEditMotif(item.motif || '');
+    setEditCompletes(item.completes || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditMotif('');
+    setEditCompletes('');
+  };
+
+  const handleSaveEdit = (e, id) => {
+    e.preventDefault();
+    updateMutation.mutate({
+      id,
+      motif: editMotif.trim(),
+      completes: editCompletes.trim()
+    });
   };
 
   if (!enabled) return null;
@@ -174,6 +223,9 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
               const isPending = item.statut === 'en_attente';
               const statutClass = item.statut ? `fiche-completude-item--${item.statut}` : '';
               const showTreatActions = allowTreat && isPending;
+              const showEditActions = allowEdit && (item.can_edit !== false) && isPending;
+              const isEditing = editingId === item.id;
+
               return (
                 <div
                   key={item.id}
@@ -190,29 +242,89 @@ const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTrea
                       {item.created_by_pseudo ? ` — ${item.created_by_pseudo}` : ''}
                     </span>
                   </div>
-                  <p className="fiche-completude-line">
-                    <strong>Motif :</strong> {item.motif}
-                  </p>
-                  <p className="fiche-completude-line fiche-completude-line--multiline">
-                    <strong>Complétudes :</strong> {item.completes}
-                  </p>
-                  {item.reponse_traitement && (
-                    <p className="fiche-completude-line fiche-completude-line--multiline">
-                      <strong>Réponse :</strong> {item.reponse_traitement}
-                      {item.traite_par_pseudo ? ` (${item.traite_par_pseudo})` : ''}
-                    </p>
-                  )}
-                  {showTreatActions && (
-                    <div className="form-actions" style={{ marginTop: '8px' }}>
-                      <button
-                        type="button"
-                        className="btn-confirm"
-                        disabled={traiterMutation.isLoading}
-                        onClick={() => traiterMutation.mutate({ id: item.id })}
-                      >
-                        {traiterMutation.isLoading ? 'Traitement…' : 'Traité'}
-                      </button>
-                    </div>
+
+                  {isEditing ? (
+                    <form className="fiche-completude-form" onSubmit={(e) => handleSaveEdit(e, item.id)}>
+                      <div className="form-group">
+                        <label htmlFor={`completude-edit-motif-${item.id}`}>Motif</label>
+                        <input
+                          id={`completude-edit-motif-${item.id}`}
+                          type="text"
+                          className="form-control"
+                          value={editMotif}
+                          onChange={(e) => setEditMotif(e.target.value)}
+                          maxLength={500}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor={`completude-edit-completes-${item.id}`}>Complétudes</label>
+                        <textarea
+                          id={`completude-edit-completes-${item.id}`}
+                          className="form-control"
+                          rows={4}
+                          value={editCompletes}
+                          onChange={(e) => setEditCompletes(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="form-actions">
+                        <button
+                          type="submit"
+                          className="btn-confirm"
+                          disabled={updateMutation.isLoading}
+                        >
+                          {updateMutation.isLoading ? 'Enregistrement…' : 'Enregistrer'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-cancel"
+                          onClick={handleCancelEdit}
+                          disabled={updateMutation.isLoading}
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <p className="fiche-completude-line">
+                        <strong>Motif :</strong> {item.motif}
+                      </p>
+                      <p className="fiche-completude-line fiche-completude-line--multiline">
+                        <strong>Complétudes :</strong> {item.completes}
+                      </p>
+                      {item.reponse_traitement && (
+                        <p className="fiche-completude-line fiche-completude-line--multiline">
+                          <strong>Réponse :</strong> {item.reponse_traitement}
+                          {item.traite_par_pseudo ? ` (${item.traite_par_pseudo})` : ''}
+                        </p>
+                      )}
+                      {(showEditActions || showTreatActions) && (
+                        <div className="form-actions" style={{ marginTop: '8px' }}>
+                          {showEditActions && (
+                            <button
+                              type="button"
+                              className="btn-cancel"
+                              disabled={updateMutation.isLoading || traiterMutation.isLoading}
+                              onClick={() => handleStartEdit(item)}
+                            >
+                              Modifier
+                            </button>
+                          )}
+                          {showTreatActions && (
+                            <button
+                              type="button"
+                              className="btn-confirm"
+                              disabled={traiterMutation.isLoading}
+                              onClick={() => traiterMutation.mutate({ id: item.id })}
+                            >
+                              {traiterMutation.isLoading ? 'Traitement…' : 'Traité'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               );

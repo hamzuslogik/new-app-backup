@@ -194,16 +194,14 @@ const Validation = () => {
 
       {showFilters && (
         <div className="validation-filters">
-          {!isQualiteConfirmation && (
-            <div className="filter-group">
-              <label>Statut</label>
-              <select value={filters.valider} onChange={(e) => handleFilterChange('valider', e.target.value)}>
-                <option value="">Tous</option>
-                <option value="1">Validés</option>
-                <option value="0">Non validés</option>
-              </select>
-            </div>
-          )}
+          <div className="filter-group">
+            <label>{isQualiteConfirmation ? 'Validation RDV' : 'Statut'}</label>
+            <select value={filters.valider} onChange={(e) => handleFilterChange('valider', e.target.value)}>
+              <option value="">Tous</option>
+              <option value="1">Validés</option>
+              <option value="0">Non validés</option>
+            </select>
+          </div>
           <div className="filter-group">
             <label>Date début</label>
             <input

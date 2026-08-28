@@ -129,6 +129,23 @@ async function enrichWorkflowEventData(triggerType, eventData) {
         }
       };
     }
+
+    if (
+      typeof triggerType === 'string' &&
+      triggerType.startsWith('demande_insertion_') &&
+      eventData.demande_insertion?.id_agent
+    ) {
+      const u = await loadUser(eventData.demande_insertion.id_agent);
+      const nomAff = formatAgentQualificationDisplayName(u);
+      return {
+        ...eventData,
+        demande_insertion: {
+          ...eventData.demande_insertion,
+          agent_pseudo: eventData.demande_insertion.agent_pseudo ?? u?.pseudo ?? null,
+          agent_qualification_nom: nomAff || null
+        }
+      };
+    }
   } catch (e) {
     console.error('[WORKFLOW] enrichWorkflowEventData:', e);
   }
@@ -748,10 +765,20 @@ async function insertNotification(query, type, id_fiche, message, destination, d
  */
 async function enrichSuperviseurQualifAgent(eventData) {
   try {
-    if (!eventData || !eventData.fiche) return;
-    if (eventData.fiche.id_superviseur_qualif_agent !== undefined && eventData.fiche.id_superviseur_qualif_agent !== null) return;
-    const agentId = eventData.fiche.id_agent;
+    if (!eventData) return;
+    const agentId =
+      eventData.fiche?.id_agent ||
+      eventData.demande_insertion?.id_agent ||
+      null;
     if (!agentId) return;
+
+    if (!eventData.fiche) eventData.fiche = {};
+    if (
+      eventData.fiche.id_superviseur_qualif_agent !== undefined &&
+      eventData.fiche.id_superviseur_qualif_agent !== null
+    ) {
+      return;
+    }
     const { queryOne } = require('../../config/database');
     const row = await queryOne(
       `SELECT u_sup.id AS id_superviseur
@@ -1008,6 +1035,18 @@ async function executeNotificationAction(config, eventData) {
   } else if (destination === 'decalage_destination' && eventData.decalage?.destination) {
     destId = eventData.decalage.destination;
     console.log('[WORKFLOW] Destination résolue depuis decalage_destination (confirmateur):', destId);
+  } else if (destination === 'demande_insertion_agent' && eventData.demande_insertion?.id_agent) {
+    destId = eventData.demande_insertion.id_agent;
+    console.log('[WORKFLOW] Destination résolue depuis demande_insertion_agent:', destId);
+  } else if (destination === 'demande_insertion_superviseur' && eventData.demande_insertion?.id_superviseur) {
+    destId = eventData.demande_insertion.id_superviseur;
+    console.log('[WORKFLOW] Destination résolue depuis demande_insertion_superviseur:', destId);
+  } else if (destination === 'demande_insertion_rp_qualif' && eventData.demande_insertion?.id_rp_qualif) {
+    destId = eventData.demande_insertion.id_rp_qualif;
+    console.log('[WORKFLOW] Destination résolue depuis demande_insertion_rp_qualif:', destId);
+  } else if (destination === 'demande_insertion_traitant' && eventData.demande_insertion?.id_traitant) {
+    destId = eventData.demande_insertion.id_traitant;
+    console.log('[WORKFLOW] Destination résolue depuis demande_insertion_traitant:', destId);
   }
 
   // Validation stricte du destinataire

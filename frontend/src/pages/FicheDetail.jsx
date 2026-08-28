@@ -443,6 +443,13 @@ const TIME_SLOTS = [
 
 // États sans transition possible (aligné sur backend management.routes.js) : pas de « nouvel état »
 const ETATS_SANS_NOUVEL_ETAT = [22, 25, 26, 34, 35]; // ANNULER 2 FOIS, REFUSER 2 FOIS, RDV ANNULER 2 FOIS, HHC FINANCEMENT, HHC TECHNIQUE
+
+/** Admin (1, 7), Backoffice (11), RE Confirmation (14), RP Confirmation (13) : changement d'état autorisé même depuis un état définitif. */
+const FONCTIONS_BYPASS_ETAT_DEFINITIF = [1, 7, 11, 13, 14];
+
+function canBypassEtatDefinitif(fonction) {
+  return FONCTIONS_BYPASS_ETAT_DEFINITIF.includes(Number(fonction));
+}
 const ETATS_AUTORISES_VERS_CONFIRMER_PLANNING = [1, 2, 5, 8, 9, 11, 12, 19];
 
 /** REFUSER / SIGNER RETRACTER (+ variantes 2×) : à la (re)confirmation, uniquement le confirmateur 1 (créateur du RDV). */
@@ -1326,6 +1333,8 @@ const FicheDetail = ({
   // Onglet Affectation : visible par administrateur (1), backoffice (11), RE confirmation (14), RP confirmation (13)
   const showAffectationTab = [1, 11, 13, 14].includes(Number(user?.fonction));
   const isAdminSession = [1, 2, 7].includes(Number(user?.fonction));
+  /** RE / RP confirmation : pas de phase 0 dans la liste des états (admin voit aussi sans phase 0). */
+  const excludeEtatsPhase0 = isREConfirmation || isRPConfirmation || isAdminSession;
   
   // Vérifier si c'est un R2 (deuxième commercial assigné)
   const isR2 = isCommercial && ficheData && Number(ficheData.id_commercial_2) === Number(user?.id);
@@ -2680,7 +2689,11 @@ const FicheDetail = ({
         return;
       }
 
-      if (ficheData?.id_etat_final != null && ETATS_SANS_NOUVEL_ETAT.includes(Number(ficheData.id_etat_final))) {
+      if (
+        ficheData?.id_etat_final != null &&
+        ETATS_SANS_NOUVEL_ETAT.includes(Number(ficheData.id_etat_final)) &&
+        !canBypassEtatDefinitif(user?.fonction)
+      ) {
         alert('Impossible de modifier l\'état : la fiche est dans un état définitif (annuler ou refus 2 fois, RDV annuler 2 fois, HHC financement à vérifier ou HHC technique).');
         return;
       }
@@ -3255,7 +3268,10 @@ const FicheDetail = ({
     return '-';
   };
 
-  const isChangementEtatBloque = fiche.id_etat_final != null && ETATS_SANS_NOUVEL_ETAT.includes(Number(fiche.id_etat_final));
+  const isChangementEtatBloque =
+    fiche.id_etat_final != null &&
+    ETATS_SANS_NOUVEL_ETAT.includes(Number(fiche.id_etat_final)) &&
+    !canBypassEtatDefinitif(user?.fonction);
 
   const userFonctionTop = user ? Number(user.fonction) : null;
   const canEditModificationRapideTop = userFonctionTop === 14 || userFonctionTop === 13 || userFonctionTop === 11 || (typeof hasPermission === 'function' && hasPermission('fiche_quick_edit'));
@@ -6616,7 +6632,7 @@ const FicheDetail = ({
                     }
                     return null; // Déjà affiché dans les phases
                   })()}
-                  {!isAdminSession && etatsPhase0.length > 0 && (
+                  {!excludeEtatsPhase0 && etatsPhase0.length > 0 && (
                     <optgroup label="PHASE 0">
                       {etatsPhase0.map(etat => (
                         <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>

@@ -1,6 +1,6 @@
 /**
  * Routes complétude fiche — montées sur le routeur /api/fiches (avant GET /:id).
- * Création : Qualité Confirmation (4).
+ * Création / modification : Qualité Confirmation (4).
  * Liste : Qualité Confirmation (4), Backoffice (11), RP (13), RE (14 — toutes les complétudes).
  * Consultation / traitement fiche : confirmateurs (6), RE (14), RP (13), QC (4), Backoffice (11).
  */
@@ -55,6 +55,10 @@ function canViewCompletude(user, fiche) {
 
 function canCreateCompletude(user) {
   return user && isQualiteConfirmation(user.fonction);
+}
+
+function canEditCompletude(user, row) {
+  return user && isQualiteConfirmation(user.fonction) && row && row.statut === 'en_attente';
 }
 
 function canTreatCompletude(user, fiche) {
@@ -298,7 +302,8 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
             ...r,
             hash: encodeFicheId ? encodeFicheId(r.fiche_id) : r.fiche_id,
             statut_label: statutLabel(r.statut),
-            can_treat: canTreatRow
+            can_treat: canTreatRow,
+            can_edit: canEditCompletude(req.user, r)
           };
         }),
         pagination: {
@@ -308,7 +313,8 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
           pages: Math.ceil(total / limitNum) || 1
         },
         permissions: {
-          can_treat: userCanTreatRole
+          can_treat: userCanTreatRole,
+          can_edit: isQualiteConfirmation(fn)
         }
       });
     } catch (error) {
@@ -363,11 +369,13 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
         success: true,
         data: (rows || []).map((r) => ({
           ...r,
-          statut_label: statutLabel(r.statut)
+          statut_label: statutLabel(r.statut),
+          can_edit: canEditCompletude(req.user, r)
         })),
         permissions: {
           can_create: canCreateCompletude(req.user),
-          can_treat: canTreatCompletude(req.user, fiche)
+          can_treat: canTreatCompletude(req.user, fiche),
+          can_edit: isQualiteConfirmation(req.user.fonction)
         }
       });
     } catch (error) {
@@ -443,6 +451,78 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
         });
       }
       console.error('POST fiche completude:', error);
+      res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
+    }
+  });
+
+  router.put('/:hash/completude/:completudeId', authenticate, hashToIdMiddleware, async (req, res) => {
+    try {
+      const idFiche = ficheIdFromReq(req);
+      const completudeId = parseInt(req.params.completudeId, 10);
+      if (!idFiche || !completudeId || Number.isNaN(completudeId)) {
+        return res.status(400).json({ success: false, message: 'Identifiants invalides' });
+      }
+      if (!canCreateCompletude(req.user)) {
+        return res.status(403).json({ success: false, message: 'Accès réservé à la Qualité Confirmation' });
+      }
+
+      const motif = String(req.body.motif || '').trim();
+      const completes = String(req.body.completes || '').trim();
+      if (!motif) {
+        return res.status(400).json({ success: false, message: 'Le motif est requis' });
+      }
+      if (!completes) {
+        return res.status(400).json({ success: false, message: 'Les complétudes sont requises' });
+      }
+
+      const fiche = await loadFicheForCompletude(idFiche);
+      if (!fiche) {
+        return res.status(404).json({ success: false, message: 'Fiche non trouvée' });
+      }
+
+      const row = await queryOne(
+        'SELECT id, statut FROM fiche_completude WHERE id = ? AND id_fiche = ?',
+        [completudeId, idFiche]
+      );
+      if (!row) {
+        return res.status(404).json({ success: false, message: 'Complétude introuvable' });
+      }
+      if (!canEditCompletude(req.user, row)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Seules les complétudes en attente peuvent être modifiées'
+        });
+      }
+
+      await query(
+        `UPDATE fiche_completude SET motif = ?, completes = ? WHERE id = ? AND id_fiche = ?`,
+        [motif.slice(0, 500), completes, completudeId, idFiche]
+      );
+
+      const updated = await queryOne(
+        `SELECT c.*,
+          u_create.pseudo AS created_by_pseudo,
+          u_trait.pseudo AS traite_par_pseudo
+         FROM fiche_completude c
+         LEFT JOIN utilisateurs u_create ON c.id_created_by = u_create.id
+         LEFT JOIN utilisateurs u_trait ON c.id_traite_par = u_trait.id
+         WHERE c.id = ?`,
+        [completudeId]
+      );
+
+      res.json({
+        success: true,
+        message: 'Complétude modifiée',
+        data: updated ? { ...updated, statut_label: statutLabel(updated.statut), can_edit: true } : null
+      });
+    } catch (error) {
+      if (error.code === 'ER_NO_SUCH_TABLE') {
+        return res.status(503).json({
+          success: false,
+          message: 'Table fiche_completude absente. Exécutez backend/scripts/create-fiche-completude-table.sql'
+        });
+      }
+      console.error('PUT fiche completude:', error);
       res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
     }
   });
@@ -542,6 +622,7 @@ module.exports = {
   isQualiteConfirmation,
   canViewCompletude,
   canCreateCompletude,
+  canEditCompletude,
   canTreatCompletude,
   canAccessListeCompletudes,
   statutLabel

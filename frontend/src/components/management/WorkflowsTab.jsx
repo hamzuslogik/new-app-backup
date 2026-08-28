@@ -242,6 +242,10 @@ const DYNAMIC_RECIPIENT_OPTIONS = [
   { value: '{alerte_ko.id_agent}', label: "Agent destinataire de l'alerte qualité / notification ({alerte_ko.id_agent})" },
   { value: '{decalage.expediteur}', label: 'Expéditeur du décalage ({decalage.expediteur})' },
   { value: '{decalage.destination}', label: 'Confirmateur (destination du décalage) ({decalage.destination})' },
+  { value: '{demande_insertion.id_agent}', label: "Agent demandeur d'insertion ({demande_insertion.id_agent})" },
+  { value: '{demande_insertion.id_superviseur}', label: 'Superviseur (RE) de l\'agent demandeur ({demande_insertion.id_superviseur})' },
+  { value: '{demande_insertion.id_rp_qualif}', label: 'RP qualification ({demande_insertion.id_rp_qualif})' },
+  { value: '{demande_insertion.id_traitant}', label: 'Traitant du refus / approbation ({demande_insertion.id_traitant})' },
   { value: '{completude.id_created_by}', label: 'Créateur de la complétude ({completude.id_created_by})' },
   { value: '{completude.id_traite_par}', label: 'Traitant de la complétude ({completude.id_traite_par})' }
 ];
@@ -568,7 +572,11 @@ const WorkflowsTab = () => {
           'id_confirmateur_3': 'Confirmateur 3',
           'id_qualite': 'Agent qualité',
           'id_commercial': 'Commercial',
-          'id_commercial_2': 'Commercial 2'
+          'id_commercial_2': 'Commercial 2',
+          'demande_insertion_agent': 'Agent demandeur insertion',
+          'demande_insertion_superviseur': 'Superviseur agent demandeur',
+          'demande_insertion_rp_qualif': 'RP qualification',
+          'demande_insertion_traitant': 'Traitant insertion'
         };
         parts.push(`→ ${destMap[config.destination] || config.destination}`);
       } else {
@@ -1217,6 +1225,10 @@ const WorkflowsTab = () => {
                             <option value="alerte_ko_agent">Agent destinataire de l&apos;alerte qualité (notification, pas KO fiche)</option>
                             <option value="decalage_expediteur">Expéditeur du décalage (ex. commercial)</option>
                             <option value="decalage_destination">Confirmateur du décalage (destination)</option>
+                            <option value="demande_insertion_agent">Agent demandeur d&apos;insertion ({'{demande_insertion.id_agent}'})</option>
+                            <option value="demande_insertion_superviseur">Superviseur (RE) de l&apos;agent demandeur ({'{demande_insertion.id_superviseur}'})</option>
+                            <option value="demande_insertion_rp_qualif">RP qualification ({'{demande_insertion.id_rp_qualif}'})</option>
+                            <option value="demande_insertion_traitant">Traitant approbation / refus ({'{demande_insertion.id_traitant}'})</option>
                           </select>
                           <small>Utilisé uniquement si aucun utilisateur ni fonction n’est sélectionné ci-dessus.</small>
                         </div>
@@ -1623,6 +1635,10 @@ const WorkflowsTab = () => {
                               <option value="{alerte_ko.id_agent}">Agent destinataire alerte qualité ({'{alerte_ko.id_agent}'})</option>
                               <option value="{decalage.expediteur}">Expéditeur du décalage ({'{decalage.expediteur}'})</option>
                               <option value="{decalage.destination}">Confirmateur du décalage ({'{decalage.destination}'})</option>
+                              <option value="{demande_insertion.id_agent}">Agent demandeur d&apos;insertion ({'{demande_insertion.id_agent}'})</option>
+                              <option value="{demande_insertion.id_superviseur}">Superviseur (RE) agent demandeur ({'{demande_insertion.id_superviseur}'})</option>
+                              <option value="{demande_insertion.id_rp_qualif}">RP qualification ({'{demande_insertion.id_rp_qualif}'})</option>
+                              <option value="{demande_insertion.id_traitant}">Traitant approbation / refus ({'{demande_insertion.id_traitant}'})</option>
                             </optgroup>
                             <optgroup label="Utilisateurs spécifiques">
                               {utilisateursData?.map(u => (

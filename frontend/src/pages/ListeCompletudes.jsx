@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaListAlt, FaFilter, FaChevronDown, FaChevronUp, FaCheck } from 'react-icons/fa';
+import { FaListAlt, FaFilter, FaChevronDown, FaChevronUp, FaCheck, FaEdit } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import './ListeCompletudes.css';
@@ -37,6 +37,9 @@ const ListeCompletudes = () => {
 
   const [showFilters, setShowFilters] = useState(true);
   const [reponseById, setReponseById] = useState({});
+  const [editingId, setEditingId] = useState(null);
+  const [editMotif, setEditMotif] = useState('');
+  const [editCompletes, setEditCompletes] = useState('');
   const [filters, setFilters] = useState({
     page: 1,
     limit: 50,
@@ -136,6 +139,27 @@ const ListeCompletudes = () => {
     }
   );
 
+  const updateMutation = useMutation(
+    async ({ hash, id, motif, completes }) => {
+      const res = await api.put(`/fiches/${hash}/completude/${id}`, { motif, completes });
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        toast.success('Complétude modifiée');
+        setEditingId(null);
+        setEditMotif('');
+        setEditCompletes('');
+        queryClient.invalidateQueries(['liste-completudes']);
+        queryClient.invalidateQueries(['fiche-completude']);
+        refetch();
+      },
+      onError: (err) => {
+        toast.error(err.response?.data?.message || 'Erreur lors de la modification');
+      }
+    }
+  );
+
   if (!allowed) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -167,6 +191,27 @@ const ListeCompletudes = () => {
     if (statut === 'traitee') return 'statut-traitee';
     if (statut === 'non_traitee') return 'statut-non-traitee';
     return 'statut-attente';
+  };
+
+  const handleStartEdit = (row) => {
+    setEditingId(row.id);
+    setEditMotif(row.motif || '');
+    setEditCompletes(row.completes || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditMotif('');
+    setEditCompletes('');
+  };
+
+  const handleSaveEdit = (row) => {
+    updateMutation.mutate({
+      hash: row.hash,
+      id: row.id,
+      motif: editMotif.trim(),
+      completes: editCompletes.trim()
+    });
   };
 
   return (
@@ -395,7 +440,43 @@ const ListeCompletudes = () => {
                       )}
                     </td>
                     <td className="cell-actions">
-                      {row.can_treat ? (
+                      {editingId === row.id ? (
+                        <div className="edit-block">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Motif"
+                            value={editMotif}
+                            onChange={(e) => setEditMotif(e.target.value)}
+                            maxLength={500}
+                          />
+                          <textarea
+                            className="form-control"
+                            rows={3}
+                            placeholder="Complétudes"
+                            value={editCompletes}
+                            onChange={(e) => setEditCompletes(e.target.value)}
+                          />
+                          <div className="edit-block-actions">
+                            <button
+                              type="button"
+                              className="btn-traiter"
+                              disabled={updateMutation.isLoading}
+                              onClick={() => handleSaveEdit(row)}
+                            >
+                              Enregistrer
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-reset"
+                              disabled={updateMutation.isLoading}
+                              onClick={handleCancelEdit}
+                            >
+                              Annuler
+                            </button>
+                          </div>
+                        </div>
+                      ) : row.can_treat ? (
                         <div className="traiter-block">
                           <textarea
                             className="form-control"
@@ -421,6 +502,14 @@ const ListeCompletudes = () => {
                             <FaCheck /> Traité
                           </button>
                         </div>
+                      ) : row.can_edit ? (
+                        <button
+                          type="button"
+                          className="btn-modifier"
+                          onClick={() => handleStartEdit(row)}
+                        >
+                          <FaEdit /> Modifier
+                        </button>
                       ) : (
                         <span className="no-action">—</span>
                       )}
