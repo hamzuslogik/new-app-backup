@@ -178,17 +178,30 @@ const Alertes = () => {
                 </tr>
               </thead>
               <tbody>
-                {alertes.map((a) => (
-                  <tr key={a.id}>
+                {alertes.map((a) => {
+                  const commentaire = a.commentaire ? String(a.commentaire).trim() : '';
+                  return (
+                  <tr
+                    key={a.id}
+                    className={commentaire ? 'alerte-row alerte-row--has-comment' : 'alerte-row'}
+                  >
                     <td>{formatDate(a.date_alerte)}</td>
                     <td>{(a.nom || '').trim()} {(a.prenom || '').trim() || '-'}</td>
                     <td>{a.tel || '-'}</td>
                     <td>{a.agent_pseudo || '-'}</td>
                     {!hideIdQualite && <td>{a.qualite_pseudo || '-'}</td>}
                     <td>{a.type_alerte || '-'}</td>
-                    <td className="comment-cell">{a.commentaire ? String(a.commentaire).slice(0, 80) + (a.commentaire.length > 80 ? '…' : '') : '-'}</td>
+                    <td className="comment-cell">
+                      <span className="comment-preview">{commentaire || '-'}</span>
+                      {commentaire ? (
+                        <div className="comment-bubble" role="tooltip">
+                          {commentaire}
+                        </div>
+                      ) : null}
+                    </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

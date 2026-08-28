@@ -1259,6 +1259,14 @@ table.fiches-table thead,
   fill: #ffffff !important;
 }
 
+.btn-archive--unarchive {
+  background: #28a745;
+}
+
+.btn-archive--unarchive:hover {
+  background: #218838;
+}
+
 .btn-ko {
   background: #6c757d;
   color: white;

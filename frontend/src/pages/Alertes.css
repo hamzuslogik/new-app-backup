@@ -149,6 +149,7 @@
 
 .page-alertes .alertes-table-container {
   overflow-x: auto;
+  overflow-y: visible;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #fff;
@@ -178,6 +179,56 @@
   background: #faf5ff;
 }
 
+.page-alertes .alertes-table tbody tr.alerte-row--has-comment {
+  cursor: help;
+}
+
+.page-alertes .alertes-table .comment-cell {
+  position: relative;
+  max-width: 220px;
+  overflow: visible;
+}
+
+.page-alertes .alertes-table .comment-preview {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-alertes .alertes-table .comment-bubble {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 50;
+  min-width: 220px;
+  max-width: min(440px, 85vw);
+  padding: 10px 12px;
+  background: #1f2937;
+  color: #f9fafb;
+  font-size: 12px;
+  line-height: 1.45;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  white-space: pre-wrap;
+  word-break: break-word;
+  pointer-events: none;
+}
+
+.page-alertes .alertes-table .comment-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 16px;
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
+}
+
+.page-alertes .alertes-table tbody tr.alerte-row--has-comment:hover .comment-bubble {
+  display: block;
+}
+
 .page-alertes .alertes-table .num-alerte {
   display: inline-block;
   padding: 2px 8px;
@@ -186,13 +237,6 @@
   color: white;
   font-weight: 600;
   font-size: 12px;
-}
-
-.page-alertes .alertes-table .comment-cell {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .page-alertes .btn-link-fiche {

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaPlus, FaEdit, FaArchive, FaTimes, FaSearch, FaChevronDown, FaChevronUp, FaCheck, FaFileAlt, FaBan } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaArchive, FaBoxOpen, FaTimes, FaSearch, FaChevronDown, FaChevronUp, FaCheck, FaFileAlt, FaBan } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
@@ -27,6 +27,7 @@ const Fiches = () => {
   const isSuperviseurQualif = user?.fonction === 2;
   /** Backoffice : toutes les fiches créées le jour courant (pas de filtre id_agent par défaut) */
   const isBackoffice = user?.fonction === 11;
+  const canArchiveFiche = [1, 2, 7, 11, 13].includes(Number(user?.fonction));
   const [showFilters, setShowFilters] = useState(!isAgentQualif); // Masquer pour agent qualif
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [koModal, setKoModal] = useState({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' });
@@ -496,9 +497,15 @@ const Fiches = () => {
     setAppliedFilters((prev) => ({ ...prev, fiche_source: source, page: 1 }));
   };
 
-  const handleArchive = (fiche, archive) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir ${archive ? 'archiver' : 'désarchiver'} cette fiche ?`)) {
-      archiveMutation.mutate({ id: fiche.id, archive });
+  const handleArchive = (fiche) => {
+    const isArchived = fiche.archive === 1 || fiche.archive === true;
+    const nextArchive = !isArchived;
+    if (!fiche.hash) {
+      toast.error('Identifiant fiche manquant');
+      return;
+    }
+    if (window.confirm(`Êtes-vous sûr de vouloir ${nextArchive ? 'archiver' : 'désarchiver'} cette fiche ?`)) {
+      archiveMutation.mutate({ id: fiche.hash, archive: nextArchive });
     }
   };
 
@@ -1232,12 +1239,13 @@ const Fiches = () => {
                   {fiches.map((fiche) => {
                     const etatColor = getFicheEtatColor(fiche);
                     const produitColor = getProduitColor(fiche.produit);
+                    const isArchived = fiche.archive === 1 || fiche.archive === true;
                     
                     return (
                       <tr 
                         key={fiche.hash}
                         style={{ backgroundColor: `${etatColor}20` }}
-                        className={fiche.archive ? 'archived' : ''}
+                        className={isArchived ? 'archived' : ''}
                       >
                         <td data-label="">{fiche.nom || ''} {fiche.prenom || ''}</td>
                         <td data-label="Prénom:">{fiche.prenom || ''}</td>
@@ -1288,7 +1296,7 @@ const Fiches = () => {
                         </td>
                         <td data-label="">
                           <div className="fiche-actions">
-                            {fiche.archive === 1 || fiche.archive === true ? (
+                            {isArchived ? (
                               <div className="fiche-indicators">
                                 <span className="indicator archive" title="Archivée">ARCH</span>
                               </div>
@@ -1345,18 +1353,18 @@ const Fiches = () => {
                                   <FaBan />
                                 </button>
                               )}
-                              {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7) && (
+                              {canArchiveFiche && (
                                 <button
-                                  className="btn-archive"
-                                  onClick={() => {
-                                    // Pour l'archivage, on utilise le hash
-                                    if (fiche.hash) {
-                                      archiveMutation.mutate({ id: fiche.hash, archive: !fiche.archive });
-                                    }
+                                  type="button"
+                                  className={`btn-archive${isArchived ? ' btn-archive--unarchive' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleArchive(fiche);
                                   }}
-                                  title={fiche.archive ? 'Désarchiver' : 'Archiver'}
+                                  title={isArchived ? 'Désarchiver' : 'Archiver'}
+                                  disabled={archiveMutation.isLoading}
                                 >
-                                  <FaArchive />
+                                  {isArchived ? <FaBoxOpen /> : <FaArchive />}
                                 </button>
                               )}
                             </div>
