@@ -1,5 +1,36 @@
 import React from 'react';
 
+const PAC_PUISSANCE_OPTIONS = [
+  { value: '11 KW', label: '11 KW' },
+  { value: '14 KW', label: '14 KW' },
+  { value: '16 KW', label: '16 KW' },
+];
+
+/** Anciennes valeurs en base (ex. 11kw, KW 11) → libellé « 11 KW » */
+const normalizePacPuissanceSelectValue = (raw) => {
+  const s = String(raw ?? '').trim();
+  if (!s) return '';
+  const legacy = {
+    '11kw': '11 KW',
+    '14kw': '14 KW',
+    '16kw': '16 KW',
+    '11': '11 KW',
+    '14': '14 KW',
+    '16': '16 KW',
+    kw11: '11 KW',
+    kw14: '14 KW',
+    kw16: '16 KW',
+    'kw 11': '11 KW',
+    'kw 14': '14 KW',
+    'kw 16': '16 KW',
+  };
+  const key = s.replace(/\s+/g, ' ').trim().toLowerCase();
+  const keyCompact = key.replace(/\s+/g, '');
+  if (legacy[key] || legacy[keyCompact]) return legacy[key] || legacy[keyCompact];
+  if (PAC_PUISSANCE_OPTIONS.some((o) => o.value === s)) return s;
+  return s;
+};
+
 export function resolveSignerProduitKind(produitId, produitsList) {
   if (produitId == null || produitId === '') return null;
   const p = (produitsList || []).find((pr) => String(pr.id) === String(produitId));
@@ -44,15 +75,15 @@ export function SignerProduitPacPvFields({
           <select
             id={`${idPrefix}_ph3_puissance_signer`}
             className={inputClass}
-            value={etatFormData.ph3_puissance}
+            value={normalizePacPuissanceSelectValue(etatFormData.ph3_puissance)}
             onChange={(e) => patch({ ph3_puissance: e.target.value })}
             disabled={disabled}
             required={required}
           >
             <option value="">Sélectionner</option>
-            <option value="11kw">11kw</option>
-            <option value="14kw">14kw</option>
-            <option value="16kw">16kw</option>
+            {PAC_PUISSANCE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
 
