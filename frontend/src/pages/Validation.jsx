@@ -358,7 +358,7 @@ const Validation = () => {
                 </thead>
                 <tbody>
                   {statsByDepartement
-                    .filter((dep) => (dep.nonValides || 0) > 0)
+                    .filter((dep) => (dep.total || 0) > 0)
                     .map((dep, index) => (
                       <tr key={dep.departement || index}>
                         <td>{dep.departement || '-'}</td>

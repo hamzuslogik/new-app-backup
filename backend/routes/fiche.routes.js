@@ -3368,24 +3368,37 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
     };
 
     // Calculer les stats par département (en utilisant les 2 premiers chiffres du code postal)
+    const normalizeDepCode = (raw) => {
+      const s = String(raw ?? '').trim().toUpperCase();
+      if (!s) return '';
+      // Corse : 200/201 → 2A, 202/206 → 2B (approximation courante)
+      if (/^\d{2,}/.test(s) && s.startsWith('20')) {
+        const third = s.length >= 3 ? s[2] : '';
+        if (third === '0' || third === '1') return '2A';
+        if (third === '2' || third === '6') return '2B';
+      }
+      if (/^[0-9]{1,2}$/.test(s)) return s.padStart(2, '0');
+      if (/^[0-9A-Z]{2}/.test(s)) return s.substring(0, 2);
+      return s;
+    };
+
     const statsByDep = {};
     fiches.forEach(fiche => {
-      if (fiche.cp && fiche.cp.length >= 2) {
-        const dep = fiche.cp.substring(0, 2);
-        if (!statsByDep[dep]) {
-          statsByDep[dep] = {
-            departement: dep,
-            valides: 0,
-            nonValides: 0,
-            total: 0
-          };
-        }
-        statsByDep[dep].total++;
-        if (fiche.valider === 1) {
-          statsByDep[dep].valides++;
-        } else {
-          statsByDep[dep].nonValides++;
-        }
+      const dep = normalizeDepCode(fiche.cp);
+      if (!dep) return;
+      if (!statsByDep[dep]) {
+        statsByDep[dep] = {
+          departement: dep,
+          valides: 0,
+          nonValides: 0,
+          total: 0
+        };
+      }
+      statsByDep[dep].total++;
+      if (fiche.valider === 1) {
+        statsByDep[dep].valides++;
+      } else {
+        statsByDep[dep].nonValides++;
       }
     });
 
@@ -3396,18 +3409,25 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
 
     // Créer un tableau complet avec tous les départements
     const statsDepartements = allDepartements.map(dep => {
-      const depCode = dep.departement_code;
+      const depCode = normalizeDepCode(dep.departement_code) || String(dep.departement_code || '').trim();
       if (statsByDep[depCode]) {
-        return statsByDep[depCode];
-      } else {
-        return {
-          departement: depCode,
-          valides: 0,
-          nonValides: 0,
-          total: 0
-        };
+        return { ...statsByDep[depCode], departement: depCode };
+      }
+      return {
+        departement: depCode,
+        valides: 0,
+        nonValides: 0,
+        total: 0
+      };
+    });
+
+    // Inclure aussi les dép. présents dans les RDV mais absents / inactifs en table departements
+    Object.keys(statsByDep).forEach((depCode) => {
+      if (!statsDepartements.some((d) => d.departement === depCode)) {
+        statsDepartements.push(statsByDep[depCode]);
       }
     });
+    statsDepartements.sort((a, b) => String(a.departement).localeCompare(String(b.departement), 'fr'));
 
     // Calculer les totaux
     const totals = {
