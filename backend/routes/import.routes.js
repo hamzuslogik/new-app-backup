@@ -36,6 +36,40 @@ const encodeFicheId = (id) => {
   return `${hash.substring(0, 16)}${encodedId}`;
 };
 
+const decodeFicheId = (hash) => {
+  if (!hash || /[&?]/.test(String(hash)) || String(hash).length < 17) return null;
+  try {
+    const encodedId = String(hash).substring(16);
+    const hashPrefix = String(hash).substring(0, 16);
+    let base64 = encodedId.replace(/[-_]/g, (m) => ({ '-': '+', '_': '/' }[m]));
+    base64 += '='.repeat((4 - (base64.length % 4)) % 4);
+    const idNum = parseInt(Buffer.from(base64, 'base64').toString('utf8'), 10);
+    if (isNaN(idNum) || idNum <= 0) return null;
+    const hmac = crypto.createHmac('sha256', HASH_SECRET);
+    hmac.update(String(idNum));
+    if (hashPrefix !== hmac.digest('hex').substring(0, 16)) return null;
+    return idNum;
+  } catch (_) {
+    return null;
+  }
+};
+
+const stripImportDupMeta = (dup) => {
+  const {
+    _extractedNom,
+    _extractedPrenom,
+    _extractedTel,
+    _extractedCp,
+    _extractedVille,
+    reason,
+    reasonType,
+    duplicatePhone,
+    existingFiche,
+    ...contact
+  } = dup;
+  return contact;
+};
+
 // Configuration de multer pour l'upload de fichiers
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -407,7 +441,7 @@ const checkDuplicates = async (contacts, fileColumns = []) => {
   // Ignorer les fiches archivées (archive = 1 ou archive > 0)
   console.log('📊 Récupération des numéros de téléphone existants dans la base...');
   const existingPhones = await query(`
-    SELECT id, nom, prenom, tel, gsm1, gsm2, id_etat_final, hash,
+    SELECT id, nom, prenom, tel, gsm1, gsm2, id_etat_final, hash, date_insert_time,
            (SELECT titre FROM etats WHERE id = fiches.id_etat_final) as etat_titre
     FROM fiches 
     WHERE (archive = 0 OR archive IS NULL) 
@@ -429,6 +463,7 @@ const checkDuplicates = async (contacts, fileColumns = []) => {
       tel: row.tel,
       id_etat_final: row.id_etat_final,
       etat_titre: row.etat_titre,
+      date_insert_time: row.date_insert_time || null,
       archive: 0
     };
     if (row.tel) {
@@ -718,6 +753,7 @@ const checkDuplicates = async (contacts, fileColumns = []) => {
           tel: duplicateInfo.tel || '',
           id_etat_final: duplicateInfo.id_etat_final || null,
           etat_titre: duplicateInfo.etat_titre || 'Non défini',
+          date_insert_time: duplicateInfo.date_insert_time || null,
           archive: 0
         }
       });
@@ -1276,11 +1312,10 @@ const insertFiche = async (contact, mapping, userId, idCentre, produitId = null,
       if (isFirstContact) {
         console.log(`✓ Hash calculé et stocké pour la fiche ID ${insertId}: ${hash}`);
       }
+      return { success: true, id: insertId, hash };
     } else {
       throw new Error('Impossible de récupérer l\'ID de la fiche insérée');
     }
-    
-    return true;
   } catch (sqlError) {
     // Log détaillé de l'erreur SQL
     console.error('Erreur SQL lors de l\'insertion:');
@@ -1515,15 +1550,50 @@ async function runImportJob(jobId, params) {
 
   const notInserted = [];
   (job.duplicatesList || []).forEach(dup => {
-    notInserted.push({ nom: dup._extractedNom || dup.nom || '', prenom: dup._extractedPrenom || dup.prenom || '', tel: dup._extractedTel || dup.tel || dup.gsm1 || dup.gsm2 || '', cp: dup._extractedCp || dup.cp || '', ville: dup._extractedVille || dup.ville || '', raison: dup.reason || 'Doublon', typeRaison: dup.reasonType || 'duplicate', ficheExistante: dup.existingFiche || null });
+    notInserted.push({
+      nom: dup._extractedNom || dup.nom || '',
+      prenom: dup._extractedPrenom || dup.prenom || '',
+      tel: dup._extractedTel || dup.tel || dup.gsm1 || dup.gsm2 || '',
+      cp: dup._extractedCp || dup.cp || '',
+      ville: dup._extractedVille || dup.ville || '',
+      raison: dup.reason || 'Doublon',
+      typeRaison: dup.reasonType || 'duplicate',
+      ficheExistante: dup.existingFiche || null,
+      contact: stripImportDupMeta(dup)
+    });
   });
   job.invalidPostalCodes.forEach(err => {
-    notInserted.push({ nom: err.nom || '', prenom: err.prenom || '', tel: err.tel || '', cp: err.cp || '', ville: err.ville || '', raison: err.reason || 'Code postal invalide', typeRaison: err.reasonType || 'invalid_postal_code', ficheExistante: null });
+    notInserted.push({
+      nom: err.nom || '',
+      prenom: err.prenom || '',
+      tel: err.tel || '',
+      cp: err.cp || '',
+      ville: err.ville || '',
+      raison: err.reason || 'Code postal invalide',
+      typeRaison: err.reasonType || 'invalid_postal_code',
+      ficheExistante: null,
+      contact: err.contact || null
+    });
   });
   job.otherErrors.forEach(err => {
-    notInserted.push({ nom: err.nom || '', prenom: err.prenom || '', tel: err.tel || '', cp: err.cp || '', ville: err.ville || '', raison: err.reason || 'Erreur lors de l\'insertion', typeRaison: err.reasonType || 'other_error', ficheExistante: null });
+    notInserted.push({
+      nom: err.nom || '',
+      prenom: err.prenom || '',
+      tel: err.tel || '',
+      cp: err.cp || '',
+      ville: err.ville || '',
+      raison: err.reason || 'Erreur lors de l\'insertion',
+      typeRaison: err.reasonType || 'other_error',
+      ficheExistante: null,
+      contact: err.contact || null
+    });
   });
   job.notInserted = { total: notInserted.length, list: notInserted };
+  job.importContext = {
+    mapping: params.mapping || null,
+    id_centre: params.centreId || null,
+    produit: params.produit || null
+  };
 }
 
 // POST /api/import/process — Démarre l'import et retourne immédiatement un jobId (l'import continue en arrière-plan)
@@ -1672,8 +1742,95 @@ router.get('/progress/:jobId', authenticate, checkPermissionCode('fiches_create'
     payload.invalidPostalCodes = job.invalidPostalCodes;
     payload.otherErrors = job.otherErrors;
     payload.notInserted = job.notInserted;
+    payload.importContext = job.importContext || null;
   }
   res.json({ success: true, data: payload });
+});
+
+// POST /api/import/archive-and-insert — Archiver la fiche existante puis insérer le contact doublon
+router.post('/archive-and-insert', authenticate, checkPermissionCode('fiches_create'), async (req, res) => {
+  try {
+    if (!isAdminOrBackofficeOrRPConfirmation(req.user.fonction)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'avez pas la permission d\'archiver des fiches'
+      });
+    }
+
+    const {
+      existing_hash,
+      existing_id,
+      contact,
+      mapping,
+      id_centre,
+      produit
+    } = req.body;
+
+    if (!contact || typeof contact !== 'object') {
+      return res.status(400).json({ success: false, message: 'Données du contact requises' });
+    }
+    if (!mapping || typeof mapping !== 'object') {
+      return res.status(400).json({ success: false, message: 'Mapping requis' });
+    }
+
+    const centreId = id_centre || req.user.centre;
+    if (!centreId) {
+      return res.status(400).json({ success: false, message: 'Centre requis' });
+    }
+    if (!produit) {
+      return res.status(400).json({ success: false, message: 'Produit requis' });
+    }
+
+    let ficheId = existing_id ? parseInt(existing_id, 10) : null;
+    if ((!ficheId || Number.isNaN(ficheId)) && existing_hash) {
+      ficheId = decodeFicheId(existing_hash);
+    }
+    if (!ficheId || Number.isNaN(ficheId)) {
+      return res.status(400).json({ success: false, message: 'Identifiant de la fiche existante invalide' });
+    }
+
+    const existing = await queryOne('SELECT id, archive FROM fiches WHERE id = ?', [ficheId]);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Fiche existante non trouvée' });
+    }
+
+    const now = new Date();
+    const nowTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+    if (Number(existing.archive) !== 1) {
+      await query(
+        `UPDATE fiches SET archive = 1, date_modif_time = ? WHERE id = ?`,
+        [nowTime, ficheId]
+      );
+    }
+
+    resetInsertFicheLog();
+    const inserted = await insertFiche(
+      contact,
+      mapping,
+      req.user.id,
+      centreId,
+      produit,
+      null
+    );
+
+    res.json({
+      success: true,
+      message: 'Fiche existante archivée et contact inséré',
+      data: {
+        archived_id: ficheId,
+        inserted_id: inserted?.id || null,
+        inserted_hash: inserted?.hash || null
+      }
+    });
+  } catch (error) {
+    console.error('Erreur archive-and-insert:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Erreur lors de l\'archivage et de l\'insertion',
+      error: error.message
+    });
+  }
 });
 
 // POST /api/import/cancel/:jobId — Annuler un import en cours
@@ -2151,7 +2308,8 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
         ville: dup._extractedVille || dup.ville || '',
         raison: dup.reason || 'Doublon',
         typeRaison: dup.reasonType || 'duplicate',
-        ficheExistante: dup.existingFiche || null
+        ficheExistante: dup.existingFiche || null,
+        contact: stripImportDupMeta(dup)
       }));
       
       // Générer un fichier CSV avec les contacts non insérés si il y en a
@@ -2233,6 +2391,11 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
           notInserted: {
             total: notInsertedSpecial.length,
             list: notInsertedSpecial
+          },
+          importContext: {
+            mapping: mapping || null,
+            id_centre: centreId || null,
+            produit: produit || null
           },
           // Lien de téléchargement du fichier CSV
           downloadFile: downloadFile ? `/api/import/download/${downloadFile}` : null
@@ -2405,7 +2568,8 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
         ville: dup._extractedVille || dup.ville || '',
         raison: dup.reason || 'Doublon',
         typeRaison: dup.reasonType || 'duplicate',
-        ficheExistante: dup.existingFiche || null
+        ficheExistante: dup.existingFiche || null,
+        contact: stripImportDupMeta(dup)
       });
     });
     
@@ -2419,7 +2583,8 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
         ville: err.ville || '',
         raison: err.reason || 'Code postal invalide',
         typeRaison: err.reasonType || 'invalid_postal_code',
-        ficheExistante: null
+        ficheExistante: null,
+        contact: err.contact || null
       });
     });
     
@@ -2433,7 +2598,8 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
         ville: err.ville || '',
         raison: err.reason || 'Erreur lors de l\'insertion',
         typeRaison: err.reasonType || 'other_error',
-        ficheExistante: null
+        ficheExistante: null,
+        contact: err.contact || null
       });
     });
     
@@ -2510,6 +2676,11 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
         notInserted: {
           total: notInserted.length,
           list: notInserted
+        },
+        importContext: {
+          mapping: mapping || null,
+          id_centre: centreId || null,
+          produit: produit || null
         },
         // Lien de téléchargement du fichier CSV
         downloadFile: downloadFile ? `/api/import/download/${downloadFile}` : null

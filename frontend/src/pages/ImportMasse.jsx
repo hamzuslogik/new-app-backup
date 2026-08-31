@@ -31,9 +31,27 @@ function progressToResult(data) {
     duplicatesList: data.duplicatesList ?? [],
     errorsList: data.errorsList ?? [],
     notInserted: data.notInserted ?? { total: 0, list: [] },
+    importContext: data.importContext ?? null,
     cancelled: data.cancelled ?? false
   };
 }
+
+const formatInsertDate = (value) => {
+  if (!value) return null;
+  try {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return String(value);
+  }
+};
 
 const ImportMasse = () => {
   useForceDesktopViewport('import-masse-page');
@@ -236,15 +254,80 @@ const ImportMasse = () => {
     }
   );
 
-  const handleArchiveExisting = (ficheExistante) => {
+  const archiveAndInsertMutation = useMutation(
+    async ({ item, ctx }) => {
+      const response = await api.post('/import/archive-and-insert', {
+        existing_hash: item.ficheExistante?.hash,
+        existing_id: item.ficheExistante?.id,
+        contact: item.contact,
+        mapping: ctx.mapping,
+        id_centre: ctx.id_centre,
+        produit: ctx.produit
+      });
+      return response.data;
+    },
+    {
+      onSuccess: (_, variables) => {
+        toast.success('Fiche existante archivée et contact inséré');
+        const targetHash = variables.item?.ficheExistante?.hash;
+        setImportResult((prev) => {
+          if (!prev?.notInserted?.list) return prev;
+          const list = prev.notInserted.list.filter(
+            (row) => row.ficheExistante?.hash !== targetHash || row.tel !== variables.item?.tel
+          );
+          const next = {
+            ...prev,
+            inserted: (prev.inserted || 0) + 1,
+            duplicates: Math.max(0, (prev.duplicates || 0) - 1),
+            notInserted: {
+              total: list.length,
+              list
+            }
+          };
+          try {
+            sessionStorage.setItem(SESSION_STORAGE_RESULT_KEY, JSON.stringify(next));
+          } catch (e) {
+            /* ignore */
+          }
+          return next;
+        });
+        queryClient.invalidateQueries('fiches');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de l\'archivage et de l\'insertion');
+      }
+    }
+  );
+
+  const handleArchiveExisting = (item) => {
+    const ficheExistante = item?.ficheExistante;
     if (!ficheExistante?.hash) {
       toast.error('Identifiant fiche manquant');
       return;
     }
     const isArchived = ficheExistante.archive === 1 || ficheExistante.archive === true;
-    const nextArchive = !isArchived;
-    if (window.confirm(`Êtes-vous sûr de vouloir ${nextArchive ? 'archiver' : 'désarchiver'} cette fiche ?`)) {
-      archiveMutation.mutate({ hash: ficheExistante.hash, archive: nextArchive });
+    if (isArchived) {
+      if (window.confirm('Êtes-vous sûr de vouloir désarchiver cette fiche ?')) {
+        archiveMutation.mutate({ hash: ficheExistante.hash, archive: false });
+      }
+      return;
+    }
+
+    if (!item.contact) {
+      toast.error('Données du contact indisponibles. Relancez un import pour pouvoir insérer ce doublon.');
+      return;
+    }
+    const ctx = {
+      mapping: importResult?.importContext?.mapping || mapping,
+      id_centre: importResult?.importContext?.id_centre || selectedCentre || user?.centre,
+      produit: importResult?.importContext?.produit || selectedProduit
+    };
+    if (!ctx.mapping || !Object.keys(ctx.mapping).length || !ctx.produit) {
+      toast.error('Contexte d\'import manquant (mapping/produit). Relancez un import.');
+      return;
+    }
+    if (window.confirm('Archiver la fiche existante et insérer automatiquement ce contact ?')) {
+      archiveAndInsertMutation.mutate({ item, ctx });
     }
   };
 
@@ -748,6 +831,7 @@ const ImportMasse = () => {
                               <div><strong>Nom:</strong> {existing.nom || 'N/A'} {existing.prenom || ''}</div>
                               <div><strong>Tél:</strong> {existing.tel || 'N/A'}</div>
                               <div><strong>État:</strong> {existing.etat_titre || 'N/A'}</div>
+                              <div><strong>Date insertion:</strong> {formatInsertDate(existing.date_insert_time) || 'N/A'}</div>
                               {isArchived && (
                                 <div><strong>Statut:</strong> Archivée</div>
                               )}
@@ -762,9 +846,9 @@ const ImportMasse = () => {
                               <button
                                 type="button"
                                 className={`btn-archive-icon${isArchived ? ' btn-archive-icon--unarchive' : ''}`}
-                                onClick={() => handleArchiveExisting(existing)}
-                                title={isArchived ? 'Désarchiver' : 'Archiver'}
-                                disabled={archiveMutation.isLoading}
+                                onClick={() => handleArchiveExisting(item)}
+                                title={isArchived ? 'Désarchiver' : 'Archiver et insérer le contact'}
+                                disabled={archiveMutation.isLoading || archiveAndInsertMutation.isLoading}
                               >
                                 {isArchived ? <FaBoxOpen /> : <FaArchive />}
                               </button>
