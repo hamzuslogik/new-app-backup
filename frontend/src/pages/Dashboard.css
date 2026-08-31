@@ -3025,6 +3025,25 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   transform: rotate(90deg);
 }
 
+.fiche-detail-modal-archived-blocked {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  padding: 32px 24px;
+  text-align: center;
+  color: #495057;
+  background: #f8f9fa;
+}
+
+.fiche-detail-modal-archived-blocked p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  max-width: 420px;
+  line-height: 1.5;
+}
+
 /* Styles pour FicheDetail dans le modal */
 .fiche-detail-modal-content .fiche-detail {
   border: none !important;

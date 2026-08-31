@@ -421,19 +421,21 @@ const checkDuplicates = async (contacts, fileColumns = []) => {
   const phoneMap = new Map(); // Map<numéro_normalisé, fiche_info>
   
   existingPhones.forEach(row => {
+    const ficheInfo = {
+      id: row.id,
+      hash: row.hash || encodeFicheId(row.id),
+      nom: row.nom,
+      prenom: row.prenom,
+      tel: row.tel,
+      id_etat_final: row.id_etat_final,
+      etat_titre: row.etat_titre,
+      archive: 0
+    };
     if (row.tel) {
       const normalizedTel = cleanPhoneNumber(row.tel);
       if (normalizedTel) {
         if (!phoneMap.has(normalizedTel)) {
-          phoneMap.set(normalizedTel, {
-            id: row.id,
-            hash: row.hash,
-            nom: row.nom,
-            prenom: row.prenom,
-            tel: row.tel,
-            id_etat_final: row.id_etat_final,
-            etat_titre: row.etat_titre
-          });
+          phoneMap.set(normalizedTel, ficheInfo);
         }
       }
     }
@@ -441,15 +443,7 @@ const checkDuplicates = async (contacts, fileColumns = []) => {
       const normalizedGsm1 = cleanPhoneNumber(row.gsm1);
       if (normalizedGsm1) {
         if (!phoneMap.has(normalizedGsm1)) {
-          phoneMap.set(normalizedGsm1, {
-            id: row.id,
-            hash: row.hash,
-            nom: row.nom,
-            prenom: row.prenom,
-            tel: row.tel,
-            id_etat_final: row.id_etat_final,
-            etat_titre: row.etat_titre
-          });
+          phoneMap.set(normalizedGsm1, ficheInfo);
         }
       }
     }
@@ -457,15 +451,7 @@ const checkDuplicates = async (contacts, fileColumns = []) => {
       const normalizedGsm2 = cleanPhoneNumber(row.gsm2);
       if (normalizedGsm2) {
         if (!phoneMap.has(normalizedGsm2)) {
-          phoneMap.set(normalizedGsm2, {
-            id: row.id,
-            hash: row.hash,
-            nom: row.nom,
-            prenom: row.prenom,
-            tel: row.tel,
-            id_etat_final: row.id_etat_final,
-            etat_titre: row.etat_titre
-          });
+          phoneMap.set(normalizedGsm2, ficheInfo);
         }
       }
     }
@@ -731,7 +717,8 @@ const checkDuplicates = async (contacts, fileColumns = []) => {
           prenom: duplicateInfo.prenom || '',
           tel: duplicateInfo.tel || '',
           id_etat_final: duplicateInfo.id_etat_final || null,
-          etat_titre: duplicateInfo.etat_titre || 'Non défini'
+          etat_titre: duplicateInfo.etat_titre || 'Non défini',
+          archive: 0
         }
       });
     } else {
@@ -1159,11 +1146,12 @@ const insertFiche = async (contact, mapping, userId, idCentre, produitId = null,
     }
   }
 
-  // Valeurs par défaut obligatoires
-  // Utiliser l'agent sélectionné (id_agent) si fourni, sinon l'utilisateur connecté
-  ficheData.id_agent = idAgent != null && idAgent > 0 ? parseInt(idAgent, 10) : userId;
-  // id_insert = utilisateur ayant lancé l'import en masse (NULL pour saisie agent / API standard)
-  ficheData.id_insert = userId != null && userId > 0 ? parseInt(userId, 10) : null;
+  // Import en masse : ne pas renseigner id_agent.
+  // id_insert = utilisateur ayant lancé l'import ; id_qualite = même valeur.
+  delete ficheData.id_agent;
+  const insertUserId = userId != null && userId > 0 ? parseInt(userId, 10) : null;
+  ficheData.id_insert = insertUserId;
+  ficheData.id_qualite = insertUserId;
   // Toujours utiliser le centre sélectionné
   ficheData.id_centre = idCentre;
   // Utiliser le produit sélectionné si fourni et si le mapping ne contient pas déjà un produit
@@ -1549,14 +1537,11 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
     const centreId = id_centre || req.user.centre;
     if (!centreId) return res.status(400).json({ success: false, message: 'Centre requis' });
     if (!produit) return res.status(400).json({ success: false, message: 'Produit requis' });
-    if (!id_agent) return res.status(400).json({ success: false, message: 'Agent requis' });
 
     const centre = await queryOne('SELECT id, etat FROM centres WHERE id = ?', [centreId]);
     if (!centre || centre.etat === 0) return res.status(400).json({ success: false, message: 'Centre invalide ou désactivé' });
     const produitData = await queryOne('SELECT id FROM produits WHERE id = ?', [parseInt(produit)]);
     if (!produitData) return res.status(400).json({ success: false, message: 'Produit invalide' });
-    const agentData = await queryOne('SELECT id, etat FROM utilisateurs WHERE id = ?', [parseInt(id_agent)]);
-    if (!agentData || agentData.etat === 0) return res.status(400).json({ success: false, message: 'Agent invalide ou désactivé' });
 
     const tempFilePath = path.join(__dirname, '../../uploads', tempFile);
     if (!fs.existsSync(tempFilePath)) return res.status(404).json({ success: false, message: 'Fichier temporaire non trouvé' });
@@ -1623,7 +1608,7 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
         userId: req.user.id,
         centreId,
         produit,
-        id_agent: parseInt(id_agent, 10),
+        id_agent: null,
         tempFilePath,
         tempFile,
         data,
@@ -1963,14 +1948,6 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
       });
     }
 
-    // Vérifier que l'agent est fourni
-    if (!id_agent) {
-      return res.status(400).json({
-        success: false,
-        message: 'Agent requis'
-      });
-    }
-
     // Vérifier que le centre existe et est actif
     const centre = await queryOne('SELECT id, etat FROM centres WHERE id = ?', [centreId]);
     if (!centre || centre.etat === 0) {
@@ -1986,15 +1963,6 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
       return res.status(400).json({
         success: false,
         message: 'Produit invalide'
-      });
-    }
-
-    // Vérifier que l'agent existe et est actif
-    const agentData = await queryOne('SELECT id, etat FROM utilisateurs WHERE id = ?', [parseInt(id_agent)]);
-    if (!agentData || agentData.etat === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Agent invalide ou désactivé'
       });
     }
 
@@ -2344,7 +2312,7 @@ router.post('/process', authenticate, checkPermissionCode('fiches_create'), asyn
     for (let i = 0; i < validContacts.length; i++) {
       const contact = validContacts[i];
       try {
-        await insertFiche(contact, mapping, req.user.id, centreId, produit, parseInt(id_agent, 10));
+        await insertFiche(contact, mapping, req.user.id, centreId, produit, null);
         inserted++;
         
         // Afficher la progression tous les 100 contacts

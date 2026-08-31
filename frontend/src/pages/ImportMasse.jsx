@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useMutation, useQuery } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaUpload, FaFileExcel, FaFileCsv, FaCheck, FaTimes, FaDownload, FaSpinner } from 'react-icons/fa';
+import { FaUpload, FaFileExcel, FaFileCsv, FaCheck, FaTimes, FaDownload, FaSpinner, FaArchive, FaBoxOpen } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import './ImportMasse.css';
@@ -38,6 +38,8 @@ function progressToResult(data) {
 const ImportMasse = () => {
   useForceDesktopViewport('import-masse-page');
   const { user, hasPermission } = useAuth();
+  const queryClient = useQueryClient();
+  const canArchiveFiche = [1, 2, 7, 11, 13].includes(Number(user?.fonction));
   const [file, setFile] = useState(null);
   const [previewData, setPreviewData] = useState(null);
   const [mapping, setMapping] = useState({});
@@ -48,7 +50,6 @@ const ImportMasse = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedCentre, setSelectedCentre] = useState(user?.centre || '');
   const [selectedProduit, setSelectedProduit] = useState('');
-  const [selectedAgent, setSelectedAgent] = useState('');
   const [activeJobId, setActiveJobId] = useState(() => sessionStorage.getItem(SESSION_STORAGE_JOB_KEY) || null);
   const abortControllerRef = useRef(null);
 
@@ -63,14 +64,6 @@ const ImportMasse = () => {
     const res = await api.get('/management/produits');
     return res.data.data || [];
   });
-
-  // Récupérer la liste des utilisateurs (pour le choix de l'agent assigné aux fiches importées)
-  const { data: usersData } = useQuery('users', async () => {
-    const res = await api.get('/management/utilisateurs');
-    return res.data.data || [];
-  });
-  // Afficher uniquement les utilisateurs de fonction backoffice (fonction 11)
-  const agentsList = (usersData || []).filter(u => u.etat > 0 && Number(u.fonction) === 11);
 
   // Polling de la progression d'un import en cours (persisté via sessionStorage)
   const { data: progressResponse, isError: progressError, error: progressErr } = useQuery(
@@ -201,6 +194,60 @@ const ImportMasse = () => {
     }
   );
 
+  const archiveMutation = useMutation(
+    async ({ hash, archive }) => {
+      const response = await api.patch(`/fiches/${hash}/archive`, { archive });
+      return response.data;
+    },
+    {
+      onSuccess: (_, variables) => {
+        toast.success(variables.archive ? 'Fiche archivée avec succès' : 'Fiche désarchivée avec succès');
+        setImportResult((prev) => {
+          if (!prev?.notInserted?.list) return prev;
+          const next = {
+            ...prev,
+            notInserted: {
+              ...prev.notInserted,
+              list: prev.notInserted.list.map((item) => {
+                const hash = item.ficheExistante?.hash;
+                if (!hash || hash !== variables.hash) return item;
+                return {
+                  ...item,
+                  ficheExistante: {
+                    ...item.ficheExistante,
+                    archive: variables.archive ? 1 : 0
+                  }
+                };
+              })
+            }
+          };
+          try {
+            sessionStorage.setItem(SESSION_STORAGE_RESULT_KEY, JSON.stringify(next));
+          } catch (e) {
+            /* ignore */
+          }
+          return next;
+        });
+        queryClient.invalidateQueries('fiches');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de l\'archivage de la fiche');
+      }
+    }
+  );
+
+  const handleArchiveExisting = (ficheExistante) => {
+    if (!ficheExistante?.hash) {
+      toast.error('Identifiant fiche manquant');
+      return;
+    }
+    const isArchived = ficheExistante.archive === 1 || ficheExistante.archive === true;
+    const nextArchive = !isArchived;
+    if (window.confirm(`Êtes-vous sûr de vouloir ${nextArchive ? 'archiver' : 'désarchiver'} cette fiche ?`)) {
+      archiveMutation.mutate({ hash: ficheExistante.hash, archive: nextArchive });
+    }
+  };
+
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
@@ -249,12 +296,6 @@ const ImportMasse = () => {
       return;
     }
 
-    // Vérifier qu'un agent est sélectionné
-    if (!selectedAgent) {
-      toast.error('Veuillez sélectionner un agent');
-      return;
-    }
-
     setIsProcessing(true);
     setImportResult(null);
     importMutation.mutate({
@@ -262,8 +303,7 @@ const ImportMasse = () => {
       tempFile,
       skipDuplicates: false,
       id_centre: selectedCentre,
-      produit: selectedProduit,
-      id_agent: selectedAgent
+      produit: selectedProduit
     });
   };
 
@@ -297,7 +337,6 @@ const ImportMasse = () => {
     sessionStorage.removeItem(SESSION_STORAGE_RESULT_KEY);
     setSelectedCentre(user?.centre || '');
     setSelectedProduit('');
-    setSelectedAgent('');
   };
 
   if (!hasPermission('fiches_create')) {
@@ -466,27 +505,6 @@ const ImportMasse = () => {
               </select>
               <p className="selection-help">Toutes les fiches importées seront associées à ce produit</p>
             </div>
-
-            <div className="agent-selection">
-              <label htmlFor="agent-select">
-                <strong>Agent *</strong>
-              </label>
-              <select
-                id="agent-select"
-                value={selectedAgent}
-                onChange={(e) => setSelectedAgent(e.target.value)}
-                className="agent-select"
-                required
-              >
-                <option value="">-- Sélectionner un agent --</option>
-                {agentsList.map(agent => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.pseudo || agent.nom || agent.login || `ID ${agent.id}`}
-                  </option>
-                ))}
-              </select>
-              <p className="selection-help">Toutes les fiches importées seront assignées à cet agent (liste des utilisateurs backoffice)</p>
-            </div>
           </div>
 
           <div className="mapping-table-container">
@@ -561,7 +579,7 @@ const ImportMasse = () => {
             <button
               className="btn-import"
               onClick={handleImport}
-              disabled={isProcessing || !!activeJobId || !(mapping.tel || mapping.gsm1 || mapping.gsm2) || !selectedCentre || !selectedProduit || !selectedAgent}
+              disabled={isProcessing || !!activeJobId || !(mapping.tel || mapping.gsm1 || mapping.gsm2) || !selectedCentre || !selectedProduit}
             >
               {isProcessing ? (
                 <>
@@ -708,11 +726,15 @@ const ImportMasse = () => {
                       <th>Ville</th>
                       <th>Raison</th>
                       <th>Fiche Existante</th>
+                      {canArchiveFiche && <th>Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {importResult.notInserted.list.map((item, idx) => (
-                      <tr key={idx}>
+                    {importResult.notInserted.list.map((item, idx) => {
+                      const existing = item.ficheExistante;
+                      const isArchived = existing?.archive === 1 || existing?.archive === true;
+                      return (
+                      <tr key={idx} className={isArchived ? 'row-archived' : ''}>
                         <td>{item.nom || 'N/A'}</td>
                         <td>{item.prenom || 'N/A'}</td>
                         <td>{item.tel || 'N/A'}</td>
@@ -720,19 +742,40 @@ const ImportMasse = () => {
                         <td>{item.ville || 'N/A'}</td>
                         <td className="reason-cell">{item.raison || 'N/A'}</td>
                         <td>
-                          {item.ficheExistante ? (
+                          {existing ? (
                             <div className="existing-fiche-info">
-                              <div><strong>ID:</strong> {item.ficheExistante.id || 'N/A'}</div>
-                              <div><strong>Nom:</strong> {item.ficheExistante.nom || 'N/A'} {item.ficheExistante.prenom || ''}</div>
-                              <div><strong>Tél:</strong> {item.ficheExistante.tel || 'N/A'}</div>
-                              <div><strong>État:</strong> {item.ficheExistante.etat_titre || 'N/A'}</div>
+                              <div><strong>ID:</strong> {existing.id || 'N/A'}</div>
+                              <div><strong>Nom:</strong> {existing.nom || 'N/A'} {existing.prenom || ''}</div>
+                              <div><strong>Tél:</strong> {existing.tel || 'N/A'}</div>
+                              <div><strong>État:</strong> {existing.etat_titre || 'N/A'}</div>
+                              {isArchived && (
+                                <div><strong>Statut:</strong> Archivée</div>
+                              )}
                             </div>
                           ) : (
                             <span>-</span>
                           )}
                         </td>
+                        {canArchiveFiche && (
+                          <td className="actions-cell">
+                            {existing?.hash ? (
+                              <button
+                                type="button"
+                                className={`btn-archive-icon${isArchived ? ' btn-archive-icon--unarchive' : ''}`}
+                                onClick={() => handleArchiveExisting(existing)}
+                                title={isArchived ? 'Désarchiver' : 'Archiver'}
+                                disabled={archiveMutation.isLoading}
+                              >
+                                {isArchived ? <FaBoxOpen /> : <FaArchive />}
+                              </button>
+                            ) : (
+                              <span>-</span>
+                            )}
+                          </td>
+                        )}
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

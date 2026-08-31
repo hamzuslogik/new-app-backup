@@ -165,6 +165,15 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
     };
   }, [ficheHash, onClose, isOverlayLocked]);
 
+  // Mode verrouille (close=0) : n'afficher que les fiches non archivées (archive = 0 / NULL)
+  const isArchived =
+    ficheData &&
+    (ficheData.archive === 1 ||
+      ficheData.archive === true ||
+      ficheData.archive === '1');
+  const waitingFicheForLockedMode = isOverlayLocked && !ficheData;
+  const blockArchivedInLockedMode = isOverlayLocked && !!ficheData && isArchived;
+
   // Déterminer la couleur du border selon l'état de la fiche
   // Applique aussi la logique "Signer Complet" (état SIGNER + sous-état COMPLETE → couleur de l'état 45)
   const getEtatColor = () => {
@@ -174,7 +183,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
     return etat?.color || '#3498db';
   };
 
-  const etatColor = getEtatColor();
+  const etatColor = blockArchivedInLockedMode ? '#6c757d' : getEtatColor();
 
 
   const modalContent = (
@@ -205,15 +214,25 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
             <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-banner-logo" />
             <span className="fiche-detail-modal-banner-title">DÉTAIL FICHE</span>
           </div>
-          <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
-            <FicheDetail
-              ficheHash={ficheHash}
-              onClose={onClose}
-              isModal={true}
-              initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
-              initialTab={options?.initialTab || null}
-            />
-          </RouteParamsProvider>
+          {waitingFicheForLockedMode ? (
+            <div className="fiche-detail-modal-archived-blocked">
+              <p>Chargement…</p>
+            </div>
+          ) : blockArchivedInLockedMode ? (
+            <div className="fiche-detail-modal-archived-blocked" role="alert">
+              <p>Cette fiche est archivée et ne peut pas être consultée dans ce mode.</p>
+            </div>
+          ) : (
+            <RouteParamsProvider params={{ id: ficheHash }} navigate={navigate}>
+              <FicheDetail
+                ficheHash={ficheHash}
+                onClose={onClose}
+                isModal={true}
+                initialFocusHistoriqueEtats={options?.focusHistoriqueEtats === true}
+                initialTab={options?.initialTab || null}
+              />
+            </RouteParamsProvider>
+          )}
         </div>
       </div>
     </div>
