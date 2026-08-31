@@ -949,9 +949,28 @@ router.get('/', authenticate, async (req, res) => {
       include_ko
     } = req.query;
 
-    const normalizePhoneSearchValue = (raw) => {
-      const value = String(raw ?? '').trim();
-      return /^\d{9}$/.test(value) ? `0${value}` : value;
+    /** Variantes de recherche téléphone (avec/sans 0, espaces, +33) — aligné Dashboard / URL */
+    const buildPhoneSearchVariants = (raw) => {
+      const trimmed = String(raw ?? '').trim();
+      if (!trimmed) return [];
+      const digits = trimmed.replace(/\D/g, '');
+      const variants = new Set([trimmed]);
+      if (digits) {
+        variants.add(digits);
+        if (/^\d{9}$/.test(digits)) {
+          variants.add(`0${digits}`);
+        }
+        if (digits.startsWith('0') && digits.length === 10) {
+          variants.add(digits.slice(1));
+          variants.add(`33${digits.slice(1)}`);
+        }
+        if (digits.startsWith('33') && digits.length >= 11) {
+          const national = digits.slice(2);
+          variants.add(national);
+          variants.add(`0${national}`);
+        }
+      }
+      return Array.from(variants).filter(Boolean);
     };
 
     const includeArchive =
@@ -1224,9 +1243,14 @@ router.get('/', authenticate, async (req, res) => {
       const champRecherche = critere_champ || 'tel';
       
       if (champRecherche === 'tel') {
-        const critereTel = normalizePhoneSearchValue(critere);
-        whereConditions.push('(fiche.tel = ? OR fiche.gsm1 = ? OR fiche.gsm2 = ?)');
-        params.push(critereTel, critereTel, critereTel);
+        const variants = buildPhoneSearchVariants(critere);
+        if (variants.length > 0) {
+          const placeholders = variants.map(() => '?').join(',');
+          whereConditions.push(
+            `(fiche.tel IN (${placeholders}) OR fiche.gsm1 IN (${placeholders}) OR fiche.gsm2 IN (${placeholders}))`
+          );
+          params.push(...variants, ...variants, ...variants);
+        }
       } else if (champRecherche === 'cp') {
         whereConditions.push('fiche.cp LIKE ?');
         params.push(`${critere}%`);
@@ -1246,9 +1270,14 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
     if (tel) {
-      const telSearch = normalizePhoneSearchValue(tel);
-      whereConditions.push('(fiche.tel = ? OR fiche.gsm1 = ? OR fiche.gsm2 = ?)');
-      params.push(telSearch, telSearch, telSearch);
+      const variants = buildPhoneSearchVariants(tel);
+      if (variants.length > 0) {
+        const placeholders = variants.map(() => '?').join(',');
+        whereConditions.push(
+          `(fiche.tel IN (${placeholders}) OR fiche.gsm1 IN (${placeholders}) OR fiche.gsm2 IN (${placeholders}))`
+        );
+        params.push(...variants, ...variants, ...variants);
+      }
     }
     if (cp) {
       appendCpDepartementFilter(whereConditions, params, cp);

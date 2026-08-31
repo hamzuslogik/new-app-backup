@@ -51,12 +51,27 @@ const Fiches = () => {
     date_fin: '',
     time_debut: '',
     time_fin: '',
+    critere: '',
+    critere_champ: 'tel',
+    cp: '',
+    nom: '',
+    prenom: '',
+    produit: '',
+    id_confirmateur: '',
+    id_commercial: '',
   });
   const [filters, setFilters] = useState(getInitialFilters);
   // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
   const [appliedFilters, setAppliedFilters] = useState(getInitialFilters);
 
   const normalizeText = (v) => (typeof v === 'string' ? v.trim() : v);
+  const getLocalTodayStr = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   // Options de cache communes pour les données de référence (rarement modifiées)
   const referenceDataOptions = {
@@ -149,6 +164,19 @@ const Fiches = () => {
       if (typeof searchParams.critere === 'string') {
         searchParams.critere = searchParams.critere.trim();
       }
+
+      // Recherche ciblée (tél/nom/CP…) : ne pas restreindre à l'onglet Qualif/Backoffice
+      // (comportement aligné sur le Dashboard, sinon un numéro d'import masse est introuvable sur Qualif)
+      const hasLookupCriterion = !!(
+        (searchParams.critere || '').trim() ||
+        (searchParams.nom || '').trim() ||
+        (searchParams.prenom || '').trim() ||
+        (searchParams.cp || '').trim() ||
+        (searchParams.tel || '').trim()
+      );
+      if (hasLookupCriterion) {
+        delete searchParams.fiche_source;
+      }
       
       // Nettoyer les paramètres vides (mais garder page, limit, fiche_search, critere, critere_champ)
       Object.keys(searchParams).forEach(key => {
@@ -180,22 +208,14 @@ const Fiches = () => {
           }
           return;
         }
-        // Si on fait une recherche par critère uniquement, ne pas appliquer les filtres de date par défaut
-        // Supprimer les dates si elles sont les dates d'aujourd'hui (valeurs par défaut) et qu'on cherche par critère
+        // Si recherche par critère/CP uniquement avec dates = aujourd'hui (défaut), les retirer pour une recherche globale
         if (key === 'date_debut' || key === 'date_fin' || key === 'date_champ' || key === 'time_debut' || key === 'time_fin') {
-          // Si critere est rempli et que les dates sont les dates d'aujourd'hui, les supprimer pour permettre une recherche globale
-          if (searchParams.critere) {
-            const today = new Date().toISOString().split('T')[0];
-            if (key === 'date_debut' && searchParams.date_debut === today) {
-              delete searchParams[key];
-              return;
-            }
-            if (key === 'date_fin' && searchParams.date_fin === today) {
-              delete searchParams[key];
-              return;
-            }
-            if ((key === 'date_champ' || key === 'time_debut' || key === 'time_fin') && searchParams.critere) {
-              // Supprimer ces paramètres si on cherche uniquement par critère
+          if (hasLookupCriterion) {
+            const today = getLocalTodayStr();
+            const onlyDefaultToday =
+              (!searchParams.date_debut || searchParams.date_debut === today) &&
+              (!searchParams.date_fin || searchParams.date_fin === today);
+            if (onlyDefaultToday) {
               delete searchParams[key];
               return;
             }
@@ -476,9 +496,12 @@ const Fiches = () => {
     }
     const newFilters = { ...filters, fiche_search: true, page: 1 };
     
-    if (newFilters.critere) {
-      const today = new Date().toISOString().split('T')[0];
-      if (newFilters.date_debut === today && newFilters.date_fin === today) {
+    if (newFilters.critere || (newFilters.cp || '').trim() || (newFilters.nom || '').trim() || (newFilters.prenom || '').trim()) {
+      const today = getLocalTodayStr();
+      if (
+        (!newFilters.date_debut || newFilters.date_debut === today) &&
+        (!newFilters.date_fin || newFilters.date_fin === today)
+      ) {
         delete newFilters.date_debut;
         delete newFilters.date_fin;
         delete newFilters.date_champ;
@@ -638,11 +661,14 @@ const Fiches = () => {
     ? allFiches 
     : allFiches.filter(fiche => {
         const searchLower = debouncedQuickSearch.trim().toLowerCase();
+        const searchDigits = searchLower.replace(/\D/g, '');
         // Rechercher dans tous les champs
         const searchFields = [
           fiche.nom || '',
           fiche.prenom || '',
           fiche.tel || '',
+          fiche.gsm1 || '',
+          fiche.gsm2 || '',
           fiche.cp || '',
           fiche.ville || '',
           fiche.adresse || '',
@@ -657,9 +683,18 @@ const Fiches = () => {
           fiche.valider > 0 ? 'validé' : '',
         ];
         
-        return searchFields.some(field => 
-          field.toString().toLowerCase().includes(searchLower)
-        );
+        return searchFields.some(field => {
+          const text = field.toString().toLowerCase();
+          if (text.includes(searchLower)) return true;
+          // Téléphone : match avec/sans 0 et sans espaces
+          if (searchDigits.length >= 6) {
+            const fieldDigits = text.replace(/\D/g, '');
+            if (fieldDigits.includes(searchDigits)) return true;
+            if (searchDigits.startsWith('0') && fieldDigits.includes(searchDigits.slice(1))) return true;
+            if (!searchDigits.startsWith('0') && fieldDigits.includes(`0${searchDigits}`)) return true;
+          }
+          return false;
+        });
       });
 
   return (
