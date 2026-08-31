@@ -160,7 +160,12 @@ const Fiches = () => {
         }
         // include_archive: n'envoyer au backend que si activé
         if (key === 'include_archive') {
-          if (searchParams.include_archive) {
+          if (
+            searchParams.include_archive === true ||
+            searchParams.include_archive === 1 ||
+            searchParams.include_archive === '1' ||
+            searchParams.include_archive === 'true'
+          ) {
             searchParams.include_archive = 1;
           } else {
             delete searchParams.include_archive;
@@ -218,7 +223,7 @@ const Fiches = () => {
       time_fin: timeEnd
     };
 
-    if (src.include_archive) {
+    if (src.include_archive === true || src.include_archive === 1 || src.include_archive === '1') {
       defaultParams.include_archive = 1;
     }
     if (!isAgentQualif && src.fiche_source) {
@@ -434,13 +439,15 @@ const Fiches = () => {
       page: 1,
       ...(key === 'id_etat_final' ? { id_sous_etat: '', annuler_repro_type: '' } : {})
     }));
-    // Pagination et limite : mettre à jour appliedFilters pour lancer la requête
-    if (key === 'page' || key === 'limit') {
+    // Pagination, limite, archives : appliquer immédiatement à la requête
+    if (key === 'page' || key === 'limit' || key === 'include_archive') {
       setIsSearching(true);
+      const autoLoadProfile = isAgentQualif || isSuperviseurQualif || isBackoffice;
       setAppliedFilters(prev => ({
         ...prev,
         [key]: key === 'page' ? value : nextValue,
-        ...(key === 'limit' ? { page: 1 } : {})
+        ...(key === 'limit' ? { page: 1 } : {}),
+        ...(key === 'include_archive' && !autoLoadProfile ? { fiche_search: true } : {}),
       }));
     }
   };
@@ -461,7 +468,8 @@ const Fiches = () => {
       (filters.cp || '').trim() ||
       filters.produit ||
       (filters.nom || '').trim() ||
-      (filters.prenom || '').trim()
+      (filters.prenom || '').trim() ||
+      filters.include_archive
     );
     if (!hasRefinedSearch && !window.confirm('Cette recherche peut prendre plusieurs secondes. Confirmer la recherche ?')) {
       return;

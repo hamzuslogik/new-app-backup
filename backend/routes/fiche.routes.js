@@ -1185,18 +1185,21 @@ router.get('/', authenticate, async (req, res) => {
         // Pour les commerciaux (fonction 5), ajouter aussi l'état CONFIRMER (7) en plus des groupes autorisés
         if (req.user.fonction === 5) {
           // Commerciaux : Phase 3 (groupe 3) + CONFIRMER (état 7) + groupe 0
-          whereConditions.push(`EXISTS (
+          // includeArchive : les fiches archivées restent visibles même hors groupes autorisés
+          const archiveBypass = includeArchive ? 'fiche.archive = 1 OR ' : '';
+          whereConditions.push(`(${archiveBypass}EXISTS (
             SELECT 1 FROM etats e 
             WHERE e.id = fiche.id_etat_final 
             AND (CAST(e.groupe AS CHAR) IN (${allAllowedGroups.map(() => '?').join(',')}) OR fiche.id_etat_final = 7)
-          )`);
+          ))`);
           params.push(...allAllowedGroups.map(g => String(g)));
         } else {
-          whereConditions.push(`EXISTS (
+          const archiveBypass = includeArchive ? 'fiche.archive = 1 OR ' : '';
+          whereConditions.push(`(${archiveBypass}EXISTS (
             SELECT 1 FROM etats e 
             WHERE e.id = fiche.id_etat_final 
             AND CAST(e.groupe AS CHAR) IN (${allAllowedGroups.map(() => '?').join(',')})
-          )`);
+          ))`);
           params.push(...allAllowedGroups.map(g => String(g)));
         }
       }
