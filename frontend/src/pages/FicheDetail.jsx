@@ -423,9 +423,7 @@ function buildConfFormStateFromFiche(ficheData, user) {
     consommation_chauffage: ficheData.consommation_chauffage || '',
     conf_commentaire_produit: ficheData.conf_commentaire_produit || ficheData.commentaire || '',
     id_commercial_2:
-      ficheHonoreASuivreViaCompteRendu(ficheData) &&
-      ficheData.id_commercial_2 != null &&
-      Number(ficheData.id_commercial_2) > 0
+      ficheData.id_commercial_2 != null && Number(ficheData.id_commercial_2) > 0
         ? String(ficheData.id_commercial_2)
         : ''
   };
@@ -2588,12 +2586,10 @@ const FicheDetail = ({
       updateData.histo_id_confirmateur_2 = updateData.id_confirmateur_2;
       updateData.histo_id_confirmateur_3 = updateData.id_confirmateur_3;
 
-      if (ficheHonoreASuivreViaCompteRendu(ficheData)) {
-        updateData.id_commercial_2 =
-          confFormData.id_commercial_2 && String(confFormData.id_commercial_2).trim() !== ''
-            ? parseInt(confFormData.id_commercial_2, 10)
-            : null;
-      }
+      updateData.id_commercial_2 =
+        confFormData.id_commercial_2 && String(confFormData.id_commercial_2).trim() !== ''
+          ? parseInt(confFormData.id_commercial_2, 10)
+          : null;
 
       // Appeler l'API pour mettre à jour
       const res = await api.put(`/fiches/${hash}`, updateData);
@@ -6839,32 +6835,30 @@ const FicheDetail = ({
                         </select>
                       </td>
                     </tr>
-                    {ficheHonoreASuivreViaCompteRendu(ficheData) && (
-                      <tr>
-                        <td>
-                          <label htmlFor="conf_id_commercial_2">Commercial secondaire (R2) (optionnel)</label>
-                        </td>
-                        <td>
-                          <select
-                            id="conf_id_commercial_2"
-                            className="form-control"
-                            value={confFormData.id_commercial_2 || ''}
-                            onChange={(e) =>
-                              setConfFormData({ ...confFormData, id_commercial_2: e.target.value })
-                            }
-                          >
-                            <option value="">Sélectionner</option>
-                            {(commerciaux || [])
-                              .filter((u) => u.etat > 0 || u.etat == null)
-                              .map((com) => (
-                                <option key={com.id} value={com.id}>
-                                  {com.pseudo}
-                                </option>
-                              ))}
-                          </select>
-                        </td>
-                      </tr>
-                    )}
+                    <tr>
+                      <td>
+                        <label htmlFor="conf_id_commercial_2">Commercial 2 (optionnel)</label>
+                      </td>
+                      <td>
+                        <select
+                          id="conf_id_commercial_2"
+                          className="form-control"
+                          value={confFormData.id_commercial_2 || ''}
+                          onChange={(e) =>
+                            setConfFormData({ ...confFormData, id_commercial_2: e.target.value })
+                          }
+                        >
+                          <option value="">Aucun</option>
+                          {(commerciaux || [])
+                            .filter((u) => u.etat > 0 || u.etat == null)
+                            .map((com) => (
+                              <option key={com.id} value={com.id}>
+                                {com.pseudo}
+                              </option>
+                            ))}
+                        </select>
+                      </td>
+                    </tr>
                     <tr>
                       <td><label htmlFor="conf_id_confirmateur">Confirmateur *</label></td>
                       <td>
