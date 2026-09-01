@@ -366,6 +366,27 @@ const triggerWorkflowOnCompteRenduApproved = async (req, res, next) => {
             }).catch(error => {
               console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (compte_rendu_approved):', error);
             });
+
+            // Déclencher aussi etat_changed si la transition d'état a changé (ex. CONFIRMER → SIGNER)
+            const oldEtatNum = etatMeta?.old_etat != null && etatMeta.old_etat !== ''
+              ? parseInt(etatMeta.old_etat, 10) : null;
+            const newEtatNum = etatMeta?.new_etat != null && etatMeta.new_etat !== ''
+              ? parseInt(etatMeta.new_etat, 10) : null;
+            if (oldEtatNum != null && newEtatNum != null && !Number.isNaN(oldEtatNum) && !Number.isNaN(newEtatNum) && oldEtatNum !== newEtatNum) {
+              console.log('[WORKFLOW] Transition état via compte rendu — déclenchement etat_changed');
+              executeWorkflow('etat_changed', {
+                fiche,
+                fiche_id: fiche.id,
+                id_fiche: fiche.id,
+                user: req.user,
+                old_etat: oldEtatNum,
+                new_etat: newEtatNum,
+                old_etat_titre: etatMeta.old_etat_titre ?? null,
+                new_etat_titre: etatMeta.new_etat_titre ?? null
+              }).catch(error => {
+                console.error('[WORKFLOW] Erreur lors de l\'exécution des workflows (etat_changed via CR):', error);
+              });
+            }
           }
         }
       } catch (error) {

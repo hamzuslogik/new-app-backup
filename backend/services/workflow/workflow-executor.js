@@ -261,21 +261,24 @@ function matchEtatTransitionConfig(config, oldEtatRaw, newEtatRaw, logTag = 'eta
   } else if (fromAnyState) {
     console.log(`[WORKFLOW] [${logTag}] ✅ État source: n'importe quel état (etat_from_any ou non défini)`);
   } else {
-    let fromOk = true;
+    let fromOk = false;
     if (hasFromNums) {
       const etatFrom = Array.isArray(config.etat_from) ? config.etat_from : [config.etat_from];
       const etatFromNums = etatFrom.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
-      if (oldEtatNum === null || !etatFromNums.includes(oldEtatNum)) {
-        console.log(`[WORKFLOW] [${logTag}] ❌ État source (ID) ne correspond pas: ${oldEtatNum} pas dans [${etatFromNums.join(', ')}]`);
-        fromOk = false;
-      } else {
+      if (oldEtatNum !== null && etatFromNums.includes(oldEtatNum)) {
         console.log(`[WORKFLOW] [${logTag}] ✅ État source (ID) correspond: ${oldEtatNum}`);
+        fromOk = true;
+      } else {
+        console.log(`[WORKFLOW] [${logTag}] État source (ID) ne correspond pas: ${oldEtatNum} pas dans [${etatFromNums.join(', ')}]`);
       }
     }
-    if (hasFromTitres) {
-      if (!matchEtatTitresList(fromTitres, oldEtatTitre, logTag, 'source')) fromOk = false;
+    if (hasFromTitres && matchEtatTitresList(fromTitres, oldEtatTitre, logTag, 'source')) {
+      fromOk = true;
     }
-    if (!fromOk) triggerMatches = false;
+    if (!fromOk) {
+      console.log(`[WORKFLOW] [${logTag}] ❌ État source: aucun critère (ID ou titre) ne correspond`);
+      triggerMatches = false;
+    }
   }
 
   const toAnyState = config.etat_to_any === true ||
@@ -290,21 +293,24 @@ function matchEtatTransitionConfig(config, oldEtatRaw, newEtatRaw, logTag = 'eta
   } else if (toAnyState) {
     console.log(`[WORKFLOW] [${logTag}] ✅ État cible: n'importe quel état (etat_to_any ou non défini)`);
   } else {
-    let toOk = true;
+    let toOk = false;
     if (hasToNums) {
       const etatTo = Array.isArray(config.etat_to) ? config.etat_to : [config.etat_to];
       const etatToNums = etatTo.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
-      if (newEtatNum === null || !etatToNums.includes(newEtatNum)) {
-        console.log(`[WORKFLOW] [${logTag}] ❌ État cible (ID) ne correspond pas: ${newEtatNum} pas dans [${etatToNums.join(', ')}]`);
-        toOk = false;
-      } else {
+      if (newEtatNum !== null && etatToNums.includes(newEtatNum)) {
         console.log(`[WORKFLOW] [${logTag}] ✅ État cible (ID) correspond: ${newEtatNum}`);
+        toOk = true;
+      } else {
+        console.log(`[WORKFLOW] [${logTag}] État cible (ID) ne correspond pas: ${newEtatNum} pas dans [${etatToNums.join(', ')}]`);
       }
     }
-    if (hasToTitres) {
-      if (!matchEtatTitresList(toTitres, newEtatTitre, logTag, 'cible')) toOk = false;
+    if (hasToTitres && matchEtatTitresList(toTitres, newEtatTitre, logTag, 'cible')) {
+      toOk = true;
     }
-    if (!toOk) triggerMatches = false;
+    if (!toOk) {
+      console.log(`[WORKFLOW] [${logTag}] ❌ État cible: aucun critère (ID ou titre) ne correspond`);
+      triggerMatches = false;
+    }
   }
 
   if (triggerMatches && !toAnyState &&
@@ -1181,21 +1187,53 @@ async function executeSMSAction(config, eventData) {
 /**
  * Action : Mise à jour d'un champ
  */
+const UPDATE_FIELD_ALLOWED = new Set([
+  'valider', 'ko', 'hc', 'archive', 'active',
+  'id_agent', 'id_insert', 'id_qualite', 'id_qualif', 'id_centre',
+  'id_confirmateur', 'id_confirmateur_2', 'id_confirmateur_3',
+  'id_commercial', 'id_commercial_2', 'id_etat_final', 'id_sous_etat',
+  'produit', 'rdv_urgent', 'conf_rdv_avec', 'conf_presence_couple',
+  'commentaire', 'commentaire_commercial', 'commentaire_qualite',
+  'motif_qualif', 'motif_ko'
+]);
+
+const UPDATE_FIELD_INT_FIELDS = new Set(['valider', 'ko', 'hc', 'archive', 'active', 'rdv_urgent']);
+
 async function executeUpdateFieldAction(config, eventData) {
   const { query } = require('../../config/database');
   const { field, value } = config;
-  
+
   const ficheId = eventData.fiche?.id;
   if (!ficheId) {
     throw new Error('Fiche non trouvée pour la mise à jour');
   }
 
+  const fieldName = String(field || '').trim();
+  if (!fieldName || !UPDATE_FIELD_ALLOWED.has(fieldName)) {
+    throw new Error(`Champ non autorisé ou manquant pour update_field: "${fieldName || '(vide)'}"`);
+  }
+
   // Remplacer les variables dans la valeur
-  const processedValue = replaceVariables(value, eventData);
+  let processedValue = replaceVariables(value, eventData);
 
-  await query(`UPDATE fiches SET \`${field}\` = ? WHERE id = ?`, [processedValue, ficheId]);
+  if (UPDATE_FIELD_INT_FIELDS.has(fieldName)) {
+    if (processedValue === '' || processedValue === null || processedValue === undefined) {
+      processedValue = 0;
+    } else {
+      const n = parseInt(String(processedValue).trim(), 10);
+      processedValue = Number.isNaN(n) ? 0 : n;
+    }
+  }
 
-  return { success: true, field, value: processedValue };
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const result = await query(
+    `UPDATE fiches SET \`${fieldName}\` = ?, date_modif_time = ? WHERE id = ?`,
+    [processedValue, now, ficheId]
+  );
+
+  console.log(`[WORKFLOW] update_field — fiche ${ficheId}: ${fieldName} = ${processedValue} (affectedRows: ${result?.affectedRows ?? '?'})`);
+
+  return { success: true, field: fieldName, value: processedValue, affectedRows: result?.affectedRows ?? null };
 }
 
 /**
@@ -1648,6 +1686,8 @@ function replaceVariables(template, eventData) {
 module.exports = {
   executeWorkflow,
   executeWorkflowActions,
-  executeAction
+  executeAction,
+  doesWorkflowTriggerRowFire,
+  matchEtatTransitionConfig
 };
 

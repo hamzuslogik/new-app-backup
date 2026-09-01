@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, checkPermission } = require('../middleware/auth.middleware');
 const { query, queryOne, transaction } = require('../config/database');
-const { executeWorkflow } = require('../services/workflow/workflow-executor');
+const { executeWorkflow, doesWorkflowTriggerRowFire } = require('../services/workflow/workflow-executor');
 
 /** Normalise les IDs d'état côté serveur (évite chaînes / format legacy etat_id seul). */
 function sanitizeWorkflowTriggerConfig(type, config) {
@@ -328,18 +328,17 @@ router.patch('/:id/toggle', authenticate, checkPermission(1, 2, 7, 11), async (r
   }
 });
 
-// Tester un workflow
+// Tester un workflow (simulation du matching des déclencheurs + liste des actions)
 router.post('/:id/test', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { id } = req.params;
-    const { test_data } = req.body; // Données de test (fiche, etc.)
+    const { test_data } = req.body;
 
     const workflow = await queryOne('SELECT * FROM workflows WHERE id = ?', [id]);
     if (!workflow) {
       return res.status(404).json({ success: false, message: 'Workflow non trouvé' });
     }
 
-    // Récupérer triggers et actions
     const triggers = await query(
       'SELECT * FROM workflow_triggers WHERE id_workflow = ?',
       [id]
@@ -349,28 +348,39 @@ router.post('/:id/test', authenticate, checkPermission(1, 2, 7, 11), async (req,
       [id]
     );
 
-    // Simuler l'exécution (sans vraiment exécuter)
+    const eventData = test_data && typeof test_data === 'object' ? test_data : {
+      fiche: { id: 1, id_etat_final: 8, valider: 1 },
+      old_etat: 7,
+      new_etat: 8,
+      old_etat_titre: 'CONFIRMER',
+      new_etat_titre: 'ANNULER',
+      user: { id: req.user?.id, pseudo: req.user?.pseudo }
+    };
+
     const result = {
       workflow_id: id,
       workflow_nom: workflow.nom,
+      workflow_actif: workflow.actif,
       triggers_matched: [],
       actions_to_execute: [],
-      simulation: true
+      would_execute: false,
+      simulation: true,
+      test_event: eventData
     };
 
-    // Vérifier les triggers
     for (const trigger of triggers) {
       const config = trigger.config ? JSON.parse(trigger.config) : null;
       const conditions = trigger.conditions ? JSON.parse(trigger.conditions) : null;
+      const wouldMatch = doesWorkflowTriggerRowFire(trigger, trigger.type, eventData);
       result.triggers_matched.push({
         type: trigger.type,
         config,
         conditions,
-        would_match: true // Simplifié pour le test
+        would_match: wouldMatch
       });
+      if (wouldMatch) result.would_execute = true;
     }
 
-    // Lister les actions
     for (const action of actions) {
       const config = action.config ? JSON.parse(action.config) : null;
       result.actions_to_execute.push({
