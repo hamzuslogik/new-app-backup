@@ -22,6 +22,50 @@ function addWorkingDays(date, days) {
   return result;
 }
 
+/** Colonnes réelles de la table fiches (cache session requête). */
+let ficheTableColumnsCache = null;
+async function getFicheTableColumns() {
+  if (ficheTableColumnsCache) return ficheTableColumnsCache;
+  const rows = await query(
+    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fiches'`
+  );
+  ficheTableColumnsCache = new Set((rows || []).map((r) => r.COLUMN_NAME));
+  return ficheTableColumnsCache;
+}
+
+/**
+ * Champs Phase 3 stockés sur compte_rendu_pending → colonne fiches.
+ * valeur_mensualite existe sur compte_rendu_pending (« Partie à financer ») mais pas sur
+ * toutes les bases fiches : on ne l'écrit que si la colonne existe (voir migration SQL).
+ * ph3_mensualite = « Mensualité du crédit » sur les deux tables.
+ */
+const COMPTE_RENDU_PH3_TO_FICHE = {
+  ph3_installateur: 'ph3_installateur',
+  ph3_pac: 'ph3_pac',
+  ph3_puissance: 'ph3_puissance',
+  ph3_puissance_pv: 'ph3_puissance_pv',
+  ph3_rr_model: 'ph3_rr_model',
+  ph3_ballon: 'ph3_ballon',
+  ph3_marque_ballon: 'ph3_marque_ballon',
+  ph3_alimentation: 'ph3_alimentation',
+  ph3_type: 'ph3_type',
+  ph3_prix: 'ph3_prix',
+  ph3_bonus_30: 'ph3_bonus_30',
+  ph3_mensualite: 'ph3_mensualite',
+  ph3_attente: 'ph3_attente',
+  nbr_annee_finance: 'nbr_annee_finance',
+  credit_immobilier: 'credit_immobilier',
+  credit_autre: 'credit_autre',
+  valeur_mensualite: 'valeur_mensualite',
+  conf_consommations: 'conf_consommations',
+};
+
+const COMPTE_RENDU_PH3_DECIMAL_FIELDS = new Set([
+  'ph3_prix', 'ph3_bonus_30', 'ph3_mensualite', 'credit_immobilier', 'credit_autre',
+  'valeur_mensualite', 'conf_consommations',
+]);
+
 // =====================================================
 // ROUTE: POST /api/compte-rendu
 // Créer un compte rendu (toute fonction ; doit être approuvé par admin/backoffice/RP)
@@ -879,32 +923,32 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     }
 
     // Ajouter les informations de vente (Phase 3) et enregistrer dans modifica
-    const ph3Fields = [
-      'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
-      'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
-      'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
-      'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'conf_consommations'
-    ];
+    const ficheTableColumns = await getFicheTableColumns();
 
-    for (const field of ph3Fields) {
-      if (compteRendu[field] !== null && compteRendu[field] !== undefined) {
-        const oldValue = ancienneFiche[field];
-        let newValue = compteRendu[field];
-        if (field === 'nbr_annee_finance') {
-          newValue = String(newValue).trim() === '' ? null : parseInt(newValue, 10);
-        } else if (['ph3_prix', 'ph3_bonus_30', 'ph3_mensualite', 'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'conf_consommations'].includes(field)) {
-          newValue = String(newValue).trim() === '' ? null : parseFloat(newValue);
-        }
-        
-        // Enregistrer la modification dans modifica si la valeur a changé
-        if (oldValue !== newValue) {
-          await logModification(compteRendu.id_fiche, user.id, field, oldValue, newValue, now);
-        }
-        
-        if (!fields.includes(`\`${field}\` = ?`)) {
-          fields.push(`\`${field}\` = ?`);
-          values.push(compteRendu[field]);
-        }
+    for (const [crField, ficheColumn] of Object.entries(COMPTE_RENDU_PH3_TO_FICHE)) {
+      if (!ficheTableColumns.has(ficheColumn)) {
+        continue;
+      }
+      if (compteRendu[crField] === null || compteRendu[crField] === undefined) {
+        continue;
+      }
+
+      const oldValue = ancienneFiche[ficheColumn];
+      let newValue = compteRendu[crField];
+      if (crField === 'nbr_annee_finance') {
+        newValue = String(newValue).trim() === '' ? null : parseInt(newValue, 10);
+      } else if (COMPTE_RENDU_PH3_DECIMAL_FIELDS.has(crField)) {
+        newValue = String(newValue).trim() === '' ? null : parseFloat(newValue);
+      }
+
+      if (oldValue !== newValue) {
+        await logModification(compteRendu.id_fiche, user.id, ficheColumn, oldValue, newValue, now);
+      }
+
+      const sqlFragment = `\`${ficheColumn}\` = ?`;
+      if (!fields.includes(sqlFragment)) {
+        fields.push(sqlFragment);
+        values.push(newValue);
       }
     }
 
