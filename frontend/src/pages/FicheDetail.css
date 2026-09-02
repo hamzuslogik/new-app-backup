@@ -2266,6 +2266,20 @@
   background: #e8f4f8;
 }
 
+/* Pseudo commercial à côté de <CR> : couleur du bandeau (blanc), pas le bleu « Commercial » des détails */
+.fiche-detail-cr-commercial-pseudo {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+.etat-actuel-card .etat-actuel-badge .fiche-detail-cr-commercial-pseudo,
+.etat-historique-card .historique-header .fiche-detail-cr-commercial-pseudo {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+}
+
 /* État CONFIRMER (7) — détails : lisibilité date RDV / commercial / confirmateur */
 /* !important : d'autres feuilles (ex. modal dashboard) imposent color sur span avec !important */
 .etat-current-history-section span.fiche-detail-etat-confirmer-val--rdv,

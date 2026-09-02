@@ -4841,8 +4841,7 @@ const FicheDetail = ({
                               <span style={{ marginRight: '6px' }}>&lt;CR&gt;</span>
                               {crPseudoEtatActuel && (
                                 <span
-                                  className="fiche-detail-etat-confirmer-val--commercial"
-                                  data-confirmer-hl="commercial"
+                                  className="fiche-detail-cr-commercial-pseudo"
                                   style={{ marginRight: '6px' }}
                                 >
                                   {formatAgentPseudoDisplay(crPseudoEtatActuel)} –
@@ -5634,10 +5633,7 @@ const FicheDetail = ({
                                           {histo.cr_commercial_pseudo ? (
                                             <>
                                               {' '}
-                                              <span
-                                                className="fiche-detail-etat-confirmer-val--commercial"
-                                                data-confirmer-hl="commercial"
-                                              >
+                                              <span className="fiche-detail-cr-commercial-pseudo">
                                                 {formatAgentPseudoDisplay(histo.cr_commercial_pseudo)}
                                               </span>
                                             </>
