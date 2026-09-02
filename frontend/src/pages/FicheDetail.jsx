@@ -4077,12 +4077,6 @@ const FicheDetail = ({
                 const cqDoneDateLabel =
                   embedded && cqDone ? formatControleQualiteDate(resolveControleQualiteDate(fiche)) : null;
                 return (
-                  <>
-                    {cqDoneDateLabel && (
-                      <p className="controle-qualite-card__done-date">
-                        Contrôle qualité effectué le {cqDoneDateLabel}
-                      </p>
-                    )}
                   <div className={`controle-qualite-card${embedded ? ' controle-qualite-card--embedded' : ''}`}>
                     <div className="controle-qualite-card__header">CONTROLE QUALITE:</div>
                     <div className="controle-qualite-card__body">
@@ -4133,6 +4127,11 @@ const FicheDetail = ({
                           placeholder="Commentaires..."
                         />
                       </div>
+                      {cqDoneDateLabel && (
+                        <p className="controle-qualite-card__done-date">
+                          Contrôle qualité effectué le {cqDoneDateLabel}
+                        </p>
+                      )}
                       <div className="controle-qualite-actions">
                         <button
                           type="button"
@@ -4149,7 +4148,6 @@ const FicheDetail = ({
                       </div>
                     </div>
                   </div>
-                  </>
                 );
               };
 
