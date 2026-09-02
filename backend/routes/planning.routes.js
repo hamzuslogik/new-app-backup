@@ -216,17 +216,17 @@ router.get('/week', authenticate, async (req, res) => {
 
     // CONFIRMER (état 7) sur la semaine :
     // - par défaut : CP dans le département (cp LIKE dep%)
-    // - si ic / id_commercial : tous les RDV du commercial (id_commercial ou id_commercial_2), tous départements
+    // - si ic / id_commercial : tous les RDV du commercial (id_commercial uniquement), tous départements
     const whereCondition = useCommercialWeek
       ? `WHERE fiche.date_rdv_time >= ? AND fiche.date_rdv_time <= ?
        AND fiche.id_etat_final = 7
-       AND (fiche.id_commercial = ? OR fiche.id_commercial_2 = ?)`
+       AND fiche.id_commercial = ?`
       : `WHERE fiche.date_rdv_time >= ? AND fiche.date_rdv_time <= ?
        AND fiche.cp LIKE ?
        AND fiche.id_etat_final = 7`;
 
     const fichesParams = useCommercialWeek
-      ? [`${weekStart} 00:00:00`, `${weekEnd} 23:59:59`, idCommercialFilter, idCommercialFilter]
+      ? [`${weekStart} 00:00:00`, `${weekEnd} 23:59:59`, idCommercialFilter]
       : [`${weekStart} 00:00:00`, `${weekEnd} 23:59:59`, `${dep}%`];
 
     const fiches = await query(
@@ -2129,10 +2129,9 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
       const params = [dateStart, dateEnd];
 
       if (type === 'affilie') {
-        conditions.push('((f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0) OR (f.id_commercial_2 IS NOT NULL AND CAST(f.id_commercial_2 AS UNSIGNED) > 0))');
+        conditions.push('(f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0)');
       } else if (type === 'non_affilie') {
         conditions.push('(f.id_commercial IS NULL OR CAST(COALESCE(f.id_commercial, 0) AS UNSIGNED) = 0)');
-        conditions.push('(f.id_commercial_2 IS NULL OR CAST(COALESCE(f.id_commercial_2, 0) AS UNSIGNED) = 0)');
       } else if (type !== 'jour' && type !== 'production_rdv') {
         return res.status(400).json({
           success: false,

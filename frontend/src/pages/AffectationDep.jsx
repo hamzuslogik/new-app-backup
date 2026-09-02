@@ -314,13 +314,12 @@ const AffectationDep = () => {
     setFilterCommercialId((prev) => (prev === commercialId ? null : commercialId));
   };
 
-  /** Filtre affichage (sécurité) : commercial principal ou R2 — le mode ic côté API charge déjà tous les RDV du commercial */
+  /** Filtre affichage : commercial principal (id_commercial) uniquement */
   const rdvMatchesCommercialFilter = (rdv) => {
     if (filterCommercialId == null) return true;
     const fid = Number(filterCommercialId);
     const c1 = rdv.id_commercial != null ? Number(rdv.id_commercial) : null;
-    const c2 = rdv.id_commercial_2 != null ? Number(rdv.id_commercial_2) : null;
-    return c1 === fid || c2 === fid;
+    return c1 === fid;
   };
 
   // Calculer les distances entre les codes postaux des RDV sélectionnés
