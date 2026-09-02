@@ -511,15 +511,27 @@ const decodeFicheId = (hash) => {
 // Middleware pour convertir le hash en ID dans les paramètres
 const hashToIdMiddleware = async (req, res, next) => {
   try {
-    const { parseFicheRouteIdentifier } = require('../utils/ficheRouteIdentifier');
+    const { parseFicheRouteIdentifier, mergeFicheRouteQueries } = require('../utils/ficheRouteIdentifier');
+    let embeddedQuery = null;
     if (req.params.id) {
       const parsed = parseFicheRouteIdentifier(req.params.id);
       req.params.id = parsed.identifier;
+      if (parsed.embeddedQuery) embeddedQuery = parsed.embeddedQuery;
     }
     if (req.params.hash) {
       const parsed = parseFicheRouteIdentifier(req.params.hash);
       req.params.hash = parsed.identifier;
+      if (parsed.embeddedQuery) embeddedQuery = parsed.embeddedQuery;
     }
+
+    // close=0 peut être en query (?close=0) ou collé au path (...&close=0)
+    const routeQuery = mergeFicheRouteQueries(
+      embeddedQuery,
+      req.originalUrl && String(req.originalUrl).includes('?')
+        ? String(req.originalUrl).split('?').slice(1).join('?')
+        : (req.query ? new URLSearchParams(req.query).toString() : '')
+    );
+    const isCloseZeroMode = routeQuery.get('close') === '0';
 
     // Cache court pour éviter une requête DB à chaque hit
     if (!global.__phoneUrlSearchSettingCache) {
@@ -566,7 +578,12 @@ const hashToIdMiddleware = async (req, res, next) => {
       return digits.length >= 10 && digits.length <= 14;
     };
 
-    const findFicheIdByPhone = async (rawPhone) => {
+    /**
+     * Résolution téléphone → id fiche.
+     * Priorité aux fiches non archivées (archive = 0 / NULL).
+     * En mode close=0 : uniquement archive=0 (pas de repli sur archivée).
+     */
+    const findFicheIdByPhone = async (rawPhone, { nonArchivedOnly = false } = {}) => {
       if (!rawPhone) return null;
       const trimmed = String(rawPhone).trim();
       if (!trimmed) return null;
@@ -588,16 +605,31 @@ const hashToIdMiddleware = async (req, res, next) => {
       if (vals.length === 0) return null;
 
       const placeholders = vals.map(() => '?').join(',');
-      const found = await queryOne(
+      const phoneParams = [...vals, ...vals, ...vals];
+      const phoneWhere = `(tel IN (${placeholders}) OR gsm1 IN (${placeholders}) OR gsm2 IN (${placeholders}))`;
+
+      // 1) Toujours privilégier la fiche active (non archivée), la plus récente
+      const activeFound = await queryOne(
         `SELECT id FROM fiches
-         WHERE tel IN (${placeholders})
-            OR gsm1 IN (${placeholders})
-            OR gsm2 IN (${placeholders})
+         WHERE ${phoneWhere}
+           AND (archive = 0 OR archive IS NULL)
          ORDER BY id DESC
          LIMIT 1`,
-        [...vals, ...vals, ...vals]
+        phoneParams
       );
-      return found?.id || null;
+      if (activeFound?.id) return activeFound.id;
+
+      // 2) Hors mode close=0 : repli éventuel sur une fiche archivée
+      if (nonArchivedOnly) return null;
+
+      const archivedFound = await queryOne(
+        `SELECT id FROM fiches
+         WHERE ${phoneWhere}
+         ORDER BY id DESC
+         LIMIT 1`,
+        phoneParams
+      );
+      return archivedFound?.id || null;
     };
 
     // Gérer le paramètre 'id'
@@ -610,7 +642,7 @@ const hashToIdMiddleware = async (req, res, next) => {
         // Si ça ressemble à un numéro de téléphone, PRIORITÉ à la recherche téléphone
         // (évite 0610895976 -> parseInt -> 610895976, faux ID)
         if (looksLikePhoneNumber(req.params.id) && await getPhoneUrlSearchEnabled()) {
-          const phoneMatchedId = await findFicheIdByPhone(req.params.id);
+          const phoneMatchedId = await findFicheIdByPhone(req.params.id, { nonArchivedOnly: isCloseZeroMode });
           if (phoneMatchedId) {
             req.params.id = phoneMatchedId;
             return next();
@@ -623,7 +655,7 @@ const hashToIdMiddleware = async (req, res, next) => {
           req.params.id = directId;
         } else {
           // Si ce n'est ni un hash ni un id, essayer comme numéro de téléphone (tel/gsm1/gsm2)
-          const phoneMatchedId = await findFicheIdByPhone(req.params.id);
+          const phoneMatchedId = await findFicheIdByPhone(req.params.id, { nonArchivedOnly: isCloseZeroMode });
           if (phoneMatchedId) {
             req.params.id = phoneMatchedId;
             return next();
@@ -663,7 +695,7 @@ const hashToIdMiddleware = async (req, res, next) => {
       } else {
         // Si ça ressemble à un téléphone, le rechercher avant parseInt
         if (looksLikePhoneNumber(req.params.hash) && await getPhoneUrlSearchEnabled()) {
-          const phoneMatchedId = await findFicheIdByPhone(req.params.hash);
+          const phoneMatchedId = await findFicheIdByPhone(req.params.hash, { nonArchivedOnly: isCloseZeroMode });
           if (phoneMatchedId) {
             req.params.id = phoneMatchedId;
             delete req.params.hash;
@@ -678,7 +710,7 @@ const hashToIdMiddleware = async (req, res, next) => {
           delete req.params.hash;
         } else {
           // Fallback: autoriser /fiches/<tel> en résolvant via tel/gsm1/gsm2
-          const phoneMatchedId = await findFicheIdByPhone(req.params.hash);
+          const phoneMatchedId = await findFicheIdByPhone(req.params.hash, { nonArchivedOnly: isCloseZeroMode });
           if (phoneMatchedId) {
             req.params.id = phoneMatchedId;
             delete req.params.hash;
