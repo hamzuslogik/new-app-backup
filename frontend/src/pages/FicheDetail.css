@@ -2280,7 +2280,7 @@
 .historique-list span.fiche-detail-etat-confirmer-val--commercial,
 .fiche-detail-etat-confirmer-val--commercial {
   color: #1d4ed8 !important;
-  font-weight: 700 !important;
+  font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
 }
@@ -2289,7 +2289,7 @@
 .historique-list span.fiche-detail-etat-confirmer-val--confirmateur,
 .fiche-detail-etat-confirmer-val--confirmateur {
   color: #b91c1c !important;
-  font-weight: 700 !important;
+  font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
 }
@@ -2301,13 +2301,13 @@
 }
 .fiche-detail-modal-content span.fiche-detail-etat-confirmer-val--commercial {
   color: #1d4ed8 !important;
-  font-weight: 700 !important;
+  font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
 }
 .fiche-detail-modal-content span.fiche-detail-etat-confirmer-val--confirmateur {
   color: #b91c1c !important;
-  font-weight: 700 !important;
+  font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
 }
@@ -2326,7 +2326,7 @@
 .etat-actuel-card span[data-confirmer-hl='commercial'],
 .historique-list span[data-confirmer-hl='commercial'] {
   color: #1d4ed8 !important;
-  font-weight: 700 !important;
+  font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
   -webkit-text-fill-color: #1d4ed8 !important;
@@ -2336,7 +2336,7 @@
 .etat-actuel-card span[data-confirmer-hl='confirmateur'],
 .historique-list span[data-confirmer-hl='confirmateur'] {
   color: #b91c1c !important;
-  font-weight: 700 !important;
+  font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
   -webkit-text-fill-color: #b91c1c !important;
@@ -2578,6 +2578,7 @@
 .etat-actuel-card span.fiche-detail-etat-confirmer-val--commercial {
   color: #1d4ed8 !important;
   -webkit-text-fill-color: #1d4ed8 !important;
+  font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
 }
@@ -2585,6 +2586,7 @@
 .etat-actuel-card span.fiche-detail-etat-confirmer-val--confirmateur {
   color: #b91c1c !important;
   -webkit-text-fill-color: #b91c1c !important;
+  font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
 }
@@ -2691,6 +2693,7 @@
 .etat-historique-card span.fiche-detail-etat-confirmer-val--commercial {
   color: #1d4ed8 !important;
   -webkit-text-fill-color: #1d4ed8 !important;
+  font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
 }
@@ -2698,6 +2701,7 @@
 .etat-historique-card span.fiche-detail-etat-confirmer-val--confirmateur {
   color: #b91c1c !important;
   -webkit-text-fill-color: #b91c1c !important;
+  font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
 }

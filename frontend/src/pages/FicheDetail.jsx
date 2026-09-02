@@ -146,11 +146,12 @@ function canShowQualiteConfirmationBackofficePanel(user) {
 function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
   const L = normalizeDetailItemLabel(itemLabel);
   const bold = { fontWeight: 700 };
+  const agentBold = { fontWeight: 900 };
   // Commercial : toujours en bleu, quel que soit l'etat (gere aussi « Commercial 1 », « Commercial 2 »)
   if (/^Commercial(\s*\d+)?$/i.test(L)) {
     return {
       className: 'fiche-detail-etat-confirmer-val--commercial',
-      style: { ...bold, color: '#1d4ed8', fontSize: '15px', textTransform: 'uppercase' },
+      style: { ...agentBold, color: '#1d4ed8', fontSize: '15px', textTransform: 'uppercase' },
       dataHl: 'commercial',
     };
   }
@@ -158,7 +159,7 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
   if (/^Confirmateur(\s*\d+)?$/i.test(L)) {
     return {
       className: 'fiche-detail-etat-confirmer-val--confirmateur',
-      style: { ...bold, color: '#b91c1c', fontSize: '15px', textTransform: 'uppercase' },
+      style: { ...agentBold, color: '#b91c1c', fontSize: '15px', textTransform: 'uppercase' },
       dataHl: 'confirmateur',
     };
   }
