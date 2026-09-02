@@ -101,6 +101,34 @@ const COMPTE_RENDU_PH3_DECIMAL_FIELDS = new Set([
   'valeur_mensualite', 'conf_consommations',
 ]);
 
+/** États pouvant porter un sous-état (aligné frontend FicheDetail / EditCompteRenduModal). */
+const ETATS_AVEC_SOUS_ETAT = new Set([2, 8, 11, 12, 13, 16, 19, 44, 45]);
+
+/**
+ * Sous-état à appliquer sur fiches / fiches_histo à l'approbation d'un CR :
+ * - null si l'état cible n'en porte pas (ex. 9, 34, 35) → efface l'ancien sous-état
+ * - null si le CR n'en fournit pas
+ * - validé en BDD (id_sous_etat doit appartenir à id_etat_final)
+ */
+async function resolveSousEtatForCompteRenduApproval(idEtatFinal, idSousEtatFromCr) {
+  const etatId = idEtatFinal != null && idEtatFinal !== '' ? parseInt(idEtatFinal, 10) : null;
+  if (!etatId || !ETATS_AVEC_SOUS_ETAT.has(etatId)) {
+    return null;
+  }
+  if (idSousEtatFromCr == null || idSousEtatFromCr === '') {
+    return null;
+  }
+  const sousEtatId = parseInt(idSousEtatFromCr, 10);
+  if (!Number.isFinite(sousEtatId) || sousEtatId <= 0) {
+    return null;
+  }
+  const row = await queryOne(
+    'SELECT id FROM sous_etat WHERE id = ? AND id_etat = ? LIMIT 1',
+    [sousEtatId, etatId]
+  );
+  return row ? sousEtatId : null;
+}
+
 // =====================================================
 // ROUTE: POST /api/compte-rendu
 // Créer un compte rendu (toute fonction ; doit être approuvé par admin/backoffice/RP)
@@ -806,6 +834,10 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
 
     const ancienEtat = ancienneFiche.id_etat_final;
     const nouveauEtat = compteRendu.id_etat_final || modifications.id_etat_final || ancienEtat;
+    const sousEtatFinal = await resolveSousEtatForCompteRenduApproval(
+      nouveauEtat,
+      compteRendu.id_sous_etat
+    );
 
     // Appliquer les modifications à la fiche
     const fields = [];
@@ -944,6 +976,26 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       }
     }
 
+    // Synchroniser le sous-état : appliquer celui du CR ou effacer si l'état cible n'en a pas
+    const ancienSousEtat = ancienneFiche.id_sous_etat ?? null;
+    const sousEtatChanged =
+      (ancienSousEtat == null ? null : Number(ancienSousEtat)) !==
+      (sousEtatFinal == null ? null : Number(sousEtatFinal));
+    if (sousEtatChanged) {
+      await logModification(
+        compteRendu.id_fiche,
+        user.id,
+        'id_sous_etat',
+        ancienSousEtat,
+        sousEtatFinal,
+        now
+      );
+    }
+    if (!fields.includes('`id_sous_etat` = ?')) {
+      fields.push('`id_sous_etat` = ?');
+      values.push(sousEtatFinal);
+    }
+
     // Déballé veut réfléchir (honoré à suivre) : définir automatiquement date_rdv_time = date rappel à J+2 jours ouvrés (lundi-vendredi)
     const idEtatFinal = compteRendu.id_etat_final || modifications.id_etat_final || ancienEtat;
     if (idEtatFinal === 9 && !modifications.date_rdv_time) {
@@ -1062,8 +1114,9 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
         await query(
           `INSERT INTO fiches_histo (
              id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr,
-             id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial
-           ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)`,
+             id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial,
+             id_sous_etat
+           ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`,
           [
             compteRendu.id_fiche,
             nouveauEtat,
@@ -1072,7 +1125,8 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
             snapConf1,
             snapConf2,
             snapConf3,
-            snapCom
+            snapCom,
+            sousEtatFinal
           ]
         );
       };
@@ -1083,8 +1137,8 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
             `INSERT INTO fiches_histo (
                id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr,
                id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial,
-               conf_commentaire_produit
-             ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`,
+               id_sous_etat, conf_commentaire_produit
+             ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`,
             [
               compteRendu.id_fiche,
               nouveauEtat,
@@ -1094,6 +1148,7 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
               snapConf2,
               snapConf3,
               snapCom,
+              sousEtatFinal,
               histoCommentaire
             ]
           );
@@ -1101,7 +1156,7 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
           await histoInsertBase();
         }
       } catch (histoErr) {
-        // Colonne conf_commentaire_produit absente : insert sans commentaire
+        // Colonne conf_commentaire_produit ou id_sous_etat absente : insert sans commentaire
         if (histoErr && histoErr.code === 'ER_BAD_FIELD_ERROR' && histoCommentaire) {
           try {
             await histoInsertBase();
@@ -1116,10 +1171,33 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
             }
           }
         } else if (histoErr && histoErr.code === 'ER_BAD_FIELD_ERROR') {
-          await query(
-            `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr) VALUES (?, ?, ?, 1, ?)`,
-            [compteRendu.id_fiche, nouveauEtat, now, idCommercialCr]
-          );
+          try {
+            await query(
+              `INSERT INTO fiches_histo (
+                 id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr,
+                 id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial
+               ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)`,
+              [
+                compteRendu.id_fiche,
+                nouveauEtat,
+                now,
+                idCommercialCr,
+                snapConf1,
+                snapConf2,
+                snapConf3,
+                snapCom
+              ]
+            );
+          } catch (histoErr3) {
+            if (histoErr3 && histoErr3.code === 'ER_BAD_FIELD_ERROR') {
+              await query(
+                `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr) VALUES (?, ?, ?, 1, ?)`,
+                [compteRendu.id_fiche, nouveauEtat, now, idCommercialCr]
+              );
+            } else {
+              throw histoErr3;
+            }
+          }
         } else {
           throw histoErr;
         }

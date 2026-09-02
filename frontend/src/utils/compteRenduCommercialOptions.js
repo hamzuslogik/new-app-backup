@@ -125,15 +125,15 @@ export function buildEtatFormPatchForCompteRenduOption(optionKey, { ficheData, s
   }
 
   if (opt.etatId === 9) {
-    return { selectedEtat: opt.etatId, patch: { conf_commentaire_produit: '' } };
+    return { selectedEtat: opt.etatId, patch: { conf_commentaire_produit: '', id_sous_etat: '' } };
   }
 
   if (opt.etatId === 12 || opt.etatId === 34) {
-    return { selectedEtat: opt.etatId, patch: { conf_commentaire_produit: '', motif_qualif: '' } };
+    return { selectedEtat: opt.etatId, patch: { conf_commentaire_produit: '', motif_qualif: '', id_sous_etat: '' } };
   }
 
   if (opt.etatId === 35) {
-    return { selectedEtat: opt.etatId, patch: { conf_commentaire_produit: '' } };
+    return { selectedEtat: opt.etatId, patch: { conf_commentaire_produit: '', id_sous_etat: '' } };
   }
 
   if (opt.annulerReproSimple) {

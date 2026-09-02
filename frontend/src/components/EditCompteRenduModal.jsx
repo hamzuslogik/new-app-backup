@@ -11,7 +11,7 @@ import {
   SignerProduitPacPvFields,
   SignerBonusAnnonceSelect,
 } from './SignerProduitFormFields';
-import { validateSignerCompteRenduForm, alertSignerCompteRenduValidation } from '../utils/validateSignerCompteRendu';
+import { validateSignerCompteRenduForm, alertSignerCompteRenduValidation, filterSignerSousEtats } from '../utils/validateSignerCompteRendu';
 import './EditCompteRenduModal.css';
 
 const getLocalTodayDate = () => {
@@ -183,6 +183,9 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
   const isEtatHonoreSuivre = idEtat === 9;
   const isEtatCommentaireSeul = [9, 12, 23, 34, 35].includes(idEtat);
   const isEtat11ou12 = idEtat === 11 || idEtat === 12;
+  const sousEtatsForForm = isEtatSigner
+    ? filterSignerSousEtats(sousEtatsData)
+    : sousEtatsData;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -196,7 +199,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
       const signerValidation = validateSignerCompteRenduForm({
         etatFormData: formData,
         produits: produitsData,
-        sousEtats: sousEtatsData,
+        sousEtats: sousEtatsForForm,
         requireCommercial: false,
         sousEtatsMode: 'any',
         extraFields: {
@@ -230,7 +233,12 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
 
     const data = {
       id_etat_final: formData.id_etat_final || null,
-      id_sous_etat: formData.id_sous_etat || null,
+      id_sous_etat:
+        etatsAvecListeSousEtats.includes(parseInt(formData.id_etat_final, 10)) &&
+        formData.id_sous_etat &&
+        String(formData.id_sous_etat).trim() !== ''
+          ? parseInt(formData.id_sous_etat, 10)
+          : null,
       produit: isEtatSigner && formData.produit ? parseInt(formData.produit, 10) : null,
       commentaire:
         isEtat11ou12 && !(formData.id_sous_etat && String(formData.id_sous_etat).trim() !== '')
@@ -355,7 +363,7 @@ const EditCompteRenduModal = ({ compteRendu, etats, onClose, onSave, isLoading, 
                 disabled={readOnly}
               >
                 <option value="">{isEtat11ou12 ? '—' : 'Sélectionner un sous-état'}</option>
-                {sousEtatsData.map(sousEtat => (
+                {sousEtatsForForm.map(sousEtat => (
                   <option key={sousEtat.id} value={sousEtat.id}>{sousEtat.titre}</option>
                 ))}
               </select>
