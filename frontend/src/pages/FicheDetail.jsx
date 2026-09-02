@@ -4431,13 +4431,7 @@ const FicheDetail = ({
                   if (etatData.ph3_mensualite) items.push({ label: 'Mensualité du crédit', value: etatData.ph3_mensualite });
                   if (etatData.ph3_nbr_annee_finance) items.push({ label: 'Nombre de mois du crédit', value: etatData.ph3_nbr_annee_finance });
                   if (etatData.ph3_alimentation) items.push({ label: 'Alimentation', value: etatData.ph3_alimentation });
-                  // Contrôle qualité : affichage uniquement pour l'état SIGNER (13), pas les autres états signer.
-                  if (isEtatSigner13(etatId)) {
-                    if (etatData.cq_etat) items.push({ label: 'CQ ETAT', value: etatData.cq_etat });
-                    if (etatData.cq_dossier) items.push({ label: 'CQ DOSSIER', value: etatData.cq_dossier });
-                    const observationCQ = cleanObservationCQ(etatData.observations_cq);
-                    if (observationCQ) items.push({ label: 'Observation', value: observationCQ, fullWidth: true });
-                  }
+                  // CQ ETAT / CQ DOSSIER / Observation : uniquement dans le formulaire CONTROLE QUALITE, pas dans les détails signature.
                 }
                 // CONFIRMER (7) — confirmateur(s) depuis fiches_histo ; champs conf_ remplis
                 else if (Number(etatId) === 7) {
