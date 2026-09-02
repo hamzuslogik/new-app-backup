@@ -4174,6 +4174,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       date_appel_time: toLocalDatetimeString(fiche.date_appel_time),
       date_modif_time: toLocalDatetimeString(fiche.date_modif_time),
       date_insert_time: toLocalDatetimeString(fiche.date_insert_time),
+      cq_date_modif: fiche.cq_date_modif != null ? toLocalDatetimeString(fiche.cq_date_modif) : null,
       cqe: cq_etat,
       cqd: cq_dossier,
       installeur: installeur,
@@ -5064,9 +5065,23 @@ router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req
     const cqDossierVal = cq_dossier !== undefined && cq_dossier !== '' ? parseInt(cq_dossier) || null : fiche.cq_dossier;
     const observationsVal = observations_cq !== undefined ? cleanObservationCQ(observations_cq) : (fiche.observations_cq ?? null);
 
+    const cqDone =
+      cqEtatVal != null && cqEtatVal !== '' && cqDossierVal != null && cqDossierVal !== '';
+    const ficheCols = await query(
+      `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fiches'`
+    );
+    const ficheColSet = new Set((ficheCols || []).map((c) => c.COLUMN_NAME));
+    const updateFields = ['cq_etat = ?', 'cq_dossier = ?', 'observations_cq = ?', 'date_modif_time = ?'];
+    const updateValues = [cqEtatVal, cqDossierVal, observationsVal, now];
+    if (cqDone && ficheColSet.has('cq_date_modif')) {
+      updateFields.push('cq_date_modif = ?');
+      updateValues.push(now);
+    }
+    updateValues.push(id);
     await query(
-      `UPDATE fiches SET cq_etat = ?, cq_dossier = ?, observations_cq = ?, date_modif_time = ? WHERE id = ?`,
-      [cqEtatVal, cqDossierVal, observationsVal, now, id]
+      `UPDATE fiches SET ${updateFields.join(', ')} WHERE id = ?`,
+      updateValues
     );
 
     if (cqEtatVal !== fiche.cq_etat) {

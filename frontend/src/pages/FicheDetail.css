@@ -3261,6 +3261,28 @@
    Carte « CONTROLE QUALITE » (états signer : 13, 16, 44, 45)
    Cadre avec bandeau d'en-tête + formulaire en ligne (label gauche / champ droite).
    ===================================================== */
+.controle-qualite-card__done-date {
+  margin: 16px auto 0 auto;
+  width: 100%;
+  max-width: 760px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e5e7eb;
+  text-align: left;
+}
+
+.etat-actuel-card .controle-qualite-card__done-date,
+.etat-historique-card .controle-qualite-card__done-date {
+  color: #ffffff;
+}
+
+.controle-qualite-card__done-date + .controle-qualite-card,
+.controle-qualite-card__done-date + .controle-qualite-card.controle-qualite-card--embedded {
+  margin-top: 8px;
+}
+
 .controle-qualite-card {
   margin: 20px auto 0 auto;
   width: 100%;

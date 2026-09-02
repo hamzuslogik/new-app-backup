@@ -4005,6 +4005,45 @@ const FicheDetail = ({
               //   - utilisé dans la carte « État actuel » quand id_etat_final === 13
               //   - utilisé dans l'entrée d'historique état 13 quand l'état actuel n'est pas 13
               // Les données (cq_etat, cq_dossier, observations_cq) sont stockées sur la fiche (table fiches).
+              const isControleQualiteDone = (ficheRow) => {
+                const etat = ficheRow?.cq_etat;
+                const dossier = ficheRow?.cq_dossier;
+                return (
+                  etat != null && etat !== '' && Number(etat) > 0 &&
+                  dossier != null && dossier !== '' && Number(dossier) > 0
+                );
+              };
+
+              const resolveControleQualiteDate = (ficheRow) => {
+                if (ficheRow?.cq_date_modif) return ficheRow.cq_date_modif;
+                const cqTypes = new Set(['cq_etat', 'cq_dossier', 'observations_cq']);
+                const mods = Array.isArray(modificaData) ? modificaData : [];
+                let best = null;
+                for (const m of mods) {
+                  const field = m.type || m.champ;
+                  if (!cqTypes.has(field)) continue;
+                  const d = m.date_modif_time || m.date;
+                  if (!d) continue;
+                  const ts = new Date(d).getTime();
+                  if (Number.isNaN(ts)) continue;
+                  if (best == null || ts > new Date(best).getTime()) best = d;
+                }
+                return best;
+              };
+
+              const formatControleQualiteDate = (value) => {
+                if (value == null || value === '') return null;
+                const d = new Date(value);
+                if (Number.isNaN(d.getTime())) return String(value);
+                return d.toLocaleString('fr-FR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+              };
+
               const renderControleQualiteForm = ({ embedded = false, keySuffix = '' } = {}) => {
                 const ficheHash = fiche.hash || hash;
                 const form = cqFormByHash[ficheHash] || {};
@@ -4016,7 +4055,16 @@ const FicheDetail = ({
                 const idCqEtat = `cq_etat_signer${keySuffix}`;
                 const idCqDossier = `cq_dossier_signer${keySuffix}`;
                 const idObs = `cq_observations_signer${keySuffix}`;
+                const cqDone = isControleQualiteDone(fiche);
+                const cqDoneDateLabel =
+                  embedded && cqDone ? formatControleQualiteDate(resolveControleQualiteDate(fiche)) : null;
                 return (
+                  <>
+                    {cqDoneDateLabel && (
+                      <p className="controle-qualite-card__done-date">
+                        Contrôle qualité effectué le {cqDoneDateLabel}
+                      </p>
+                    )}
                   <div className={`controle-qualite-card${embedded ? ' controle-qualite-card--embedded' : ''}`}>
                     <div className="controle-qualite-card__header">CONTROLE QUALITE:</div>
                     <div className="controle-qualite-card__body">
@@ -4083,6 +4131,7 @@ const FicheDetail = ({
                       </div>
                     </div>
                   </div>
+                  </>
                 );
               };
 
