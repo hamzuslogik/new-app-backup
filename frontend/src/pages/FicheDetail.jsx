@@ -3972,7 +3972,7 @@ const FicheDetail = ({
               const isEtatSigner13 = (id) => Number(id) === 13;
               const cleanObservationCQ = (value) => {
                 if (value == null) return '';
-                return String(value)
+                const cleaned = String(value)
                   .split(/\r?\n/)
                   .map((line) => {
                     const normalized = line
@@ -3991,8 +3991,8 @@ const FicheDetail = ({
                     return line.replace(/^\s*observations?\s*:?\s*/i, '');
                   })
                   .filter((line) => String(line).trim() !== '')
-                  .join('\n')
-                  .trim();
+                  .join('\n');
+                return cleaned.trim() === '' ? '' : cleaned;
               };
 
               // Formulaire Contrôle Qualité réutilisable :
@@ -4005,7 +4005,7 @@ const FicheDetail = ({
                 const vCqEtat = form.cq_etat !== undefined ? form.cq_etat : String(fiche.cq_etat ?? '');
                 const vCqDossier = form.cq_dossier !== undefined ? form.cq_dossier : String(fiche.cq_dossier ?? '');
                 const vObs = form.observations !== undefined
-                  ? cleanObservationCQ(form.observations)
+                  ? form.observations
                   : cleanObservationCQ(fiche.observations_cq);
                 const idCqEtat = `cq_etat_signer${keySuffix}`;
                 const idCqDossier = `cq_dossier_signer${keySuffix}`;

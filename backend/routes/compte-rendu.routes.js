@@ -22,6 +22,41 @@ function addWorkingDays(date, days) {
   return result;
 }
 
+/** Normalise une date/heure MySQL (YYYY-MM-DD HH:MM[:SS]). */
+function normalizeMysqlDateTime(value) {
+  if (value == null) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    const hh = String(value.getHours()).padStart(2, '0');
+    const mm = String(value.getMinutes()).padStart(2, '0');
+    const ss = String(value.getSeconds()).padStart(2, '0');
+    return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+  }
+  const raw = String(value).trim().replace('T', ' ');
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(raw)) return `${raw}:00`;
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(raw)) return raw.slice(0, 19);
+  return null;
+}
+
+/**
+ * Date/heure de signature à écrire dans signature.date_heure :
+ * priorité à la date mentionnée dans le CR (modifications.date_sign_time),
+ * jamais date_creation, date_visite (planning) ni date d'approbation.
+ */
+function resolveSignatureDateHeureFromCompteRendu(compteRendu, modifications, fiche) {
+  const candidates = [
+    modifications?.date_sign_time,
+    fiche?.date_sign_time,
+  ];
+  for (const candidate of candidates) {
+    const normalized = normalizeMysqlDateTime(candidate);
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
 /** Colonnes réelles de la table fiches (cache session requête). */
 let ficheTableColumnsCache = null;
 async function getFicheTableColumns() {
@@ -1018,8 +1053,12 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
           ? Number(ficheAvantDesaffectation.id_commercial)
           : (compteRendu.id_commercial ? Number(compteRendu.id_commercial) : null);
       const idCommercialCr = compteRendu.id_commercial || snapCom || null;
+      const histoCommentaire =
+        compteRendu.commentaire != null && String(compteRendu.commentaire).trim() !== ''
+          ? String(compteRendu.commentaire).trim()
+          : null;
 
-      try {
+      const histoInsertBase = async () => {
         await query(
           `INSERT INTO fiches_histo (
              id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr,
@@ -1036,9 +1075,47 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
             snapCom
           ]
         );
+      };
+
+      try {
+        if (histoCommentaire) {
+          await query(
+            `INSERT INTO fiches_histo (
+               id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr,
+               id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial,
+               conf_commentaire_produit
+             ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`,
+            [
+              compteRendu.id_fiche,
+              nouveauEtat,
+              now,
+              idCommercialCr,
+              snapConf1,
+              snapConf2,
+              snapConf3,
+              snapCom,
+              histoCommentaire
+            ]
+          );
+        } else {
+          await histoInsertBase();
+        }
       } catch (histoErr) {
-        // Bases sans toutes les colonnes : insert minimal
-        if (histoErr && histoErr.code === 'ER_BAD_FIELD_ERROR') {
+        // Colonne conf_commentaire_produit absente : insert sans commentaire
+        if (histoErr && histoErr.code === 'ER_BAD_FIELD_ERROR' && histoCommentaire) {
+          try {
+            await histoInsertBase();
+          } catch (histoErr2) {
+            if (histoErr2 && histoErr2.code === 'ER_BAD_FIELD_ERROR') {
+              await query(
+                `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr) VALUES (?, ?, ?, 1, ?)`,
+                [compteRendu.id_fiche, nouveauEtat, now, idCommercialCr]
+              );
+            } else {
+              throw histoErr2;
+            }
+          }
+        } else if (histoErr && histoErr.code === 'ER_BAD_FIELD_ERROR') {
           await query(
             `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr) VALUES (?, ?, ?, 1, ?)`,
             [compteRendu.id_fiche, nouveauEtat, now, idCommercialCr]
@@ -1056,17 +1133,27 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     // SIGNER RETRACTER (16) : ne pas créer / écraser — conserve le propriétaire de la signature SIGNER.
     const etatsSignes = [13, 44, 45];
     if (nouveauEtat && etatsSignes.includes(nouveauEtat) && ficheMiseAJour) {
-      const dateAcceptation = now; // date d'acceptation du compte rendu
+      // Date signature = date mentionnée dans le CR (date_sign_time), pas création ni approbation
+      const dateSignature = resolveSignatureDateHeureFromCompteRendu(
+        compteRendu,
+        modifications,
+        ficheMiseAJour
+      );
+      if (!dateSignature) {
+        console.error(
+          `[compte-rendu][approve] Signature non créée pour fiche ${compteRendu.id_fiche} : date_sign_time absente du compte rendu`
+        );
+      } else {
       const datePlanning = ficheMiseAJour.date_rdv_time || null; // date planning de la fiche
       const tel = ficheMiseAJour.tel;
 
-      // Vérifier si une signature existe déjà pour cette fiche avec cette date d'acceptation
+      // Vérifier si une signature existe déjà pour cette fiche avec cette date de signature
       const signatureExistante = await queryOne(
         `SELECT COUNT(*) as count 
          FROM signature s
          WHERE s.id_fiche = ? 
            AND s.date_heure = ?`,
-        [compteRendu.id_fiche, dateAcceptation]
+        [compteRendu.id_fiche, dateSignature]
       );
 
       // Confirmateurs figés avant désaffectation (pas les slots éventuellement vidés plus tard)
@@ -1103,13 +1190,13 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
              WHERE s.id_fiche = ?
                AND s.confirmateur = ?
                AND s.date_heure = ?`,
-            [compteRendu.id_fiche, idConfirmateur, dateAcceptation]
+            [compteRendu.id_fiche, idConfirmateur, dateSignature]
           );
           if (!existing) {
             await query(
               `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
                VALUES (?, ?, 1.0, ?, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur, dateAcceptation, tel, datePlanning]
+              [compteRendu.id_fiche, idConfirmateur, dateSignature, tel, datePlanning]
             );
           }
         }
@@ -1123,13 +1210,13 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
              WHERE s.id_fiche = ?
                AND s.confirmateur = ?
                AND s.date_heure = ?`,
-            [compteRendu.id_fiche, idConfirmateur, dateAcceptation]
+            [compteRendu.id_fiche, idConfirmateur, dateSignature]
           );
           if (!existing1) {
             await query(
               `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
                VALUES (?, ?, 0.5, ?, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur, dateAcceptation, tel, datePlanning]
+              [compteRendu.id_fiche, idConfirmateur, dateSignature, tel, datePlanning]
             );
           }
           // Confirmateur 2
@@ -1138,13 +1225,13 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
              WHERE s.id_fiche = ?
                AND s.confirmateur = ?
                AND s.date_heure = ?`,
-            [compteRendu.id_fiche, idConfirmateur2, dateAcceptation]
+            [compteRendu.id_fiche, idConfirmateur2, dateSignature]
           );
           if (!existing2) {
             await query(
               `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
                VALUES (?, ?, 0.5, ?, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur2, dateAcceptation, tel, datePlanning]
+              [compteRendu.id_fiche, idConfirmateur2, dateSignature, tel, datePlanning]
             );
           }
         }
@@ -1158,13 +1245,13 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
              WHERE s.id_fiche = ?
                AND s.confirmateur = ?
                AND s.date_heure = ?`,
-            [compteRendu.id_fiche, idConfirmateur, dateAcceptation]
+            [compteRendu.id_fiche, idConfirmateur, dateSignature]
           );
           if (!existing1) {
             await query(
               `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
                VALUES (?, ?, 0.33, ?, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur, dateAcceptation, tel, datePlanning]
+              [compteRendu.id_fiche, idConfirmateur, dateSignature, tel, datePlanning]
             );
           }
           // Confirmateur 2
@@ -1173,13 +1260,13 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
              WHERE s.id_fiche = ?
                AND s.confirmateur = ?
                AND s.date_heure = ?`,
-            [compteRendu.id_fiche, idConfirmateur2, dateAcceptation]
+            [compteRendu.id_fiche, idConfirmateur2, dateSignature]
           );
           if (!existing2) {
             await query(
               `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
                VALUES (?, ?, 0.33, ?, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur2, dateAcceptation, tel, datePlanning]
+              [compteRendu.id_fiche, idConfirmateur2, dateSignature, tel, datePlanning]
             );
           }
           // Confirmateur 3
@@ -1188,17 +1275,18 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
              WHERE s.id_fiche = ?
                AND s.confirmateur = ?
                AND s.date_heure = ?`,
-            [compteRendu.id_fiche, idConfirmateur3, dateAcceptation]
+            [compteRendu.id_fiche, idConfirmateur3, dateSignature]
           );
           if (!existing3) {
             await query(
               `INSERT INTO signature (id_fiche, confirmateur, ajoute, date_heure, tel, date_planning)
                VALUES (?, ?, 0.33, ?, ?, ?)`,
-              [compteRendu.id_fiche, idConfirmateur3, dateAcceptation, tel, datePlanning]
+              [compteRendu.id_fiche, idConfirmateur3, dateSignature, tel, datePlanning]
             );
           }
         }
       }
+      } // fin else dateSignature
     }
 
     // Mettre à jour le compte rendu

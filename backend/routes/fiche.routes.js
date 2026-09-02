@@ -5025,9 +5025,8 @@ function cleanObservationCQ(value) {
       return line.replace(/^\s*observations?\s*:?\s*/i, '');
     })
     .filter((line) => String(line).trim() !== '')
-    .join('\n')
-    .trim();
-  return cleaned || null;
+    .join('\n');
+  return cleaned.trim() === '' ? null : cleaned;
 }
 
 router.put('/:id/controle-qualite', authenticate, hashToIdMiddleware, async (req, res) => {
