@@ -2289,6 +2289,22 @@
   color: #15803d !important;
   font-weight: 700 !important;
 }
+
+.etat-current-history-section span.fiche-detail-etat-signe-le,
+.etat-actuel-card span.fiche-detail-etat-signe-le,
+.historique-list span.fiche-detail-etat-signe-le,
+.fiche-detail-etat-signe-le,
+.fiche-detail-modal-content span.fiche-detail-etat-signe-le {
+  color: #FF3380 !important;
+  -webkit-text-fill-color: #FF3380 !important;
+  font-weight: 900 !important;
+  font-size: 15px !important;
+  border: 4px solid #FF3380 !important;
+  border-radius: 6px !important;
+  padding: 2px 8px !important;
+  display: inline-block !important;
+  background-color: #fff0f6 !important;
+}
 .etat-current-history-section span.fiche-detail-etat-confirmer-val--commercial,
 .etat-actuel-card span.fiche-detail-etat-confirmer-val--commercial,
 .historique-list span.fiche-detail-etat-confirmer-val--commercial,
@@ -2354,6 +2370,15 @@
   font-size: 15px !important;
   text-transform: uppercase !important;
   -webkit-text-fill-color: #b91c1c !important;
+}
+.fiche-detail span[data-confirmer-hl='signe-le'],
+.etat-current-history-section span[data-confirmer-hl='signe-le'],
+.etat-actuel-card span[data-confirmer-hl='signe-le'],
+.historique-list span[data-confirmer-hl='signe-le'] {
+  color: #FF3380 !important;
+  font-weight: 900 !important;
+  font-size: 15px !important;
+  -webkit-text-fill-color: #FF3380 !important;
 }
 
 .etat-current-history-section span.fiche-detail-etat-confirmer-val--rdv-avant,
@@ -2604,6 +2629,11 @@
   font-size: 15px !important;
   text-transform: uppercase !important;
 }
+.etat-actuel-card span[data-confirmer-hl='signe-le'],
+.etat-actuel-card span.fiche-detail-etat-signe-le {
+  color: #FF3380 !important;
+  -webkit-text-fill-color: #FF3380 !important;
+}
 
 /* Boutons internes (Modifier, Valider, etc.) : laisser leur couleur propre */
 .etat-actuel-card button,
@@ -2718,6 +2748,11 @@
   font-weight: 900 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
+}
+.etat-historique-card span[data-confirmer-hl='signe-le'],
+.etat-historique-card span.fiche-detail-etat-signe-le {
+  color: #FF3380 !important;
+  -webkit-text-fill-color: #FF3380 !important;
 }
 
 /* Décalage / Changer l'état / Compte rendu : même largeur effective et

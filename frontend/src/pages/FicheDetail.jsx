@@ -179,6 +179,23 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
       dataHl: 'rdv',
     };
   }
+  // Signé le : cadre violet comme l'état SIGNER (état actuel + historique)
+  if (/^Signé le$/i.test(L) || /^DATE SIGNATURE$/i.test(L)) {
+    return {
+      className: 'fiche-detail-etat-signe-le',
+      style: {
+        fontWeight: 900,
+        color: '#FF3380',
+        border: '4px solid #FF3380',
+        borderRadius: '6px',
+        padding: '2px 8px',
+        display: 'inline-block',
+        backgroundColor: '#fff0f6',
+        fontSize: '15px',
+      },
+      dataHl: 'signe-le',
+    };
+  }
   return null;
 }
 
@@ -4390,6 +4407,9 @@ const FicheDetail = ({
                     // Fallback si aucun commentaire historisé n'existe pour la ligne
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
                   }
+                  if (etatData.date_sign_time) {
+                    items.push({ label: 'Signé le', value: formatDateNoSeconds(etatData.date_sign_time) });
+                  }
                   if (etatData.ph3_pac) {
                     const pacValue = etatData.ph3_pac === 'reau' || etatData.ph3_pac === 'R/EAU' ? 'R/EAU' : 
                                      etatData.ph3_pac === 'rr' || etatData.ph3_pac === 'R/R' ? 'R/R' : etatData.ph3_pac;
@@ -4413,7 +4433,6 @@ const FicheDetail = ({
                   if (etatData.ph3_mensualite) items.push({ label: 'Mensualité du crédit', value: etatData.ph3_mensualite });
                   if (etatData.ph3_nbr_annee_finance) items.push({ label: 'Nombre de mois du crédit', value: etatData.ph3_nbr_annee_finance });
                   if (etatData.ph3_alimentation) items.push({ label: 'Alimentation', value: etatData.ph3_alimentation });
-                  if (etatData.date_sign_time) items.push({ label: 'DATE SIGNATURE', value: formatDateNoSeconds(etatData.date_sign_time) });
                   // Contrôle qualité : affichage uniquement pour l'état SIGNER (13), pas les autres états signer.
                   if (isEtatSigner13(etatId)) {
                     if (etatData.cq_etat) items.push({ label: 'CQ ETAT', value: etatData.cq_etat });
