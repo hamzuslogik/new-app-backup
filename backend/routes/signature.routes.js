@@ -201,7 +201,7 @@ router.get('/', authenticate, async (req, res) => {
         e.titre as etat_titre,
         se.titre as sous_etat_titre,
         COALESCE(uc_sign.pseudo, uc.pseudo) as commercial_pseudo,
-        COALESCE(uc2_sign.pseudo, uc2.pseudo) as commercial_2_pseudo,
+        uc2.pseudo as commercial_2_pseudo,
         cqe.titre as cq_etat_titre,
         cqd.titre as cq_dossier_titre,
         i.nom as installateur_nom,
@@ -230,7 +230,6 @@ router.get('/', authenticate, async (req, res) => {
         LIMIT 1
       )
       LEFT JOIN utilisateurs uc_sign ON uc_sign.id = COALESCE(fh_sign.id_commercial, fh_sign.id_commercial_cr)
-      LEFT JOIN utilisateurs uc2_sign ON uc2_sign.id = fh_sign.id_commercial_2
       LEFT JOIN cq_etat cqe ON f.cq_etat = cqe.id
       LEFT JOIN cq_dossier cqd ON f.cq_dossier = cqd.id
       LEFT JOIN installateurs i ON f.ph3_installateur = i.id
