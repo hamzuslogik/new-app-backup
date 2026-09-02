@@ -2281,6 +2281,8 @@
 .fiche-detail-etat-confirmer-val--commercial {
   color: #1d4ed8 !important;
   font-weight: 700 !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
 }
 .etat-current-history-section span.fiche-detail-etat-confirmer-val--confirmateur,
 .etat-actuel-card span.fiche-detail-etat-confirmer-val--confirmateur,
@@ -2288,6 +2290,8 @@
 .fiche-detail-etat-confirmer-val--confirmateur {
   color: #b91c1c !important;
   font-weight: 700 !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
 }
 
 /* Modal fiche (Dashboard) : mêmes couleurs si section rendue dans .fiche-detail-modal-content */
@@ -2298,10 +2302,14 @@
 .fiche-detail-modal-content span.fiche-detail-etat-confirmer-val--commercial {
   color: #1d4ed8 !important;
   font-weight: 700 !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
 }
 .fiche-detail-modal-content span.fiche-detail-etat-confirmer-val--confirmateur {
   color: #b91c1c !important;
   font-weight: 700 !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
 }
 
 /* Attribut data : même rendu si une règle du modal surcharge color (WebKit + !important) */
@@ -2319,6 +2327,8 @@
 .historique-list span[data-confirmer-hl='commercial'] {
   color: #1d4ed8 !important;
   font-weight: 700 !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
   -webkit-text-fill-color: #1d4ed8 !important;
 }
 .fiche-detail span[data-confirmer-hl='confirmateur'],
@@ -2327,6 +2337,8 @@
 .historique-list span[data-confirmer-hl='confirmateur'] {
   color: #b91c1c !important;
   font-weight: 700 !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
   -webkit-text-fill-color: #b91c1c !important;
 }
 
@@ -2566,11 +2578,15 @@
 .etat-actuel-card span.fiche-detail-etat-confirmer-val--commercial {
   color: #1d4ed8 !important;
   -webkit-text-fill-color: #1d4ed8 !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
 }
 .etat-actuel-card span[data-confirmer-hl='confirmateur'],
 .etat-actuel-card span.fiche-detail-etat-confirmer-val--confirmateur {
   color: #b91c1c !important;
   -webkit-text-fill-color: #b91c1c !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
 }
 
 /* Boutons internes (Modifier, Valider, etc.) : laisser leur couleur propre */
@@ -2675,11 +2691,15 @@
 .etat-historique-card span.fiche-detail-etat-confirmer-val--commercial {
   color: #1d4ed8 !important;
   -webkit-text-fill-color: #1d4ed8 !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
 }
 .etat-historique-card span[data-confirmer-hl='confirmateur'],
 .etat-historique-card span.fiche-detail-etat-confirmer-val--confirmateur {
   color: #b91c1c !important;
   -webkit-text-fill-color: #b91c1c !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
 }
 
 /* Décalage / Changer l'état / Compte rendu : même largeur effective et

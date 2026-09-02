@@ -73,6 +73,12 @@ function normalizeDetailItemLabel(s) {
     .trim();
 }
 
+/** Pseudo confirmateur / commercial : toujours en majuscules à l'affichage. */
+function formatAgentPseudoDisplay(value) {
+  if (value == null || value === '') return value;
+  return String(value).trim().toUpperCase();
+}
+
 function normalizePlanningDayName(dayName) {
   return String(dayName || '')
     .trim()
@@ -144,7 +150,7 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
   if (/^Commercial(\s*\d+)?$/i.test(L)) {
     return {
       className: 'fiche-detail-etat-confirmer-val--commercial',
-      style: { ...bold, color: '#1d4ed8' },
+      style: { ...bold, color: '#1d4ed8', fontSize: '15px', textTransform: 'uppercase' },
       dataHl: 'commercial',
     };
   }
@@ -152,7 +158,7 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
   if (/^Confirmateur(\s*\d+)?$/i.test(L)) {
     return {
       className: 'fiche-detail-etat-confirmer-val--confirmateur',
-      style: { ...bold, color: '#b91c1c' },
+      style: { ...bold, color: '#b91c1c', fontSize: '15px', textTransform: 'uppercase' },
       dataHl: 'confirmateur',
     };
   }
@@ -4783,7 +4789,15 @@ const FicheDetail = ({
                           {isCurrentStateFromCR ? (
                             <>
                               <span style={{ marginRight: '6px' }}>&lt;CR&gt;</span>
-                              {crPseudoEtatActuel && <span style={{ marginRight: '6px' }}>{crPseudoEtatActuel} – </span>}
+                              {crPseudoEtatActuel && (
+                                <span
+                                  className="fiche-detail-etat-confirmer-val--commercial"
+                                  data-confirmer-hl="commercial"
+                                  style={{ marginRight: '6px' }}
+                                >
+                                  {formatAgentPseudoDisplay(crPseudoEtatActuel)} –
+                                </span>
+                              )}
                             </>
                           ) : null}
                           {etatActuel.etat_titre}
@@ -5469,9 +5483,17 @@ const FicheDetail = ({
                           }}
                         >
                           {historiquePriorityState.label}
-                          {historiquePriorityState.commercialPseudo
-                            ? ` — Commercial : ${historiquePriorityState.commercialPseudo}`
-                            : ''}
+                          {historiquePriorityState.commercialPseudo ? (
+                            <>
+                              {' — Commercial : '}
+                              <span
+                                className="fiche-detail-etat-confirmer-val--commercial"
+                                data-confirmer-hl="commercial"
+                              >
+                                {formatAgentPseudoDisplay(historiquePriorityState.commercialPseudo)}
+                              </span>
+                            </>
+                          ) : null}
                         </div>
                       )}
                       {historiqueListeSansEtatActuel.length > 0 && (
@@ -5557,7 +5579,20 @@ const FicheDetail = ({
                                       }}
                                     >
                                       {histo.from_compte_rendu && (
-                                        <span style={{ marginRight: '6px' }}>&lt;CR&gt;{histo.cr_commercial_pseudo ? ` ${histo.cr_commercial_pseudo}` : ''}</span>
+                                        <span style={{ marginRight: '6px' }}>
+                                          &lt;CR&gt;
+                                          {histo.cr_commercial_pseudo ? (
+                                            <>
+                                              {' '}
+                                              <span
+                                                className="fiche-detail-etat-confirmer-val--commercial"
+                                                data-confirmer-hl="commercial"
+                                              >
+                                                {formatAgentPseudoDisplay(histo.cr_commercial_pseudo)}
+                                              </span>
+                                            </>
+                                          ) : null}
+                                        </span>
                                       )}
                                       {histoEtatTitre}
                                     </span>
