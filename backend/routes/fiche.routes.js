@@ -364,6 +364,24 @@ function shouldInsertFichesHistoPut(ficheData, fiche) {
 }
 
 /**
+ * Sous-état à appliquer sur fiches lors d'un changement d'état :
+ * - si un id_sous_etat est fourni et appartient au nouvel état → l'affecter
+ * - sinon → null (effacer l'ancien sous-état)
+ */
+async function resolveSousEtatForEtatChange(newEtatId, idSousEtatFourni) {
+  const etatId = parseEtatId(newEtatId);
+  if (!Number.isFinite(etatId)) return null;
+  if (idSousEtatFourni == null || idSousEtatFourni === '') return null;
+  const sousEtatId = parseInt(idSousEtatFourni, 10);
+  if (!Number.isFinite(sousEtatId) || sousEtatId <= 0) return null;
+  const row = await queryOne(
+    'SELECT id FROM sous_etat WHERE id = ? AND id_etat = ? LIMIT 1',
+    [sousEtatId, etatId]
+  );
+  return row ? sousEtatId : null;
+}
+
+/**
  * Enregistre un audit dans la table controle_qualite (page Contrôle Qualité).
  * En cas d'erreur (ex: table absente), log uniquement pour ne pas casser la réponse.
  * @param {Object} params - id_fiche, id_qualite, id_etat?, id_sous_etat?, commentaire?, ko?, hc?, id_etat_precedent?, id_sous_etat_precedent?, id_agent_fiche?, id_centre?, date_audit?, date_fiche?
@@ -4747,13 +4765,24 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       
       // date_appel_time : ne plus modifier la table fiches au changement d'état.
       // L'horodatage du passage d'état est enregistré dans fiches_histo.date_appel_time.
+      // Sous-état : effacer l'ancien (pas de sous-état fourni sur PATCH champ unique).
       await query(
-        `UPDATE fiches SET date_modif_time = ? WHERE id = ?`,
+        `UPDATE fiches SET date_modif_time = ?, id_sous_etat = NULL WHERE id = ?`,
         [now, id]
       );
+      if (fiche.id_sous_etat != null) {
+        await logModification(
+          id,
+          req.user.id,
+          req.user.pseudo || 'Utilisateur',
+          'id_sous_etat',
+          fiche.id_sous_etat,
+          null
+        );
+      }
       
       const histoConf = getHistoConfirmateur(req, fiche);
-      const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
+      const histoSousEtat = null;
       const dateRdvHisto = fiche.date_rdv_time || null;
       try {
         await query(
@@ -5547,16 +5576,27 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
       );
     }
 
-    // Mettre à jour l'état et date_appel_time automatiquement lors du changement d'état
+    // Ne plus modifier fiches.date_appel_time (contrôle qualité) — horodatage dans fiches_histo
+    // Effacer le sous-état : les états groupe 0 n'en portent pas via etat-rapide
     await query(
-      'UPDATE fiches SET id_etat_final = ?, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
-      [newEtatId, now, now, id]
+      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = NULL, date_modif_time = ? WHERE id = ?',
+      [newEtatId, now, id]
     );
 
     // Enregistrer dans l'historique (avec id_confirmateur : connecté ou choisi par RE/RP/admin/backoffice) + conf_* si état 7
     if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
+      if (fiche.id_sous_etat != null) {
+        await logModification(
+          id,
+          req.user.id,
+          req.user.pseudo || 'Utilisateur',
+          'id_sous_etat',
+          fiche.id_sous_etat,
+          null
+        );
+      }
       const histoConf = getHistoConfirmateur(req, fiche);
-      const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
+      const histoSousEtat = null;
       let dateRdvHisto = null;
       let confCols = [];
       let confVals = [];
@@ -5572,18 +5612,40 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
           confVals = out.vals;
         }
       }
-      let histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_creation', ...confCols];
-      let histoValues = [id, newEtatId, histoConf, histoSousEtat, dateRdvHisto, now, ...confVals];
+      let histoCols = ['id_fiche', 'id_etat', 'id_confirmateur', 'id_sous_etat', 'date_rdv_time', 'date_appel_time', 'date_creation', ...confCols];
+      let histoValues = [id, newEtatId, histoConf, histoSousEtat, dateRdvHisto, now, now, ...confVals];
       const ficheQualifSnap = await queryOne('SELECT complement_chauffage FROM fiches WHERE id = ?', [id]);
       if (ficheQualifSnap) {
         histoCols.push('complement_chauffage');
         histoValues.push(ficheQualifSnap.complement_chauffage ?? null);
       }
       const histoPlaceholders = histoCols.map(() => '?').join(', ');
-      await query(
-        `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
-        histoValues
-      );
+      try {
+        await query(
+          `INSERT INTO fiches_histo (${histoCols.join(', ')}) VALUES (${histoPlaceholders})`,
+          histoValues
+        );
+      } catch (histoInsertErr) {
+        if (histoInsertErr && histoInsertErr.code === 'ER_BAD_FIELD_ERROR') {
+          const drop = new Set(['date_appel_time', 'complement_chauffage']);
+          const unknownCol = String(histoInsertErr.message || '').match(/Unknown column '([^']+)'/i);
+          if (unknownCol && unknownCol[1]) drop.add(unknownCol[1]);
+          const cols2 = [];
+          const vals2 = [];
+          histoCols.forEach((col, i) => {
+            if (!drop.has(col)) {
+              cols2.push(col);
+              vals2.push(histoValues[i]);
+            }
+          });
+          await query(
+            `INSERT INTO fiches_histo (${cols2.join(', ')}) VALUES (${cols2.map(() => '?').join(', ')})`,
+            vals2
+          );
+        } else {
+          throw histoInsertErr;
+        }
+      }
 
       if (newEtatId === 7) {
         const confCommentIdx = confCols.indexOf('conf_commentaire_produit');
@@ -5735,10 +5797,11 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
 
     const oldKoVal = fiche.ko != null ? Number(fiche.ko) : 0;
 
-    // Mettre à jour l'état vers "En-Attente" (validation hors KO) et retirer le flag KO
+    // Ne plus modifier fiches.date_appel_time — horodatage dans fiches_histo
+    // Effacer le sous-état (En-Attente n'en a pas)
     await query(
-      'UPDATE fiches SET id_etat_final = ?, ko = 0, hc = 0, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
-      [newEtatId, now, now, id]
+      'UPDATE fiches SET id_etat_final = ?, ko = 0, hc = 0, id_sous_etat = NULL, date_modif_time = ? WHERE id = ?',
+      [newEtatId, now, id]
     );
     if (oldKoVal === 1) {
       await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'ko', oldKoVal, 0);
@@ -5748,12 +5811,23 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
     // Enregistrer dans l'historique si changement d'état
     if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
       const histoConf = getHistoConfirmateur(req, fiche);
-      const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
+      const histoSousEtat = null;
       const dateRdvHisto = fiche.date_rdv_time || null;
-      await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, newEtatId, histoConf, histoSousEtat, dateRdvHisto, now]
-      );
+      try {
+        await query(
+          `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_appel_time, date_creation) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [id, newEtatId, histoConf, histoSousEtat, dateRdvHisto, now, now]
+        );
+      } catch (histoInsertErr) {
+        if (histoInsertErr && histoInsertErr.code === 'ER_BAD_FIELD_ERROR') {
+          await query(
+            `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
+            [id, newEtatId, histoConf, histoSousEtat, dateRdvHisto, now]
+          );
+        } else {
+          throw histoInsertErr;
+        }
+      }
 
       // Logger la modification
       await logModification(
@@ -5906,8 +5980,8 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     }
     
     await query(
-      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = NULL, ko = 1, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
-      [newEtatId, now, now, id]
+      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = NULL, ko = 1, date_modif_time = ? WHERE id = ?',
+      [newEtatId, now, id]
     );
 
     const ficheInfosKo = await queryOne(
@@ -5932,10 +6006,21 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
       const histoConf = getHistoConfirmateur(req, fiche);
       const dateRdvHistoKo = fiche.date_rdv_time || null;
-      await query(
-        'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, newEtatId, histoConf, null, dateRdvHistoKo, now]
-      );
+      try {
+        await query(
+          'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_appel_time, date_creation) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [id, newEtatId, histoConf, null, dateRdvHistoKo, now, now]
+        );
+      } catch (histoInsertErr) {
+        if (histoInsertErr && histoInsertErr.code === 'ER_BAD_FIELD_ERROR') {
+          await query(
+            'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, newEtatId, histoConf, null, dateRdvHistoKo, now]
+          );
+        } else {
+          throw histoInsertErr;
+        }
+      }
       await logModification(
         id,
         req.user.id,
@@ -6094,10 +6179,10 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
     
     const oldKoValHc = fiche.ko != null ? Number(fiche.ko) : 0;
 
-    // Mettre à jour la fiche avec l'état HC (hors KO) et retirer le flag KO
+    // Mettre à jour la fiche avec l'état HC (hors KO) — ne plus toucher date_appel_time
     await query(
-      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = ?, hc = 1, ko = 0, commentaire_qualite = ?, date_appel_time = ?, date_modif_time = ? WHERE id = ?',
-      [newEtatId, id_sous_etat, commentaire_hc || null, now, now, id]
+      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = ?, hc = 1, ko = 0, commentaire_qualite = ?, date_modif_time = ? WHERE id = ?',
+      [newEtatId, id_sous_etat, commentaire_hc || null, now, id]
     );
     if (oldKoValHc === 1) {
       await logModification(id, req.user.id, req.user.pseudo || 'Utilisateur', 'ko', oldKoValHc, 0);
@@ -6107,10 +6192,21 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
     if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {
       const histoConf = getHistoConfirmateur(req, fiche);
       const dateRdvHistoHc = fiche.date_rdv_time || null;
-      await query(
-        'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, newEtatId, histoConf, id_sous_etat, dateRdvHistoHc, now]
-      );
+      try {
+        await query(
+          'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_appel_time, date_creation) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [id, newEtatId, histoConf, id_sous_etat, dateRdvHistoHc, now, now]
+        );
+      } catch (histoInsertErr) {
+        if (histoInsertErr && histoInsertErr.code === 'ER_BAD_FIELD_ERROR') {
+          await query(
+            'INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, newEtatId, histoConf, id_sous_etat, dateRdvHistoHc, now]
+          );
+        } else {
+          throw histoInsertErr;
+        }
+      }
       await logModification(
         id,
         req.user.id,
@@ -6677,6 +6773,19 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     if (shouldInsertFichesHistoPut(ficheData, fiche)) {
       const oldEtatId = parseEtatId(fiche.id_etat_final);
       const newEtatId = parseEtatId(ficheData.id_etat_final);
+      const etatChanged =
+        Number.isFinite(oldEtatId) &&
+        Number.isFinite(newEtatId) &&
+        oldEtatId !== newEtatId;
+
+      // Au changement d'état : affecter le sous-état du nouvel état s'il est fourni et valide, sinon l'effacer
+      if (etatChanged) {
+        const providedSous = Object.prototype.hasOwnProperty.call(ficheData, 'id_sous_etat')
+          ? ficheData.id_sous_etat
+          : null;
+        const resolvedSous = await resolveSousEtatForEtatChange(newEtatId, providedSous);
+        ficheData.id_sous_etat = resolvedSous;
+      }
 
       // Date d'appel du passage d'état → fiches_histo uniquement (ne plus écrire fiches.date_appel_time)
       const normalizeDateTime = (v) => {
@@ -6724,8 +6833,12 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
 
       const histoSousEtat = Object.prototype.hasOwnProperty.call(ficheData, 'id_sous_etat')
-        ? ficheData.id_sous_etat
-        : (fiche && fiche.id_sous_etat != null ? fiche.id_sous_etat : null);
+        ? (ficheData.id_sous_etat === '' || ficheData.id_sous_etat == null
+          ? null
+          : ficheData.id_sous_etat)
+        : (etatChanged
+          ? null
+          : (fiche && fiche.id_sous_etat != null ? fiche.id_sous_etat : null));
       let dateRdvHisto = Object.prototype.hasOwnProperty.call(ficheData, 'date_rdv_time')
         ? (ficheData.date_rdv_time === '' ? null : ficheData.date_rdv_time)
         : (fiche.date_rdv_time || null);

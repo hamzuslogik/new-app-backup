@@ -1240,7 +1240,7 @@ async function executeUpdateFieldAction(config, eventData) {
  * Action : Changement d'état
  */
 async function executeChangeEtatAction(config, eventData) {
-  const { query } = require('../../config/database');
+  const { query, queryOne } = require('../../config/database');
   const { etat_id } = config;
   
   const ficheId = eventData.fiche?.id;
@@ -1250,20 +1250,42 @@ async function executeChangeEtatAction(config, eventData) {
 
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
   
-  // Mettre à jour l'état
+  // Mettre à jour l'état — effacer le sous-état (sauf si fourni dans la config et valide pour le nouvel état)
+  let sousEtatId = null;
+  if (config.id_sous_etat != null && config.id_sous_etat !== '') {
+    const candidate = parseInt(config.id_sous_etat, 10);
+    if (Number.isFinite(candidate) && candidate > 0) {
+      const row = await queryOne(
+        'SELECT id FROM sous_etat WHERE id = ? AND id_etat = ? LIMIT 1',
+        [candidate, etat_id]
+      );
+      if (row) sousEtatId = candidate;
+    }
+  }
   await query(`
     UPDATE fiches 
-    SET id_etat_final = ?, date_appel_time = ?, date_modif_time = ?
+    SET id_etat_final = ?, id_sous_etat = ?, date_modif_time = ?
     WHERE id = ?
-  `, [etat_id, now, now, ficheId]);
+  `, [etat_id, sousEtatId, now, ficheId]);
 
   // Enregistrer dans l'historique
-  await query(`
-    INSERT INTO fiches_histo (id_fiche, id_etat, date_creation)
-    VALUES (?, ?, ?)
-  `, [ficheId, etat_id, now]);
+  try {
+    await query(`
+      INSERT INTO fiches_histo (id_fiche, id_etat, id_sous_etat, date_appel_time, date_creation)
+      VALUES (?, ?, ?, ?, ?)
+    `, [ficheId, etat_id, sousEtatId, now, now]);
+  } catch (histoInsertErr) {
+    if (histoInsertErr && histoInsertErr.code === 'ER_BAD_FIELD_ERROR') {
+      await query(`
+        INSERT INTO fiches_histo (id_fiche, id_etat, date_creation)
+        VALUES (?, ?, ?)
+      `, [ficheId, etat_id, now]);
+    } else {
+      throw histoInsertErr;
+    }
+  }
 
-  return { success: true, etat_id };
+  return { success: true, etat_id, id_sous_etat: sousEtatId };
 }
 
 /**
