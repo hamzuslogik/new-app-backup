@@ -57,7 +57,7 @@ const Validation = () => {
   });
 
   const canLoadValidation =
-    !!user && [1, 2, 4, 6, 7, 11, 14].includes(Number(user.fonction));
+    !!user && [1, 2, 4, 6, 7, 11, 13, 14].includes(Number(user.fonction));
 
   const { data: validationData, isLoading, error } = useQuery(
     ['validation-rdv', filters],
@@ -222,6 +222,52 @@ const Validation = () => {
       )}
 
       <div className="validation-content">
+        {!isQualiteConfirmation && (
+          <div className="departements-stats-container">
+            <h2>Statistiques par Département</h2>
+            <div className="departements-table-container">
+              <table className="departements-table">
+                <thead>
+                  <tr>
+                    <th>Département</th>
+                    <th>Validé</th>
+                    <th>Non Validé</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statsByDepartement
+                    .filter((dep) => (dep.total || 0) > 0)
+                    .map((dep, index) => (
+                      <tr key={dep.departement || index}>
+                        <td>{dep.departement || '-'}</td>
+                        <td>{dep.valides || 0}</td>
+                        <td>{dep.nonValides || 0}</td>
+                        <td>{dep.total || 0}</td>
+                      </tr>
+                    ))}
+                </tbody>
+                <tfoot>
+                  <tr className="totals-row">
+                    <td>
+                      <strong>Total</strong>
+                    </td>
+                    <td>
+                      <strong>{totals.valides}</strong>
+                    </td>
+                    <td>
+                      <strong>{totals.nonValides}</strong>
+                    </td>
+                    <td>
+                      <strong>{totals.total}</strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+
         <div className="validation-quick-search">
           <label htmlFor="validation-quick-search-dep">Recherche rapide département</label>
           <input
@@ -342,52 +388,6 @@ const Validation = () => {
             </table>
           </div>
         ) : null}
-
-        {!isQualiteConfirmation && (
-          <div className="departements-stats-container">
-            <h2>Statistiques par Département</h2>
-            <div className="departements-table-container">
-              <table className="departements-table">
-                <thead>
-                  <tr>
-                    <th>Département</th>
-                    <th>Validé</th>
-                    <th>Non Validé</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statsByDepartement
-                    .filter((dep) => (dep.total || 0) > 0)
-                    .map((dep, index) => (
-                      <tr key={dep.departement || index}>
-                        <td>{dep.departement || '-'}</td>
-                        <td>{dep.valides || 0}</td>
-                        <td>{dep.nonValides || 0}</td>
-                        <td>{dep.total || 0}</td>
-                      </tr>
-                    ))}
-                </tbody>
-                <tfoot>
-                  <tr className="totals-row">
-                    <td>
-                      <strong>Total</strong>
-                    </td>
-                    <td>
-                      <strong>{totals.valides}</strong>
-                    </td>
-                    <td>
-                      <strong>{totals.nonValides}</strong>
-                    </td>
-                    <td>
-                      <strong>{totals.total}</strong>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
 
       {auditFiche && (

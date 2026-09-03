@@ -3311,7 +3311,8 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
 
     // Confirmateurs (fonction 6) : ne voient que les fiches où ils sont assignés
     //   (id_confirmateur, id_confirmateur_2 ou id_confirmateur_3).
-    // Qualité Confirmation (4), RE Confirmation (14), Admins (1, 2, 7), Backoffice (11) : voient tout.
+    // Qualité Confirmation (4), RE Confirmation (14), RP Confirmation (13),
+    // Admins (1, 2, 7), Backoffice (11) : voient tout.
     if (Number(req.user.fonction) === 6) {
       whereConditions.push('(f.id_confirmateur = ? OR f.id_confirmateur_2 = ? OR f.id_confirmateur_3 = ?)');
       params.push(req.user.id, req.user.id, req.user.id);

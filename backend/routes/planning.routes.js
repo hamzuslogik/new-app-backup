@@ -992,7 +992,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7, 11), async (r
 });
 
 // Dupliquer un planning
-router.post('/duplicate', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+router.post('/duplicate', authenticate, checkPermission(1, 2, 7, 11, 13), async (req, res) => {
   try {
     const { sourceWeek, sourceYear, targetWeek, targetYear, dep } = req.body;
 
@@ -1431,7 +1431,7 @@ router.delete('/hebdomadaire/:departementId', authenticate, checkPermission(1, 2
 });
 
 // Dupliquer le planning d'une semaine vers plusieurs autres semaines
-router.post('/hebdomadaire/duplicate', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+router.post('/hebdomadaire/duplicate', authenticate, checkPermission(1, 2, 7, 11, 13), async (req, res) => {
   try {
     const { source_week, source_year, target_weeks, target_year } = req.body;
 

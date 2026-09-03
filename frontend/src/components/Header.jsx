@@ -45,11 +45,11 @@ const Header = () => {
     refetchOnReconnect: true
   };
 
-  // Liste courte non lues : le backend renvoie uniquement les notifications dont destination = utilisateur connecté
+  // Liste dropdown : notifications du jour (lues + non lues), destinataire = utilisateur connecté
   const { data: notificationsData } = useQuery(
     'notifications',
     async () => {
-      const res = await api.get('/notifications');
+      const res = await api.get('/notifications', { params: { all: 'true' } });
       return res.data.data || [];
     },
     notificationQueryOpts
@@ -181,8 +181,24 @@ const Header = () => {
     }
   };
 
+  const isNotificationFromToday = (notification) => {
+    const raw = notification?.date_creation;
+    if (!raw) return false;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return false;
+    const now = new Date();
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
+  };
+
   const notificationsAll = notificationsData || [];
-  const notifications = notificationsAll.filter((n) => n.lu === 0);
+  // Dropdown : uniquement les notifications de la journée (lues et non lues)
+  const notifications = notificationsAll
+    .filter(isNotificationFromToday)
+    .sort((a, b) => new Date(b.date_creation || 0) - new Date(a.date_creation || 0));
   const unreadCount = notificationsCount || 0;
   const userFonction = user ? Number(user.fonction) : null;
   const isAdmin = user && [1, 2, 7].includes(userFonction);
@@ -310,7 +326,7 @@ const Header = () => {
           {showNotifications && (
             <div className="notifications-dropdown">
                 <div className="notifications-header">
-                  <h3>Notifications</h3>
+                  <h3>Notifications du jour</h3>
                   <div className="notifications-header-actions">
                     <button
                       className="sound-toggle-btn"
@@ -356,7 +372,7 @@ const Header = () => {
                 <div className="notifications-list">
                   {notifications.length === 0 ? (
                     <div className="no-notifications">
-                      <p>Aucune notification non lue</p>
+                      <p>Aucune notification aujourd&apos;hui</p>
                       <Link to="/notifications" onClick={() => setShowNotifications(false)} className="view-all-link">Voir la page Notifications</Link>
                     </div>
                   ) : (
@@ -365,6 +381,7 @@ const Header = () => {
                       const isDecalageRequest = notification.type === 'decalage_request';
                       const isPending = !notification.action || notification.action === 'pending';
                       const canAction = isRdvApproval && isPending && isAdmin; // Seuls les admins peuvent approuver/refuser les RDV
+                      const isUnread = Number(notification.lu) === 0;
                       
                       // Pour les notifications de décalage, afficher les métadonnées si disponibles
                       let decalageInfo = null;
@@ -381,7 +398,7 @@ const Header = () => {
                       return (
                         <div
                           key={notification.id}
-                          className={`notification-item unread ${canAction ? 'has-actions' : ''}`}
+                          className={`notification-item ${isUnread ? 'unread' : 'read'} ${canAction ? 'has-actions' : ''}`}
                           onClick={(e) => {
                             if (e.target.closest('button')) return;
                             if (canAction) return;
@@ -444,7 +461,7 @@ const Header = () => {
                               </div>
                             )}
                           </div>
-                          {notification.lu === 0 && !canAction && (
+                          {isUnread && !canAction && (
                             <button
                               className="mark-read-btn"
                               onClick={(e) => {
