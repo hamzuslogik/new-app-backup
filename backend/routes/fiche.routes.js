@@ -4255,6 +4255,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
          etat.color as etat_color,
          se.titre as sous_etat_titre,
          u_histo.pseudo as histo_confirmateur_pseudo,
+         u_histo.fonction as histo_confirmateur_fonction,
          u_cr.pseudo as cr_commercial_pseudo
          FROM fiches_histo histo
          LEFT JOIN etats etat ON histo.id_etat = etat.id
@@ -4380,6 +4381,10 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           return {
           ...histo,
           histo_id_confirmateur: histo.id_confirmateur,
+          histo_confirmateur_fonction:
+            histo.histo_confirmateur_fonction != null
+              ? Number(histo.histo_confirmateur_fonction)
+              : null,
           from_compte_rendu: fromCr,
           cr_commercial_pseudo: histo.cr_commercial_pseudo || null,
           id_confirmateur: conf1Id,
@@ -4413,11 +4418,11 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           // Pour l'historique, priorité aux valeurs historisées de la ligne (sinon repli fiche courante)
           // Toujours sérialiser en chaîne locale (même bug UTC que sur la fiche).
           date_rdv_time: toLocalDatetimeString(histo.date_rdv_time ?? fiche.date_rdv_time),
-          // date_appel_time : DATETIME MySQL → mysql2 renvoie un Date local → JSON.stringify
-          // le convertit en ISO UTC, ce qui décale l'heure côté front (« Date d'appel » affichée
-          // via new Date(...).toLocaleString). On sérialise en chaîne locale pour éviter le décalage.
-          date_appel_time: toLocalDatetimeString(histo.date_appel_time ?? fiche.date_appel_time),
-          // Même problématique pour date_creation (utilisée comme fallback de « Date d'appel »).
+          // date_appel_time : uniquement la valeur historisée (fiches_histo), pas le champ fiches.
+          // DATETIME MySQL → mysql2 renvoie un Date local → JSON.stringify le convertit en ISO UTC ;
+          // on sérialise en chaîne locale pour éviter le décalage côté front.
+          date_appel_time: toLocalDatetimeString(histo.date_appel_time),
+          // Même problématique pour date_creation (fallback d’affichage si date_appel_time absente).
           date_creation: toLocalDatetimeString(histo.date_creation),
           date_sign_time: toLocalDatetimeString(histo.date_sign_time ?? fiche.date_sign_time),
           profession_mr: fiche.profession_mr || null,
@@ -4739,19 +4744,31 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
         );
       }
       
-      // Mettre à jour automatiquement date_appel_time lors du changement d'état
+      // date_appel_time : ne plus modifier la table fiches au changement d'état.
+      // L'horodatage du passage d'état est enregistré dans fiches_histo.date_appel_time.
       await query(
-        `UPDATE fiches SET date_appel_time = ?, date_modif_time = ? WHERE id = ?`,
-        [now, now, id]
+        `UPDATE fiches SET date_modif_time = ? WHERE id = ?`,
+        [now, id]
       );
       
       const histoConf = getHistoConfirmateur(req, fiche);
       const histoSousEtat = (fiche && (fiche.id_sous_etat != null)) ? fiche.id_sous_etat : null;
       const dateRdvHisto = fiche.date_rdv_time || null;
-      await query(
-        `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, parseInt(value, 10), histoConf, histoSousEtat, dateRdvHisto, now]
-      );
+      try {
+        await query(
+          `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_appel_time, date_creation) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [id, parseInt(value, 10), histoConf, histoSousEtat, dateRdvHisto, now, now]
+        );
+      } catch (histoInsertErr) {
+        if (histoInsertErr && histoInsertErr.code === 'ER_BAD_FIELD_ERROR') {
+          await query(
+            `INSERT INTO fiches_histo (id_fiche, id_etat, id_confirmateur, id_sous_etat, date_rdv_time, date_creation) VALUES (?, ?, ?, ?, ?, ?)`,
+            [id, parseInt(value, 10), histoConf, histoSousEtat, dateRdvHisto, now]
+          );
+        } else {
+          throw histoInsertErr;
+        }
+      }
 
       if (parseInt(value, 10) === 7) {
         await upsertConfirmationForEtat7({
@@ -4851,7 +4868,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     if (field === 'date_appel_time' && !isModificationRapide) {
       return res.status(400).json({
         success: false,
-        message: 'date_appel_time ne peut pas être modifiée manuellement. Elle est remplie automatiquement lors du changement d\'état.'
+        message: 'date_appel_time ne peut pas être modifiée manuellement (sauf modification rapide). Au changement d\'état, la date est enregistrée dans l\'historique (fiches_histo).'
       });
     }
 
@@ -6660,7 +6677,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       const oldEtatId = parseEtatId(fiche.id_etat_final);
       const newEtatId = parseEtatId(ficheData.id_etat_final);
 
-      // Date d'appel: valeur saisie pour NRP (2) sinon horodatage courant
+      // Date d'appel du passage d'état → fiches_histo uniquement (ne plus écrire fiches.date_appel_time)
       const normalizeDateTime = (v) => {
         if (v == null || v === '') return null;
         const s = String(v).trim();
@@ -6668,10 +6685,9 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         return s;
       };
       const providedDateAppel = normalizeDateTime(ficheData.date_appel_time);
-      const effectiveDateAppelTime = newEtatId === 2
-        ? now
-        : (providedDateAppel || now);
-      ficheData.date_appel_time = effectiveDateAppelTime;
+      const effectiveDateAppelTime = providedDateAppel || now;
+      // Retirer du payload fiches pour éviter toute mise à jour de fiches.date_appel_time
+      delete ficheData.date_appel_time;
 
       // Si on passe de l'état CONFIRMER (7) à un état du groupe 2, supprimer la date du RDV
       if (oldEtatId === 7 && newEtatId !== 7) {
@@ -6747,9 +6763,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       if (Object.prototype.hasOwnProperty.call(ficheData, 'date_sign_time')) {
         pushHistoCol('date_sign_time', ficheData.date_sign_time === '' ? null : ficheData.date_sign_time);
       }
-      if (newEtatId === 2 || Object.prototype.hasOwnProperty.call(ficheData, 'date_appel_time')) {
-        pushHistoCol('date_appel_time', effectiveDateAppelTime);
-      }
+      // Toujours historiser date_appel_time sur la ligne fiches_histo (affichage état actuel / historique)
+      pushHistoCol('date_appel_time', effectiveDateAppelTime);
       if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial')) {
         const ic = ficheData.id_commercial;
         const n = ic === '' || ic === undefined || ic === null ? NaN : parseInt(ic, 10);
@@ -6841,7 +6856,6 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     // Construire la requête de mise à jour
     const fields = [];
     const values = [];
-    const effectiveNewEtatId = parseEtatId(ficheData?.id_etat_final);
 
     // Liste des champs autorisés pour éviter les injections SQL
     const allowedFields = [
@@ -6867,10 +6881,6 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
 
     for (const [key, value] of Object.entries(ficheData)) {
       if (value !== undefined && key !== 'id' && allowedFields.includes(key)) {
-        // Autoriser date_appel_time uniquement pour NRP (2) ; sinon conserver l'ancien comportement.
-        if (key === 'date_appel_time' && effectiveNewEtatId !== 2) {
-          continue; // Ne pas inclure ce champ dans la mise à jour
-        }
         fields.push(`\`${key}\` = ?`);
         values.push(value === '' ? null : value);
       }
@@ -6893,10 +6903,6 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       const userPseudo = req.user.pseudo || 'Utilisateur';
       for (const [key, value] of Object.entries(ficheData)) {
         if (value !== undefined && key !== 'id' && allowedFields.includes(key)) {
-          // Autoriser date_appel_time uniquement pour NRP (2) ; sinon conserver l'ancien comportement.
-          if (key === 'date_appel_time' && effectiveNewEtatId !== 2) {
-            continue; // Ne pas logger cette modification
-          }
           const oldValue = fiche[key];
           const newValue = value === '' ? null : value;
           await logModification(

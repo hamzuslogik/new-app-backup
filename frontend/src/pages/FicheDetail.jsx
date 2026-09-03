@@ -163,6 +163,14 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
       dataHl: 'confirmateur',
     };
   }
+  // Audité par (qualité qualification) : même mise en évidence que Confirmateur
+  if (/^Audité par$/i.test(L)) {
+    return {
+      className: 'fiche-detail-etat-confirmer-val--confirmateur',
+      style: { ...agentBold, color: '#b91c1c', fontSize: '15px', textTransform: 'uppercase' },
+      dataHl: 'confirmateur',
+    };
+  }
   // Date RDV : surlignage vert encadre, uniquement quand l'etat est CONFIRMER
   if (L === 'Date RDV' && isEtatConfirmerLike(etatId, etatTitre)) {
     return {
@@ -4186,6 +4194,9 @@ const FicheDetail = ({
                   etatData.histo_confirmateur_pseudo != null && String(etatData.histo_confirmateur_pseudo).trim() !== ''
                     ? String(etatData.histo_confirmateur_pseudo).trim()
                     : '';
+                // Qualité qualification (2 superviseur, 8 qualité, 12 RP) → libellé « Audité par » au lieu de « Confirmateur »
+                const isAuteurQualiteQualif = [2, 8, 12].includes(Number(etatData.histo_confirmateur_fonction));
+                const labelAuteurEtat = isAuteurQualiteQualif ? 'Audité par' : 'Confirmateur';
                 const isHonoreASuivreCompteRendu =
                   Number(etatId) === 9 &&
                   (etatData.from_compte_rendu === true || etatData.from_compte_rendu === 1);
@@ -4237,7 +4248,7 @@ const FicheDetail = ({
                 // (demande explicite). Il reste visible dans l'historique des passages NRP.
                 if (etatId === 2) {
                   if (etatData.sous_etat_titre) items.push({ label: 'Sous-état', value: etatData.sous_etat_titre });
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                   if (!isCurrent) {
                     // Afficher le commentaire commercial en priorité s'il existe
                     if (etatData.commentaire_commercial) {
@@ -4247,11 +4258,11 @@ const FicheDetail = ({
                     }
                   }
                   if (etatData.histo_date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateTime(etatData.histo_date_rdv_time) });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
+                  if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // RAPPEL POUR BUREAU (19)
                 else if (etatId === 19) {
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -4259,11 +4270,11 @@ const FicheDetail = ({
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateTime(etatData.date_rdv_time) });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
+                  if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // ANNULER ET A REPROGRAMMER (8)
                 else if (etatId === 8) {
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -4272,11 +4283,11 @@ const FicheDetail = ({
                   }
                   const rappelEtat8 = etatData.histo_date_rdv_time || etatData.date_rdv_time;
                   if (rappelEtat8) items.push({ label: 'A rappeler le', value: formatRdvDateTime(rappelEtat8) });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
+                  if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // CLIENT HONORE A SUIVRE (9)
                 else if (etatId === 9) {
-                  if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurEtatListe });
+                  if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurEtatListe });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -4284,11 +4295,11 @@ const FicheDetail = ({
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
+                  if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // RDV ANNULER (11)
                 else if (etatId === 11) {
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -4299,7 +4310,7 @@ const FicheDetail = ({
                 }
                 // RDV ANNULER 2 FOIS (26)
                 else if (etatId === 26) {
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -4310,29 +4321,29 @@ const FicheDetail = ({
                 }
                 // REFUSER (12)
                 else if (etatId === 12) {
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
+                  if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // HHC FINANCEMENT A VERIFIER (34)
                 else if (etatId === 34) {
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
                   } else if (etatData.conf_commentaire_produit) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
+                  if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // HCC TECHNIQUE (35)
                 else if (etatId === 35) {
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                   // Afficher le commentaire commercial en priorité s'il existe
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -4340,7 +4351,7 @@ const FicheDetail = ({
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
                   if (etatData.commercial_pseudo) items.push({ label: 'Commercial', value: etatData.commercial_pseudo });
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
+                  if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // SIGNER, SIGNER RETRACTER, SIGNER COMPLET, SIGNER PM (13, 16, 45, 44) - Phase 3
                 else if (isEtatSigner(etatId)) {
@@ -4356,12 +4367,16 @@ const FicheDetail = ({
                       .filter((p) => p !== '');
                     if (confsSigner.length >= 2) {
                       confsSigner.forEach((pseudo, idx) => {
-                        items.push({ label: `Confirmateur ${idx + 1}`, value: pseudo });
+                        const labelConf =
+                          idx === 0 && isAuteurQualiteQualif
+                            ? 'Audité par'
+                            : `Confirmateur ${idx + 1}`;
+                        items.push({ label: labelConf, value: pseudo });
                       });
                     } else if (confsSigner.length === 1) {
-                      items.push({ label: 'Confirmateur', value: confsSigner[0] });
+                      items.push({ label: labelAuteurEtat, value: confsSigner[0] });
                     } else if (etatData.histo_confirmateur_pseudo) {
-                      items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                      items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                     }
                   }
                   // Commercial(s) : si >= 2, afficher chaque pseudo sur sa propre ligne (« Commercial 1 », « Commercial 2 »).
@@ -4442,12 +4457,16 @@ const FicheDetail = ({
                   ].filter((p) => p != null && String(p).trim() !== '');
                   if (confsConfirmer.length >= 2) {
                     confsConfirmer.forEach((pseudo, idx) => {
-                      items.push({ label: `Confirmateur ${idx + 1}`, value: pseudo });
+                      const labelConf =
+                        idx === 0 && isAuteurQualiteQualif
+                          ? 'Audité par'
+                          : `Confirmateur ${idx + 1}`;
+                      items.push({ label: labelConf, value: pseudo });
                     });
                   } else if (confsConfirmer.length === 1) {
-                    items.push({ label: 'Confirmateur', value: confsConfirmer[0] });
+                    items.push({ label: labelAuteurEtat, value: confsConfirmer[0] });
                   } else if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) {
-                    items.push({ label: 'Confirmateur', value: valeurConfirmateurEtatListe });
+                    items.push({ label: labelAuteurEtat, value: valeurConfirmateurEtatListe });
                   }
                   if (etatData.from_compte_rendu && etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial (compte rendu)', value: etatData.commentaire_commercial, fullWidth: true });
@@ -4463,7 +4482,7 @@ const FicheDetail = ({
                         : {}),
                     });
                   }
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
+                  if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                   // Champs conf_ (affichés uniquement si non vides)
                   if (etatData.conf_rdv_avec) items.push({ label: 'RDV pris avec', value: etatData.conf_rdv_avec });
                   if (etatData.conf_deja_etude || etatData.conf_deja_fait_etude) {
@@ -4512,7 +4531,7 @@ const FicheDetail = ({
                 }
                 // Par défaut
                 else {
-                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: 'Confirmateur', value: valeurConfirmateurAffichee });
+                  if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                   // Afficher le commentaire commercial s'il existe (après création d'un compte rendu approuvé)
                   if (etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
@@ -4523,7 +4542,7 @@ const FicheDetail = ({
                   } else if (etatData.conf_commentaire_produit && !etatData.commentaire_commercial) {
                     items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
                   }
-                  if (etatData.date_creation || etatData.date_appel_time) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_creation || etatData.date_appel_time) });
+                  if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 
                 return items;
@@ -4546,10 +4565,11 @@ const FicheDetail = ({
 
               const dateCreationEtatActuel = (lastHisto && lastHisto.id_etat === fiche.id_etat_final) ? lastHisto.date_creation : (fiche.date_modif_time || fiche.date_insert_time || null);
               
-              // Construire l'objet état actuel à partir des données de la fiche
+              // Date affichée état actuel / bandeau : priorité à fiches_histo.date_appel_time
               const currentDateAppelTime = (lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.date_appel_time)
                 ? lastHisto.date_appel_time
-                : fiche.date_appel_time;
+                : null;
+              const dateAfficheeEtatActuel = currentDateAppelTime || dateCreationEtatActuel;
               // Pour NRP « A rappeler le » : on utilise exclusivement la valeur historisée
               // dans fiches_histo (alias `histo_date_rdv_time`, déjà sérialisée en chaîne locale
                // par le backend), pour éviter tout décalage horaire dû à la conversion UTC d'un Date JS.
@@ -4570,6 +4590,10 @@ const FicheDetail = ({
                   lastHistoEtatActuel?.histo_confirmateur_pseudo ||
                   lastHistoEtatActuel?.confirmateur_pseudo ||
                   null,
+                histo_confirmateur_fonction:
+                  lastHistoEtatActuel?.histo_confirmateur_fonction != null
+                    ? Number(lastHistoEtatActuel.histo_confirmateur_fonction)
+                    : null,
                 // Confirmateurs : priorité à la ligne fiches_histo de l'état actuel, sinon slots fiche
                 confirmateur_pseudo:
                   lastHistoEtatActuel?.confirmateur_pseudo ||
@@ -4884,8 +4908,8 @@ const FicheDetail = ({
                             letterSpacing: 0,
                           }}
                         >
-                          {etatActuel.date_creation
-                            ? formatDateNoSeconds(etatActuel.date_creation)
+                          {dateAfficheeEtatActuel
+                            ? formatDateNoSeconds(dateAfficheeEtatActuel)
                             : '-'}
                         </span>
                       </span>
@@ -5676,7 +5700,9 @@ const FicheDetail = ({
                                         fontWeight: 'bold'
                                       }}
                                     >
-                                      {histo.date_creation ? formatDateNoSeconds(histo.date_creation) : '-'}
+                                      {histo.date_appel_time
+                                        ? formatDateNoSeconds(histo.date_appel_time)
+                                        : (histo.date_creation ? formatDateNoSeconds(histo.date_creation) : '-')}
                                     </span>
                                   </div>
                                 </div>
