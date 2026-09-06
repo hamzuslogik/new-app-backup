@@ -2156,6 +2156,14 @@ const FicheDetail = ({
       return;
     }
 
+    const dateRdvNormalized = data.date_rdv_time.includes(':')
+      ? data.date_rdv_time
+      : `${data.date_rdv_time}:00`;
+    if (!isBeforeRdvDateTime(dateRdvNormalized)) {
+      alert('La date du RDV est dépassée. Impossible de créer un RDV à une date passée.');
+      return;
+    }
+
     setRdvSubmitting(true);
     try {
       // Vérifier la disponibilité du créneau
@@ -2541,6 +2549,11 @@ const FicheDetail = ({
       const dateRdvTime = confFormData.conf_rdv_date && confFormData.conf_rdv_time 
         ? `${confFormData.conf_rdv_date} ${confFormData.conf_rdv_time}:00`
         : null;
+
+      if (dateRdvTime && !isBeforeRdvDateTime(dateRdvTime)) {
+        alert('La date du RDV est dépassée. Impossible de créer un RDV à une date passée.');
+        return;
+      }
 
       // Vérifier si le créneau planning est fermé (même règle que création RDV depuis l'onglet Planning)
       if (confFormData.conf_rdv_date && confFormData.conf_rdv_time) {
@@ -7110,6 +7123,7 @@ const FicheDetail = ({
                           type="date"
                           id="conf_rdv_date"
                           className="form-control"
+                          min={new Date().toISOString().slice(0, 10)}
                           value={confFormData.conf_rdv_date}
                           onChange={(e) => setConfFormData({...confFormData, conf_rdv_date: e.target.value})}
                         />
@@ -10415,6 +10429,7 @@ const CreateRdvModal = ({
                       type="date"
                       id="rdv_date"
                       className="form-control"
+                      min={new Date().toISOString().slice(0, 10)}
                       value={rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[0] : ''}
                       onChange={(e) => {
                         const time = rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[1] : '00:00';

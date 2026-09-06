@@ -192,6 +192,26 @@ function toMysqlLocalDateTime(d = new Date()) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+/** Parse date/heure RDV en heure locale (évite le décalage UTC de `new Date('YYYY-MM-DD HH:mm:ss')`). */
+function parseMysqlLocalDateTime(value) {
+  if (value == null || String(value).trim() === '') return null;
+  const match = String(value)
+    .trim()
+    .match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!match) {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const [, y, m, day, h, min, sec] = match;
+  return new Date(Number(y), Number(m) - 1, Number(day), Number(h), Number(min), Number(sec || 0));
+}
+
+function isRdvDateTimePast(value, now = new Date()) {
+  const rdv = parseMysqlLocalDateTime(value);
+  if (!rdv) return false;
+  return rdv.getTime() < now.getTime();
+}
+
 /**
  * Alimente la table confirmations au passage CONFIRMER (7) avec l'heure système locale.
  * Source historique : scripts SQL copiant fiches_histo.date_creation (souvent écrite en UTC).
@@ -4944,6 +4964,13 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       fiche.id_qualite_confirmation = user.id;
     }
 
+    if (dbField === 'date_rdv_time' && dbValue != null && String(dbValue).trim() !== '' && isRdvDateTimePast(dbValue)) {
+      return res.status(400).json({
+        success: false,
+        message: 'La date du RDV est dépassée. Impossible d\'enregistrer une date de RDV passée.'
+      });
+    }
+
     // Mettre à jour le champ sur fiches (source de vérité affichage fiche + stats)
     const now = toMysqlLocalDateTime();
     await query(
@@ -6686,9 +6713,16 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
 
     // Vérifier si un RDV est créé/modifié et si le créneau est fermé
     if (ficheData.date_rdv_time !== undefined && ficheData.date_rdv_time !== null && ficheData.date_rdv_time !== '') {
+      // Création / affectation d'une date RDV : refuser une date/heure déjà passée
+      if (isRdvDateTimePast(ficheData.date_rdv_time)) {
+        return res.status(400).json({
+          success: false,
+          message: 'La date du RDV est dépassée. Impossible de créer un RDV à une date passée.'
+        });
+      }
       try {
         // Extraire la date et l'heure du RDV
-        const rdvDateTime = new Date(ficheData.date_rdv_time);
+        const rdvDateTime = parseMysqlLocalDateTime(ficheData.date_rdv_time) || new Date(ficheData.date_rdv_time);
         const rdvDate = rdvDateTime.toISOString().split('T')[0]; // YYYY-MM-DD
         const rdvTime = rdvDateTime.toTimeString().split(' ')[0]; // HH:MM:SS
         
