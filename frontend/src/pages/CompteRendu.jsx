@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaEdit, FaEye, FaClipboardList, FaCheck, FaTimes, FaClock, FaCheckCircle, FaTimesCircle, FaSearch } from 'react-icons/fa';
+import { FaEdit, FaClipboardList, FaCheck, FaTimes, FaClock, FaCheckCircle, FaTimesCircle, FaSearch, FaCalendarAlt } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import EditCompteRenduModal from '../components/EditCompteRenduModal';
@@ -14,6 +14,7 @@ import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { isCompteRenduSignerEtat, getEtatsCompteRenduFilter } from '../utils/compteRenduSigner';
 import { getDateRappelAffichage } from '../utils/compteRenduDateRappel';
 import { canManageTrackingFromCompteRendu } from '../utils/trackingAccess';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 
 const getTodayISO = () => new Date().toISOString().split('T')[0];
 
@@ -21,6 +22,7 @@ const CompteRendu = () => {
   useForceDesktopViewport('compterendu-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('comptes-rendus');
   const [selectedStatutPending, setSelectedStatutPending] = useState(user.fonction === 5 ? 'pending' : 'all');
   const [filterDate, setFilterDate] = useState(getTodayISO);
   const [filterCommercial, setFilterCommercial] = useState('');
@@ -68,7 +70,19 @@ const CompteRendu = () => {
       if (filterEtat) params.id_etat_final = filterEtat;
       const res = await api.get('/compte-rendu', { params });
       return res.data.data || [];
-    }
+    },
+    { enabled: activeTab === 'comptes-rendus' }
+  );
+
+  const { data: rdvSansCrData, isLoading: isLoadingRdvSansCr } = useQuery(
+    ['compte-rendu-rdv-sans-cr', filterDate, filterCommercial],
+    async () => {
+      const params = { date: filterDate };
+      if (filterCommercial) params.id_commercial = filterCommercial;
+      const res = await api.get('/compte-rendu/rdv-sans-cr', { params });
+      return res.data.data || [];
+    },
+    { enabled: activeTab === 'rdv-sans-cr' }
   );
 
   // Mutation pour approuver un compte rendu pending
@@ -80,6 +94,7 @@ const CompteRendu = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('compte-rendu-pending');
+        queryClient.invalidateQueries('compte-rendu-rdv-sans-cr');
         queryClient.invalidateQueries('fiches');
         toast.success('Compte rendu approuvé avec succès');
         setSelectedCompteRendu(null);
@@ -181,6 +196,7 @@ const CompteRendu = () => {
   }, [etatsCompteRenduFiltre, filterEtat]);
 
   const compteRendusPending = comptesRendusPendingData || [];
+  const rdvSansCr = rdvSansCrData || [];
   const compteRenduRows = useMemo(() => {
     const rows = [];
     for (let i = 0; i < compteRendusPending.length; i += 2) {
@@ -188,11 +204,26 @@ const CompteRendu = () => {
     }
     return rows;
   }, [compteRendusPending]);
+  const rdvSansCrRows = useMemo(() => {
+    const rows = [];
+    for (let i = 0; i < rdvSansCr.length; i += 2) {
+      rows.push(rdvSansCr.slice(i, i + 2));
+    }
+    return rows;
+  }, [rdvSansCr]);
   const isAdmin = [1, 2, 7].includes(Number(user.fonction));
   const isBackoffice = Number(user.fonction) === 11; // Backoffice = fonction 11
   const isRPConfirmation = Number(user.fonction) === 13; // RP Confirmation = fonction 13
   const canApprove = isAdmin || isBackoffice || isRPConfirmation; // Admins, backoffice et RP Confirmation peuvent approuver / modifier
   const canManageTracking = canManageTrackingFromCompteRendu(user);
+
+  const getProduitLabelFromValue = (raw) => {
+    if (raw == null || String(raw) === '') return '-';
+    const n = Number(raw);
+    if (n === 1) return 'PAC';
+    if (n === 2) return 'PV';
+    return String(raw);
+  };
 
   const getCardColorByEtat = (cr) => {
     const etat = etats.find((e) => Number(e.id) === Number(cr.id_etat_final));
@@ -251,11 +282,7 @@ const CompteRendu = () => {
   const getProduitLabel = (cr) => {
     const mods = parseMods(cr?.modifications);
     const raw = cr?.produit ?? mods?.produit;
-    if (raw == null || String(raw) === '') return '-';
-    const n = Number(raw);
-    if (n === 1) return 'PAC';
-    if (n === 2) return 'PV';
-    return String(raw);
+    return getProduitLabelFromValue(raw);
   };
 
   const buildCompteRenduDetails = (cr) => {
@@ -302,9 +329,26 @@ const CompteRendu = () => {
     <div className="compte-rendu-page">
       <div className="page-header">
         <h1><FaClipboardList /> Comptes Rendus</h1>
+        <div className="tabs">
+          <button
+            type="button"
+            className={`tab ${activeTab === 'comptes-rendus' ? 'active' : ''}`}
+            onClick={() => setActiveTab('comptes-rendus')}
+          >
+            <FaClipboardList /> Comptes rendus
+          </button>
+          <button
+            type="button"
+            className={`tab ${activeTab === 'rdv-sans-cr' ? 'active' : ''}`}
+            onClick={() => setActiveTab('rdv-sans-cr')}
+          >
+            <FaCalendarAlt /> RDV sans compte rendu
+          </button>
+        </div>
       </div>
 
       {/* Section Comptes Rendus Pending */}
+      {activeTab === 'comptes-rendus' && (
       <div className="results-section">
           <div className="pending-header">
             <div className="compte-rendu-filters">
@@ -589,6 +633,114 @@ const CompteRendu = () => {
             <div className="no-data">Aucun compte rendu trouvé</div>
           )}
       </div>
+      )}
+
+      {activeTab === 'rdv-sans-cr' && (
+        <div className="results-section">
+          <div className="pending-header">
+            <div className="compte-rendu-filters">
+              <div className="filter-group">
+                <label htmlFor="filter-date-rdv-sans-cr">Date RDV :</label>
+                <input
+                  id="filter-date-rdv-sans-cr"
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                  className="filter-input"
+                />
+              </div>
+              {canApprove && (
+                <div className="filter-group">
+                  <label htmlFor="filter-commercial-rdv-sans-cr">Commercial :</label>
+                  <select
+                    id="filter-commercial-rdv-sans-cr"
+                    value={filterCommercial}
+                    onChange={(e) => setFilterCommercial(e.target.value)}
+                    className="filter-select"
+                  >
+                    <option value="">Tous</option>
+                    {commerciaux.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nom} {c.prenom}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {isLoadingRdvSansCr ? (
+            <div className="loading">Chargement...</div>
+          ) : rdvSansCr.length > 0 ? (
+            <>
+              <p className="compte-rendu-results-count">
+                <strong>{rdvSansCr.length}</strong>{' '}
+                RDV sans compte rendu
+              </p>
+              <div className="compte-rendu-rows">
+                {rdvSansCrRows.map((row, rowIndex) => (
+                  <div key={`rdv-row-${rowIndex}`} className="compte-rendu-row">
+                    {row.map((rdv) => (
+                      <div
+                        key={rdv.id}
+                        className="compte-rendu-card rdv-sans-cr-card"
+                        style={{
+                          border: `1px solid ${rdv.etat_color || '#6c757d'}`,
+                          borderLeft: `4px solid ${rdv.etat_color || '#6c757d'}`,
+                          background: hexToRgba(rdv.etat_color || '#6c757d', 0.08)
+                        }}
+                      >
+                        <div className="cr-header">
+                          <div className="cr-info">
+                            <div className="cr-title">
+                              <h3>
+                                {rdv.nom} {rdv.prenom}
+                              </h3>
+                              {rdv.etat_titre && (
+                                <span
+                                  className="statut-badge"
+                                  style={{
+                                    background: hexToRgba(rdv.etat_color || '#6c757d', 0.2),
+                                    color: '#1f2937',
+                                    border: `1px solid ${rdv.etat_color || '#6c757d'}`
+                                  }}
+                                >
+                                  {rdv.etat_titre}
+                                </span>
+                              )}
+                            </div>
+                            <div className="cr-meta">
+                              <span>Tél: {rdv.tel || '-'}</span>
+                              <span>Produit: {getProduitLabelFromValue(rdv.produit)}</span>
+                              <span>Date RDV: {formatRdvDateTime(rdv.date_rdv_time) || '-'}</span>
+                              <span>Commercial: {rdv.commercial_pseudo || '-'}</span>
+                              {rdv.commercial_2_pseudo && (
+                                <span>Commercial 2: {rdv.commercial_2_pseudo}</span>
+                              )}
+                              <span>Confirmateur: {rdv.confirmateur_pseudo || '-'}</span>
+                            </div>
+                          </div>
+                          <div className="cr-actions">
+                            <FicheDetailLink
+                              ficheHash={rdv.hash}
+                              ficheId={rdv.id}
+                              className="btn-icon"
+                              title="Détails fiche"
+                            >
+                              <FaSearch />
+                            </FicheDetailLink>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="no-data">Aucun RDV sans compte rendu pour cette date</div>
+          )}
+        </div>
+      )}
 
       {/* Modal d'approbation/rejet */}
       {selectedCompteRendu && canApprove && selectedCompteRendu.statut === 'pending' && (

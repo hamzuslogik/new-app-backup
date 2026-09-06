@@ -506,6 +506,90 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // =====================================================
+// ROUTE: GET /api/compte-rendu/rdv-sans-cr
+// RDV planifiés (CONFIRMER), affectés à un commercial, sans CR pending/approved
+// =====================================================
+router.get('/rdv-sans-cr', authenticate, async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user || !user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non authentifié'
+      });
+    }
+
+    const { date, id_commercial } = req.query;
+    const whereConditions = [
+      'f.archive = 0',
+      'f.active = 1',
+      'f.date_rdv_time IS NOT NULL',
+      "f.date_rdv_time != ''",
+      '(f.id_commercial IS NOT NULL AND f.id_commercial > 0)',
+      'f.id_etat_final = 7',
+      `NOT EXISTS (
+         SELECT 1 FROM compte_rendu_pending cr
+         WHERE cr.id_fiche = f.id
+           AND cr.statut IN ('pending', 'approved')
+       )`
+    ];
+    const params = [];
+
+    if (user.fonction === 5) {
+      whereConditions.push('(f.id_commercial = ? OR f.id_commercial_2 = ?)');
+      params.push(user.id, user.id);
+    } else if (id_commercial) {
+      whereConditions.push('(f.id_commercial = ? OR f.id_commercial_2 = ?)');
+      params.push(id_commercial, id_commercial);
+    }
+
+    if (date) {
+      whereConditions.push('DATE(f.date_rdv_time) = ?');
+      params.push(date);
+    }
+
+    const rows = await query(
+      `SELECT
+         f.id,
+         f.hash,
+         f.nom,
+         f.prenom,
+         f.tel,
+         f.date_rdv_time,
+         f.id_etat_final,
+         f.id_commercial,
+         f.id_commercial_2,
+         f.produit,
+         e.titre AS etat_titre,
+         e.color AS etat_color,
+         u_com.pseudo AS commercial_pseudo,
+         u_com2.pseudo AS commercial_2_pseudo,
+         u_conf.pseudo AS confirmateur_pseudo
+       FROM fiches f
+       LEFT JOIN etats e ON f.id_etat_final = e.id
+       LEFT JOIN utilisateurs u_com ON f.id_commercial = u_com.id
+       LEFT JOIN utilisateurs u_com2 ON f.id_commercial_2 = u_com2.id
+       LEFT JOIN utilisateurs u_conf ON f.id_confirmateur = u_conf.id
+       WHERE ${whereConditions.join(' AND ')}
+       ORDER BY f.date_rdv_time ASC, f.id ASC`,
+      params
+    );
+
+    res.json({
+      success: true,
+      data: rows || []
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des RDV sans compte rendu:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des RDV sans compte rendu',
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
 // ROUTE: GET /api/compte-rendu/:id
 // Récupérer un compte rendu spécifique
 // =====================================================
