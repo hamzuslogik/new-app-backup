@@ -2203,7 +2203,9 @@ const FICHE_EXPORT_FIELDS = {
   id_commercial: 'f.id_commercial',
   id_commercial_2: 'f.id_commercial_2',
   id_agent: 'f.id_agent',
+  agent_pseudo: 'ua.pseudo',
   commentaire: 'f.commentaire',
+  commentaire_qualite: 'f.commentaire_qualite',
   date_insert_time: 'f.date_insert_time',
   date_modif_time: 'f.date_modif_time',
   date_appel_time: 'f.date_appel_time',
@@ -2342,6 +2344,7 @@ router.post('/fiches-export', authenticate, async (req, res) => {
       LEFT JOIN etats e ON f.id_etat_final = e.id
       LEFT JOIN sous_etat se ON f.id_sous_etat = se.id
       LEFT JOIN centres c ON f.id_centre = c.id
+      LEFT JOIN utilisateurs ua ON f.id_agent = ua.id
       ${whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''}
       ORDER BY f.${date_field} DESC
       LIMIT 200000
