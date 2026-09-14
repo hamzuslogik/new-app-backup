@@ -1008,12 +1008,30 @@ async function executeNotificationAction(config, eventData) {
   } else if (destination === 'id_insert' && eventData.fiche?.id_insert) {
     destId = eventData.fiche.id_insert;
     console.log(`[WORKFLOW] Destination résolue depuis id_insert (agent créateur):`, destId);
-  } else if (destination === 'id_commercial' && eventData.fiche?.id_commercial) {
-    destId = eventData.fiche.id_commercial;
-    console.log(`[WORKFLOW] Destination résolue depuis id_commercial:`, destId);
-  } else if (destination === 'id_commercial_2' && eventData.fiche?.id_commercial_2) {
-    destId = eventData.fiche.id_commercial_2;
-    console.log(`[WORKFLOW] Destination résolue depuis id_commercial_2:`, destId);
+  } else if (destination === 'id_commercial') {
+    // RDV désaffecté : fiche.id_commercial est déjà vidé → repli sur old_id_commercial
+    const current = eventData.fiche?.id_commercial;
+    const currentId = current != null && Number(current) > 0 ? Number(current) : null;
+    const oldId =
+      eventData.old_id_commercial != null && Number(eventData.old_id_commercial) > 0
+        ? Number(eventData.old_id_commercial)
+        : null;
+    destId = currentId || oldId;
+    console.log(`[WORKFLOW] Destination résolue depuis id_commercial:`, destId, currentId ? '(fiche)' : '(old_id_commercial)');
+  } else if (destination === 'id_commercial_2') {
+    const current = eventData.fiche?.id_commercial_2;
+    const currentId = current != null && Number(current) > 0 ? Number(current) : null;
+    const oldId =
+      eventData.commercial_slot === 'secondaire' &&
+      eventData.old_id_commercial != null &&
+      Number(eventData.old_id_commercial) > 0
+        ? Number(eventData.old_id_commercial)
+        : null;
+    destId = currentId || oldId;
+    console.log(`[WORKFLOW] Destination résolue depuis id_commercial_2:`, destId, currentId ? '(fiche)' : '(old_id_commercial)');
+  } else if (destination === 'old_id_commercial' && eventData.old_id_commercial) {
+    destId = eventData.old_id_commercial;
+    console.log(`[WORKFLOW] Destination résolue depuis old_id_commercial (commercial désaffecté):`, destId);
   } else if (destination === 'id_qualite' && eventData.fiche?.id_qualite) {
     destId = eventData.fiche.id_qualite;
     console.log(`[WORKFLOW] Destination résolue depuis id_qualite (agent qualité):`, destId);

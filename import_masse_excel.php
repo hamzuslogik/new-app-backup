@@ -427,7 +427,10 @@ function build_yj_insert_row(array $tableCols, array $mappedRow, string $nomCent
             continue;
         }
         if ($colName === 'nom_agent') {
-            $insertData[$colName] = 'AG001';
+            // yj_fiche.nom_agent = pseudo agent (varchar) → fiches.id_agent via utilisateurs
+            $v = $mappedRow['nom_agent'] ?? ($mappedRow['id_agent'] ?? '');
+            $v = trim((string)$v);
+            $insertData[$colName] = $v !== '' ? $v : 'AG001';
             continue;
         }
         if ($colName === 'nom_centre') {
@@ -586,7 +589,7 @@ $yjFieldsPerso = [
     'profession_mr', 'profession_mme', 'age_mr', 'age_mme', 'enfant_encharge', 'situation_conju', 'revenu', 'credit',
     'credit_autre', 'credit_immobilier', 'site_classe', 'zones_ombres', 'chemines', 'nb_chemines', 'surface_disponible',
     'motif_qualification', 'nom_commercial', 'nom_commercial_2', 'id_commercial', 'nom_confirmateur', 'nom_confirmateur_2',
-    'nom_confirmateur_3', 'id_confirmateur', 'id_agent', 'id_qualite', 'nom_qualite', 'id_centre', 'entretient',
+    'nom_confirmateur_3', 'id_confirmateur', 'nom_agent', 'id_qualite', 'nom_qualite', 'id_centre', 'entretient',
     'conf_presence_couple', 'conf_revenu', 'conf_credit', 'pac_propritaire_maison', 'adresse_ip', 'exportation', 'favorite',
     'color', 'PENALITE', 'DETAIL_PENALITE', 'observation_qualite', 'valider',
 ];
@@ -621,6 +624,7 @@ $autoMapAliases = [
     'conf_consommations' => ['consommation', 'conso'],
     'conf_produit' => ['conf_produit', 'produit', 'product', 'type_produit'],
     'date_heure_appel' => ['date appel', 'date d appel', 'date_appel', 'appel', 'rdv', 'date rdv'],
+    'nom_agent' => ['nom_agent', 'agent', 'id_agent', 'pseudo agent', 'pseudo_agent', 'agent_pseudo'],
 ];
 
 $step = 'upload';
@@ -1123,7 +1127,7 @@ function selected($a, $b): string { return ((string)$a === (string)$b) ? 'select
           <div class="col"><label>id_centre</label><input type="number" name="id_centre" required step="1" title="ID centre (integer)"></div>
           <div class="col"><label>conf_produit (texte, défaut)</label><input type="text" name="conf_produit" placeholder="Si aucune colonne Excel n’est mappée sur conf_produit"></div>
         </div>
-        <p class="help-small">Les fiches importées ont pour <code>etat_final</code> la valeur <strong>EN-ATTENTE</strong>. <code>conf_produit</code> en base est un libellé (varchar), pas un identifiant numérique — vous pouvez le mapper depuis une colonne Excel ou utiliser le champ défaut ci-dessus. <code>id_centre</code> du formulaire s’applique à chaque ligne si la colonne <code>id_centre</code> n’est pas renseignée pour cette ligne.</p>
+        <p class="help-small">Les fiches importées ont pour <code>etat_final</code> la valeur <strong>EN-ATTENTE</strong>. <code>conf_produit</code> en base est un libellé (varchar), pas un identifiant numérique — vous pouvez le mapper depuis une colonne Excel ou utiliser le champ défaut ci-dessus. <code>id_centre</code> du formulaire s’applique à chaque ligne si la colonne <code>id_centre</code> n’est pas renseignée pour cette ligne. L’agent s’importe via <code>nom_agent</code> (pseudo), pas via un ID numérique — il sera résolu ensuite vers <code>fiches.id_agent</code>.</p>
         <br>
 
         <div class="mapping-section">

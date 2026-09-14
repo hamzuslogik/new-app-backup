@@ -57,8 +57,22 @@ async function fireRdvCommercialChange({ ficheId, oldFiche, newFiche, user, slot
   const oldPseudo = oldId ? await loadCommercialPseudo(oldId) : null;
   const newPseudo = newId ? await loadCommercialPseudo(newId) : null;
 
+  // Après désaffectation, la fiche en base a déjà id_commercial vide :
+  // on conserve l'ancien commercial sur le payload pour destination / templates.
+  let ficheForEvent = fiche;
+  if (oldId && !newId) {
+    ficheForEvent = { ...fiche };
+    if (slot === 'secondaire') {
+      ficheForEvent.id_commercial_2 = oldId;
+      ficheForEvent.commercial_2_pseudo = oldPseudo;
+    } else {
+      ficheForEvent.id_commercial = oldId;
+      ficheForEvent.commercial_pseudo = oldPseudo;
+    }
+  }
+
   const basePayload = {
-    fiche,
+    fiche: ficheForEvent,
     user,
     commercial_slot: slot,
     affectation_source: source,

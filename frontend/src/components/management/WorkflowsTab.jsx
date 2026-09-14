@@ -234,6 +234,7 @@ const DYNAMIC_RECIPIENT_OPTIONS = [
   { value: '{fiche.id_qualite}', label: 'Agent qualite ({fiche.id_qualite})' },
   { value: '{fiche.id_commercial}', label: 'Commercial principal ({fiche.id_commercial})' },
   { value: '{fiche.id_commercial_2}', label: 'Commercial secondaire ({fiche.id_commercial_2})' },
+  { value: '{old_id_commercial}', label: 'Commercial désaffecté / précédent ({old_id_commercial})' },
   { value: '{fiche.id_superviseur_qualif_agent}', label: "Superviseur qualif de l'agent de la fiche ({fiche.id_superviseur_qualif_agent})" },
   { value: '{remarque.id_destinataire}', label: 'Destinataire de la remarque ({remarque.id_destinataire})' },
   { value: '{remarque.id_expediteur}', label: 'Expéditeur de la remarque ({remarque.id_expediteur})' },
@@ -1217,6 +1218,7 @@ const WorkflowsTab = () => {
                             <option value="id_qualite">Agent qualité qui a audité ({'{fiche.id_qualite}'})</option>
                             <option value="id_commercial">Commercial principal ({'{fiche.id_commercial}'})</option>
                             <option value="id_commercial_2">Commercial secondaire ({'{fiche.id_commercial_2}'})</option>
+                            <option value="old_id_commercial">Commercial désaffecté / précédent ({'{old_id_commercial}'})</option>
                             <option value="id_superviseur_qualif_agent">Superviseur qualif de l&apos;agent de la fiche ({'{fiche.id_superviseur_qualif_agent}'})</option>
                             <option value="remarque_destinataire">Destinataire de la remarque (déclencheur remarque)</option>
                             <option value="remarque_expediteur">Expéditeur de la remarque (déclencheur remarque)</option>
