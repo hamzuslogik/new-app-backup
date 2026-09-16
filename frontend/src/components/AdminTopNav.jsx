@@ -56,15 +56,27 @@ function Dropdown({ label, children, open, onOpen, onClose }) {
 }
 
 function Flyout({ label, children, open, onOpen, onClose }) {
+  const toggle = () => (open ? onClose() : onOpen());
   return (
     <div
       className={`admin-nav-flyout ${open ? 'open' : ''}`}
       onMouseEnter={onOpen}
     >
-      <button type="button" className="admin-nav-flyout-trigger" onClick={() => (open ? onClose() : onOpen())}>
+      <div
+        className="admin-nav-link admin-nav-flyout-trigger"
+        role="button"
+        tabIndex={0}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+      >
         <span>{label}</span>
         <FaChevronDown className={`admin-nav-caret ${open ? 'open' : ''}`} />
-      </button>
+      </div>
       {open && <div className="admin-nav-flyout-menu">{children}</div>}
     </div>
   );
