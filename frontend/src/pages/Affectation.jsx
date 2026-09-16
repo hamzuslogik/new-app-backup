@@ -14,7 +14,6 @@ const Affectation = () => {
   const queryClient = useQueryClient();
   const [selectedFiches, setSelectedFiches] = useState([]);
   const [selectedCommercial, setSelectedCommercial] = useState('');
-  const [activeTab, setActiveTab] = useState('non-affectes'); // 'affectes' ou 'non-affectes'
   const [filters, setFilters] = useState({
     date_debut: new Date().toISOString().split('T')[0],
     date_fin: new Date().toISOString().split('T')[0],
@@ -40,19 +39,11 @@ const Affectation = () => {
     return res.data.data || [];
   });
 
-  const { data: departementsData } = useQuery('departements', async () => {
-    const res = await api.get('/management/departements');
-    return res.data.data || [];
-  });
-
   // Récupérer les fiches confirmées
   const { data: fichesData, isLoading, refetch } = useQuery(
-    ['fiches-confirmees', filters, activeTab],
+    ['fiches-confirmees', filters],
     async () => {
-      const params = { 
-        ...filters,
-        affectees: activeTab === 'affectes' ? '1' : '0' // 1 pour affectées, 0 pour non affectées
-      };
+      const params = { ...filters };
       Object.keys(params).forEach(key => {
         if (!params[key] || params[key] === 'all') delete params[key];
       });
@@ -163,28 +154,6 @@ const Affectation = () => {
     <div className="affectation-page">
       <h2 className="page-title"><FaUserCheck /> Affectation des Fiches Confirmées</h2>
 
-      {/* Onglets */}
-      <div className="affectation-tabs">
-        <button
-          className={`tab-button ${activeTab === 'non-affectes' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('non-affectes');
-            setSelectedFiches([]);
-          }}
-        >
-          RDV Non Affectés
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'affectes' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('affectes');
-            setSelectedFiches([]);
-          }}
-        >
-          RDV Affectés
-        </button>
-      </div>
-
       {/* Filtres */}
       <div className="affectation-filters">
         <div className="filter-row">
@@ -240,18 +209,14 @@ const Affectation = () => {
 
           <div className="filter-group">
             <label>Département</label>
-            <select
+            <input
+              type="text"
               value={filters.departement}
               onChange={(e) => handleFilterChange('departement', e.target.value)}
               className="form-control"
-            >
-              <option value="">Tous les départements</option>
-              {departementsData?.map(dep => (
-                <option key={dep.id} value={dep.departement_code}>
-                  {dep.departement_code} - {dep.departement_nom}
-                </option>
-              ))}
-            </select>
+              placeholder="Ex: 01, 75, 13"
+              title="Filtrer par un ou plusieurs codes département, séparés par une virgule"
+            />
           </div>
 
           <div className="filter-group">
@@ -287,24 +252,20 @@ const Affectation = () => {
         </div>
 
         <div className="action-buttons">
-          {activeTab === 'non-affectes' && (
-            <button
-              onClick={handleAffecter}
-              disabled={selectedFiches.length === 0 || !selectedCommercial || affectMutation.isLoading}
-              className="btn btn-affect"
-            >
-              {affectMutation.isLoading ? 'Affectation...' : `Affecter ${selectedFiches.length} fiche(s)`}
-            </button>
-          )}
-          {activeTab === 'affectes' && (
-            <button
-              onClick={handleDesaffecter}
-              disabled={selectedFiches.length === 0 || desaffectMutation.isLoading}
-              className="btn btn-desaffect"
-            >
-              {desaffectMutation.isLoading ? 'Désaffectation...' : `Désaffecter ${selectedFiches.length} fiche(s)`}
-            </button>
-          )}
+          <button
+            onClick={handleAffecter}
+            disabled={selectedFiches.length === 0 || !selectedCommercial || affectMutation.isLoading}
+            className="btn btn-affect"
+          >
+            {affectMutation.isLoading ? 'Affectation...' : `Affecter ${selectedFiches.length} fiche(s)`}
+          </button>
+          <button
+            onClick={handleDesaffecter}
+            disabled={selectedFiches.length === 0 || desaffectMutation.isLoading}
+            className="btn btn-desaffect"
+          >
+            {desaffectMutation.isLoading ? 'Désaffectation...' : `Désaffecter ${selectedFiches.length} fiche(s)`}
+          </button>
         </div>
       </div>
 
@@ -350,9 +311,7 @@ const Affectation = () => {
           <div className="loading">Chargement des fiches...</div>
         ) : fichesData?.length === 0 ? (
           <div className="no-data">
-            {activeTab === 'affectes' 
-              ? 'Aucune fiche confirmée affectée trouvée' 
-              : 'Aucune fiche confirmée non affectée trouvée'}
+            Aucune fiche confirmée trouvée
           </div>
         ) : (
           <div className="table-responsive">

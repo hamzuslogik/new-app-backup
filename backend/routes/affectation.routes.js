@@ -26,12 +26,10 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
     const conditions = ['f.id_etat_final = 7'];
     const queryParams = [];
 
-    // Filtrer selon si on veut les affectées ou non affectées
+    // Filtrer selon si on veut les affectées, non affectées, ou toutes
     if (affectees === '1') {
-      // Fiches affectées (id_commercial > 0)
       conditions.push('f.id_commercial > 0');
-    } else {
-      // Fiches non affectées (par défaut)
+    } else if (affectees === '0') {
       conditions.push('(f.id_commercial = 0 OR f.id_commercial IS NULL)');
     }
 
