@@ -566,7 +566,7 @@ const AffectationDep = () => {
                       return (
                         <td key={`${day.date}-${timeKey}`} className="planning-cell">
                           <div className="rdv-list">
-                            {rdvsFiltered.map((rdv, index) => {
+                            {rdvsFiltered.map((rdv) => {
                               const commercialName = getUserName(rdv.id_commercial);
                               const commercialColor = getUserColor(rdv.id_commercial);
                               const isSelected = selectedRdvs.has(rdv.id);
@@ -610,19 +610,19 @@ const AffectationDep = () => {
                                       onClick={(e) => e.stopPropagation()}
                                       className="rdv-checkbox"
                                     />
-                                    {isAssigned && commercialName ? (
-                                      <span className="rdv-commercial-name">{commercialName}</span>
-                                    ) : null}
                                     <FicheDetailLink
                                       ficheHash={rdv.hash}
                                       ficheId={rdv.id}
                                       className="rdv-link"
                                       title={`RDV ${rdv.id} - CP: ${cpLabel} - ${commercialName || 'Non affecté'}`}
                                     >
-                                      ({index + 1}) : {cpLabel}
+                                      {cpLabel}
                                     </FicheDetailLink>
                                     {rdvTime ? <span className="rdv-time">{rdvTime}</span> : null}
                                   </div>
+                                  {isAssigned && commercialName ? (
+                                    <span className="rdv-commercial-name">{commercialName}</span>
+                                  ) : null}
                                   <div className="rdv-badges">
                                     {userIsAdmin && rdv.qualification === 'RDV_URGENT' && (
                                       <span className="badge urgent">RDV_URGENT</span>

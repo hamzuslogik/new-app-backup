@@ -14,7 +14,7 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { formatRdvDateTime, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
+import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
@@ -1103,11 +1103,6 @@ const Dashboard = () => {
     return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#FFE441' : '#cccccc';
   };
 
-  const getDecalageHeure = (datetimeStr) => {
-    const heure = formatRdvTimeOnly(datetimeStr);
-    return heure || '-';
-  };
-
   const getDecalageDashboardInfo = (fiche) => {
     const etatIdRaw = fiche?.decale_id_etat;
     const etatId = Number(etatIdRaw);
@@ -1122,16 +1117,16 @@ const Dashboard = () => {
     if (etatId === 6 || titre.includes('ANNUL')) return null;
 
     let status = 'pending';
+    let text = 'En cours';
     if (etatId === 2 || titre.includes('ACCEPT') || titre.includes('VALID')) {
       status = 'accepted';
+      text = 'Acceptée';
     } else if (etatId === 3 || etatId === 4 || titre.includes('REFUS')) {
       status = 'refused';
+      text = 'Refusée';
     }
 
-    return {
-      status,
-      text: `Etat décalage : ${getDecalageHeure(fiche.decale_date_prevu)} > ${getDecalageHeure(fiche.decale_date_nouvelle)}`,
-    };
+    return { status, text };
   };
 
   // Vérifier les indicateurs dans l'historique basés sur les titres des états

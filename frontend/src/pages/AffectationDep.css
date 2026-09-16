@@ -250,13 +250,13 @@ html body .affectation-dep .planning-grid .time-slot-header * {
   border: 1px solid #d0d0d0;
   padding: 2px;
   vertical-align: top;
-  min-width: 120px;
+  min-width: 180px;
 }
 
 .planning-cell {
   position: relative;
   min-height: 40px;
-  padding: 2px !important;
+  padding: 4px !important;
   background: #e9e9e9;
   text-align: center;
 }
@@ -266,7 +266,7 @@ html body .affectation-dep .planning-grid .time-slot-header * {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 10px 4px 8px;
 }
 
@@ -276,13 +276,13 @@ html body .affectation-dep .planning-grid .time-slot-header * {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-wrap: nowrap;
+  gap: 6px;
   padding: 0;
   margin: 0;
   border: none;
   background: transparent;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.2;
   min-height: 0;
   opacity: 1;
@@ -307,14 +307,16 @@ html body .affectation-dep .planning-grid .time-slot-header * {
   color: #dc2626;
 }
 
-.rdv-pill {
+.affectation-dep .rdv-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px 2px 4px;
-  border-radius: 8px;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 10px;
   background: #9bb380;
-  max-width: 100%;
+  max-width: none;
+  white-space: nowrap;
 }
 
 .rdv-item.confirme .rdv-pill {
@@ -336,37 +338,36 @@ html body .affectation-dep .planning-grid .time-slot-header * {
 .rdv-item .rdv-checkbox {
   position: static;
   cursor: pointer;
-  width: 14px !important;
-  height: 14px !important;
+  width: 15px !important;
+  height: 15px !important;
   margin: 0 !important;
   padding: 0 !important;
   z-index: 5;
   transform: none;
   -webkit-appearance: checkbox !important;
   appearance: checkbox !important;
-  min-width: 14px !important;
-  min-height: 14px !important;
-  max-width: 14px !important;
-  max-height: 14px !important;
+  min-width: 15px !important;
+  min-height: 15px !important;
+  max-width: 15px !important;
+  max-height: 15px !important;
   flex-shrink: 0;
 }
 
 .rdv-commercial-name {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   color: #111 !important;
   white-space: nowrap;
-  max-width: 72px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: none;
+  overflow: visible;
 }
 
 .rdv-link {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   color: #111 !important;
   text-decoration: none !important;
   cursor: pointer;
-  font-size: 11px !important;
+  font-size: 12px !important;
   line-height: 1.2 !important;
   font-weight: 800 !important;
   padding: 0 !important;
@@ -392,16 +393,23 @@ html body .affectation-dep .planning-grid .time-slot-header * {
   opacity: 1 !important;
 }
 
-.rdv-time {
+.affectation-dep .rdv-time,
+.affectation-dep .rdv-pill .rdv-time {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  left: auto !important;
   color: #e67e22 !important;
-  font-weight: 800;
-  font-size: 11px;
-  white-space: nowrap;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+  display: inline !important;
 }
 
 .rdv-badges {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 3px;
   margin-top: 0;
   align-items: center;
