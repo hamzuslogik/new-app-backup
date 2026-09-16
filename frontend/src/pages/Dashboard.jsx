@@ -131,6 +131,34 @@ function getTodayDateRange() {
   return { dateStr, timeStart: '00:00:00', timeEnd: '23:59:59' };
 }
 
+const COMMERCIAL_DAY_OFFSET = 5;
+
+function toLocalDateString(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function buildCommercialDayOptions() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const options = [];
+  for (let offset = -COMMERCIAL_DAY_OFFSET; offset <= COMMERCIAL_DAY_OFFSET; offset += 1) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + offset);
+    const dateStr = toLocalDateString(d);
+    const dayName = d.toLocaleDateString('fr-FR', { weekday: 'long' });
+    const dayNum = String(d.getDate()).padStart(2, '0');
+    options.push({
+      dateStr,
+      label: `${dayName} ${dayNum}`,
+      isToday: offset === 0,
+    });
+  }
+  return options;
+}
+
 const DASHBOARD_MODAL_URL_KEYS = new Set([
   DASHBOARD_OPEN_FICHE_PARAM,
   'tableModal',
@@ -1070,6 +1098,29 @@ const Dashboard = () => {
     setStatsListOverride(null);
     // Nettoyer l'URL pour revenir au comportement par défaut au prochain rafraîchissement.
     setSearchParams({}, { replace: true });
+  };
+
+  const commercialDayOptions = buildCommercialDayOptions();
+  const isCommercialRdvView = Number(appliedFilters.id_commercial) > 0 && appliedFilters.fiche_search;
+  const commercialDayValue = commercialDayOptions.some((d) => d.dateStr === String(appliedFilters.date_debut || ''))
+    ? String(appliedFilters.date_debut)
+    : getTodayDateRange().dateStr;
+
+  const handleCommercialDayChange = (dateStr) => {
+    const newFilters = {
+      ...appliedFilters,
+      fiche_search: true,
+      page: 1,
+      date_champ: 'date_rdv_time',
+      date_debut: dateStr,
+      date_fin: dateStr,
+      time_debut: '00:00:00',
+      time_fin: '23:59:59',
+    };
+    setFilters(newFilters);
+    setAppliedFilters(newFilters);
+    setStatsListOverride(null);
+    setSearchParams(filtersToUrlParams(newFilters), { replace: true });
   };
 
   // Réinitialiser isSearching quand la requête est terminée
@@ -2249,6 +2300,23 @@ const Dashboard = () => {
                   : `${pagination.total}`}
             </h2>
           </div>
+          {isCommercialRdvView && (
+            <div className="dashboard-commercial-day-select">
+              <label htmlFor="dashboard-commercial-day">Jour</label>
+              <select
+                id="dashboard-commercial-day"
+                className="dashboard-commercial-day-select-input"
+                value={commercialDayValue}
+                onChange={(e) => handleCommercialDayChange(e.target.value)}
+              >
+                {commercialDayOptions.map((day) => (
+                  <option key={day.dateStr} value={day.dateStr}>
+                    {day.label}{day.isToday ? " (aujourd'hui)" : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {(isFetchingList) && (
             <div className="search-loading-indicator">
               <div className="spinner-small"></div>

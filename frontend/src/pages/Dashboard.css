@@ -1221,6 +1221,38 @@ button.stat-card.stat-card-clickable {
   flex-wrap: wrap;
 }
 
+.dashboard-commercial-day-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.dashboard-commercial-day-select label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #333;
+  white-space: nowrap;
+}
+
+.dashboard-commercial-day-select-input {
+  min-width: 180px;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  background: #fff;
+  cursor: pointer;
+}
+
+.dashboard-commercial-day-select-input:focus {
+  outline: none;
+  border-color: #9cbfc8;
+  box-shadow: 0 0 0 2px rgba(156, 191, 200, 0.35);
+}
+
 .limit-selector {
   display: flex;
   align-items: center;

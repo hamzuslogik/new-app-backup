@@ -89,7 +89,9 @@ export function adminMenuUrls(now = new Date()) {
         id_commercial: id,
         date_champ: 'date_rdv_time',
         date_debut: today,
+        date_fin: today,
         time_debut: '00:00:00',
+        time_fin: '23:59:59',
       }),
     signesSemaine: dashboardSearchUrl({
       id_etat_final: 't_s',
