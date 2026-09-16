@@ -34,6 +34,23 @@ import CompteRenduEarlyVerification from '../components/CompteRenduEarlyVerifica
 import { isBeforeRdvDateTime } from '../utils/compteRenduEarlyVerification';
 import { resolveConfRevenuAfterTypeContratChange } from '../utils/revenuTypeContrat';
 
+/** Mention « RDV SEUL » : Mr sans Mme / Mme sans Mr (conf_presence_couple). */
+function getRdvSeulMention(fiche) {
+  const raw = String(fiche?.conf_presence_couple ?? '').toUpperCase().trim();
+  if (!raw) return null;
+  if (raw === 'MR SEUL SANS MME' || (raw.includes('MR') && raw.includes('SANS MME'))) {
+    return 'Mr Sans Mme';
+  }
+  if (
+    raw === 'MME SEULE SANS MR' ||
+    raw === 'MME SEUL SANS MR' ||
+    (raw.includes('MME') && raw.includes('SANS MR'))
+  ) {
+    return 'Mme sans Mr';
+  }
+  return null;
+}
+
 /** Mode de chauffage (VARCHAR en base) : affichage tel quel. */
 function modeChauffageAffiche(confProp, modeProp) {
   const v = confProp ?? modeProp;
@@ -3682,6 +3699,15 @@ const FicheDetail = ({
                 ])}
             </tbody>
           </table>
+          {(() => {
+            const rdvSeulMention = getRdvSeulMention(fiche);
+            if (!rdvSeulMention) return null;
+            return (
+              <div className="fiche-rdv-seul-mention">
+                RDV SEUL : {rdvSeulMention}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Formulaire de décalage de RDV */}

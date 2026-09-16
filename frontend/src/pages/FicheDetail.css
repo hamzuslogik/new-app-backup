@@ -462,6 +462,15 @@
   border-bottom: none;
 }
 
+.fiche-rdv-seul-mention {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  color: #dc2626;
+  font-weight: 800;
+  font-size: 15px;
+  text-align: center;
+}
+
 .field-label {
   width: 30%;
   padding: 12px;
