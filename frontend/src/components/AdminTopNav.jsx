@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaChevronDown } from 'react-icons/fa';
 import { showTrackingInSidebar } from '../utils/trackingAccess';
-import { adminMenuUrls } from '../utils/adminMenuUrls';
+import { adminMenuUrls, isAdminMenuLinkActive } from '../utils/adminMenuUrls';
 import useUserHomePage from '../hooks/useUserHomePage';
 import './AdminTopNav.css';
 
@@ -140,6 +140,14 @@ const AdminTopNav = () => {
   };
 
   const itemClass = ({ isActive }) => `admin-nav-link ${isActive ? 'active' : ''}`;
+  const classFor = (to, extra = '') => {
+    const extras = extra ? ` ${extra}` : '';
+    if (String(to).includes('?')) {
+      return () =>
+        `admin-nav-link${extras}${isAdminMenuLinkActive(location, to) ? ' active' : ''}`;
+    }
+    return ({ isActive }) => `admin-nav-link${extras}${isActive ? ' active' : ''}`;
+  };
 
   return (
     <nav className="admin-top-nav" onClick={(e) => {
@@ -155,10 +163,10 @@ const AdminTopNav = () => {
         onOpen={() => { setOpenMenu('plannings'); setOpenFlyout(null); }}
         onClose={closeAll}
       >
-        <NavLink to={urls.planningHebdo} className={itemClass}>Planning hebdomadaire</NavLink>
-        <NavLink to={urls.affectationDep} className={itemClass}>Affectation par département</NavLink>
-        <NavLink to={urls.affectation} className={itemClass}>Affectation</NavLink>
-        <NavLink to={urls.alertePlanning} className={itemClass}>Alerte planning</NavLink>
+        <NavLink to={urls.planningHebdo} className={classFor(urls.planningHebdo)}>Planning hebdomadaire</NavLink>
+        <NavLink to={urls.affectationDep} className={classFor(urls.affectationDep)}>Affectation par département</NavLink>
+        <NavLink to={urls.affectation} className={classFor(urls.affectation)}>Affectation</NavLink>
+        <NavLink to={urls.alertePlanning} className={classFor(urls.alertePlanning)}>Alerte planning</NavLink>
         <Flyout
           label="DEP"
           open={openFlyout === 'dep'}
@@ -167,8 +175,9 @@ const AdminTopNav = () => {
         >
           {departementsData.map((dept) => {
             const code = dept.code || dept.departement_code;
+            const to = urls.dep(code);
             return (
-              <NavLink key={code} to={urls.dep(code)} className={({ isActive }) => `admin-nav-link admin-nav-dep-link ${isActive ? 'active' : ''}`}>
+              <NavLink key={code} to={to} className={classFor(to, 'admin-nav-dep-link')}>
                 {code}
               </NavLink>
             );
@@ -183,12 +192,12 @@ const AdminTopNav = () => {
         onOpen={() => { setOpenMenu('rdv'); setOpenFlyout(null); }}
         onClose={closeAll}
       >
-        <NavLink to={urls.rdvPrisAujourdhui} className={itemClass}>Rdv pris aujourd&apos;hui</NavLink>
-        <NavLink to={urls.rdvAffilie} className={itemClass}>RDV affilié</NavLink>
-        <NavLink to={urls.rdvNonAffilie} className={itemClass}>RDV non affilié</NavLink>
-        <NavLink to={urls.confirmesVeille} className={itemClass}>Confirmés de la veille</NavLink>
-        <NavLink to={urls.confirmesLendemain} className={itemClass}>Confirmés du lendemain</NavLink>
-        <NavLink to={urls.rdvVue} className={itemClass}>Vue rendez-vous</NavLink>
+        <NavLink to={urls.rdvPrisAujourdhui} className={classFor(urls.rdvPrisAujourdhui)}>Rdv pris aujourd&apos;hui</NavLink>
+        <NavLink to={urls.rdvAffilie} className={classFor(urls.rdvAffilie)}>RDV affilié</NavLink>
+        <NavLink to={urls.rdvNonAffilie} className={classFor(urls.rdvNonAffilie)}>RDV non affilié</NavLink>
+        <NavLink to={urls.confirmesVeille} className={classFor(urls.confirmesVeille)}>Confirmés de la veille</NavLink>
+        <NavLink to={urls.confirmesLendemain} className={classFor(urls.confirmesLendemain)}>Confirmés du lendemain</NavLink>
+        <NavLink to={urls.rdvVue} className={classFor(urls.rdvVue)}>Vue rendez-vous</NavLink>
       </Dropdown>
 
       <Dropdown
@@ -197,7 +206,7 @@ const AdminTopNav = () => {
         onOpen={() => { setOpenMenu('commerciaux'); setOpenFlyout(null); }}
         onClose={closeAll}
       >
-        <NavLink to={urls.compteRendu} className={itemClass}>Compte rendu</NavLink>
+        <NavLink to={urls.compteRendu} className={classFor(urls.compteRendu)}>Compte rendu</NavLink>
         <Flyout
           label="Commerciaux"
           open={openFlyout === 'commerciaux'}
@@ -205,7 +214,7 @@ const AdminTopNav = () => {
           onClose={() => setOpenFlyout(null)}
         >
           {commerciauxData.map((c) => (
-            <NavLink key={c.id} to={urls.commercialRdvs(c.id)} className={itemClass}>
+            <NavLink key={c.id} to={urls.commercialRdvs(c.id)} className={classFor(urls.commercialRdvs(c.id))}>
               {c.pseudo || `${c.nom || ''} ${c.prenom || ''}`.trim() || `Commercial ${c.id}`}
             </NavLink>
           ))}
@@ -219,9 +228,9 @@ const AdminTopNav = () => {
         onOpen={() => { setOpenMenu('signatures'); setOpenFlyout(null); }}
         onClose={closeAll}
       >
-        <NavLink to={urls.signesSemaine} className={itemClass}>Signés de la semaine</NavLink>
-        <NavLink to={urls.signesMois} className={itemClass}>Signés du mois</NavLink>
-        <NavLink to={urls.cqSignatures} className={itemClass}>CQ signatures</NavLink>
+        <NavLink to={urls.signesSemaine} className={classFor(urls.signesSemaine)}>Signés de la semaine</NavLink>
+        <NavLink to={urls.signesMois} className={classFor(urls.signesMois)}>Signés du mois</NavLink>
+        <NavLink to={urls.cqSignatures} className={classFor(urls.cqSignatures)}>CQ signatures</NavLink>
       </Dropdown>
 
       <Dropdown
@@ -230,14 +239,14 @@ const AdminTopNav = () => {
         onOpen={() => { setOpenMenu('validations'); setOpenFlyout(null); }}
         onClose={closeAll}
       >
-        <NavLink to={urls.decalages} className={itemClass}>Liste des décalages</NavLink>
-        <NavLink to={urls.rdvJourNonValides} className={itemClass}>RDV du jour non validés</NavLink>
-        <NavLink to={urls.rdvJourValides} className={itemClass}>RDV du jour validés</NavLink>
-        <NavLink to={urls.rdvLendemainNonValides} className={itemClass}>RDV du lendemain non validés</NavLink>
-        <NavLink to={urls.rdvLendemainValides} className={itemClass}>RDV du lendemain validés</NavLink>
+        <NavLink to={urls.decalages} className={classFor(urls.decalages)}>Liste des décalages</NavLink>
+        <NavLink to={urls.rdvJourNonValides} className={classFor(urls.rdvJourNonValides)}>RDV du jour non validés</NavLink>
+        <NavLink to={urls.rdvJourValides} className={classFor(urls.rdvJourValides)}>RDV du jour validés</NavLink>
+        <NavLink to={urls.rdvLendemainNonValides} className={classFor(urls.rdvLendemainNonValides)}>RDV du lendemain non validés</NavLink>
+        <NavLink to={urls.rdvLendemainValides} className={classFor(urls.rdvLendemainValides)}>RDV du lendemain validés</NavLink>
       </Dropdown>
 
-      <NavLink to={urls.statistiques} className={itemClass}>STATISTIQUES</NavLink>
+      <NavLink to={urls.statistiques} className={classFor(urls.statistiques)}>STATISTIQUES</NavLink>
 
       <Dropdown
         label="OUTILS"
@@ -245,13 +254,13 @@ const AdminTopNav = () => {
         onOpen={() => { setOpenMenu('outils'); setOpenFlyout(null); }}
         onClose={closeAll}
       >
-        <NavLink to={urls.gestion} className={itemClass}>Gestion</NavLink>
-        <NavLink to={urls.monProfil} className={itemClass}>Mon profil</NavLink>
-        <NavLink to={urls.permissions} className={itemClass}>Permissions</NavLink>
-        <NavLink to={urls.systemMessages} className={itemClass}>Messages système</NavLink>
-        <NavLink to={urls.envoyerMessage} className={itemClass}>Envoyer un message</NavLink>
+        <NavLink to={urls.gestion} className={classFor(urls.gestion)}>Gestion</NavLink>
+        <NavLink to={urls.monProfil} className={classFor(urls.monProfil)}>Mon profil</NavLink>
+        <NavLink to={urls.permissions} className={classFor(urls.permissions)}>Permissions</NavLink>
+        <NavLink to={urls.systemMessages} className={classFor(urls.systemMessages)}>Messages système</NavLink>
+        <NavLink to={urls.envoyerMessage} className={classFor(urls.envoyerMessage)}>Envoyer un message</NavLink>
         {extraPages.map((p) => (
-          <NavLink key={p.path} to={p.path} className={itemClass}>{p.label}</NavLink>
+          <NavLink key={p.path} to={p.path} className={classFor(p.path)}>{p.label}</NavLink>
         ))}
       </Dropdown>
     </nav>

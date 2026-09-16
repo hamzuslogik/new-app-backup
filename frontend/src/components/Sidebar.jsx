@@ -37,7 +37,7 @@ import {
   FaPaperPlane,
 } from 'react-icons/fa';
 import { showTrackingInSidebar } from '../utils/trackingAccess';
-import { adminMenuUrls } from '../utils/adminMenuUrls';
+import { adminMenuUrls, isAdminMenuLinkActive } from '../utils/adminMenuUrls';
 import './Sidebar.css';
 
 const isAdminSession = (user) => [1, 7].includes(Number(user?.fonction));
@@ -524,6 +524,14 @@ const Sidebar = ({ collapsed }) => {
   const linkClass = ({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`;
   const nestedLinkClass = ({ isActive }) => `sidebar-link sidebar-link-nested ${isActive ? 'active' : ''}`;
   const deepLinkClass = ({ isActive }) => `sidebar-link sidebar-link-deep ${isActive ? 'active' : ''}`;
+  const classFor = (to, variant = 'nested') => {
+    const base =
+      variant === 'deep' ? 'sidebar-link sidebar-link-deep' : 'sidebar-link sidebar-link-nested';
+    if (String(to).includes('?')) {
+      return () => `${base}${isAdminMenuLinkActive(location, to) ? ' active' : ''}`;
+    }
+    return variant === 'deep' ? deepLinkClass : nestedLinkClass;
+  };
 
   const renderGroupHeader = (key, label, Icon) => (
     <button type="button" className="sidebar-group-toggle" onClick={() => toggleGroup(key)}>
@@ -582,7 +590,7 @@ const Sidebar = ({ collapsed }) => {
                     const code = dept.code || dept.departement_code;
                     return (
                       <li key={code}>
-                        <NavLink to={urls.dep(code)} className={deepLinkClass}>
+                        <NavLink to={urls.dep(code)} className={classFor(urls.dep(code), 'deep')}>
                           <span>{code}</span>
                         </NavLink>
                       </li>
@@ -603,32 +611,32 @@ const Sidebar = ({ collapsed }) => {
               {openGroups.rdv && (
                 <ul className="sidebar-submenu sidebar-submenu-deep">
                   <li>
-                    <NavLink to={urls.rdvPrisAujourdhui} className={deepLinkClass}>
+                    <NavLink to={urls.rdvPrisAujourdhui} className={classFor(urls.rdvPrisAujourdhui, 'deep')}>
                       <span>Rdv pris aujourd&apos;hui</span>
                     </NavLink>
                   </li>
                   <li>
-                    <NavLink to={urls.rdvAffilie} className={deepLinkClass}>
+                    <NavLink to={urls.rdvAffilie} className={classFor(urls.rdvAffilie, 'deep')}>
                       <span>RDV affilié</span>
                     </NavLink>
                   </li>
                   <li>
-                    <NavLink to={urls.rdvNonAffilie} className={deepLinkClass}>
+                    <NavLink to={urls.rdvNonAffilie} className={classFor(urls.rdvNonAffilie, 'deep')}>
                       <span>RDV non affilié</span>
                     </NavLink>
                   </li>
                   <li>
-                    <NavLink to={urls.confirmesVeille} className={deepLinkClass}>
+                    <NavLink to={urls.confirmesVeille} className={classFor(urls.confirmesVeille, 'deep')}>
                       <span>Confirmés de la veille</span>
                     </NavLink>
                   </li>
                   <li>
-                    <NavLink to={urls.confirmesLendemain} className={deepLinkClass}>
+                    <NavLink to={urls.confirmesLendemain} className={classFor(urls.confirmesLendemain, 'deep')}>
                       <span>Confirmés du lendemain</span>
                     </NavLink>
                   </li>
                   <li>
-                    <NavLink to={urls.rdvVue} className={deepLinkClass}>
+                    <NavLink to={urls.rdvVue} className={classFor(urls.rdvVue, 'deep')}>
                       <span>Vue rendez-vous</span>
                     </NavLink>
                   </li>
@@ -665,7 +673,7 @@ const Sidebar = ({ collapsed }) => {
                 <ul className="sidebar-submenu sidebar-submenu-deep">
                   {commerciauxData.map((c) => (
                     <li key={c.id}>
-                      <NavLink to={urls.commercialRdvs(c.id)} className={deepLinkClass}>
+                      <NavLink to={urls.commercialRdvs(c.id)} className={classFor(urls.commercialRdvs(c.id), 'deep')}>
                         <span>{c.pseudo || `${c.nom || ''} ${c.prenom || ''}`.trim() || `Commercial ${c.id}`}</span>
                       </NavLink>
                     </li>
@@ -685,12 +693,12 @@ const Sidebar = ({ collapsed }) => {
         {openGroups.signatures && !collapsed && (
           <ul className="sidebar-submenu">
             <li>
-              <NavLink to={urls.signesSemaine} className={nestedLinkClass}>
+              <NavLink to={urls.signesSemaine} className={classFor(urls.signesSemaine)}>
                 <span>Signés de la semaine</span>
               </NavLink>
             </li>
             <li>
-              <NavLink to={urls.signesMois} className={nestedLinkClass}>
+              <NavLink to={urls.signesMois} className={classFor(urls.signesMois)}>
                 <span>Signés du mois</span>
               </NavLink>
             </li>
@@ -713,22 +721,22 @@ const Sidebar = ({ collapsed }) => {
               </NavLink>
             </li>
             <li>
-              <NavLink to={urls.rdvJourNonValides} className={nestedLinkClass}>
+              <NavLink to={urls.rdvJourNonValides} className={classFor(urls.rdvJourNonValides)}>
                 <span>RDV du jour non validés</span>
               </NavLink>
             </li>
             <li>
-              <NavLink to={urls.rdvJourValides} className={nestedLinkClass}>
+              <NavLink to={urls.rdvJourValides} className={classFor(urls.rdvJourValides)}>
                 <span>RDV du jour validés</span>
               </NavLink>
             </li>
             <li>
-              <NavLink to={urls.rdvLendemainNonValides} className={nestedLinkClass}>
+              <NavLink to={urls.rdvLendemainNonValides} className={classFor(urls.rdvLendemainNonValides)}>
                 <span>RDV du lendemain non validés</span>
               </NavLink>
             </li>
             <li>
-              <NavLink to={urls.rdvLendemainValides} className={nestedLinkClass}>
+              <NavLink to={urls.rdvLendemainValides} className={classFor(urls.rdvLendemainValides)}>
                 <span>RDV du lendemain validés</span>
               </NavLink>
             </li>

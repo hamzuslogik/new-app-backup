@@ -125,3 +125,18 @@ export function adminMenuUrls(now = new Date()) {
     _dates: { today, yesterday, tomorrow, weekStart, monthStart },
   };
 }
+
+/** Lien avec query : actif seulement si le pathname et les params du lien matchent l’URL courante. */
+export function isAdminMenuLinkActive(location, to) {
+  const href = String(to || '');
+  const qIndex = href.indexOf('?');
+  const path = qIndex === -1 ? href : href.slice(0, qIndex);
+  if (location.pathname !== path) return false;
+  if (qIndex === -1) return true;
+  const want = new URLSearchParams(href.slice(qIndex + 1));
+  const have = new URLSearchParams(location.search);
+  for (const [key, value] of want.entries()) {
+    if (String(have.get(key) ?? '') !== String(value)) return false;
+  }
+  return true;
+}
