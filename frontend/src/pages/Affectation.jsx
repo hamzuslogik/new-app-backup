@@ -2,11 +2,59 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaUserCheck } from 'react-icons/fa';
+import { FaUserCheck, FaCheck, FaSearch } from 'react-icons/fa';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
+import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
+import FicheDetailLink from '../components/FicheDetailLink';
 import './Affectation.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+
+function getProduitName(produitId) {
+  return produitId === 1 ? 'PAC' : produitId === 2 ? 'PV' : '';
+}
+
+function getProduitColor(produitId) {
+  return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#FFE441' : '#cccccc';
+}
+
+function getDecalageInfo(fiche) {
+  const etatIdRaw = fiche?.decale_id_etat;
+  const etatId = Number(etatIdRaw);
+  const titre = String(fiche?.etat_dec || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const hasDecalage = Boolean(
+    fiche?.decale_date_prevu ||
+    fiche?.decale_date_nouvelle ||
+    (fiche?.etat_dec && String(fiche.etat_dec).trim() !== '') ||
+    (etatIdRaw != null && etatIdRaw !== '' && Number.isFinite(etatId))
+  );
+  if (!hasDecalage) return null;
+  if (etatId === 6 || titre.includes('ANNUL')) return null;
+  let status = 'pending';
+  let text = 'En cours';
+  if (etatId === 2 || titre.includes('ACCEPT') || titre.includes('VALID')) {
+    status = 'accepted';
+    text = 'Acceptée';
+  } else if (etatId === 3 || etatId === 4 || titre.includes('REFUS')) {
+    status = 'refused';
+    text = 'Refusée';
+  }
+  return { status, text };
+}
+
+function formatConfirmateurs(fiche) {
+  const parts = [
+    fiche.confirmateur_nom,
+    fiche.confirmateur_2_pseudo,
+    fiche.confirmateur_3_pseudo,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' | ') : '-';
+}
+
+function formatCommercials(fiche) {
+  const parts = [fiche.commercial_nom, fiche.commercial_2_pseudo].filter(Boolean);
+  return parts.length > 0 ? parts.join(' | ') : '-';
+}
 
 const Affectation = () => {
   useForceDesktopViewport('affectation-page');
@@ -36,6 +84,11 @@ const Affectation = () => {
 
   const { data: produitsData } = useQuery('produits', async () => {
     const res = await api.get('/management/produits');
+    return res.data.data || [];
+  });
+
+  const { data: etatsData } = useQuery('etats', async () => {
+    const res = await api.get('/management/etats');
     return res.data.data || [];
   });
 
@@ -139,15 +192,47 @@ const Affectation = () => {
   };
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
+    if (!dateStr) return '';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', { 
-      day: '2-digit', 
-      month: '2-digit', 
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const getEtatColor = (fiche) => {
+    if (fiche?.etat_color) return fiche.etat_color;
+    const etat = (etatsData || []).find((e) => e.id === fiche?.id_etat_final || e.id === Number(fiche?.id_etat_final));
+    return etat?.color || '#cccccc';
+  };
+
+  const checkIndicators = (histoString, fiche = {}) => {
+    const r2Placed = ficheHasR2Placed(fiche);
+    const presenceCouple = String(fiche?.conf_presence_couple || '').toUpperCase().trim();
+    const hasRdvSeul = [
+      'MME SEULE SANS MR',
+      'MME SEUL SANS MR',
+      'MR SEUL SANS MME',
+      'NON',
+    ].includes(presenceCouple) || String(fiche?.conf_rdv_avec || '').toUpperCase().trim() === 'SEUL';
+    if (!histoString || !etatsData) {
+      return { r2: r2Placed, rf: false, an: false, rs: hasRdvSeul };
+    }
+    const histoArray = String(histoString).split(',').map(Number);
+    let hasAnnuler = false;
+    let hasRefuser = false;
+    histoArray.forEach((etatId) => {
+      const etat = etatsData.find((e) => e.id === etatId);
+      if (etat && etat.titre) {
+        const titre = etat.titre.toUpperCase();
+        if (titre.includes('RDV ANNULER')) hasAnnuler = true;
+        if (titre.includes('REFUSER')) hasRefuser = true;
+      }
+    });
+    return { r2: r2Placed, rf: hasRefuser, an: hasAnnuler, rs: hasRdvSeul };
   };
 
   return (
@@ -314,81 +399,117 @@ const Affectation = () => {
             Aucune fiche confirmée trouvée
           </div>
         ) : (
-          <div className="table-responsive">
+          <div className="fiches-table-container">
             <table className="fiches-table">
               <thead>
                 <tr>
-                  <th></th>
-                  <th>ID</th>
-                  <th>Client</th>
+                  <th className="affectation-select-col"></th>
+                  <th>Nom</th>
+                  <th>Prénom</th>
                   <th>Téléphone</th>
-                  <th>Code postal</th>
-                  <th>Adresse</th>
-                  <th>Produit</th>
-                  <th>Centre</th>
+                  <th>CP</th>
+                  <th>Date Insertion</th>
+                  <th>Date RDV</th>
+                  <th>État Final</th>
                   <th>Confirmateur</th>
                   <th>Commercial</th>
-                  <th>Date RDV</th>
-                  <th>RDV Validé</th>
-                  <th>Date modif</th>
+                  <th>Centre</th>
+                  <th>Produit</th>
+                  <th>Validé</th>
+                  <th className="affectation-actions-col">Actions</th>
+                  <th className="dashboard-decalage-col">État décalage</th>
                 </tr>
               </thead>
               <tbody>
-                {fichesData?.map(fiche => (
-                  <tr
-                    key={fiche.id}
-                    className={selectedFiches.includes(fiche.id) ? 'selected' : ''}
-                  >
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedFiches.includes(fiche.id)}
-                        onChange={() => handleSelectFiche(fiche.id)}
-                      />
-                    </td>
-                    <td>{fiche.id}</td>
-                    <td>
-                      <strong>{fiche.nom} {fiche.prenom}</strong>
-                    </td>
-                    <td>{fiche.tel || fiche.gsm1 || '-'}</td>
-                    <td>{fiche.cp || fiche.code_postal || '-'}</td>
-                    <td>
-                      {fiche.adresse ? (
-                        <span>{fiche.adresse}{fiche.ville ? `, ${fiche.ville}` : ''}</span>
-                      ) : '-'}
-                    </td>
-                    <td>{fiche.produit_nom || '-'}</td>
-                    <td>{fiche.centre_nom || '-'}</td>
-                    <td>{fiche.confirmateur_nom || '-'}</td>
-                    <td>
-                      {fiche.commercial_nom ? (
-                        <span className="badge badge-assigned">{fiche.commercial_nom}</span>
-                      ) : (
-                        <span className="badge badge-unassigned">Non affecté</span>
-                      )}
-                      {ficheHasR2Placed(fiche) && (
-                        <span className="badge badge-r2" title="R2 placé (commercial secondaire)">
-                          R2
+                {fichesData?.map((fiche) => {
+                  const indicators = checkIndicators(fiche.id_etat_histo, fiche);
+                  const etatColor = getEtatColor(fiche);
+                  const produitColor = getProduitColor(fiche.produit);
+                  const decalageInfo = getDecalageInfo(fiche);
+                  return (
+                    <tr
+                      key={fiche.id}
+                      className={`fiche-row-by-etat ${selectedFiches.includes(fiche.id) ? 'selected' : ''}`}
+                      style={{
+                        backgroundColor: `${etatColor}40`,
+                        borderLeft: `4px solid ${etatColor}`,
+                      }}
+                    >
+                      <td className="affectation-select-col">
+                        <input
+                          type="checkbox"
+                          checked={selectedFiches.includes(fiche.id)}
+                          onChange={() => handleSelectFiche(fiche.id)}
+                        />
+                      </td>
+                      <td data-label="Nom:" className="fiche-row-lead-cell">
+                        <span className="fiche-row-lead-label">{fiche.nom || ''}</span>
+                      </td>
+                      <td data-label="Prénom:">{fiche.prenom || ''}</td>
+                      <td data-label="Téléphone:">{fiche.tel || fiche.gsm1 || ''}</td>
+                      <td data-label="CP:">{fiche.cp || fiche.code_postal || ''}</td>
+                      <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                      <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                      <td data-label="État:" className="etat-col-cell">
+                        <span
+                          className="etat-badge etat-badge--wrap"
+                          style={{ backgroundColor: etatColor }}
+                        >
+                          {getEtatDisplayWithSousEtat(fiche, etatsData || [])}
                         </span>
-                      )}
-                    </td>
-                    <td>
-                      {fiche.date_rdv_time ? (
-                        formatRdvDateTime(fiche.date_rdv_time)
-                      ) : '-'}
-                    </td>
-                    <td>
-                      {fiche.valider > 0 ? (
-                        <span className="badge badge-validated" title={fiche.conf_rdv_avec ? `Avec: ${fiche.conf_rdv_avec}` : ''}>
-                          ✓ Validé
+                      </td>
+                      <td data-label="Confirmateur:">{formatConfirmateurs(fiche)}</td>
+                      <td data-label="Commercial:">{formatCommercials(fiche)}</td>
+                      <td data-label="Centre:">{fiche.centre_nom || '-'}</td>
+                      <td data-label="Produit:">
+                        <span
+                          className="produit-indicator"
+                          style={{ backgroundColor: produitColor, color: '#ffffff' }}
+                          title={getProduitName(fiche.produit) || fiche.produit_nom}
+                        >
+                          {getProduitName(fiche.produit) || fiche.produit_nom || '-'}
                         </span>
-                      ) : (
-                        <span className="badge badge-not-validated">Non validé</span>
-                      )}
-                    </td>
-                    <td>{formatDate(fiche.date_modif_time)}</td>
-                  </tr>
-                ))}
+                      </td>
+                      <td data-label="Validé:" style={{ textAlign: 'center' }}>
+                        {fiche.valider > 0 ? (
+                          <FaCheck
+                            style={{ color: '#28a745', fontSize: '15.3px' }}
+                            title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
+                          />
+                        ) : (
+                          <span style={{ color: '#ccc' }}>-</span>
+                        )}
+                      </td>
+                      <td data-label="" className="affectation-actions-col">
+                        <div className="fiche-indicators">
+                          {indicators.r2 && (
+                            <span className="indicator r2" title="R2 placé (commercial secondaire)">R2</span>
+                          )}
+                          {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
+                          {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
+                          {indicators.rs && <span className="indicator rs" title="SEUL">SEUL</span>}
+                        </div>
+                        <div className="dashboard-actions-cell">
+                          <FicheDetailLink
+                            ficheHash={fiche.hash}
+                            ficheId={fiche.id}
+                            className="btn-detail"
+                            title="Voir les détails"
+                          >
+                            <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
+                          </FicheDetailLink>
+                        </div>
+                      </td>
+                      <td data-label="État décalage:" className="dashboard-decalage-cell">
+                        {decalageInfo && (
+                          <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
+                            {decalageInfo.text}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

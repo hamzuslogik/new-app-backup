@@ -90,11 +90,13 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
     const fiches = await query(
       `SELECT 
         f.id,
+        f.hash,
         f.tel,
         f.gsm1,
         f.nom,
         f.prenom,
         f.adresse,
+        f.cp,
         f.cp as code_postal,
         f.ville,
         f.produit,
@@ -102,19 +104,50 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
         f.id_commercial,
         f.id_commercial_2,
         f.id_confirmateur,
+        f.id_confirmateur_2,
+        f.id_confirmateur_3,
         f.date_rdv_time,
+        f.date_insert_time,
         f.date_modif_time,
         f.valider,
         f.conf_rdv_avec,
+        f.conf_presence_couple,
+        f.id_etat_final,
+        f.id_sous_etat,
+        etat.titre as etat_titre,
+        etat.color as etat_color,
+        sous_etat_se.titre as sous_etat_titre,
         c.titre as centre_nom,
         com.pseudo as commercial_nom,
+        com2.pseudo as commercial_2_pseudo,
         conf.pseudo as confirmateur_nom,
-        prod.nom as produit_nom
+        conf2.pseudo as confirmateur_2_pseudo,
+        conf3.pseudo as confirmateur_3_pseudo,
+        prod.nom as produit_nom,
+        decale.id_etat as decale_id_etat,
+        decale.date_prevu as decale_date_prevu,
+        decale.date_nouvelle as decale_date_nouvelle,
+        decale_etat.titre as etat_dec
       FROM fiches f
+      LEFT JOIN etats etat ON f.id_etat_final = etat.id
+      LEFT JOIN sous_etat sous_etat_se ON f.id_sous_etat = sous_etat_se.id
       LEFT JOIN centres c ON f.id_centre = c.id
       LEFT JOIN utilisateurs com ON f.id_commercial = com.id
+      LEFT JOIN utilisateurs com2 ON f.id_commercial_2 = com2.id
       LEFT JOIN utilisateurs conf ON f.id_confirmateur = conf.id
+      LEFT JOIN utilisateurs conf2 ON f.id_confirmateur_2 = conf2.id
+      LEFT JOIN utilisateurs conf3 ON f.id_confirmateur_3 = conf3.id
       LEFT JOIN produits prod ON f.produit = prod.id
+      LEFT JOIN (
+        SELECT d.id, d.id_fiche, d.id_etat, d.date_prevu, d.date_nouvelle
+        FROM decalages d
+        INNER JOIN (
+          SELECT id_fiche, MAX(id) AS max_id
+          FROM decalages
+          GROUP BY id_fiche
+        ) latest_decale ON latest_decale.max_id = d.id
+      ) decale ON f.id = decale.id_fiche
+      LEFT JOIN etat_decalage decale_etat ON decale.id_etat = decale_etat.id
       ${whereClause}
       AND (f.archive = 0 OR f.archive IS NULL)
       AND f.active = 1
@@ -122,6 +155,25 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
       LIMIT 500`,
       queryParams
     );
+
+    if (fiches.length > 0) {
+      const ids = fiches.map((f) => f.id);
+      const placeholders = ids.map(() => '?').join(',');
+      const histoRows = await query(
+        `SELECT id_fiche, GROUP_CONCAT(DISTINCT id_etat ORDER BY id_etat SEPARATOR ',') AS id_etat_histo
+         FROM fiches_histo
+         WHERE id_fiche IN (${placeholders})
+         GROUP BY id_fiche`,
+        ids
+      );
+      const histoByFiche = {};
+      histoRows.forEach((row) => {
+        histoByFiche[row.id_fiche] = row.id_etat_histo || null;
+      });
+      fiches.forEach((f) => {
+        f.id_etat_histo = histoByFiche[f.id] || null;
+      });
+    }
 
     res.json({
       success: true,

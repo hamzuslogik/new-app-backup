@@ -230,51 +230,183 @@
   color: #f7a219;
 }
 
-.table-responsive {
+.table-responsive,
+.fiches-table-container {
   overflow-x: auto;
   width: 100%;
 }
 
-.fiches-table {
-  width: 100%;
+.affectation-page .fiches-table {
+  width: max-content !important;
+  min-width: 100%;
+  table-layout: auto !important;
   border-collapse: collapse;
+  font-size: 11px;
 }
 
-.fiches-table thead {
+.affectation-page .fiches-table thead {
   background: #ffffff;
-}
-
-.fiches-table th {
-  padding: 12px;
-  text-align: left;
-  font-weight: 600;
   color: #333333;
-  border: 1px solid #e0e0e0;
-  white-space: nowrap;
 }
 
-.fiches-table tbody tr {
+.affectation-page .fiches-table th {
+  padding: 6px 6.4px;
+  text-align: left;
+  font-weight: 800;
+  color: #333333;
+  font-size: 10.2px;
+}
+
+.affectation-page .fiches-table tbody tr {
   transition: background-color 0.2s;
-  border-bottom: 1px solid #e0e0e0;
 }
 
-.fiches-table tbody tr:hover {
-  background-color: #f5f5f5;
+.affectation-page .fiches-table tbody tr:hover {
+  filter: brightness(0.97);
 }
 
-.fiches-table tbody tr.selected {
-  background-color: #e3f2fd;
+.affectation-page .fiches-table tbody tr.selected {
+  outline: 2px solid #2196f3;
+  outline-offset: -2px;
 }
 
-.fiches-table td {
-  padding: 9.6px 12px;
-  border: 1px solid #e0e0e0;
+.affectation-page .fiches-table td {
+  padding: 5px 6.4px;
+  border-bottom: 2px solid #ffffff;
+  vertical-align: top;
 }
 
-.fiches-table td input[type="checkbox"] {
+.affectation-page .fiches-table td input[type="checkbox"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
+}
+
+.affectation-page .etat-badge {
+  display: inline-block;
+  padding: 4px 6.4px;
+  border-radius: 4px;
+  color: white;
+  font-weight: 800;
+  font-size: 9.4px;
+}
+
+.affectation-page .fiches-table td.etat-col-cell .etat-badge--wrap {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  box-sizing: border-box;
+  line-height: 1.25;
+  display: inline-block;
+}
+
+.affectation-page .produit-indicator {
+  display: inline-block;
+  padding: 3px 4.8px;
+  border-radius: 3px;
+  color: #ffffff !important;
+  font-weight: 800;
+  font-size: 8.5px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.affectation-page .fiche-indicators {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0 auto 4px;
+}
+
+.affectation-page .fiche-indicators:empty {
+  display: none;
+  margin: 0;
+}
+
+.affectation-page .indicator {
+  display: inline-block;
+  padding: 3px 4.8px;
+  border-radius: 3px;
+  font-weight: 800;
+  font-size: 8.5px;
+  white-space: nowrap;
+}
+
+.affectation-page .indicator.r2 {
+  background: #ffa500;
+  color: white;
+}
+
+.affectation-page .indicator.rf,
+.affectation-page .indicator.an {
+  background: #ff0000;
+  color: white;
+}
+
+.affectation-page .indicator.rs {
+  background: #60a5fa;
+  color: #ffffff !important;
+  border: 1px solid #60a5fa;
+}
+
+.affectation-page .affectation-actions-col {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.affectation-page .dashboard-actions-cell {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.affectation-page .btn-detail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: #9cbfc8;
+  color: #ffffff !important;
+  text-decoration: none;
+  border: none;
+  border-radius: 4px;
+  font-size: 11.9px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.affectation-page .btn-detail svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.affectation-page .btn-detail:hover {
+  background: #4a7a87;
+  transform: translateY(-1px);
+}
+
+.affectation-page .dashboard-decalage-mention {
+  display: inline-block;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.affectation-page .dashboard-decalage-mention.is-pending {
+  color: #ea580c;
+}
+
+.affectation-page .dashboard-decalage-mention.is-accepted {
+  color: #16a34a;
+}
+
+.affectation-page .dashboard-decalage-mention.is-refused {
+  color: #dc2626;
 }
 
 .badge {

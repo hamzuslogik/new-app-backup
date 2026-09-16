@@ -14,7 +14,8 @@ html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiche
 .dashboard-page .fiches-table,
 .production-qualif table.fiches-table,
 .production-qualif table.fiches-table.fiches-table--wrap,
-.stats-agents-qualite-page .fiches-content .fiches-table {
+.stats-agents-qualite-page .fiches-content .fiches-table,
+.affectation-page .fiches-table {
   table-layout: auto !important;
   width: max-content !important;
   min-width: 100% !important;
@@ -50,7 +51,9 @@ body.rdv-vue-page .rdv-vue .fiches-table td:nth-child(n),
 .production-qualif table.fiches-table.fiches-table--wrap th,
 .production-qualif table.fiches-table.fiches-table--wrap td,
 .stats-agents-qualite-page .fiches-content .fiches-table th,
-.stats-agents-qualite-page .fiches-content .fiches-table td {
+.stats-agents-qualite-page .fiches-content .fiches-table td,
+.affectation-page .fiches-table th:nth-child(n),
+.affectation-page .fiches-table td:nth-child(n) {
   width: auto !important;
   min-width: 0 !important;
   max-width: 15ch !important;
@@ -79,7 +82,13 @@ html body table.fiches-table td.dashboard-decalage-cell,
 html body .fiches-table th.dashboard-decalage-col,
 html body .fiches-table td.dashboard-decalage-cell,
 .dashboard-page .fiches-table th.dashboard-decalage-col,
-.dashboard-page .fiches-table td.dashboard-decalage-cell {
+.dashboard-page .fiches-table td.dashboard-decalage-cell,
+.affectation-page .fiches-table th.dashboard-decalage-col,
+.affectation-page .fiches-table td.dashboard-decalage-cell,
+.affectation-page .fiches-table th.affectation-select-col,
+.affectation-page .fiches-table td.affectation-select-col,
+.affectation-page .fiches-table th.affectation-actions-col,
+.affectation-page .fiches-table td.affectation-actions-col {
   max-width: none !important;
   white-space: nowrap !important;
   overflow-wrap: normal !important;
