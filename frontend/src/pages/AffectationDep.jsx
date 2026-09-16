@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaCheck, FaUser, FaRoute, FaMinus } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaUser, FaRoute } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
@@ -45,6 +45,15 @@ function getMondayOfWeek(year, week) {
 function hourToTimeKey(hour) {
   const [hours, minutes, seconds] = hour.split(':').map(Number);
   return hours * 3600 + minutes * 60 + (seconds || 0);
+}
+
+function formatRdvSlotTime(rdv) {
+  const raw = rdv?.rdv;
+  if (raw == null || raw === '') return '';
+  const s = String(raw);
+  const match = s.match(/(\d{1,2}):(\d{2})/);
+  if (match) return `${match[1].padStart(2, '0')}:${match[2]}`;
+  return s.substring(0, 5);
 }
 
 // Helper pour formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC)
@@ -206,12 +215,6 @@ const AffectationDep = () => {
     return res.data.data || [];
   });
 
-  // Récupérer les états pour obtenir la couleur CONFIRMER
-  const { data: etatsData } = useQuery('etats', async () => {
-    const res = await api.get('/management/etats');
-    return res.data.data || [];
-  });
-
   const getUserColor = (userId) => {
     if (!userId || !usersData) return '#cccccc';
     const user = usersData.find(u => u.id === userId);
@@ -222,13 +225,6 @@ const AffectationDep = () => {
     if (!userId || !usersData) return '';
     const user = usersData.find(u => u.id === userId);
     return user?.pseudo || '';
-  };
-
-  // Obtenir la couleur de l'état CONFIRMER (état 7)
-  const getConfirmerColor = () => {
-    if (!etatsData) return '#4caf50'; // Vert par défaut
-    const confirmerEtat = etatsData.find(e => e.id === 7);
-    return confirmerEtat?.color || '#4caf50';
   };
 
   // Mutation pour affecter des RDV
@@ -575,65 +571,63 @@ const AffectationDep = () => {
                               const commercialColor = getUserColor(rdv.id_commercial);
                               const isSelected = selectedRdvs.has(rdv.id);
                               const isValide = rdv.valider === 1 || rdv.valider === true;
-                              const isConfirme = rdv.id_etat_final === 7;
-                              const confirmerColor = getConfirmerColor();
-                              
-                              // Utiliser la couleur du commercial si disponible et différente de la couleur par défaut
-                              // Sinon utiliser la couleur par défaut selon l'état (validé/non validé)
+                              const isAssigned = Number(rdv.id_commercial) > 0;
                               const defaultColor = isValide ? '#00cc00' : '#9bb380';
-                              const hasCustomColor = commercialColor && commercialColor !== '#cccccc' && commercialColor !== null && commercialColor !== undefined;
-                              const backgroundColor = hasCustomColor ? commercialColor : defaultColor;
-                              
+                              const hasCustomColor = Boolean(isAssigned && commercialColor && commercialColor !== '#cccccc');
+                              const pillBackground = hasCustomColor ? commercialColor : defaultColor;
+                              const cpLabel = rdv.cp && rdv.cp !== '0' && rdv.cp !== 0 ? String(rdv.cp) : '-';
+                              const rdvTime = formatRdvSlotTime(rdv);
+                              const showSeul = Boolean(
+                                rdv.rdv_seul ||
+                                rdv.rdv_valid_sans_couple ||
+                                (rdv.etat_check && (String(rdv.etat_check).includes('SEUL') || String(rdv.etat_check).includes('RS'))) ||
+                                (Array.isArray(rdv.etats_list) && (rdv.etats_list.includes('SEUL') || rdv.etats_list.includes('RS')))
+                              );
+
                               return (
                                 <div
                                   key={rdv.id}
-                                  className={`rdv-item ${isSelected ? 'selected' : ''} ${isValide ? 'valide' : 'confirme'} ${isConfirme ? 'rdv-confirme' : ''}`}
-                                  style={{ 
-                                    borderLeftColor: commercialColor,
-                                    backgroundColor: isConfirme ? `${confirmerColor}20` : (hasCustomColor ? commercialColor : undefined)
-                                  }}
+                                  className={`rdv-item ${isSelected ? 'selected' : ''} ${isValide ? 'valide' : 'confirme'} ${isAssigned ? 'is-assigned' : ''}`}
                                 >
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={() => handleRdvToggle(rdv.id)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="rdv-checkbox"
-                                  />
-                                  <FicheDetailLink
-                                    ficheHash={rdv.hash}
-                                    ficheId={rdv.id}
-                                    className="rdv-link"
-                                    title={`RDV ${rdv.id} - CP: ${rdv.cp && rdv.cp !== '0' && rdv.cp !== 0 ? rdv.cp : '-'} - ${commercialName || 'Non affecté'}`}
-                                  >
-                                    {rdv.cp && rdv.cp !== '0' && rdv.cp !== 0 ? String(rdv.cp) : '-'}
-                                  </FicheDetailLink>
-                                  {(rdv.id_commercial && rdv.id_commercial > 0) ? (
+                                  {isAssigned && (
                                     <button
+                                      type="button"
                                       className="btn-desaffecter"
                                       onClick={(e) => handleDesaffecter(rdv.id, e)}
                                       title="Annuler l'affectation"
-                                      style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: '#dc3545',
-                                        cursor: 'pointer',
-                                        padding: '2px 4px',
-                                        fontSize: '14px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                      }}
                                     >
-                                      <FaMinus />
+                                      -
                                     </button>
-                                  ) : null}
+                                  )}
+                                  <div
+                                    className="rdv-pill"
+                                    style={{ backgroundColor: pillBackground }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => handleRdvToggle(rdv.id)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="rdv-checkbox"
+                                    />
+                                    {isAssigned && commercialName ? (
+                                      <span className="rdv-commercial-name">{commercialName}</span>
+                                    ) : null}
+                                    <FicheDetailLink
+                                      ficheHash={rdv.hash}
+                                      ficheId={rdv.id}
+                                      className="rdv-link"
+                                      title={`RDV ${rdv.id} - CP: ${cpLabel} - ${commercialName || 'Non affecté'}`}
+                                    >
+                                      ({index + 1}) : {cpLabel}
+                                    </FicheDetailLink>
+                                    {rdvTime ? <span className="rdv-time">{rdvTime}</span> : null}
+                                  </div>
                                   <div className="rdv-badges">
-                                    {/* Badges visibles uniquement pour les admins (sauf SEUL) */}
                                     {userIsAdmin && rdv.qualification === 'RDV_URGENT' && (
                                       <span className="badge urgent">RDV_URGENT</span>
                                     )}
-                                    {userIsAdmin && (rdv.qualification === 'ANN' || 
+                                    {userIsAdmin && (rdv.qualification === 'ANN' ||
                                       (rdv.etat_check && (rdv.etat_check.includes('AN') || rdv.etat_check === 'AN')) ||
                                       (rdv.etats_list && rdv.etats_list.includes('AN'))) && (
                                       <span className="badge ann">ANN</span>
@@ -647,10 +641,8 @@ const AffectationDep = () => {
                                      (rdv.etats_list && rdv.etats_list.includes('RF'))) && (
                                       <span className="badge rf">REF</span>
                                     )}
-                                    {(rdv.rdv_valid_sans_couple ||
-                                      (rdv.etat_check && (rdv.etat_check.includes('SEUL') || rdv.etat_check === 'SEUL')) ||
-                                      (rdv.etats_list && rdv.etats_list.includes('SEUL'))) && (
-                                      <span className="badge seul">SEUL</span>
+                                    {showSeul && (
+                                      <span className="badge seul">RDV SEUL</span>
                                     )}
                                   </div>
                                 </div>
