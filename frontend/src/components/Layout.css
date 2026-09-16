@@ -16,6 +16,10 @@
   overflow-x: auto; /* Permettre le scroll horizontal si nécessaire */
 }
 
+.sidebar.sidebar-admin ~ .main-content {
+  margin-left: 240px;
+}
+
 .main-content.sidebar-collapsed {
   margin-left: 0;
 }
@@ -44,6 +48,10 @@ body[data-desktop-viewport] .content-wrapper {
   .main-content {
     margin-left: 200px !important;
     transition: margin-left 0.3s ease;
+  }
+
+  .sidebar.sidebar-admin ~ .main-content {
+    margin-left: 240px !important;
   }
   
   .main-content.sidebar-collapsed {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaPaperPlane, FaSearch, FaComments, FaCircle } from 'react-icons/fa';
@@ -55,13 +56,20 @@ const Messages = () => {
   useForceDesktopViewport('messages-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const isCommercialReceiveOnly = Number(user?.fonction) === 5;
   const [selectedUser, setSelectedUser] = useState(null);
   const [messageText, setMessageText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAllUsers, setShowAllUsers] = useState(false);
+  const [showAllUsers, setShowAllUsers] = useState(() => searchParams.get('compose') === '1');
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (searchParams.get('compose') === '1') {
+      setShowAllUsers(true);
+    }
+  }, [searchParams]);
 
   // Mettre à jour l'activité de l'utilisateur actuel
   useEffect(() => {

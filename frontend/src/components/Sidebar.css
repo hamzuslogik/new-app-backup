@@ -137,6 +137,91 @@
   color: #ffffff !important;
 }
 
+.sidebar-icon-inline {
+  font-size: 11px;
+  margin-right: 8px;
+  min-width: 14px;
+  color: #ffffff !important;
+}
+
+/* Menu admin : groupes / sous-menus */
+.sidebar-admin {
+  width: 240px;
+}
+
+.sidebar-group-toggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  color: #ffffff !important;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-align: left;
+}
+
+.sidebar-group-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-left-color: var(--secondary-color);
+}
+
+.sidebar-group-toggle.nested {
+  padding-left: 22px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.sidebar-group-label {
+  flex: 1;
+  color: #ffffff !important;
+}
+
+.sidebar-chevron {
+  font-size: 10px;
+  opacity: 0.85;
+  margin-left: 6px;
+}
+
+.sidebar-submenu {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 6px;
+}
+
+.sidebar-submenu-deep {
+  padding-bottom: 4px;
+}
+
+.sidebar-link-nested {
+  padding: 6px 12px 6px 34px;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.sidebar-link-deep {
+  padding: 5px 12px 5px 46px;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.95;
+}
+
+.sidebar-empty {
+  padding: 6px 12px 6px 46px;
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.sidebar-menu-admin .sidebar-link span {
+  line-height: 1.25;
+}
+
 /* Cercle plein rouge devant le lien Messages (messages non lus) */
 .sidebar-link-dot {
   display: inline-block;

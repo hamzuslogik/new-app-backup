@@ -1290,7 +1290,7 @@ const Fiches = () => {
                         style={{ backgroundColor: `${etatColor}20` }}
                         className={isArchived ? 'archived' : ''}
                       >
-                        <td data-label="">{fiche.nom || ''} {fiche.prenom || ''}</td>
+                        <td data-label="Nom:">{fiche.nom || ''}</td>
                         <td data-label="Prénom:">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>

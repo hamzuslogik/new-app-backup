@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,39 +31,56 @@ import {
   FaUser,
   FaListAlt,
   FaClipboardCheck,
+  FaChevronDown,
+  FaChevronRight,
+  FaTools,
+  FaPaperPlane,
 } from 'react-icons/fa';
 import { showTrackingInSidebar } from '../utils/trackingAccess';
+import { adminMenuUrls } from '../utils/adminMenuUrls';
 import './Sidebar.css';
+
+const isAdminSession = (user) => [1, 7].includes(Number(user?.fonction));
 
 const Sidebar = ({ collapsed }) => {
   const { user, hasPermission } = useAuth();
   const location = useLocation();
   const fonctionId = user?.fonction;
   const homePage = useUserHomePage();
+  const urls = useMemo(() => adminMenuUrls(), []);
+  const [openGroups, setOpenGroups] = useState({
+    plannings: true,
+    dep: false,
+    rdv: false,
+    commerciaux: true,
+    commerciauxList: false,
+    signatures: true,
+    validations: true,
+    outils: false,
+  });
 
-  /** Sur /dashboard sans query : éviter no-op du Link et rétablir la liste du jour (événement écouté par Dashboard.jsx). */
+  const toggleGroup = (key) => {
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  /** Sur /dashboard sans query : éviter no-op du Link et rétablir la liste du jour. */
   const goHomePage = (e) => {
-    // Conserver le comportement « reset » uniquement si la page d'accueil est /dashboard
     if (homePage === '/dashboard' && location.pathname === '/dashboard' && !location.search) {
       e.preventDefault();
       window.dispatchEvent(new CustomEvent('dashboard-reset-default'));
     }
   };
 
-  // Vérifier si l'utilisateur est un RE Qualification (a des agents sous sa responsabilité)
   const { data: agentsSousResponsabilite } = useQuery(
     'agents-sous-responsabilite-sidebar',
     async () => {
       const res = await api.get('/management/utilisateurs');
-      const agents = res.data.data?.filter(u => u.chef_equipe === user?.id && u.fonction === 3) || [];
-      return agents;
+      return res.data.data?.filter((u) => u.chef_equipe === user?.id && u.fonction === 3) || [];
     },
     { enabled: !!user }
   );
-
   const isREQualif = agentsSousResponsabilite && agentsSousResponsabilite.length > 0;
 
-  // Nombre de messages non lus (pour le cercle rouge sur le lien Messages)
   const { data: messagesUnread } = useQuery(
     'messages-unread-count',
     async () => {
@@ -74,13 +91,42 @@ const Sidebar = ({ collapsed }) => {
   );
   const messagesUnreadCount = messagesUnread ?? 0;
 
-  const menuItems = [
+  const { data: departementsData = [] } = useQuery(
+    'sidebar-admin-departements',
+    async () => {
+      try {
+        const res = await api.get('/planning/departements');
+        if (Array.isArray(res.data?.data) && res.data.data.length) return res.data.data;
+      } catch (_) {
+        /* fallback management */
+      }
+      const resManagement = await api.get('/management/departements', { params: { actif_only: 1 } });
+      return (resManagement.data?.data || []).map((d) => ({
+        code: d.departement_code,
+        nom: d.departement_nom_uppercase || d.departement_nom,
+      }));
+    },
+    { enabled: !!user && isAdminSession(user) }
+  );
+
+  const { data: commerciauxData = [] } = useQuery(
+    'sidebar-admin-commerciaux',
+    async () => {
+      const res = await api.get('/management/utilisateurs');
+      return (res.data.data || [])
+        .filter((u) => Number(u.fonction) === 5 && Number(u.etat) > 0)
+        .sort((a, b) => String(a.pseudo || a.nom || '').localeCompare(String(b.pseudo || b.nom || ''), 'fr'));
+    },
+    { enabled: !!user && isAdminSession(user) }
+  );
+
+  const flatMenuItems = [
     {
       path: '/dashboard',
       label: 'Tableau de bord',
       icon: FaHome,
       permission: 'dashboard_view',
-      visible: true, // Toujours visible, mais vérifié par permission
+      visible: true,
     },
     {
       path: '/recherche-fiches',
@@ -123,7 +169,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaCalendarAlt,
       permission: null,
       visible: true,
-      customCheck: (_item, user) => Number(user?.fonction) === 1,
+      customCheck: (_item, u) => Number(u?.fonction) === 1,
     },
     {
       path: '/rdv-vue',
@@ -173,13 +219,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaChartBar,
       permission: 'production_qualif_view',
       visible: true,
-      // Visible pour RP Qualification (fonction 12)
-      customCheck: (item, user, hasPermission) => {
-        // Si RP Qualification (fonction 12), toujours visible
-        if (user?.fonction === 12) return true;
-        // Sinon, vérifier la permission
-        return hasPermission(item.permission);
-      },
+      customCheck: (item, u, hp) => (u?.fonction === 12 ? true : hp(item.permission)),
     },
     {
       path: '/kpi-qualification',
@@ -215,7 +255,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaSignature,
       permission: null,
       visible: true,
-      customCheck: (item, user) => [1, 11].includes(Number(user?.fonction)),
+      customCheck: (item, u) => [1, 11].includes(Number(u?.fonction)),
     },
     {
       path: '/affectation',
@@ -237,13 +277,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaUserTie,
       permission: 'suivi_agents_view',
       visible: true,
-      // Logique personnalisée : visible pour RE Qualification même sans permission suivi_agents_view
-      customCheck: (item, user, hasPermission, isREQualif) => {
-        // Si RE Qualification, toujours visible
-        if (isREQualif) return true;
-        // Sinon, vérifier la permission
-        return hasPermission(item.permission);
-      },
+      customCheck: (item, u, hp, re) => (re ? true : hp(item.permission)),
     },
     {
       path: '/suivi-agents',
@@ -265,7 +299,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaListAlt,
       permission: null,
       visible: true,
-      customCheck: (item, user) => [4, 11, 13, 14].includes(Number(user?.fonction)),
+      customCheck: (item, u) => [4, 11, 13, 14].includes(Number(u?.fonction)),
     },
     {
       path: '/alertes',
@@ -273,8 +307,8 @@ const Sidebar = ({ collapsed }) => {
       icon: FaBell,
       permission: null,
       visible: true,
-      customCheck: (item, user, hasPermission) =>
-        [3, 2, 12].includes(Number(user?.fonction)) || (user?.fonction && hasPermission('controle_qualite_view')),
+      customCheck: (item, u, hp) =>
+        [3, 2, 12].includes(Number(u?.fonction)) || (u?.fonction && hp('controle_qualite_view')),
     },
     {
       path: '/remarques',
@@ -282,8 +316,8 @@ const Sidebar = ({ collapsed }) => {
       icon: FaComments,
       permission: null,
       visible: true,
-      customCheck: (item, user, hasPermission) =>
-        [2, 12].includes(Number(user?.fonction)) || (user?.fonction && hasPermission('controle_qualite_view')),
+      customCheck: (item, u, hp) =>
+        [2, 12].includes(Number(u?.fonction)) || (u?.fonction && hp('controle_qualite_view')),
     },
     {
       path: '/mes-indicateurs',
@@ -291,7 +325,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaChartLine,
       permission: null,
       visible: true,
-      customCheck: (item, user) => Number(user?.fonction) === 3,
+      customCheck: (item, u) => Number(u?.fonction) === 3,
     },
     {
       path: '/audit-rdv',
@@ -299,7 +333,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaCalendarAlt,
       permission: null,
       visible: false,
-      customCheck: (item, user) => [4, 13].includes(Number(user?.fonction)),
+      customCheck: (item, u) => [4, 13].includes(Number(u?.fonction)),
     },
     {
       path: '/stats-agents-qualite',
@@ -321,7 +355,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaRoute,
       permission: null,
       visible: true,
-      customCheck: (_item, user) => showTrackingInSidebar(user),
+      customCheck: (_item, u) => showTrackingInSidebar(u),
     },
     {
       path: '/phase3',
@@ -357,10 +391,9 @@ const Sidebar = ({ collapsed }) => {
       icon: FaBell,
       permission: null,
       visible: true,
-      // Pas pour superviseur qualification (2) ni RE qualification (chef d'équipe agents qualif.)
-      customCheck: (item, user, _hasPermission, isREQualif) => {
-        const f = Number(user?.fonction);
-        if (f === 2 || isREQualif) return false;
+      customCheck: (item, u, _hp, re) => {
+        const f = Number(u?.fonction);
+        if (f === 2 || re) return false;
         return [1, 7, 11, 13, 14].includes(f);
       },
     },
@@ -377,7 +410,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaClock,
       permission: 'dashboard_view',
       visible: true,
-      customCheck: (item, user) => [6, 13, 14].includes(Number(user?.fonction)),
+      customCheck: (item, u) => [6, 13, 14].includes(Number(u?.fonction)),
     },
     {
       path: '/mon-equipe',
@@ -385,7 +418,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaUsers,
       permission: null,
       visible: true,
-      customCheck: (item, user) => [2, 14].includes(Number(user?.fonction)),
+      customCheck: (item, u) => [2, 14].includes(Number(u?.fonction)),
     },
     {
       path: '/rappels-bureau',
@@ -393,7 +426,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaCalendarAlt,
       permission: null,
       visible: false,
-      customCheck: (item, user) => Number(user?.fonction) === 13,
+      customCheck: (item, u) => Number(u?.fonction) === 13,
     },
     {
       path: '/users',
@@ -408,11 +441,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaCog,
       permission: 'management_view',
       visible: true,
-      // Visible pour Admin (1, 7) et Backoffice (11) ; Superviseur qualification (2) uniquement si permission accordée
-      customCheck: (item, user, hasPermission) => {
-        if ([1, 7, 11].includes(user?.fonction)) return true;
-        return hasPermission(item.permission);
-      },
+      customCheck: (item, u, hp) => ([1, 7, 11].includes(u?.fonction) ? true : hp(item.permission)),
     },
     {
       path: '/system-messages',
@@ -420,10 +449,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaBullhorn,
       permission: 'management_view',
       visible: true,
-      customCheck: (item, user, hasPermission) => {
-        if ([1, 7, 11].includes(user?.fonction)) return true;
-        return hasPermission(item.permission);
-      },
+      customCheck: (item, u, hp) => ([1, 7, 11].includes(u?.fonction) ? true : hp(item.permission)),
     },
     {
       path: '/permissions',
@@ -431,10 +457,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaShieldAlt,
       permission: 'config_permissions',
       visible: true,
-      customCheck: (item, user, hasPermission) => {
-        if ([1, 7, 11].includes(user?.fonction)) return true;
-        return hasPermission(item.permission);
-      },
+      customCheck: (item, u, hp) => ([1, 7, 11].includes(u?.fonction) ? true : hp(item.permission)),
     },
     {
       path: '/import-masse',
@@ -445,7 +468,7 @@ const Sidebar = ({ collapsed }) => {
     },
     {
       path: '/demandes-insertion',
-      label: 'Demandes d\'Insertion',
+      label: "Demandes d'Insertion",
       icon: FaExclamationTriangle,
       permission: 'demandes_insertion_view',
       visible: true,
@@ -456,10 +479,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaBell,
       permission: null,
       visible: true,
-      // Visible pour tous les utilisateurs
-      customCheck: (item, user) => {
-        return true; // Tous les utilisateurs peuvent voir leurs notifications
-      },
+      customCheck: () => true,
     },
     {
       path: '/mon-profil',
@@ -467,13 +487,341 @@ const Sidebar = ({ collapsed }) => {
       icon: FaUser,
       permission: null,
       visible: true,
-      // RE qualification, RP qualification, qualité qualification, qualité confirmation, confirmateur, RE confirmation, RP confirmation, backoffice, ADMINISTRATEUR, partenaire (pas commercial)
-      customCheck: (item, user) => [1, 2, 6, 7, 8, 9, 11, 12, 13, 14].includes(Number(user?.fonction)),
+      customCheck: (item, u) => [1, 2, 6, 7, 8, 9, 11, 12, 13, 14].includes(Number(u?.fonction)),
     },
   ];
 
+  const isItemVisible = (item) => {
+    if (item.visible === false) return false;
+    if (item.customCheck) return item.customCheck(item, user, hasPermission, isREQualif);
+    if (item.permission) return hasPermission(item.permission);
+    return item.visible;
+  };
+
+  const adminMentionedPaths = new Set([
+    '/dashboard',
+    '/planning-hebdomadaire',
+    '/affectation-dep',
+    '/affectation',
+    '/alerte-planning',
+    '/rdv-vue',
+    '/compte-rendu',
+    '/signatures',
+    '/cq-signatures',
+    '/decalages',
+    '/statistiques',
+    '/management',
+    '/mon-profil',
+    '/permissions',
+    '/system-messages',
+    '/messages',
+  ]);
+
+  const autresOutils = flatMenuItems.filter(
+    (item) => isItemVisible(item) && !adminMentionedPaths.has(item.path)
+  );
+
+  const linkClass = ({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`;
+  const nestedLinkClass = ({ isActive }) => `sidebar-link sidebar-link-nested ${isActive ? 'active' : ''}`;
+  const deepLinkClass = ({ isActive }) => `sidebar-link sidebar-link-deep ${isActive ? 'active' : ''}`;
+
+  const renderGroupHeader = (key, label, Icon) => (
+    <button type="button" className="sidebar-group-toggle" onClick={() => toggleGroup(key)}>
+      <Icon className="sidebar-icon" />
+      {!collapsed && (
+        <>
+          <span className="sidebar-group-label">{label}</span>
+          {openGroups[key] ? <FaChevronDown className="sidebar-chevron" /> : <FaChevronRight className="sidebar-chevron" />}
+        </>
+      )}
+    </button>
+  );
+
+  const renderAdminMenu = () => (
+    <ul className="sidebar-menu sidebar-menu-admin">
+      <li>
+        <NavLink to={urls.dashboard} onClick={goHomePage} className={linkClass} end>
+          <FaHome className="sidebar-icon" />
+          {!collapsed && <span>DASHBOARD</span>}
+        </NavLink>
+      </li>
+
+      <li className="sidebar-group">
+        {renderGroupHeader('plannings', 'PLANNINGS', FaCalendarAlt)}
+        {(openGroups.plannings || collapsed) && !collapsed && (
+          <ul className="sidebar-submenu">
+            <li>
+              <NavLink to={urls.planningHebdo} className={nestedLinkClass}>
+                <span>Planning hebdomadaire</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.affectationDep} className={nestedLinkClass}>
+                <span>Affectation par département</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.affectation} className={nestedLinkClass}>
+                <span>Affectation</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.alertePlanning} className={nestedLinkClass}>
+                <span>Alerte planning</span>
+              </NavLink>
+            </li>
+
+            <li className="sidebar-group sidebar-group-nested">
+              <button type="button" className="sidebar-group-toggle nested" onClick={() => toggleGroup('dep')}>
+                <span className="sidebar-group-label">DEP</span>
+                {openGroups.dep ? <FaChevronDown className="sidebar-chevron" /> : <FaChevronRight className="sidebar-chevron" />}
+              </button>
+              {openGroups.dep && (
+                <ul className="sidebar-submenu sidebar-submenu-deep">
+                  {departementsData.map((dept) => {
+                    const code = dept.code || dept.departement_code;
+                    const nom = dept.nom || dept.departement_nom || code;
+                    return (
+                      <li key={code}>
+                        <NavLink to={urls.dep(code)} className={deepLinkClass}>
+                          <span>
+                            {code} — {nom}
+                          </span>
+                        </NavLink>
+                      </li>
+                    );
+                  })}
+                  {departementsData.length === 0 && (
+                    <li className="sidebar-empty">Aucun département</li>
+                  )}
+                </ul>
+              )}
+            </li>
+
+            <li className="sidebar-group sidebar-group-nested">
+              <button type="button" className="sidebar-group-toggle nested" onClick={() => toggleGroup('rdv')}>
+                <span className="sidebar-group-label">RDV</span>
+                {openGroups.rdv ? <FaChevronDown className="sidebar-chevron" /> : <FaChevronRight className="sidebar-chevron" />}
+              </button>
+              {openGroups.rdv && (
+                <ul className="sidebar-submenu sidebar-submenu-deep">
+                  <li>
+                    <NavLink to={urls.rdvPrisAujourdhui} className={deepLinkClass}>
+                      <span>Rdv pris aujourd&apos;hui</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink to={urls.rdvAffilie} className={deepLinkClass}>
+                      <span>RDV affilié</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink to={urls.rdvNonAffilie} className={deepLinkClass}>
+                      <span>RDV non affilié</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink to={urls.confirmesVeille} className={deepLinkClass}>
+                      <span>Confirmés de la veille</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink to={urls.confirmesLendemain} className={deepLinkClass}>
+                      <span>Confirmés du lendemain</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink to={urls.rdvVue} className={deepLinkClass}>
+                      <span>Vue rendez-vous</span>
+                    </NavLink>
+                  </li>
+                </ul>
+              )}
+            </li>
+          </ul>
+        )}
+      </li>
+
+      <li className="sidebar-group">
+        {renderGroupHeader('commerciaux', 'COMMERCIAUX', FaUserTie)}
+        {openGroups.commerciaux && !collapsed && (
+          <ul className="sidebar-submenu">
+            <li>
+              <NavLink to={urls.compteRendu} className={nestedLinkClass}>
+                <span>Compte rendu</span>
+              </NavLink>
+            </li>
+            <li className="sidebar-group sidebar-group-nested">
+              <button
+                type="button"
+                className="sidebar-group-toggle nested"
+                onClick={() => toggleGroup('commerciauxList')}
+              >
+                <span className="sidebar-group-label">Commerciaux</span>
+                {openGroups.commerciauxList ? (
+                  <FaChevronDown className="sidebar-chevron" />
+                ) : (
+                  <FaChevronRight className="sidebar-chevron" />
+                )}
+              </button>
+              {openGroups.commerciauxList && (
+                <ul className="sidebar-submenu sidebar-submenu-deep">
+                  {commerciauxData.map((c) => (
+                    <li key={c.id}>
+                      <NavLink to={urls.commercialRdvs(c.id)} className={deepLinkClass}>
+                        <span>{c.pseudo || `${c.nom || ''} ${c.prenom || ''}`.trim() || `Commercial ${c.id}`}</span>
+                      </NavLink>
+                    </li>
+                  ))}
+                  {commerciauxData.length === 0 && (
+                    <li className="sidebar-empty">Aucun commercial</li>
+                  )}
+                </ul>
+              )}
+            </li>
+          </ul>
+        )}
+      </li>
+
+      <li className="sidebar-group">
+        {renderGroupHeader('signatures', 'SIGNATURES', FaSignature)}
+        {openGroups.signatures && !collapsed && (
+          <ul className="sidebar-submenu">
+            <li>
+              <NavLink to={urls.signesSemaine} className={nestedLinkClass}>
+                <span>Signés de la semaine</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.signesMois} className={nestedLinkClass}>
+                <span>Signés du mois</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.cqSignatures} className={nestedLinkClass}>
+                <span>CQ signatures</span>
+              </NavLink>
+            </li>
+          </ul>
+        )}
+      </li>
+
+      <li className="sidebar-group">
+        {renderGroupHeader('validations', 'VALIDATIONS', FaCheck)}
+        {openGroups.validations && !collapsed && (
+          <ul className="sidebar-submenu">
+            <li>
+              <NavLink to={urls.decalages} className={nestedLinkClass}>
+                <span>Liste des décalages</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.rdvJourNonValides} className={nestedLinkClass}>
+                <span>RDV du jour non validés</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.rdvJourValides} className={nestedLinkClass}>
+                <span>RDV du jour validés</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.rdvLendemainNonValides} className={nestedLinkClass}>
+                <span>RDV du lendemain non validés</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.rdvLendemainValides} className={nestedLinkClass}>
+                <span>RDV du lendemain validés</span>
+              </NavLink>
+            </li>
+          </ul>
+        )}
+      </li>
+
+      <li>
+        <NavLink to={urls.statistiques} className={linkClass}>
+          <FaChartBar className="sidebar-icon" />
+          {!collapsed && <span>STATISTIQUES</span>}
+        </NavLink>
+      </li>
+
+      <li className="sidebar-group">
+        {renderGroupHeader('outils', 'OUTILS', FaTools)}
+        {openGroups.outils && !collapsed && (
+          <ul className="sidebar-submenu">
+            <li>
+              <NavLink to={urls.gestion} className={nestedLinkClass}>
+                <span>Gestion</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.monProfil} className={nestedLinkClass}>
+                <span>Mon profil</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.permissions} className={nestedLinkClass}>
+                <span>Permissions</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.systemMessages} className={nestedLinkClass}>
+                <span>Messages système</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.envoyerMessage} className={nestedLinkClass}>
+                {messagesUnreadCount > 0 && <span className="sidebar-link-dot" aria-hidden />}
+                <FaPaperPlane className="sidebar-icon-inline" />
+                <span>Envoyer un message</span>
+              </NavLink>
+            </li>
+            {autresOutils.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.path}>
+                  <NavLink
+                    to={item.path}
+                    onClick={item.path === '/dashboard' ? goHomePage : undefined}
+                    className={nestedLinkClass}
+                  >
+                    <Icon className="sidebar-icon-inline" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </li>
+    </ul>
+  );
+
+  const renderFlatMenu = () => (
+    <ul className="sidebar-menu">
+      {flatMenuItems.filter(isItemVisible).map((item) => {
+        const Icon = item.icon;
+        const showMessagesDot = item.path === '/messages' && messagesUnreadCount > 0;
+        return (
+          <li key={item.path}>
+            <NavLink
+              to={item.path}
+              onClick={item.path === '/dashboard' ? goHomePage : undefined}
+              className={linkClass}
+            >
+              {showMessagesDot && <span className="sidebar-link-dot" aria-hidden />}
+              <Icon className="sidebar-icon" />
+              {!collapsed && <span>{item.label}</span>}
+            </NavLink>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${isAdminSession(user) ? 'sidebar-admin' : ''}`}>
       <Link to={homePage} className="sidebar-logo-container" onClick={goHomePage}>
         {collapsed ? (
           <img src="/logo/logo.png" alt="JWS Group" className="sidebar-logo-icon" />
@@ -482,48 +830,10 @@ const Sidebar = ({ collapsed }) => {
         )}
       </Link>
       <nav className="sidebar-nav">
-        <ul className="sidebar-menu">
-          {menuItems
-            .filter((item) => {
-              // Respecter en priorité le flag visible
-              if (item.visible === false) {
-                return false;
-              }
-              // Si l'item a une fonction de vérification personnalisée, l'utiliser
-              if (item.customCheck) {
-                return item.customCheck(item, user, hasPermission, isREQualif);
-              }
-              // Si l'item a une permission, vérifier la permission
-              if (item.permission) {
-                return hasPermission(item.permission);
-              }
-              // Sinon, utiliser la propriété visible
-              return item.visible;
-            })
-            .map((item) => {
-              const Icon = item.icon;
-              const showMessagesDot = item.path === '/messages' && messagesUnreadCount > 0;
-              return (
-                <li key={item.path}>
-                  <NavLink
-                    to={item.path}
-                    onClick={item.path === '/dashboard' ? goHomePage : undefined}
-                    className={({ isActive }) =>
-                      `sidebar-link ${isActive ? 'active' : ''}`
-                    }
-                  >
-                    {showMessagesDot && <span className="sidebar-link-dot" aria-hidden />}
-                    <Icon className="sidebar-icon" />
-                    {!collapsed && <span>{item.label}</span>}
-                  </NavLink>
-                </li>
-              );
-            })}
-        </ul>
+        {isAdminSession(user) ? renderAdminMenu() : renderFlatMenu()}
       </nav>
     </aside>
   );
 };
 
 export default Sidebar;
-

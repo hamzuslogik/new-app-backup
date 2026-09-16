@@ -517,12 +517,76 @@ function getUserByPseudo($pseudo) {
     return null;
 }
 
+// Corrige les caractères "mojibake" (ex. CARAYONÃ‚Â THIERRY → CARAYON THIERRY)
+function fixMojibakeText($value) {
+    if (!is_string($value)) {
+        return $value;
+    }
+    $s = trim($value);
+    if ($s === '') {
+        return '';
+    }
+
+    if (preg_match('/Ã.|Â[\x80-\xBF\xA0]|Ã‚/u', $s)) {
+        if (function_exists('mb_convert_encoding')) {
+            $as1252 = @mb_convert_encoding($s, 'Windows-1252', 'UTF-8');
+            if (is_string($as1252) && $as1252 !== '' && function_exists('mb_check_encoding') && mb_check_encoding($as1252, 'UTF-8')) {
+                $s = $as1252;
+            } elseif (is_string($as1252) && $as1252 !== '') {
+                $asUtf8 = @mb_convert_encoding($as1252, 'UTF-8', 'Windows-1252');
+                if (is_string($asUtf8) && $asUtf8 !== '' && !preg_match('/Ã.|Â[\xA0]/u', $asUtf8)) {
+                    $s = $asUtf8;
+                }
+            }
+        }
+    }
+
+    $replacements = array(
+        "\xC2\xA0" => ' ',
+        "\xA0" => ' ',
+        'Ã‚Â' => ' ',
+        'Ã‚' => '',
+        'Â ' => ' ',
+        'Â' => '',
+        'Ã,Â' => ', ',
+        'Ã©' => 'é',
+        'Ã¨' => 'è',
+        'Ãª' => 'ê',
+        'Ã«' => 'ë',
+        'Ã ' => 'à',
+        'Ã¡' => 'á',
+        'Ã¢' => 'â',
+        'Ã§' => 'ç',
+        'Ã´' => 'ô',
+        'Ã¶' => 'ö',
+        'Ã¹' => 'ù',
+        'Ã»' => 'û',
+        'Ã¼' => 'ü',
+        'Ã®' => 'î',
+        'Ã¯' => 'ï',
+        'Ã‰' => 'É',
+        'Ãˆ' => 'È',
+        'ÃŠ' => 'Ê',
+        'Ã‡' => 'Ç',
+        'Ã€' => 'À',
+    );
+    $s = strtr($s, $replacements);
+    $s = preg_replace('/Ã[^A-Za-z0-9]*Â\s*/u', ' ', $s);
+    $s = preg_replace('/[ \t\x{00A0}\x{202F}]+/u', ' ', $s);
+    $s = preg_replace('/\s+,/u', ',', $s);
+    $s = preg_replace('/,\s*/u', ', ', $s);
+    $s = preg_replace('/\s{2,}/u', ' ', $s);
+
+    return trim($s);
+}
+
 // Fonction de validation et nettoyage des données
 function sanitizeInput($data) {
     if (is_array($data)) {
         return array_map('sanitizeInput', $data);
     }
-    return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
+    $clean = fixMojibakeText(strip_tags(trim((string)$data)));
+    return htmlspecialchars($clean, ENT_QUOTES, 'UTF-8');
 }
 
 // Fonction d'authentification agent Vicidial (pseudo + mot de passe)
@@ -775,6 +839,12 @@ if (!empty($agent) && ($reloadFiche || empty($vicidialData))) {
         
         if ($stmt->num_rows > 0) {
             $vicidialData = mysqli_stmt_fetch_assoc_compat($stmt);
+            $vicidialTextKeys = array('first_name', 'last_name', 'address1', 'address2', 'city', 'postal_code', 'phone_number', 'alt_phone');
+            foreach ($vicidialTextKeys as $vk) {
+                if (isset($vicidialData[$vk]) && is_string($vicidialData[$vk])) {
+                    $vicidialData[$vk] = fixMojibakeText($vicidialData[$vk]);
+                }
+            }
             writeLog("Lead trouve: ID " . $vicidialData['lead_id']);
             // Afficher un message si c'est un rechargement explicite
             if (isset($_GET['load_last']) && empty($success) && empty($error)) {

@@ -224,7 +224,75 @@ function coerce_for_yj_column($value, array $meta)
     if (in_array($t, ['decimal', 'float', 'double'], true)) {
         return $value === '' ? 0 : 0 + (float)$value;
     }
-    return (string)$value;
+    return sanitize_imported_text((string)$value);
+}
+
+/**
+ * Corrige les caractères "mojibake" fréquents (ex. CARAYONÃ‚Â THIERRY → CARAYON THIERRY)
+ * issus d'un mauvais encodage Excel / Windows-1252 / double UTF-8.
+ */
+function sanitize_imported_text(string $s): string
+{
+    $s = trim($s);
+    if ($s === '') {
+        return '';
+    }
+
+    // Réparation double encodage UTF-8 lu comme Windows-1252
+    if (preg_match('/Ã.|Â[\x80-\xBF\xA0]|Ã‚/u', $s)) {
+        $as1252 = @mb_convert_encoding($s, 'Windows-1252', 'UTF-8');
+        if (is_string($as1252) && $as1252 !== '' && mb_check_encoding($as1252, 'UTF-8')) {
+            $s = $as1252;
+        } elseif (is_string($as1252) && $as1252 !== '') {
+            $asUtf8 = @mb_convert_encoding($as1252, 'UTF-8', 'Windows-1252');
+            if (is_string($asUtf8) && $asUtf8 !== '' && !preg_match('/Ã.|Â[\xA0]/u', $asUtf8)) {
+                $s = $asUtf8;
+            }
+        }
+    }
+
+    // Séquences restantes fréquemment vues dans les exports FR
+    $replacements = [
+        "\xC2\xA0" => ' ',   // NBSP UTF-8
+        "\xA0" => ' ',       // NBSP latin1
+        'Ã‚Â' => ' ',
+        'Ã‚' => '',
+        'Â ' => ' ',
+        'Â' => '',
+        'Ã,Â' => ', ',
+        'Ã©' => 'é',
+        'Ã¨' => 'è',
+        'Ãª' => 'ê',
+        'Ã«' => 'ë',
+        'Ã ' => 'à',
+        'Ã¡' => 'á',
+        'Ã¢' => 'â',
+        'Ã§' => 'ç',
+        'Ã´' => 'ô',
+        'Ã¶' => 'ö',
+        'Ã¹' => 'ù',
+        'Ã»' => 'û',
+        'Ã¼' => 'ü',
+        'Ã®' => 'î',
+        'Ã¯' => 'ï',
+        'Ã‰' => 'É',
+        'Ãˆ' => 'È',
+        'ÃŠ' => 'Ê',
+        'Ã‡' => 'Ç',
+        'Ã€' => 'À',
+    ];
+    $s = strtr($s, $replacements);
+
+    // Filet de sécurité : cluster Ã…Â entre mots → espace (ou virgule si une virgule est dans le cluster)
+    $s = preg_replace('/Ã[^A-Za-z0-9]*Â\s*/u', ' ', $s) ?? $s;
+
+    // Espaces / ponctuation
+    $s = preg_replace('/[ \t\x{00A0}\x{202F}]+/u', ' ', $s) ?? $s;
+    $s = preg_replace('/\s+,/u', ',', $s) ?? $s;
+    $s = preg_replace('/,\s*/u', ', ', $s) ?? $s;
+    $s = preg_replace('/\s{2,}/u', ' ', $s) ?? $s;
+
+    return trim($s);
 }
 
 function normalize_excel_datetime($value): string
@@ -429,7 +497,7 @@ function build_yj_insert_row(array $tableCols, array $mappedRow, string $nomCent
         if ($colName === 'nom_agent') {
             // yj_fiche.nom_agent = pseudo agent (varchar) → fiches.id_agent via utilisateurs
             $v = $mappedRow['nom_agent'] ?? ($mappedRow['id_agent'] ?? '');
-            $v = trim((string)$v);
+            $v = sanitize_imported_text(trim((string)$v));
             $insertData[$colName] = $v !== '' ? $v : 'AG001';
             continue;
         }
@@ -519,7 +587,7 @@ function collect_mapped_yj_row(array $row, array $mapping, array $commentaireMer
             $parts[] = $v;
         }
     }
-    $out['commentaire'] = implode(' / ', $parts);
+    $out['commentaire'] = sanitize_imported_text(implode(' / ', $parts));
 
     return $out;
 }

@@ -1576,6 +1576,30 @@ router.get('/', authenticate, async (req, res) => {
     if (rdv_non_valid) {
       whereConditions.push('fiche.valider = 0');
     }
+    if (rdv_affilie) {
+      whereConditions.push('(fiche.id_commercial IS NOT NULL AND CAST(fiche.id_commercial AS UNSIGNED) > 0)');
+    }
+    if (rdv_non_affilie) {
+      whereConditions.push('(fiche.id_commercial IS NULL OR CAST(fiche.id_commercial AS UNSIGNED) = 0)');
+    }
+    if (sgn_week || sgn_month) {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const end = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} 23:59:59`;
+      let start;
+      if (sgn_week) {
+        const d = new Date(now);
+        const day = d.getDay() || 7; // lundi = 1
+        d.setDate(d.getDate() - (day - 1));
+        start = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} 00:00:00`;
+      } else {
+        start = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01 00:00:00`;
+      }
+      whereConditions.push('fiche.date_sign_time IS NOT NULL');
+      whereConditions.push('fiche.date_sign_time >= ? AND fiche.date_sign_time <= ?');
+      whereConditions.push('fiche.id_etat_final = ?');
+      params.push(start, end, 13);
+    }
     if (day_rdv) {
       whereConditions.push('fiche.date_rdv_time >= ? AND fiche.date_rdv_time <= ?');
       params.push(`${day_rdv} 00:00:00`, `${day_rdv} 23:59:59`);

@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { FaSignature, FaChartLine, FaUsers, FaFileAlt, FaSearch } from 'react-icons/fa';
 import api from '../config/api';
@@ -22,14 +23,29 @@ function countConfirmateursOnSignatureEvent(signature, allSignatures) {
   }).length;
 }
 
+function startOfWeekLocalISO() {
+  const now = new Date();
+  const day = now.getDay() || 7;
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (day - 1));
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 const Signatures = () => {
   useForceDesktopViewport('signatures-page');
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const isAdminSession = [1, 11].includes(Number(user?.fonction));
-  const [dateDebut, setDateDebut] = useState(() => getFirstOfMonthLocal());
-  const [dateFin, setDateFin] = useState(() => getTodayLocal());
-  const [dateChamp, setDateChamp] = useState('date_rdv_time');
+  const [dateDebut, setDateDebut] = useState(() => {
+    const fromUrl = searchParams.get('date_debut');
+    return fromUrl || getFirstOfMonthLocal();
+  });
+  const [dateFin, setDateFin] = useState(() => {
+    const fromUrl = searchParams.get('date_fin');
+    return fromUrl || getTodayLocal();
+  });
+  const [dateChamp, setDateChamp] = useState(() => searchParams.get('date_champ') || 'date_rdv_time');
   const [selectedConfirmateur, setSelectedConfirmateur] = useState('');
   const [selectedCommercial, setSelectedCommercial] = useState('');
   const [page, setPage] = useState(1);
@@ -44,6 +60,25 @@ const Signatures = () => {
   });
   const [motifRejet, setMotifRejet] = useState('');
   const [selectedConfirmateurModal, setSelectedConfirmateurModal] = useState('');
+
+  useEffect(() => {
+    const d0 = searchParams.get('date_debut');
+    const d1 = searchParams.get('date_fin');
+    const champ = searchParams.get('date_champ');
+    const range = searchParams.get('range');
+    if (range === 'week') {
+      setDateDebut(startOfWeekLocalISO());
+      setDateFin(getTodayLocal());
+    } else if (range === 'month') {
+      setDateDebut(getFirstOfMonthLocal());
+      setDateFin(getTodayLocal());
+    } else {
+      if (d0) setDateDebut(d0);
+      if (d1) setDateFin(d1);
+    }
+    if (champ) setDateChamp(champ);
+    setPage(1);
+  }, [searchParams]);
 
   // Récupérer les KPI
   const { data: kpiData, isLoading: isLoadingKpi } = useQuery(
