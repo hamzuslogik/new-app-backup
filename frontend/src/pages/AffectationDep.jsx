@@ -136,6 +136,9 @@ const AffectationDep = () => {
   const [year, setYear] = useState(parseInt(searchParams.get('y')) || currentYear);
   const [dep, setDep] = useState(searchParams.get('dp') || '');
   const [selectedRdvs, setSelectedRdvs] = useState(new Set());
+  /** Affectations en attente : ficheId → id_commercial (appliquées au clic sur Appliquer) */
+  const [pendingAssignments, setPendingAssignments] = useState({});
+  const [isApplying, setIsApplying] = useState(false);
   /** Filtre liste RDV : n'afficher que ceux affectés à ce commercial (clic sans sélection). null = tous */
   const [filterCommercialId, setFilterCommercialId] = useState(null);
   const [distanceResults, setDistanceResults] = useState(null);
@@ -235,17 +238,6 @@ const AffectationDep = () => {
         id_commercial: idCommercial
       });
       return res.data;
-    },
-    {
-      onSuccess: (data) => {
-        toast.success(`${data.success_count || selectedRdvs.size} RDV(s) affecté(s) avec succès`);
-        setSelectedRdvs(new Set());
-        refetchPlanning();
-        queryClient.invalidateQueries(['planning-week']);
-      },
-      onError: (error) => {
-        toast.error('Erreur lors de l\'affectation: ' + (error.response?.data?.message || error.message));
-      }
     }
   );
 
@@ -271,7 +263,16 @@ const AffectationDep = () => {
 
   // Gérer l'annulation de l'affectation d'un RDV
   const handleDesaffecter = (ficheId, e) => {
-    e.stopPropagation(); // Empêcher la propagation de l'événement
+    e.stopPropagation();
+    const key = Number(ficheId);
+    if (pendingAssignments[key] != null) {
+      setPendingAssignments((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      return;
+    }
     desaffectMutation.mutate(ficheId);
   };
 
@@ -286,35 +287,68 @@ const AffectationDep = () => {
     setSelectedRdvs(newSelected);
   };
 
-  // Gérer l'affectation à un commercial
-  const handleAffecter = (idCommercial) => {
-    if (selectedRdvs.size === 0) {
-      toast.warning('Veuillez sélectionner au moins un RDV');
-      return;
-    }
-    if (!idCommercial) {
-      toast.error('Commercial invalide');
-      return;
-    }
-    
-    const fichesIds = Array.from(selectedRdvs);
-    affectMutation.mutate({ fichesIds, idCommercial });
-  };
-
-  /** Clic commercial : avec RDV cochés → affecter ; sinon → filtrer / désactiver le filtre */
+  /** Clic commercial : avec RDV cochés → prévisualiser la couleur ; sinon → filtrer */
   const handleCommercialSidebarClick = (commercialId) => {
     if (selectedRdvs.size > 0) {
-      handleAffecter(commercialId);
+      if (!commercialId) {
+        toast.error('Commercial invalide');
+        return;
+      }
+      setPendingAssignments((prev) => {
+        const next = { ...prev };
+        selectedRdvs.forEach((ficheId) => {
+          next[Number(ficheId)] = Number(commercialId);
+        });
+        return next;
+      });
+      setSelectedRdvs(new Set());
       return;
     }
     setFilterCommercialId((prev) => (prev === commercialId ? null : commercialId));
+  };
+
+  const handleApplyAssignments = async () => {
+    const entries = Object.entries(pendingAssignments);
+    if (entries.length === 0) {
+      toast.warning('Aucune modification à appliquer');
+      return;
+    }
+    const byCommercial = {};
+    entries.forEach(([ficheId, commercialId]) => {
+      const cid = Number(commercialId);
+      if (!byCommercial[cid]) byCommercial[cid] = [];
+      byCommercial[cid].push(Number(ficheId));
+    });
+    setIsApplying(true);
+    try {
+      let total = 0;
+      for (const [commercialId, fichesIds] of Object.entries(byCommercial)) {
+        const data = await affectMutation.mutateAsync({
+          fichesIds,
+          idCommercial: Number(commercialId),
+        });
+        total += Number(data?.success_count) || fichesIds.length;
+      }
+      toast.success(`${total} RDV(s) affecté(s) avec succès`);
+      setPendingAssignments({});
+      setSelectedRdvs(new Set());
+      refetchPlanning();
+      queryClient.invalidateQueries(['planning-week']);
+    } catch (error) {
+      toast.error('Erreur lors de l\'affectation: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   /** Filtre affichage : commercial principal (id_commercial) uniquement */
   const rdvMatchesCommercialFilter = (rdv) => {
     if (filterCommercialId == null) return true;
     const fid = Number(filterCommercialId);
-    const c1 = rdv.id_commercial != null ? Number(rdv.id_commercial) : null;
+    const pendingId = pendingAssignments[Number(rdv.id)];
+    const c1 = pendingId != null
+      ? Number(pendingId)
+      : (rdv.id_commercial != null ? Number(rdv.id_commercial) : null);
     return c1 === fid;
   };
 
@@ -455,6 +489,7 @@ const AffectationDep = () => {
   useEffect(() => {
     setSelectedRdvs(new Set());
     setFilterCommercialId(null);
+    setPendingAssignments({});
   }, [week, year, dep]);
 
   if (isLoadingPlanning || isLoadingDepartements) {
@@ -557,7 +592,6 @@ const AffectationDep = () => {
                       const dateData = planning[day.date];
                       const slotData = dateData?.time?.[timeKey];
                       const rdvs = slotData?.planning || [];
-                      const availability = slotData?.av || 0;
                       const rdvsFiltered =
                         filterCommercialId == null
                           ? rdvs
@@ -567,14 +601,18 @@ const AffectationDep = () => {
                         <td key={`${day.date}-${timeKey}`} className="planning-cell">
                           <div className="rdv-list">
                             {rdvsFiltered.map((rdv) => {
+                              const pendingCommercialId = pendingAssignments[Number(rdv.id)];
+                              const isPending = pendingCommercialId != null;
                               const commercialName = getUserName(rdv.id_commercial);
+                              const pendingColor = isPending ? getUserColor(pendingCommercialId) : null;
                               const commercialColor = getUserColor(rdv.id_commercial);
                               const isSelected = selectedRdvs.has(rdv.id);
                               const isValide = rdv.valider === 1 || rdv.valider === true;
                               const isAssigned = Number(rdv.id_commercial) > 0;
                               const defaultColor = isValide ? '#00cc00' : '#9bb380';
-                              const hasCustomColor = Boolean(isAssigned && commercialColor && commercialColor !== '#cccccc');
-                              const pillBackground = hasCustomColor ? commercialColor : defaultColor;
+                              const colorForPill = isPending ? pendingColor : commercialColor;
+                              const hasCustomColor = Boolean(colorForPill && colorForPill !== '#cccccc' && (isPending || isAssigned));
+                              const pillBackground = hasCustomColor ? colorForPill : defaultColor;
                               const cpLabel = rdv.cp && rdv.cp !== '0' && rdv.cp !== 0 ? String(rdv.cp) : '-';
                               const rdvTime = formatRdvSlotTime(rdv);
                               const showSeul = Boolean(
@@ -587,14 +625,14 @@ const AffectationDep = () => {
                               return (
                                 <div
                                   key={rdv.id}
-                                  className={`rdv-item ${isSelected ? 'selected' : ''} ${isValide ? 'valide' : 'confirme'} ${isAssigned ? 'is-assigned' : ''}`}
+                                  className={`rdv-item ${isSelected ? 'selected' : ''} ${isValide ? 'valide' : 'confirme'} ${isAssigned || isPending ? 'is-assigned' : ''}`}
                                 >
-                                  {isAssigned && (
+                                  {(isAssigned || isPending) && (
                                     <button
                                       type="button"
                                       className="btn-desaffecter"
                                       onClick={(e) => handleDesaffecter(rdv.id, e)}
-                                      title="Annuler l'affectation"
+                                      title={isPending ? 'Annuler la pré-affectation' : 'Annuler l\'affectation'}
                                     >
                                       -
                                     </button>
@@ -620,7 +658,7 @@ const AffectationDep = () => {
                                     </FicheDetailLink>
                                     {rdvTime ? <span className="rdv-time">{rdvTime}</span> : null}
                                   </div>
-                                  {isAssigned && commercialName ? (
+                                  {!isPending && isAssigned && commercialName ? (
                                     <span className="rdv-commercial-name">{commercialName}</span>
                                   ) : null}
                                   <div className="rdv-badges">
@@ -655,9 +693,6 @@ const AffectationDep = () => {
                                 —
                               </div>
                             )}
-                            {rdvs.length === 0 && availability > 0 && (
-                              <div className="availability-indicator">Disponible: {availability}</div>
-                            )}
                           </div>
                         </td>
                       );
@@ -671,17 +706,6 @@ const AffectationDep = () => {
 
         {/* Sidebar avec liste des commerciaux */}
         <div className="commerciaux-sidebar">
-          <div className="sidebar-header">
-            <h3>Commerciaux</h3>
-            <p className="sidebar-hint">
-              Sans sélection : clic pour voir tous les RDV du commercial (France, cette semaine). Avec RDV cochés : clic pour affecter.
-            </p>
-            {selectedRdvs.size > 0 && (
-              <div className="selected-info">
-                {selectedRdvs.size} RDV sélectionné(s)
-              </div>
-            )}
-          </div>
           <div className="commerciaux-list">
             {commerciauxData && commerciauxData.map(commercial => (
               <button
@@ -689,14 +713,14 @@ const AffectationDep = () => {
                 type="button"
                 className={`commercial-button ${filterCommercialId === commercial.id ? 'commercial-button--filter-active' : ''}`}
                 onClick={() => handleCommercialSidebarClick(commercial.id)}
-                disabled={affectMutation.isLoading}
+                disabled={isApplying}
                 style={{ 
                   backgroundColor: commercial.color || '#9cbfc8',
                   borderColor: commercial.color || '#9cbfc8'
                 }}
                 title={
                   selectedRdvs.size > 0
-                    ? `Affecter ${selectedRdvs.size} RDV(s) à ${commercial.pseudo}`
+                    ? `Préparer l'affectation de ${selectedRdvs.size} RDV(s) à ${commercial.pseudo}`
                     : filterCommercialId === commercial.id
                       ? `Afficher tous les RDV (retirer le filtre)`
                       : `Voir uniquement les RDV affectés à ${commercial.pseudo}`
@@ -709,16 +733,25 @@ const AffectationDep = () => {
               <div className="no-commerciaux">Aucun commercial disponible</div>
             )}
           </div>
-          {selectedRdvs.size > 0 && (
-            <div className="sidebar-footer">
+          <div className="sidebar-footer">
+            {selectedRdvs.size > 0 && (
               <button
+                type="button"
                 className="btn-clear-selection"
                 onClick={() => setSelectedRdvs(new Set())}
               >
                 Effacer la sélection
               </button>
-            </div>
-          )}
+            )}
+            <button
+              type="button"
+              className="btn-appliquer"
+              onClick={handleApplyAssignments}
+              disabled={isApplying || Object.keys(pendingAssignments).length === 0}
+            >
+              {isApplying ? 'Application...' : 'Appliquer'}
+            </button>
+          </div>
         </div>
       </div>
 
