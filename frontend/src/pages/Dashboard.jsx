@@ -14,7 +14,7 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { formatRdvDateTime, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
@@ -1101,6 +1101,37 @@ const Dashboard = () => {
   // Obtenir la couleur du produit
   const getProduitColor = (produitId) => {
     return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#FFE441' : '#cccccc';
+  };
+
+  const getDecalageHeure = (datetimeStr) => {
+    const heure = formatRdvTimeOnly(datetimeStr);
+    return heure || '-';
+  };
+
+  const getDecalageDashboardInfo = (fiche) => {
+    const etatIdRaw = fiche?.decale_id_etat;
+    const etatId = Number(etatIdRaw);
+    const titre = String(fiche?.etat_dec || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const hasDecalage = Boolean(
+      fiche?.decale_date_prevu ||
+      fiche?.decale_date_nouvelle ||
+      (fiche?.etat_dec && String(fiche.etat_dec).trim() !== '') ||
+      (etatIdRaw != null && etatIdRaw !== '' && Number.isFinite(etatId))
+    );
+    if (!hasDecalage) return null;
+    if (etatId === 6 || titre.includes('ANNUL')) return null;
+
+    let status = 'pending';
+    if (etatId === 2 || titre.includes('ACCEPT') || titre.includes('VALID')) {
+      status = 'accepted';
+    } else if (etatId === 3 || etatId === 4 || titre.includes('REFUS')) {
+      status = 'refused';
+    }
+
+    return {
+      status,
+      text: `Etat décalage : ${getDecalageHeure(fiche.decale_date_prevu)} > ${getDecalageHeure(fiche.decale_date_nouvelle)}`,
+    };
   };
 
   // Vérifier les indicateurs dans l'historique basés sur les titres des états
@@ -2277,6 +2308,7 @@ const Dashboard = () => {
                       Validé {getSortIcon('Validé')}
                     </th>
                     <th>Actions</th>
+                    <th className="dashboard-decalage-col">État décalage</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2284,6 +2316,7 @@ const Dashboard = () => {
                     const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                     const etatColor = getEtatColor(fiche.id_etat_final, fiche);
                     const produitColor = getProduitColor(fiche.produit);
+                    const decalageInfo = getDecalageDashboardInfo(fiche);
                     
                     return (
                       <tr 
@@ -2399,6 +2432,13 @@ const Dashboard = () => {
                               </span>
                             </button>
                           </div>
+                        </td>
+                        <td data-label="État décalage:" className="dashboard-decalage-cell">
+                          {decalageInfo && (
+                            <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
+                              {decalageInfo.text}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );

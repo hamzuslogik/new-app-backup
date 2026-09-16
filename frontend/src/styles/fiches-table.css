@@ -73,3 +73,15 @@ html body .fiches-table .fiche-row-lead-label {
   overflow-wrap: anywhere !important;
   word-break: break-word !important;
 }
+
+html body table.fiches-table th.dashboard-decalage-col,
+html body table.fiches-table td.dashboard-decalage-cell,
+html body .fiches-table th.dashboard-decalage-col,
+html body .fiches-table td.dashboard-decalage-cell,
+.dashboard-page .fiches-table th.dashboard-decalage-col,
+.dashboard-page .fiches-table td.dashboard-decalage-cell {
+  max-width: none !important;
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}

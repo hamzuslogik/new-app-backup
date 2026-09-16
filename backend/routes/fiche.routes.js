@@ -1882,6 +1882,9 @@ router.get('/', authenticate, async (req, res) => {
        NULL as id_etat_histo,
        decale.message as decale_message,
        decale.expediteur as decale_expediteur,
+       decale.id_etat as decale_id_etat,
+       decale.date_prevu as decale_date_prevu,
+       decale.date_nouvelle as decale_date_nouvelle,
        decale_etat.titre as etat_dec,
        u1.pseudo as confirmateur_pseudo,
        u2.pseudo as confirmateur_2_pseudo,
@@ -1893,7 +1896,15 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN cq_etat cq_e ON fiche.cq_etat = cq_e.id
        LEFT JOIN cq_dossier cq_d ON fiche.cq_dossier = cq_d.id
        LEFT JOIN installateurs install ON fiche.ph3_installateur = install.id
-       LEFT JOIN decalages decale ON fiche.id = decale.id_fiche
+       LEFT JOIN (
+         SELECT d.id, d.id_fiche, d.id_etat, d.date_prevu, d.date_nouvelle, d.message, d.expediteur
+         FROM decalages d
+         INNER JOIN (
+           SELECT id_fiche, MAX(id) AS max_id
+           FROM decalages
+           GROUP BY id_fiche
+         ) latest_decale ON latest_decale.max_id = d.id
+       ) decale ON fiche.id = decale.id_fiche
        LEFT JOIN etat_decalage decale_etat ON decale.id_etat = decale_etat.id
        LEFT JOIN utilisateurs u1 ON fiche.id_confirmateur = u1.id
        LEFT JOIN utilisateurs u2 ON fiche.id_confirmateur_2 = u2.id
