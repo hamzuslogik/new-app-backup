@@ -53,7 +53,7 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  background: var(--header-bg, #14532D);
+  background: var(--sidebar-bg, #052E16);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   z-index: 1200;
@@ -66,6 +66,8 @@
   box-sizing: border-box;
   font-weight: 500;
   padding: 8px 14px;
+  color: #ffffff !important;
+  background: transparent;
 }
 
 .admin-nav-flyout {
@@ -74,24 +76,33 @@
   width: 100%;
 }
 
+.admin-nav-flyout-trigger,
+.admin-nav-flyout-trigger span,
+.admin-nav-flyout-trigger svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
 .admin-nav-flyout-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  min-height: 0;
   padding: 8px 14px;
-  background: transparent;
+  background: transparent !important;
   border: none;
-  color: #ffffff;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .admin-nav-flyout-trigger:hover,
 .admin-nav-flyout.open .admin-nav-flyout-trigger {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.12) !important;
 }
 
 .admin-nav-flyout-menu {
@@ -99,6 +110,7 @@
   flex-direction: column;
   width: 100%;
   padding: 0 0 6px;
+  background: transparent;
 }
 
 .admin-nav-flyout-menu .admin-nav-link {
@@ -107,6 +119,8 @@
   box-sizing: border-box;
   font-weight: 500;
   padding: 7px 14px 7px 28px;
+  color: #ffffff !important;
+  background: transparent;
 }
 
 .admin-nav-empty {
