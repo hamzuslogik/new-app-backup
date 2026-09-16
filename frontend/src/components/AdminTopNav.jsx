@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { FaChevronDown } from 'react-icons/fa';
 import { showTrackingInSidebar } from '../utils/trackingAccess';
 import { adminMenuUrls } from '../utils/adminMenuUrls';
 import useUserHomePage from '../hooks/useUserHomePage';
@@ -60,11 +60,10 @@ function Flyout({ label, children, open, onOpen, onClose }) {
     <div
       className={`admin-nav-flyout ${open ? 'open' : ''}`}
       onMouseEnter={onOpen}
-      onMouseLeave={onClose}
     >
-      <button type="button" className="admin-nav-flyout-trigger">
+      <button type="button" className="admin-nav-flyout-trigger" onClick={() => (open ? onClose() : onOpen())}>
         <span>{label}</span>
-        <FaChevronRight />
+        <FaChevronDown className={`admin-nav-caret ${open ? 'open' : ''}`} />
       </button>
       {open && <div className="admin-nav-flyout-menu">{children}</div>}
     </div>
