@@ -59,7 +59,7 @@ export function adminMenuUrls(now = new Date()) {
     dep: (code) => `/affectation-dep${qs({ dp: code })}`,
     rdvPrisAujourdhui: dashboardSearchUrl({
       id_etat_final: 7,
-      date_champ: 'date_modif_time',
+      date_champ: 'date_confirmation',
       date_debut: today,
       date_fin: today,
       time_debut: '00:00:00',

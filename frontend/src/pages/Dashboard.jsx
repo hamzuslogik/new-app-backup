@@ -1943,7 +1943,7 @@ const Dashboard = () => {
                     onChange={(e) => handleDateChampChange(e.target.value)}
                   >
                     <option value="">Sélectionnez date</option>
-                    <option value="date_modif_time">Date Modification</option>
+                    <option value="date_modif_time">Date Modification (état)</option>
                     <option value="date_insert_time">Date Insertion</option>
                     <option value="date_appel_time">Date d'appel</option>
                     {user?.fonction !== 3 && (
@@ -2790,7 +2790,7 @@ const Dashboard = () => {
                     onChange={(e) => handleDateChampChange(e.target.value)}
                   >
                     <option value="">Sélectionnez date</option>
-                    <option value="date_modif_time">Date Modification</option>
+                    <option value="date_modif_time">Date Modification (état)</option>
                     <option value="date_insert_time">Date Insertion</option>
                     <option value="date_appel_time">Date d'appel</option>
                     {user?.fonction !== 3 && (

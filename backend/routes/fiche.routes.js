@@ -1440,8 +1440,9 @@ router.get('/', authenticate, async (req, res) => {
       params.push(id_sous_etat);
     }
     if (id_commercial && !isCommercialCrDrill) {
-      whereConditions.push('(fiche.id_commercial = ? OR fiche.id_commercial_2 = ?)');
-      params.push(id_commercial, id_commercial);
+      // Liens / filtre commercial : uniquement le commercial principal, pas id_commercial_2 (R2)
+      whereConditions.push('fiche.id_commercial = ?');
+      params.push(id_commercial);
     }
     // RP Confirmation (13) : rappels par RE (id_etat_final=19), filtre par id_re (Tous = tous les RE sous le RP)
     if (req.user.fonction === 13 && (idEtatFinalForWhere == 19 || idEtatFinalForWhere === '19')) {
@@ -1577,9 +1578,11 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push('fiche.valider = 0');
     }
     if (rdv_affilie) {
+      // Affilié = commercial principal renseigné (id_commercial), pas id_commercial_2
       whereConditions.push('(fiche.id_commercial IS NOT NULL AND CAST(fiche.id_commercial AS UNSIGNED) > 0)');
     }
     if (rdv_non_affilie) {
+      // Non affilié = pas de commercial principal, même si un R2 (id_commercial_2) est présent
       whereConditions.push('(fiche.id_commercial IS NULL OR CAST(fiche.id_commercial AS UNSIGNED) = 0)');
     }
     if (sgn_week || sgn_month) {
@@ -1689,6 +1692,32 @@ router.get('/', authenticate, async (req, res) => {
           histoIdsSubqueryParams = [startDatetime, endDatetime];
           histoJoinForFichesHisto = `INNER JOIN (${histoIdsSubquerySql}) histo_conf ON fiche.id = histo_conf.id_fiche`;
           histoParamsForFichesHisto = histoIdsSubqueryParams;
+        } else if (date_champ === 'date_modif_time') {
+          // Date modification = changement d'état (fiches_histo.date_creation), pas fiches.date_modif_time
+          const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
+          const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
+          if (dateDebut && dateFin) {
+            whereConditions.push(`EXISTS (
+              SELECT 1 FROM fiches_histo h
+              WHERE h.id_fiche = fiche.id
+                AND h.date_creation >= ? AND h.date_creation <= ?
+            )`);
+            params.push(startDatetime, endDatetime);
+          } else if (dateDebut) {
+            whereConditions.push(`EXISTS (
+              SELECT 1 FROM fiches_histo h
+              WHERE h.id_fiche = fiche.id
+                AND h.date_creation >= ?
+            )`);
+            params.push(startDatetime);
+          } else if (dateFin) {
+            whereConditions.push(`EXISTS (
+              SELECT 1 FROM fiches_histo h
+              WHERE h.id_fiche = fiche.id
+                AND h.date_creation <= ?
+            )`);
+            params.push(endDatetime);
+          }
         } else if (date_champ === 'date_confirmation') {
           // Convertir les dates en timestamps Unix
           const startTimestamp = Math.floor(new Date(`${dateDebut || dateFin} ${timeStart}`).getTime() / 1000);
