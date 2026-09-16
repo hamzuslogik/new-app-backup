@@ -1,0 +1,75 @@
+/* Tableaux .fiches-table (toutes pages) : largeur selon le contenu, max 15 caractères puis retour à la ligne. */
+
+html body table.fiches-table,
+html body .fiches-table,
+html.rdv-vue-page .rdv-vue .fiches-table,
+body.rdv-vue-page .rdv-vue .fiches-table,
+body.rdv-vue-page[data-desktop-viewport] .fiches-table,
+body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table,
+html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table,
+html.planning-commercial-page .planning-commercial .fiches-table,
+body.planning-commercial-page .planning-commercial .fiches-table,
+html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table,
+.dashboard-admin-page .fiches-table,
+.dashboard-page .fiches-table,
+.production-qualif table.fiches-table,
+.production-qualif table.fiches-table.fiches-table--wrap,
+.stats-agents-qualite-page .fiches-content .fiches-table {
+  table-layout: auto !important;
+  width: max-content !important;
+  min-width: 100% !important;
+  max-width: none !important;
+}
+
+html body table.fiches-table col,
+html body .fiches-table col,
+.production-qualif table.fiches-table.fiches-table--wrap col {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+html body table.fiches-table > thead > tr > th,
+html body table.fiches-table > tbody > tr > td,
+html body table.fiches-table th:nth-child(n),
+html body table.fiches-table td:nth-child(n),
+html body .fiches-table th:nth-child(n),
+html body .fiches-table td:nth-child(n),
+html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(n),
+html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(n),
+body.planning-commercial-page .planning-commercial .fiches-table th:nth-child(n),
+body.planning-commercial-page .planning-commercial .fiches-table td:nth-child(n),
+html.rdv-vue-page .rdv-vue .fiches-table th:nth-child(n),
+html.rdv-vue-page .rdv-vue .fiches-table td:nth-child(n),
+body.rdv-vue-page .rdv-vue .fiches-table th:nth-child(n),
+body.rdv-vue-page .rdv-vue .fiches-table td:nth-child(n),
+.dashboard-admin-page .fiches-table th:nth-child(n),
+.dashboard-admin-page .fiches-table td:nth-child(n),
+.dashboard-page .fiches-table th:nth-child(n),
+.dashboard-page .fiches-table td:nth-child(n),
+.production-qualif table.fiches-table.fiches-table--wrap th,
+.production-qualif table.fiches-table.fiches-table--wrap td,
+.stats-agents-qualite-page .fiches-content .fiches-table th,
+.stats-agents-qualite-page .fiches-content .fiches-table td {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 15ch !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  hyphens: manual;
+}
+
+html body table.fiches-table .etat-badge,
+html body table.fiches-table .etat-badge--wrap,
+html body table.fiches-table .produit-indicator,
+html body table.fiches-table .fiche-row-lead-label,
+html body .fiches-table .etat-badge,
+html body .fiches-table .etat-badge--wrap,
+html body .fiches-table .produit-indicator,
+html body .fiches-table .fiche-row-lead-label {
+  max-width: 100% !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}

@@ -173,10 +173,10 @@ body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container {
 
 body.rdv-vue-page[data-desktop-viewport] .fiches-table,
 body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table {
-  min-width: 1400px !important;
-  width: 100% !important;
+  min-width: 100% !important;
+  width: max-content !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 body.rdv-vue-page[data-desktop-viewport] .rdv-vue {
@@ -385,10 +385,10 @@ html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiche
 
 html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .fiches-table,
 html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table {
-  min-width: 1400px !important;
-  width: 100% !important;
+  min-width: 100% !important;
+  width: max-content !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 html.viewport-zoomed body.dashboard-page,

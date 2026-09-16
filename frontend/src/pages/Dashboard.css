@@ -1670,16 +1670,16 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 
 .fiches-table td.etat-col-cell,
 .fiches-table td:nth-child(7) {
-  white-space: nowrap;
+  white-space: normal;
   vertical-align: top;
 }
 
 .fiches-table td.etat-col-cell .etat-badge--wrap,
 .fiches-table td:nth-child(7) .etat-badge {
-  white-space: nowrap;
-  word-break: normal;
-  overflow-wrap: normal;
-  max-width: none;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
   box-sizing: border-box;
   line-height: 1.25;
   display: inline-block;
@@ -4409,7 +4409,10 @@ body.dashboard-page.dashboard-page--extranet-scroll .fiches-table th,
 body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td,
 body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table th,
 body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table td {
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 15ch;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 html.viewport-zoomed.dashboard-page.dashboard-page--extranet-scroll,
@@ -4905,6 +4908,19 @@ html body.dashboard-page .fiches-table th:nth-child(n),
 html body.dashboard-page .fiches-table td:nth-child(n) {
   width: auto !important;
   min-width: 0 !important;
-  max-width: none !important;
-  white-space: nowrap !important;
+  max-width: 15ch !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  hyphens: manual;
+}
+
+html body.dashboard-page .fiches-table td:nth-child(n) .etat-badge,
+html body.dashboard-page .fiches-table td:nth-child(n) .etat-badge--wrap,
+html body.dashboard-page .fiches-table td:nth-child(n) .produit-indicator,
+html body.dashboard-page .fiches-table td:nth-child(n) .fiche-row-lead-label {
+  max-width: 100% !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }

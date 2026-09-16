@@ -346,7 +346,7 @@ body.planning-commercial-page .planning-commercial .fiches-table {
   min-width: 1400px !important;
   width: 100% !important;
   max-width: 100% !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
   border-collapse: collapse !important;
   font-size: 11px;
 }
@@ -359,7 +359,7 @@ body.planning-commercial-page .planning-commercial .fiches-table {
 
 .fiches-table {
   width: 100%;
-  table-layout: fixed;
+  table-layout: auto;
   border-collapse: collapse;
   font-size: 11px;
 }
@@ -795,7 +795,7 @@ body.planning-commercial-page.planning-commercial-page--extranet-scroll .fiches-
   min-width: 1400px !important;
   width: max-content !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 body.planning-commercial-page.planning-commercial-page--extranet-scroll .fiches-table th,
@@ -819,7 +819,7 @@ html.viewport-zoomed body.planning-commercial-page.planning-commercial-page--ext
   min-width: 1400px !important;
   width: max-content !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 body.planning-commercial-page.planning-commercial-page--mobile-native .search-panel {

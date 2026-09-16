@@ -401,8 +401,9 @@
 }
 
 .production-qualif table.fiches-table.fiches-table--wrap {
-  table-layout: fixed;
-  width: 100%;
+  table-layout: auto;
+  width: max-content;
+  min-width: 100%;
 }
 
 .production-qualif table.fiches-table.fiches-table--wrap col.colw-date {

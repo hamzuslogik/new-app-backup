@@ -748,10 +748,11 @@
 }
 
 .fiches-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 11px;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 /* Forcer l'affichage du thead - règle très spécifique */

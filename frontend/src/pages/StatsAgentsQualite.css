@@ -860,7 +860,7 @@
 
 /* Uniformiser le wrapping pour les tableaux onglets Fiches/RDVs */
 .stats-agents-qualite-page .fiches-content .fiches-table {
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .stats-agents-qualite-page .fiches-content .fiches-table th,

@@ -33,7 +33,7 @@ body.rdv-vue-page .rdv-vue .fiches-table {
   min-width: 1400px !important;
   width: 100% !important;
   max-width: 100% !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
   border-collapse: collapse !important;
 }
 
@@ -69,7 +69,7 @@ body.rdv-vue-page[data-desktop-viewport] .fiches-table {
   width: 100% !important;
   min-width: 1400px !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 @media (max-width: 768px) {
@@ -801,7 +801,7 @@ body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table {
   min-width: 1400px !important;
   width: 100% !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table th,
@@ -825,7 +825,7 @@ html.viewport-zoomed body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-tab
   min-width: 1400px !important;
   width: 100% !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 html.viewport-zoomed.rdv-vue-page.rdv-vue-page--table-desktop-view.fiche-detail-modal-open,
@@ -919,7 +919,7 @@ body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table {
   min-width: 1400px !important;
   width: 100% !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table-container {

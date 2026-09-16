@@ -12,10 +12,10 @@ body.dashboard-admin-page {
 /* Forcer les tableaux CRM à 1400px dans Dashboard-ADMIN */
 .dashboard-admin-page .fiches-table,
 .dashboard-admin-page .confirmateurs-table {
-  min-width: 1400px !important;
-  width: auto !important;
+  min-width: 100% !important;
+  width: max-content !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
   border-collapse: collapse !important;
 }
 
@@ -1151,8 +1151,9 @@ body.dashboard-admin-page {
 }
 
 .fiches-table {
-  width: 100%;
-  table-layout: fixed;
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
   border-collapse: collapse;
   font-size: 11px;
 }
