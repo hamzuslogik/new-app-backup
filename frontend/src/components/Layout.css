@@ -17,8 +17,13 @@
 }
 
 .app-admin-topnav .main-content,
-.app-admin-topnav .main-content.sidebar-collapsed {
+.app-admin-topnav .main-content.sidebar-collapsed,
+html.admin-topnav .main-content,
+html.admin-topnav .main-content.sidebar-collapsed,
+body.admin-topnav .main-content,
+body.admin-topnav .main-content.sidebar-collapsed {
   margin-left: 0 !important;
+  width: 100% !important;
 }
 
 .main-content.sidebar-collapsed {
@@ -53,6 +58,9 @@ body[data-desktop-viewport] .content-wrapper {
 
   .app-admin-topnav .main-content,
   .app-admin-topnav .main-content.sidebar-collapsed,
+  html.admin-topnav .main-content,
+  body.admin-topnav .main-content,
+  body.admin-topnav .main-content.sidebar-collapsed,
   .main-content.sidebar-collapsed {
     margin-left: 0 !important; /* Enlever la marge quand le sidebar est masqué */
   }

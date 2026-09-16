@@ -218,6 +218,29 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
   flex: 1;
 }
 
+html.admin-topnav .sidebar,
+html.admin-topnav .sidebar.collapsed,
+html[data-desktop-viewport].admin-topnav .sidebar,
+html[data-desktop-viewport].admin-topnav .sidebar.collapsed,
+body.admin-topnav .sidebar,
+body[data-desktop-viewport].admin-topnav .sidebar {
+  display: none !important;
+  width: 0 !important;
+  transform: translateX(-100%) !important;
+}
+
+html.admin-topnav .main-content,
+html.admin-topnav .main-content.sidebar-collapsed,
+body.admin-topnav .main-content,
+body.admin-topnav .main-content.sidebar-collapsed,
+body[data-desktop-viewport].admin-topnav .main-content,
+body[data-desktop-viewport].admin-topnav .main-content.sidebar-collapsed,
+.app-admin-topnav .main-content,
+.app-admin-topnav .main-content.sidebar-collapsed {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
 @supports (-webkit-touch-callout: none) {
   html[data-desktop-viewport] .sidebar {
     padding-bottom: env(safe-area-inset-bottom, 0);
@@ -275,6 +298,11 @@ body[data-desktop-viewport] .main-content.sidebar-collapsed {
   body[data-desktop-viewport] .main-content,
   body[data-desktop-viewport] .main-content.sidebar-collapsed {
     margin-left: 200px !important;
+  }
+
+  body[data-desktop-viewport].admin-topnav .main-content,
+  body[data-desktop-viewport].admin-topnav .main-content.sidebar-collapsed {
+    margin-left: 0 !important;
   }
 }
 

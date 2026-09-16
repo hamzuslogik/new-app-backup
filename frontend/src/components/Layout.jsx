@@ -16,6 +16,22 @@ const LayoutContent = () => {
   const { sidebarCollapsed, isMobile, isTablet, closeSidebar, mobileExtranetActive } = useSidebar();
   const { user } = useAuth();
   const adminLayout = isAdminSession(user);
+
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    if (adminLayout) {
+      root.classList.add('admin-topnav');
+      body.classList.add('admin-topnav');
+    } else {
+      root.classList.remove('admin-topnav');
+      body.classList.remove('admin-topnav');
+    }
+    return () => {
+      root.classList.remove('admin-topnav');
+      body.classList.remove('admin-topnav');
+    };
+  }, [adminLayout]);
   const extranetMobile = mobileExtranetActive || isMobileNativeExtranetPage();
   const useMobileSidebar = !FORCE_DESKTOP_VIEWPORT || extranetMobile;
   const mobileLayout = extranetMobile || isMobile || isTablet;
