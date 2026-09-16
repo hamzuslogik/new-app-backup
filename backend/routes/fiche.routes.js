@@ -1016,7 +1016,9 @@ router.get('/', authenticate, async (req, res) => {
       sgn_month,
       yesterday,
       tomorrow,
-      include_ko
+      include_ko,
+      sort_by,
+      sort_dir
     } = req.query;
 
     /** Variantes de recherche téléphone (avec/sans 0, espaces, +33) — aligné Dashboard / URL */
@@ -1810,6 +1812,24 @@ router.get('/', authenticate, async (req, res) => {
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
+    const FICHE_LIST_SORT_COLUMNS = {
+      nom: 'fiche.nom',
+      prenom: 'fiche.prenom',
+      tel: 'fiche.tel',
+      cp: 'fiche.cp',
+      date_insert_time: 'fiche.date_insert_time',
+      date_rdv_time: 'fiche.date_rdv_time',
+      id_etat_final: 'etat.titre',
+      id_confirmateur: 'u1.pseudo',
+      id_commercial: 'com_sort.pseudo',
+      id_centre: 'centre_sort.titre',
+      produit: 'fiche.produit',
+      valider: 'fiche.valider',
+    };
+    const sortColumn = FICHE_LIST_SORT_COLUMNS[String(sort_by || '')] || 'fiche.date_rdv_time';
+    const sortDirection = String(sort_dir || '').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+    const orderByClause = `ORDER BY ${sortColumn} ${sortDirection}, fiche.id ${sortDirection}`;
+
     // Configurer GROUP_CONCAT pour éviter les troncatures
     await query('SET SESSION group_concat_max_len = 1000000');
 
@@ -1909,11 +1929,13 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN utilisateurs u1 ON fiche.id_confirmateur = u1.id
        LEFT JOIN utilisateurs u2 ON fiche.id_confirmateur_2 = u2.id
        LEFT JOIN utilisateurs u3 ON fiche.id_confirmateur_3 = u3.id
+       LEFT JOIN utilisateurs com_sort ON fiche.id_commercial = com_sort.id
+       LEFT JOIN centres centre_sort ON fiche.id_centre = centre_sort.id
        ${histoJoinForFichesHisto}
        ${qualifJoin}
        ${whereClause}
        GROUP BY fiche.id
-       ORDER BY fiche.date_rdv_time ASC
+       ${orderByClause}
        LIMIT ? OFFSET ?`;
     const selectParams = histoJoinForFichesHisto
       ? [...histoParamsForFichesHisto, ...params, parsedLimit, offset]

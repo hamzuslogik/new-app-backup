@@ -602,6 +602,8 @@ const Dashboard = () => {
       if (src.id_confirmateur) {
         upcomingParams.id_confirmateur = src.id_confirmateur;
       }
+      upcomingParams.sort_by = sortConfig.key || 'date_rdv_time';
+      upcomingParams.sort_dir = sortConfig.direction || 'asc';
       // RE Confirmation : limiter aux fiches dont le 1er confirmateur appartient à son équipe
       if (user?.fonction === 14) {
         upcomingParams.re_equipe_confirmateur_primary = 1;
@@ -614,7 +616,9 @@ const Dashboard = () => {
         ...src, 
         limit: limitParam,
         page: pageParam,
-        fiche_search: 1
+        fiche_search: 1,
+        sort_by: sortConfig.key || 'date_rdv_time',
+        sort_dir: sortConfig.direction || 'asc',
       };
 
       // Normaliser le critère (enlever espaces avant/après)
@@ -630,7 +634,7 @@ const Dashboard = () => {
 
       // Nettoyer les paramètres vides (mais garder page, limit, fiche_search, critere, critere_champ)
       Object.keys(searchParams).forEach(key => {
-        if (key === 'page' || key === 'limit' || key === 'fiche_search') {
+        if (key === 'page' || key === 'limit' || key === 'fiche_search' || key === 'sort_by' || key === 'sort_dir') {
           return; // Ne pas supprimer ces paramètres
         }
         // include_archive: n'envoyer au backend que si activé
@@ -693,6 +697,8 @@ const Dashboard = () => {
       date_fin: '',
       time_debut: '',
       time_fin: '',
+      sort_by: sortConfig.key || 'date_rdv_time',
+      sort_dir: sortConfig.direction || 'asc',
     };
     if (src.id_centre) {
       defaultParams.id_centre = src.id_centre;
@@ -714,7 +720,7 @@ const Dashboard = () => {
 
   // Récupérer les fiches (requête lancée uniquement au clic Recherche, pagination ou reset)
   const { data, isLoading, isFetching, error, refetch } = useQuery(
-    ['fiches', appliedFilters, activeTab, debouncedQuickSearch, statsListOverride],
+    ['fiches', appliedFilters, activeTab, debouncedQuickSearch, statsListOverride, sortConfig],
     async () => {
       const params = getQueryParams();
       const response = await api.get('/fiches', { params });
@@ -1395,6 +1401,8 @@ const Dashboard = () => {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+    setFilters((prev) => ({ ...prev, page: 1 }));
+    setAppliedFilters((prev) => ({ ...prev, page: 1 }));
   };
 
   // Fonction pour obtenir l'icône de tri
@@ -1446,13 +1454,15 @@ const Dashboard = () => {
     const aValue = getSortValue(a, sortConfig.key);
     const bValue = getSortValue(b, sortConfig.key);
 
-    if (aValue < bValue) {
-      return sortConfig.direction === 'asc' ? -1 : 1;
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
     }
-    if (aValue > bValue) {
-      return sortConfig.direction === 'asc' ? 1 : -1;
-    }
-    return 0;
+
+    const cmp = String(aValue ?? '').localeCompare(String(bValue ?? ''), 'fr', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+    return sortConfig.direction === 'asc' ? cmp : -cmp;
   });
 
   const filteredFiches = debouncedQuickSearch.trim() === '' 
