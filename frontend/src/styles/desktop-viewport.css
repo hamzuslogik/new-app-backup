@@ -135,10 +135,10 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container {
 
 body.dashboard-page[data-desktop-viewport] .fiches-table,
 body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
-  min-width: 1400px !important;
-  width: 100% !important;
+  min-width: 100% !important;
+  width: max-content !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 body.dashboard-page[data-desktop-viewport] .dashboard {
@@ -371,10 +371,10 @@ html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-t
 
 html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .fiches-table,
 html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .confirmateurs-table {
-  min-width: 1400px !important;
-  width: 100% !important;
+  min-width: 100% !important;
+  width: max-content !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table {

@@ -153,6 +153,11 @@ html body .admin-top-nav .admin-nav-dropdown .admin-nav-flyout.open .admin-nav-f
   background: transparent;
 }
 
+.admin-nav-flyout-menu .admin-nav-dep-link {
+  padding: 7px 14px !important;
+  text-align: center;
+}
+
 .admin-nav-empty {
   display: block;
   padding: 8px 14px;

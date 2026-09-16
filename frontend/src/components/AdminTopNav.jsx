@@ -167,10 +167,9 @@ const AdminTopNav = () => {
         >
           {departementsData.map((dept) => {
             const code = dept.code || dept.departement_code;
-            const nom = dept.nom || dept.departement_nom || code;
             return (
-              <NavLink key={code} to={urls.dep(code)} className={itemClass}>
-                {code} — {nom}
+              <NavLink key={code} to={urls.dep(code)} className={({ isActive }) => `admin-nav-link admin-nav-dep-link ${isActive ? 'active' : ''}`}>
+                {code}
               </NavLink>
             );
           })}

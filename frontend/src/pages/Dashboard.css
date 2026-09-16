@@ -11,13 +11,13 @@ body.dashboard-page {
   touch-action: pan-x pan-y pinch-zoom;
 }
 
-/* Forcer les tableaux CRM à prendre toute la largeur dans Dashboard */
+/* Tableaux CRM dashboard : largeur des colonnes selon le contenu */
 .dashboard-page .fiches-table,
 .dashboard-page .confirmateurs-table {
-  min-width: 1400px !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  table-layout: fixed !important;
+  min-width: 100% !important;
+  width: max-content !important;
+  max-width: none !important;
+  table-layout: auto !important;
   border-collapse: collapse !important;
 }
 
@@ -55,9 +55,10 @@ body.dashboard-page {
   
   .dashboard-page .fiches-table,
   .dashboard-page .confirmateurs-table {
-    min-width: 1400px !important;
-    width: auto !important;
+    min-width: 100% !important;
+    width: max-content !important;
     max-width: none !important;
+    table-layout: auto !important;
   }
   
   .dashboard-page .fiches-table-container,
@@ -93,9 +94,10 @@ body.dashboard-page {
   
   .dashboard-page .fiches-table,
   .dashboard-page .confirmateurs-table {
-    min-width: 1400px !important;
-    width: auto !important;
+    min-width: 100% !important;
+    width: max-content !important;
     max-width: none !important;
+    table-layout: auto !important;
   }
   
   .dashboard-page .fiches-table-container,
@@ -1299,16 +1301,17 @@ body.dashboard-page[data-desktop-viewport] .fiches-table,
 body.dashboard-page[data-desktop-viewport] .confirmateurs-table,
 html.dashboard-page[data-desktop-viewport] .fiches-table,
 html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
-  width: 100% !important;
-  min-width: 1400px !important;
+  width: max-content !important;
+  min-width: 100% !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
   touch-action: pan-x pan-y pinch-zoom !important;
 }
 
 .fiches-table {
-  width: 100%;
-  table-layout: fixed;
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
   border-collapse: collapse;
   font-size: 11px;
 }
@@ -1365,9 +1368,9 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 .fiches-table td {
   padding: 5px 6.4px;
   border-bottom: 2px solid #ffffff;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
   vertical-align: top;
 }
 
@@ -1395,117 +1398,60 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   min-width: 0;
 }
 
-/* Nom / Prénom: retour à la ligne uniquement entre mots (pas de coupe au milieu d'un mot) */
-.fiches-table td:nth-child(1),
-.fiches-table td:nth-child(2) {
-  white-space: normal;
-  word-break: keep-all;
-  overflow-wrap: normal;
-}
-
-/* Priorité forte Dashboard: ne jamais couper un mot dans Nom/Prénom */
+/* Largeurs de colonnes : auto selon le contenu */
 .dashboard-page .fiches-table td:nth-child(1),
-.dashboard-page .fiches-table td:nth-child(2) {
-  white-space: normal !important;
-  word-break: normal !important;
-  overflow-wrap: normal !important;
-  hyphens: none !important;
-}
-
+.dashboard-page .fiches-table td:nth-child(2),
 .dashboard-page .fiches-table th:nth-child(1),
 .dashboard-page .fiches-table th:nth-child(2) {
-  white-space: normal !important;
+  white-space: nowrap !important;
   word-break: normal !important;
   overflow-wrap: normal !important;
   hyphens: none !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
 }
 
-/* Téléphone - colonne un peu plus étroite */
 .fiches-table th:nth-child(3),
-.fiches-table td:nth-child(3) {
-  width: 108px;
-  min-width: 100px;
-  max-width: 116px;
-}
-
-/* Colonnes Date Insertion et Date RDV - largeur augmentée */
+.fiches-table td:nth-child(3),
+.fiches-table th:nth-child(4),
+.fiches-table td:nth-child(4),
 .fiches-table th:nth-child(5),
-.fiches-table td:nth-child(5) {
-  min-width: 140px;
-  width: 140px;
-}
-
+.fiches-table td:nth-child(5),
 .fiches-table th:nth-child(6),
 .fiches-table td:nth-child(6) {
-  min-width: 140px;
-  width: 140px;
+  width: auto;
+  min-width: 0;
+  max-width: none;
 }
 
-/* CP - colonne réduite */
-.fiches-table th:nth-child(4),
-.fiches-table td:nth-child(4) {
-  min-width: 52px;
-  width: 52px;
-}
-
-/* État Final - largeur pour contenir "ANNULER ET A REPROGRAMMER" sans dépasser */
 .dashboard-page .fiches-table th:nth-child(7),
-.dashboard-page .fiches-table td:nth-child(7) {
-  min-width: 140px !important;
-  width: 140px !important;
-  max-width: 140px !important;
-  white-space: normal;
-  word-wrap: break-word;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+.dashboard-page .fiches-table td:nth-child(7),
+.dashboard-page .fiches-table th:nth-child(8),
+.dashboard-page .fiches-table td:nth-child(8),
+.dashboard-page .fiches-table th:nth-child(9),
+.dashboard-page .fiches-table td:nth-child(9),
+.dashboard-page .fiches-table th:nth-child(11),
+.dashboard-page .fiches-table td:nth-child(11) {
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
   line-height: 1.2;
 }
 
-/* Confirmateur — colonne réduite + retour ligne */
-.dashboard-page .fiches-table th:nth-child(8),
-.dashboard-page .fiches-table td:nth-child(8) {
-  min-width: 110px !important;
-  width: 110px !important;
-  max-width: 130px !important;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-/* Commercial — un peu plus étroit que confirmateur */
-.dashboard-page .fiches-table th:nth-child(9),
-.dashboard-page .fiches-table td:nth-child(9) {
-  min-width: 88px !important;
-  width: 88px !important;
-  max-width: 104px !important;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-/* Produit - colonne réduite */
-.dashboard-page .fiches-table th:nth-child(11),
-.dashboard-page .fiches-table td:nth-child(11) {
-  min-width: 44px !important;
-  width: 58px !important;
-  max-width: 68px !important;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-/* Validé - colonne réduite */
 .fiches-table th:nth-child(12),
-.fiches-table td:nth-child(12) {
-  min-width: 44px;
-  width: 44px;
-}
-
-/* Actions - colonne réduite, centrée */
+.fiches-table td:nth-child(12),
 .fiches-table th:nth-child(13),
 .fiches-table td:nth-child(13) {
-  min-width: 52px;
-  width: 52px;
+  min-width: 0;
+  width: auto;
+}
+
+.fiches-table th:nth-child(13),
+.fiches-table td:nth-child(13) {
   text-align: center;
 }
 
@@ -1630,16 +1576,10 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   }
 
   .dashboard-page .fiches-table td:nth-child(1),
-  .dashboard-page .fiches-table td:nth-child(2) {
-    white-space: normal !important;
-    word-break: normal !important;
-    overflow-wrap: normal !important;
-    hyphens: none !important;
-  }
-
+  .dashboard-page .fiches-table td:nth-child(2),
   .dashboard-page .fiches-table th:nth-child(1),
   .dashboard-page .fiches-table th:nth-child(2) {
-    white-space: normal !important;
+    white-space: nowrap !important;
     word-break: normal !important;
     overflow-wrap: normal !important;
     hyphens: none !important;
@@ -1688,39 +1628,27 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     width: 160px !important;
   }
 
-  /* Dashboard : mêmes réductions qu’en desktop (viewport forcé inclus) */
+  /* Dashboard : largeurs selon le contenu */
   .dashboard-page .fiches-table th:nth-child(1),
   .dashboard-page .fiches-table td:nth-child(1),
   .dashboard-page .fiches-table th:nth-child(2),
-  .dashboard-page .fiches-table td:nth-child(2) {
-    min-width: 84px !important;
-    width: 84px !important;
-    max-width: 104px !important;
-  }
-
+  .dashboard-page .fiches-table td:nth-child(2),
   .dashboard-page .fiches-table th:nth-child(4),
-  .dashboard-page .fiches-table td:nth-child(4) {
-    min-width: 44px !important;
-    width: 46px !important;
-    max-width: 50px !important;
-  }
-
+  .dashboard-page .fiches-table td:nth-child(4),
   .dashboard-page .fiches-table th:nth-child(5),
   .dashboard-page .fiches-table td:nth-child(5),
   .dashboard-page .fiches-table th:nth-child(6),
   .dashboard-page .fiches-table td:nth-child(6) {
-    width: 16ch !important;
-    min-width: 16ch !important;
-    max-width: 17ch !important;
-    box-sizing: border-box !important;
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: none !important;
   }
 
-  /* État Final - conserver le retour à la ligne */
   .fiches-table th:nth-child(7),
   .fiches-table td:nth-child(7) {
-    white-space: normal !important;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+    white-space: nowrap !important;
+    word-break: normal;
+    overflow-wrap: normal;
   }
 }
 
@@ -1742,16 +1670,16 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 
 .fiches-table td.etat-col-cell,
 .fiches-table td:nth-child(7) {
-  white-space: normal;
+  white-space: nowrap;
   vertical-align: top;
 }
 
 .fiches-table td.etat-col-cell .etat-badge--wrap,
 .fiches-table td:nth-child(7) .etat-badge {
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  max-width: 100%;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+  max-width: none;
   box-sizing: border-box;
   line-height: 1.25;
   display: inline-block;
@@ -1777,39 +1705,26 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 }
 
 .fiches-table td:nth-child(11) .produit-indicator {
-  white-space: normal;
-  word-break: break-word;
-  max-width: 100%;
+  white-space: nowrap;
+  word-break: normal;
+  max-width: none;
   box-sizing: border-box;
 }
 
-/* Dashboard : Nom / Prénom un peu plus étroits */
+/* Dashboard : colonnes selon le contenu */
 .dashboard-page .fiches-table th:nth-child(1),
 .dashboard-page .fiches-table td:nth-child(1),
 .dashboard-page .fiches-table th:nth-child(2),
-.dashboard-page .fiches-table td:nth-child(2) {
-  min-width: 84px !important;
-  width: 84px !important;
-  max-width: 104px !important;
-}
-
-/* Dashboard : CP — largeur mini pour code postal */
+.dashboard-page .fiches-table td:nth-child(2),
 .dashboard-page .fiches-table th:nth-child(4),
-.dashboard-page .fiches-table td:nth-child(4) {
-  min-width: 44px !important;
-  width: 46px !important;
-  max-width: 50px !important;
-}
-
-/* Dashboard : Date insertion / Date RDV — largeur ~ une ligne dd/mm/yyyy hh:mm (16ch) */
+.dashboard-page .fiches-table td:nth-child(4),
 .dashboard-page .fiches-table th:nth-child(5),
 .dashboard-page .fiches-table td:nth-child(5),
 .dashboard-page .fiches-table th:nth-child(6),
 .dashboard-page .fiches-table td:nth-child(6) {
-  width: 16ch !important;
-  min-width: 16ch !important;
-  max-width: 17ch !important;
-  box-sizing: border-box !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
 }
 
 .dashboard-page .fiches-table td:nth-child(5),
@@ -1819,7 +1734,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 
 .dashboard-page .fiches-table th:nth-child(5),
 .dashboard-page .fiches-table th:nth-child(6) {
-  white-space: normal !important;
+  white-space: nowrap !important;
   line-height: 1.2 !important;
   vertical-align: bottom !important;
 }
@@ -4387,13 +4302,13 @@ body.dashboard-page--mobile-native .fiche-row-lead-label {
 /* Dashboard table: Centre compact + retour à la ligne si dépasse */
 .dashboard-page .fiches-table th:nth-child(10),
 .dashboard-page .fiches-table td:nth-child(10) {
-  width: 120px !important;
-  min-width: 120px !important;
-  max-width: 120px !important;
-  white-space: normal !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
-  hyphens: auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -4484,10 +4399,10 @@ body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table-contain
 
 body.dashboard-page.dashboard-page--extranet-scroll .fiches-table,
 body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table {
-  min-width: 1400px !important;
+  min-width: 100% !important;
   width: max-content !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 body.dashboard-page.dashboard-page--extranet-scroll .fiches-table th,
@@ -4511,10 +4426,10 @@ html.viewport-zoomed body.dashboard-page.dashboard-page--extranet-scroll {
 /* Zoom out (pinch) : tableau desktop pleine largeur visible */
 html.viewport-zoomed.dashboard-page.dashboard-page--extranet-scroll .fiches-table,
 html.viewport-zoomed body.dashboard-page.dashboard-page--extranet-scroll .fiches-table {
-  min-width: 1400px !important;
+  min-width: 100% !important;
   width: max-content !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 /* Filtres empilés (mobile) — modèle photo extranet */
@@ -4918,10 +4833,10 @@ body.dashboard-page.dashboard-page--table-desktop-view:not([data-desktop-viewpor
 
 body.dashboard-page.dashboard-page--table-desktop-view .fiches-table,
 body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table {
-  min-width: 1400px !important;
-  width: 100% !important;
+  min-width: 100% !important;
+  width: max-content !important;
   max-width: none !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container,
@@ -4975,4 +4890,21 @@ body.dashboard-page[data-desktop-viewport] .confirmateurs-table-container::-webk
 body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container::-webkit-scrollbar-thumb:hover,
 body.dashboard-page.dashboard-page--table-desktop-view .confirmateurs-table-container::-webkit-scrollbar-thumb:hover {
   background: #3d4f63;
+}
+
+/* Colonnes dashboard : largeur déterminée par le contenu (pas de largeurs fixes) */
+html body.dashboard-page .fiches-table,
+html body.dashboard-page .confirmateurs-table {
+  table-layout: auto !important;
+  width: max-content !important;
+  min-width: 100% !important;
+  max-width: none !important;
+}
+
+html body.dashboard-page .fiches-table th:nth-child(n),
+html body.dashboard-page .fiches-table td:nth-child(n) {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  white-space: nowrap !important;
 }

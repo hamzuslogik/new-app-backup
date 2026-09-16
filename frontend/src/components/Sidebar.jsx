@@ -580,13 +580,10 @@ const Sidebar = ({ collapsed }) => {
                 <ul className="sidebar-submenu sidebar-submenu-deep">
                   {departementsData.map((dept) => {
                     const code = dept.code || dept.departement_code;
-                    const nom = dept.nom || dept.departement_nom || code;
                     return (
                       <li key={code}>
                         <NavLink to={urls.dep(code)} className={deepLinkClass}>
-                          <span>
-                            {code} — {nom}
-                          </span>
+                          <span>{code}</span>
                         </NavLink>
                       </li>
                     );
