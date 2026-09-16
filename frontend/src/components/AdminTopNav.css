@@ -1,0 +1,119 @@
+.admin-top-nav {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  overflow: visible;
+}
+
+.admin-nav-link,
+.admin-nav-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  color: #ffffff !important;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.admin-nav-link:hover,
+.admin-nav-trigger:hover,
+.admin-nav-item.open .admin-nav-trigger {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.admin-nav-link.active {
+  background: rgba(22, 163, 74, 0.28);
+}
+
+.admin-nav-caret {
+  font-size: 9px;
+  opacity: 0.85;
+}
+
+.admin-nav-item {
+  position: relative;
+}
+
+.admin-nav-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 260px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  background: var(--header-bg, #14532D);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  z-index: 1200;
+  padding: 6px 0;
+}
+
+.admin-nav-dropdown .admin-nav-link {
+  display: block;
+  width: 100%;
+  font-weight: 500;
+  padding: 8px 14px;
+}
+
+.admin-nav-flyout {
+  position: relative;
+}
+
+.admin-nav-flyout-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+
+.admin-nav-flyout-trigger:hover,
+.admin-nav-flyout.open .admin-nav-flyout-trigger {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.admin-nav-flyout-menu {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  min-width: 240px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  background: var(--header-bg, #14532D);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  z-index: 1210;
+  padding: 6px 0;
+}
+
+.admin-nav-empty {
+  display: block;
+  padding: 8px 14px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+@media (max-width: 1200px) {
+  .admin-nav-link,
+  .admin-nav-trigger {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+}

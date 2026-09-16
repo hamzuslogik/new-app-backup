@@ -7,11 +7,15 @@ import { FicheDetailModalProvider } from '../contexts/FicheDetailModalContext';
 import { SidebarProvider, useSidebar } from '../contexts/SidebarContext';
 import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
 import { isMobileNativeExtranetPage } from '../utils/applyForceDesktopViewport';
+import { useAuth } from '../contexts/AuthContext';
+import { isAdminSession } from '../utils/adminMenuUrls';
 import api from '../config/api';
 import './Layout.css';
 
 const LayoutContent = () => {
   const { sidebarCollapsed, isMobile, isTablet, closeSidebar, mobileExtranetActive } = useSidebar();
+  const { user } = useAuth();
+  const adminLayout = isAdminSession(user);
   const extranetMobile = mobileExtranetActive || isMobileNativeExtranetPage();
   const useMobileSidebar = !FORCE_DESKTOP_VIEWPORT || extranetMobile;
   const mobileLayout = extranetMobile || isMobile || isTablet;
@@ -89,9 +93,9 @@ const LayoutContent = () => {
 
   return (
     <FicheDetailModalProvider>
-      <div className="app">
+      <div className={`app ${adminLayout ? 'app-admin-topnav' : ''}`}>
         <GlobalKeyboardShortcuts />
-        {useMobileSidebar && !sidebarCollapsed && mobileLayout && (
+        {!adminLayout && useMobileSidebar && !sidebarCollapsed && mobileLayout && (
           <div 
             ref={overlayRef}
             className={`sidebar-overlay active ${overlayReady ? 'ready' : ''}`} 
@@ -99,8 +103,8 @@ const LayoutContent = () => {
             style={{ pointerEvents: overlayReady ? 'auto' : 'none' }}
           ></div>
         )}
-        <Sidebar collapsed={sidebarCollapsed} />
-        <div className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        {!adminLayout && <Sidebar collapsed={sidebarCollapsed} />}
+        <div className={`main-content ${sidebarCollapsed || adminLayout ? 'sidebar-collapsed' : ''}`}>
           <Header />
           <div className="content-wrapper">
             <Outlet />

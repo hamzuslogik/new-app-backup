@@ -16,8 +16,9 @@
   overflow-x: auto; /* Permettre le scroll horizontal si nécessaire */
 }
 
-.sidebar.sidebar-admin ~ .main-content {
-  margin-left: 240px;
+.app-admin-topnav .main-content,
+.app-admin-topnav .main-content.sidebar-collapsed {
+  margin-left: 0 !important;
 }
 
 .main-content.sidebar-collapsed {
@@ -50,10 +51,8 @@ body[data-desktop-viewport] .content-wrapper {
     transition: margin-left 0.3s ease;
   }
 
-  .sidebar.sidebar-admin ~ .main-content {
-    margin-left: 240px !important;
-  }
-  
+  .app-admin-topnav .main-content,
+  .app-admin-topnav .main-content.sidebar-collapsed,
   .main-content.sidebar-collapsed {
     margin-left: 0 !important; /* Enlever la marge quand le sidebar est masqué */
   }

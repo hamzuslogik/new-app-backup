@@ -10,6 +10,8 @@ import useUserHomePage from '../hooks/useUserHomePage';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { navigateFromNotification } from '../utils/notificationNavigation';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
+import { isAdminSession } from '../utils/adminMenuUrls';
+import AdminTopNav from './AdminTopNav';
 import './Header.css';
 
 const Header = () => {
@@ -29,6 +31,8 @@ const Header = () => {
     }
   };
   const queryClient = useQueryClient();
+  const adminLayout = isAdminSession(user);
+  const [now, setNow] = useState(() => new Date());
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   const [isBlinking, setIsBlinking] = useState(false);
@@ -290,26 +294,21 @@ const Header = () => {
     }
   }, [showNotifications]);
 
-  return (
-    <header className="header">
-      <div className="header-left">
-        <button 
-          className="menu-toggle" 
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            toggleSidebar();
-          }}
-        >
-          <FaBars />
-        </button>
-        <Link to={homePage} className="header-logo-container" onClick={goHomePage}>
-          <img src="/logo/logo.png" alt="JWS Group Logo" className="header-logo" />
-        </Link>
-        <h1 className="header-title">CRM JWS Group</h1>
-      </div>
-      <div className="header-right">
-        {/* Afficher le bouton de notifications pour tous les utilisateurs */}
+  useEffect(() => {
+    if (!adminLayout) return undefined;
+    const timer = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, [adminLayout]);
+
+  const clockLabel = now.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).replace(',', '');
+
+  const notificationBlock = (
         <div className="notification-container" ref={notificationRef}>
           <button 
             className="notification-btn"
@@ -481,6 +480,53 @@ const Header = () => {
               </div>
             )}
           </div>
+  );
+
+  if (adminLayout) {
+    return (
+      <header className="header header-admin">
+        <div className="header-admin-top">
+          <div className="header-admin-welcome">
+            Bienvenue sur votre Espace : <strong>{user?.pseudo || 'Utilisateur'}</strong>
+          </div>
+          <div className="header-admin-top-right">
+            <span className="header-admin-clock">{clockLabel}</span>
+            {notificationBlock}
+            <button className="logout-btn" onClick={handleLogout}>
+              <FaSignOutAlt /> Déconnexion
+            </button>
+          </div>
+        </div>
+        <div className="header-admin-nav-row">
+          <Link to={homePage} className="header-logo-container" onClick={goHomePage}>
+            <img src="/logo/logo.png" alt="JWS Group Logo" className="header-logo" />
+          </Link>
+          <AdminTopNav />
+        </div>
+      </header>
+    );
+  }
+
+  return (
+    <header className="header">
+      <div className="header-left">
+        <button 
+          className="menu-toggle" 
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            toggleSidebar();
+          }}
+        >
+          <FaBars />
+        </button>
+        <Link to={homePage} className="header-logo-container" onClick={goHomePage}>
+          <img src="/logo/logo.png" alt="JWS Group Logo" className="header-logo" />
+        </Link>
+        <h1 className="header-title">CRM JWS Group</h1>
+      </div>
+      <div className="header-right">
+        {notificationBlock}
         <div className="user-menu">
           <div className="user-info">
             <span className="user-name" style={{ color: '#ffffff' }}>{user?.pseudo || 'Utilisateur'}</span>

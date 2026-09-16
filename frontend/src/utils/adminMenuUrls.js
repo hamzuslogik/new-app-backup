@@ -2,6 +2,8 @@
  * Helpers d’URL pour le menu admin (Dashboard / Signatures / Affectation).
  */
 
+export const isAdminSession = (user) => [1, 7].includes(Number(user?.fonction));
+
 function pad2(n) {
   return String(n).padStart(2, '0');
 }
