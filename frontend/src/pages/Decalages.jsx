@@ -146,12 +146,6 @@ const Decalages = () => {
     return dateB - dateA; // Ordre décroissant
   });
 
-  const handleStatutChange = (decalageId, newStatut) => {
-    if (window.confirm('Voulez-vous changer le statut de ce décalage ?')) {
-      updateStatutMutation.mutate({ id: decalageId, id_etat: newStatut });
-    }
-  };
-
   const handleFicheClick = (decalage) => {
     // Utiliser le hash de la fiche si disponible, sinon utiliser l'ID
     if (decalage.fiche_hash) {
@@ -173,6 +167,29 @@ const Decalages = () => {
     if (!etatId) return 'Non défini';
     const etat = etatsDecalage?.find(e => e.id === etatId);
     return etat?.titre || 'Non défini';
+  };
+
+  const isDecalageTraite = (decalage) => {
+    const id = Number(decalage?.id_etat);
+    const etat = etatsDecalage?.find((e) => e.id === id);
+    const titre = String(etat?.titre || decalage?.etat_dec || '')
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    if (!Number.isFinite(id) || id === 1 || titre.includes('ATTENTE')) return false;
+    if (id === 2 || titre.includes('ACCEPT') || titre.includes('VALID')) return true;
+    if (id === 3 || id === 4 || titre.includes('REFUS')) return true;
+    return false;
+  };
+
+  const handleStatutChange = (decalageId, newStatut, decalage) => {
+    if (isDecalageTraite(decalage)) {
+      toast.warning('Cette demande a déjà été traitée et ne peut plus être modifiée.');
+      return;
+    }
+    if (window.confirm('Voulez-vous changer le statut de ce décalage ?')) {
+      updateStatutMutation.mutate({ id: decalageId, id_etat: newStatut });
+    }
   };
 
   if (isLoading) {
@@ -395,43 +412,39 @@ const Decalages = () => {
                     </span>
                   </td>
                   <td data-label="">
-                    {/* Permissions pour modifier le statut :
-                        - Admins (1, 2, 7) : peuvent changer vers tous les états
-                        - Confirmateurs (6) : peuvent refuser ou valider, mais pas annuler
-                        - RE Confirmation (14) : peuvent refuser ou valider, mais pas annuler
-                        - RP Confirmation (13) : peuvent refuser ou valider, mais pas annuler
-                        - Commerciaux (5) : peuvent seulement annuler leurs propres décalages */}
-                    {([1, 2, 7].includes(Number(user?.fonction)) || 
-                      Number(user?.fonction) === 6 ||
-                      Number(user?.fonction) === 14 ||
-                      Number(user?.fonction) === 13 ||
-                      (Number(user?.fonction) === 5 && decalage.expediteur === user?.id)) && (
-                      <div className="action-buttons">
-                        {etatsDecalage?.filter(etat => {
-                          // Filtrer les états selon les permissions
-                          if ([1, 2, 7].includes(Number(user?.fonction))) {
-                            // Admins : tous les états
-                            return true;
-                          } else if (Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13) {
-                            // Confirmateurs, RE Confirmation, RP Confirmation (13) : pas d'annulation (id_etat = 6)
-                            return etat.id !== 6;
-                          } else if (Number(user?.fonction) === 5) {
-                            // Commerciaux : seulement annulation (id_etat = 6)
-                            return etat.id === 6;
-                          }
-                          return false;
-                        }).map(etat => (
-                          <button
-                            key={etat.id}
-                            className={`action-btn ${decalage.id_etat === etat.id ? 'active' : ''}`}
-                            onClick={() => handleStatutChange(decalage.id, etat.id)}
-                            disabled={updateStatutMutation.isLoading || decalage.id_etat === etat.id}
-                            title={`Changer le statut à: ${etat.titre}`}
-                          >
-                            {etat.titre}
-                          </button>
-                        ))}
-                      </div>
+                    {isDecalageTraite(decalage) ? (
+                      <span className="action-locked" title="Demande déjà traitée">
+                        Traité
+                      </span>
+                    ) : (
+                      ([1, 2, 7].includes(Number(user?.fonction)) ||
+                        Number(user?.fonction) === 6 ||
+                        Number(user?.fonction) === 14 ||
+                        Number(user?.fonction) === 13 ||
+                        (Number(user?.fonction) === 5 && decalage.expediteur === user?.id)) && (
+                        <div className="action-buttons">
+                          {etatsDecalage?.filter(etat => {
+                            if ([1, 2, 7].includes(Number(user?.fonction))) {
+                              return true;
+                            } else if (Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13) {
+                              return etat.id !== 6;
+                            } else if (Number(user?.fonction) === 5) {
+                              return etat.id === 6;
+                            }
+                            return false;
+                          }).map(etat => (
+                            <button
+                              key={etat.id}
+                              className={`action-btn ${decalage.id_etat === etat.id ? 'active' : ''}`}
+                              onClick={() => handleStatutChange(decalage.id, etat.id, decalage)}
+                              disabled={updateStatutMutation.isLoading || decalage.id_etat === etat.id}
+                              title={`Changer le statut à: ${etat.titre}`}
+                            >
+                              {etat.titre}
+                            </button>
+                          ))}
+                        </div>
+                      )
                     )}
                   </td>
                 </tr>

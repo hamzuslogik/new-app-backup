@@ -33,6 +33,24 @@ function pickFicheContactForWorkflow(row) {
   };
 }
 
+function normalizeDecalageEtatTitre(titre) {
+  return String(titre || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+/** Demande déjà acceptée ou refusée : plus aucune modification de statut. */
+function isDecalageTraite(idEtat, titre) {
+  const id = Number(idEtat);
+  const t = normalizeDecalageEtatTitre(titre);
+  if (!Number.isFinite(id) || id === 1 || t.includes('ATTENTE')) return false;
+  if (id === 6 || t.includes('ANNUL')) return false;
+  if (id === 2 || t.includes('ACCEPT') || t.includes('VALID')) return true;
+  if (id === 3 || id === 4 || t.includes('REFUS')) return true;
+  return false;
+}
+
 /**
  * Chargement fiche pour executeWorkflow (décalage) : sans cela, {fiche.id_confirmateur} et
  * assimilés restent vides alors que RE/RP passent par destination_fonctions — d’où notif confirmateur manquante.
@@ -451,6 +469,13 @@ router.put('/:id/statut', authenticate, async (req, res) => {
 
     const idEtatRequested = parseInt(id_etat, 10);
     const currentEtat = parseInt(decalage.id_etat, 10);
+
+    if (isDecalageTraite(currentEtat, decalage.etat_titre)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cette demande a déjà été traitée (acceptée ou refusée) et ne peut plus être modifiée.'
+      });
+    }
 
     // Annulation (état 6) : uniquement si la demande est encore en attente (id 1), et rôle autorisé
     if (idEtatRequested === 6) {

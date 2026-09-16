@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
-import { FaBell, FaEdit, FaTimes, FaTrash } from 'react-icons/fa';
+import { FaBell, FaEdit, FaPlus, FaTimes, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import api from '../config/api';
 import {
@@ -9,6 +9,7 @@ import {
   utcPlanningWeekNumber,
 } from '../utils/planningWeekKeys';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+import './AlertePlanning.css';
 
 const SLOT_OPTIONS = [
   { value: '09:00:00', label: '9H' },
@@ -39,6 +40,17 @@ const FUNCTION_OPTIONS = [
   { value: 14, label: 'RE Confirmation' },
 ];
 
+const EMPTY_FORM = {
+  id: null,
+  dep: '',
+  day_name: 'lundi',
+  slot_hour: '09:00:00',
+  message: '',
+  visible_functions: [],
+  weeks_all: true,
+  selected_week_keys: [],
+};
+
 function alertRowToEditState(a) {
   const v = String(a.week_visibility ?? '*').trim();
   const weeks_all = !v || v === '*';
@@ -59,6 +71,13 @@ function alertRowToEditState(a) {
   };
 }
 
+function parseFunctionIds(raw) {
+  return String(raw || '')
+    .split(',')
+    .map((v) => parseInt(v, 10))
+    .filter((n) => Number.isFinite(n));
+}
+
 const WeekPickerBlock = ({
   weeks_all,
   selected_week_keys,
@@ -68,10 +87,10 @@ const WeekPickerBlock = ({
   selectAll,
   clearAll,
 }) => (
-  <div className="departement-selector" style={{ minWidth: 280, maxWidth: 440 }}>
+  <div className="alerte-planning-field alerte-planning-field-full">
     <label>Semaines d’affichage</label>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div className="alerte-weeks-block">
+      <label className="alerte-vis-option">
         <input
           type="checkbox"
           checked={weeks_all}
@@ -81,29 +100,17 @@ const WeekPickerBlock = ({
       </label>
       {!weeks_all && (
         <>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" className="nav-btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={selectAll}>
+          <div className="alerte-weeks-toolbar">
+            <button type="button" className="alerte-planning-btn alerte-planning-btn-ghost" onClick={selectAll}>
               Tout sélectionner
             </button>
-            <button type="button" className="nav-btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={clearAll}>
+            <button type="button" className="alerte-planning-btn alerte-planning-btn-ghost" onClick={clearAll}>
               Tout désélectionner
             </button>
           </div>
-          <div
-            style={{
-              maxHeight: 220,
-              overflowY: 'auto',
-              border: '1px solid #cfd8dc',
-              borderRadius: 6,
-              padding: 8,
-              background: '#fafafa',
-            }}
-          >
+          <div className="alerte-weeks-list">
             {weekPickerKeys.map((key) => (
-              <label
-                key={key}
-                style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, marginBottom: 6, cursor: 'pointer' }}
-              >
+              <label key={key} className="alerte-weeks-option">
                 <input type="checkbox" checked={selected_week_keys.includes(key)} onChange={() => toggleWeekKey(key)} />
                 <span>{labelForPlanningWeekKey(key)}</span>
               </label>
@@ -125,23 +132,13 @@ const AlertePlanning = () => {
     return enumeratePlanningWeekKeys(refYear, refWeek, 6, 30);
   }, []);
 
-  const [formData, setFormData] = useState({
-    dep: '',
-    day_name: 'lundi',
-    slot_hour: '09:00:00',
-    message: '',
-    visible_functions: [],
-    weeks_all: true,
-    selected_week_keys: [],
-  });
+  const [modalForm, setModalForm] = useState(null);
 
-  const [editForm, setEditForm] = useState(null);
-
-  const editWeekPickerKeys = useMemo(() => {
+  const weekPickerKeys = useMemo(() => {
     const s = new Set(baseWeekPickerKeys);
-    (editForm?.selected_week_keys || []).forEach((k) => s.add(k));
+    (modalForm?.selected_week_keys || []).forEach((k) => s.add(k));
     return [...s].sort((a, b) => a.localeCompare(b, 'fr'));
-  }, [baseWeekPickerKeys, editForm?.selected_week_keys]);
+  }, [baseWeekPickerKeys, modalForm?.selected_week_keys]);
 
   const { data: departementsData } = useQuery('planning-alerts-departements', async () => {
     const res = await api.get('/planning/departements');
@@ -153,6 +150,8 @@ const AlertePlanning = () => {
     return res.data?.data || [];
   });
 
+  const closeModal = () => setModalForm(null);
+
   const saveMutation = useMutation(
     async (payload) => {
       const res = await api.post('/planning-alerts', payload);
@@ -162,7 +161,7 @@ const AlertePlanning = () => {
       onSuccess: () => {
         queryClient.invalidateQueries('planning-alerts-list');
         toast.success('Alerte planning enregistrée');
-        setFormData((prev) => ({ ...prev, message: '' }));
+        closeModal();
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de l\'enregistrement');
@@ -179,7 +178,7 @@ const AlertePlanning = () => {
       onSuccess: () => {
         queryClient.invalidateQueries('planning-alerts-list');
         toast.success('Alerte mise à jour');
-        setEditForm(null);
+        closeModal();
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour');
@@ -196,7 +195,7 @@ const AlertePlanning = () => {
       onSuccess: (_, id) => {
         queryClient.invalidateQueries('planning-alerts-list');
         toast.success('Alerte supprimée');
-        setEditForm((prev) => (prev?.id === id ? null : prev));
+        setModalForm((prev) => (prev?.id === id ? null : prev));
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de la suppression');
@@ -222,41 +221,24 @@ const AlertePlanning = () => {
     return true;
   };
 
-  const handleSubmit = (e) => {
+  const handleModalSubmit = (e) => {
     e.preventDefault();
-    if (!formData.dep || !formData.day_name || !formData.slot_hour || !formData.message.trim() || formData.visible_functions.length === 0) {
+    if (!modalForm) return;
+    if (!modalForm.dep || !modalForm.day_name || !modalForm.slot_hour || !modalForm.message.trim() || modalForm.visible_functions.length === 0) {
       toast.warning('Département, jour, créneau, message et visibilité sont obligatoires');
       return;
     }
-    if (!validateWeeks(formData)) return;
-    saveMutation.mutate(buildPayloadCore(formData));
-  };
-
-  const handleEditSubmit = (e) => {
-    e.preventDefault();
-    if (!editForm) return;
-    if (!editForm.dep || !editForm.day_name || !editForm.slot_hour || !editForm.message.trim() || editForm.visible_functions.length === 0) {
-      toast.warning('Tous les champs obligatoires ne sont pas remplis');
-      return;
+    if (!validateWeeks(modalForm)) return;
+    const payload = buildPayloadCore(modalForm);
+    if (modalForm.id) {
+      updateMutation.mutate({ id: modalForm.id, payload });
+    } else {
+      saveMutation.mutate(payload);
     }
-    if (!validateWeeks(editForm)) return;
-    updateMutation.mutate({ id: editForm.id, payload: buildPayloadCore(editForm) });
   };
 
   const toggleVisibilityFunction = (fonctionId) => {
-    setFormData((prev) => {
-      const exists = prev.visible_functions.includes(fonctionId);
-      return {
-        ...prev,
-        visible_functions: exists
-          ? prev.visible_functions.filter((id) => id !== fonctionId)
-          : [...prev.visible_functions, fonctionId],
-      };
-    });
-  };
-
-  const toggleEditVisibilityFunction = (fonctionId) => {
-    setEditForm((prev) => {
+    setModalForm((prev) => {
       if (!prev) return prev;
       const exists = prev.visible_functions.includes(fonctionId);
       return {
@@ -266,17 +248,6 @@ const AlertePlanning = () => {
           : [...prev.visible_functions, fonctionId],
       };
     });
-  };
-
-  const formatVisibilityLabel = (raw) => {
-    const ids = String(raw || '')
-      .split(',')
-      .map((v) => parseInt(v, 10))
-      .filter((n) => Number.isFinite(n));
-    if (ids.length === 0) return '-';
-    return ids
-      .map((id) => FUNCTION_OPTIONS.find((f) => f.value === id)?.label || `Fonction ${id}`)
-      .join(', ');
   };
 
   const formatWeekVisibilityLabel = (raw) => {
@@ -289,20 +260,14 @@ const AlertePlanning = () => {
     return `${parts.length} semaine(s) : ${parts.slice(0, 2).map((k) => labelForPlanningWeekKey(k)).join(' · ')}…`;
   };
 
-  const toggleWeekKeyForm = (key) => {
-    setFormData((prev) => {
-      const has = prev.selected_week_keys.includes(key);
-      return {
-        ...prev,
-        selected_week_keys: has
-          ? prev.selected_week_keys.filter((k) => k !== key)
-          : [...prev.selected_week_keys, key],
-      };
-    });
+  const formatWeekVisibilityTitle = (raw) => {
+    const v = String(raw ?? '*').trim();
+    if (!v || v === '*') return 'Toutes les semaines';
+    return v.split(',').map((s) => s.trim()).filter(Boolean).map((k) => labelForPlanningWeekKey(k)).join('\n');
   };
 
-  const toggleWeekKeyEdit = (key) => {
-    setEditForm((prev) => {
+  const toggleWeekKey = (key) => {
+    setModalForm((prev) => {
       if (!prev) return prev;
       const has = prev.selected_week_keys.includes(key);
       return {
@@ -314,95 +279,24 @@ const AlertePlanning = () => {
     });
   };
 
+  const isSaving = saveMutation.isLoading || updateMutation.isLoading;
+  const isEdit = Boolean(modalForm?.id);
+
   return (
-    <div className="planning page-content">
-      <div className="planning-header">
+    <div className="alerte-planning-page">
+      <div className="alerte-planning-header">
         <h1><FaBell /> Alerte Planning</h1>
+        <button
+          type="button"
+          className="alerte-planning-btn alerte-planning-btn-primary"
+          onClick={() => setModalForm({ ...EMPTY_FORM })}
+        >
+          <FaPlus /> Ajouter une alerte
+        </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="planning-controls" style={{ marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
-        <div className="departement-selector">
-          <label>Département</label>
-          <select
-            value={formData.dep}
-            onChange={(e) => setFormData((prev) => ({ ...prev, dep: e.target.value }))}
-          >
-            <option value="">Sélectionner</option>
-            {(departementsData || []).map((d) => {
-              const code = d.code || d.departement_code || '';
-              const nom = d.nom || d.departement_nom_uppercase || d.departement_nom || '';
-              return <option key={code} value={code}>{code} - {nom}</option>;
-            })}
-          </select>
-        </div>
-        <div className="departement-selector">
-          <label>Jour</label>
-          <select
-            value={formData.day_name}
-            onChange={(e) => setFormData((prev) => ({ ...prev, day_name: e.target.value }))}
-          >
-            {DAY_OPTIONS.map((day) => (
-              <option key={day.value} value={day.value}>{day.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="departement-selector">
-          <label>Créneau</label>
-          <select
-            value={formData.slot_hour}
-            onChange={(e) => setFormData((prev) => ({ ...prev, slot_hour: e.target.value }))}
-          >
-            {SLOT_OPTIONS.map((slot) => (
-              <option key={slot.value} value={slot.value}>{slot.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="departement-selector" style={{ minWidth: 280 }}>
-          <label>Message</label>
-          <input
-            type="text"
-            value={formData.message}
-            onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
-            placeholder="Ex: !!9H:30"
-          />
-        </div>
-        <WeekPickerBlock
-          weeks_all={formData.weeks_all}
-          selected_week_keys={formData.selected_week_keys}
-          weekPickerKeys={baseWeekPickerKeys}
-          onWeeksAllChange={(checked) =>
-            setFormData((prev) => ({
-              ...prev,
-              weeks_all: checked,
-              selected_week_keys: checked ? [] : prev.selected_week_keys,
-            }))
-          }
-          toggleWeekKey={toggleWeekKeyForm}
-          selectAll={() => setFormData((prev) => ({ ...prev, selected_week_keys: [...baseWeekPickerKeys] }))}
-          clearAll={() => setFormData((prev) => ({ ...prev, selected_week_keys: [] }))}
-        />
-        <div className="departement-selector" style={{ minWidth: 320 }}>
-          <label>Visibilité (fonctions)</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxWidth: 400 }}>
-            {FUNCTION_OPTIONS.map((opt) => (
-              <label key={opt.value} style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <input
-                  type="checkbox"
-                  checked={formData.visible_functions.includes(opt.value)}
-                  onChange={() => toggleVisibilityFunction(opt.value)}
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
-        </div>
-        <button type="submit" className="nav-btn" disabled={saveMutation.isLoading}>
-          {saveMutation.isLoading ? 'Enregistrement...' : 'Enregistrer'}
-        </button>
-      </form>
-
-      <div className="planning-table-container">
-        <table className="planning-table">
+      <div className="alerte-planning-table-wrap">
+        <table className="alerte-planning-table">
           <thead>
             <tr>
               <th>Département</th>
@@ -416,172 +310,168 @@ const AlertePlanning = () => {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan="7">Chargement...</td></tr>
+              <tr><td className="alerte-planning-empty" colSpan="7">Chargement...</td></tr>
             ) : (alertsData || []).length === 0 ? (
-              <tr><td colSpan="7">Aucune alerte configurée</td></tr>
+              <tr><td className="alerte-planning-empty" colSpan="7">Aucune alerte configurée</td></tr>
             ) : (
-              (alertsData || []).map((a) => (
-                <tr key={a.id}>
-                  <td>{a.dep}</td>
-                  <td>{DAY_OPTIONS.find((d) => d.value === a.day_name)?.label || a.day_name || '-'}</td>
-                  <td>{a.slot_hour?.substring(0, 5)}</td>
-                  <td>{a.message}</td>
-                  <td style={{ maxWidth: 280, fontSize: 12, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                    {formatWeekVisibilityLabel(a.week_visibility)}
-                  </td>
-                  <td>{formatVisibilityLabel(a.visible_functions)}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        className="nav-btn"
-                        onClick={() => setEditForm(alertRowToEditState(a))}
-                        title="Modifier"
-                      >
-                        <FaEdit />
-                      </button>
-                      <button
-                        type="button"
-                        className="nav-btn"
-                        onClick={() => deleteMutation.mutate(a.id)}
-                        disabled={deleteMutation.isLoading}
-                        title="Supprimer"
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              (alertsData || []).map((a) => {
+                const visIds = parseFunctionIds(a.visible_functions);
+                return (
+                  <tr key={a.id}>
+                    <td>{a.dep}</td>
+                    <td>{DAY_OPTIONS.find((d) => d.value === a.day_name)?.label || a.day_name || '-'}</td>
+                    <td>{SLOT_OPTIONS.find((s) => s.value === a.slot_hour)?.label || a.slot_hour?.substring(0, 5)}</td>
+                    <td className="alerte-planning-message">{a.message}</td>
+                    <td className="alerte-planning-weeks" title={formatWeekVisibilityTitle(a.week_visibility)}>
+                      {formatWeekVisibilityLabel(a.week_visibility)}
+                    </td>
+                    <td>
+                      <div className="alerte-vis-badges">
+                        {visIds.length === 0 ? (
+                          <span>-</span>
+                        ) : (
+                          visIds.map((id) => (
+                            <span key={id} className="alerte-vis-badge">
+                              {FUNCTION_OPTIONS.find((f) => f.value === id)?.label || `Fonction ${id}`}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="alerte-planning-actions">
+                        <button
+                          type="button"
+                          className="alerte-planning-btn alerte-planning-btn-icon"
+                          onClick={() => setModalForm(alertRowToEditState(a))}
+                          title="Modifier"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          type="button"
+                          className="alerte-planning-btn alerte-planning-btn-icon alerte-planning-btn-danger"
+                          onClick={() => deleteMutation.mutate(a.id)}
+                          disabled={deleteMutation.isLoading}
+                          title="Supprimer"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
 
-      {editForm && (
+      {modalForm && (
         <div
+          className="alerte-planning-overlay"
           role="presentation"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,.5)',
-            zIndex: 4000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 16,
-          }}
-          onClick={() => setEditForm(null)}
+          onClick={closeModal}
         >
           <div
+            className="alerte-planning-modal"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="alerte-planning-edit-title"
-            style={{
-              background: '#fff',
-              borderRadius: 10,
-              maxWidth: 640,
-              width: '100%',
-              maxHeight: '92vh',
-              overflow: 'auto',
-              boxShadow: '0 8px 32px rgba(0,0,0,.18)',
-              padding: 22,
-            }}
+            aria-labelledby="alerte-planning-modal-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 id="alerte-planning-edit-title" style={{ margin: 0, fontSize: 18, color: '#1a2529' }}>
-                Modifier l’alerte #{editForm.id}
+            <div className="alerte-planning-modal-header">
+              <h2 id="alerte-planning-modal-title">
+                {isEdit ? `Modifier l’alerte #${modalForm.id}` : 'Nouvelle alerte planning'}
               </h2>
-              <button type="button" className="nav-btn" aria-label="Fermer" onClick={() => setEditForm(null)}>
+              <button type="button" className="alerte-planning-modal-close" aria-label="Fermer" onClick={closeModal}>
                 <FaTimes />
               </button>
             </div>
-            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div className="departement-selector">
-                <label>Département</label>
-                <select
-                  value={editForm.dep}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, dep: e.target.value }))}
-                >
-                  <option value="">Sélectionner</option>
-                  {(departementsData || []).map((d) => {
-                    const code = d.code || d.departement_code || '';
-                    const nom = d.nom || d.departement_nom_uppercase || d.departement_nom || '';
-                    return <option key={code} value={code}>{code} - {nom}</option>;
-                  })}
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                <div className="departement-selector">
+            <form className="alerte-planning-form" onSubmit={handleModalSubmit}>
+              <div className="alerte-planning-form-grid">
+                <div className="alerte-planning-field">
+                  <label>Département</label>
+                  <select
+                    value={modalForm.dep}
+                    onChange={(e) => setModalForm((prev) => ({ ...prev, dep: e.target.value }))}
+                  >
+                    <option value="">Sélectionner</option>
+                    {(departementsData || []).map((d) => {
+                      const code = d.code || d.departement_code || '';
+                      const nom = d.nom || d.departement_nom_uppercase || d.departement_nom || '';
+                      return <option key={code} value={code}>{code} - {nom}</option>;
+                    })}
+                  </select>
+                </div>
+                <div className="alerte-planning-field">
                   <label>Jour</label>
                   <select
-                    value={editForm.day_name}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, day_name: e.target.value }))}
+                    value={modalForm.day_name}
+                    onChange={(e) => setModalForm((prev) => ({ ...prev, day_name: e.target.value }))}
                   >
                     {DAY_OPTIONS.map((day) => (
                       <option key={day.value} value={day.value}>{day.label}</option>
                     ))}
                   </select>
                 </div>
-                <div className="departement-selector">
+                <div className="alerte-planning-field">
                   <label>Créneau</label>
                   <select
-                    value={editForm.slot_hour}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, slot_hour: e.target.value }))}
+                    value={modalForm.slot_hour}
+                    onChange={(e) => setModalForm((prev) => ({ ...prev, slot_hour: e.target.value }))}
                   >
                     {SLOT_OPTIONS.map((slot) => (
                       <option key={slot.value} value={slot.value}>{slot.label}</option>
                     ))}
                   </select>
                 </div>
-              </div>
-              <div className="departement-selector">
-                <label>Message</label>
-                <input
-                  type="text"
-                  value={editForm.message}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, message: e.target.value }))}
+                <div className="alerte-planning-field alerte-planning-field-full">
+                  <label>Message</label>
+                  <input
+                    type="text"
+                    value={modalForm.message}
+                    onChange={(e) => setModalForm((prev) => ({ ...prev, message: e.target.value }))}
+                    placeholder="Ex: !!9H:30"
+                  />
+                </div>
+                <div className="alerte-planning-field alerte-planning-field-full">
+                  <label>Visibilité (fonctions)</label>
+                  <div className="alerte-vis-grid">
+                    {FUNCTION_OPTIONS.map((opt) => (
+                      <label key={opt.value} className="alerte-vis-option">
+                        <input
+                          type="checkbox"
+                          checked={modalForm.visible_functions.includes(opt.value)}
+                          onChange={() => toggleVisibilityFunction(opt.value)}
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <WeekPickerBlock
+                  weeks_all={modalForm.weeks_all}
+                  selected_week_keys={modalForm.selected_week_keys}
+                  weekPickerKeys={weekPickerKeys}
+                  onWeeksAllChange={(checked) =>
+                    setModalForm((prev) => ({
+                      ...prev,
+                      weeks_all: checked,
+                      selected_week_keys: checked ? [] : prev.selected_week_keys,
+                    }))
+                  }
+                  toggleWeekKey={toggleWeekKey}
+                  selectAll={() => setModalForm((prev) => ({ ...prev, selected_week_keys: [...weekPickerKeys] }))}
+                  clearAll={() => setModalForm((prev) => ({ ...prev, selected_week_keys: [] }))}
                 />
               </div>
-              <WeekPickerBlock
-                weeks_all={editForm.weeks_all}
-                selected_week_keys={editForm.selected_week_keys}
-                weekPickerKeys={editWeekPickerKeys}
-                onWeeksAllChange={(checked) =>
-                  setEditForm((prev) => ({
-                    ...prev,
-                    weeks_all: checked,
-                    selected_week_keys: checked ? [] : prev.selected_week_keys,
-                  }))
-                }
-                toggleWeekKey={toggleWeekKeyEdit}
-                selectAll={() =>
-                  setEditForm((prev) => ({ ...prev, selected_week_keys: [...editWeekPickerKeys] }))
-                }
-                clearAll={() => setEditForm((prev) => ({ ...prev, selected_week_keys: [] }))}
-              />
-              <div className="departement-selector">
-                <label>Visibilité (fonctions)</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {FUNCTION_OPTIONS.map((opt) => (
-                    <label key={opt.value} style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <input
-                        type="checkbox"
-                        checked={editForm.visible_functions.includes(opt.value)}
-                        onChange={() => toggleEditVisibilityFunction(opt.value)}
-                      />
-                      {opt.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" className="nav-btn" onClick={() => setEditForm(null)}>
+              <div className="alerte-planning-modal-footer">
+                <button type="button" className="alerte-planning-btn alerte-planning-btn-secondary" onClick={closeModal}>
                   Annuler
                 </button>
-                <button type="submit" className="nav-btn" disabled={updateMutation.isLoading}>
-                  {updateMutation.isLoading ? 'Enregistrement…' : 'Enregistrer'}
+                <button type="submit" className="alerte-planning-btn alerte-planning-btn-primary" disabled={isSaving}>
+                  {isSaving ? 'Enregistrement…' : (isEdit ? 'Enregistrer' : 'Ajouter')}
                 </button>
               </div>
             </form>

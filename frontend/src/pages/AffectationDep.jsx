@@ -476,8 +476,26 @@ const AffectationDep = () => {
     return `${formatDate(start.date)} Au ${formatDate(end.date)}`;
   };
 
+  // Suivre le département (et la semaine) depuis l’URL : le menu DEP
+  // reste sur /affectation-dep et ne remonte pas le composant.
+  useEffect(() => {
+    const urlDep = searchParams.get('dp') || '';
+    const urlWeek = parseInt(searchParams.get('w'), 10);
+    const urlYear = parseInt(searchParams.get('y'), 10);
+    if (urlDep && urlDep !== dep) {
+      setDep(urlDep);
+    }
+    if (Number.isFinite(urlWeek) && urlWeek > 0 && urlWeek !== week) {
+      setWeek(urlWeek);
+    }
+    if (Number.isFinite(urlYear) && urlYear > 0 && urlYear !== year) {
+      setYear(urlYear);
+    }
+  }, [searchParams]);
+
   // Initialiser le département si vide
   useEffect(() => {
+    if (searchParams.get('dp')) return;
     if (!dep && departementsData && departementsData.length > 0) {
       const firstDep = departementsData[0].code || departementsData[0].departement_code;
       setDep(firstDep);

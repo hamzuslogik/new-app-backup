@@ -1,0 +1,359 @@
+.alerte-planning-page {
+  padding: 16px;
+  background: #f4f6f9;
+  min-height: calc(100vh - 60px);
+}
+
+.alerte-planning-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--filter-bg, #DCFCE7);
+  border: 1px solid var(--filter-border, #86EFAC);
+  padding: 14px 18px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.alerte-planning-header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--label-color, #065F46);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alerte-planning-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.alerte-planning-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.alerte-planning-btn-primary {
+  background: #16a34a;
+  color: #fff;
+}
+
+.alerte-planning-btn-primary:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.alerte-planning-btn-secondary {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.alerte-planning-btn-secondary:hover:not(:disabled) {
+  background: #d1d5db;
+}
+
+.alerte-planning-btn-ghost {
+  background: transparent;
+  color: #065F46;
+  border: 1px solid var(--filter-border, #86EFAC);
+  padding: 6px 10px;
+}
+
+.alerte-planning-btn-icon {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 6px 8px;
+}
+
+.alerte-planning-btn-icon:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.alerte-planning-btn-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.alerte-planning-btn-danger:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+.alerte-planning-table-wrap {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+}
+
+.alerte-planning-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.alerte-planning-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.alerte-planning-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef2f6;
+  vertical-align: top;
+  color: #1f2937;
+}
+
+.alerte-planning-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.alerte-planning-empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 28px 12px !important;
+  font-style: italic;
+}
+
+.alerte-planning-message {
+  max-width: 220px;
+  word-break: break-word;
+  font-weight: 600;
+}
+
+.alerte-planning-weeks {
+  max-width: 240px;
+  font-size: 12px;
+  color: #475569;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.alerte-vis-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 320px;
+}
+
+.alerte-vis-badge {
+  display: inline-block;
+  background: #ecfdf5;
+  color: #065F46;
+  border: 1px solid #86EFAC;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.alerte-planning-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-start;
+  white-space: nowrap;
+}
+
+.alerte-planning-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.alerte-planning-modal {
+  background: #fff;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 92vh;
+  overflow: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.alerte-planning-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #9cbfc8;
+  color: #fff;
+  border-radius: 10px 10px 0 0;
+}
+
+.alerte-planning-modal-header h2 {
+  margin: 0;
+  font-size: 17px;
+  color: #fff;
+}
+
+.alerte-planning-modal-close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  display: inline-flex;
+}
+
+.alerte-planning-modal-close:hover {
+  opacity: 0.8;
+}
+
+.alerte-planning-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px 20px;
+}
+
+.alerte-planning-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.alerte-planning-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.alerte-planning-field-full {
+  grid-column: 1 / -1;
+}
+
+.alerte-planning-field label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #065F46;
+}
+
+.alerte-planning-field input,
+.alerte-planning-field select {
+  padding: 8px 10px;
+  border: 1px solid #86EFAC;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  color: #064E3B;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.alerte-planning-field input:focus,
+.alerte-planning-field select:focus {
+  outline: none;
+  border-color: #22C55E;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.12);
+}
+
+.alerte-vis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  padding: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.alerte-vis-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+
+.alerte-vis-option input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #16a34a;
+}
+
+.alerte-weeks-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alerte-weeks-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.alerte-weeks-list {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fafafa;
+}
+
+.alerte-weeks-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.alerte-weeks-option:last-child {
+  margin-bottom: 0;
+}
+
+.alerte-weeks-option input {
+  margin-top: 1px;
+  accent-color: #16a34a;
+}
+
+.alerte-planning-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+@media (max-width: 720px) {
+  .alerte-planning-form-grid,
+  .alerte-vis-grid {
+    grid-template-columns: 1fr;
+  }
+}

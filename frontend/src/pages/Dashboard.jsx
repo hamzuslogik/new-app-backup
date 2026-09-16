@@ -1985,6 +1985,7 @@ const Dashboard = () => {
                     {user?.fonction !== 3 && (
                       <option value="date_rdv_time">Date Planning</option>
                     )}
+                    <option value="date_sign_time">Date signature</option>
                     <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
                     <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                   </select>
@@ -2841,6 +2842,7 @@ const Dashboard = () => {
                     {user?.fonction !== 3 && (
                       <option value="date_rdv_time">Date Planning</option>
                     )}
+                    <option value="date_sign_time">Date signature</option>
                     <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
                     <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                   </select>

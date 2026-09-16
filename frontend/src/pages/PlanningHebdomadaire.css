@@ -289,13 +289,16 @@
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   overflow-x: auto;
-  padding: 8px;
+  padding: 6px;
   margin-top: 8px;
   margin-bottom: 8px;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .planning-hebdomadaire-table {
-  width: 100%;
+  width: auto;
+  table-layout: auto;
   border-collapse: collapse;
   margin: 0;
 }
@@ -305,22 +308,46 @@
 }
 
 .planning-hebdomadaire-table th {
-  padding: 2px 8px;
+  padding: 2px 4px;
   text-align: left;
   font-weight: bold;
   color: #9cbfc8;
   border-bottom: 2px solid #ddd;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.1;
   vertical-align: middle;
 }
 
 .planning-hebdomadaire-table td {
-  padding: 2px 8px;
+  padding: 2px 4px;
   border-bottom: 1px solid #e0e0e0;
   font-size: 11px;
   line-height: 1.1;
   vertical-align: middle;
+}
+
+.planning-hebdomadaire-table th:nth-child(1),
+.planning-hebdomadaire-table td:nth-child(1) {
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 8px;
+}
+
+.planning-hebdomadaire-table th:nth-child(n+2):nth-child(-n+6),
+.planning-hebdomadaire-table td:nth-child(n+2):nth-child(-n+6) {
+  width: 54px;
+  min-width: 54px;
+  max-width: 54px;
+  text-align: center;
+  padding: 2px 2px;
+  white-space: nowrap;
+}
+
+.planning-hebdomadaire-table th:nth-child(7),
+.planning-hebdomadaire-table td:nth-child(7) {
+  width: 1%;
+  white-space: nowrap;
+  padding: 2px 3px;
 }
 
 .planning-hebdomadaire-table tbody tr {
@@ -345,18 +372,19 @@
 }
 
 .btn-delete {
-  padding: 4px 8px;
+  padding: 3px 6px;
   background: transparent;
   color: #e74c3c;
   border: 1px solid #e74c3c;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 9px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   transition: all 0.3s;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .btn-delete:hover {
