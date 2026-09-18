@@ -551,16 +551,18 @@ const AffectationDep = () => {
       {/* Header */}
       <div className="affectation-dep-header">
         <div className="header-left">
-          <h1><FaCalendarAlt /> Affectation par Département - Semaine {week}:</h1>
-        </div>
-        <div className="header-right">
-          <button className="nav-btn" onClick={handlePrevWeek} title="Semaine précédente">
-            <FaChevronLeft />
-          </button>
-          <span className="week-dates">{formatWeekRange()}</span>
-          <button className="nav-btn" onClick={handleNextWeek} title="Semaine suivante">
-            <FaChevronRight />
-          </button>
+          <h1>
+            <FaCalendarAlt /> Semaine {week} : Dep {dep || '—'}
+          </h1>
+          <div className="header-right">
+            <button className="nav-btn" onClick={handlePrevWeek} title="Semaine précédente">
+              <FaChevronLeft />
+            </button>
+            <span className="week-dates">{formatWeekRange()}</span>
+            <button className="nav-btn" onClick={handleNextWeek} title="Semaine suivante">
+              <FaChevronRight />
+            </button>
+          </div>
         </div>
       </div>
 

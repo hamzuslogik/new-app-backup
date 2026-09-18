@@ -9,15 +9,19 @@
   background: var(--filter-bg, #DCFCE7);
   border: 1px solid var(--filter-border, #86EFAC);
   color: var(--label-color, #065F46);
-  padding: 16px 20px;
+  padding: 10px 16px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  justify-content: flex-start;
+  align-items: flex-start;
+  margin-bottom: 8px;
   border-radius: 8px;
 }
 
 .affectation-dep-header .header-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   color: var(--label-color, #065F46) !important;
 }
 
