@@ -160,7 +160,7 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
       const ids = fiches.map((f) => f.id);
       const placeholders = ids.map(() => '?').join(',');
       const histoRows = await query(
-        `SELECT id_fiche, GROUP_CONCAT(DISTINCT id_etat ORDER BY id_etat SEPARATOR ',') AS id_etat_histo
+        `SELECT id_fiche, GROUP_CONCAT(id_etat ORDER BY id ASC SEPARATOR ',') AS id_etat_histo
          FROM fiches_histo
          WHERE id_fiche IN (${placeholders})
          GROUP BY id_fiche`,

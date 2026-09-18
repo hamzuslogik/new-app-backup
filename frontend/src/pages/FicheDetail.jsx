@@ -11,6 +11,7 @@ import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
 import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
+import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, format, addMonths } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
 import './FicheDetail.css';
@@ -9877,9 +9878,7 @@ const PlanningViewForModal = ({
                     
                     const hasData = hasPlanning || totalRdvInSlot > 0;
                     const displayAvailability = availabilityCount !== null ? availabilityCount : 0;
-                    const hasR2Placed = rdvs.some(
-                      (rdv) => rdv.id_commercial_2 != null && Number(rdv.id_commercial_2) > 0
-                    );
+                    const hasR2Placed = rdvs.some((rdv) => ficheHasR2Placed(rdv));
                     
                     // Couleur du badge : vert si OK, orange si presque plein, rouge si plein (sur le total réel du créneau)
                     let bgColor = '#cccccc';

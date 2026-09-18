@@ -342,7 +342,7 @@ async function attachIdEtatHistoToFiches(fiches) {
   for (const chunk of chunkArray(ids, FICHE_IDS_IN_CHUNK)) {
     const ph = chunk.map(() => '?').join(',');
     const rows = await query(
-      `SELECT id_fiche, GROUP_CONCAT(DISTINCT id_etat ORDER BY id ASC SEPARATOR ',') AS id_etat_histo
+      `SELECT id_fiche, GROUP_CONCAT(id_etat ORDER BY id ASC SEPARATOR ',') AS id_etat_histo
        FROM fiches_histo
        WHERE id_fiche IN (${ph})
        GROUP BY id_fiche`,

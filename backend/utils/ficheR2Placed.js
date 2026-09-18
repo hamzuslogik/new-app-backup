@@ -6,8 +6,8 @@
 
 const ETAT_CONFIRMER = 7;
 const ETAT_HONORE = 9;
-const ETATS_SIGNER = [13, 16, 38, 44, 45];
-const ETATS_REFUSER = [12, 25];
+const ETATS_SIGNER = new Set([13, 16, 38, 44, 45]);
+const ETATS_REFUSER = new Set([12, 25]);
 
 function parseHistoEtatIds(histo) {
   if (!histo) return [];
@@ -53,29 +53,49 @@ function etatsBetweenLastAndNewRdv(ids) {
   return ids.slice();
 }
 
-function isR2FromHistoIds(histoIds) {
-  const ids = parseHistoEtatIds(histoIds);
-  if (!ids.length) return false;
-  const windowIds = etatsBetweenLastAndNewRdv(ids);
-  if (!windowIds.length) return false;
-  const hasHonore = windowIds.some((id) => id === ETAT_HONORE);
-  if (!hasHonore) return false;
-  const hasSignerOrRefuser = windowIds.some(
-    (id) => ETATS_SIGNER.includes(id) || ETATS_REFUSER.includes(id)
-  );
-  return !hasSignerOrRefuser;
+function normalizeTitre(titre) {
+  return String(titre || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
-export function ficheHasR2Placed(obj) {
+function titreIsHonore(titre) {
+  const t = normalizeTitre(titre);
+  return t.includes('HONORE') && t.includes('SUIVRE');
+}
+
+function titreBlocksR2(titre) {
+  const t = normalizeTitre(titre);
+  if (!t) return false;
+  return t.includes('REFUSER') || t.includes('SIGNER');
+}
+
+function ficheHasR2Placed(obj, etatsMap = null) {
   if (!obj) return false;
   if (!(obj.id_commercial_2 != null && Number(obj.id_commercial_2) > 0)) return false;
 
-  const histo = obj.id_etat_histo || obj.historique;
-  if (histo) return isR2FromHistoIds(histo);
+  const ids = parseHistoEtatIds(obj.id_etat_histo);
+  if (!ids.length) return false;
 
-  if (Array.isArray(obj.etats_list) && obj.etats_list.includes('R2')) return true;
-  if (typeof obj.etat_check === 'string' && obj.etat_check.split(',').map((s) => s.trim()).includes('R2')) {
-    return true;
+  const windowIds = etatsBetweenLastAndNewRdv(ids);
+  if (!windowIds.length) return false;
+
+  let hasHonore = windowIds.some((id) => id === ETAT_HONORE);
+  let hasBlocker = windowIds.some((id) => ETATS_SIGNER.has(id) || ETATS_REFUSER.has(id));
+
+  if (etatsMap) {
+    windowIds.forEach((id) => {
+      const titre = etatsMap[id];
+      if (titreIsHonore(titre)) hasHonore = true;
+      if (titreBlocksR2(titre)) hasBlocker = true;
+    });
   }
-  return false;
+
+  return hasHonore && !hasBlocker;
 }
+
+module.exports = {
+  ficheHasR2Placed,
+  parseHistoEtatIds
+};

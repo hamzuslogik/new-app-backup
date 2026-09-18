@@ -4,6 +4,7 @@ const { authenticate, checkPermission } = require('../middleware/auth.middleware
 const { query, queryOne } = require('../config/database');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 const { encodeFicheId } = require('./fiche.routes');
+const { ficheHasR2Placed, parseHistoEtatIds } = require('../utils/ficheR2Placed');
 
 // Helper pour obtenir le lundi d'une semaine ISO (plus robuste pour les transitions d'année)
 function getMondayOfWeek(year, week) {
@@ -236,7 +237,7 @@ router.get('/week', authenticate, async (req, res) => {
        fiche.conf_presence_couple,
        fiche.conf_rdv_avec,
        fiche.valider,
-       GROUP_CONCAT(DISTINCT histo.id_etat ORDER BY histo.id ASC SEPARATOR ',') as id_etat_histo,
+       GROUP_CONCAT(DISTINCT CONCAT(histo.id, ':', histo.id_etat) ORDER BY histo.id ASC SEPARATOR ',') as id_etat_histo,
        (SELECT histo2.id_etat 
         FROM fiches_histo histo2 
         WHERE histo2.id_fiche = fiche.id 
@@ -281,8 +282,7 @@ router.get('/week', authenticate, async (req, res) => {
     const allEtatIds = new Set();
     fiches.forEach(fiche => {
       if (fiche.id_etat_histo) {
-        const histoArray = String(fiche.id_etat_histo).split(',').map(Number);
-        histoArray.forEach(id => {
+        parseHistoEtatIds(fiche.id_etat_histo).forEach(id => {
           if (id && !isNaN(id)) allEtatIds.add(id);
         });
       }
@@ -402,11 +402,14 @@ router.get('/week', authenticate, async (req, res) => {
       const etats = [];
       let hasAnnuler = false;
       let hasRefuser = false;
-      let hasR2 = false;
+      const hasR2 = ficheHasR2Placed(
+        { id_commercial_2: fiche.id_commercial_2, id_etat_histo: fiche.id_etat_histo },
+        etatsMap
+      );
       
       // Vérifier l'historique complet si disponible
       if (fiche.id_etat_histo) {
-        const histoArray = String(fiche.id_etat_histo).split(',').map(Number);
+        const histoArray = parseHistoEtatIds(fiche.id_etat_histo);
         
         // Vérifier chaque état dans l'historique en utilisant la map des états pré-chargés
         histoArray.forEach(etatId => {
@@ -420,16 +423,12 @@ router.get('/week', authenticate, async (req, res) => {
             if (titre.includes('REFUSER')) {
               hasRefuser = true;
             }
-            // Vérifier pour R2 (CLIENT HONORE A SUIVRE = état 9)
-            if (etatId === 9 || titre.includes('CLIENT HONORE')) {
-              hasR2 = true;
-            }
           }
         });
       }
       
       // Si l'historique n'a pas été vérifié ou n'est pas disponible, vérifier le dernier état
-      if (!hasAnnuler && !hasRefuser && !hasR2) {
+      if (!hasAnnuler && !hasRefuser) {
         const dernierEtat = fiche.dernier_etat || fiche.id_etat_final;
         if (dernierEtat && etatsMap[dernierEtat]) {
           const titre = etatsMap[dernierEtat].toUpperCase();
@@ -438,9 +437,6 @@ router.get('/week', authenticate, async (req, res) => {
           }
           if (titre.includes('REFUSER')) {
             hasRefuser = true;
-          }
-          if (dernierEtat === 9 || titre.includes('CLIENT HONORE')) {
-            hasR2 = true;
           }
         }
       }
@@ -489,6 +485,7 @@ router.get('/week', authenticate, async (req, res) => {
         operation: fiche.produit === 1 ? 'PAC' : fiche.produit === 2 ? 'PV' : '',
         id_commercial: fiche.id_commercial || 0,
         id_commercial_2: fiche.id_commercial_2 != null ? fiche.id_commercial_2 : null,
+        id_etat_histo: fiche.id_etat_histo || null,
         id_etat_final: fiche.id_etat_final || null, // État final de la fiche
         etat_check: etats.join(','), // Retourner tous les états séparés par virgule
         etats_list: etats, // Liste des états pour faciliter l'accès
