@@ -481,6 +481,58 @@ html body .affectation-dep .planning-grid .time-slot-header * {
   max-height: calc(100vh - 200px);
 }
 
+.commerciaux-sidebar--floating {
+  position: fixed;
+  top: 88px;
+  right: 12px;
+  z-index: 1400;
+  width: 168px;
+  max-height: calc(100vh - 24px);
+  background: #ececec;
+  border: 1px solid #d0d0d0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.commerciaux-sidebar--floating.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.sidebar-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 8px 10px 4px;
+  padding: 6px 0;
+  background: #f7f7f7;
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
+  color: #6b6b6b;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+
+.sidebar-drag-handle svg {
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.sidebar-drag-handle:hover {
+  background: #fff;
+  color: #333;
+}
+
+.commerciaux-sidebar--floating .commerciaux-list {
+  padding: 4px 10px 8px;
+}
+
+.commerciaux-sidebar--floating .sidebar-footer {
+  padding: 8px 10px 10px;
+}
+
 .sidebar-header {
   padding: 16px;
   border-bottom: 1px solid #e0e0e0;
@@ -794,17 +846,17 @@ html body .affectation-dep .planning-grid .time-slot-header * {
     flex-direction: column;
   }
 
-  .commerciaux-sidebar {
+  .commerciaux-sidebar:not(.commerciaux-sidebar--floating) {
     width: 100%;
     max-height: 300px;
   }
 
-  .commerciaux-list {
+  .commerciaux-sidebar:not(.commerciaux-sidebar--floating) .commerciaux-list {
     flex-direction: row;
     flex-wrap: wrap;
   }
 
-  .commercial-button {
+  .commerciaux-sidebar:not(.commerciaux-sidebar--floating) .commercial-button {
     flex: 1;
     min-width: 150px;
   }

@@ -343,14 +343,14 @@ const Affectation = () => {
               disabled={selectedFiches.length === 0 || !selectedCommercial || affectMutation.isLoading}
               className="btn btn-affect"
             >
-              {affectMutation.isLoading ? 'Affectation...' : `Affecter ${selectedFiches.length} fiche(s)`}
+              {affectMutation.isLoading ? 'Affectation...' : 'Affecter'}
             </button>
             <button
               onClick={handleDesaffecter}
               disabled={selectedFiches.length === 0 || desaffectMutation.isLoading}
               className="btn btn-desaffect"
             >
-              {desaffectMutation.isLoading ? 'Désaffectation...' : `Désaffecter ${selectedFiches.length} fiche(s)`}
+              {desaffectMutation.isLoading ? 'Désaffectation...' : 'Désaffecter'}
             </button>
           </div>
         </div>

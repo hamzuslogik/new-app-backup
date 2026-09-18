@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaUser, FaRoute } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaUser, FaRoute, FaArrowsAlt } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
@@ -143,6 +143,9 @@ const AffectationDep = () => {
   const [filterCommercialId, setFilterCommercialId] = useState(null);
   const [distanceResults, setDistanceResults] = useState(null);
   const [showDistanceModal, setShowDistanceModal] = useState(false);
+  const sidebarRef = useRef(null);
+  const [sidebarPos, setSidebarPos] = useState(null);
+  const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
   
   // Bloquer le scroll du body quand le modal est ouvert
   useModalScrollLock(showDistanceModal);
@@ -305,6 +308,35 @@ const AffectationDep = () => {
       return;
     }
     setFilterCommercialId((prev) => (prev === commercialId ? null : commercialId));
+  };
+
+  const handleSidebarDragStart = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const el = sidebarRef.current;
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = el.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    setIsDraggingSidebar(true);
+
+    const onMove = (ev) => {
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      let x = ev.clientX - offsetX;
+      let y = ev.clientY - offsetY;
+      x = Math.max(0, Math.min(window.innerWidth - w, x));
+      y = Math.max(0, Math.min(window.innerHeight - h, y));
+      setSidebarPos({ x, y });
+    };
+    const onUp = () => {
+      setIsDraggingSidebar(false);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   };
 
   const handleApplyAssignments = async () => {
@@ -723,7 +755,22 @@ const AffectationDep = () => {
         </div>
 
         {/* Sidebar avec liste des commerciaux */}
-        <div className="commerciaux-sidebar">
+        <div
+          ref={sidebarRef}
+          className={`commerciaux-sidebar commerciaux-sidebar--floating${isDraggingSidebar ? ' is-dragging' : ''}`}
+          style={
+            sidebarPos
+              ? { left: sidebarPos.x, top: sidebarPos.y, right: 'auto', bottom: 'auto' }
+              : undefined
+          }
+        >
+          <div
+            className="sidebar-drag-handle"
+            onPointerDown={handleSidebarDragStart}
+            title="Déplacer la liste"
+          >
+            <FaArrowsAlt />
+          </div>
           <div className="commerciaux-list">
             {commerciauxData && commerciauxData.map(commercial => (
               <button
