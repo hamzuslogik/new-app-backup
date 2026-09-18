@@ -998,13 +998,13 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   cursor: pointer;
 }
 
-.availability-cell.editable:hover:not(.closed-slot) {
+.availability-cell.editable:hover {
   background: rgba(247, 162, 25, 0.15) !important;
   box-shadow: inset 0 0 0 2px rgba(247, 162, 25, 0.3);
 }
 
-.availability-cell.closed-slot {
-  cursor: not-allowed;
+.availability-cell.closed-slot.editable {
+  cursor: pointer;
 }
 
 .edit-controls {

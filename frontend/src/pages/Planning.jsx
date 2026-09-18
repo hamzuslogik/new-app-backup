@@ -798,10 +798,6 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
 
   const handleCellClick = (date, hour) => {
     if (!canEdit) return;
-    // Vérifier si le créneau est fermé
-    const availData = availability[date]?.[hour];
-    const isClosed = availData?.is_closed === 1;
-    if (isClosed) return; // Ne pas permettre l'édition si le créneau est fermé
     setEditingCell(`${date}-${hour}`);
     setEditValue('');
   };
@@ -949,9 +945,8 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                   const dayPlanning = planning[day.date]?.time?.[timeKey];
                   const rdvCount = dayPlanning?.planning?.length || 0;
                   
-                  // Badge rdv-count / availability-total (affiché en permanence sauf si fermé)
+                  // Badge rdv-count / availability-total (affiché même si le créneau est fermé)
                   const renderRdvBadge = () => {
-                    if (isClosed) return null;
                     return (
                       <span
                         className="availability-rdv-info"
@@ -997,7 +992,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                           return;
                         }
                         e.stopPropagation();
-                        if (canEdit && !isClosed) {
+                        if (canEdit) {
                           handleCellClick(day.date, slot.hour);
                         }
                       }}
@@ -1006,24 +1001,6 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                       {renderRdvBadge()}
                       
                       <div className="availability-value">
-                        {isClosed ? (
-                          <div className="closed-slot-indicator">
-                            <span className="closed-label">FERMÉ</span>
-                            {isAdmin && !isEditing && (
-                              <button
-                                className="toggle-closed-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onToggleClosed(day.date, slot.hour);
-                                }}
-                                title="Ouvrir ce créneau"
-                              >
-                                <FaLock />
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          <>
                             <div className="edit-controls" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="text"
@@ -1085,13 +1062,11 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                                   e.stopPropagation();
                                   onToggleClosed(day.date, slot.hour);
                                 }}
-                                title="Fermer ce créneau"
+                                title={isClosed ? "Ouvrir ce créneau" : "Fermer ce créneau"}
                               >
                                 <FaLock />
                               </button>
                             )}
-                          </>
-                        )}
                       </div>
                     </td>
                   );

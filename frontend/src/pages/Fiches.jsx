@@ -11,6 +11,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { getEffectiveEtatColor, getEffectiveEtatTitle } from '../utils/etatSignerComplet';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { isRdvDateBeforeToday, formatLocalYmd } from '../utils/compteRenduEarlyVerification';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import KoMotifModal from '../components/KoMotifModal';
@@ -1653,6 +1654,17 @@ const FicheFormModal = ({
     } else if (submitData.date_rdv_time) {
       submitData.date_rdv_time = `${submitData.date_rdv_time} 00:00:00`;
     }
+
+    if (submitData.date_rdv_time && isRdvDateBeforeToday(submitData.date_rdv_time)) {
+      const originalYmd = fiche?.date_rdv_time
+        ? String(fiche.date_rdv_time).match(/^(\d{4}-\d{2}-\d{2})/)?.[1]
+        : '';
+      const incomingYmd = String(submitData.date_rdv_time).match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || '';
+      if (incomingYmd !== originalYmd) {
+        toast.error("Impossible de créer un RDV à une date antérieure à aujourd'hui.");
+        return;
+      }
+    }
     
     // Supprimer les champs temporaires
     delete submitData.date_rdv_time_hour;
@@ -2112,7 +2124,7 @@ const FicheFormModal = ({
                 </div>
                 <div className="form-group">
                   <label>Date RDV</label>
-                  <input type="date" name="date_rdv_time" value={formData.date_rdv_time || ''} onChange={handleChange} />
+                  <input type="date" name="date_rdv_time" min={formatLocalYmd()} value={formData.date_rdv_time || ''} onChange={handleChange} />
                 </div>
                 <div className="form-group">
                   <label>Heure RDV</label>

@@ -867,7 +867,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7, 11), async (r
         // Mettre à jour si existe
         await query(
           `UPDATE planning_availablity 
-           SET force_crenaux = 1, nbr_com = ?, is_closed = 0, date_modif = ?, date_modif_time = ?
+           SET force_crenaux = 1, nbr_com = ?, date_modif = ?, date_modif_time = ?
            WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
           [parseInt(value), timestamp, dateModifTime, week, year, dep, date, hour]
         );
@@ -916,7 +916,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7, 11), async (r
         if (existing) {
           await query(
             `UPDATE planning_availablity 
-             SET nbr_com = ?, is_closed = 0, date_modif = ?, date_modif_time = ?
+             SET nbr_com = ?, date_modif = ?, date_modif_time = ?
              WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
             [parseInt(value), timestamp, dateModifTime, week, year, dep, date, slot.hour]
           );

@@ -212,6 +212,18 @@ function isRdvDateTimePast(value, now = new Date()) {
   return rdv.getTime() < now.getTime();
 }
 
+function formatLocalYmd(d = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function isRdvDateBeforeToday(value, now = new Date()) {
+  const s = String(value || '').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return false;
+  return `${m[1]}-${m[2]}-${m[3]}` < formatLocalYmd(now);
+}
+
 /**
  * Alimente la table confirmations au passage CONFIRMER (7) avec l'heure système locale.
  * Source historique : scripts SQL copiant fiches_histo.date_creation (souvent écrite en UTC).
@@ -5050,11 +5062,13 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       fiche.id_qualite_confirmation = user.id;
     }
 
-    if (dbField === 'date_rdv_time' && dbValue != null && String(dbValue).trim() !== '' && isRdvDateTimePast(dbValue)) {
-      return res.status(400).json({
-        success: false,
-        message: 'La date du RDV est dépassée. Impossible d\'enregistrer une date de RDV passée.'
-      });
+    if (dbField === 'date_rdv_time' && dbValue != null && String(dbValue).trim() !== '') {
+      if (isRdvDateBeforeToday(dbValue) || isRdvDateTimePast(dbValue)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Impossible de créer un RDV à une date antérieure à aujourd\'hui.'
+        });
+      }
     }
 
     // Mettre à jour le champ sur fiches (source de vérité affichage fiche + stats)
@@ -5539,6 +5553,15 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
       'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'pseudo'
     ];
+
+    if (ficheData.date_rdv_time != null && String(ficheData.date_rdv_time).trim() !== '') {
+      if (isRdvDateBeforeToday(ficheData.date_rdv_time) || isRdvDateTimePast(ficheData.date_rdv_time)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Impossible de créer un RDV à une date antérieure à aujourd\'hui.'
+        });
+      }
+    }
 
     // Gérer les valeurs NULL et filtrer les colonnes valides
     const fields = [];
@@ -6799,17 +6822,19 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
 
     // Vérifier si un RDV est créé/modifié et si le créneau est fermé
     if (ficheData.date_rdv_time !== undefined && ficheData.date_rdv_time !== null && ficheData.date_rdv_time !== '') {
-      // Création / affectation d'une date RDV : refuser une date/heure déjà passée
-      if (isRdvDateTimePast(ficheData.date_rdv_time)) {
+      const incomingRdv = String(ficheData.date_rdv_time).trim();
+      const previousRdv = fiche.date_rdv_time == null ? '' : String(fiche.date_rdv_time).trim();
+      // Création / changement de date RDV : refuser une date calendaire < aujourd'hui
+      if (incomingRdv !== previousRdv && (isRdvDateBeforeToday(incomingRdv) || isRdvDateTimePast(incomingRdv))) {
         return res.status(400).json({
           success: false,
-          message: 'La date du RDV est dépassée. Impossible de créer un RDV à une date passée.'
+          message: 'Impossible de créer un RDV à une date antérieure à aujourd\'hui.'
         });
       }
       try {
         // Extraire la date et l'heure du RDV
         const rdvDateTime = parseMysqlLocalDateTime(ficheData.date_rdv_time) || new Date(ficheData.date_rdv_time);
-        const rdvDate = rdvDateTime.toISOString().split('T')[0]; // YYYY-MM-DD
+        const rdvDate = formatLocalYmd(rdvDateTime);
         const rdvTime = rdvDateTime.toTimeString().split(' ')[0]; // HH:MM:SS
         
         // Déterminer le créneau horaire
@@ -6851,9 +6876,15 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             [week, year, dep, rdvDate, slotHour]
           );
           
-          if (closedSlot && ficheData.allow_unavailable_slot !== true) {
+          const allowUnavailable =
+            ficheData.allow_unavailable_slot === true ||
+            ficheData.allow_unavailable_slot === 1 ||
+            ficheData.allow_unavailable_slot === '1' ||
+            ficheData.allow_unavailable_slot === 'true';
+          if (closedSlot && !allowUnavailable) {
             return res.status(400).json({
               success: false,
+              code: 'PLANNING_SLOT_CLOSED',
               message: 'Ce créneau horaire est fermé. Impossible de créer un RDV dans ce créneau.'
             });
           }

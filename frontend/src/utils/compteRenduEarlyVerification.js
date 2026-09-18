@@ -17,6 +17,18 @@ export function isBeforeRdvDateTime(dateRdvTime, now = new Date()) {
   return now.getTime() < rdv.getTime();
 }
 
+export function formatLocalYmd(d = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export function isRdvDateBeforeToday(dateRdvTime, now = new Date()) {
+  const s = String(dateRdvTime || '').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return false;
+  return `${m[1]}-${m[2]}-${m[3]}` < formatLocalYmd(now);
+}
+
 export function generateFourDigitCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }

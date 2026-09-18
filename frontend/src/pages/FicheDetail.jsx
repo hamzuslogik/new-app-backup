@@ -33,7 +33,7 @@ import {
 } from '../utils/compteRenduCommercialOptions';
 import CompteRenduEarlyVerification from '../components/CompteRenduEarlyVerification';
 import CodeVerificationModal from '../components/CodeVerificationModal';
-import { isBeforeRdvDateTime } from '../utils/compteRenduEarlyVerification';
+import { isBeforeRdvDateTime, isRdvDateBeforeToday, formatLocalYmd } from '../utils/compteRenduEarlyVerification';
 import { resolveConfRevenuAfterTypeContratChange } from '../utils/revenuTypeContrat';
 
 /** Mention « RDV SEUL » : Mr sans Mme / Mme sans Mr (conf_presence_couple). */
@@ -615,6 +615,34 @@ function timeToSlotHour(timeStr) {
   return null;
 }
 
+function lookupAvailabilityCell(availMap, dateStr, slotHour) {
+  if (!availMap || !dateStr) return null;
+  const dayMap = availMap[dateStr] || availMap[String(dateStr).slice(0, 10)];
+  if (!dayMap || typeof dayMap !== 'object') return null;
+  if (slotHour && dayMap[slotHour] != null) return dayMap[slotHour];
+  const wanted = String(slotHour || '').slice(0, 8);
+  if (!wanted) return null;
+  const key = Object.keys(dayMap).find((k) => String(k).slice(0, 8) === wanted);
+  return key ? dayMap[key] : null;
+}
+
+function isClosedAvailabilityCell(cell) {
+  if (!cell) return false;
+  return Number(cell.is_closed) === 1 || cell.is_closed === true || cell.is_closed === '1';
+}
+
+function isZeroAvailabilityCell(cell) {
+  if (!cell) return false;
+  return cell.nbr_com === 0 || cell.nbr_com === '0';
+}
+
+function isPlanningSlotClosedError(error) {
+  const data = error?.response?.data;
+  if (data?.code === 'PLANNING_SLOT_CLOSED') return true;
+  const msg = String(data?.message || error?.message || '');
+  return /cr[eé]neau/i.test(msg) && /ferm[eé]/i.test(msg);
+}
+
 /** Plage horaire alignée sur les buckets planning (voir timeToSlotMinuteRanges) pour filtrer date_rdv_time sur le dashboard. */
 function getDashboardTimeRangeForPlanningSlot(slotHour) {
   const map = {
@@ -732,6 +760,7 @@ const FicheDetail = ({
   const [slotCodeModal, setSlotCodeModal] = useState(null);
   const slotCodeVerifiedRef = useRef(false);
   const pendingAfterSlotCodeRef = useRef(null);
+  const pendingKnownSlotStatusRef = useRef(null);
   const [showConfirmConfFields, setShowConfirmConfFields] = useState(false);
   const [rdvFormData, setRdvFormData] = useState({
     date_rdv_time: '',
@@ -2055,6 +2084,20 @@ const FicheDetail = ({
         return;
       }
     }
+
+    if (isRdvDateBeforeToday(dateStr)) {
+      alert('Impossible de créer un RDV à une date antérieure à aujourd\'hui.');
+      return;
+    }
+
+    const slotCell = lookupAvailabilityCell(availabilityData, dateStr, timeStr)
+      || lookupAvailabilityCell(availabilityData, dateStr, timeToSlotHour(timeStr));
+    pendingKnownSlotStatusRef.current = {
+      date: dateStr,
+      hour: timeToSlotHour(timeStr) || timeStr,
+      closed: isClosedAvailabilityCell(slotCell),
+      zero: isZeroAvailabilityCell(slotCell)
+    };
     
     // Construire dateTime pour le formulaire (format: YYYY-MM-DD HH:MM)
     // Ne pas utiliser new Date() car cela peut causer des problèmes de timezone
@@ -2187,6 +2230,21 @@ const FicheDetail = ({
       }
     }
 
+    if (isRdvDateBeforeToday(dateStr)) {
+      alert('Impossible de créer un RDV à une date antérieure à aujourd\'hui.');
+      return;
+    }
+
+    const slotHour = timeToSlotHour(timeStr) || timeStr;
+    const cachedAvail = queryClient.getQueryData(['availability-modal', planningWeek, planningYear, planningDep]);
+    const slotCell = lookupAvailabilityCell(cachedAvail?.data, dateStr, slotHour);
+    pendingKnownSlotStatusRef.current = {
+      date: dateStr,
+      hour: slotHour,
+      closed: isClosedAvailabilityCell(slotCell),
+      zero: isZeroAvailabilityCell(slotCell)
+    };
+
     setSelectedSlot({ date: dateStr, hour });
     setShowRdvModal(false);
     setActiveTab('fiches');
@@ -2221,21 +2279,80 @@ const FicheDetail = ({
 
   const getPlanningSlotStatus = async (dateStr, timeStr) => {
     const dep = resolvePlanningDepFromFiche();
-    const slotHour = timeToSlotHour(timeStr);
-    if (!dep || !dateStr || !slotHour) return { closed: false, zero: false };
+    const slotHour = timeToSlotHour(timeStr)
+      || (selectedSlot?.hour ? String(selectedSlot.hour) : null);
+    const empty = { closed: false, zero: false, date: dateStr, hour: slotHour, dep };
+    if (!dateStr) return empty;
+
+    const known = pendingKnownSlotStatusRef.current;
+    if (known && known.date === dateStr && (known.closed || known.zero)) {
+      return { ...known, hour: slotHour || known.hour, dep };
+    }
+
+    const readCell = (map) => lookupAvailabilityCell(map, dateStr, slotHour);
+
+    const cachedKeys = [
+      ['availability-modal', planningWeek, planningYear, planningDep],
+      ['planning-availability', planningWeek, planningYear, planningDep]
+    ];
+    for (const key of cachedKeys) {
+      if (!key[1] || !key[2] || !key[3]) continue;
+      const cached = queryClient.getQueryData(key);
+      const cell = readCell(cached?.data);
+      if (cell && (isClosedAvailabilityCell(cell) || isZeroAvailabilityCell(cell))) {
+        return {
+          closed: isClosedAvailabilityCell(cell),
+          zero: isZeroAvailabilityCell(cell),
+          date: dateStr,
+          hour: slotHour,
+          dep
+        };
+      }
+    }
+
+    try {
+      const allCached = queryClient.getQueriesData({ queryKey: ['availability-modal'] });
+      for (const [, cached] of allCached) {
+        const cell = readCell(cached?.data);
+        if (cell && (isClosedAvailabilityCell(cell) || isZeroAvailabilityCell(cell))) {
+          return {
+            closed: isClosedAvailabilityCell(cell),
+            zero: isZeroAvailabilityCell(cell),
+            date: dateStr,
+            hour: slotHour,
+            dep
+          };
+        }
+      }
+    } catch (err) {
+      /* ignore cache scan */
+    }
+
+    if (!dep || !slotHour) return empty;
     try {
       const rdvDate = new Date(`${dateStr}T12:00:00`);
       const week = getWeekNumber(rdvDate);
-      const year = rdvDate.getFullYear();
-      const availRes = await api.get('/planning/availability', { params: { w: week, y: year, dp: dep } });
-      const availData = availRes.data?.data?.[dateStr]?.[slotHour];
-      const closed = Number(availData?.is_closed) === 1;
-      const nbr = availData?.nbr_com;
-      const zero = nbr === 0 || nbr === '0';
-      return { closed, zero, date: dateStr, hour: slotHour, dep };
+      const isoThursday = new Date(Date.UTC(rdvDate.getFullYear(), rdvDate.getMonth(), rdvDate.getDate()));
+      const dayNum = isoThursday.getUTCDay() || 7;
+      isoThursday.setUTCDate(isoThursday.getUTCDate() + 4 - dayNum);
+      const yearsToTry = [...new Set([isoThursday.getUTCFullYear(), rdvDate.getFullYear(), planningYear].filter(Boolean))];
+      for (const year of yearsToTry) {
+        const availRes = await api.get('/planning/availability', { params: { w: week, y: year, dp: dep } });
+        const cell = readCell(availRes.data?.data);
+        if (cell) {
+          return {
+            closed: isClosedAvailabilityCell(cell),
+            zero: isZeroAvailabilityCell(cell),
+            date: dateStr,
+            hour: slotHour,
+            dep
+          };
+        }
+      }
+      return empty;
     } catch (err) {
       console.error('Erreur lors de la lecture du créneau planning:', err);
-      return { closed: false, zero: false };
+      return empty;
     }
   };
 
@@ -2267,6 +2384,10 @@ const FicheDetail = ({
     const dateRdvNormalized = data.date_rdv_time.includes(':')
       ? data.date_rdv_time
       : `${data.date_rdv_time}:00`;
+    if (isRdvDateBeforeToday(dateRdvNormalized)) {
+      alert('Impossible de créer un RDV à une date antérieure à aujourd\'hui.');
+      return;
+    }
     if (!isBeforeRdvDateTime(dateRdvNormalized)) {
       alert('La date du RDV est dépassée. Impossible de créer un RDV à une date passée.');
       return;
@@ -2479,6 +2600,8 @@ const FicheDetail = ({
       // Fermer le modal
       setShowRdvModal(false);
       setSelectedSlot(null);
+      slotCodeVerifiedRef.current = false;
+      pendingKnownSlotStatusRef.current = null;
 
       // Recharger les données
       queryClient.invalidateQueries(['fiche', hash]);
@@ -2495,6 +2618,11 @@ const FicheDetail = ({
       }
     } catch (error) {
       console.error('Erreur lors de la création du RDV:', error);
+      if (isPlanningSlotClosedError(error) && !slotCodeVerifiedRef.current) {
+        pendingAfterSlotCodeRef.current = () => handleCreateRdvFromForm(data);
+        setSlotCodeModal({ closed: true, zero: false });
+        return;
+      }
       alert('Erreur lors de la création du rendez-vous: ' + (error.response?.data?.message || error.message));
     } finally {
       setRdvSubmitting(false);
@@ -2666,6 +2794,10 @@ const FicheDetail = ({
         ? `${confFormData.conf_rdv_date} ${confFormData.conf_rdv_time}:00`
         : null;
 
+      if (dateRdvTime && isRdvDateBeforeToday(dateRdvTime)) {
+        alert('Impossible de créer un RDV à une date antérieure à aujourd\'hui.');
+        return;
+      }
       if (dateRdvTime && !isBeforeRdvDateTime(dateRdvTime)) {
         alert('La date du RDV est dépassée. Impossible de créer un RDV à une date passée.');
         return;
@@ -2787,9 +2919,16 @@ const FicheDetail = ({
           id_commercial_2: ''
         });
         alert('Fiche confirmée avec succès');
+        slotCodeVerifiedRef.current = false;
+        pendingKnownSlotStatusRef.current = null;
       }
     } catch (error) {
       console.error('Erreur lors de la confirmation:', error);
+      if (isPlanningSlotClosedError(error) && !slotCodeVerifiedRef.current) {
+        pendingAfterSlotCodeRef.current = () => handleConfirmSubmit();
+        setSlotCodeModal({ closed: true, zero: false });
+        return;
+      }
       alert('Erreur lors de la confirmation de la fiche: ' + (error.response?.data?.message || error.message));
     }
   };
@@ -7236,7 +7375,7 @@ const FicheDetail = ({
                           type="date"
                           id="conf_rdv_date"
                           className="form-control"
-                          min={new Date().toISOString().slice(0, 10)}
+                          min={formatLocalYmd()}
                           value={confFormData.conf_rdv_date}
                           onChange={(e) => setConfFormData({...confFormData, conf_rdv_date: e.target.value})}
                         />
@@ -8859,7 +8998,7 @@ const FicheDetail = ({
         />
       )}
 
-      {slotCodeModal && (
+      {slotCodeModal && createPortal(
         <CodeVerificationModal
           title="Créneau fermé ou indisponible"
           message={
@@ -8877,9 +9016,11 @@ const FicheDetail = ({
           onVerified={handleSlotCodeVerified}
           onCancel={() => {
             pendingAfterSlotCodeRef.current = null;
+            slotCodeVerifiedRef.current = false;
             setSlotCodeModal(null);
           }}
-        />
+        />,
+        document.body
       )}
     </div>
   );
@@ -9939,6 +10080,7 @@ const PlanningViewForModal = ({
                     const availabilityFromPlanning = dayPlanning?.av ?? null;
                     const availData = availability?.[day.date]?.[slot.hour];
                     const isClosed = availData?.is_closed === 1;
+                    const isPastCalendarDay = isRdvDateBeforeToday(day.date);
                     const availabilityCount = availabilityFromPlanning !== null ? availabilityFromPlanning : (availData?.nbr_com ?? null);
                     // availability peut être null (pas de planning créé), 0 (bloqué), ou > 0 (disponible)
                     const hasPlanning = availabilityCount !== null && availabilityCount !== undefined;
@@ -10146,7 +10288,7 @@ const PlanningViewForModal = ({
                                 </span>
                               )}
                             </div>
-                            {onSelectSlot && hasPlanning && !canEditThis && (
+                            {onSelectSlot && hasPlanning && !canEditThis && !isPastCalendarDay && (
                               <button
                                 type="button"
                                 className="planning-create-btn"
@@ -10241,7 +10383,7 @@ const PlanningViewForModal = ({
                           </>
                         ) : isAvailable && !isBlocked ? (
                           <>
-                            {onSelectSlot && (
+                            {onSelectSlot && !isPastCalendarDay && (
                               <button
                                 type="button"
                                 className="planning-create-btn"
@@ -10581,7 +10723,7 @@ const CreateRdvModal = ({
                       type="date"
                       id="rdv_date"
                       className="form-control"
-                      min={new Date().toISOString().slice(0, 10)}
+                      min={formatLocalYmd()}
                       value={rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[0] : ''}
                       onChange={(e) => {
                         const time = rdvFormData.date_rdv_time ? rdvFormData.date_rdv_time.split(' ')[1] : '00:00';
