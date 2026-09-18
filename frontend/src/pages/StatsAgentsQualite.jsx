@@ -276,7 +276,7 @@ const StatsAgentsQualite = () => {
   }
 
   const formatDateTime = (value) => {
-    if (!value) return '-';
+    if (!value) return '';
     return new Date(value).toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
@@ -786,20 +786,20 @@ const StatsAgentsQualite = () => {
                         <td>{formatDateTime(fiche.date_audit)}</td>
                         <td>
                           <div className="name-cell">
-                            <span className="nom">{fiche.nom || '-'}</span>
-                            <span className="prenom">{fiche.prenom || '-'}</span>
+                            <span className="nom">{fiche.nom || ''}</span>
+                            <span className="prenom">{fiche.prenom || ''}</span>
                           </div>
                         </td>
-                        <td>{fiche.tel || '-'}</td>
+                        <td>{fiche.tel || ''}</td>
                         <td>
                           <div className="location-cell">
-                            <span>{fiche.cp || '-'}</span>
-                            <span className="ville">{fiche.ville || '-'}</span>
+                            <span>{fiche.cp || ''}</span>
+                            <span className="ville">{fiche.ville || ''}</span>
                           </div>
                         </td>
                         <td>
                           <div className="agent-cell">
-                            <span className="pseudo">{fiche.qualite?.pseudo || '-'}</span>
+                            <span className="pseudo">{fiche.qualite?.pseudo || ''}</span>
                             {(fiche.qualite?.nom || fiche.qualite?.prenom) && (
                               <span className="fullname">
                                 {fiche.qualite.nom} {fiche.qualite.prenom}
@@ -809,7 +809,7 @@ const StatsAgentsQualite = () => {
                         </td>
                         <td>
                           <div className="agent-cell">
-                            <span className="pseudo">{fiche.agent_pseudo || '-'}</span>
+                            <span className="pseudo">{fiche.agent_pseudo || ''}</span>
                             {(fiche.agent_nom || fiche.agent_prenom) && (
                               <span className="fullname">
                                 {fiche.agent_nom} {fiche.agent_prenom}
@@ -817,13 +817,13 @@ const StatsAgentsQualite = () => {
                             )}
                           </div>
                         </td>
-                        <td>{fiche.centre_titre || '-'}</td>
+                        <td>{fiche.centre_titre || ''}</td>
                         <td>
                           <span
                             className="etat-badge"
                             style={{ backgroundColor: fiche.etat_color || '#ccc' }}
                           >
-                            {fiche.etat_abbreviation || fiche.etat_titre || '-'}
+                            {fiche.etat_abbreviation || fiche.etat_titre || ''}
                           </span>
                         </td>
                         <td className="status-cell">
@@ -952,16 +952,16 @@ const StatsAgentsQualite = () => {
                         <td>{formatDateTime(rdv.date_rdv_time)}</td>
                         <td>
                           <div className="name-cell">
-                            <span className="nom">{rdv.nom || '-'}</span>
-                            <span className="prenom">{rdv.prenom || '-'}</span>
+                            <span className="nom">{rdv.nom || ''}</span>
+                            <span className="prenom">{rdv.prenom || ''}</span>
                           </div>
                         </td>
-                        <td>{rdv.tel || '-'}</td>
-                        <td>{rdv.confirmateur_pseudo || '-'}</td>
-                        <td>{rdv.produit_nom || '-'}</td>
+                        <td>{rdv.tel || ''}</td>
+                        <td>{rdv.confirmateur_pseudo || ''}</td>
+                        <td>{rdv.produit_nom || ''}</td>
                         <td>
                           <div className="agent-cell">
-                            <span className="pseudo">{rdv.auditeur?.pseudo || '-'}</span>
+                            <span className="pseudo">{rdv.auditeur?.pseudo || ''}</span>
                             {(rdv.auditeur?.nom || rdv.auditeur?.prenom) && (
                               <span className="fullname">
                                 {rdv.auditeur.nom} {rdv.auditeur.prenom}

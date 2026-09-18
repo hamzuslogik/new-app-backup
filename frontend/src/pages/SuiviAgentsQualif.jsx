@@ -748,12 +748,12 @@ const SuiviAgentsQualif = () => {
                   {fiches.map(fiche => (
                     <tr key={fiche.id}>
                       <td>{fiche.id}</td>
-                      <td>{fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : '-'}</td>
-                      <td>{fiche.agent_pseudo || '-'}</td>
-                      <td>{fiche.nom || '-'}</td>
-                      <td>{fiche.prenom || '-'}</td>
-                      <td>{fiche.tel || '-'}</td>
-                      <td>{fiche.cp || '-'}</td>
+                      <td>{fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
+                      <td>{fiche.agent_pseudo || ''}</td>
+                      <td>{fiche.nom || ''}</td>
+                      <td>{fiche.prenom || ''}</td>
+                      <td>{fiche.tel || ''}</td>
+                      <td>{fiche.cp || ''}</td>
                       <td>
                         <span 
                           className="etat-badge"
@@ -768,7 +768,7 @@ const SuiviAgentsQualif = () => {
                           {(fiche.ko === 1 || fiche.ko === '1')
                             ? 'KO'
                             : (fiche.etat_groupe === '0' || fiche.etat_groupe === 0)
-                              ? (fiche.etat_titre || '-')
+                              ? (fiche.etat_titre || '')
                               : 'Validé'}
                         </span>
                       </td>

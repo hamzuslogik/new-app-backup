@@ -551,7 +551,7 @@ const PlanningCommercial = () => {
     const names = [];
     if (fiche.commercial_pseudo) names.push(fiche.commercial_pseudo);
     if (fiche.commercial_2_pseudo) names.push(fiche.commercial_2_pseudo);
-    return names.length > 0 ? names.join(' / ') : '-';
+    return names.length > 0 ? names.join(' / ') : '';
   };
   
   // Vérifier si c'est un R2 (deuxième commercial assigné)
@@ -1081,12 +1081,10 @@ const PlanningCommercial = () => {
                                 }}
                                 title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
                               />
-                            ) : (
-                              <span style={{ color: '#ccc' }}>-</span>
-                            )}
+                            ) : null}
                           </td>
                         ) : (
-                          <td data-label="Centre:">{fiche.centre_titre || '-'}</td>
+                          <td data-label="Centre:">{fiche.centre_titre || ''}</td>
                         )}
                         <td data-label="">
                           <button

@@ -23,7 +23,7 @@ const getFicheEtatDisplay = (fiche) => {
   }
   const isGroupe0 = fiche.etat_groupe === '0' || fiche.etat_groupe === 0;
   if (isGroupe0) {
-    return { label: fiche.etat_titre || '-', color: fiche.etat_color || '#ccc' };
+    return { label: fiche.etat_titre || '', color: fiche.etat_color || '#ccc' };
   }
   return { label: 'Validée', color: '#4CAF50' };
 };
@@ -840,11 +840,11 @@ const ProductionQualif = () => {
                   {fiches.map((fiche) => (
                       <tr key={fiche.id || fiche.hash}>
                         <td className="col-date">{formatDateTimeFr(fiche.date_insert_time)}</td>
-                        <td className="col-agent">{fiche.agent_pseudo || '-'}</td>
-                        <td className="col-nom">{fiche.nom || '-'}</td>
-                        <td className="col-prenom">{fiche.prenom || '-'}</td>
-                        <td className="col-tel">{fiche.tel || '-'}</td>
-                        <td className="col-cp">{fiche.cp || '-'}</td>
+                        <td className="col-agent">{fiche.agent_pseudo || ''}</td>
+                        <td className="col-nom">{fiche.nom || ''}</td>
+                        <td className="col-prenom">{fiche.prenom || ''}</td>
+                        <td className="col-tel">{fiche.tel || ''}</td>
+                        <td className="col-cp">{fiche.cp || ''}</td>
                         <td className="col-etat">
                           {(() => {
                             const { label: displayEtat, color: displayColor } = getFicheEtatDisplay(fiche);

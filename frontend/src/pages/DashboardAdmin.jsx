@@ -1140,9 +1140,7 @@ const DashboardAdmin = () => {
                               }} 
                               title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
                             />
-                          ) : (
-                            <span style={{ color: '#ccc' }}>-</span>
-                          )}
+                          ) : null}
                         </td>
                         <td data-label="">
                           <div className="fiche-indicators">

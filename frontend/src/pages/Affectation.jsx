@@ -48,12 +48,12 @@ function formatConfirmateurs(fiche) {
     fiche.confirmateur_2_pseudo,
     fiche.confirmateur_3_pseudo,
   ].filter(Boolean);
-  return parts.length > 0 ? parts.join(' | ') : '-';
+  return parts.length > 0 ? parts.join(' | ') : '';
 }
 
 function formatCommercials(fiche) {
   const parts = [fiche.commercial_nom, fiche.commercial_2_pseudo].filter(Boolean);
-  return parts.length > 0 ? parts.join(' | ') : '-';
+  return parts.length > 0 ? parts.join(' | ') : '';
 }
 
 const Affectation = () => {
@@ -322,35 +322,37 @@ const Affectation = () => {
 
       {/* Actions d'affectation */}
       <div className="affectation-actions">
-        <div className="action-group">
-          <label>Commercial à affecter</label>
-          <select
-            value={selectedCommercial}
-            onChange={(e) => setSelectedCommercial(e.target.value)}
-            className="form-control commercial-select"
-          >
-            <option value="">Sélectionner un commercial</option>
-            {commerciauxData?.map(com => (
-              <option key={com.id} value={com.id}>{com.pseudo}</option>
-            ))}
-          </select>
-        </div>
+        <div className="affectation-assign-row">
+          <div className="action-group">
+            <label>Commercial à affecter</label>
+            <select
+              value={selectedCommercial}
+              onChange={(e) => setSelectedCommercial(e.target.value)}
+              className="form-control commercial-select"
+            >
+              <option value="">Sélectionner un commercial</option>
+              {commerciauxData?.map(com => (
+                <option key={com.id} value={com.id}>{com.pseudo}</option>
+              ))}
+            </select>
+          </div>
 
-        <div className="action-buttons">
-          <button
-            onClick={handleAffecter}
-            disabled={selectedFiches.length === 0 || !selectedCommercial || affectMutation.isLoading}
-            className="btn btn-affect"
-          >
-            {affectMutation.isLoading ? 'Affectation...' : `Affecter ${selectedFiches.length} fiche(s)`}
-          </button>
-          <button
-            onClick={handleDesaffecter}
-            disabled={selectedFiches.length === 0 || desaffectMutation.isLoading}
-            className="btn btn-desaffect"
-          >
-            {desaffectMutation.isLoading ? 'Désaffectation...' : `Désaffecter ${selectedFiches.length} fiche(s)`}
-          </button>
+          <div className="action-buttons">
+            <button
+              onClick={handleAffecter}
+              disabled={selectedFiches.length === 0 || !selectedCommercial || affectMutation.isLoading}
+              className="btn btn-affect"
+            >
+              {affectMutation.isLoading ? 'Affectation...' : `Affecter ${selectedFiches.length} fiche(s)`}
+            </button>
+            <button
+              onClick={handleDesaffecter}
+              disabled={selectedFiches.length === 0 || desaffectMutation.isLoading}
+              className="btn btn-desaffect"
+            >
+              {desaffectMutation.isLoading ? 'Désaffectation...' : `Désaffecter ${selectedFiches.length} fiche(s)`}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -460,14 +462,14 @@ const Affectation = () => {
                       </td>
                       <td data-label="Confirmateur:">{formatConfirmateurs(fiche)}</td>
                       <td data-label="Commercial:">{formatCommercials(fiche)}</td>
-                      <td data-label="Centre:">{fiche.centre_nom || '-'}</td>
+                      <td data-label="Centre:">{fiche.centre_nom || ''}</td>
                       <td data-label="Produit:">
                         <span
                           className="produit-indicator"
                           style={{ backgroundColor: produitColor, color: '#ffffff' }}
                           title={getProduitName(fiche.produit) || fiche.produit_nom}
                         >
-                          {getProduitName(fiche.produit) || fiche.produit_nom || '-'}
+                          {getProduitName(fiche.produit) || fiche.produit_nom || ''}
                         </span>
                       </td>
                       <td data-label="Validé:" style={{ textAlign: 'center' }}>
@@ -476,9 +478,7 @@ const Affectation = () => {
                             style={{ color: '#28a745', fontSize: '15.3px' }}
                             title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
                           />
-                        ) : (
-                          <span style={{ color: '#ccc' }}>-</span>
-                        )}
+                        ) : null}
                       </td>
                       <td data-label="" className="affectation-actions-col">
                         <div className="fiche-indicators">

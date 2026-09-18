@@ -4,7 +4,7 @@
  * Use for date_rdv_time and any RDV-related datetimes so display is independent of the user's machine timezone.
  */
 export function formatRdvDateTime(datetimeStr) {
-  if (datetimeStr == null || datetimeStr === '') return '-';
+  if (datetimeStr == null || datetimeStr === '') return '';
   const s = String(datetimeStr).trim();
   const match = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if (!match) return s;
@@ -14,7 +14,7 @@ export function formatRdvDateTime(datetimeStr) {
 
 /** Date only (no time), timezone-independent. */
 export function formatRdvDateOnly(datetimeStr) {
-  if (datetimeStr == null || datetimeStr === '') return '-';
+  if (datetimeStr == null || datetimeStr === '') return '';
   const s = String(datetimeStr).trim();
   const match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return s;

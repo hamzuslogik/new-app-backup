@@ -1357,7 +1357,7 @@ const Dashboard = () => {
       if (c1) parts.push({ key: '1', id: fiche.id_confirmateur, name: c1 });
       if (c2) parts.push({ key: '2', id: fiche.id_confirmateur_2, name: c2 });
       if (c3) parts.push({ key: '3', id: fiche.id_confirmateur_3, name: c3 });
-      if (parts.length === 0) return '-';
+      if (parts.length === 0) return '';
       return (
         <>
           {parts.map((p, i) => (
@@ -2436,7 +2436,7 @@ const Dashboard = () => {
                           </span>
                         </td>
                         <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
-                        <td data-label="Commercial:">{getCommercialsFormatted(fiche) || '-'}</td>
+                        <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
                         <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
                         <td data-label="Produit:">
                           <span 
@@ -2457,9 +2457,7 @@ const Dashboard = () => {
                               }} 
                               title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
                             />
-                          ) : (
-                            <span style={{ color: '#ccc' }}>-</span>
-                          )}
+                          ) : null}
                         </td>
                         <td data-label="">
                           <div className="fiche-indicators">

@@ -192,7 +192,7 @@ const StatistiquesFiches = () => {
   };
 
   const formatDateOnly = (dateStr) => {
-    if (!dateStr) return '-';
+    if (!dateStr) return '';
     const date = new Date(dateStr);
     return date.toLocaleDateString('fr-FR', {
       year: 'numeric',
@@ -788,14 +788,14 @@ const StatistiquesFiches = () => {
                         borderLeft: `4px solid ${etatColor}`
                       }}
                     >
-                      <td>{fiche.nom || '-'}</td>
-                      <td>{fiche.prenom || '-'}</td>
-                      <td>{fiche.tel || fiche.gsm1 || '-'}</td>
-                      <td>{fiche.cp || '-'}</td>
+                      <td>{fiche.nom || ''}</td>
+                      <td>{fiche.prenom || ''}</td>
+                      <td>{fiche.tel || fiche.gsm1 || ''}</td>
+                      <td>{fiche.cp || ''}</td>
                       <td>{formatDateOnly(fiche.date_insert_time)}</td>
                       <td>{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                      <td>{fiche.confirmateur_nom || '-'}</td>
-                      <td>{fiche.commercial_nom || '-'}</td>
+                      <td>{fiche.confirmateur_nom || ''}</td>
+                      <td>{fiche.commercial_nom || ''}</td>
                       <td>
                         {fiche.etat_titre ? (
                           <span

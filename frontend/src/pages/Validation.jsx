@@ -324,11 +324,11 @@ const Validation = () => {
 
                   return (
                     <tr key={fiche.id}>
-                      <td>{fiche.nom || '-'}</td>
-                      <td>{fiche.prenom || '-'}</td>
-                      <td className="detail-column">{fiche.tel || '-'}</td>
-                      <td className="detail-column">{fiche.cp || '-'}</td>
-                      <td className="detail-column">{fiche.ville || '-'}</td>
+                      <td>{fiche.nom || ''}</td>
+                      <td>{fiche.prenom || ''}</td>
+                      <td className="detail-column">{fiche.tel || ''}</td>
+                      <td className="detail-column">{fiche.cp || ''}</td>
+                      <td className="detail-column">{fiche.ville || ''}</td>
                       <td className="product-column">
                         <span
                           className="produit-indicator"
@@ -338,7 +338,7 @@ const Validation = () => {
                         </span>
                       </td>
                       <td>{`${formatRdvDateOnly(fiche.date_rdv_time)} ${formatRdvTimeOnly(fiche.date_rdv_time)}`.trim()}</td>
-                      <td className="detail-column">{confirmateurs.join(', ') || '-'}</td>
+                      <td className="detail-column">{confirmateurs.join(', ') || ''}</td>
                       {isQualiteConfirmation && (
                         <td className="status-column">
                           {auditee ? (

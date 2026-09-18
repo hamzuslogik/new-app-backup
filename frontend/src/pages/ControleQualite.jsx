@@ -448,7 +448,7 @@ const ControleQualite = () => {
   const getQualiteAgentLabel = (fiche) => {
     if (fiche.qualite_assignee_pseudo) return fiche.qualite_assignee_pseudo;
     if (fiche.qualite_user_pseudo) return fiche.qualite_user_pseudo;
-    return '-';
+    return '';
   };
 
   const getEtatSubmenuItemStyle = (etat) => ({
@@ -479,7 +479,7 @@ const ControleQualite = () => {
       return fiche.etat_titre || 'HC';
     }
     if (isEtatGroupe0(fiche.id_etat_final)) {
-      return fiche.etat_titre || '-';
+      return fiche.etat_titre || '';
     }
     return 'Validé';
   };
@@ -1145,17 +1145,17 @@ const ControleQualite = () => {
                     onDoubleClick={(e) => handleRowDoubleClick(e, fiche)}
                     title="Double-clic : sélectionner pour changer l'état · Clic droit : menu d'actions"
                   >
-                    <td>{fiche.nom || '-'}</td>
-                    <td>{fiche.prenom || '-'}</td>
-                    <td>{fiche.tel || '-'}</td>
-                    <td>{fiche.cp || '-'}</td>
-                    <td>{fiche.agent_pseudo || '-'}</td>
+                    <td>{fiche.nom || ''}</td>
+                    <td>{fiche.prenom || ''}</td>
+                    <td>{fiche.tel || ''}</td>
+                    <td>{fiche.cp || ''}</td>
+                    <td>{fiche.agent_pseudo || ''}</td>
                     <td className="commentaire-agent-col" title={fiche.commentaire || undefined}>
                       <div className="commentaire-agent-text">
-                        {fiche.commentaire || '-'}
+                        {fiche.commentaire || ''}
                       </div>
                     </td>
-                    <td className="agent-qualite-cell" title={getQualiteAgentLabel(fiche) !== '-' ? `Agent qualité : ${getQualiteAgentLabel(fiche)}` : undefined}>
+                    <td className="agent-qualite-cell" title={getQualiteAgentLabel(fiche) ? `Agent qualité : ${getQualiteAgentLabel(fiche)}` : undefined}>
                       {getQualiteAgentLabel(fiche)}
                     </td>
                     <td className="commentaire-qualite-col">

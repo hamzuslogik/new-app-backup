@@ -644,21 +644,21 @@ const RendezVousVue = () => {
                     </td>
                     <td>{f.prenom || ''}</td>
                     <td>{f.tel || ''}</td>
-                    <td>{f.cp || '—'}</td>
-                    <td>{f.ville || '—'}</td>
-                    <td>{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : '—'}</td>
+                    <td>{f.cp || ''}</td>
+                    <td>{f.ville || ''}</td>
+                    <td>{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
                     <td>{formatRdvDateTime(f.date_rdv_time)}</td>
                     <td>
                       <span className="etat-badge" style={{ backgroundColor: getEtatColor(f) }}>
-                        {f.etat_titre || f.id_etat_final || '—'}
+                        {f.etat_titre || f.id_etat_final || ''}
                       </span>
                     </td>
-                    <td>{getConfirmateursFormatted(f) || '—'}</td>
-                    <td>{[f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ') || '—'}</td>
-                    <td>{getCentreName(f.id_centre) || '—'}</td>
+                    <td>{getConfirmateursFormatted(f) || ''}</td>
+                    <td>{[f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ') || ''}</td>
+                    <td>{getCentreName(f.id_centre) || ''}</td>
                     <td className="produit-col">
                       <span className="produit-indicator" style={{ backgroundColor: getProduitColor(f.produit), color: '#fff' }}>
-                        {getProduitName(f.produit) || '—'}
+                        {getProduitName(f.produit) || ''}
                       </span>
                     </td>
                     <td>{Number(f.valider) > 0 ? '✓' : ''}</td>

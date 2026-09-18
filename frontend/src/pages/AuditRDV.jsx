@@ -53,7 +53,7 @@ const AuditRDV = () => {
   const pagination = data?.pagination || { page: 1, limit: 100, total: 0, pages: 1 };
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
+    if (!dateStr) return '';
     return new Date(dateStr).toLocaleString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
@@ -150,16 +150,16 @@ const AuditRDV = () => {
                 const hasChanges = isEditing && displayVal !== (fiche.commentaire_qualite || '');
                 return (
                   <tr key={fiche.hash}>
-                    <td>{fiche.nom || '-'}</td>
-                    <td>{fiche.prenom || '-'}</td>
-                    <td>{fiche.tel || '-'}</td>
-                    <td>{fiche.cp || '-'}</td>
-                    <td>{fiche.ville || '-'}</td>
-                    <td>{fiche.agent_pseudo || '-'}</td>
-                    <td>{fiche.centre_nom || '-'}</td>
+                    <td>{fiche.nom || ''}</td>
+                    <td>{fiche.prenom || ''}</td>
+                    <td>{fiche.tel || ''}</td>
+                    <td>{fiche.cp || ''}</td>
+                    <td>{fiche.ville || ''}</td>
+                    <td>{fiche.agent_pseudo || ''}</td>
+                    <td>{fiche.centre_nom || ''}</td>
                     <td>{formatDate(fiche.date_creation_rdv)}</td>
                     <td>{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                    <td>{fiche.etat_titre || '-'}</td>
+                    <td>{fiche.etat_titre || ''}</td>
                     <td>
                       <div className="comment-quick-edit-container">
                         {hasChanges && (

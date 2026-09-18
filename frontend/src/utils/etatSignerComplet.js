@@ -37,7 +37,7 @@ export function isSignerEtat(fiche, etats = []) {
 
 /** Libellé colonne État : « SIGNER - COMPLETE » pour les états signer ayant un sous-état */
 export function getEtatDisplayWithSousEtat(fiche, etats = [], sousEtats = []) {
-  const baseTitle = (getEtatTitle(fiche, etats) || '').trim() || '-';
+  const baseTitle = (getEtatTitle(fiche, etats) || '').trim();
   if (!isSignerEtat(fiche, etats)) return baseTitle;
   const sousTitle = (getSousEtatTitle(fiche, sousEtats) || '').trim();
   if (!sousTitle) return baseTitle;
