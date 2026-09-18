@@ -51,6 +51,24 @@ function isDecalageTraite(idEtat, titre) {
   return false;
 }
 
+function normalizeDecalageDateTime(value) {
+  if (value == null || value === '') return '';
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}`;
+  }
+  const s = String(value).trim().replace('T', ' ');
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[ ](\d{1,2}):(\d{2})/);
+  if (!m) return s;
+  return `${m[1]} ${String(m[2]).padStart(2, '0')}:${m[3]}`;
+}
+
+function isSameDecalageDateTime(a, b) {
+  const na = normalizeDecalageDateTime(a);
+  const nb = normalizeDecalageDateTime(b);
+  return Boolean(na && nb && na === nb);
+}
+
 /**
  * Chargement fiche pour executeWorkflow (décalage) : sans cela, {fiche.id_confirmateur} et
  * assimilés restent vides alors que RE/RP passent par destination_fonctions — d’où notif confirmateur manquante.
@@ -641,7 +659,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
     // Le décalage est considéré comme validé s'il n'est ni refusé, ni annulé, ni en attente
     const estValide = !estRefuse && !estAnnule && !estEnAttente;
 
-    // Si le décalage est validé/accepté et qu'il y a une date_nouvelle, mettre à jour la date RDV de la fiche
+    // Si le décalage est validé/accepté et qu'il y a une date_nouvelle différente, mettre à jour la date RDV
     if (estValide && decalage.date_nouvelle && decalage.id_fiche) {
       try {
         const ficheAvant = await queryOne(
@@ -649,7 +667,13 @@ router.put('/:id/statut', authenticate, async (req, res) => {
           [decalage.id_fiche]
         );
         const ancienneDateRdv = decalage.date_prevu || ficheAvant?.date_rdv_time || '';
+        const sameAsRequested = isSameDecalageDateTime(decalage.date_nouvelle, decalage.date_prevu)
+          || isSameDecalageDateTime(decalage.date_nouvelle, ficheAvant?.date_rdv_time)
+          || isSameDecalageDateTime(decalage.date_nouvelle, ancienneDateRdv);
 
+        if (sameAsRequested) {
+          console.log(`Date RDV inchangée (décalage sans durée) pour la fiche ${decalage.id_fiche}`);
+        } else {
         // Mettre à jour la date_rdv_time de la fiche avec date_nouvelle
         await query(
           `UPDATE fiches 
@@ -710,6 +734,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
         ).catch(err => {
           console.log('Impossible d\'enregistrer dans l\'historique:', err.message);
         });
+        }
       } catch (updateError) {
         console.error('Erreur lors de la mise à jour de la date RDV de la fiche:', updateError);
         // Ne pas bloquer la réponse si la mise à jour de la fiche échoue

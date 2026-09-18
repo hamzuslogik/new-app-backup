@@ -104,6 +104,17 @@ function normalizePlanningDayName(dayName) {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+const ADMIN_DECALAGE_DEFAULT_MESSAGE =
+  'ADMIN: cette methode donne à l\'administrateur de donner des instructions de décalage non précise';
+
+function isAdminOrBackofficeFonction(fonction) {
+  return [1, 2, 7, 11].includes(Number(fonction));
+}
+
+function isSameDateDecalageSelection(selectMinutes) {
+  return !selectMinutes || selectMinutes === '0' || selectMinutes === 'same';
+}
+
 function addMinutesToDateTimeString(dateTimeValue, minutesToAdd) {
   const s = String(dateTimeValue ?? '').trim();
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/);
@@ -1503,13 +1514,21 @@ const FicheDetail = ({
   // Initialiser le formulaire de décalage avec la date du RDV de la fiche
   useEffect(() => {
     if (ficheData && ficheData.date_rdv_time) {
+      const sameDate = addMinutesToDateTimeString(ficheData.date_rdv_time, 0) || ficheData.date_rdv_time;
+      const adminBackoffice = isAdminOrBackofficeFonction(user?.fonction);
       setDecalageFormData(prev => ({
         ...prev,
         date_prevu: ficheData.date_rdv_time,
-        id_confirmateur: ficheData.id_confirmateur ? String(ficheData.id_confirmateur) : ''
+        id_confirmateur: ficheData.id_confirmateur ? String(ficheData.id_confirmateur) : prev.id_confirmateur,
+        ...(adminBackoffice && isSameDateDecalageSelection(prev.select_minutes)
+          ? {
+              nouvelle_date: prev.nouvelle_date || sameDate,
+              message: prev.message || ADMIN_DECALAGE_DEFAULT_MESSAGE
+            }
+          : {})
       }));
     }
-  }, [ficheData]);
+  }, [ficheData, user?.fonction]);
 
   // Calculer la nouvelle date/heure en fonction du décalage sélectionné
   const calculateNouvelleDate = (datePrevu, minutes) => {
@@ -1582,12 +1601,16 @@ const FicheDetail = ({
         queryClient.invalidateQueries(['decalages', user?.id]);
         queryClient.invalidateQueries(['fiche', hash]);
         alert('Décalage créé avec succès');
+        const adminBackoffice = isAdminOrBackofficeFonction(user?.fonction);
+        const sameDate = ficheData?.date_rdv_time
+          ? (addMinutesToDateTimeString(ficheData.date_rdv_time, 0) || ficheData.date_rdv_time)
+          : '';
         setDecalageFormData({
           select_minutes: '0',
           id_confirmateur: ficheData?.id_confirmateur ? String(ficheData.id_confirmateur) : '',
-          message: '',
+          message: adminBackoffice ? ADMIN_DECALAGE_DEFAULT_MESSAGE : '',
           date_prevu: ficheData?.date_rdv_time || '',
-          nouvelle_date: ''
+          nouvelle_date: adminBackoffice ? sameDate : ''
         });
       },
       onError: (error) => {
@@ -1639,7 +1662,10 @@ const FicheDetail = ({
       return;
     }
 
-    if (!decalageFormData.select_minutes || decalageFormData.select_minutes === '0') {
+    const adminBackoffice = isAdminOrBackofficeFonction(user.fonction);
+    const sameDateMode = isSameDateDecalageSelection(decalageFormData.select_minutes);
+
+    if (!adminBackoffice && sameDateMode) {
       alert('Veuillez sélectionner une durée de décalage');
       return;
     }
@@ -1657,8 +1683,8 @@ const FicheDetail = ({
     } else if (user.fonction === 6) {
       // Confirmateurs : utiliser leur propre ID
       destination = user.id;
-    } else if ([1, 2, 7].includes(user.fonction)) {
-      // Admins : utiliser le confirmateur sélectionné dans la liste déroulante
+    } else if (adminBackoffice) {
+      // Admins / backoffice : utiliser le confirmateur sélectionné dans la liste déroulante
       destination = decalageFormData.id_confirmateur || ficheData?.id_confirmateur;
       if (!destination) {
         alert('Veuillez sélectionner un confirmateur depuis la liste déroulante');
@@ -1669,21 +1695,23 @@ const FicheDetail = ({
       return;
     }
 
-    // Vérifier que la nouvelle date a été calculée
-    if (!decalageFormData.nouvelle_date || decalageFormData.select_minutes === '0') {
-      alert('Veuillez sélectionner une durée de décalage (10 minutes, 1 heure, etc.)');
-      return;
-    }
-    
     // Récupérer la date RDV originale de la fiche
     const dateRdvOriginale = ficheData?.date_rdv_time || decalageFormData.date_prevu || '';
     if (!dateRdvOriginale) {
       alert('Erreur : la date de rendez-vous originale n\'a pas été trouvée.');
       return;
     }
-    
-    // La nouvelle date calculée après ajout du décalage
-    let dateNouvelle = decalageFormData.nouvelle_date;
+
+    let dateNouvelle = '';
+    if (adminBackoffice && sameDateMode) {
+      dateNouvelle = addMinutesToDateTimeString(dateRdvOriginale, 0) || dateRdvOriginale;
+    } else {
+      if (!decalageFormData.nouvelle_date || sameDateMode) {
+        alert('Veuillez sélectionner une durée de décalage (10 minutes, 1 heure, etc.)');
+        return;
+      }
+      dateNouvelle = decalageFormData.nouvelle_date;
+    }
     
     // S'assurer que date_nouvelle est au bon format (YYYY-MM-DD HH:MM:SS)
     if (dateNouvelle.includes('T')) {
@@ -1698,12 +1726,15 @@ const FicheDetail = ({
       dateNouvelle = `${year}-${month}-${day} ${hours}:${mins}:${secs}`;
     }
 
+    const message = decalageFormData.message.trim()
+      || (adminBackoffice && sameDateMode ? ADMIN_DECALAGE_DEFAULT_MESSAGE : '');
+
     decalageMutation.mutate({
       id_fiche: idFicheNum,
       destination: parseInt(destination, 10),
-      message: decalageFormData.message.trim() || '',
+      message,
       date_prevu: dateRdvOriginale, // Date RDV originale
-      date_nouvelle: dateNouvelle    // Nouvelle date après décalage
+      date_nouvelle: dateNouvelle    // Nouvelle date après décalage (identique si sans durée)
     });
   };
 
@@ -8452,9 +8483,10 @@ const FicheDetail = ({
                   className="form-control"
                   value={decalageFormData.select_minutes}
                   onChange={(e) => {
-                    const minutes = parseInt(e.target.value);
+                    const minutes = parseInt(e.target.value, 10);
                     const dateRdvOriginale = ficheData?.date_rdv_time || decalageFormData.date_prevu || '';
-                    if (minutes > 0 && dateRdvOriginale) {
+                    const sameMode = isSameDateDecalageSelection(e.target.value);
+                    if (!sameMode && minutes > 0 && dateRdvOriginale) {
                       try {
                         const formattedNewDate = addMinutesToDateTimeString(dateRdvOriginale, minutes);
                         if (!formattedNewDate) {
@@ -8471,16 +8503,21 @@ const FicheDetail = ({
                         alert('Erreur lors du calcul de la nouvelle date. Veuillez réessayer.');
                       }
                     } else {
+                      const sameDate = addMinutesToDateTimeString(dateRdvOriginale, 0) || dateRdvOriginale;
                       setDecalageFormData(prev => ({
                         ...prev,
                         select_minutes: e.target.value,
-                        nouvelle_date: '',
-                        date_prevu: dateRdvOriginale
+                        nouvelle_date: sameDate,
+                        date_prevu: dateRdvOriginale,
+                        message: prev.message || ADMIN_DECALAGE_DEFAULT_MESSAGE
                       }));
                     }
                   }}
                 >
                   <option value="0">SÉLECTIONNER</option>
+                  {isAdminOrBackofficeFonction(user.fonction) && (
+                    <option value="same">SANS DURÉE (même date RDV)</option>
+                  )}
                   <option value="10">10 MIN</option>
                   <option value="15">15 MIN</option>
                   <option value="20">20 MIN</option>
@@ -8497,23 +8534,33 @@ const FicheDetail = ({
                   <option value="105">1H45</option>
                   <option value="120">2 HEURES</option>
                 </select>
+                {isAdminOrBackofficeFonction(user.fonction) && isSameDateDecalageSelection(decalageFormData.select_minutes) && (
+                  <small style={{ display: 'block', marginTop: '6px', color: '#555', fontStyle: 'italic' }}>
+                    Sans durée : la nouvelle date reste la date RDV actuelle. Vous pouvez donner des instructions dans le message.
+                  </small>
+                )}
               </div>
 
               {decalageFormData.nouvelle_date && (
                 <div className="form-group decalage-date-preview" style={{ 
-                  background: '#e8f5e9', 
+                  background: isSameDateDecalageSelection(decalageFormData.select_minutes) ? '#fff8e1' : '#e8f5e9', 
                   padding: '10px', 
                   borderRadius: '4px',
                   marginBottom: '15px',
-                  border: '2px solid #4caf50'
+                  border: isSameDateDecalageSelection(decalageFormData.select_minutes) ? '2px solid #f59e0b' : '2px solid #4caf50'
                 }}>
                   <strong>📅 Nouvelle date/heure :</strong> 
-                  <span style={{ display: 'block', marginTop: '5px', fontSize: '13.6px', fontWeight: 'bold', color: '#2e7d32' }}>
+                  <span style={{ display: 'block', marginTop: '5px', fontSize: '13.6px', fontWeight: 'bold', color: isSameDateDecalageSelection(decalageFormData.select_minutes) ? '#92400e' : '#2e7d32' }}>
                     {formatRdvDateTime(decalageFormData.nouvelle_date)}
                   </span>
                   {ficheData?.date_rdv_time && (
                     <div className="decalage-date-originale" style={{ marginTop: '8px', fontSize: '10.2px', color: '#666', fontStyle: 'italic' }}>
                       Date originale : {formatRdvDateTime(ficheData.date_rdv_time)}
+                    </div>
+                  )}
+                  {isSameDateDecalageSelection(decalageFormData.select_minutes) && (
+                    <div style={{ marginTop: '8px', fontSize: '10.2px', color: '#92400e' }}>
+                      À l'acceptation, l'heure du RDV ne sera pas mise à jour (identique à l'heure actuelle).
                     </div>
                   )}
                 </div>
@@ -8534,7 +8581,7 @@ const FicheDetail = ({
                 </div>
               )}
 
-              {([1, 2, 7].includes(user.fonction)) && (
+              {isAdminOrBackofficeFonction(user.fonction) && (
                 <div className="form-group">
                   <label htmlFor="id_confirmateur_dec_bottom">Confirmateur :</label>
                   <select
@@ -8571,7 +8618,9 @@ const FicheDetail = ({
                   onChange={(e) => {
                     setDecalageFormData({...decalageFormData, message: e.target.value});
                   }}
-                  placeholder="Saisissez le message expliquant le décalage..."
+                  placeholder={isAdminOrBackofficeFonction(user.fonction)
+                    ? ADMIN_DECALAGE_DEFAULT_MESSAGE
+                    : 'Saisissez le message expliquant le décalage...'}
                 />
               </div>
 
