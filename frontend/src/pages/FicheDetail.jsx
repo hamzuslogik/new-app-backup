@@ -10132,9 +10132,9 @@ const PlanningViewForModal = ({
                     return (
                       <td
                         key={`${day.date}-${slot.hour}`}
-                        className={`planning-cell ${isBlocked ? 'blocked' : ''} ${hasPlanning ? 'has-planning' : ''} ${currentFicheInSlot ? 'current-fiche' : ''} ${hasData ? 'has-data' : ''} ${isAvailable && !hasData ? 'available-slot' : ''}`}
+                        className={`planning-cell ${isBlocked ? 'blocked' : ''} ${isClosed ? 'closed-slot' : ''} ${hasPlanning ? 'has-planning' : ''} ${currentFicheInSlot ? 'current-fiche' : ''} ${hasData ? 'has-data' : ''} ${isAvailable && !hasData ? 'available-slot' : ''}`}
                         style={{ 
-                          backgroundColor: isBlocked ? 'rgba(34, 45, 50, 0.8)' : 'transparent',
+                          backgroundColor: (isBlocked || isClosed) ? '#000000' : 'transparent',
                           position: 'relative',
                           cursor: 'default',
                           border: 'none'

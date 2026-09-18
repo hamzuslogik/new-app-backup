@@ -690,7 +690,7 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                         key={`${day.date}-${slot.hour}`}
                         className={`planning-cell ${isBlocked ? 'blocked' : ''} ${hasPlanning ? 'has-planning' : ''} ${isClosed ? 'closed-slot' : ''}`}
                         style={{ 
-                          backgroundColor: isClosed ? 'rgba(255, 0, 0, 0.3)' : (isBlocked ? 'rgba(34, 45, 50, 0.8)' : 'transparent'),
+                          backgroundColor: (isClosed || isBlocked) ? '#000000' : 'transparent',
                           position: 'relative'
                         }}
                       >
@@ -938,6 +938,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                     ? localAvailabilityOverrides[cellKey]
                     : (availData?.nbr_com ?? null); // null si pas de planning créé
                   const isClosed = availData?.is_closed === 1; // Vérifier si le créneau est fermé
+                  const isZero = currentValue === 0 || currentValue === '0';
                   
                   // Récupérer le nombre de RDV pris pour ce créneau
                   // Calculer le timeKey directement à partir de l'heure pour éviter les problèmes de fuseau horaire
@@ -985,7 +986,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                   return (
                     <td
                       key={cellKey}
-                      className={`availability-cell ${isClosed ? 'closed-slot' : ''} ${canEdit ? 'editable' : ''}`}
+                      className={`availability-cell ${isClosed ? 'closed-slot' : ''} ${isZero ? 'zero-slot' : ''} ${canEdit ? 'editable' : ''}`}
                       onClick={(e) => {
                         // Ne pas déclencher le clic si on clique sur le bouton de fermeture ou sur les contrôles d'édition
                         if (e.target.closest('.toggle-closed-btn') || e.target.closest('.edit-controls') || e.target.closest('.availability-rdv-info')) {

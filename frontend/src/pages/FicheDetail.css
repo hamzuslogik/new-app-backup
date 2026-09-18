@@ -866,9 +866,18 @@
   background: #f9f9f9;
 }
 
-.planning-cell.blocked {
-  background: rgba(34, 45, 50, 0.8) !important;
-  opacity: 0.6;
+.planning-cell.blocked,
+.planning-cell.closed-slot {
+  background: #000000 !important;
+  background-color: #000000 !important;
+  opacity: 1;
+  color: #ffffff !important;
+}
+
+.planning-cell.blocked:hover,
+.planning-cell.closed-slot:hover {
+  background: #000000 !important;
+  background-color: #000000 !important;
 }
 
 .planning-cell.current-fiche {
@@ -876,7 +885,7 @@
   background: #fff9e6;
 }
 
-.planning-cell:hover {
+.planning-cell:hover:not(.blocked):not(.closed-slot) {
   background: #f0f0f0;
 }
 

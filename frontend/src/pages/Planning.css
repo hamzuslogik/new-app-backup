@@ -286,15 +286,21 @@
   color: #333333 !important;
 }
 
-.planning-cell.blocked {
-  background-color: rgba(34, 45, 50, 0.8) !important;
-  opacity: 0.6;
+.planning-cell.blocked,
+.planning-cell.closed-slot {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  opacity: 1;
   color: #ffffff !important;
 }
 
+.planning-cell.blocked:hover,
+.planning-cell.closed-slot:hover {
+  background-color: #000000 !important;
+  background: #000000 !important;
+}
 
 .planning-cell.closed-slot {
-  background-color: rgba(255, 0, 0, 0.3) !important;
   position: relative;
 }
 
@@ -307,13 +313,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.45);
   z-index: 10;
   border-radius: 4px;
 }
 
 .closed-label {
-  background-color: #f44336;
+  background-color: #000000;
   color: white;
   padding: 6.4px 12.8px;
   border-radius: 4px;
@@ -321,11 +327,15 @@
   font-size: 11.9px;
   text-transform: uppercase;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 1px solid #ffffff;
 }
 
-.availability-cell.closed-slot {
-  background-color: rgba(255, 0, 0, 0.2) !important;
+.availability-cell.closed-slot,
+.availability-cell.zero-slot {
+  background-color: #000000 !important;
+  background: #000000 !important;
   position: relative;
+  color: #ffffff !important;
 }
 
 .closed-slot-indicator {
@@ -998,13 +1008,21 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   cursor: pointer;
 }
 
-.availability-cell.editable:hover {
+.availability-cell.editable:hover:not(.closed-slot):not(.zero-slot) {
   background: rgba(247, 162, 25, 0.15) !important;
   box-shadow: inset 0 0 0 2px rgba(247, 162, 25, 0.3);
 }
 
-.availability-cell.closed-slot.editable {
+.availability-cell.closed-slot.editable,
+.availability-cell.zero-slot.editable {
   cursor: pointer;
+}
+
+.availability-cell.closed-slot.editable:hover,
+.availability-cell.zero-slot.editable:hover {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  box-shadow: none;
 }
 
 .edit-controls {
