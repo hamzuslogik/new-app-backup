@@ -4487,6 +4487,10 @@ const FicheDetail = ({
                 
                 const items = [];
 
+                if (etatData.pseudo != null && String(etatData.pseudo).trim() !== '') {
+                  items.push({ label: 'Pseudo', value: String(etatData.pseudo).trim() });
+                }
+
                 if (etatData.from_compte_rendu && !isEtatSigner(etatId)) {
                   const nomCommercial =
                     etatData.cr_commercial_pseudo || etatData.commercial_pseudo;
@@ -4943,7 +4947,8 @@ const FicheDetail = ({
                 date_creation: dateCreationEtatActuel,
                 from_compte_rendu: !!(lastHisto && lastHisto.id_etat === fiche.id_etat_final && lastHisto.from_compte_rendu),
                 cr_commercial_pseudo:
-                  lastHistoEtatActuel?.cr_commercial_pseudo || fiche.compte_rendu_commercial_pseudo || null
+                  lastHistoEtatActuel?.cr_commercial_pseudo || fiche.compte_rendu_commercial_pseudo || null,
+                pseudo: lastHistoEtatActuel?.pseudo || null
               };
 
               // Afficher <CR> dans l'état actuel uniquement si cet état vient d'un compte rendu (dernière entrée historio = état actuel et from_compte_rendu)

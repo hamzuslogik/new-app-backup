@@ -4660,7 +4660,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         // Pour les entrées issues d'un compte rendu (from_compte_rendu), remplacer commentaire_commercial par le commentaire du CR (compte_rendu_pending)
         try {
           const crs = await query(
-            `SELECT id, id_etat_final, id_commercial, commentaire,
+            `SELECT id, id_etat_final, id_commercial, commentaire, pseudo,
                     COALESCE(date_approbation, date_modif, date_creation) AS date_ref
              FROM compte_rendu_pending
              WHERE id_fiche = ? AND statut = 'approved'`,
@@ -4680,10 +4680,17 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
                 const diff = Math.abs(histoDate - crDate);
                 return !acc || diff < acc.diff ? { cr, diff } : acc;
               }, null);
-              if (best && best.cr.commentaire != null && best.cr.commentaire !== '') {
-                return { ...histo, commentaire_commercial: best.cr.commentaire };
+              if (!best) return histo;
+              const next = { ...histo };
+              if (best.cr.commentaire != null && best.cr.commentaire !== '') {
+                next.commentaire_commercial = best.cr.commentaire;
               }
-              return histo;
+              const histoPseudo = next.pseudo != null ? String(next.pseudo).trim() : '';
+              const crPseudo = best.cr.pseudo != null ? String(best.cr.pseudo).trim() : '';
+              if (histoPseudo === '' && crPseudo !== '') {
+                next.pseudo = crPseudo;
+              }
+              return next;
             });
           }
         } catch (_) { }
@@ -7055,6 +7062,10 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           : (fiche.complement_chauffage ?? null);
         pushHistoCol('complement_chauffage', complementSnap);
       }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'pseudo')) {
+        const histoPseudo = ficheData.pseudo == null ? '' : String(ficheData.pseudo).trim();
+        pushHistoCol('pseudo', histoPseudo === '' ? null : histoPseudo);
+      }
 
       const histoPlaceholders = histoCols.map(() => '?').join(', ');
       try {
@@ -7071,6 +7082,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             'id_commercial_2',
             'complement_chauffage',
             'conf_complement_chauffage',
+            'pseudo',
           ]);
           const unknownCol = String(histoInsertErr.message || '').match(/Unknown column '([^']+)'/i);
           if (unknownCol && unknownCol[1]) drop.add(unknownCol[1]);

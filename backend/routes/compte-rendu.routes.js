@@ -1169,6 +1169,34 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       [now, compteRendu.id_fiche]
     );
 
+    // Pseudo saisi dans le CR (compte_rendu_pending) : à historiser dans fiches_histo s'il est mentionné.
+    const histoPseudo =
+      (compteRendu.pseudo != null && String(compteRendu.pseudo).trim() !== '')
+        ? String(compteRendu.pseudo).trim()
+        : (modifications.pseudo != null && String(modifications.pseudo).trim() !== ''
+          ? String(modifications.pseudo).trim()
+          : null);
+
+    const persistHistoPseudo = async (histoId) => {
+      if (!histoPseudo) return;
+      try {
+        if (histoId) {
+          await query('UPDATE fiches_histo SET pseudo = ? WHERE id = ?', [histoPseudo, histoId]);
+          return;
+        }
+        await query(
+          `UPDATE fiches_histo SET pseudo = ?
+           WHERE id_fiche = ? AND from_compte_rendu = 1
+           ORDER BY id DESC LIMIT 1`,
+          [histoPseudo, compteRendu.id_fiche]
+        );
+      } catch (pseudoErr) {
+        if (!pseudoErr || pseudoErr.code !== 'ER_BAD_FIELD_ERROR') {
+          console.error('[compte-rendu][approve] Impossible d\'enregistrer pseudo dans fiches_histo:', pseudoErr?.message);
+        }
+      }
+    };
+
     // Enregistrer l'historique si l'état a changé — figer confirmateurs/commerciaux du moment
     // (ne pas dépendre de la fiche après re-Confirmer / nouvelle affectation).
     if (nouveauEtat && nouveauEtat !== ancienEtat) {
@@ -1195,7 +1223,7 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
           : null;
 
       const histoInsertBase = async () => {
-        await query(
+        const result = await query(
           `INSERT INTO fiches_histo (
              id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr,
              id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial,
@@ -1213,11 +1241,13 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
             sousEtatFinal
           ]
         );
+        return result?.insertId || null;
       };
 
+      let histoInsertId = null;
       try {
         if (histoCommentaire) {
-          await query(
+          const histoRes = await query(
             `INSERT INTO fiches_histo (
                id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr,
                id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial,
@@ -1236,27 +1266,29 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
               histoCommentaire
             ]
           );
+          histoInsertId = histoRes?.insertId || null;
         } else {
-          await histoInsertBase();
+          histoInsertId = await histoInsertBase();
         }
       } catch (histoErr) {
         // Colonne conf_commentaire_produit ou id_sous_etat absente : insert sans commentaire
         if (histoErr && histoErr.code === 'ER_BAD_FIELD_ERROR' && histoCommentaire) {
           try {
-            await histoInsertBase();
+            histoInsertId = await histoInsertBase();
           } catch (histoErr2) {
             if (histoErr2 && histoErr2.code === 'ER_BAD_FIELD_ERROR') {
-              await query(
+              const fallbackRes = await query(
                 `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr) VALUES (?, ?, ?, 1, ?)`,
                 [compteRendu.id_fiche, nouveauEtat, now, idCommercialCr]
               );
+              histoInsertId = fallbackRes?.insertId || null;
             } else {
               throw histoErr2;
             }
           }
         } else if (histoErr && histoErr.code === 'ER_BAD_FIELD_ERROR') {
           try {
-            await query(
+            const histoRes = await query(
               `INSERT INTO fiches_histo (
                  id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr,
                  id_confirmateur, id_confirmateur_2, id_confirmateur_3, id_commercial
@@ -1272,18 +1304,42 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
                 snapCom
               ]
             );
+            histoInsertId = histoRes?.insertId || null;
           } catch (histoErr3) {
             if (histoErr3 && histoErr3.code === 'ER_BAD_FIELD_ERROR') {
-              await query(
+              const fallbackRes = await query(
                 `INSERT INTO fiches_histo (id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr) VALUES (?, ?, ?, 1, ?)`,
                 [compteRendu.id_fiche, nouveauEtat, now, idCommercialCr]
               );
+              histoInsertId = fallbackRes?.insertId || null;
             } else {
               throw histoErr3;
             }
           }
         } else {
           throw histoErr;
+        }
+      }
+      await persistHistoPseudo(histoInsertId);
+    } else if (histoPseudo) {
+      // Pas de changement d'état : créer / mettre à jour une ligne histo si le pseudo est saisi
+      try {
+        const histoRes = await query(
+          `INSERT INTO fiches_histo (
+             id_fiche, id_etat, date_creation, from_compte_rendu, id_commercial_cr, pseudo
+           ) VALUES (?, ?, ?, 1, ?, ?)`,
+          [
+            compteRendu.id_fiche,
+            nouveauEtat || ancienEtat,
+            now,
+            compteRendu.id_commercial || null,
+            histoPseudo
+          ]
+        );
+        await persistHistoPseudo(histoRes?.insertId || null);
+      } catch (pseudoInsertErr) {
+        if (!pseudoInsertErr || pseudoInsertErr.code !== 'ER_BAD_FIELD_ERROR') {
+          console.error('[compte-rendu][approve] Impossible d\'insérer pseudo dans fiches_histo:', pseudoInsertErr?.message);
         }
       }
     }
