@@ -1168,6 +1168,11 @@
   color: white;
 }
 
+.etat-badge.sg {
+  background: #FF3380;
+  color: white;
+}
+
 .etat-badge.an {
   background: #ff9800;
   color: white;

@@ -219,20 +219,24 @@ const Affectation = () => {
       'NON',
     ].includes(presenceCouple) || String(fiche?.conf_rdv_avec || '').toUpperCase().trim() === 'SEUL';
     if (!histoString || !etatsData) {
-      return { r2: r2Placed, rf: false, an: false, rs: hasRdvSeul };
+      return { r2: r2Placed, rf: false, an: false, rs: hasRdvSeul, sg: false };
     }
     const histoArray = String(histoString).split(',').map(Number);
     let hasAnnuler = false;
     let hasRefuser = false;
+    let hasSigner = false;
     histoArray.forEach((etatId) => {
       const etat = etatsData.find((e) => e.id === etatId);
       if (etat && etat.titre) {
         const titre = etat.titre.toUpperCase();
         if (titre.includes('RDV ANNULER')) hasAnnuler = true;
         if (titre.includes('REFUSER')) hasRefuser = true;
+        if ([13, 16, 38, 44, 45].includes(Number(etatId)) || titre.includes('SIGNER')) hasSigner = true;
+      } else if ([13, 16, 38, 44, 45].includes(Number(etatId))) {
+        hasSigner = true;
       }
     });
-    return { r2: r2Placed, rf: hasRefuser, an: hasAnnuler, rs: hasRdvSeul };
+    return { r2: r2Placed, rf: hasRefuser, an: hasAnnuler, rs: hasRdvSeul, sg: hasSigner };
   };
 
   return (
@@ -486,6 +490,7 @@ const Affectation = () => {
                             <span className="indicator r2" title="R2 placé (commercial secondaire)">R2</span>
                           )}
                           {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
+                          {indicators.sg && <span className="indicator sg" title="Signé">SIGNER</span>}
                           {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
                           {indicators.rs && <span className="indicator rs" title="SEUL">SEUL</span>}
                         </div>

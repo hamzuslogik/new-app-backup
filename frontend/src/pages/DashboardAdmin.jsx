@@ -379,11 +379,12 @@ const DashboardAdmin = () => {
   // Vérifier les indicateurs : R2 = commercial secondaire (comme Planning) ; AN/RF via historique
   const checkIndicators = (histoString, fiche = {}) => {
     const r2Placed = ficheHasR2Placed(fiche);
-    if (!histoString || !etatsData) return { r2: r2Placed, rf: false, an: false };
+    if (!histoString || !etatsData) return { r2: r2Placed, rf: false, an: false, sg: false };
     
     const histoArray = histoString.split(',').map(Number);
     let hasAnnuler = false;
     let hasRefuser = false;
+    let hasSigner = false;
     
     histoArray.forEach(etatId => {
       const etat = etatsData.find(e => e.id === etatId);
@@ -395,13 +396,19 @@ const DashboardAdmin = () => {
         if (titre.includes('REFUSER')) {
           hasRefuser = true;
         }
+        if ([13, 16, 38, 44, 45].includes(Number(etatId)) || titre.includes('SIGNER')) {
+          hasSigner = true;
+        }
+      } else if ([13, 16, 38, 44, 45].includes(Number(etatId))) {
+        hasSigner = true;
       }
     });
     
     return {
       r2: r2Placed,
       rf: hasRefuser,
-      an: hasAnnuler
+      an: hasAnnuler,
+      sg: hasSigner
     };
   };
 
@@ -1150,6 +1157,7 @@ const DashboardAdmin = () => {
                             </span>
                           )}
                             {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
+                            {indicators.sg && <span className="indicator sg" title="Signé">SIGNER</span>}
                             {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
                           </div>
                           <button

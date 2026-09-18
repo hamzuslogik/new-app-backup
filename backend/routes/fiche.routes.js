@@ -6851,7 +6851,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             [week, year, dep, rdvDate, slotHour]
           );
           
-          if (closedSlot) {
+          if (closedSlot && ficheData.allow_unavailable_slot !== true) {
             return res.status(400).json({
               success: false,
               message: 'Ce créneau horaire est fermé. Impossible de créer un RDV dans ce créneau.'

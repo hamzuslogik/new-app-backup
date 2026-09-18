@@ -584,6 +584,11 @@
   color: white;
 }
 
+.etat-badge.sg {
+  background: #FF3380;
+  color: white;
+}
+
 .rdv-content {
   display: flex;
   flex-direction: column;

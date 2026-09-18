@@ -32,6 +32,7 @@ import {
   resolveOptionKey,
 } from '../utils/compteRenduCommercialOptions';
 import CompteRenduEarlyVerification from '../components/CompteRenduEarlyVerification';
+import CodeVerificationModal from '../components/CodeVerificationModal';
 import { isBeforeRdvDateTime } from '../utils/compteRenduEarlyVerification';
 import { resolveConfRevenuAfterTypeContratChange } from '../utils/revenuTypeContrat';
 
@@ -728,6 +729,9 @@ const FicheDetail = ({
   const [rdvSubmitting, setRdvSubmitting] = useState(false);
   const [etatSubmitting, setEtatSubmitting] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null); // { date, hour }
+  const [slotCodeModal, setSlotCodeModal] = useState(null);
+  const slotCodeVerifiedRef = useRef(false);
+  const pendingAfterSlotCodeRef = useRef(null);
   const [showConfirmConfFields, setShowConfirmConfFields] = useState(false);
   const [rdvFormData, setRdvFormData] = useState({
     date_rdv_time: '',
@@ -1241,6 +1245,10 @@ const FicheDetail = ({
   useEffect(() => {
     setEarlyCrVerified(false);
   }, [ficheData?.id, ficheData?.date_rdv_time]);
+
+  useEffect(() => {
+    slotCodeVerifiedRef.current = false;
+  }, [confFormData.conf_rdv_date, confFormData.conf_rdv_time, rdvFormData.date_rdv_time]);
 
   const showCompletudeSection =
     isQualiteConfirmation ||
@@ -2197,6 +2205,57 @@ const FicheDetail = ({
     }, 0);
   };
 
+  const resolvePlanningDepFromFiche = () => {
+    let dep = planningDep;
+    if (!dep && ficheData?.cp) {
+      const cpStr = String(ficheData.cp).trim();
+      if (/^\d/.test(cpStr)) dep = cpStr.substring(0, 2);
+      else {
+        const m = cpStr.match(/\d{2}/);
+        if (m) dep = m[0];
+      }
+    }
+    if (dep && String(dep).length === 2 && /^\d{2}$/.test(String(dep))) return String(dep);
+    return null;
+  };
+
+  const getPlanningSlotStatus = async (dateStr, timeStr) => {
+    const dep = resolvePlanningDepFromFiche();
+    const slotHour = timeToSlotHour(timeStr);
+    if (!dep || !dateStr || !slotHour) return { closed: false, zero: false };
+    try {
+      const rdvDate = new Date(`${dateStr}T12:00:00`);
+      const week = getWeekNumber(rdvDate);
+      const year = rdvDate.getFullYear();
+      const availRes = await api.get('/planning/availability', { params: { w: week, y: year, dp: dep } });
+      const availData = availRes.data?.data?.[dateStr]?.[slotHour];
+      const closed = Number(availData?.is_closed) === 1;
+      const nbr = availData?.nbr_com;
+      const zero = nbr === 0 || nbr === '0';
+      return { closed, zero, date: dateStr, hour: slotHour, dep };
+    } catch (err) {
+      console.error('Erreur lors de la lecture du créneau planning:', err);
+      return { closed: false, zero: false };
+    }
+  };
+
+  const openSlotCodeModalIfNeeded = async (dateStr, timeStr, thenFn) => {
+    if (slotCodeVerifiedRef.current) return true;
+    const status = await getPlanningSlotStatus(dateStr, timeStr);
+    if (!status.closed && !status.zero) return true;
+    pendingAfterSlotCodeRef.current = thenFn;
+    setSlotCodeModal(status);
+    return false;
+  };
+
+  const handleSlotCodeVerified = () => {
+    slotCodeVerifiedRef.current = true;
+    setSlotCodeModal(null);
+    const next = pendingAfterSlotCodeRef.current;
+    pendingAfterSlotCodeRef.current = null;
+    if (typeof next === 'function') next();
+  };
+
   // Fonction pour créer le RDV depuis le formulaire (formData optionnel = données avec professions résolues)
   const handleCreateRdvFromForm = async (formData) => {
     const data = formData || rdvFormData;
@@ -2212,6 +2271,11 @@ const FicheDetail = ({
       alert('La date du RDV est dépassée. Impossible de créer un RDV à une date passée.');
       return;
     }
+
+    const datePart = String(dateRdvNormalized).split(/[T\s]/)[0];
+    const timePart = String(dateRdvNormalized).split(/[T\s]/)[1] || '';
+    const canProceedSlot = await openSlotCodeModalIfNeeded(datePart, timePart, () => handleCreateRdvFromForm(data));
+    if (!canProceedSlot) return;
 
     setRdvSubmitting(true);
     try {
@@ -2248,7 +2312,7 @@ const FicheDetail = ({
 
       // Vérifier si le créneau est disponible ou a atteint sa limite
       if (availabilityCount !== null && availabilityCount !== undefined) {
-        if (availabilityCount === 0 || rdvCountInSlot >= availabilityCount) {
+        if (Number(availabilityCount) > 0 && rdvCountInSlot >= availabilityCount) {
           needsApproval = true;
         }
       }
@@ -2326,6 +2390,9 @@ const FicheDetail = ({
         data.id_commercial_2 && String(data.id_commercial_2).trim() !== ''
           ? parseInt(data.id_commercial_2, 10)
           : null;
+      if (slotCodeVerifiedRef.current) {
+        updateData.allow_unavailable_slot = true;
+      }
 
       // Vérifier si le RDV est pour aujourd'hui ou demain
       const rdvDate = new Date(updateData.date_rdv_time);
@@ -2604,28 +2671,13 @@ const FicheDetail = ({
         return;
       }
 
-      // Vérifier si le créneau planning est fermé (même règle que création RDV depuis l'onglet Planning)
       if (confFormData.conf_rdv_date && confFormData.conf_rdv_time) {
-        let dep = planningDep;
-        if (!dep && ficheData?.cp) {
-          const cpStr = String(ficheData.cp).trim();
-          if (/^\d/.test(cpStr)) dep = cpStr.substring(0, 2);
-          else { const m = cpStr.match(/\d{2}/); if (m) dep = m[0]; }
-        }
-        if (dep && dep.length === 2 && /^\d{2}$/.test(dep)) {
-          const rdvDate = new Date(confFormData.conf_rdv_date + 'T12:00:00');
-          const week = getWeekNumber(rdvDate);
-          const year = rdvDate.getFullYear();
-          const slotHour = timeToSlotHour(confFormData.conf_rdv_time);
-          if (slotHour) {
-            const availRes = await api.get('/planning/availability', { params: { w: week, y: year, dp: dep } });
-            const availData = availRes.data?.data?.[confFormData.conf_rdv_date]?.[slotHour];
-            if (availData?.is_closed === 1) {
-              alert('Impossible de confirmer : le créneau du planning pour cette date et heure est fermé.');
-              return;
-            }
-          }
-        }
+        const canProceedSlot = await openSlotCodeModalIfNeeded(
+          confFormData.conf_rdv_date,
+          confFormData.conf_rdv_time,
+          () => handleConfirmSubmit()
+        );
+        if (!canProceedSlot) return;
       }
 
       // Préparer les données à envoyer
@@ -2684,6 +2736,9 @@ const FicheDetail = ({
         confFormData.id_commercial_2 && String(confFormData.id_commercial_2).trim() !== ''
           ? parseInt(confFormData.id_commercial_2, 10)
           : null;
+      if (slotCodeVerifiedRef.current) {
+        updateData.allow_unavailable_slot = true;
+      }
 
       // Appeler l'API pour mettre à jour
       const res = await api.put(`/fiches/${hash}`, updateData);
@@ -8803,6 +8858,29 @@ const FicheDetail = ({
           rdvSubmitting={rdvSubmitting}
         />
       )}
+
+      {slotCodeModal && (
+        <CodeVerificationModal
+          title="Créneau fermé ou indisponible"
+          message={
+            <>
+              <strong>Attention :</strong>{' '}
+              {slotCodeModal.closed && slotCodeModal.zero
+                ? 'ce créneau est fermé et sa disponibilité est à 0.'
+                : slotCodeModal.closed
+                  ? 'ce créneau du planning est fermé.'
+                  : 'ce créneau a une disponibilité à 0.'}
+              {' '}L'insertion d'un rendez-vous n'est pas recommandée.
+              Pour continuer, reproduisez le code à 4 chiffres ci-dessous.
+            </>
+          }
+          onVerified={handleSlotCodeVerified}
+          onCancel={() => {
+            pendingAfterSlotCodeRef.current = null;
+            setSlotCodeModal(null);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -10068,7 +10146,7 @@ const PlanningViewForModal = ({
                                 </span>
                               )}
                             </div>
-                            {onSelectSlot && hasPlanning && availabilityCount > 0 && !canEditThis && (
+                            {onSelectSlot && hasPlanning && !canEditThis && (
                               <button
                                 type="button"
                                 className="planning-create-btn"

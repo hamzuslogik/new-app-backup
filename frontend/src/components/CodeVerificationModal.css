@@ -1,0 +1,37 @@
+.code-verification-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.code-verification-modal-content {
+  width: 100%;
+  max-width: 480px;
+}
+
+.code-verification-modal-content .compte-rendu-early-verification {
+  margin: 0;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+}
+
+.code-verification-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.code-verification-modal-actions .btn-secondary {
+  min-width: 120px;
+  padding: 8px 14px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+  color: #000 !important;
+  font-weight: 600;
+  cursor: pointer;
+}

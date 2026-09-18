@@ -455,6 +455,11 @@ html body .affectation-dep .planning-grid .time-slot-header * {
   color: white;
 }
 
+.rdv-item .badge.sg {
+  background: #FF3380;
+  color: white;
+}
+
 .rdv-item .badge.seul {
   background: transparent;
   color: #dc2626 !important;

@@ -731,6 +731,10 @@ const AffectationDep = () => {
                                      (rdv.etats_list && rdv.etats_list.includes('RF'))) && (
                                       <span className="badge rf">REF</span>
                                     )}
+                                    {userIsAdmin && ((rdv.etat_check && (rdv.etat_check.includes('SG') || rdv.etat_check === 'SG')) ||
+                                     (rdv.etats_list && rdv.etats_list.includes('SG'))) && (
+                                      <span className="badge sg" title="Signé (historique)">SIGNER</span>
+                                    )}
                                     {showSeul && (
                                       <span className="badge seul">RDV SEUL</span>
                                     )}

@@ -1815,6 +1815,11 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   color: white;
 }
 
+.indicator.sg {
+  background: #FF3380;
+  color: white;
+}
+
 .indicator.an {
   background: #ff0000;
   color: white;

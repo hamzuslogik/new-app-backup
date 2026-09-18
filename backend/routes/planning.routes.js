@@ -402,6 +402,7 @@ router.get('/week', authenticate, async (req, res) => {
       const etats = [];
       let hasAnnuler = false;
       let hasRefuser = false;
+      let hasSigner = false;
       const hasR2 = ficheHasR2Placed(
         { id_commercial_2: fiche.id_commercial_2, id_etat_histo: fiche.id_etat_histo },
         etatsMap
@@ -413,22 +414,23 @@ router.get('/week', authenticate, async (req, res) => {
         
         // Vérifier chaque état dans l'historique en utilisant la map des états pré-chargés
         histoArray.forEach(etatId => {
-          if (etatId && !isNaN(etatId) && etatsMap[etatId]) {
-            const titre = etatsMap[etatId].toUpperCase();
-            // Vérifier si "RDV ANNULER" est présent dans le titre
+          if (etatId && !isNaN(etatId)) {
+            const titre = (etatsMap[etatId] || '').toUpperCase();
             if (titre.includes('RDV ANNULER')) {
               hasAnnuler = true;
             }
-            // Vérifier si "REFUSER" est présent dans le titre
             if (titre.includes('REFUSER')) {
               hasRefuser = true;
+            }
+            if ([13, 16, 38, 44, 45].includes(etatId) || titre.includes('SIGNER')) {
+              hasSigner = true;
             }
           }
         });
       }
       
       // Si l'historique n'a pas été vérifié ou n'est pas disponible, vérifier le dernier état
-      if (!hasAnnuler && !hasRefuser) {
+      if (!hasAnnuler && !hasRefuser && !hasSigner) {
         const dernierEtat = fiche.dernier_etat || fiche.id_etat_final;
         if (dernierEtat && etatsMap[dernierEtat]) {
           const titre = etatsMap[dernierEtat].toUpperCase();
@@ -438,6 +440,9 @@ router.get('/week', authenticate, async (req, res) => {
           if (titre.includes('REFUSER')) {
             hasRefuser = true;
           }
+          if ([13, 16, 38, 44, 45].includes(Number(dernierEtat)) || titre.includes('SIGNER')) {
+            hasSigner = true;
+          }
         }
       }
       
@@ -445,6 +450,7 @@ router.get('/week', authenticate, async (req, res) => {
       if (hasR2) etats.push('R2');
       if (hasRefuser) etats.push('RF');
       if (hasAnnuler) etats.push('AN');
+      if (hasSigner) etats.push('SG');
       
       // Vérifier la présence du couple (indépendamment de l'état)
       // Compatibilité: anciennes valeurs (MME SEUL..., NON) + nouvelles valeurs métier.
