@@ -24,7 +24,37 @@
 
 .header-actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.decalage-date-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary, #333);
+}
+
+.decalage-date-filter input {
+  padding: 6px 8px;
+  border: 1px solid #86EFAC;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.decalage-date-filter-all {
+  background: #ffffff;
+  color: #065F46;
+  border: 1px solid #86EFAC;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .filter-toggle-btn {

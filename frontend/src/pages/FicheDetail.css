@@ -2614,8 +2614,8 @@
 }
 
 .etat-actuel-card .etat-actuel-rdv-seul-label {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #ff4d4d !important;
+  -webkit-text-fill-color: #ff4d4d !important;
   font-weight: 800;
   font-size: 15px;
 }

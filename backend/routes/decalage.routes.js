@@ -125,11 +125,9 @@ router.get('/', authenticate, async (req, res) => {
 
     // Règles de consultation selon la fonction
     if (req.user.fonction === 6) {
-      // Confirmateurs : voient uniquement les décalages où ils sont destinataires
-      // ET où ils sont le confirmateur principal de la fiche (id_confirmateur, pas confirmateur2 ni confirmateur3)
-      // Condition : d.destination = req.user.id ET (si fiche existe : f.id_confirmateur = req.user.id, sinon on accepte)
-      whereClause = 'WHERE d.destination = ? AND (f.id IS NULL OR f.id_confirmateur = ?)';
-      params = [req.user.id, req.user.id];
+      // Confirmateurs : toutes les demandes qui leur sont adressées, y compris sans heure
+      whereClause = 'WHERE d.destination = ?';
+      params = [req.user.id];
     } else if (req.user.fonction === 14) {
       // RE Confirmation : voient les décalages de leurs confirmateurs sous responsabilité
       // Récupérer les IDs des confirmateurs sous responsabilité (chef_equipe = RE Confirmation)
@@ -185,8 +183,8 @@ router.get('/', authenticate, async (req, res) => {
       // Commerciaux : voient uniquement leurs propres demandes de décalage (où ils sont expéditeurs)
       whereClause = 'WHERE d.expediteur = ?';
       params = [req.user.id];
-    } else if ([1, 2].includes(req.user.fonction)) {
-      // Admins (fonction 1, 2) : voient tous les décalages
+    } else if ([1, 2, 7, 11].includes(Number(req.user.fonction))) {
+      // Admins / backoffice : toutes les demandes, y compris sans heure
       whereClause = '';
       params = [];
     } else {

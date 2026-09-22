@@ -39,25 +39,6 @@ function isDecalageSansHeure(decalage) {
   return isSameDecalageDateTime(decalage.date_nouvelle, decalage.date_prevu);
 }
 
-// Helper pour obtenir le numéro de semaine ISO
-function getWeekNumber(date = new Date()) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
-// Helper pour obtenir le lundi d'une semaine ISO
-function getMondayOfWeek(year, week) {
-  const simple = new Date(year, 0, 4);
-  const jan4Day = simple.getDay() || 7;
-  const week1Monday = new Date(year, 0, 4 - (jan4Day - 1));
-  const targetMonday = new Date(week1Monday);
-  targetMonday.setDate(week1Monday.getDate() + (week - 1) * 7);
-  return targetMonday;
-}
-
 const Decalages = () => {
   useForceDesktopViewport('decalages-page');
   const { user } = useAuth();
@@ -68,7 +49,8 @@ const Decalages = () => {
     id_etat: '',
     expediteur: '',
     destination: '',
-    search: ''
+    search: '',
+    date_creation: formatLocalYmd(),
   });
   const [showFilters, setShowFilters] = useState(false);
   const [acceptModal, setAcceptModal] = useState(null);
@@ -145,41 +127,23 @@ const Decalages = () => {
     }
   }, [user?.id, queryClient, refetch]);
 
-  // Filtrer les décalages
-  let filteredDecalages = decalagesData || [];
-  
-  // Pour les commerciaux : filtrer uniquement les demandes de la semaine en cours
-  if (user?.fonction === 5) {
-    const currentDate = new Date();
-    const currentWeek = getWeekNumber(currentDate);
-    const currentYear = currentDate.getFullYear();
-    const weekStart = getMondayOfWeek(currentYear, currentWeek);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6); // Dimanche de la semaine
-    
-    // Mettre les heures à minuit pour la comparaison
-    weekStart.setHours(0, 0, 0, 0);
-    weekEnd.setHours(23, 59, 59, 999);
-    
-    filteredDecalages = filteredDecalages.filter(decalage => {
-      if (!decalage.date_creation) return false;
-      const decalageDate = new Date(decalage.date_creation);
-      return decalageDate >= weekStart && decalageDate <= weekEnd;
-    });
-  } else {
-    // Pour les autres utilisateurs, appliquer les filtres normaux
-    filteredDecalages = filteredDecalages.filter(decalage => {
-      if (filters.id_etat && decalage.id_etat !== parseInt(filters.id_etat)) return false;
-      if (filters.expediteur && decalage.expediteur !== parseInt(filters.expediteur)) return false;
-      if (filters.destination && decalage.destination !== parseInt(filters.destination)) return false;
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        const searchIn = `${decalage.fiche_nom || ''} ${decalage.fiche_prenom || ''} ${decalage.fiche_tel || ''} ${decalage.message || ''}`.toLowerCase();
-        if (!searchIn.includes(searchLower)) return false;
-      }
-      return true;
-    });
-  }
+  // Filtrer les décalages (par défaut : date de création = aujourd'hui, y compris sans heure)
+  let filteredDecalages = (decalagesData || []).filter((decalage) => {
+    if (filters.date_creation) {
+      const createdOn = parseDecalageDatePart(decalage.date_creation);
+      if (createdOn !== filters.date_creation) return false;
+    }
+    if (user?.fonction === 5) return true;
+    if (filters.id_etat && decalage.id_etat !== parseInt(filters.id_etat, 10)) return false;
+    if (filters.expediteur && Number(decalage.expediteur) !== parseInt(filters.expediteur, 10)) return false;
+    if (filters.destination && Number(decalage.destination) !== parseInt(filters.destination, 10)) return false;
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      const searchIn = `${decalage.fiche_nom || ''} ${decalage.fiche_prenom || ''} ${decalage.fiche_tel || ''} ${decalage.message || ''}`.toLowerCase();
+      if (!searchIn.includes(searchLower)) return false;
+    }
+    return true;
+  });
   
   // Trier par date de création (plus récent en premier)
   filteredDecalages = filteredDecalages.sort((a, b) => {
@@ -311,6 +275,24 @@ const Decalages = () => {
       <div className="decalages-header">
         <h1><FaClock /> Demandes de Décalage</h1>
         <div className="header-actions">
+          <label className="decalage-date-filter">
+            Date création
+            <input
+              type="date"
+              value={filters.date_creation}
+              onChange={(e) => setFilters({ ...filters, date_creation: e.target.value })}
+            />
+          </label>
+          {filters.date_creation && (
+            <button
+              type="button"
+              className="decalage-date-filter-all"
+              onClick={() => setFilters({ ...filters, date_creation: '' })}
+              title="Afficher toutes les dates"
+            >
+              Toutes les dates
+            </button>
+          )}
           {user?.fonction !== 5 && (
             <button
               className="filter-toggle-btn"
@@ -375,9 +357,9 @@ const Decalages = () => {
                 className="filter-select"
               >
                 <option value="">Tous les expéditeurs</option>
-                {usersData?.filter(u => u.fonction === 5).map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.pseudo}
+                {usersData?.filter((u) => [1, 2, 5, 7, 11].includes(Number(u.fonction))).map((sender) => (
+                  <option key={sender.id} value={sender.id}>
+                    {sender.pseudo}
                   </option>
                 ))}
               </select>
@@ -434,7 +416,9 @@ const Decalages = () => {
             {filteredDecalages.length === 0 ? (
               <tr>
                 <td colSpan="9" className="no-data">
-                  Aucune demande de décalage trouvée
+                  {filters.date_creation
+                    ? 'Aucune demande de décalage pour cette date'
+                    : 'Aucune demande de décalage trouvée'}
                 </td>
               </tr>
             ) : (
