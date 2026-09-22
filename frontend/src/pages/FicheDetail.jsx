@@ -1471,45 +1471,56 @@ const FicheDetail = ({
 
   const ID_ETAT_DECALAGE_EN_ATTENTE = 1;
   const ID_ETAT_DECALAGE_ANNULE = 6;
+  const currentFicheId = ficheData?.id != null ? Number(ficheData.id) : null;
+  const isCurrentFicheDecalage = (d) => {
+    const decalageFicheId = Number(d?.id_fiche ?? d?.fiche_id);
+    return Number.isFinite(currentFicheId) && currentFicheId > 0
+      && Number.isFinite(decalageFicheId) && decalageFicheId === currentFicheId;
+  };
 
-  // Récupérer les décalages existants pour cette fiche
+  // Uniquement les décalages de la fiche ouverte (jamais ceux d'une autre fiche).
   const { data: decalagesData } = useQuery(
-    ['decalages', ficheData?.id],
+    ['decalages', 'fiche', currentFicheId],
     async () => {
-      if (!ficheData?.id) return null;
-      const res = await api.get('/decalages');
-      return (res.data.data || []).filter(d => d.id_fiche === ficheData.id);
+      if (!Number.isFinite(currentFicheId) || currentFicheId <= 0) return [];
+      const res = await api.get('/decalages', { params: { id_fiche: currentFicheId } });
+      return (res.data.data || []).filter((d) => Number(d.id_fiche ?? d.fiche_id) === currentFicheId);
     },
     {
-      enabled: !!ficheData?.id,
+      enabled: Number.isFinite(currentFicheId) && currentFicheId > 0,
       refetchInterval: isCommercial ? 15000 : false,
     }
   );
 
+  const decalagesPourFiche = useMemo(() => {
+    if (!Array.isArray(decalagesData)) return [];
+    return decalagesData.filter(isCurrentFicheDecalage);
+  }, [decalagesData, currentFicheId]);
+
   const commercialPendingDecalage = useMemo(() => {
-    if (!isCommercial || !Array.isArray(decalagesData)) return null;
-    return decalagesData.find(
+    if (!isCommercial || decalagesPourFiche.length === 0) return null;
+    return decalagesPourFiche.find(
       (d) =>
         Number(d.expediteur) === Number(user?.id) &&
         Number(d.id_etat) === ID_ETAT_DECALAGE_EN_ATTENTE
     ) || null;
-  }, [decalagesData, isCommercial, user?.id]);
+  }, [decalagesPourFiche, isCommercial, user?.id]);
 
   const hasCommercialPendingDecalage = !!commercialPendingDecalage;
 
   const commercialAlreadyCreatedDecalage = useMemo(() => {
-    if (!isCommercial || !Array.isArray(decalagesData)) return false;
-    return decalagesData.some((d) => Number(d.expediteur) === Number(user?.id));
-  }, [decalagesData, isCommercial, user?.id]);
+    if (!isCommercial || decalagesPourFiche.length === 0) return false;
+    return decalagesPourFiche.some((d) => Number(d.expediteur) === Number(user?.id));
+  }, [decalagesPourFiche, isCommercial, user?.id]);
 
   const commercialCanCreateDecalage = !commercialAlreadyCreatedDecalage;
 
   const heureRdvAvantDecalage = useMemo(() => {
-    if (!Array.isArray(decalagesData) || decalagesData.length === 0) return null;
+    if (decalagesPourFiche.length === 0) return null;
     const currentNorm = String(ficheData?.date_rdv_time || '').trim();
     if (!currentNorm) return null;
 
-    const candidats = decalagesData
+    const candidats = decalagesPourFiche
       .filter((d) => {
         if (!d.date_prevu) return false;
         if (Number(d.id_etat) === ID_ETAT_DECALAGE_EN_ATTENTE) return false;
@@ -1522,24 +1533,26 @@ const FicheDetail = ({
       });
 
     return candidats[0]?.date_prevu ?? null;
-  }, [decalagesData, ficheData?.date_rdv_time]);
+  }, [decalagesPourFiche, ficheData?.date_rdv_time]);
 
   const decalageRdvHistorique = useMemo(() => {
-    if (!Array.isArray(decalagesData)) return [];
-    return [...decalagesData]
+    return [...decalagesPourFiche]
       .filter((d) => d.date_prevu)
       .sort((a, b) => {
         const ta = a.date_creation ? new Date(a.date_creation).getTime() : 0;
         const tb = b.date_creation ? new Date(b.date_creation).getTime() : 0;
         return tb - ta;
       });
-  }, [decalagesData]);
+  }, [decalagesPourFiche]);
 
   const prevDecalagesSignatureRef = useRef(null);
   useEffect(() => {
-    if (!hash || !Array.isArray(decalagesData)) return;
+    prevDecalagesSignatureRef.current = null;
+  }, [currentFicheId]);
+  useEffect(() => {
+    if (!hash || !Array.isArray(decalagesPourFiche)) return;
     const signature = JSON.stringify(
-      decalagesData.map((d) => ({ id: d.id, id_etat: d.id_etat, date_nouvelle: d.date_nouvelle }))
+      decalagesPourFiche.map((d) => ({ id: d.id, id_etat: d.id_etat, date_nouvelle: d.date_nouvelle }))
     );
     if (prevDecalagesSignatureRef.current != null && prevDecalagesSignatureRef.current !== signature) {
       queryClient.invalidateQueries(['fiche', hash]);
@@ -1547,7 +1560,7 @@ const FicheDetail = ({
       queryClient.invalidateQueries(['planning-commercial']);
     }
     prevDecalagesSignatureRef.current = signature;
-  }, [decalagesData, hash, queryClient]);
+  }, [decalagesPourFiche, hash, queryClient]);
 
   // Initialiser le formulaire de décalage avec la date du RDV de la fiche
   useEffect(() => {
@@ -1617,8 +1630,8 @@ const FicheDetail = ({
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(['decalages', ficheData?.id]);
-        queryClient.invalidateQueries(['decalages', user?.id]);
+        queryClient.invalidateQueries(['decalages', 'fiche', currentFicheId]);
+        queryClient.invalidateQueries(['decalages']);
         queryClient.invalidateQueries(['fiche', hash]);
       },
       onError: (err) => {
@@ -1635,8 +1648,8 @@ const FicheDetail = ({
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(['decalages', ficheData?.id]);
-        queryClient.invalidateQueries(['decalages', user?.id]);
+        queryClient.invalidateQueries(['decalages', 'fiche', currentFicheId]);
+        queryClient.invalidateQueries(['decalages']);
         queryClient.invalidateQueries(['fiche', hash]);
         alert('Décalage créé avec succès');
         const adminBackoffice = isAdminOrBackofficeFonction(user?.fonction);
@@ -3964,7 +3977,7 @@ const FicheDetail = ({
             </h2>
             
             {/* Afficher les décalages existants pour cette fiche */}
-            {decalagesData && decalagesData.length > 0 && (
+            {decalagesPourFiche.length > 0 && (
               <div className="decalage-existing-list" style={{ 
                 border: '1px solid #e0e0e0', 
                 borderTop: 'none', 
@@ -3973,10 +3986,10 @@ const FicheDetail = ({
                 marginBottom: '10px'
               }}>
                 <h3 style={{ marginTop: '0', marginBottom: '10px', fontSize: '11.9px', fontWeight: 'bold' }}>
-                  Demande de décalage ({decalagesData.length})
+                  Demande de décalage ({decalagesPourFiche.length})
                 </h3>
                 <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                  {decalagesData.map((decalage, index) => (
+                  {decalagesPourFiche.map((decalage, index) => (
                     <div key={decalage.id || index} className="decalage-existing-item" style={{ 
                       background: '#fff', 
                       padding: '10px', 
@@ -8609,7 +8622,7 @@ const FicheDetail = ({
               Demande de décalage
             </h2>
             
-            {decalagesData && decalagesData.length > 0 && (
+            {decalagesPourFiche.length > 0 && (
               <div className="decalage-existing-list" style={{ 
                 border: '1px solid #e0e0e0', 
                 borderTop: 'none', 
@@ -8618,10 +8631,10 @@ const FicheDetail = ({
                 marginBottom: '10px'
               }}>
                 <h3 style={{ marginTop: '0', marginBottom: '10px', fontSize: '11.9px', fontWeight: 'bold' }}>
-                  Demande de décalage ({decalagesData.length})
+                  Demande de décalage ({decalagesPourFiche.length})
                 </h3>
                 <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                  {decalagesData.map((decalage, index) => (
+                  {decalagesPourFiche.map((decalage, index) => (
                     <div key={decalage.id || index} className="decalage-existing-item" style={{ 
                       background: '#fff', 
                       padding: '10px', 

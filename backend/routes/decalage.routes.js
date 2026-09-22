@@ -173,6 +173,14 @@ router.get('/', authenticate, async (req, res) => {
       params = [req.user.id, req.user.id];
     }
 
+    const idFicheFilter = parseInt(req.query.id_fiche, 10);
+    if (Number.isFinite(idFicheFilter) && idFicheFilter > 0) {
+      whereClause = whereClause
+        ? `${whereClause} AND d.id_fiche = ?`
+        : 'WHERE d.id_fiche = ?';
+      params.push(idFicheFilter);
+    }
+
     const decalages = await query(
       `SELECT d.*, 
         ed.titre as etat_dec,
