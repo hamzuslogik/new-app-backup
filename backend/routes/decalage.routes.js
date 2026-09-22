@@ -754,15 +754,8 @@ router.put('/:id/statut', authenticate, async (req, res) => {
         } catch (modifRdvErr) {
           console.log('Impossible d\'enregistrer date_rdv_time (décalage) dans modifica:', modifRdvErr.message);
         }
-        
-        // Enregistrer dans l'historique de la fiche
-        await query(
-          `INSERT INTO fiches_histo (id_fiche, id_etat, date_rdv_time, date_creation) 
-           VALUES (?, (SELECT id_etat_final FROM fiches WHERE id = ?), ?, ?)`,
-          [decalage.id_fiche, decalage.id_fiche, effectiveDateNouvelle, now]
-        ).catch(err => {
-          console.log('Impossible d\'enregistrer dans l\'historique:', err.message);
-        });
+        // Pas d'insert fiches_histo : une ligne id_etat=7 aujourd'hui ferait
+        // réapparaître la fiche dans le dashboard « confirmées du jour ».
         ficheUpdated = true;
         }
       } catch (updateError) {
