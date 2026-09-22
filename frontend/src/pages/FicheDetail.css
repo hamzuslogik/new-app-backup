@@ -2652,6 +2652,32 @@
   border-bottom: none;
 }
 
+.etat-actuel-card .etat-actuel-signaler-absence-btn,
+.etat-actuel-card .etat-actuel-signaler-absence-btn * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.etat-actuel-card .etat-actuel-signaler-absence-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #e11d48;
+  border: none;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.etat-actuel-card .etat-actuel-signaler-absence-btn:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
 /* Édition commentaire (double-clic) : texte sombre sur fond blanc du textarea */
 .etat-actuel-card textarea.etat-actuel-comment-edit-textarea,
 .etat-actuel-card span textarea.etat-actuel-comment-edit-textarea {

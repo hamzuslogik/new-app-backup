@@ -53,14 +53,6 @@ function getRdvSeulRawLabel(fiche) {
   return null;
 }
 
-/** Mention « RDV SEUL » : Mr sans Mme / Mme sans Mr (conf_presence_couple). */
-function getRdvSeulMention(fiche) {
-  const raw = getRdvSeulRawLabel(fiche);
-  if (raw === 'MR SEUL SANS MME') return 'Mr sans mme';
-  if (raw === 'MME SEULE SANS MR') return 'Mme sans Mr';
-  return null;
-}
-
 const RDV_SEUL_PRESENCE_OPTIONS = [
   { value: 'MR SEUL SANS MME', label: 'MR SEUL SANS MME' },
   { value: 'MME SEULE SANS MR', label: 'MME SEULE SANS MR' },
@@ -3937,15 +3929,6 @@ const FicheDetail = ({
                 ])}
             </tbody>
           </table>
-          {(() => {
-            const rdvSeulMention = getRdvSeulMention(fiche);
-            if (!rdvSeulMention) return null;
-            return (
-              <div className="fiche-rdv-seul-mention">
-                RDV SEUL : {rdvSeulMention}
-              </div>
-            );
-          })()}
         </div>
 
         {/* Formulaire de décalage de RDV */}
@@ -5613,67 +5596,53 @@ const FicheDetail = ({
                       {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
                         renderQualiteConfirmationBackofficePanel()}
 
-                      {getRdvSeulRawLabel(fiche) && (
+                      {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) && !isCommercial && (
                         <div className="etat-actuel-rdv-seul-row">
-                          <span className="etat-actuel-rdv-seul-label">
-                            RDV seul : {getRdvSeulRawLabel(fiche)}
-                          </span>
-                          {!isCommercial && (
-                            <div style={{ position: 'relative', display: 'inline-block' }}>
-                              <button
-                                type="button"
-                                className="etat-actuel-modifier-validation-btn"
-                                onClick={() => setRdvSeulDropdownOpen((prev) => !prev)}
-                                disabled={updateFieldMutation.isLoading}
-                                title="Modifier la présence"
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                  padding: '8px 14px',
-                                  background: '#ffffff',
-                                  color: '#000000',
-                                  border: '1px solid #d1d5db',
-                                  borderRadius: '999px',
-                                  fontWeight: 700,
-                                  fontSize: '13px',
-                                  cursor: updateFieldMutation.isLoading ? 'wait' : 'pointer',
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-                                }}
-                              >
-                                <FaEdit style={{ color: '#000000' }} />
-                                <span style={{ color: '#000000' }}>Modifier</span>
-                                <FaChevronDown size={11} style={{ color: '#000000' }} />
-                              </button>
-                              {rdvSeulDropdownOpen && (
-                                <>
-                                  <div
-                                    onClick={() => setRdvSeulDropdownOpen(false)}
-                                    style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'transparent' }}
-                                  />
-                                  <div className="etat-actuel-rdv-seul-dropdown">
-                                    {RDV_SEUL_PRESENCE_OPTIONS.map((opt) => (
-                                      <button
-                                        key={opt.value}
-                                        type="button"
-                                        disabled={updateFieldMutation.isLoading}
-                                        onClick={async () => {
-                                          setRdvSeulDropdownOpen(false);
-                                          if (String(fiche.conf_presence_couple || '').toUpperCase() === opt.value) return;
-                                          await updateFieldMutation.mutateAsync({
-                                            field: 'rdv_seul',
-                                            value: opt.value,
-                                          });
-                                        }}
-                                      >
-                                        {opt.label}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </>
-                              )}
-                            </div>
+                          {getRdvSeulRawLabel(fiche) && (
+                            <span className="etat-actuel-rdv-seul-label">
+                              RDV seul : {getRdvSeulRawLabel(fiche)}
+                            </span>
                           )}
+                          <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <button
+                              type="button"
+                              className="etat-actuel-signaler-absence-btn"
+                              onClick={() => setRdvSeulDropdownOpen((prev) => !prev)}
+                              disabled={updateFieldMutation.isLoading}
+                              title="Signaler l'absence du couple"
+                            >
+                              <FaEdit />
+                              <span>Signaler l'absence du couple</span>
+                              <FaChevronDown size={11} />
+                            </button>
+                            {rdvSeulDropdownOpen && (
+                              <>
+                                <div
+                                  onClick={() => setRdvSeulDropdownOpen(false)}
+                                  style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'transparent' }}
+                                />
+                                <div className="etat-actuel-rdv-seul-dropdown">
+                                  {RDV_SEUL_PRESENCE_OPTIONS.map((opt) => (
+                                    <button
+                                      key={opt.value}
+                                      type="button"
+                                      disabled={updateFieldMutation.isLoading}
+                                      onClick={async () => {
+                                        setRdvSeulDropdownOpen(false);
+                                        if (String(fiche.conf_presence_couple || '').toUpperCase() === opt.value) return;
+                                        await updateFieldMutation.mutateAsync({
+                                          field: 'rdv_seul',
+                                          value: opt.value,
+                                        });
+                                      }}
+                                    >
+                                      {opt.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
 
