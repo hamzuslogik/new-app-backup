@@ -490,7 +490,7 @@ const Affectation = () => {
                             <span className="indicator r2" title="R2 placé (commercial secondaire)">R2</span>
                           )}
                           {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
-                          {indicators.sg && <span className="indicator sg" title="Signé">SIGNER</span>}
+                          {indicators.sg && <span className="indicator sg" title="Signé">SIG</span>}
                           {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
                           {indicators.rs && <span className="indicator rs" title="SEUL">SEUL</span>}
                         </div>
