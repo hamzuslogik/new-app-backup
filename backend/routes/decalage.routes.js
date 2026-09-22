@@ -117,7 +117,7 @@ async function getFicheWorkflowContext(idFiche) {
 // Récupérer les décalages avec règles de consultation :
 // - Confirmateurs (fonction 6) : voient les décalages où ils sont destinataires
 // - Commerciaux (fonction 5) : voient leurs propres décalages créés
-// - Admins (fonctions 1, 2, 7) : voient tous les décalages
+// - Admins (1, 2, 7), backoffice (11), RP Confirmation (13), RE Confirmation (14) : toutes les demandes
 router.get('/', authenticate, async (req, res) => {
   try {
     let whereClause = '';
@@ -128,63 +128,13 @@ router.get('/', authenticate, async (req, res) => {
       // Confirmateurs : toutes les demandes qui leur sont adressées, y compris sans heure
       whereClause = 'WHERE d.destination = ?';
       params = [req.user.id];
-    } else if (req.user.fonction === 14) {
-      // RE Confirmation : voient les décalages de leurs confirmateurs sous responsabilité
-      // Récupérer les IDs des confirmateurs sous responsabilité (chef_equipe = RE Confirmation)
-      const confirmateursIds = await query(
-        'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 6 AND etat > 0',
-        [req.user.id]
-      );
-      
-      if (confirmateursIds.length === 0) {
-        // Aucun confirmateur sous responsabilité, retourner vide
-        return res.json({
-          success: true,
-          data: []
-        });
-      }
-      
-      const ids = confirmateursIds.map(c => c.id);
-      whereClause = `WHERE d.destination IN (${ids.map(() => '?').join(',')})`;
-      params = ids;
-    } else if (req.user.fonction === 13) {
-      // RP Confirmation (fonction 13) : voient les décalages de tous les RE Confirmation et confirmateurs sous leur responsabilité
-      // Récupérer les IDs des RE Confirmation sous responsabilité (chef_equipe = RP Confirmation)
-      const reConfirmationIds = await query(
-        'SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 14 AND etat > 0',
-        [req.user.id]
-      );
-      
-      // Récupérer les IDs des confirmateurs sous responsabilité des RE Confirmation
-      let allConfirmateursIds = [];
-      if (reConfirmationIds.length > 0) {
-        const reIds = reConfirmationIds.map(re => re.id);
-        const confirmateursIds = await query(
-          `SELECT id FROM utilisateurs WHERE chef_equipe IN (${reIds.map(() => '?').join(',')}) AND fonction = 6 AND etat > 0`,
-          reIds
-        );
-        allConfirmateursIds = confirmateursIds.map(c => c.id);
-      }
-      
-      // Combiner les IDs des RE Confirmation et des confirmateurs
-      const allIds = [...reConfirmationIds.map(re => re.id), ...allConfirmateursIds];
-      
-      if (allIds.length === 0) {
-        // Aucun RE Confirmation ou confirmateur sous responsabilité, retourner vide
-        return res.json({
-          success: true,
-          data: []
-        });
-      }
-      
-      whereClause = `WHERE d.destination IN (${allIds.map(() => '?').join(',')})`;
-      params = allIds;
     } else if (req.user.fonction === 5) {
       // Commerciaux : voient uniquement leurs propres demandes de décalage (où ils sont expéditeurs)
       whereClause = 'WHERE d.expediteur = ?';
       params = [req.user.id];
-    } else if ([1, 2, 7, 11].includes(Number(req.user.fonction))) {
-      // Admins / backoffice : toutes les demandes, y compris sans heure
+    } else if ([1, 2, 7, 11, 13, 14].includes(Number(req.user.fonction))) {
+      // Admins, backoffice, RP Confirmation (13), RE Confirmation (14) :
+      // toutes les demandes, indépendamment du destinataire
       whereClause = '';
       params = [];
     } else {
@@ -991,6 +941,7 @@ router.get('/:id', authenticate, async (req, res) => {
     // Vérifier les permissions de consultation
     const canView = 
       isAdminOrBackofficeOrRPConfirmation(req.user.fonction) || // Admins, Backoffice, RP Confirmation
+      Number(req.user.fonction) === 14 || // RE Confirmation : toutes les demandes
       decalage.expediteur === req.user.id || // Créateur
       (req.user.fonction === 6 && decalage.destination === req.user.id); // Confirmateur destinataire
 
