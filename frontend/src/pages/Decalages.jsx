@@ -7,8 +7,37 @@ import { FaClock, FaUser, FaFileAlt, FaCheck, FaTimes, FaSearch, FaFilter, FaSyn
 import { toast } from 'react-toastify';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { formatLocalYmd, isRdvDateBeforeToday } from '../utils/compteRenduEarlyVerification';
 import './Decalages.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+
+function normalizeDecalageDateTime(value) {
+  if (value == null || value === '') return '';
+  const s = String(value).trim().replace('T', ' ');
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[ ](\d{1,2}):(\d{2})/);
+  if (!m) return s;
+  return `${m[1]} ${String(m[2]).padStart(2, '0')}:${m[3]}`;
+}
+
+function isSameDecalageDateTime(a, b) {
+  const na = normalizeDecalageDateTime(a);
+  const nb = normalizeDecalageDateTime(b);
+  return Boolean(na && nb && na === nb);
+}
+
+function parseDecalageDatePart(value) {
+  const m = String(value || '').match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : '';
+}
+
+function isAdminOrBackofficeFonction(fonction) {
+  return [1, 2, 7, 11].includes(Number(fonction));
+}
+
+function isDecalageSansHeure(decalage) {
+  if (!decalage?.date_nouvelle) return true;
+  return isSameDecalageDateTime(decalage.date_nouvelle, decalage.date_prevu);
+}
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -42,6 +71,9 @@ const Decalages = () => {
     search: ''
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [acceptModal, setAcceptModal] = useState(null);
+  const [acceptDate, setAcceptDate] = useState('');
+  const [acceptTime, setAcceptTime] = useState('');
 
   // Récupérer les décalages (filtrés par l'utilisateur connecté côté backend)
   const { data: decalagesData, isLoading, refetch } = useQuery(
@@ -74,12 +106,18 @@ const Decalages = () => {
 
   // Mutation pour mettre à jour le statut d'un décalage
   const updateStatutMutation = useMutation(
-    async ({ id, id_etat }) => {
-      const res = await api.put(`/decalages/${id}/statut`, { id_etat });
+    async ({ id, id_etat, date_nouvelle, appliquer_fiche }) => {
+      const payload = { id_etat };
+      if (date_nouvelle) payload.date_nouvelle = date_nouvelle;
+      if (appliquer_fiche !== undefined) payload.appliquer_fiche = appliquer_fiche;
+      const res = await api.put(`/decalages/${id}/statut`, payload);
       return res.data;
     },
     {
       onSuccess: (data) => {
+        setAcceptModal(null);
+        setAcceptDate('');
+        setAcceptTime('');
         queryClient.invalidateQueries(['decalages']);
         queryClient.invalidateQueries(['fiche']);
         queryClient.invalidateQueries(['modifica']);
@@ -87,7 +125,11 @@ const Decalages = () => {
         if (data?.data?.id_fiche) {
           queryClient.invalidateQueries(['decalages', data.data.id_fiche]);
         }
-        toast.success('Statut du décalage mis à jour avec succès');
+        toast.success(
+          data?.data?.fiche_updated
+            ? 'Date enregistrée et appliquée à la fiche'
+            : 'Date enregistrée sur la demande de décalage'
+        );
       },
       onError: (error) => {
         toast.error('Erreur lors de la mise à jour du statut: ' + (error.response?.data?.message || error.message));
@@ -182,14 +224,82 @@ const Decalages = () => {
     return false;
   };
 
+  const getExpediteurFonction = (decalage) => {
+    if (decalage?.expediteur_fonction != null && decalage.expediteur_fonction !== '') {
+      return Number(decalage.expediteur_fonction);
+    }
+    const sender = usersData?.find((u) => Number(u.id) === Number(decalage?.expediteur));
+    return sender?.fonction != null ? Number(sender.fonction) : null;
+  };
+
+  const isAcceptEtat = (etatId) => {
+    const etat = etatsDecalage?.find((e) => Number(e.id) === Number(etatId));
+    const titre = String(etat?.titre || '')
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    if (Number(etatId) === 4 || titre.includes('REFUS')) return false;
+    if (Number(etatId) === 6 || titre.includes('ANNUL')) return false;
+    if (Number(etatId) === 1 || titre.includes('ATTENTE')) return false;
+    return Number(etatId) === 2 || titre.includes('ACCEPT') || titre.includes('VALID');
+  };
+
+  const needsClientRdvModal = (decalage, etatId) => {
+    if (!isAcceptEtat(etatId) || !isDecalageSansHeure(decalage)) return false;
+    const fn = getExpediteurFonction(decalage);
+    if (fn == null || Number.isNaN(fn)) return true;
+    return isAdminOrBackofficeFonction(fn);
+  };
+
   const handleStatutChange = (decalageId, newStatut, decalage) => {
     if (isDecalageTraite(decalage)) {
       toast.warning('Cette demande a déjà été traitée et ne peut plus être modifiée.');
       return;
     }
+    if (needsClientRdvModal(decalage, newStatut)) {
+      setAcceptModal({ decalage, id_etat: newStatut, step: 'saisie' });
+      setAcceptDate(parseDecalageDatePart(decalage.date_prevu) || formatLocalYmd());
+      setAcceptTime('');
+      return;
+    }
     if (window.confirm('Voulez-vous changer le statut de ce décalage ?')) {
       updateStatutMutation.mutate({ id: decalageId, id_etat: newStatut });
     }
+  };
+
+  const buildAcceptedDateNouvelle = () => {
+    if (!acceptDate || !acceptTime) {
+      toast.error('Veuillez saisir la date et l\'heure du RDV accepté par le client.');
+      return null;
+    }
+    const date_nouvelle = `${acceptDate} ${acceptTime}:00`;
+    if (isRdvDateBeforeToday(date_nouvelle)) {
+      toast.error('La date du RDV ne peut pas être antérieure à aujourd\'hui.');
+      return null;
+    }
+    return date_nouvelle;
+  };
+
+  const submitAcceptModal = (e) => {
+    e?.preventDefault?.();
+    if (!acceptModal?.decalage?.id) return;
+    if (!buildAcceptedDateNouvelle()) return;
+    setAcceptModal((prev) => (prev ? { ...prev, step: 'appliquer' } : prev));
+  };
+
+  const confirmAcceptModal = (appliquerFiche) => {
+    if (!acceptModal?.decalage?.id) return;
+    const date_nouvelle = buildAcceptedDateNouvelle();
+    if (!date_nouvelle) {
+      setAcceptModal((prev) => (prev ? { ...prev, step: 'saisie' } : prev));
+      return;
+    }
+    updateStatutMutation.mutate({
+      id: acceptModal.decalage.id,
+      id_etat: acceptModal.id_etat,
+      date_nouvelle,
+      appliquer_fiche: !!appliquerFiche,
+    });
   };
 
   if (isLoading) {
@@ -389,10 +499,10 @@ const Decalages = () => {
                       : '-'}
                   </td>
                   <td data-label="Nouveau RDV:">
-                    {decalage.date_nouvelle
+                    {isDecalageSansHeure(decalage)
+                      ? 'Non défini'
+                      : decalage.date_nouvelle
                       ? formatRdvDateTime(decalage.date_nouvelle)
-                      : decalage.date_prevu
-                      ? formatRdvDateTime(decalage.date_prevu)
                       : '-'}
                   </td>
                   <td data-label="Message:" className="message-cell">
@@ -453,6 +563,101 @@ const Decalages = () => {
           </tbody>
         </table>
       </div>
+
+      {acceptModal && (
+        <div
+          className="decalage-accept-modal-overlay"
+          onClick={() => {
+            if (!updateStatutMutation.isLoading) setAcceptModal(null);
+          }}
+        >
+          <form
+            className="decalage-accept-modal"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={submitAcceptModal}
+          >
+            {acceptModal.step === 'appliquer' ? (
+              <>
+                <h2>Appliquer à la fiche ?</h2>
+                <p>
+                  Date saisie : <strong>{formatRdvDateTime(`${acceptDate} ${acceptTime}:00`)}</strong>
+                  <br />
+                  Enregistrer cette date sur la fiche ?
+                </p>
+                <div className="decalage-accept-modal-actions">
+                  <button
+                    type="button"
+                    className="decalage-accept-modal-cancel"
+                    onClick={() => setAcceptModal((prev) => (prev ? { ...prev, step: 'saisie' } : prev))}
+                    disabled={updateStatutMutation.isLoading}
+                  >
+                    Retour
+                  </button>
+                  <button
+                    type="button"
+                    className="decalage-accept-modal-no"
+                    onClick={() => confirmAcceptModal(false)}
+                    disabled={updateStatutMutation.isLoading}
+                  >
+                    Non
+                  </button>
+                  <button
+                    type="button"
+                    className="decalage-accept-modal-confirm"
+                    onClick={() => confirmAcceptModal(true)}
+                    disabled={updateStatutMutation.isLoading}
+                  >
+                    {updateStatutMutation.isLoading ? 'Enregistrement…' : 'Oui'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2>RDV accepté par le client</h2>
+                <p>La date et l&apos;heure sont obligatoires. Elles seront toujours enregistrées sur la demande.</p>
+                <div className="decalage-accept-modal-fields">
+                  <label>
+                    Date
+                    <input
+                      type="date"
+                      value={acceptDate}
+                      min={formatLocalYmd()}
+                      onChange={(e) => setAcceptDate(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Heure
+                    <input
+                      type="time"
+                      value={acceptTime}
+                      onChange={(e) => setAcceptTime(e.target.value)}
+                      required
+                    />
+                  </label>
+                </div>
+                <div className="decalage-accept-modal-actions">
+                  <button
+                    type="button"
+                    className="decalage-accept-modal-cancel"
+                    onClick={() => setAcceptModal(null)}
+                    disabled={updateStatutMutation.isLoading}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    className="decalage-accept-modal-confirm"
+                    disabled={updateStatutMutation.isLoading || !acceptDate || !acceptTime}
+                  >
+                    Continuer
+                  </button>
+                </div>
+              </>
+            )}
+          </form>
+        </div>
+      )}
     </div>
   );
 };

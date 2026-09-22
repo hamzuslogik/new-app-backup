@@ -69,6 +69,28 @@ function isSameDecalageDateTime(a, b) {
   return Boolean(na && nb && na === nb);
 }
 
+function toMysqlDecalageDateTime(value) {
+  if (value == null || String(value).trim() === '') return null;
+  const s = String(value).trim().replace('T', ' ');
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[ ](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return null;
+  return `${m[1]} ${String(m[2]).padStart(2, '0')}:${m[3]}:${m[4] || '00'}`;
+}
+
+function formatLocalYmd(d = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function isAdminOrBackofficeFonction(fonction) {
+  return [1, 2, 7, 11].includes(Number(fonction));
+}
+
+function isDecalageSansHeure(decalage) {
+  if (!decalage?.date_nouvelle) return true;
+  return isSameDecalageDateTime(decalage.date_nouvelle, decalage.date_prevu);
+}
+
 /**
  * Chargement fiche pour executeWorkflow (décalage) : sans cela, {fiche.id_confirmateur} et
  * assimilés restent vides alors que RE/RP passent par destination_fonctions — d’où notif confirmateur manquante.
@@ -186,6 +208,7 @@ router.get('/', authenticate, async (req, res) => {
         ed.titre as etat_dec,
         u_exp.pseudo as expediteur_pseudo, 
         u_exp.photo as expediteur_photo,
+        u_exp.fonction as expediteur_fonction,
         u_dest.pseudo as destination_pseudo,
         u_dest.photo as destination_photo,
         f.id as fiche_id,
@@ -469,7 +492,11 @@ router.post('/', authenticate, checkPermissionCode('decalage_create'), async (re
 router.put('/:id/statut', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const { id_etat } = req.body;
+    const { id_etat, date_nouvelle: dateNouvelleBody, appliquer_fiche: appliquerFicheBody } = req.body;
+    const hasAppliquerFicheFlag = Object.prototype.hasOwnProperty.call(req.body, 'appliquer_fiche');
+    const appliquerFiche = hasAppliquerFicheFlag
+      ? (appliquerFicheBody === true || appliquerFicheBody === 1 || String(appliquerFicheBody) === '1' || String(appliquerFicheBody).toLowerCase() === 'true')
+      : null;
 
     if (!id_etat) {
       return res.status(400).json({
@@ -645,17 +672,9 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       });
     }
 
-    await query(
-      `UPDATE decalages SET
-       id_etat = ?,
-       modifie_le = ?
-       WHERE id = ?`,
-      [id_etat, now, id]
-    );
-
     // Récupérer le titre du nouvel état pour vérifier s'il s'agit d'un état "validé/accepté"
     const nouvelEtat = await queryOne('SELECT titre FROM etat_decalage WHERE id = ?', [id_etat]);
-    
+
     // Considérer comme validé si :
     // - Le titre contient "VALID", "ACCEPT", "APPROUV" (insensible à la casse)
     // - ET ce n'est ni "REFUSÉ" (id_etat = 4) ni "ANNULÉ" (id_etat = 6) ni "EN-ATTENTE" (id_etat = 1)
@@ -663,24 +682,78 @@ router.put('/:id/statut', authenticate, async (req, res) => {
     const estRefuse = id_etat === 4 || titreEtat.includes('REFUS');
     const estAnnule = id_etat === 6 || titreEtat.includes('ANNUL');
     const estEnAttente = id_etat === 1 || titreEtat.includes('EN-ATTENTE') || titreEtat.includes('ATTENTE');
-    
+
     // Le décalage est considéré comme validé s'il n'est ni refusé, ni annulé, ni en attente
     const estValide = !estRefuse && !estAnnule && !estEnAttente;
 
-    // Si le décalage est validé/accepté et qu'il y a une date_nouvelle différente, mettre à jour la date RDV
-    if (estValide && decalage.date_nouvelle && decalage.id_fiche) {
+    const acceptedDateNouvelle = toMysqlDecalageDateTime(dateNouvelleBody);
+    let effectiveDateNouvelle = acceptedDateNouvelle || decalage.date_nouvelle || null;
+
+    if (estValide) {
+      let senderFonction = null;
+      if (decalage.expediteur) {
+        const sender = await queryOne('SELECT fonction FROM utilisateurs WHERE id = ?', [decalage.expediteur]);
+        senderFonction = sender?.fonction;
+      }
+      const fromAdmin = isAdminOrBackofficeFonction(senderFonction);
+      if (fromAdmin && isDecalageSansHeure(decalage) && !acceptedDateNouvelle) {
+        return res.status(400).json({
+          success: false,
+          message: 'Veuillez saisir la date et l\'heure du RDV accepté par le client.'
+        });
+      }
+      if (acceptedDateNouvelle && acceptedDateNouvelle.slice(0, 10) < formatLocalYmd()) {
+        return res.status(400).json({
+          success: false,
+          message: 'La date du RDV ne peut pas être antérieure à aujourd\'hui.'
+        });
+      }
+    }
+
+    if (acceptedDateNouvelle) {
+      await query(
+        `UPDATE decalages SET
+         id_etat = ?,
+         date_nouvelle = ?,
+         modifie_le = ?
+         WHERE id = ?`,
+        [id_etat, acceptedDateNouvelle, now, id]
+      );
+      effectiveDateNouvelle = acceptedDateNouvelle;
+    } else {
+      await query(
+        `UPDATE decalages SET
+         id_etat = ?,
+         modifie_le = ?
+         WHERE id = ?`,
+        [id_etat, now, id]
+      );
+    }
+
+    // Date toujours enregistrée sur la demande. Mise à jour de la fiche seulement si demandée
+    // et pas déjà appliquée.
+    let ficheUpdated = false;
+    if (estValide && effectiveDateNouvelle && decalage.id_fiche) {
       try {
         const ficheAvant = await queryOne(
           'SELECT date_rdv_time FROM fiches WHERE id = ?',
           [decalage.id_fiche]
         );
         const ancienneDateRdv = decalage.date_prevu || ficheAvant?.date_rdv_time || '';
-        const sameAsRequested = isSameDecalageDateTime(decalage.date_nouvelle, decalage.date_prevu)
-          || isSameDecalageDateTime(decalage.date_nouvelle, ficheAvant?.date_rdv_time)
-          || isSameDecalageDateTime(decalage.date_nouvelle, ancienneDateRdv);
+        const alreadyApplied = isSameDecalageDateTime(ficheAvant?.date_rdv_time, effectiveDateNouvelle);
+        const sameAsRequested = !acceptedDateNouvelle && (
+          isSameDecalageDateTime(effectiveDateNouvelle, decalage.date_prevu)
+          || isSameDecalageDateTime(effectiveDateNouvelle, ficheAvant?.date_rdv_time)
+          || isSameDecalageDateTime(effectiveDateNouvelle, ancienneDateRdv)
+        );
+        const shouldUpdateFiche = alreadyApplied
+          ? false
+          : (appliquerFiche === false
+            ? false
+            : (appliquerFiche === true ? true : !sameAsRequested));
 
-        if (sameAsRequested) {
-          console.log(`Date RDV inchangée (décalage sans durée) pour la fiche ${decalage.id_fiche}`);
+        if (!shouldUpdateFiche) {
+          console.log(`Date RDV non appliquée à la fiche ${decalage.id_fiche} (déjà fait, refusé, ou sans durée)`);
         } else {
         // Mettre à jour la date_rdv_time de la fiche avec date_nouvelle
         await query(
@@ -688,10 +761,10 @@ router.put('/:id/statut', authenticate, async (req, res) => {
            SET date_rdv_time = ?,
                date_modif_time = ?
            WHERE id = ?`,
-          [decalage.date_nouvelle, now, decalage.id_fiche]
+          [effectiveDateNouvelle, now, decalage.id_fiche]
         );
         
-        console.log(`Date RDV de la fiche ${decalage.id_fiche} mise à jour avec la nouvelle date: ${decalage.date_nouvelle}`);
+        console.log(`Date RDV de la fiche ${decalage.id_fiche} mise à jour avec la nouvelle date: ${effectiveDateNouvelle}`);
 
         // Historique modifica date_rdv_time (décalage accepté)
         try {
@@ -720,13 +793,13 @@ router.put('/:id/statut', authenticate, async (req, res) => {
               await query(
                 `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, \`${dateCol}\`)
                  VALUES (?, ?, ?, ?, ?, ?)`,
-                [decalage.id_fiche, req.user.id, 'date_rdv_time', String(ancienneDateRdv), String(decalage.date_nouvelle), now]
+                [decalage.id_fiche, req.user.id, 'date_rdv_time', String(ancienneDateRdv), String(effectiveDateNouvelle), now]
               );
             } else if (hasOldStructure) {
               await query(
                 `INSERT INTO modifica (id_fiche, id_user, champ, last_val, val, \`${dateCol}\`)
                  VALUES (?, ?, ?, ?, ?, ?)`,
-                [decalage.id_fiche, req.user.id, 'date_rdv_time', String(ancienneDateRdv), String(decalage.date_nouvelle), now]
+                [decalage.id_fiche, req.user.id, 'date_rdv_time', String(ancienneDateRdv), String(effectiveDateNouvelle), now]
               );
             }
           }
@@ -738,10 +811,11 @@ router.put('/:id/statut', authenticate, async (req, res) => {
         await query(
           `INSERT INTO fiches_histo (id_fiche, id_etat, date_rdv_time, date_creation) 
            VALUES (?, (SELECT id_etat_final FROM fiches WHERE id = ?), ?, ?)`,
-          [decalage.id_fiche, decalage.id_fiche, decalage.date_nouvelle, now]
+          [decalage.id_fiche, decalage.id_fiche, effectiveDateNouvelle, now]
         ).catch(err => {
           console.log('Impossible d\'enregistrer dans l\'historique:', err.message);
         });
+        ficheUpdated = true;
         }
       } catch (updateError) {
         console.error('Erreur lors de la mise à jour de la date RDV de la fiche:', updateError);
@@ -809,7 +883,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
       data: {
         id_fiche: decalage.id_fiche,
         id_etat,
-        fiche_updated: estValide && !!decalage.date_nouvelle && !!decalage.id_fiche,
+        fiche_updated: ficheUpdated,
       },
     });
 
@@ -826,8 +900,9 @@ router.put('/:id/statut', authenticate, async (req, res) => {
         fiche: ficheForWorkflow
           ? {
               ...ficheForWorkflow,
-              date_rdv_time:
-                decalage.date_nouvelle || decalage.date_prevu || ficheForWorkflow.date_rdv_time || null,
+              date_rdv_time: ficheUpdated
+                ? (effectiveDateNouvelle || decalage.date_nouvelle || ficheForWorkflow.date_rdv_time || null)
+                : (ficheForWorkflow.date_rdv_time || decalage.date_prevu || null),
             }
           : null,
         user: req.user,
@@ -840,7 +915,7 @@ router.put('/:id/statut', authenticate, async (req, res) => {
           expediteur: decalage.expediteur,
           destination: decalage.destination,
           date_prevu: decalage.date_prevu,
-          date_nouvelle: decalage.date_nouvelle,
+          date_nouvelle: effectiveDateNouvelle || decalage.date_nouvelle,
           modifie_le: now,
           message: decalageMessageForWorkflow,
           ...ficheContactDecalage,
