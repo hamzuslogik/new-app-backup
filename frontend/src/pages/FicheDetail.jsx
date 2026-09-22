@@ -5606,13 +5606,13 @@ const FicheDetail = ({
                           <div style={{ position: 'relative', display: 'inline-block' }}>
                             <button
                               type="button"
-                              className="etat-actuel-signaler-absence-btn"
+                              className={getRdvSeulRawLabel(fiche) ? 'etat-actuel-modifier-validation-btn' : 'etat-actuel-signaler-absence-btn'}
                               onClick={() => setRdvSeulDropdownOpen((prev) => !prev)}
                               disabled={updateFieldMutation.isLoading}
-                              title="Signaler l'absence du couple"
+                              title={getRdvSeulRawLabel(fiche) ? 'Modifier la présence' : "Signaler l'absence du couple"}
                             >
                               <FaEdit />
-                              <span>Signaler l'absence du couple</span>
+                              <span>{getRdvSeulRawLabel(fiche) ? 'Modifier' : "Signaler l'absence du couple"}</span>
                               <FaChevronDown size={11} />
                             </button>
                             {rdvSeulDropdownOpen && (
