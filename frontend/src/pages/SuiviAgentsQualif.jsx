@@ -49,6 +49,38 @@ const getEtatHeaderStyle = (etat) => {
   };
 };
 
+function formatPersonName(nom, prenom) {
+  const n = String(nom || '').trim();
+  const p = String(prenom || '').trim();
+  return [n, p].filter(Boolean).join(' ') || '—';
+}
+
+function formatPct(part, total) {
+  const t = Number(total) || 0;
+  if (t <= 0) return '0%';
+  const v = Math.round((Number(part || 0) / t) * 1000) / 10;
+  return `${v}%`.replace(/\.0%$/, '%');
+}
+
+function isKoEtat(etat) {
+  const abbr = String(etat?.abbreviation || '').trim().toUpperCase();
+  const titre = String(etat?.titre || '').trim().toUpperCase();
+  return abbr === 'KO' || titre === 'KO' || Number(etat?.id) === 54;
+}
+
+function isHcEtat(etat) {
+  const abbr = String(etat?.abbreviation || '').trim().toUpperCase();
+  const titre = String(etat?.titre || '').trim().toUpperCase();
+  if (Number(etat?.id) === 55) return true;
+  if (abbr === 'HC' || titre === 'HC' || titre === 'HORS CIBLE') return true;
+  if (abbr.startsWith('HHC') || titre.startsWith('HHC')) return false;
+  return titre.startsWith('HORS CIBLE') || /^HC\b/.test(titre) || abbr === 'HC';
+}
+
+function getEtatCount(agentStat, etatId) {
+  return agentStat?.stats?.find((s) => Number(s.id) === Number(etatId))?.count || 0;
+}
+
 const getEtatCellStyle = (etat, count) => {
   const bg = normalizeHex(etat?.color || '#9e9e9e');
   return {
@@ -375,20 +407,35 @@ const SuiviAgentsQualif = () => {
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Agent + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
       const columns = [
         { key: 'agent', label: 'Agent' },
-        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
+        { key: 'nom_prenom', label: 'Nom & prénom' },
+        { key: 'superviseur', label: 'Superviseur' },
       ];
+      stats.etats.forEach((etat) => {
+        const label = etat.abbreviation || etat.titre;
+        columns.push({ key: `etat_${etat.id}`, label });
+        if (isKoEtat(etat)) columns.push({ key: `pct_ko`, label: '% KO' });
+        if (isHcEtat(etat)) columns.push({ key: `pct_hc`, label: '% HC' });
+      });
+      columns.push({ key: 'valide', label: 'Validé' });
+      columns.push({ key: 'total', label: 'Total' });
       const statsData = stats.agents.map(agentStat => {
-        const agentName = agentStat.agent.pseudo || 'N/A';
-        const row = { agent: agentName };
+        const total = agentStat.total || 0;
+        const row = {
+          agent: agentStat.agent.pseudo || 'N/A',
+          nom_prenom: formatPersonName(agentStat.agent.nom, agentStat.agent.prenom),
+          superviseur: agentStat.agent.superviseur_pseudo
+            || formatPersonName(agentStat.agent.superviseur_nom, agentStat.agent.superviseur_prenom),
+          total,
+        };
         stats.etats.forEach(etat => {
-          const stat = agentStat.stats.find(s => s.id === etat.id);
-          const label = etat.titre || etat.abbreviation;
-          row[`etat_${label}`] = stat?.count || 0;
+          const count = getEtatCount(agentStat, etat.id);
+          row[`etat_${etat.id}`] = count;
+          if (isKoEtat(etat)) row.pct_ko = formatPct(count, total);
+          if (isHcEtat(etat)) row.pct_hc = formatPct(count, total);
         });
-        row['etat_Validé'] = agentStat.validated || 0;
+        row.valide = `${agentStat.validated || 0} (${formatPct(agentStat.validated || 0, total)})`;
         return row;
       });
       exportToCSV(statsData, columns, 'suivi-agents-qualif-stats');
@@ -414,20 +461,35 @@ const SuiviAgentsQualif = () => {
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Agent + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
       const columns = [
         { key: 'agent', label: 'Agent' },
-        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
+        { key: 'nom_prenom', label: 'Nom & prénom' },
+        { key: 'superviseur', label: 'Superviseur' },
       ];
+      stats.etats.forEach((etat) => {
+        const label = etat.abbreviation || etat.titre;
+        columns.push({ key: `etat_${etat.id}`, label });
+        if (isKoEtat(etat)) columns.push({ key: `pct_ko`, label: '% KO' });
+        if (isHcEtat(etat)) columns.push({ key: `pct_hc`, label: '% HC' });
+      });
+      columns.push({ key: 'valide', label: 'Validé' });
+      columns.push({ key: 'total', label: 'Total' });
       const statsData = stats.agents.map(agentStat => {
-        const agentName = agentStat.agent.pseudo || 'N/A';
-        const row = { agent: agentName };
+        const total = agentStat.total || 0;
+        const row = {
+          agent: agentStat.agent.pseudo || 'N/A',
+          nom_prenom: formatPersonName(agentStat.agent.nom, agentStat.agent.prenom),
+          superviseur: agentStat.agent.superviseur_pseudo
+            || formatPersonName(agentStat.agent.superviseur_nom, agentStat.agent.superviseur_prenom),
+          total,
+        };
         stats.etats.forEach(etat => {
-          const stat = agentStat.stats.find(s => s.id === etat.id);
-          const label = etat.titre || etat.abbreviation;
-          row[`etat_${label}`] = stat?.count || 0;
+          const count = getEtatCount(agentStat, etat.id);
+          row[`etat_${etat.id}`] = count;
+          if (isKoEtat(etat)) row.pct_ko = formatPct(count, total);
+          if (isHcEtat(etat)) row.pct_hc = formatPct(count, total);
         });
-        row['etat_Validé'] = agentStat.validated || 0;
+        row.valide = `${agentStat.validated || 0} (${formatPct(agentStat.validated || 0, total)})`;
         return row;
       });
       exportToExcel(statsData, columns, 'suivi-agents-qualif-stats');
@@ -458,20 +520,35 @@ const SuiviAgentsQualif = () => {
     } else if (viewMode === 'stats' && stats.agents && stats.agents.length > 0) {
       // Exporter les statistiques en format tableau croisé
       // Colonnes : Agent + tous les états
-      const etatLabels = stats.etats.map(etat => etat.titre || etat.abbreviation).concat(['Validé']);
       const columns = [
         { key: 'agent', label: 'Agent' },
-        ...etatLabels.map(label => ({ key: `etat_${label}`, label }))
+        { key: 'nom_prenom', label: 'Nom & prénom' },
+        { key: 'superviseur', label: 'Superviseur' },
       ];
+      stats.etats.forEach((etat) => {
+        const label = etat.abbreviation || etat.titre;
+        columns.push({ key: `etat_${etat.id}`, label });
+        if (isKoEtat(etat)) columns.push({ key: `pct_ko`, label: '% KO' });
+        if (isHcEtat(etat)) columns.push({ key: `pct_hc`, label: '% HC' });
+      });
+      columns.push({ key: 'valide', label: 'Validé' });
+      columns.push({ key: 'total', label: 'Total' });
       const statsData = stats.agents.map(agentStat => {
-        const agentName = agentStat.agent.pseudo || 'N/A';
-        const row = { agent: agentName };
+        const total = agentStat.total || 0;
+        const row = {
+          agent: agentStat.agent.pseudo || 'N/A',
+          nom_prenom: formatPersonName(agentStat.agent.nom, agentStat.agent.prenom),
+          superviseur: agentStat.agent.superviseur_pseudo
+            || formatPersonName(agentStat.agent.superviseur_nom, agentStat.agent.superviseur_prenom),
+          total,
+        };
         stats.etats.forEach(etat => {
-          const stat = agentStat.stats.find(s => s.id === etat.id);
-          const label = etat.titre || etat.abbreviation;
-          row[`etat_${label}`] = stat?.count || 0;
+          const count = getEtatCount(agentStat, etat.id);
+          row[`etat_${etat.id}`] = count;
+          if (isKoEtat(etat)) row.pct_ko = formatPct(count, total);
+          if (isHcEtat(etat)) row.pct_hc = formatPct(count, total);
         });
-        row['etat_Validé'] = agentStat.validated || 0;
+        row.valide = `${agentStat.validated || 0} (${formatPct(agentStat.validated || 0, total)})`;
         return row;
       });
       exportToPDF(statsData, columns, 'suivi-agents-qualif-stats', 'Suivi Agents Qualification - Statistiques');
@@ -858,19 +935,37 @@ const SuiviAgentsQualif = () => {
               <table className="suivi-table">
                 <thead>
                   <tr>
-                    <th rowSpan="2" className="agent-col-header">Agent</th>
+                    <th className="agent-col-header">Agent</th>
+                    <th className="name-col-header">Nom & prénom</th>
+                    <th className="superviseur-col-header">Superviseur</th>
                     {stats.etats && stats.etats.length > 0 && stats.etats.map(etat => (
-                      <th
-                        key={etat.id}
-                        className="etat-col-header"
-                        title={etat.titre}
-                        style={getEtatHeaderStyle(etat)}
-                      >
-                        {etat.abbreviation || etat.titre}
-                      </th>
+                      <React.Fragment key={etat.id}>
+                        <th
+                          className="etat-col-header"
+                          title={etat.titre}
+                          style={getEtatHeaderStyle(etat)}
+                        >
+                          {etat.abbreviation || etat.titre}
+                        </th>
+                        {isKoEtat(etat) && (
+                          <th
+                            className="pct-col-header"
+                            style={getEtatHeaderStyle(etat)}
+                          >
+                            % KO
+                          </th>
+                        )}
+                        {isHcEtat(etat) && (
+                          <th
+                            className="pct-col-header"
+                            style={getEtatHeaderStyle(etat)}
+                          >
+                            % HC
+                          </th>
+                        )}
+                      </React.Fragment>
                     ))}
                     <th
-                      rowSpan="2"
                       className="validated-col-header"
                       style={{
                         backgroundColor: VALIDATED_COLOR,
@@ -882,7 +977,6 @@ const SuiviAgentsQualif = () => {
                       Validé
                     </th>
                     <th
-                      rowSpan="2"
                       className="total-col-header"
                       style={{
                         backgroundColor: TOTAL_COLOR,
@@ -914,17 +1008,40 @@ const SuiviAgentsQualif = () => {
                           <span className="agent-name">{agentStat.agent.pseudo || 'N/A'}</span>
                         </div>
                       </td>
+                      <td className="name-col-cell">
+                        {formatPersonName(agentStat.agent.nom, agentStat.agent.prenom)}
+                      </td>
+                      <td className="superviseur-col-cell">
+                        {agentStat.agent.superviseur_pseudo
+                          || formatPersonName(agentStat.agent.superviseur_nom, agentStat.agent.superviseur_prenom)}
+                      </td>
                       {stats.etats && stats.etats.map(etat => {
-                        const stat = agentStat.stats.find(s => s.id === etat.id);
-                        const count = stat?.count || 0;
+                        const count = getEtatCount(agentStat, etat.id);
                         return (
-                          <td
-                            key={etat.id}
-                            className="etat-col-cell"
-                            style={getEtatCellStyle(etat, count)}
-                          >
-                            {count}
-                          </td>
+                          <React.Fragment key={etat.id}>
+                            <td
+                              className="etat-col-cell"
+                              style={getEtatCellStyle(etat, count)}
+                            >
+                              {count}
+                            </td>
+                            {isKoEtat(etat) && (
+                              <td
+                                className="pct-col-cell"
+                                style={getEtatCellStyle(etat, count)}
+                              >
+                                {formatPct(count, agentStat.total)}
+                              </td>
+                            )}
+                            {isHcEtat(etat) && (
+                              <td
+                                className="pct-col-cell"
+                                style={getEtatCellStyle(etat, count)}
+                              >
+                                {formatPct(count, agentStat.total)}
+                              </td>
+                            )}
+                          </React.Fragment>
                         );
                       })}
                       <td
@@ -937,6 +1054,9 @@ const SuiviAgentsQualif = () => {
                         }}
                       >
                         {agentStat.validated || 0}
+                        <span className="conformite-pct">
+                          {' '}({formatPct(agentStat.validated || 0, agentStat.total)})
+                        </span>
                       </td>
                       <td
                         className="total-col-cell"
@@ -954,19 +1074,38 @@ const SuiviAgentsQualif = () => {
                 <tfoot>
                   <tr className="totals-row">
                     <td className="agent-col-cell"><strong>Totaux</strong></td>
+                    <td className="name-col-cell" />
+                    <td className="superviseur-col-cell" />
                     {stats.etats && stats.etats.map(etat => {
-                      const total = stats.agents.reduce((sum, agentStat) => {
-                        const stat = agentStat.stats.find(s => s.id === etat.id);
-                        return sum + (stat?.count || 0);
-                      }, 0);
+                      const totalEtat = stats.agents.reduce((sum, agentStat) => (
+                        sum + getEtatCount(agentStat, etat.id)
+                      ), 0);
+                      const totalFiches = stats.agents.reduce((sum, agentStat) => sum + (agentStat.total || 0), 0);
                       return (
-                        <td
-                          key={etat.id}
-                          className="etat-col-cell totals-etat-cell"
-                          style={getEtatCellStyle(etat, total)}
-                        >
-                          {total}
-                        </td>
+                        <React.Fragment key={etat.id}>
+                          <td
+                            className="etat-col-cell totals-etat-cell"
+                            style={getEtatCellStyle(etat, totalEtat)}
+                          >
+                            {totalEtat}
+                          </td>
+                          {isKoEtat(etat) && (
+                            <td
+                              className="pct-col-cell"
+                              style={getEtatCellStyle(etat, totalEtat)}
+                            >
+                              {formatPct(totalEtat, totalFiches)}
+                            </td>
+                          )}
+                          {isHcEtat(etat) && (
+                            <td
+                              className="pct-col-cell"
+                              style={getEtatCellStyle(etat, totalEtat)}
+                            >
+                              {formatPct(totalEtat, totalFiches)}
+                            </td>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                     <td
@@ -978,6 +1117,12 @@ const SuiviAgentsQualif = () => {
                       }}
                     >
                       {stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0)}
+                      <span className="conformite-pct">
+                        {' '}({formatPct(
+                          stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0),
+                          stats.agents.reduce((sum, agentStat) => sum + (agentStat.total || 0), 0)
+                        )})
+                      </span>
                     </td>
                     <td
                       className="total-col-cell"

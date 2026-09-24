@@ -1353,10 +1353,15 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
         u.prenom,
         u.photo,
         u.centre,
-        c.titre as centre_nom
+        c.titre as centre_nom,
+        u.chef_equipe,
+        sup.pseudo as superviseur_pseudo,
+        sup.nom as superviseur_nom,
+        sup.prenom as superviseur_prenom
       FROM utilisateurs u
       LEFT JOIN fonctions f ON u.fonction = f.id
       LEFT JOIN centres c ON u.centre = c.id
+      LEFT JOIN utilisateurs sup ON u.chef_equipe = sup.id
       WHERE u.fonction = 3
       AND u.etat > 0
       AND (f.etat > 0 OR f.etat IS NULL)
@@ -1565,7 +1570,11 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
             prenom: agent.prenom,
             photo: agent.photo,
             centre: agent.centre,
-            centre_nom: agent.centre_nom
+            centre_nom: agent.centre_nom,
+            chef_equipe: agent.chef_equipe,
+            superviseur_pseudo: agent.superviseur_pseudo,
+            superviseur_nom: agent.superviseur_nom,
+            superviseur_prenom: agent.superviseur_prenom
           },
           stats: Object.values(statsByEtat),
           validated: validatedCount,
