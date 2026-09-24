@@ -180,6 +180,7 @@
 .suivi-table th.etat-col-header,
 .suivi-table th.pct-col-header,
 .suivi-table th.validated-col-header,
+.suivi-table th.conformite-col-header,
 .suivi-table th.total-col-header {
   border: 1px solid rgba(0, 0, 0, 0.08);
   font-size: 13.5px;
@@ -188,6 +189,7 @@
 .suivi-table td.etat-col-cell,
 .suivi-table td.pct-col-cell,
 .suivi-table td.validated-col-cell,
+.suivi-table td.conformite-col-cell,
 .suivi-table td.total-col-cell {
   text-align: center;
   font-weight: 700;
@@ -198,6 +200,7 @@
 
 .suivi-table .totals-row td.etat-col-cell,
 .suivi-table .totals-row td.validated-col-cell,
+.suivi-table .totals-row td.conformite-col-cell,
 .suivi-table .totals-row td.total-col-cell {
   font-size: 15px;
 }
@@ -343,9 +346,11 @@
 
   .suivi-table th.etat-col-header,
   .suivi-table th.validated-col-header,
+  .suivi-table th.conformite-col-header,
   .suivi-table th.total-col-header,
   .suivi-table td.etat-col-cell,
   .suivi-table td.validated-col-cell,
+  .suivi-table td.conformite-col-cell,
   .suivi-table td.total-col-cell {
     font-size: 12.5px;
   }
@@ -524,6 +529,7 @@
 
 .suivi-agents-qualif .suivi-table th.etat-col-header,
 .suivi-agents-qualif .suivi-table th.validated-col-header,
+.suivi-agents-qualif .suivi-table th.conformite-col-header,
 .suivi-agents-qualif .suivi-table th.total-col-header {
   font-weight: 700 !important;
   text-align: center !important;
@@ -532,6 +538,7 @@
 
 .suivi-agents-qualif .suivi-table td.etat-col-cell,
 .suivi-agents-qualif .suivi-table td.validated-col-cell,
+.suivi-agents-qualif .suivi-table td.conformite-col-cell,
 .suivi-agents-qualif .suivi-table td.total-col-cell {
   font-size: 15px !important;
 }

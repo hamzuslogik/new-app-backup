@@ -436,6 +436,7 @@ const SuiviAgentsQualif = () => {
         if (isHcEtat(etat)) columns.push({ key: `pct_hc`, label: '% HC' });
       });
       columns.push({ key: 'valide', label: 'Validé' });
+      columns.push({ key: 'conformite', label: '% conformité' });
       columns.push({ key: 'total', label: 'Total' });
       const statsData = stats.agents.map(agentStat => {
         const total = agentStat.total || 0;
@@ -452,7 +453,8 @@ const SuiviAgentsQualif = () => {
           if (isKoEtat(etat)) row.pct_ko = formatPct(count, total);
           if (isHcEtat(etat)) row.pct_hc = formatPct(count, total);
         });
-        row.valide = `${agentStat.validated || 0} (${getConformitePct(agentStat.validated || 0, agentStat, stats.etats)})`;
+        row.valide = agentStat.validated || 0;
+        row.conformite = getConformitePct(agentStat.validated || 0, agentStat, stats.etats);
         return row;
       });
       exportToCSV(statsData, columns, 'suivi-agents-qualif-stats');
@@ -490,6 +492,7 @@ const SuiviAgentsQualif = () => {
         if (isHcEtat(etat)) columns.push({ key: `pct_hc`, label: '% HC' });
       });
       columns.push({ key: 'valide', label: 'Validé' });
+      columns.push({ key: 'conformite', label: '% conformité' });
       columns.push({ key: 'total', label: 'Total' });
       const statsData = stats.agents.map(agentStat => {
         const total = agentStat.total || 0;
@@ -506,7 +509,8 @@ const SuiviAgentsQualif = () => {
           if (isKoEtat(etat)) row.pct_ko = formatPct(count, total);
           if (isHcEtat(etat)) row.pct_hc = formatPct(count, total);
         });
-        row.valide = `${agentStat.validated || 0} (${getConformitePct(agentStat.validated || 0, agentStat, stats.etats)})`;
+        row.valide = agentStat.validated || 0;
+        row.conformite = getConformitePct(agentStat.validated || 0, agentStat, stats.etats);
         return row;
       });
       exportToExcel(statsData, columns, 'suivi-agents-qualif-stats');
@@ -549,6 +553,7 @@ const SuiviAgentsQualif = () => {
         if (isHcEtat(etat)) columns.push({ key: `pct_hc`, label: '% HC' });
       });
       columns.push({ key: 'valide', label: 'Validé' });
+      columns.push({ key: 'conformite', label: '% conformité' });
       columns.push({ key: 'total', label: 'Total' });
       const statsData = stats.agents.map(agentStat => {
         const total = agentStat.total || 0;
@@ -565,7 +570,8 @@ const SuiviAgentsQualif = () => {
           if (isKoEtat(etat)) row.pct_ko = formatPct(count, total);
           if (isHcEtat(etat)) row.pct_hc = formatPct(count, total);
         });
-        row.valide = `${agentStat.validated || 0} (${getConformitePct(agentStat.validated || 0, agentStat, stats.etats)})`;
+        row.valide = agentStat.validated || 0;
+        row.conformite = getConformitePct(agentStat.validated || 0, agentStat, stats.etats);
         return row;
       });
       exportToPDF(statsData, columns, 'suivi-agents-qualif-stats', 'Suivi Agents Qualification - Statistiques');
@@ -994,6 +1000,17 @@ const SuiviAgentsQualif = () => {
                       Validé
                     </th>
                     <th
+                      className="conformite-col-header"
+                      style={{
+                        backgroundColor: VALIDATED_COLOR,
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        textAlign: 'center'
+                      }}
+                    >
+                      % conformité
+                    </th>
+                    <th
                       className="total-col-header"
                       style={{
                         backgroundColor: TOTAL_COLOR,
@@ -1071,9 +1088,17 @@ const SuiviAgentsQualif = () => {
                         }}
                       >
                         {agentStat.validated || 0}
-                        <span className="conformite-pct">
-                          {' '}({getConformitePct(agentStat.validated || 0, agentStat, stats.etats)})
-                        </span>
+                      </td>
+                      <td
+                        className="conformite-col-cell"
+                        style={{
+                          backgroundColor: (agentStat.validated || 0) > 0 ? `${VALIDATED_COLOR}88` : `${VALIDATED_COLOR}48`,
+                          color: (agentStat.validated || 0) > 0 ? '#222' : '#888',
+                          fontWeight: 700,
+                          textAlign: 'center'
+                        }}
+                      >
+                        {getConformitePct(agentStat.validated || 0, agentStat, stats.etats)}
                       </td>
                       <td
                         className="total-col-cell"
@@ -1134,15 +1159,22 @@ const SuiviAgentsQualif = () => {
                       }}
                     >
                       {stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0)}
-                      <span className="conformite-pct">
-                        {' '}({formatPct(
-                          stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0),
-                          stats.agents.reduce((sum, agentStat) => {
-                            const { ko, hc } = getKoHcCounts(agentStat, stats.etats);
-                            return sum + (agentStat.validated || 0) + ko + hc;
-                          }, 0)
-                        )})
-                      </span>
+                    </td>
+                    <td
+                      className="conformite-col-cell"
+                      style={{
+                        backgroundColor: `${VALIDATED_COLOR}88`,
+                        fontWeight: 700,
+                        textAlign: 'center'
+                      }}
+                    >
+                      {formatPct(
+                        stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0),
+                        stats.agents.reduce((sum, agentStat) => {
+                          const { ko, hc } = getKoHcCounts(agentStat, stats.etats);
+                          return sum + (agentStat.validated || 0) + ko + hc;
+                        }, 0)
+                      )}
                     </td>
                     <td
                       className="total-col-cell"
