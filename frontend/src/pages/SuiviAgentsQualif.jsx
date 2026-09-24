@@ -81,6 +81,23 @@ function getEtatCount(agentStat, etatId) {
   return agentStat?.stats?.find((s) => Number(s.id) === Number(etatId))?.count || 0;
 }
 
+function getKoHcCounts(agentStat, etats) {
+  let ko = 0;
+  let hc = 0;
+  (etats || []).forEach((etat) => {
+    const count = getEtatCount(agentStat, etat.id);
+    if (isKoEtat(etat)) ko += count;
+    if (isHcEtat(etat)) hc += count;
+  });
+  return { ko, hc };
+}
+
+/** Conformité = validé / (validé + KO + HC), hors états en écoute et autres. */
+function getConformitePct(validated, agentStat, etats) {
+  const { ko, hc } = getKoHcCounts(agentStat, etats);
+  return formatPct(validated, Number(validated || 0) + ko + hc);
+}
+
 const getEtatCellStyle = (etat, count) => {
   const bg = normalizeHex(etat?.color || '#9e9e9e');
   return {
@@ -435,7 +452,7 @@ const SuiviAgentsQualif = () => {
           if (isKoEtat(etat)) row.pct_ko = formatPct(count, total);
           if (isHcEtat(etat)) row.pct_hc = formatPct(count, total);
         });
-        row.valide = `${agentStat.validated || 0} (${formatPct(agentStat.validated || 0, total)})`;
+        row.valide = `${agentStat.validated || 0} (${getConformitePct(agentStat.validated || 0, agentStat, stats.etats)})`;
         return row;
       });
       exportToCSV(statsData, columns, 'suivi-agents-qualif-stats');
@@ -489,7 +506,7 @@ const SuiviAgentsQualif = () => {
           if (isKoEtat(etat)) row.pct_ko = formatPct(count, total);
           if (isHcEtat(etat)) row.pct_hc = formatPct(count, total);
         });
-        row.valide = `${agentStat.validated || 0} (${formatPct(agentStat.validated || 0, total)})`;
+        row.valide = `${agentStat.validated || 0} (${getConformitePct(agentStat.validated || 0, agentStat, stats.etats)})`;
         return row;
       });
       exportToExcel(statsData, columns, 'suivi-agents-qualif-stats');
@@ -548,7 +565,7 @@ const SuiviAgentsQualif = () => {
           if (isKoEtat(etat)) row.pct_ko = formatPct(count, total);
           if (isHcEtat(etat)) row.pct_hc = formatPct(count, total);
         });
-        row.valide = `${agentStat.validated || 0} (${formatPct(agentStat.validated || 0, total)})`;
+        row.valide = `${agentStat.validated || 0} (${getConformitePct(agentStat.validated || 0, agentStat, stats.etats)})`;
         return row;
       });
       exportToPDF(statsData, columns, 'suivi-agents-qualif-stats', 'Suivi Agents Qualification - Statistiques');
@@ -1055,7 +1072,7 @@ const SuiviAgentsQualif = () => {
                       >
                         {agentStat.validated || 0}
                         <span className="conformite-pct">
-                          {' '}({formatPct(agentStat.validated || 0, agentStat.total)})
+                          {' '}({getConformitePct(agentStat.validated || 0, agentStat, stats.etats)})
                         </span>
                       </td>
                       <td
@@ -1120,7 +1137,10 @@ const SuiviAgentsQualif = () => {
                       <span className="conformite-pct">
                         {' '}({formatPct(
                           stats.agents.reduce((sum, agentStat) => sum + (agentStat.validated || 0), 0),
-                          stats.agents.reduce((sum, agentStat) => sum + (agentStat.total || 0), 0)
+                          stats.agents.reduce((sum, agentStat) => {
+                            const { ko, hc } = getKoHcCounts(agentStat, stats.etats);
+                            return sum + (agentStat.validated || 0) + ko + hc;
+                          }, 0)
                         )})
                       </span>
                     </td>
