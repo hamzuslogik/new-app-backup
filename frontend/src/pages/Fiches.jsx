@@ -930,8 +930,7 @@ const Fiches = () => {
           aria-label={`Filtrer ${label}`}
         >
           <FaFilter />
-        </button>
-        {label} {getSortIcon(label)}
+        </button>{label} {getSortIcon(label)}
       </th>
     );
   };
