@@ -838,19 +838,31 @@ table.fiches-table thead,
   color: #f7a219 !important;
 }
 
+.fiches-table th.sortable-header .header-label-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .fiches-table th.sortable-header .header-filter-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 12px;
-  height: 12px;
-  margin-right: 1px;
-  padding: 0;
+  width: 11px !important;
+  height: 11px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
   border: none;
   background: transparent;
   cursor: pointer;
   vertical-align: middle;
   color: #999;
+  flex: 0 0 auto;
+  line-height: 1;
 }
 
 .fiches-table th.sortable-header .header-filter-btn svg {

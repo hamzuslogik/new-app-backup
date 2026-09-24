@@ -922,15 +922,19 @@ const Fiches = () => {
     const active = isHeaderFilterActive(headerFilters[key]);
     return (
       <th onClick={() => handleSort(label)} className="sortable-header">
-        <button
-          type="button"
-          className={`header-filter-btn${active ? ' is-active' : ''}${openHeaderFilter === key ? ' is-open' : ''}`}
-          onClick={(event) => toggleHeaderFilter(event, label)}
-          title={`Filtrer ${label}`}
-          aria-label={`Filtrer ${label}`}
-        >
-          <FaFilter />
-        </button>{label} {getSortIcon(label)}
+        <span className="header-label-wrap">
+          <button
+            type="button"
+            className={`header-filter-btn${active ? ' is-active' : ''}${openHeaderFilter === key ? ' is-open' : ''}`}
+            onClick={(event) => toggleHeaderFilter(event, label)}
+            title={`Filtrer ${label}`}
+            aria-label={`Filtrer ${label}`}
+          >
+            <FaFilter />
+          </button>
+          <span className="header-col-title">{label}</span>
+          {getSortIcon(label)}
+        </span>
       </th>
     );
   };
