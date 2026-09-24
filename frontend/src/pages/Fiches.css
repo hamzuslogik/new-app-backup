@@ -838,6 +838,98 @@ table.fiches-table thead,
   color: #f7a219 !important;
 }
 
+.fiches-table th.sortable-header .header-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  vertical-align: middle;
+  color: #999;
+}
+
+.fiches-table th.sortable-header .header-filter-btn svg {
+  font-size: 9px;
+  color: #999 !important;
+}
+
+.fiches-table th.sortable-header .header-filter-btn:hover svg,
+.fiches-table th.sortable-header .header-filter-btn.is-active svg,
+.fiches-table th.sortable-header .header-filter-btn.is-open svg {
+  color: #f7a219 !important;
+}
+
+.header-filter-popover {
+  position: fixed;
+  z-index: 1400;
+  min-width: 220px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+}
+
+.header-filter-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #333;
+}
+
+.header-filter-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+}
+
+.header-filter-select,
+.header-filter-input {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 5px 7px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #333;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.header-filter-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.header-filter-clear {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #f7f7f7;
+  color: #333;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.header-filter-clear:hover {
+  background: #eee;
+}
+
+.fiches-table td.header-filter-empty {
+  text-align: center;
+  padding: 16px 8px;
+  color: #777;
+  font-weight: 500;
+  white-space: normal;
+}
+
 .fiches-table td {
   padding: 5px 6.4px;
   border-bottom: 1px solid #eee;
@@ -1733,6 +1825,15 @@ table.fiches-table thead,
   }
 
   .fiches-table th.sortable-header .sort-icon.sort-active {
+    color: #f7a219 !important;
+  }
+
+  .fiches-table th.sortable-header .header-filter-btn svg {
+    color: #999 !important;
+  }
+
+  .fiches-table th.sortable-header .header-filter-btn.is-active svg,
+  .fiches-table th.sortable-header .header-filter-btn.is-open svg {
     color: #f7a219 !important;
   }
 

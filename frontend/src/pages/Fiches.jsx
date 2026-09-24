@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaPlus, FaEdit, FaArchive, FaBoxOpen, FaTimes, FaSearch, FaChevronDown, FaChevronUp, FaCheck, FaFileAlt, FaBan, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaArchive, FaBoxOpen, FaTimes, FaSearch, FaChevronDown, FaChevronUp, FaCheck, FaFileAlt, FaBan, FaSort, FaSortUp, FaSortDown, FaFilter } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
@@ -17,6 +17,56 @@ import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import KoMotifModal from '../components/KoMotifModal';
 import './Fiches.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+
+const HEADER_FILTER_OPS = [
+  { value: 'eq', label: 'Égal' },
+  { value: 'neq', label: 'Différent' },
+  { value: 'starts', label: 'Commence par' },
+  { value: 'nstarts', label: 'Ne commence pas par' },
+  { value: 'ends', label: 'Se termine par' },
+  { value: 'nends', label: 'Ne se termine pas par' },
+  { value: 'contains', label: 'Contient' },
+  { value: 'ncontains', label: 'Ne contient pas' },
+  { value: 'empty', label: 'Est vide' },
+  { value: 'nempty', label: "N'est pas vide" },
+];
+
+const HEADER_FILTER_OPS_WITHOUT_VALUE = new Set(['empty', 'nempty']);
+
+const isHeaderFilterActive = (filter) => {
+  if (!filter?.op) return false;
+  if (HEADER_FILTER_OPS_WITHOUT_VALUE.has(filter.op)) return true;
+  return String(filter.value || '').trim() !== '';
+};
+
+const matchesHeaderFilter = (text, op, value) => {
+  const t = String(text ?? '').toLowerCase().trim();
+  const v = String(value ?? '').toLowerCase().trim();
+  switch (op) {
+    case 'eq':
+      return t === v;
+    case 'neq':
+      return t !== v;
+    case 'starts':
+      return t.startsWith(v);
+    case 'nstarts':
+      return !t.startsWith(v);
+    case 'ends':
+      return t.endsWith(v);
+    case 'nends':
+      return !t.endsWith(v);
+    case 'contains':
+      return t.includes(v);
+    case 'ncontains':
+      return !t.includes(v);
+    case 'empty':
+      return t === '';
+    case 'nempty':
+      return t !== '';
+    default:
+      return true;
+  }
+};
 
 const Fiches = () => {
   useForceDesktopViewport('fiches-page');
@@ -68,6 +118,10 @@ const Fiches = () => {
     key: null,
     direction: 'asc',
   });
+  const [headerFilters, setHeaderFilters] = useState({});
+  const [openHeaderFilter, setOpenHeaderFilter] = useState(null);
+  const [headerFilterPos, setHeaderFilterPos] = useState({ top: 0, left: 0 });
+  const headerFilterRef = useRef(null);
 
   const normalizeText = (v) => (typeof v === 'string' ? v.trim() : v);
   const getLocalTodayStr = () => {
@@ -339,6 +393,33 @@ const Fiches = () => {
       setIsSearching(false);
     }
   }, [isFetching, isSearching]);
+
+  useEffect(() => {
+    if (!openHeaderFilter) return undefined;
+    const onPointerDown = (event) => {
+      if (
+        headerFilterRef.current?.contains(event.target) ||
+        event.target.closest('.header-filter-btn')
+      ) {
+        return;
+      }
+      setOpenHeaderFilter(null);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpenHeaderFilter(null);
+    };
+    const onViewportChange = () => setOpenHeaderFilter(null);
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('scroll', onViewportChange, true);
+    window.addEventListener('resize', onViewportChange);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('scroll', onViewportChange, true);
+      window.removeEventListener('resize', onViewportChange);
+    };
+  }, [openHeaderFilter]);
 
   // Mutation pour créer une fiche
   const createMutation = useMutation(
@@ -770,7 +851,92 @@ const Fiches = () => {
     return String(value).toLowerCase();
   };
 
-  const sortedFiches = [...fiches].sort((a, b) => {
+  const getFilterText = (fiche, key) => {
+    if (key === 'date_insert_time') return formatDate(fiche.date_insert_time);
+    if (key === 'valider') return fiche.valider > 0 ? 'validé' : '';
+    if (key === 'id_agent') return getUserName(fiche.id_agent) || fiche.agent_pseudo || '';
+    if (key === 'id_centre') return getCentreName(fiche.id_centre);
+    if (key === 'id_etat_final') {
+      return isAgentQualif
+        ? getEtatDisplayForAgentQualif(fiche.id_etat_final)
+        : getFicheEtatName(fiche);
+    }
+    if (key === 'produit') return getProduitName(fiche.produit);
+    return String(fiche[key] ?? '');
+  };
+
+  const hasHeaderFilters = Object.values(headerFilters).some(isHeaderFilterActive);
+
+  const headerFilteredFiches = !hasHeaderFilters
+    ? fiches
+    : fiches.filter((fiche) =>
+        Object.entries(headerFilters).every(([key, filter]) => {
+          if (!isHeaderFilterActive(filter)) return true;
+          return matchesHeaderFilter(getFilterText(fiche, key), filter.op, filter.value);
+        })
+      );
+
+  const toggleHeaderFilter = (event, columnName) => {
+    event.stopPropagation();
+    const key = columnKeys[columnName];
+    if (!key) return;
+    if (openHeaderFilter === key) {
+      setOpenHeaderFilter(null);
+      return;
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    const popoverWidth = 220;
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 8) {
+      left = window.innerWidth - popoverWidth - 8;
+    }
+    if (left < 8) left = 8;
+    setHeaderFilterPos({ top: rect.bottom + 4, left });
+    setOpenHeaderFilter(key);
+  };
+
+  const updateOpenHeaderFilter = (patch) => {
+    if (!openHeaderFilter) return;
+    setHeaderFilters((prev) => ({
+      ...prev,
+      [openHeaderFilter]: {
+        op: 'eq',
+        value: '',
+        ...prev[openHeaderFilter],
+        ...patch,
+      },
+    }));
+  };
+
+  const clearOpenHeaderFilter = () => {
+    if (!openHeaderFilter) return;
+    setHeaderFilters((prev) => {
+      const next = { ...prev };
+      delete next[openHeaderFilter];
+      return next;
+    });
+  };
+
+  const renderSortableHeader = (label) => {
+    const key = columnKeys[label];
+    const active = isHeaderFilterActive(headerFilters[key]);
+    return (
+      <th onClick={() => handleSort(label)} className="sortable-header">
+        <button
+          type="button"
+          className={`header-filter-btn${active ? ' is-active' : ''}${openHeaderFilter === key ? ' is-open' : ''}`}
+          onClick={(event) => toggleHeaderFilter(event, label)}
+          title={`Filtrer ${label}`}
+          aria-label={`Filtrer ${label}`}
+        >
+          <FaFilter />
+        </button>
+        {label} {getSortIcon(label)}
+      </th>
+    );
+  };
+
+  const sortedFiches = [...headerFilteredFiches].sort((a, b) => {
     if (!sortConfig.key) return 0;
 
     const aValue = getSortValue(a, sortConfig.key);
@@ -1327,9 +1493,11 @@ const Fiches = () => {
                     : 'Fiches qualif créées aujourd\'hui'}
             </h2>
             <p className="results-count">
-              {quickSearch.trim() !== '' 
-                ? <>Affichage: <strong>{fiches.length}</strong> fiches</>
-                : <>Total: <strong>{pagination.total}</strong> fiches</>}
+              {hasHeaderFilters
+                ? <>Affichage: <strong>{sortedFiches.length}</strong> / {fiches.length} fiches</>
+                : quickSearch.trim() !== ''
+                  ? <>Affichage: <strong>{fiches.length}</strong> fiches</>
+                  : <>Total: <strong>{pagination.total}</strong> fiches</>}
             </p>
           </div>
           {isFetchingList && (
@@ -1355,40 +1523,27 @@ const Fiches = () => {
               <table className="fiches-table">
                 <thead>
                   <tr>
-                    <th onClick={() => handleSort('Nom')} className="sortable-header">
-                      Nom {getSortIcon('Nom')}
-                    </th>
-                    <th onClick={() => handleSort('Prénom')} className="sortable-header">
-                      Prénom {getSortIcon('Prénom')}
-                    </th>
-                    <th onClick={() => handleSort('Téléphone')} className="sortable-header">
-                      Téléphone {getSortIcon('Téléphone')}
-                    </th>
-                    <th onClick={() => handleSort('CP')} className="sortable-header">
-                      CP {getSortIcon('CP')}
-                    </th>
-                    <th onClick={() => handleSort('Date Insertion')} className="sortable-header">
-                      Date Insertion {getSortIcon('Date Insertion')}
-                    </th>
-                    <th onClick={() => handleSort('Agent')} className="sortable-header">
-                      Agent {getSortIcon('Agent')}
-                    </th>
-                    <th onClick={() => handleSort('État Final')} className="sortable-header">
-                      État Final {getSortIcon('État Final')}
-                    </th>
-                    <th onClick={() => handleSort('Centre')} className="sortable-header">
-                      Centre {getSortIcon('Centre')}
-                    </th>
-                    <th onClick={() => handleSort('Produit')} className="sortable-header">
-                      Produit {getSortIcon('Produit')}
-                    </th>
-                    <th onClick={() => handleSort('Validé')} className="sortable-header">
-                      Validé {getSortIcon('Validé')}
-                    </th>
+                    {renderSortableHeader('Nom')}
+                    {renderSortableHeader('Prénom')}
+                    {renderSortableHeader('Téléphone')}
+                    {renderSortableHeader('CP')}
+                    {renderSortableHeader('Date Insertion')}
+                    {renderSortableHeader('Agent')}
+                    {renderSortableHeader('État Final')}
+                    {renderSortableHeader('Centre')}
+                    {renderSortableHeader('Produit')}
+                    {renderSortableHeader('Validé')}
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
+                  {sortedFiches.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className="header-filter-empty">
+                        Aucune fiche pour ces filtres d&apos;en-tête
+                      </td>
+                    </tr>
+                  ) : null}
                   {sortedFiches.map((fiche) => {
                     const etatColor = getFicheEtatColor(fiche);
                     const produitColor = getProduitColor(fiche.produit);
@@ -1611,6 +1766,57 @@ const Fiches = () => {
         }}
         onClose={() => setKoModal({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' })}
       />
+      {openHeaderFilter && (
+        <div
+          ref={headerFilterRef}
+          className="header-filter-popover"
+          style={{ top: headerFilterPos.top, left: headerFilterPos.left }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <p className="header-filter-title">
+            {Object.keys(columnKeys).find((label) => columnKeys[label] === openHeaderFilter) || 'Filtrer'}
+          </p>
+          <label className="header-filter-label" htmlFor="header-filter-op">
+            Condition
+          </label>
+          <select
+            id="header-filter-op"
+            className="header-filter-select"
+            value={headerFilters[openHeaderFilter]?.op || 'eq'}
+            onChange={(event) => updateOpenHeaderFilter({
+              op: event.target.value,
+              value: HEADER_FILTER_OPS_WITHOUT_VALUE.has(event.target.value)
+                ? ''
+                : (headerFilters[openHeaderFilter]?.value || ''),
+            })}
+          >
+            {HEADER_FILTER_OPS.map((op) => (
+              <option key={op.value} value={op.value}>{op.label}</option>
+            ))}
+          </select>
+          {!HEADER_FILTER_OPS_WITHOUT_VALUE.has(headerFilters[openHeaderFilter]?.op || 'eq') && (
+            <>
+              <label className="header-filter-label" htmlFor="header-filter-value">
+                Valeur
+              </label>
+              <input
+                id="header-filter-value"
+                type="text"
+                className="header-filter-input"
+                value={headerFilters[openHeaderFilter]?.value || ''}
+                placeholder="Saisir une valeur…"
+                autoFocus
+                onChange={(event) => updateOpenHeaderFilter({ value: event.target.value })}
+              />
+            </>
+          )}
+          <div className="header-filter-actions">
+            <button type="button" className="header-filter-clear" onClick={clearOpenHeaderFilter}>
+              Effacer
+            </button>
+          </div>
+        </div>
+      )}
       <ScrollToTopButton />
     </div>
   );
