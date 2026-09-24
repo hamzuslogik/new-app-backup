@@ -815,6 +815,29 @@ table.fiches-table thead,
   color: #333333 !important;
 }
 
+.fiches-table th.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.fiches-table th.sortable-header:hover {
+  background-color: #f5f5f5;
+}
+
+.fiches-table th.sortable-header .sort-icon {
+  display: inline-block;
+  font-size: 10px;
+  color: #999 !important;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.fiches-table th.sortable-header .sort-icon.sort-active {
+  color: #f7a219 !important;
+}
+
 .fiches-table td {
   padding: 5px 6.4px;
   border-bottom: 1px solid #eee;
@@ -1703,6 +1726,14 @@ table.fiches-table thead,
     color: #333333 !important;
     visibility: visible !important;
     opacity: 1 !important;
+  }
+
+  .fiches-table th.sortable-header .sort-icon {
+    color: #999 !important;
+  }
+
+  .fiches-table th.sortable-header .sort-icon.sort-active {
+    color: #f7a219 !important;
   }
 
   .fiches-table tbody {

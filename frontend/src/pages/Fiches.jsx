@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaPlus, FaEdit, FaArchive, FaBoxOpen, FaTimes, FaSearch, FaChevronDown, FaChevronUp, FaCheck, FaFileAlt, FaBan } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaArchive, FaBoxOpen, FaTimes, FaSearch, FaChevronDown, FaChevronUp, FaCheck, FaFileAlt, FaBan, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
@@ -64,6 +64,10 @@ const Fiches = () => {
   const [filters, setFilters] = useState(getInitialFilters);
   // Filtres appliqués à la requête (mis à jour uniquement au clic sur Recherche, pagination ou reset)
   const [appliedFilters, setAppliedFilters] = useState(getInitialFilters);
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: 'asc',
+  });
 
   const normalizeText = (v) => (typeof v === 'string' ? v.trim() : v);
   const getLocalTodayStr = () => {
@@ -158,7 +162,8 @@ const Fiches = () => {
         ...src, 
         limit: limitParam,
         page: pageParam,
-        fiche_search: 1
+        fiche_search: 1,
+        ...(sortConfig.key ? { sort_by: sortConfig.key, sort_dir: sortConfig.direction } : {})
       };
 
       // Normaliser la recherche par critère (enlever espaces avant/après)
@@ -181,7 +186,7 @@ const Fiches = () => {
       
       // Nettoyer les paramètres vides (mais garder page, limit, fiche_search, critere, critere_champ)
       Object.keys(searchParams).forEach(key => {
-        if (key === 'page' || key === 'limit' || key === 'fiche_search') {
+        if (key === 'page' || key === 'limit' || key === 'fiche_search' || key === 'sort_by' || key === 'sort_dir') {
           return; // Ne pas supprimer ces paramètres
         }
         if (key === 'fiche_source' && !isAgentQualif && searchParams.fiche_source) {
@@ -241,7 +246,8 @@ const Fiches = () => {
       date_debut: dateStr,
       date_fin: dateStr,
       time_debut: timeStart,
-      time_fin: timeEnd
+      time_fin: timeEnd,
+      ...(sortConfig.key ? { sort_by: sortConfig.key, sort_dir: sortConfig.direction } : {})
     };
 
     if (src.include_archive === true || src.include_archive === 1 || src.include_archive === '1') {
@@ -291,7 +297,7 @@ const Fiches = () => {
     isBackoffice;
 
   const { data, isLoading, isFetching, error, refetch } = useQuery(
-    ['fiches', appliedFilters, debouncedQuickSearch],
+    ['fiches', appliedFilters, debouncedQuickSearch, sortConfig],
     async () => {
       const params = getQueryParams();
       const response = await api.get('/fiches', { params });
@@ -697,6 +703,89 @@ const Fiches = () => {
           return false;
         });
       });
+
+  const columnKeys = {
+    'Nom': 'nom',
+    'Prénom': 'prenom',
+    'Téléphone': 'tel',
+    'CP': 'cp',
+    'Date Insertion': 'date_insert_time',
+    'Agent': 'id_agent',
+    'État Final': 'id_etat_final',
+    'Centre': 'id_centre',
+    'Produit': 'produit',
+    'Validé': 'valider',
+  };
+
+  const handleSort = (columnName) => {
+    const key = columnKeys[columnName];
+    if (!key) return;
+
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+    setFilters((prev) => ({ ...prev, page: 1 }));
+    setAppliedFilters((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const getSortIcon = (columnName) => {
+    const key = columnKeys[columnName];
+    if (!key || sortConfig.key !== key) {
+      return <FaSort className="sort-icon" />;
+    }
+    return sortConfig.direction === 'asc'
+      ? <FaSortUp className="sort-icon sort-active" />
+      : <FaSortDown className="sort-icon sort-active" />;
+  };
+
+  const getSortValue = (fiche, key) => {
+    if (key === 'id_agent') {
+      return (getUserName(fiche.id_agent) || fiche.agent_pseudo || '').toLowerCase();
+    }
+    if (key === 'id_centre') {
+      return getCentreName(fiche.id_centre).toLowerCase();
+    }
+    if (key === 'id_etat_final') {
+      const etatLabel = isAgentQualif
+        ? getEtatDisplayForAgentQualif(fiche.id_etat_final)
+        : getFicheEtatName(fiche);
+      return (etatLabel || '').toLowerCase();
+    }
+    if (key === 'produit') {
+      return getProduitName(fiche.produit).toLowerCase();
+    }
+    if (key === 'valider') {
+      return Number(fiche.valider) || 0;
+    }
+
+    let value = fiche[key];
+    if (value == null) value = '';
+
+    if (key.includes('date') || key.includes('time')) {
+      return new Date(value || 0).getTime();
+    }
+
+    return String(value).toLowerCase();
+  };
+
+  const sortedFiches = [...fiches].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+
+    const aValue = getSortValue(a, sortConfig.key);
+    const bValue = getSortValue(b, sortConfig.key);
+
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+
+    const cmp = String(aValue ?? '').localeCompare(String(bValue ?? ''), 'fr', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+    return sortConfig.direction === 'asc' ? cmp : -cmp;
+  });
 
   return (
     <div className="fiches-page">
@@ -1266,21 +1355,41 @@ const Fiches = () => {
               <table className="fiches-table">
                 <thead>
                   <tr>
-                    <th>Nom</th>
-                    <th>Prénom</th>
-                    <th>Téléphone</th>
-                    <th>CP</th>
-                    <th>Date Insertion</th>
-                    <th>Agent</th>
-                    <th>État Final</th>
-                    <th>Centre</th>
-                    <th>Produit</th>
-                    <th>Validé</th>
+                    <th onClick={() => handleSort('Nom')} className="sortable-header">
+                      Nom {getSortIcon('Nom')}
+                    </th>
+                    <th onClick={() => handleSort('Prénom')} className="sortable-header">
+                      Prénom {getSortIcon('Prénom')}
+                    </th>
+                    <th onClick={() => handleSort('Téléphone')} className="sortable-header">
+                      Téléphone {getSortIcon('Téléphone')}
+                    </th>
+                    <th onClick={() => handleSort('CP')} className="sortable-header">
+                      CP {getSortIcon('CP')}
+                    </th>
+                    <th onClick={() => handleSort('Date Insertion')} className="sortable-header">
+                      Date Insertion {getSortIcon('Date Insertion')}
+                    </th>
+                    <th onClick={() => handleSort('Agent')} className="sortable-header">
+                      Agent {getSortIcon('Agent')}
+                    </th>
+                    <th onClick={() => handleSort('État Final')} className="sortable-header">
+                      État Final {getSortIcon('État Final')}
+                    </th>
+                    <th onClick={() => handleSort('Centre')} className="sortable-header">
+                      Centre {getSortIcon('Centre')}
+                    </th>
+                    <th onClick={() => handleSort('Produit')} className="sortable-header">
+                      Produit {getSortIcon('Produit')}
+                    </th>
+                    <th onClick={() => handleSort('Validé')} className="sortable-header">
+                      Validé {getSortIcon('Validé')}
+                    </th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {fiches.map((fiche) => {
+                  {sortedFiches.map((fiche) => {
                     const etatColor = getFicheEtatColor(fiche);
                     const produitColor = getProduitColor(fiche.produit);
                     const isArchived = fiche.archive === 1 || fiche.archive === true;

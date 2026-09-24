@@ -1835,6 +1835,7 @@ router.get('/', authenticate, async (req, res) => {
       id_confirmateur: 'u1.pseudo',
       id_commercial: 'com_sort.pseudo',
       id_centre: 'centre_sort.titre',
+      id_agent: 'agent_sort.pseudo',
       produit: 'fiche.produit',
       valider: 'fiche.valider',
     };
@@ -1942,6 +1943,7 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN utilisateurs u2 ON fiche.id_confirmateur_2 = u2.id
        LEFT JOIN utilisateurs u3 ON fiche.id_confirmateur_3 = u3.id
        LEFT JOIN utilisateurs com_sort ON fiche.id_commercial = com_sort.id
+       LEFT JOIN utilisateurs agent_sort ON fiche.id_agent = agent_sort.id
        LEFT JOIN centres centre_sort ON fiche.id_centre = centre_sort.id
        ${histoJoinForFichesHisto}
        ${qualifJoin}
