@@ -170,6 +170,95 @@ async function getProductionHours() {
   }
 }
 
+function getDayKeyFromYmd(ymd) {
+  const text = String(ymd || '').slice(0, 10);
+  const m = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  // Midi local pour éviter les décalages DST
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+  return ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][d.getDay()];
+}
+
+function getSlotsMinutes(slots) {
+  if (!Array.isArray(slots) || slots.length === 0) return 0;
+  return slots.reduce((sum, slot) => {
+    const start = normalizeTimeHm(slot?.start);
+    const end = normalizeTimeHm(slot?.end);
+    if (!start || !end) return sum;
+    const diff = timeToMinutes(end) - timeToMinutes(start);
+    return sum + (diff > 0 ? diff : 0);
+  }, 0);
+}
+
+/**
+ * Minutes travaillées dans les créneaux jusqu'à une heure de départ (HH:MM[:SS]).
+ */
+function getWorkedMinutesUntil(slots, heureDepartHm) {
+  const cutoff = normalizeTimeHm(heureDepartHm);
+  if (!cutoff || !Array.isArray(slots)) return 0;
+  const cutoffMin = timeToMinutes(cutoff);
+  let worked = 0;
+  for (const slot of slots) {
+    const start = normalizeTimeHm(slot?.start);
+    const end = normalizeTimeHm(slot?.end);
+    if (!start || !end) continue;
+    const startMin = timeToMinutes(start);
+    const endMin = timeToMinutes(end);
+    if (endMin <= startMin) continue;
+    if (cutoffMin <= startMin) continue;
+    if (cutoffMin >= endMin) {
+      worked += endMin - startMin;
+    } else {
+      worked += cutoffMin - startMin;
+    }
+  }
+  return worked;
+}
+
+/**
+ * Coefficient de présence pour un jour donné.
+ * absence => 0
+ * départ à 11h avec production 09–12 + 13–18 (8h) => 2/8 = 0.25
+ * présent toute la journée (pas de signalement) => non stocké ici (1 implicite)
+ *
+ * @returns {{ coefficient: number, heures_travaillees: number, heures_prevues: number, day_key: string|null }}
+ */
+function computePresenceCoefficient({ type, heureDepart, dateJour, productionHours }) {
+  const dayKey = getDayKeyFromYmd(dateJour);
+  const slots = dayKey && productionHours ? productionHours[dayKey] || [] : [];
+  const plannedMinutes = getSlotsMinutes(slots);
+  const heuresPrevues = Math.round((plannedMinutes / 60) * 100) / 100;
+
+  if (type === 'absence') {
+    return {
+      coefficient: 0,
+      heures_travaillees: 0,
+      heures_prevues: heuresPrevues,
+      day_key: dayKey,
+    };
+  }
+
+  if (plannedMinutes <= 0) {
+    return {
+      coefficient: 0,
+      heures_travaillees: 0,
+      heures_prevues: 0,
+      day_key: dayKey,
+    };
+  }
+
+  const workedMinutes = getWorkedMinutesUntil(slots, heureDepart);
+  const heuresTravaillees = Math.round((workedMinutes / 60) * 100) / 100;
+  const coefficient = Math.round((workedMinutes / plannedMinutes) * 10000) / 10000;
+
+  return {
+    coefficient: Math.max(0, Math.min(1, coefficient)),
+    heures_travaillees: heuresTravaillees,
+    heures_prevues: heuresPrevues,
+    day_key: dayKey,
+  };
+}
+
 function invalidateSecuritySettingsCache() {
   securityCache = { expiresAt: 0, data: null };
 }
@@ -297,4 +386,10 @@ module.exports = {
   defaultProductionHours,
   normalizeProductionHours,
   getProductionHours,
+  computePresenceCoefficient,
+  getDayKeyFromYmd,
+  getSlotsMinutes,
+  getWorkedMinutesUntil,
+  timeToMinutes,
+  normalizeTimeHm,
 };

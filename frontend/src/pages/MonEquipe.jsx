@@ -143,12 +143,26 @@ const MonEquipe = () => {
     if (!presence) {
       return <span className="mon-equipe-badge mon-equipe-badge--ok">Présent</span>;
     }
+    const coef = Number(presence.coefficient_presence);
+    const coefLabel = Number.isFinite(coef) ? coef.toFixed(2) : null;
     if (presence.type === 'absence') {
-      return <span className="mon-equipe-badge mon-equipe-badge--absent">Absent</span>;
+      return (
+        <span className="mon-equipe-badge mon-equipe-badge--absent" title="Coefficient 0">
+          Absent{coefLabel != null ? ` (${coefLabel})` : ''}
+        </span>
+      );
     }
     return (
-      <span className="mon-equipe-badge mon-equipe-badge--depart">
+      <span
+        className="mon-equipe-badge mon-equipe-badge--depart"
+        title={
+          Number.isFinite(Number(presence.heures_travaillees))
+            ? `${presence.heures_travaillees}h / ${presence.heures_prevues}h`
+            : undefined
+        }
+      >
         Départ {formatHeureDepart(presence.heure_depart)}
+        {coefLabel != null ? ` (${coefLabel})` : ''}
       </span>
     );
   };

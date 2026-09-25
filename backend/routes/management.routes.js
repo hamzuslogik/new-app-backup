@@ -18,6 +18,7 @@ const {
   invalidateBruteForceWhitelistCache,
   getProductionHours,
   normalizeProductionHours,
+  computePresenceCoefficient,
 } = require('../utils/globalSettingsHelper');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -49,6 +50,9 @@ async function ensurePresenceAgentsQualifTable() {
       date_jour DATE NOT NULL,
       type ENUM('absence', 'depart') NOT NULL,
       heure_depart TIME NULL,
+      coefficient_presence DECIMAL(6,4) NOT NULL DEFAULT 0,
+      heures_travaillees DECIMAL(6,2) NOT NULL DEFAULT 0,
+      heures_prevues DECIMAL(6,2) NOT NULL DEFAULT 0,
       created_at DATETIME NOT NULL,
       updated_at DATETIME NOT NULL,
       UNIQUE KEY uniq_agent_jour (id_agent, date_jour),
@@ -56,6 +60,19 @@ async function ensurePresenceAgentsQualifTable() {
       KEY idx_superviseur (id_superviseur)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  // Migrations colonnes si table déjà créée sans coefficient
+  const alterCols = [
+    ['coefficient_presence', 'DECIMAL(6,4) NOT NULL DEFAULT 0'],
+    ['heures_travaillees', 'DECIMAL(6,2) NOT NULL DEFAULT 0'],
+    ['heures_prevues', 'DECIMAL(6,2) NOT NULL DEFAULT 0'],
+  ];
+  for (const [col, def] of alterCols) {
+    try {
+      await query(`ALTER TABLE presence_agents_qualif ADD COLUMN ${col} ${def}`);
+    } catch (e) {
+      // colonne déjà présente
+    }
+  }
 }
 
 async function getSupervisedQualifAgent(superviseurId, agentId) {
@@ -73,7 +90,7 @@ async function attachPresenceAujourdhui(rows) {
   const today = getLocalYmd();
   const placeholders = rows.map(() => '?').join(',');
   const presenceRows = await query(
-    `SELECT id, id_agent, type, heure_depart
+    `SELECT id, id_agent, type, heure_depart, coefficient_presence, heures_travaillees, heures_prevues
      FROM presence_agents_qualif
      WHERE date_jour = ? AND id_agent IN (${placeholders})`,
     [today, ...rows.map((r) => r.id)]
@@ -88,6 +105,9 @@ async function attachPresenceAujourdhui(rows) {
           id: presence.id,
           type: presence.type,
           heure_depart: presence.heure_depart,
+          coefficient_presence: Number(presence.coefficient_presence) || 0,
+          heures_travaillees: Number(presence.heures_travaillees) || 0,
+          heures_prevues: Number(presence.heures_prevues) || 0,
         }
       : null;
   });
@@ -859,20 +879,43 @@ router.post('/presence-agents-qualif', authenticate, async (req, res) => {
 
     await ensurePresenceAgentsQualifTable();
     const today = getLocalYmd();
+    const productionHours = await getProductionHours();
+    const presenceCalc = computePresenceCoefficient({
+      type,
+      heureDepart,
+      dateJour: today,
+      productionHours,
+    });
+
     await query(
       `INSERT INTO presence_agents_qualif
-        (id_agent, id_superviseur, date_jour, type, heure_depart, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+        (id_agent, id_superviseur, date_jour, type, heure_depart,
+         coefficient_presence, heures_travaillees, heures_prevues,
+         created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
        ON DUPLICATE KEY UPDATE
          type = VALUES(type),
          heure_depart = VALUES(heure_depart),
          id_superviseur = VALUES(id_superviseur),
+         coefficient_presence = VALUES(coefficient_presence),
+         heures_travaillees = VALUES(heures_travaillees),
+         heures_prevues = VALUES(heures_prevues),
          updated_at = NOW()`,
-      [agentId, req.user.id, today, type, heureDepart]
+      [
+        agentId,
+        req.user.id,
+        today,
+        type,
+        heureDepart,
+        presenceCalc.coefficient,
+        presenceCalc.heures_travaillees,
+        presenceCalc.heures_prevues,
+      ]
     );
 
     const saved = await queryOne(
-      `SELECT id, id_agent, type, heure_depart, date_jour
+      `SELECT id, id_agent, type, heure_depart, date_jour,
+              coefficient_presence, heures_travaillees, heures_prevues
        FROM presence_agents_qualif
        WHERE id_agent = ? AND date_jour = ?`,
       [agentId, today]
@@ -880,7 +923,10 @@ router.post('/presence-agents-qualif', authenticate, async (req, res) => {
 
     res.json({
       success: true,
-      message: type === 'absence' ? 'Absence signalée' : 'Départ signalé',
+      message:
+        type === 'absence'
+          ? `Absence signalée (coefficient ${presenceCalc.coefficient})`
+          : `Départ signalé (coefficient ${presenceCalc.coefficient})`,
       data: saved,
     });
   } catch (error) {
