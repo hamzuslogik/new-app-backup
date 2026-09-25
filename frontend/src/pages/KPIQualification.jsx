@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaTrophy, FaUsers, FaChartLine, FaCalendarDay, FaCalendarWeek, FaCalendarAlt, FaFileAlt, FaBan, FaUserTimes, FaExclamationTriangle, FaCommentDots } from 'react-icons/fa';
+import { FaTrophy, FaUsers, FaChartLine, FaCalendarDay, FaCalendarWeek, FaCalendarAlt, FaFileAlt, FaBan, FaUserTimes, FaExclamationTriangle, FaCommentDots, FaBalanceScale } from 'react-icons/fa';
 import './KPIQualification.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -26,6 +26,23 @@ function getTauxConversionDisplay(tauxConversion) {
   return { kind: 'ok', taux, fichesValidees, fichesProduites };
 }
 
+function formatRatioValue(ratio) {
+  if (ratio == null || Number.isNaN(Number(ratio))) return 'N/C';
+  return Number(ratio).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function formatEffectif(effectif) {
+  return Number(effectif || 0).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function teamLabel(superviseur) {
+  if (!superviseur) return 'Équipe';
+  if (superviseur.nom || superviseur.prenom) {
+    return `${superviseur.nom || ''} ${superviseur.prenom || ''}`.trim();
+  }
+  return superviseur.pseudo || `RE #${superviseur.id}`;
+}
+
 function KpiCounterCard({ icon: Icon, label, value, accentClass }) {
   return (
     <div className={`kpi-counter-card ${accentClass || ''}`}>
@@ -35,6 +52,21 @@ function KpiCounterCard({ icon: Icon, label, value, accentClass }) {
       </div>
       <div className="kpi-counter-single">
         <span className="kpi-counter-value">{(value ?? 0).toLocaleString('fr-FR')}</span>
+      </div>
+    </div>
+  );
+}
+
+function RatioBlock({ title, metrics, highlight }) {
+  if (!metrics) return null;
+  return (
+    <div className={`ratio-summary-block ${highlight || ''}`}>
+      <div className="ratio-summary-label">{title}</div>
+      <div className="ratio-summary-value">{formatRatioValue(metrics.ratio)}</div>
+      <div className="ratio-summary-detail">
+        <span>{(metrics.production ?? 0).toLocaleString('fr-FR')} fiches</span>
+        <span className="ratio-summary-sep">/</span>
+        <span>{formatEffectif(metrics.effectif)} présent</span>
       </div>
     </div>
   );
@@ -125,6 +157,7 @@ const KPIQualification = () => {
 
   const currentData = kpiData?.[selectedPeriod];
   const details = currentData?.details;
+  const ratioProduction = currentData?.ratio_production;
   const detailCounters = [
     { key: 'fiches_produites', label: 'Fiches produites', icon: FaFileAlt, accentClass: 'counter-produites' },
     { key: 'nb_ko', label: 'KO', icon: FaBan, accentClass: 'counter-ko' },
@@ -420,6 +453,69 @@ const KPIQualification = () => {
                 })()}
               </div>
             </div>
+
+            {/* Ratio production / effectif */}
+            {ratioProduction && (
+              <div className="kpi-card ratio-production">
+                <div className="kpi-card-header">
+                  <FaBalanceScale className="kpi-icon" />
+                  <h2>Ratio production / effectif</h2>
+                  <span className="period-label">{currentData.period}</span>
+                </div>
+                <div className="kpi-card-body">
+                  <p className="ratio-formula-hint">
+                    Production = fiches insérées (hors KO / HC) · Effectif = somme des coefficients de présence
+                  </p>
+
+                  <div className="ratio-plateau-row">
+                    <RatioBlock
+                      title={ratioProduction.mon_plateau?.label || 'Mon plateau'}
+                      metrics={ratioProduction.mon_plateau}
+                      highlight="ratio-mon"
+                    />
+                    {ratioProduction.autre_plateau && (
+                      <RatioBlock
+                        title={ratioProduction.autre_plateau.label || 'Autre plateau'}
+                        metrics={ratioProduction.autre_plateau}
+                        highlight="ratio-autre"
+                      />
+                    )}
+                  </div>
+
+                  {ratioProduction.equipes?.length > 0 ? (
+                    <div className="ratio-teams-table-wrap">
+                      <table className="ratio-teams-table">
+                        <thead>
+                          <tr>
+                            <th>Équipe</th>
+                            <th>Production</th>
+                            <th>Effectif</th>
+                            <th>Ratio</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ratioProduction.equipes.map((eq) => (
+                            <tr key={eq.superviseur?.id || eq.superviseur?.pseudo}>
+                              <td>
+                                <div className="ratio-team-name">{teamLabel(eq.superviseur)}</div>
+                                {eq.superviseur?.pseudo && (
+                                  <div className="ratio-team-pseudo">{eq.superviseur.pseudo}</div>
+                                )}
+                              </td>
+                              <td>{(eq.production ?? 0).toLocaleString('fr-FR')}</td>
+                              <td>{formatEffectif(eq.effectif)}</td>
+                              <td className="ratio-cell">{formatRatioValue(eq.ratio)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="no-data">Aucune équipe pour cette période</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {details && (
@@ -450,4 +546,3 @@ const KPIQualification = () => {
 };
 
 export default KPIQualification;
-

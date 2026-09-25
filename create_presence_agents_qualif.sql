@@ -59,6 +59,9 @@ SELECT
 FROM utilisateurs u
 WHERE u.fonction = 3
   AND (u.etat > 0 OR u.etat IS NULL)
-ON DUPLICATE KEY UPDATE
-  /* no-op : conserve absence / départ déjà enregistrés */
-  id = id;
+  AND NOT EXISTS (
+    SELECT 1
+    FROM presence_agents_qualif p
+    WHERE p.id_agent = u.id
+      AND p.date_jour = CURDATE()
+  );

@@ -2,8 +2,6 @@
 -- N'écrase jamais une ligne déjà présente (absence / départ).
 --
 -- Crontab exemple (lun–ven à 06:00) :
--- 0 6 * * 1-5 mysql -h HOST -u USER -p'PASS' NOM_BDD -e "SOURCE /chemin/cron_presence_agents_qualif_quotidien.sql"
--- ou :
 -- 0 6 * * 1-5 mysql -h HOST -u USER -p'PASS' NOM_BDD < /chemin/cron_presence_agents_qualif_quotidien.sql
 
 INSERT INTO presence_agents_qualif (
@@ -32,5 +30,9 @@ SELECT
 FROM utilisateurs u
 WHERE u.fonction = 3
   AND (u.etat > 0 OR u.etat IS NULL)
-ON DUPLICATE KEY UPDATE
-  id = id;
+  AND NOT EXISTS (
+    SELECT 1
+    FROM presence_agents_qualif p
+    WHERE p.id_agent = u.id
+      AND p.date_jour = CURDATE()
+  );

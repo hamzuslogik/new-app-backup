@@ -2137,6 +2137,226 @@ async function countKpiQualifDetails(agentIds, startDate, endDate) {
   };
 }
 
+/** Ratio = production / effectif présent (SUM coefficient_presence). Production = fiches insérées hors KO / HC. */
+function buildRatioMetric(production, effectif) {
+  const prod = Number(production) || 0;
+  const eff = Number(effectif) || 0;
+  return {
+    production: prod,
+    effectif: Math.round(eff * 10000) / 10000,
+    ratio: eff > 0 ? Math.round((prod / eff) * 100) / 100 : null,
+  };
+}
+
+async function sumPresenceEffectif(agentIds, dateStart, dateEnd) {
+  if (!agentIds || agentIds.length === 0) return 0;
+  try {
+    const placeholders = agentIds.map(() => '?').join(',');
+    const row = await queryOne(
+      `SELECT COALESCE(SUM(coefficient_presence), 0) AS effectif
+       FROM presence_agents_qualif
+       WHERE date_jour >= ? AND date_jour <= ?
+       AND id_agent IN (${placeholders})`,
+      [dateStart, dateEnd, ...agentIds]
+    );
+    return Number(row?.effectif) || 0;
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') return 0;
+    throw err;
+  }
+}
+
+async function countProductionSansKoHc(agentIds, startDateTime, endDateTime) {
+  const ID_ETAT_HC = 55;
+  if (!agentIds || agentIds.length === 0) return 0;
+  const placeholders = agentIds.map(() => '?').join(',');
+  const row = await queryOne(
+    `SELECT COUNT(DISTINCT f.id) AS count
+     FROM fiches f
+     INNER JOIN utilisateurs u ON f.id_agent = u.id
+     WHERE u.fonction = 3
+     AND f.id_agent IN (${placeholders})
+     AND f.id_agent IS NOT NULL AND f.id_agent > 0
+     AND f.date_insert_time >= ? AND f.date_insert_time <= ?
+     AND (f.archive = 0 OR f.archive IS NULL)
+     AND (f.id_etat_final != 61 OR f.id_etat_final IS NULL)
+     AND (f.ko = 0 OR f.ko IS NULL)
+     AND (f.id_etat_final != ? OR f.id_etat_final IS NULL)`,
+    [...agentIds, startDateTime, endDateTime, ID_ETAT_HC]
+  );
+  return Number(row?.count) || 0;
+}
+
+async function computeRatioForAgents(agentIds, dateStart, dateEnd, startDateTime, endDateTime) {
+  const [production, effectif] = await Promise.all([
+    countProductionSansKoHc(agentIds, startDateTime, endDateTime),
+    sumPresenceEffectif(agentIds, dateStart, dateEnd),
+  ]);
+  return buildRatioMetric(production, effectif);
+}
+
+/**
+ * Équipes (RE) + mon plateau / autre plateau pour le ratio production/effectif.
+ */
+async function buildKpiRatioProduction({
+  user,
+  filterRpId,
+  filterSuperviseurId,
+  filterAgentId,
+  isBackofficeOrAdmin,
+  dateStart,
+  dateEnd,
+  startDateTime,
+  endDateTime,
+}) {
+  const empty = { equipes: [], mon_plateau: null, autre_plateau: null };
+  const fonction = Number(user?.fonction);
+
+  let monPlateauRpId = null;
+  if (fonction === 12) {
+    monPlateauRpId = user.id;
+  } else if (fonction === 2) {
+    const me = await queryOne(`SELECT id_rp_qualif FROM utilisateurs WHERE id = ?`, [user.id]);
+    monPlateauRpId = me?.id_rp_qualif ? Number(me.id_rp_qualif) : null;
+  } else if (isBackofficeOrAdmin && filterRpId) {
+    monPlateauRpId = filterRpId;
+  }
+
+  let superviseurs = [];
+  if (fonction === 12) {
+    superviseurs = await query(
+      `SELECT id, pseudo, nom, prenom FROM utilisateurs
+       WHERE id_rp_qualif = ? AND etat > 0
+       AND EXISTS (
+         SELECT 1 FROM utilisateurs agents
+         WHERE agents.chef_equipe = utilisateurs.id AND agents.fonction = 3 AND agents.etat > 0
+       )
+       ORDER BY pseudo ASC`,
+      [user.id]
+    );
+  } else if (fonction === 2) {
+    superviseurs = await query(
+      `SELECT id, pseudo, nom, prenom FROM utilisateurs WHERE id = ? AND etat > 0`,
+      [user.id]
+    );
+  } else if (isBackofficeOrAdmin) {
+    let sql = `
+      SELECT DISTINCT u.id, u.pseudo, u.nom, u.prenom
+      FROM utilisateurs u
+      WHERE u.etat > 0
+      AND EXISTS (
+        SELECT 1 FROM utilisateurs agents
+        WHERE agents.chef_equipe = u.id AND agents.fonction = 3 AND agents.etat > 0
+      )`;
+    const params = [];
+    if (filterSuperviseurId) {
+      sql += ' AND u.id = ?';
+      params.push(filterSuperviseurId);
+    } else if (filterRpId) {
+      sql += ' AND u.id_rp_qualif = ?';
+      params.push(filterRpId);
+    } else if (filterAgentId) {
+      sql += ` AND u.id = (SELECT chef_equipe FROM utilisateurs WHERE id = ? LIMIT 1)`;
+      params.push(filterAgentId);
+    }
+    sql += ' ORDER BY u.pseudo ASC';
+    superviseurs = await query(sql, params);
+  } else {
+    return empty;
+  }
+
+  if (filterSuperviseurId && fonction === 12) {
+    superviseurs = (superviseurs || []).filter((s) => Number(s.id) === filterSuperviseurId);
+  }
+
+  const equipes = [];
+  const monPlateauAgentIds = new Set();
+
+  for (const s of superviseurs || []) {
+    let agents = await query(
+      `SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
+      [s.id]
+    );
+    let agentIds = (agents || []).map((a) => a.id);
+    if (filterAgentId) {
+      agentIds = agentIds.includes(filterAgentId) ? [filterAgentId] : [];
+    }
+    agentIds.forEach((id) => monPlateauAgentIds.add(id));
+    const metrics = await computeRatioForAgents(
+      agentIds,
+      dateStart,
+      dateEnd,
+      startDateTime,
+      endDateTime
+    );
+    equipes.push({
+      superviseur: {
+        id: s.id,
+        pseudo: s.pseudo,
+        nom: s.nom,
+        prenom: s.prenom,
+      },
+      ...metrics,
+    });
+  }
+
+  let monPlateau = null;
+  let autrePlateau = null;
+
+  if (monPlateauRpId) {
+    const plateauAgentIds = await getQualifAgentIdsForRp(monPlateauRpId);
+    const scopedPlateauIds = filterAgentId
+      ? plateauAgentIds.filter((id) => id === filterAgentId)
+      : filterSuperviseurId
+        ? [...monPlateauAgentIds]
+        : plateauAgentIds;
+    const rpUser = await queryOne(
+      `SELECT id, pseudo, nom, prenom FROM utilisateurs WHERE id = ?`,
+      [monPlateauRpId]
+    );
+    monPlateau = {
+      label: rpUser
+        ? (rpUser.pseudo || `${rpUser.nom || ''} ${rpUser.prenom || ''}`.trim() || `Plateau #${monPlateauRpId}`)
+        : 'Mon plateau',
+      rp: rpUser
+        ? { id: rpUser.id, pseudo: rpUser.pseudo, nom: rpUser.nom, prenom: rpUser.prenom }
+        : null,
+      ...(await computeRatioForAgents(scopedPlateauIds, dateStart, dateEnd, startDateTime, endDateTime)),
+    };
+
+    const otherRps = await query(
+      `SELECT id FROM utilisateurs
+       WHERE fonction = 12 AND id != ?
+       AND (etat > 0 OR etat IS NULL)`,
+      [monPlateauRpId]
+    );
+    const otherAgentIds = [];
+    for (const rp of otherRps || []) {
+      otherAgentIds.push(...(await getQualifAgentIdsForRp(rp.id)));
+    }
+    autrePlateau = {
+      label: 'Autre plateau',
+      ...(await computeRatioForAgents(
+        [...new Set(otherAgentIds)],
+        dateStart,
+        dateEnd,
+        startDateTime,
+        endDateTime
+      )),
+    };
+  } else if (isBackofficeOrAdmin && !filterRpId) {
+    const allIds = [...monPlateauAgentIds];
+    monPlateau = {
+      label: 'Tous les plateaux',
+      rp: null,
+      ...(await computeRatioForAgents(allIds, dateStart, dateEnd, startDateTime, endDateTime)),
+    };
+    autrePlateau = null;
+  }
+
+  return { equipes, mon_plateau: monPlateau, autre_plateau: autrePlateau };
+}
+
 // Récupérer les KPI qualification (meilleurs agents et équipes)
 router.get('/kpi-qualification', authenticate, async (req, res) => {
   try {
@@ -2404,6 +2624,18 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
         detailsTotal = detailsFiltered;
       }
 
+      const ratioProduction = await buildKpiRatioProduction({
+        user: req.user,
+        filterRpId,
+        filterSuperviseurId,
+        filterAgentId,
+        isBackofficeOrAdmin,
+        dateStart: period.start,
+        dateEnd: period.end,
+        startDateTime: startDate,
+        endDateTime: endDate,
+      });
+
       kpiData[period.key] = {
         period: period.label,
         date_start: period.start,
@@ -2440,7 +2672,8 @@ router.get('/kpi-qualification', authenticate, async (req, res) => {
           total: detailsTotal,
           filtered: detailsFiltered,
           has_filter: !!hasActiveUiFilter,
-        }
+        },
+        ratio_production: ratioProduction,
       };
     }
 
