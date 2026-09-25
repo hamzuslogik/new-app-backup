@@ -21,6 +21,50 @@ const {
 const upload = multer({ storage: multer.memoryStorage() });
 const { processKoImportFromBuffer, applyKoImportRows } = require('../utils/fichesKoImport');
 
+function getLocalYmd(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function normalizeHeureDepart(raw) {
+  const text = String(raw || '').trim();
+  const match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!match) return null;
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+}
+
+async function ensurePresenceAgentsQualifTable() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS presence_agents_qualif (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      id_agent INT NOT NULL,
+      id_superviseur INT NOT NULL,
+      date_jour DATE NOT NULL,
+      type ENUM('absence', 'depart') NOT NULL,
+      heure_depart TIME NULL,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      UNIQUE KEY uniq_agent_jour (id_agent, date_jour),
+      KEY idx_date_jour (date_jour),
+      KEY idx_superviseur (id_superviseur)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+}
+
+async function getSupervisedQualifAgent(superviseurId, agentId) {
+  return queryOne(
+    `SELECT id, pseudo, nom, prenom, fonction, chef_equipe, etat
+     FROM utilisateurs
+     WHERE id = ? AND chef_equipe = ? AND fonction = 3 AND etat > 0`,
+    [agentId, superviseurId]
+  );
+}
+
 function parseIpRulesFromBody(body) {
   const raw = body.ips_autorisees;
   if (raw == null) return [];
@@ -674,6 +718,31 @@ router.get('/utilisateurs/mon-equipe', authenticate, async (req, res) => {
       }
     }
 
+    if (fn === 2 && rows.length > 0) {
+      await ensurePresenceAgentsQualifTable();
+      const today = getLocalYmd();
+      const placeholders = rows.map(() => '?').join(',');
+      const presenceRows = await query(
+        `SELECT id, id_agent, type, heure_depart
+         FROM presence_agents_qualif
+         WHERE date_jour = ? AND id_agent IN (${placeholders})`,
+        [today, ...rows.map((r) => r.id)]
+      );
+      const presenceByAgent = new Map(
+        (presenceRows || []).map((p) => [Number(p.id_agent), p])
+      );
+      rows.forEach((userRow) => {
+        const presence = presenceByAgent.get(Number(userRow.id));
+        userRow.presence_aujourdhui = presence
+          ? {
+              id: presence.id,
+              type: presence.type,
+              heure_depart: presence.heure_depart,
+            }
+          : null;
+      });
+    }
+
     res.json({
       success: true,
       data: rows,
@@ -681,6 +750,113 @@ router.get('/utilisateurs/mon-equipe', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur mon-equipe:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Signaler absence ou départ d'un agent qualification (superviseur fonction 2)
+router.post('/presence-agents-qualif', authenticate, async (req, res) => {
+  try {
+    if (Number(req.user.fonction) !== 2) {
+      return res.status(403).json({
+        success: false,
+        message: 'Réservé au superviseur qualification',
+      });
+    }
+
+    const agentId = parseInt(req.body?.id_agent, 10);
+    const type = String(req.body?.type || '').trim().toLowerCase();
+    if (!Number.isFinite(agentId) || agentId <= 0) {
+      return res.status(400).json({ success: false, message: 'Agent invalide' });
+    }
+    if (type !== 'absence' && type !== 'depart') {
+      return res.status(400).json({ success: false, message: 'Type invalide (absence ou depart)' });
+    }
+
+    let heureDepart = null;
+    if (type === 'depart') {
+      heureDepart = normalizeHeureDepart(req.body?.heure_depart);
+      if (!heureDepart) {
+        return res.status(400).json({
+          success: false,
+          message: "L'heure de départ est obligatoire",
+        });
+      }
+    }
+
+    const agent = await getSupervisedQualifAgent(req.user.id, agentId);
+    if (!agent) {
+      return res.status(403).json({
+        success: false,
+        message: "Cet agent n'est pas rattaché à votre supervision",
+      });
+    }
+
+    await ensurePresenceAgentsQualifTable();
+    const today = getLocalYmd();
+    await query(
+      `INSERT INTO presence_agents_qualif
+        (id_agent, id_superviseur, date_jour, type, heure_depart, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+       ON DUPLICATE KEY UPDATE
+         type = VALUES(type),
+         heure_depart = VALUES(heure_depart),
+         id_superviseur = VALUES(id_superviseur),
+         updated_at = NOW()`,
+      [agentId, req.user.id, today, type, heureDepart]
+    );
+
+    const saved = await queryOne(
+      `SELECT id, id_agent, type, heure_depart, date_jour
+       FROM presence_agents_qualif
+       WHERE id_agent = ? AND date_jour = ?`,
+      [agentId, today]
+    );
+
+    res.json({
+      success: true,
+      message: type === 'absence' ? 'Absence signalée' : 'Départ signalé',
+      data: saved,
+    });
+  } catch (error) {
+    console.error('Erreur POST presence-agents-qualif:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+router.delete('/presence-agents-qualif/:id_agent', authenticate, async (req, res) => {
+  try {
+    if (Number(req.user.fonction) !== 2) {
+      return res.status(403).json({
+        success: false,
+        message: 'Réservé au superviseur qualification',
+      });
+    }
+
+    const agentId = parseInt(req.params.id_agent, 10);
+    if (!Number.isFinite(agentId) || agentId <= 0) {
+      return res.status(400).json({ success: false, message: 'Agent invalide' });
+    }
+
+    const agent = await getSupervisedQualifAgent(req.user.id, agentId);
+    if (!agent) {
+      return res.status(403).json({
+        success: false,
+        message: "Cet agent n'est pas rattaché à votre supervision",
+      });
+    }
+
+    await ensurePresenceAgentsQualifTable();
+    const today = getLocalYmd();
+    await query(
+      `DELETE FROM presence_agents_qualif
+       WHERE id_agent = ? AND date_jour = ? AND id_superviseur = ?`,
+      [agentId, today, req.user.id]
+    );
+
+    res.json({ success: true, message: 'Présence du jour annulée' });
+  } catch (error) {
+    console.error('Erreur DELETE presence-agents-qualif:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
