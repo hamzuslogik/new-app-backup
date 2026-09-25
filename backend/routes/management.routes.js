@@ -15,7 +15,9 @@ const {
   isValidJwtExpiresIn,
   ensureGlobalLoginIpWhitelistTable,
   getBruteForceWhitelistRules,
-  invalidateBruteForceWhitelistCache
+  invalidateBruteForceWhitelistCache,
+  getProductionHours,
+  normalizeProductionHours,
 } = require('../utils/globalSettingsHelper');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -2999,6 +3001,40 @@ router.put('/global-settings/phone-url-search-enabled', authenticate, checkPermi
     res.json({ success: true, message: 'Paramètre global mis à jour', data: { enabled } });
   } catch (error) {
     console.error('Erreur mise à jour paramètre global phone_url_search_enabled:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+router.get('/global-settings/production-hours', authenticate, async (req, res) => {
+  try {
+    const hours = await getProductionHours();
+    res.json({ success: true, data: hours });
+  } catch (error) {
+    console.error('Erreur GET /global-settings/production-hours:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+router.put('/global-settings/production-hours', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    const normalized = normalizeProductionHours(req.body?.hours ?? req.body);
+    if (!normalized.ok) {
+      return res.status(400).json({ success: false, message: normalized.message });
+    }
+    await ensureGlobalSettingsTable();
+    await query(
+      `INSERT INTO global_settings (setting_key, setting_value, updated_by)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by), updated_at = CURRENT_TIMESTAMP`,
+      ['production_hours', JSON.stringify(normalized.data), req.user?.id || null]
+    );
+    res.json({
+      success: true,
+      message: 'Horaires de production enregistrés',
+      data: normalized.data,
+    });
+  } catch (error) {
+    console.error('Erreur PUT /global-settings/production-hours:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

@@ -18,7 +18,34 @@ async function ensureDefaultGlobalSettingsRows() {
     // 0 = désactivé ; 5 = bloquer après 5 échecs dans la fenêtre (défaut)
     ['failed_login_max_before_ip_block', '5'],
     ['failed_login_window_minutes', '60'],
-    ['session_lifetime', sessionDefault]
+    ['session_lifetime', sessionDefault],
+    [
+      'production_hours',
+      JSON.stringify({
+        lundi: [
+          { start: '09:00', end: '12:00' },
+          { start: '13:00', end: '18:00' },
+        ],
+        mardi: [
+          { start: '09:00', end: '12:00' },
+          { start: '13:00', end: '18:00' },
+        ],
+        mercredi: [
+          { start: '09:00', end: '12:00' },
+          { start: '13:00', end: '18:00' },
+        ],
+        jeudi: [
+          { start: '09:00', end: '12:00' },
+          { start: '13:00', end: '18:00' },
+        ],
+        vendredi: [
+          { start: '09:00', end: '12:00' },
+          { start: '13:00', end: '18:00' },
+        ],
+        samedi: [],
+        dimanche: [],
+      }),
+    ],
   ];
   for (const [key, val] of defaults) {
     // MariaDB / MySQL : sous-requête dérivée obligatoire (pas de « SELECT ?, ?, NULL WHERE NOT EXISTS » sans FROM).
@@ -36,12 +63,111 @@ async function ensureGlobalSettingsTable() {
   await query(`
     CREATE TABLE IF NOT EXISTS global_settings (
       setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
-      setting_value VARCHAR(255) DEFAULT NULL,
+      setting_value TEXT DEFAULT NULL,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       updated_by INT(11) DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  // Anciennes installs : VARCHAR(255) trop court pour JSON (horaires production…)
+  try {
+    await query(`ALTER TABLE global_settings MODIFY COLUMN setting_value TEXT DEFAULT NULL`);
+  } catch (e) {
+    // ignore si déjà TEXT / droits insuffisants
+  }
   await ensureDefaultGlobalSettingsRows();
+}
+
+const PRODUCTION_DAYS = [
+  'lundi',
+  'mardi',
+  'mercredi',
+  'jeudi',
+  'vendredi',
+  'samedi',
+  'dimanche',
+];
+
+const DEFAULT_PRODUCTION_SLOTS = [
+  { start: '09:00', end: '12:00' },
+  { start: '13:00', end: '18:00' },
+];
+
+function defaultProductionHours() {
+  const out = {};
+  for (const day of PRODUCTION_DAYS) {
+    out[day] = day === 'samedi' || day === 'dimanche' ? [] : DEFAULT_PRODUCTION_SLOTS.map((s) => ({ ...s }));
+  }
+  return out;
+}
+
+function normalizeTimeHm(raw) {
+  const text = String(raw || '').trim();
+  const m = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+function timeToMinutes(hm) {
+  const [h, m] = hm.split(':').map((n) => parseInt(n, 10));
+  return h * 60 + m;
+}
+
+/**
+ * Valide et normalise les plages de production par jour.
+ * @returns {{ ok: true, data: object } | { ok: false, message: string }}
+ */
+function normalizeProductionHours(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const data = {};
+  for (const day of PRODUCTION_DAYS) {
+    const slotsIn = Array.isArray(source[day]) ? source[day] : [];
+    const slots = [];
+    for (let i = 0; i < slotsIn.length; i++) {
+      const start = normalizeTimeHm(slotsIn[i]?.start);
+      const end = normalizeTimeHm(slotsIn[i]?.end);
+      if (!start || !end) {
+        return { ok: false, message: `${day} : créneau ${i + 1} — heures invalides (HH:MM)` };
+      }
+      if (timeToMinutes(end) <= timeToMinutes(start)) {
+        return {
+          ok: false,
+          message: `${day} : créneau ${i + 1} — l'heure de fin doit être après le début`,
+        };
+      }
+      slots.push({ start, end });
+    }
+    slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+    for (let i = 1; i < slots.length; i++) {
+      if (timeToMinutes(slots[i].start) < timeToMinutes(slots[i - 1].end)) {
+        return {
+          ok: false,
+          message: `${day} : les créneaux se chevauchent`,
+        };
+      }
+    }
+    data[day] = slots;
+  }
+  return { ok: true, data };
+}
+
+async function getProductionHours() {
+  await ensureGlobalSettingsTable();
+  const rows = await query(
+    `SELECT setting_value FROM global_settings WHERE setting_key = ?`,
+    ['production_hours']
+  );
+  const raw = rows?.[0]?.setting_value;
+  if (!raw) return defaultProductionHours();
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const normalized = normalizeProductionHours(parsed);
+    return normalized.ok ? normalized.data : defaultProductionHours();
+  } catch {
+    return defaultProductionHours();
+  }
 }
 
 function invalidateSecuritySettingsCache() {
@@ -166,5 +292,9 @@ module.exports = {
   isValidJwtExpiresIn,
   ensureGlobalLoginIpWhitelistTable,
   getBruteForceWhitelistRules,
-  invalidateBruteForceWhitelistCache
+  invalidateBruteForceWhitelistCache,
+  PRODUCTION_DAYS,
+  defaultProductionHours,
+  normalizeProductionHours,
+  getProductionHours,
 };

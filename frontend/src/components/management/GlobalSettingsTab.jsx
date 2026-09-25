@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { toast } from 'react-toastify';
 import api from '../../config/api';
-import { FaInfoCircle, FaShieldAlt, FaCopy, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaInfoCircle, FaShieldAlt, FaCopy, FaExternalLinkAlt, FaClock, FaPlus, FaTrash } from 'react-icons/fa';
 import Tooltip from '../common/Tooltip';
 import { buildFicheModalExampleUrl } from '../../utils/ficheModalUrlHelp';
 import './ManagementTab.css';
@@ -10,6 +10,27 @@ import './ManagementTab.css';
 const SESSION_PRESETS = ['30m', '1h', '2h', '4h', '8h', '12h', '24h', '7d'];
 
 const EXAMPLE_FICHE_ID = '0666441656';
+
+const PRODUCTION_DAYS = [
+  { key: 'lundi', label: 'Lundi' },
+  { key: 'mardi', label: 'Mardi' },
+  { key: 'mercredi', label: 'Mercredi' },
+  { key: 'jeudi', label: 'Jeudi' },
+  { key: 'vendredi', label: 'Vendredi' },
+  { key: 'samedi', label: 'Samedi' },
+  { key: 'dimanche', label: 'Dimanche' },
+];
+
+const EMPTY_PRODUCTION_HOURS = () =>
+  PRODUCTION_DAYS.reduce((acc, d) => {
+    acc[d.key] = [];
+    return acc;
+  }, {});
+
+const DEFAULT_WEEKDAY_SLOTS = [
+  { start: '09:00', end: '12:00' },
+  { start: '13:00', end: '18:00' },
+];
 
 function copyText(text, label = 'Lien') {
   if (!text) return;
@@ -128,6 +149,93 @@ const GlobalSettingsTab = () => {
       }
     }
   );
+
+  const { data: productionHoursData, isLoading: productionHoursLoading } = useQuery(
+    'global-settings-production-hours',
+    async () => {
+      const res = await api.get('/management/global-settings/production-hours');
+      return res.data?.data;
+    }
+  );
+
+  const [productionHours, setProductionHours] = useState(EMPTY_PRODUCTION_HOURS);
+
+  useEffect(() => {
+    if (productionHoursData) {
+      const next = EMPTY_PRODUCTION_HOURS();
+      PRODUCTION_DAYS.forEach(({ key }) => {
+        next[key] = Array.isArray(productionHoursData[key])
+          ? productionHoursData[key].map((s) => ({
+              start: s.start || '09:00',
+              end: s.end || '18:00',
+            }))
+          : [];
+      });
+      setProductionHours(next);
+    }
+  }, [productionHoursData]);
+
+  const saveProductionHoursMutation = useMutation(
+    async () => {
+      const res = await api.put('/management/global-settings/production-hours', {
+        hours: productionHours,
+      });
+      return res.data;
+    },
+    {
+      onSuccess: (res) => {
+        queryClient.invalidateQueries('global-settings-production-hours');
+        toast.success(res?.message || 'Horaires de production enregistrés');
+        if (res?.data) {
+          const next = EMPTY_PRODUCTION_HOURS();
+          PRODUCTION_DAYS.forEach(({ key }) => {
+            next[key] = Array.isArray(res.data[key])
+              ? res.data[key].map((s) => ({ start: s.start, end: s.end }))
+              : [];
+          });
+          setProductionHours(next);
+        }
+      },
+      onError: (err) => {
+        toast.error(
+          err.response?.data?.message || err.message || 'Erreur lors de l’enregistrement',
+          { autoClose: 6000 }
+        );
+      },
+    }
+  );
+
+  const updateSlot = (dayKey, index, field, value) => {
+    setProductionHours((prev) => {
+      const slots = [...(prev[dayKey] || [])];
+      slots[index] = { ...slots[index], [field]: value };
+      return { ...prev, [dayKey]: slots };
+    });
+  };
+
+  const addSlot = (dayKey) => {
+    setProductionHours((prev) => ({
+      ...prev,
+      [dayKey]: [...(prev[dayKey] || []), { start: '09:00', end: '12:00' }],
+    }));
+  };
+
+  const removeSlot = (dayKey, index) => {
+    setProductionHours((prev) => ({
+      ...prev,
+      [dayKey]: (prev[dayKey] || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const applyWeekdayDefaults = () => {
+    setProductionHours((prev) => {
+      const next = { ...prev };
+      ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'].forEach((key) => {
+        next[key] = DEFAULT_WEEKDAY_SLOTS.map((s) => ({ ...s }));
+      });
+      return next;
+    });
+  };
 
   const enabled = !!data;
 
@@ -300,6 +408,123 @@ const GlobalSettingsTab = () => {
               </div>
             </div>
           )}
+      </section>
+
+      <section style={{ marginBottom: 28 }}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.05rem', marginBottom: 12 }}>
+          <FaClock /> Horaires de production
+        </h3>
+        <p style={{ color: '#555', fontSize: 14, marginBottom: 16, maxWidth: 820 }}>
+          Définit, pour chaque jour, les plages où la production est ouverte. Exemple :{' '}
+          <strong>09:00 → 12:00</strong> puis <strong>13:00 → 18:00</strong>. Plusieurs créneaux
+          par jour sont autorisés ; laissez un jour sans créneau s&apos;il n&apos;y a pas de production.
+        </p>
+
+        {productionHoursLoading ? (
+          <p style={{ color: '#666' }}>Chargement…</p>
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+              padding: 16,
+              border: '1px solid #ddd',
+              borderRadius: 8,
+              maxWidth: 820,
+            }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <button type="button" className="btn-secondary" onClick={applyWeekdayDefaults}>
+                Appliquer 09:00–12:00 / 13:00–18:00 (lun–ven)
+              </button>
+            </div>
+
+            {PRODUCTION_DAYS.map(({ key, label }) => (
+              <div
+                key={key}
+                style={{
+                  border: '1px solid #e8e8e8',
+                  borderRadius: 6,
+                  padding: '10px 12px',
+                  background: '#fafafa',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    marginBottom: 8,
+                  }}
+                >
+                  <strong style={{ minWidth: 90 }}>{label}</strong>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ padding: '4px 10px', fontSize: 12 }}
+                    onClick={() => addSlot(key)}
+                  >
+                    <FaPlus /> Ajouter un créneau
+                  </button>
+                </div>
+
+                {(productionHours[key] || []).length === 0 ? (
+                  <p style={{ margin: 0, color: '#888', fontSize: 13 }}>Aucun créneau (jour sans production)</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {(productionHours[key] || []).map((slot, index) => (
+                      <div
+                        key={`${key}-${index}`}
+                        style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}
+                      >
+                        <label style={{ fontSize: 12, color: '#666' }}>Début</label>
+                        <input
+                          type="time"
+                          className="search-input"
+                          style={{ maxWidth: 130 }}
+                          value={slot.start}
+                          onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
+                        />
+                        <span style={{ color: '#888' }}>→</span>
+                        <label style={{ fontSize: 12, color: '#666' }}>Fin</label>
+                        <input
+                          type="time"
+                          className="search-input"
+                          style={{ maxWidth: 130 }}
+                          value={slot.end}
+                          onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="btn-icon btn-danger"
+                          title="Supprimer ce créneau"
+                          onClick={() => removeSlot(key, index)}
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <div>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={saveProductionHoursMutation.isLoading}
+                onClick={() => saveProductionHoursMutation.mutate()}
+              >
+                {saveProductionHoursMutation.isLoading
+                  ? 'Enregistrement…'
+                  : 'Enregistrer les horaires de production'}
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section>
