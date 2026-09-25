@@ -3,12 +3,25 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-toastify';
 import api from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle, FaKey, FaCopy, FaCheck, FaPowerOff, FaCheckCircle } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaSearch, FaInfoCircle, FaKey, FaCopy, FaCheck, FaPowerOff, FaCheckCircle, FaUserTimes, FaSignOutAlt, FaTimes, FaUndo } from 'react-icons/fa';
 import LoadingSpinner from '../common/LoadingSpinner';
 import Tooltip from '../common/Tooltip';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import useLocalStorage from '../../hooks/useLocalStorage';
+import { useModalScrollLock } from '../../hooks/useModalScrollLock';
 import './ManagementTab.css';
+import '../../pages/MonEquipe.css';
+
+const getLocalTimeHm = () => {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+};
+
+const formatHeureDepart = (value) => {
+  if (!value) return '';
+  const text = String(value);
+  return text.length >= 5 ? text.slice(0, 5) : text;
+};
 
 const UtilisateursTab = () => {
   const { user: currentUser } = useAuth();
@@ -21,6 +34,9 @@ const UtilisateursTab = () => {
   const [permanentTokenCopied, setPermanentTokenCopied] = useState(false);
 
   const canGeneratePermanentToken = [1, 2, 7].includes(Number(currentUser?.fonction));
+  const canManagePresence = [1, 11].includes(Number(currentUser?.fonction));
+  const [departModal, setDepartModal] = useState({ isOpen: false, agent: null, heure: getLocalTimeHm() });
+  useModalScrollLock(departModal.isOpen);
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
@@ -61,7 +77,9 @@ const UtilisateursTab = () => {
   }, [showForm]);
 
   const { data: utilisateurs, isLoading: loadingUsers } = useQuery('utilisateurs-management', async () => {
-    const response = await api.get('/management/utilisateurs', { params: { include_inactive: 1 } });
+    const response = await api.get('/management/utilisateurs', {
+      params: { include_inactive: 1, include_presence: canManagePresence ? 1 : undefined },
+    });
     return response.data.data;
   });
 
@@ -180,6 +198,94 @@ const UtilisateursTab = () => {
       chef_equipe: '',
       id_rp_qualif: ''
     });
+  };
+
+  const presenceMutation = useMutation(
+    async ({ id_agent, type, heure_depart }) => {
+      const res = await api.post('/management/presence-agents-qualif', {
+        id_agent,
+        type,
+        heure_depart,
+      });
+      return res.data;
+    },
+    {
+      onSuccess: (res) => {
+        queryClient.invalidateQueries('utilisateurs-management');
+        queryClient.invalidateQueries('utilisateurs-mon-equipe');
+        toast.success(res.message || 'Présence enregistrée');
+        setDepartModal({ isOpen: false, agent: null, heure: getLocalTimeHm() });
+      },
+      onError: (err) => {
+        toast.error(err.response?.data?.message || 'Erreur lors de l\'enregistrement');
+      },
+    }
+  );
+
+  const cancelPresenceMutation = useMutation(
+    async (id_agent) => {
+      const res = await api.delete(`/management/presence-agents-qualif/${id_agent}`);
+      return res.data;
+    },
+    {
+      onSuccess: (res) => {
+        queryClient.invalidateQueries('utilisateurs-management');
+        queryClient.invalidateQueries('utilisateurs-mon-equipe');
+        toast.success(res.message || 'Présence annulée');
+      },
+      onError: (err) => {
+        toast.error(err.response?.data?.message || 'Erreur lors de l\'annulation');
+      },
+    }
+  );
+
+  const openDepartModal = (agent) => {
+    setDepartModal({
+      isOpen: true,
+      agent,
+      heure: formatHeureDepart(agent.presence_aujourdhui?.heure_depart) || getLocalTimeHm(),
+    });
+  };
+
+  const handleAbsence = (agent) => {
+    const name = agent.pseudo || `${agent.nom || ''} ${agent.prenom || ''}`.trim() || 'cet utilisateur';
+    if (!window.confirm(`Signaler l'absence de ${name} pour aujourd'hui ?`)) return;
+    presenceMutation.mutate({ id_agent: agent.id, type: 'absence' });
+  };
+
+  const handleDepartSubmit = (e) => {
+    e.preventDefault();
+    if (!departModal.agent) return;
+    const heure = String(departModal.heure || '').trim();
+    if (!heure) {
+      toast.error("L'heure de départ est obligatoire");
+      return;
+    }
+    presenceMutation.mutate({
+      id_agent: departModal.agent.id,
+      type: 'depart',
+      heure_depart: heure,
+    });
+  };
+
+  const handleCancelPresence = (agent) => {
+    const name = agent.pseudo || `${agent.nom || ''} ${agent.prenom || ''}`.trim() || 'cet utilisateur';
+    if (!window.confirm(`Annuler le signalement de ${name} pour aujourd'hui ?`)) return;
+    cancelPresenceMutation.mutate(agent.id);
+  };
+
+  const renderPresenceBadge = (presence) => {
+    if (!presence) {
+      return <span className="mon-equipe-badge mon-equipe-badge--ok">Présent</span>;
+    }
+    if (presence.type === 'absence') {
+      return <span className="mon-equipe-badge mon-equipe-badge--absent">Absent</span>;
+    }
+    return (
+      <span className="mon-equipe-badge mon-equipe-badge--depart">
+        Départ {formatHeureDepart(presence.heure_depart)}
+      </span>
+    );
   };
 
   const handleToggleEtat = (user) => {
@@ -876,6 +982,7 @@ const UtilisateursTab = () => {
               <th>Superviseur / RE Confirmation</th>
               <th>RP Qualification</th>
               <th>État</th>
+              {canManagePresence && <th>Présence</th>}
               <th>Actions</th>
             </tr>
           </thead>
@@ -924,8 +1031,44 @@ const UtilisateursTab = () => {
                       {user.etat === 1 ? 'Actif' : 'Inactif'}
                     </span>
                   </td>
+                  {canManagePresence && (
+                    <td data-label="Présence:">{renderPresenceBadge(user.presence_aujourdhui)}</td>
+                  )}
                   <td data-label="">
                     <div className="action-buttons">
+                      {canManagePresence && user.etat === 1 && (
+                        <>
+                          <button
+                            type="button"
+                            className="mon-equipe-action-btn mon-equipe-action-btn--absent"
+                            onClick={() => handleAbsence(user)}
+                            disabled={presenceMutation.isLoading || cancelPresenceMutation.isLoading}
+                            title="Signaler une absence aujourd'hui"
+                          >
+                            <FaUserTimes /> Absence
+                          </button>
+                          <button
+                            type="button"
+                            className="mon-equipe-action-btn mon-equipe-action-btn--depart"
+                            onClick={() => openDepartModal(user)}
+                            disabled={presenceMutation.isLoading || cancelPresenceMutation.isLoading}
+                            title="Signaler un départ dans la journée"
+                          >
+                            <FaSignOutAlt /> Départ
+                          </button>
+                          {user.presence_aujourdhui && (
+                            <button
+                              type="button"
+                              className="mon-equipe-action-btn"
+                              onClick={() => handleCancelPresence(user)}
+                              disabled={presenceMutation.isLoading || cancelPresenceMutation.isLoading}
+                              title="Annuler le signalement du jour"
+                            >
+                              <FaUndo /> Annuler
+                            </button>
+                          )}
+                        </>
+                      )}
                       <button
                         className={`btn-icon ${user.etat === 1 ? '' : 'btn-success'}`}
                         onClick={() => handleToggleEtat(user)}
@@ -946,7 +1089,7 @@ const UtilisateursTab = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="10" className="text-center">
+                <td colSpan={canManagePresence ? 12 : 10} className="text-center">
                   {searchTerm ? 'Aucun résultat trouvé' : 'Aucun utilisateur trouvé'}
                 </td>
               </tr>
@@ -954,6 +1097,63 @@ const UtilisateursTab = () => {
           </tbody>
         </table>
       </div>
+
+      {canManagePresence && departModal.isOpen && (
+        <div
+          className="mon-equipe-modal-overlay"
+          onClick={() => setDepartModal({ isOpen: false, agent: null, heure: getLocalTimeHm() })}
+        >
+          <form
+            className="mon-equipe-modal"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={handleDepartSubmit}
+          >
+            <div className="mon-equipe-modal-header">
+              <h3>Départ dans la journée</h3>
+              <button
+                type="button"
+                className="mon-equipe-modal-close"
+                onClick={() => setDepartModal({ isOpen: false, agent: null, heure: getLocalTimeHm() })}
+                aria-label="Fermer"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <p className="mon-equipe-modal-hint">
+              Utilisateur : <strong>{departModal.agent?.pseudo || '—'}</strong>
+              {departModal.agent?.nom || departModal.agent?.prenom
+                ? ` (${[departModal.agent?.nom, departModal.agent?.prenom].filter(Boolean).join(' ')})`
+                : ''}
+            </p>
+            <label className="mon-equipe-modal-label" htmlFor="heure-depart-users">
+              Heure de départ <span className="required">*</span>
+            </label>
+            <input
+              id="heure-depart-users"
+              type="time"
+              required
+              value={departModal.heure}
+              onChange={(e) => setDepartModal((prev) => ({ ...prev, heure: e.target.value }))}
+            />
+            <div className="mon-equipe-modal-actions">
+              <button
+                type="button"
+                className="mon-equipe-action-btn"
+                onClick={() => setDepartModal({ isOpen: false, agent: null, heure: getLocalTimeHm() })}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="mon-equipe-action-btn mon-equipe-action-btn--depart"
+                disabled={presenceMutation.isLoading || !departModal.heure}
+              >
+                {presenceMutation.isLoading ? 'Enregistrement…' : 'Valider le départ'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

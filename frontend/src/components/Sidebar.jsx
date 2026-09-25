@@ -418,7 +418,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaUsers,
       permission: null,
       visible: true,
-      customCheck: (item, u) => [2, 14].includes(Number(u?.fonction)),
+      customCheck: (item, u) => [2, 12, 13, 14].includes(Number(u?.fonction)),
     },
     {
       path: '/rappels-bureau',

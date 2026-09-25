@@ -26,7 +26,9 @@ const MonEquipe = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [departModal, setDepartModal] = useState({ isOpen: false, agent: null, heure: getLocalTimeHm() });
-  const isSuperviseurQualif = Number(user?.fonction) === 2;
+  const fonctionId = Number(user?.fonction);
+  const canManagePresence = [2, 12].includes(fonctionId);
+  const showEquipeColumn = [12, 13].includes(fonctionId);
 
   useModalScrollLock(departModal.isOpen);
 
@@ -79,9 +81,13 @@ const MonEquipe = () => {
   const rows = data?.data || [];
 
   const subtitle =
-    Number(user?.fonction) === 14
-      ? 'Confirmateurs rattachés à votre équipe (lecture seule).'
-      : 'Agents qualification rattachés à votre supervision.';
+    fonctionId === 14
+      ? 'Confirmateurs rattachés à votre équipe.'
+      : fonctionId === 13
+        ? 'RE Confirmation et confirmateurs de votre équipe.'
+        : fonctionId === 12
+          ? 'Superviseurs et agents de votre plateau.'
+          : 'Agents qualification rattachés à votre supervision.';
 
   const filtered = useMemo(() => {
     if (!searchTerm.trim()) return rows;
@@ -93,7 +99,8 @@ const MonEquipe = () => {
         r.prenom?.toLowerCase().includes(t) ||
         r.mail?.toLowerCase().includes(t) ||
         r.fonction_titre?.toLowerCase().includes(t) ||
-        r.centre_titre?.toLowerCase().includes(t)
+        r.centre_titre?.toLowerCase().includes(t) ||
+        r.supervisor_pseudo?.toLowerCase().includes(t)
     );
   }, [rows, searchTerm]);
 
@@ -158,7 +165,7 @@ const MonEquipe = () => {
     );
   }
 
-  const colCount = isSuperviseurQualif ? 10 : 8;
+  const colCount = 8 + (showEquipeColumn ? 1 : 0) + (canManagePresence ? 2 : 0);
   const isBusy = presenceMutation.isLoading || cancelPresenceMutation.isLoading;
 
   return (
@@ -200,11 +207,12 @@ const MonEquipe = () => {
               <th>Nom</th>
               <th>Prénom</th>
               <th>Fonction</th>
+              {showEquipeColumn && <th>Équipe</th>}
               <th>Centre</th>
               <th>E-mail</th>
               <th>Téléphone</th>
               <th>État</th>
-              {isSuperviseurQualif && (
+              {canManagePresence && (
                 <>
                   <th>Présence</th>
                   <th>Actions</th>
@@ -226,6 +234,9 @@ const MonEquipe = () => {
                   <td>{r.nom || '—'}</td>
                   <td>{r.prenom || '—'}</td>
                   <td>{r.fonction_titre || '—'}</td>
+                  {showEquipeColumn && (
+                    <td>{r.supervisor_pseudo || r.rp_qualif_pseudo || '—'}</td>
+                  )}
                   <td>{r.centre_titre || '—'}</td>
                   <td>{r.mail || '—'}</td>
                   <td>{r.tel || '—'}</td>
@@ -236,7 +247,7 @@ const MonEquipe = () => {
                       <span className="mon-equipe-badge">Inactif</span>
                     )}
                   </td>
-                  {isSuperviseurQualif && (
+                  {canManagePresence && (
                     <>
                       <td>{renderPresenceBadge(r.presence_aujourdhui)}</td>
                       <td>

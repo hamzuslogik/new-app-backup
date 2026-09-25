@@ -65,6 +65,66 @@ async function getSupervisedQualifAgent(superviseurId, agentId) {
   );
 }
 
+async function attachPresenceAujourdhui(rows) {
+  if (!rows || rows.length === 0) return;
+  await ensurePresenceAgentsQualifTable();
+  const today = getLocalYmd();
+  const placeholders = rows.map(() => '?').join(',');
+  const presenceRows = await query(
+    `SELECT id, id_agent, type, heure_depart
+     FROM presence_agents_qualif
+     WHERE date_jour = ? AND id_agent IN (${placeholders})`,
+    [today, ...rows.map((r) => r.id)]
+  );
+  const presenceByAgent = new Map(
+    (presenceRows || []).map((p) => [Number(p.id_agent), p])
+  );
+  rows.forEach((userRow) => {
+    const presence = presenceByAgent.get(Number(userRow.id));
+    userRow.presence_aujourdhui = presence
+      ? {
+          id: presence.id,
+          type: presence.type,
+          heure_depart: presence.heure_depart,
+        }
+      : null;
+  });
+}
+
+async function assertCanManagePresence(actor, targetId) {
+  const fn = Number(actor?.fonction);
+  const id = parseInt(targetId, 10);
+  if (!Number.isFinite(id) || id <= 0) return null;
+
+  if (fn === 11 || fn === 1) {
+    return queryOne(
+      `SELECT id, pseudo, nom, prenom, fonction, chef_equipe, etat
+       FROM utilisateurs
+       WHERE id = ? AND etat > 0`,
+      [id]
+    );
+  }
+
+  if (fn === 2) {
+    return getSupervisedQualifAgent(actor.id, id);
+  }
+
+  if (fn === 12) {
+    return queryOne(
+      `SELECT u.id, u.pseudo, u.nom, u.prenom, u.fonction, u.chef_equipe, u.id_rp_qualif, u.etat
+       FROM utilisateurs u
+       LEFT JOIN utilisateurs re ON u.chef_equipe = re.id
+       WHERE u.id = ? AND u.etat > 0 AND (
+         (u.fonction = 2 AND u.id_rp_qualif = ?)
+         OR (u.fonction = 3 AND re.id_rp_qualif = ?)
+       )`,
+      [id, actor.id, actor.id]
+    );
+  }
+
+  return null;
+}
+
 function parseIpRulesFromBody(body) {
   const raw = body.ips_autorisees;
   if (raw == null) return [];
@@ -608,8 +668,9 @@ router.delete('/produits/:id', authenticate, checkPermission(1, 2, 7, 11), async
 // Récupérer tous les utilisateurs avec leurs relations (accessible à tous pour les filtres)
 router.get('/utilisateurs', authenticate, async (req, res) => {
   try {
-    const { pseudo, include_inactive } = req.query;
+    const { pseudo, include_inactive, include_presence } = req.query;
     const withInactive = include_inactive === '1' || include_inactive === 1 || include_inactive === true || include_inactive === 'true';
+    const withPresence = include_presence === '1' || include_presence === 1 || include_presence === true || include_presence === 'true';
     
     // Construire la requête avec ou sans filtre par pseudo
     let sql = `SELECT u.*, 
@@ -657,6 +718,10 @@ router.get('/utilisateurs', authenticate, async (req, res) => {
       }
     }
 
+    if (withPresence) {
+      await attachPresenceAujourdhui(utilisateurs);
+    }
+
     // Si un pseudo est fourni et qu'un seul utilisateur est trouvé, retourner directement l'objet
     if (pseudo && utilisateurs.length === 1) {
       return res.json({ success: true, data: utilisateurs[0] });
@@ -669,22 +734,48 @@ router.get('/utilisateurs', authenticate, async (req, res) => {
   }
 });
 
-// Liste en lecture seule des utilisateurs rattachés (RE Confirmation → confirmateurs ; Superviseur qualification → agents)
+// Liste d'équipe : RE/RP confirmation, superviseur/RP qualification
 router.get('/utilisateurs/mon-equipe', authenticate, async (req, res) => {
   try {
     const fn = Number(req.user.fonction);
-    let sousFonction = null;
     let roleLabel = '';
+    let whereSql = '';
+    let params = [];
+
     if (fn === 14) {
-      sousFonction = 6;
       roleLabel = 'confirmateurs';
+      whereSql = 'u.chef_equipe = ? AND u.fonction = 6 AND u.etat > 0';
+      params = [req.user.id];
+    } else if (fn === 13) {
+      roleLabel = 'RE et confirmateurs';
+      whereSql = `u.etat > 0 AND (
+        (u.fonction = 14 AND u.chef_equipe = ?)
+        OR (
+          u.fonction = 6 AND u.chef_equipe IN (
+            SELECT id FROM utilisateurs WHERE chef_equipe = ? AND fonction = 14 AND etat > 0
+          )
+        )
+      )`;
+      params = [req.user.id, req.user.id];
     } else if (fn === 2) {
-      sousFonction = 3;
       roleLabel = 'agents qualification';
+      whereSql = 'u.chef_equipe = ? AND u.fonction = 3 AND u.etat > 0';
+      params = [req.user.id];
+    } else if (fn === 12) {
+      roleLabel = 'superviseurs et agents';
+      whereSql = `u.etat > 0 AND (
+        (u.fonction = 2 AND u.id_rp_qualif = ?)
+        OR (
+          u.fonction = 3 AND u.chef_equipe IN (
+            SELECT id FROM utilisateurs WHERE id_rp_qualif = ? AND fonction = 2 AND etat > 0
+          )
+        )
+      )`;
+      params = [req.user.id, req.user.id];
     } else {
       return res.status(403).json({
         success: false,
-        message: 'Accès réservé aux RE Confirmation et aux Superviseurs qualification',
+        message: 'Accès réservé aux équipes qualification et confirmation',
       });
     }
 
@@ -698,10 +789,10 @@ router.get('/utilisateurs/mon-equipe', authenticate, async (req, res) => {
        LEFT JOIN centres c ON u.centre = c.id
        LEFT JOIN utilisateurs supervisor ON u.chef_equipe = supervisor.id
        LEFT JOIN utilisateurs rp ON u.id_rp_qualif = rp.id
-       WHERE u.chef_equipe = ? AND u.fonction = ? AND u.etat > 0
-       ORDER BY u.pseudo ASC`;
+       WHERE ${whereSql}
+       ORDER BY u.fonction ASC, u.pseudo ASC`;
 
-    let rows = await query(sql, [req.user.id, sousFonction]);
+    let rows = await query(sql, params);
 
     for (const userRow of rows) {
       if (userRow.fonction === 9) {
@@ -718,35 +809,14 @@ router.get('/utilisateurs/mon-equipe', authenticate, async (req, res) => {
       }
     }
 
-    if (fn === 2 && rows.length > 0) {
-      await ensurePresenceAgentsQualifTable();
-      const today = getLocalYmd();
-      const placeholders = rows.map(() => '?').join(',');
-      const presenceRows = await query(
-        `SELECT id, id_agent, type, heure_depart
-         FROM presence_agents_qualif
-         WHERE date_jour = ? AND id_agent IN (${placeholders})`,
-        [today, ...rows.map((r) => r.id)]
-      );
-      const presenceByAgent = new Map(
-        (presenceRows || []).map((p) => [Number(p.id_agent), p])
-      );
-      rows.forEach((userRow) => {
-        const presence = presenceByAgent.get(Number(userRow.id));
-        userRow.presence_aujourdhui = presence
-          ? {
-              id: presence.id,
-              type: presence.type,
-              heure_depart: presence.heure_depart,
-            }
-          : null;
-      });
+    if (fn === 2 || fn === 12) {
+      await attachPresenceAujourdhui(rows);
     }
 
     res.json({
       success: true,
       data: rows,
-      meta: { role: roleLabel, sous_fonction: sousFonction },
+      meta: { role: roleLabel },
     });
   } catch (error) {
     console.error('Erreur mon-equipe:', error);
@@ -754,20 +824,13 @@ router.get('/utilisateurs/mon-equipe', authenticate, async (req, res) => {
   }
 });
 
-// Signaler absence ou départ d'un agent qualification (superviseur fonction 2)
+// Signaler absence ou départ (superviseur/RP qualif, backoffice, admin)
 router.post('/presence-agents-qualif', authenticate, async (req, res) => {
   try {
-    if (Number(req.user.fonction) !== 2) {
-      return res.status(403).json({
-        success: false,
-        message: 'Réservé au superviseur qualification',
-      });
-    }
-
     const agentId = parseInt(req.body?.id_agent, 10);
     const type = String(req.body?.type || '').trim().toLowerCase();
     if (!Number.isFinite(agentId) || agentId <= 0) {
-      return res.status(400).json({ success: false, message: 'Agent invalide' });
+      return res.status(400).json({ success: false, message: 'Utilisateur invalide' });
     }
     if (type !== 'absence' && type !== 'depart') {
       return res.status(400).json({ success: false, message: 'Type invalide (absence ou depart)' });
@@ -784,11 +847,11 @@ router.post('/presence-agents-qualif', authenticate, async (req, res) => {
       }
     }
 
-    const agent = await getSupervisedQualifAgent(req.user.id, agentId);
-    if (!agent) {
+    const target = await assertCanManagePresence(req.user, agentId);
+    if (!target) {
       return res.status(403).json({
         success: false,
-        message: "Cet agent n'est pas rattaché à votre supervision",
+        message: "Vous ne pouvez pas modifier la présence de cet utilisateur",
       });
     }
 
@@ -826,23 +889,12 @@ router.post('/presence-agents-qualif', authenticate, async (req, res) => {
 
 router.delete('/presence-agents-qualif/:id_agent', authenticate, async (req, res) => {
   try {
-    if (Number(req.user.fonction) !== 2) {
-      return res.status(403).json({
-        success: false,
-        message: 'Réservé au superviseur qualification',
-      });
-    }
-
     const agentId = parseInt(req.params.id_agent, 10);
-    if (!Number.isFinite(agentId) || agentId <= 0) {
-      return res.status(400).json({ success: false, message: 'Agent invalide' });
-    }
-
-    const agent = await getSupervisedQualifAgent(req.user.id, agentId);
-    if (!agent) {
+    const target = await assertCanManagePresence(req.user, agentId);
+    if (!target) {
       return res.status(403).json({
         success: false,
-        message: "Cet agent n'est pas rattaché à votre supervision",
+        message: "Vous ne pouvez pas modifier la présence de cet utilisateur",
       });
     }
 
@@ -850,8 +902,8 @@ router.delete('/presence-agents-qualif/:id_agent', authenticate, async (req, res
     const today = getLocalYmd();
     await query(
       `DELETE FROM presence_agents_qualif
-       WHERE id_agent = ? AND date_jour = ? AND id_superviseur = ?`,
-      [agentId, today, req.user.id]
+       WHERE id_agent = ? AND date_jour = ?`,
+      [agentId, today]
     );
 
     res.json({ success: true, message: 'Présence du jour annulée' });

@@ -140,7 +140,7 @@ function App() {
           <Route path="decalages" element={<ProtectedRoute permission="decalage_view"><Decalages /></ProtectedRoute>} />
           <Route path="validation" element={<ProtectedRoute permission="validation_view"><Validation /></ProtectedRoute>} />
           <Route path="mes-rappels" element={<ProtectedRoute permission="dashboard_view" allowFunctions={[6, 13, 14]}><MesRappels /></ProtectedRoute>} />
-          <Route path="mon-equipe" element={<ProtectedRoute permission={null} allowFunctions={[2, 14]}><MonEquipe /></ProtectedRoute>} />
+          <Route path="mon-equipe" element={<ProtectedRoute permission={null} allowFunctions={[2, 12, 13, 14]}><MonEquipe /></ProtectedRoute>} />
           <Route path="rappels-bureau" element={<ProtectedRoute permission={null} allowFunctions={[13]}><RappelsBureau /></ProtectedRoute>} />
           <Route path="demandes-insertion" element={<ProtectedRoute permission="demandes_insertion_view"><DemandesInsertion /></ProtectedRoute>} />
           <Route path="notifications" element={<Notifications />} />
