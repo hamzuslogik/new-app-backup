@@ -140,8 +140,14 @@ const MonEquipe = () => {
   };
 
   const renderPresenceBadge = (presence) => {
-    if (!presence) {
-      return <span className="mon-equipe-badge mon-equipe-badge--ok">Présent</span>;
+    if (!presence || presence.type === 'present') {
+      const coef = presence ? Number(presence.coefficient_presence) : 1;
+      const coefLabel = Number.isFinite(coef) ? coef.toFixed(2) : '1.00';
+      return (
+        <span className="mon-equipe-badge mon-equipe-badge--ok" title="Journée complète">
+          Présent ({coefLabel})
+        </span>
+      );
     }
     const coef = Number(presence.coefficient_presence);
     const coefLabel = Number.isFinite(coef) ? coef.toFixed(2) : null;
@@ -284,13 +290,13 @@ const MonEquipe = () => {
                           >
                             <FaSignOutAlt /> Départ
                           </button>
-                          {r.presence_aujourdhui && (
+                          {r.presence_aujourdhui && r.presence_aujourdhui.type !== 'present' && (
                             <button
                               type="button"
                               className="mon-equipe-action-btn"
                               onClick={() => handleCancelPresence(r)}
                               disabled={isBusy}
-                              title="Annuler le signalement du jour"
+                              title="Rétablir la journée complète"
                             >
                               <FaUndo /> Annuler
                             </button>

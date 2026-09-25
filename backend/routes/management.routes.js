@@ -48,11 +48,11 @@ async function ensurePresenceAgentsQualifTable() {
       id_agent INT NOT NULL,
       id_superviseur INT NOT NULL,
       date_jour DATE NOT NULL,
-      type ENUM('absence', 'depart') NOT NULL,
+      type ENUM('present', 'absence', 'depart') NOT NULL DEFAULT 'present',
       heure_depart TIME NULL,
-      coefficient_presence DECIMAL(6,4) NOT NULL DEFAULT 0,
-      heures_travaillees DECIMAL(6,2) NOT NULL DEFAULT 0,
-      heures_prevues DECIMAL(6,2) NOT NULL DEFAULT 0,
+      coefficient_presence DECIMAL(6,4) NOT NULL DEFAULT 1.0000,
+      heures_travaillees DECIMAL(6,2) NOT NULL DEFAULT 8.00,
+      heures_prevues DECIMAL(6,2) NOT NULL DEFAULT 8.00,
       created_at DATETIME NOT NULL,
       updated_at DATETIME NOT NULL,
       UNIQUE KEY uniq_agent_jour (id_agent, date_jour),
@@ -60,11 +60,18 @@ async function ensurePresenceAgentsQualifTable() {
       KEY idx_superviseur (id_superviseur)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
-  // Migrations colonnes si table déjà créée sans coefficient
+  try {
+    await query(
+      `ALTER TABLE presence_agents_qualif
+       MODIFY COLUMN type ENUM('present', 'absence', 'depart') NOT NULL DEFAULT 'present'`
+    );
+  } catch (e) {
+    // ignore
+  }
   const alterCols = [
-    ['coefficient_presence', 'DECIMAL(6,4) NOT NULL DEFAULT 0'],
-    ['heures_travaillees', 'DECIMAL(6,2) NOT NULL DEFAULT 0'],
-    ['heures_prevues', 'DECIMAL(6,2) NOT NULL DEFAULT 0'],
+    ['coefficient_presence', 'DECIMAL(6,4) NOT NULL DEFAULT 1.0000'],
+    ['heures_travaillees', 'DECIMAL(6,2) NOT NULL DEFAULT 8.00'],
+    ['heures_prevues', 'DECIMAL(6,2) NOT NULL DEFAULT 8.00'],
   ];
   for (const [col, def] of alterCols) {
     try {
@@ -887,31 +894,52 @@ router.post('/presence-agents-qualif', authenticate, async (req, res) => {
       productionHours,
     });
 
-    await query(
-      `INSERT INTO presence_agents_qualif
-        (id_agent, id_superviseur, date_jour, type, heure_depart,
-         coefficient_presence, heures_travaillees, heures_prevues,
-         created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-       ON DUPLICATE KEY UPDATE
-         type = VALUES(type),
-         heure_depart = VALUES(heure_depart),
-         id_superviseur = VALUES(id_superviseur),
-         coefficient_presence = VALUES(coefficient_presence),
-         heures_travaillees = VALUES(heures_travaillees),
-         heures_prevues = VALUES(heures_prevues),
-         updated_at = NOW()`,
-      [
-        agentId,
-        req.user.id,
-        today,
-        type,
-        heureDepart,
-        presenceCalc.coefficient,
-        presenceCalc.heures_travaillees,
-        presenceCalc.heures_prevues,
-      ]
+    // Prefer UPDATE de la ligne créée par le cron ; INSERT seulement si absente
+    const existing = await queryOne(
+      `SELECT id FROM presence_agents_qualif WHERE id_agent = ? AND date_jour = ?`,
+      [agentId, today]
     );
+
+    if (existing?.id) {
+      await query(
+        `UPDATE presence_agents_qualif
+         SET type = ?,
+             heure_depart = ?,
+             id_superviseur = ?,
+             coefficient_presence = ?,
+             heures_travaillees = ?,
+             heures_prevues = ?,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [
+          type,
+          heureDepart,
+          req.user.id,
+          presenceCalc.coefficient,
+          presenceCalc.heures_travaillees,
+          presenceCalc.heures_prevues,
+          existing.id,
+        ]
+      );
+    } else {
+      await query(
+        `INSERT INTO presence_agents_qualif
+          (id_agent, id_superviseur, date_jour, type, heure_depart,
+           coefficient_presence, heures_travaillees, heures_prevues,
+           created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [
+          agentId,
+          req.user.id,
+          today,
+          type,
+          heureDepart,
+          presenceCalc.coefficient,
+          presenceCalc.heures_travaillees,
+          presenceCalc.heures_prevues,
+        ]
+      );
+    }
 
     const saved = await queryOne(
       `SELECT id, id_agent, type, heure_depart, date_jour,
@@ -948,13 +976,28 @@ router.delete('/presence-agents-qualif/:id_agent', authenticate, async (req, res
 
     await ensurePresenceAgentsQualifTable();
     const today = getLocalYmd();
-    await query(
-      `DELETE FROM presence_agents_qualif
-       WHERE id_agent = ? AND date_jour = ?`,
+    const existing = await queryOne(
+      `SELECT id FROM presence_agents_qualif WHERE id_agent = ? AND date_jour = ?`,
       [agentId, today]
     );
 
-    res.json({ success: true, message: 'Présence du jour annulée' });
+    if (existing?.id) {
+      // Remet la présence journée par défaut (comme le cron), plutôt que supprimer
+      await query(
+        `UPDATE presence_agents_qualif
+         SET type = 'present',
+             heure_depart = NULL,
+             coefficient_presence = 1.0000,
+             heures_travaillees = 8.00,
+             heures_prevues = 8.00,
+             id_superviseur = ?,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [req.user.id, existing.id]
+      );
+    }
+
+    res.json({ success: true, message: 'Présence du jour rétablie (journée complète)' });
   } catch (error) {
     console.error('Erreur DELETE presence-agents-qualif:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
