@@ -829,9 +829,23 @@ table.fiches-table thead,
 .fiches-page table.fiches-table thead th *,
 .fiches-page .fiches-table thead th *,
 .fiches-page .fiches-table th *,
+.fiches-page table.fiches-table thead th.actions-header,
+.fiches-page .fiches-table thead th.actions-header,
+.fiches-page table.fiches-table thead th:last-child,
+.fiches-page .fiches-table thead th:last-child,
+.fiches-table th.actions-header,
+.fiches-table th:last-child {
+  color: #ffffff !important;
+  background: #14532D !important;
+  background-color: #14532D !important;
+}
+
 .fiches-table th *,
 .fiches-table th span,
-.fiches-table th div {
+.fiches-table th div,
+.fiches-page table.fiches-table thead th.actions-header *,
+.fiches-page .fiches-table thead th.actions-header span,
+.fiches-table th.actions-header span {
   color: #ffffff !important;
   background-color: transparent !important;
 }
@@ -1233,11 +1247,12 @@ table.fiches-table thead,
   .btn-edit,
   .btn-archive,
   .btn-ko {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    padding: 0;
-    font-size: 13.6px;
+    width: 26px;
+    height: 26px;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    font-size: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1289,8 +1304,8 @@ table.fiches-table thead,
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 6.4px;
-  min-width: 180px;
+  gap: 4px;
+  min-width: 0;
   width: 100%;
 }
 
@@ -1349,15 +1364,22 @@ table.fiches-table thead,
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  padding: 0;
+  width: 26px;
+  height: 26px;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
   border: none;
   border-radius: 4px;
-  font-size: 13.6px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.action-buttons svg {
+  width: 11px;
+  height: 11px;
+  font-size: 11px;
 }
 
 .btn-detail {

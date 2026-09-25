@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaPlus, FaEdit, FaArchive, FaBoxOpen, FaTimes, FaSearch, FaChevronDown, FaChevronUp, FaCheck, FaFileAlt, FaBan, FaSort, FaSortUp, FaSortDown, FaFilter } from 'react-icons/fa';
+import { FaPlus, FaArchive, FaBoxOpen, FaTimes, FaSearch, FaChevronDown, FaChevronUp, FaCheck, FaFileAlt, FaBan, FaSort, FaSortUp, FaSortDown, FaFilter } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
@@ -82,7 +82,6 @@ const Fiches = () => {
   const [showFilters, setShowFilters] = useState(!isAgentQualif); // Masquer pour agent qualif
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [koModal, setKoModal] = useState({ isOpen: false, ficheHash: null, motifKo: '', commentaireComplement: '' });
-  const [editingFiche, setEditingFiche] = useState(null);
   const [quickSearch, setQuickSearch] = useState(''); // Recherche rapide
   const [isSearching, setIsSearching] = useState(false);
   const debouncedQuickSearch = useDebouncedValue(quickSearch, 250);
@@ -451,32 +450,6 @@ const Fiches = () => {
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Erreur lors de la création de la fiche');
-      }
-    }
-  );
-
-  // Mutation pour modifier une fiche
-  const updateMutation = useMutation(
-    async ({ hash, data }) => {
-      const response = await api.put(`/fiches/${hash}`, data);
-      return response.data;
-    },
-    {
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries('fiches');
-        queryClient.invalidateQueries('fiches-source-counts');
-        // Si la date du RDV a été modifiée, invalider toutes les queries de planning
-        if (variables.data && variables.data.date_rdv_time !== undefined) {
-          queryClient.invalidateQueries(['planning-week']);
-          queryClient.invalidateQueries(['planning-availability']);
-          queryClient.invalidateQueries(['planning-modal']);
-          queryClient.invalidateQueries(['availability-modal']);
-        }
-        setEditingFiche(null);
-        toast.success('Fiche mise à jour avec succès');
-      },
-      onError: (error) => {
-        toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour de la fiche');
       }
     }
   );
@@ -1536,7 +1509,7 @@ const Fiches = () => {
                     {renderSortableHeader('Centre')}
                     {renderSortableHeader('Produit')}
                     {renderSortableHeader('Validé')}
-                    <th>Actions</th>
+                    <th className="actions-header"><span>Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1618,21 +1591,8 @@ const Fiches = () => {
                                   title="Voir les détails"
                                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                 >
-                                  <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
+                                  <FaSearch />
                                 </FicheDetailLink>
-                              )}
-                              {!isAgentQualif && (
-                                <button
-                                  className="btn-edit"
-                                  onClick={() => {
-                                    // Pour l'édition, on a besoin de l'ID, mais il est masqué
-                                    // On peut utiliser le hash pour récupérer la fiche
-                                    setEditingFiche({ ...fiche, id: null }); // L'ID sera récupéré via le hash
-                                  }}
-                                  title="Modifier"
-                                >
-                                  <FaEdit />
-                                </button>
                               )}
                               {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 11 || user?.fonction === 12 || user?.fonction === 13) && (
                                 <button
@@ -1730,25 +1690,6 @@ const Fiches = () => {
         />
       )}
 
-      {/* Modal de modification */}
-      {editingFiche && !isAgentQualif && (
-        <FicheFormModal
-          fiche={editingFiche}
-          centres={centres}
-          agents={agents}
-          confirmateurs={confirmateurs}
-          commerciaux={commerciaux}
-          etats={etats}
-          produits={produitsData || []}
-          professions={professionsData || []}
-          modeChauffage={modeChauffageData || []}
-          etudeRaison={etudeRaisonData || []}
-          typeContratData={typeContratData || []}
-          onClose={() => setEditingFiche(null)}
-          onSave={(data) => updateMutation.mutate({ hash: editingFiche.hash, data })}
-          isLoading={updateMutation.isLoading}
-        />
-      )}
       <KoMotifModal
         isOpen={koModal.isOpen}
         title="Mettre en KO"

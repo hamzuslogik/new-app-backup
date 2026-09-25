@@ -1104,6 +1104,15 @@
   background: #eef5f7;
 }
 
+.production-comparison-other-plateau {
+  margin-top: 16px;
+}
+
+.comparison-card-other {
+  border-color: #86EFAC;
+  background: #F0FDF4;
+}
+
 .comparison-card-label {
   font-size: 12px;
   font-weight: 700;

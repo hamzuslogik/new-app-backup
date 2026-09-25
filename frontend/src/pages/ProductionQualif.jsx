@@ -1139,6 +1139,79 @@ const ProductionQualif = () => {
                 </div>
               </div>
             )}
+
+            {stats.comparison && stats.comparison_other_plateau && (
+              <div className="production-comparison production-comparison-other-plateau noprint">
+                <h2 className="production-comparison-title">Comparatif Autre plateau</h2>
+                <p className="production-comparison-subtitle">
+                  Résultat de l&apos;autre RP sur la même période · chiffres uniquement
+                </p>
+                <div className="production-comparison-grid">
+                  <div className="comparison-card">
+                    <div className="comparison-card-label">Mon plateau</div>
+                    <div className="comparison-card-period">{formatPeriodRange(stats.period)}</div>
+                    <div className="comparison-metrics">
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Fiches insérées</span>
+                        <strong className="comparison-metric-value">{stats.comparison.current.total}</strong>
+                      </div>
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Performance (conformité)</span>
+                        <strong className="comparison-metric-value">{stats.comparison.current.performance}%</strong>
+                        <span className="comparison-metric-detail">
+                          KO : {stats.comparison.current.nb_ko} ({stats.comparison.current.taux_ko}%)
+                          {' · '}
+                          HC : {stats.comparison.current.nb_hc} ({stats.comparison.current.taux_hc}%)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="comparison-card comparison-card-other">
+                    <div className="comparison-card-label">Autre plateau</div>
+                    <div className="comparison-card-period">{formatPeriodRange(stats.period)}</div>
+                    <div className="comparison-metrics">
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Fiches insérées</span>
+                        <strong className="comparison-metric-value">{stats.comparison_other_plateau.other.total}</strong>
+                      </div>
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Performance (conformité)</span>
+                        <strong className="comparison-metric-value">{stats.comparison_other_plateau.other.performance}%</strong>
+                        <span className="comparison-metric-detail">
+                          KO : {stats.comparison_other_plateau.other.nb_ko} ({stats.comparison_other_plateau.other.taux_ko}%)
+                          {' · '}
+                          HC : {stats.comparison_other_plateau.other.nb_hc} ({stats.comparison_other_plateau.other.taux_hc}%)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="comparison-card comparison-card-delta">
+                    <div className="comparison-card-label">Écart vs autre plateau</div>
+                    <div className="comparison-metrics">
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Δ Fiches</span>
+                        <strong className={`comparison-metric-value ${formatDelta(stats.comparison_other_plateau.delta.total).className}`}>
+                          {formatDelta(stats.comparison_other_plateau.delta.total).text}
+                        </strong>
+                      </div>
+                      <div className="comparison-metric">
+                        <span className="comparison-metric-label">Δ Performance</span>
+                        <strong className={`comparison-metric-value ${formatDelta(stats.comparison_other_plateau.delta.performance, ' pts').className}`}>
+                          {formatDelta(stats.comparison_other_plateau.delta.performance, ' pts').text}
+                        </strong>
+                        <span className="comparison-metric-detail">
+                          Δ KO : {formatDelta(stats.comparison_other_plateau.delta.nb_ko).text}
+                          {' · '}
+                          Δ HC : {formatDelta(stats.comparison_other_plateau.delta.nb_hc).text}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="no-data">Aucune donnée disponible pour cette période</div>

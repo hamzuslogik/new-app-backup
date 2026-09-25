@@ -152,6 +152,30 @@ function resolveProductionQualifComparisonWindow(startDateStr, endDateStr, start
   return getPreviousDaySameTimeWindow(startDateTime, endDateTime);
 }
 
+async function getQualifAgentIdsForRp(rpId) {
+  const superviseursAssignes = await query(
+    `SELECT id FROM utilisateurs
+     WHERE id_rp_qualif = ? AND etat > 0
+     AND EXISTS (
+       SELECT 1 FROM utilisateurs agents
+       WHERE agents.chef_equipe = utilisateurs.id
+       AND agents.fonction = 3
+       AND agents.etat > 0
+     )`,
+    [rpId]
+  );
+  const superviseurIds = (superviseursAssignes || []).map((s) => s.id);
+  if (superviseurIds.length === 0) return [];
+  const agentsSousResponsabilite = await query(
+    `SELECT id FROM utilisateurs
+     WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')})
+     AND fonction = 3
+     AND etat > 0`,
+    superviseurIds
+  );
+  return (agentsSousResponsabilite || []).map((a) => a.id);
+}
+
 async function computeProductionQualifPeriodTotals(agentIds, startDateTime, endDateTime) {
   const ID_ETAT_HC = 55;
   if (!agentIds || agentIds.length === 0) {
@@ -1699,6 +1723,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
             end_datetime: endDate,
           },
           comparison: null,
+          comparison_other_plateau: null,
         }
       });
     }
@@ -1926,6 +1951,36 @@ router.get('/production-qualif', authenticate, async (req, res) => {
     const deltaKo = currentTotals.nb_ko - previousTotals.nb_ko;
     const deltaHc = currentTotals.nb_hc - previousTotals.nb_hc;
 
+    let comparisonOtherPlateau = null;
+    if (fonction === 12) {
+      const otherRps = await query(
+        `SELECT id FROM utilisateurs
+         WHERE fonction = 12 AND id != ?
+         AND (etat > 0 OR etat IS NULL)`,
+        [req.user.id]
+      );
+      if (otherRps && otherRps.length > 0) {
+        const otherAgentIds = [];
+        for (const rp of otherRps) {
+          otherAgentIds.push(...(await getQualifAgentIdsForRp(rp.id)));
+        }
+        const otherTotals = await computeProductionQualifPeriodTotals(
+          [...new Set(otherAgentIds)],
+          startDate,
+          endDate
+        );
+        comparisonOtherPlateau = {
+          other: otherTotals,
+          delta: {
+            total: currentTotals.total - otherTotals.total,
+            nb_ko: currentTotals.nb_ko - otherTotals.nb_ko,
+            nb_hc: currentTotals.nb_hc - otherTotals.nb_hc,
+            performance: Math.round((currentTotals.performance - otherTotals.performance) * 10) / 10,
+          },
+        };
+      }
+    }
+
     res.json({
       success: true,
       data: {
@@ -1956,6 +2011,7 @@ router.get('/production-qualif', authenticate, async (req, res) => {
             performance: deltaPerformance,
           },
         },
+        comparison_other_plateau: comparisonOtherPlateau,
       }
     });
   } catch (error) {
