@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import {
   FaCalendarDay,
@@ -14,6 +15,7 @@ import {
   FaSortDown,
   FaExpand,
   FaCompress,
+  FaCheck,
 } from 'react-icons/fa';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { useSidebar } from '../contexts/SidebarContext';
@@ -37,6 +39,19 @@ import {
   useFicheContextMenuDismiss,
 } from '../utils/ficheRowContextMenuTouch';
 import FicheTableMobileDetailButton from '../components/FicheTableMobileDetailButton';
+import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
+import {
+  getFicheTableIndicators,
+  ficheHasDecalageRequest,
+  getDecalageDisplayInfo,
+} from '../utils/ficheTableIndicators';
+import { isAdminSession } from '../utils/adminMenuUrls';
+import {
+  FicheAdminBadgeHeaders,
+  FicheAdminValideCell,
+  FicheAdminActionCell,
+  FicheAdminIndicatorCells,
+} from '../components/fiches/FicheAdminBadgeColumns';
 import './RendezVousVue.css';
 
 const RDV_VUE_PAGE_CLASS = 'rdv-vue-page';
@@ -129,6 +144,8 @@ const fetchRdvVue = async (type, date) => {
 };
 
 const RendezVousVue = () => {
+  const { user } = useAuth();
+  const isAdminFicheLayout = isAdminSession(user);
   const { closeSidebar } = useSidebar();
   const isRdvVueTouchMobile = isTouchMobileDevice();
 
@@ -494,6 +511,33 @@ const RendezVousVue = () => {
     return etat?.color || '#9cbfc8';
   };
 
+  const handleGeneratePdf = async (hash) => {
+    if (!hash) return;
+    try {
+      const [ficheRes, profRes, tcRes] = await Promise.all([
+        api.get(`/fiches/${encodeURIComponent(hash)}`),
+        api.get('/management/professions'),
+        api.get('/management/type-contrat'),
+      ]);
+      const full = ficheRes.data?.data;
+      if (!full) throw new Error('Fiche introuvable');
+      const users = usersData || [];
+      generateFicheClientPdf(full, {
+        professions: profRes.data?.data || [],
+        typeContrat: tcRes.data?.data || [],
+        centres: centresData || [],
+        agents: users.filter((u) => Number(u.fonction) === 3),
+        commerciaux: users.filter((u) => Number(u.fonction) === 5),
+        confirmateurs: users.filter((u) => Number(u.fonction) === 6),
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Impossible de générer le PDF');
+    }
+  };
+
+  const showDecalageColAdmin =
+    isAdminFicheLayout && filteredList.some((f) => ficheHasDecalageRequest(f));
+
   return (
     <div className="rdv-vue">
       <div className="page-header">
@@ -601,29 +645,50 @@ const RendezVousVue = () => {
           <div className="loading">Chargement...</div>
         ) : filteredList.length > 0 ? (
           <div className="fiches-table-container">
-            <table className="fiches-table">
+<table className={`fiches-table${isAdminFicheLayout ? ' fiches-table--admin-layout' : ''}`}>
               <thead>
                 <tr>
                   <th className="sortable-header" onClick={() => handleSort('nom')}>Nom {getSortIndicator('nom')}</th>
                   <th className="sortable-header" onClick={() => handleSort('prenom')}>Prénom {getSortIndicator('prenom')}</th>
                   <th className="sortable-header" onClick={() => handleSort('tel')}>Téléphone {getSortIndicator('tel')}</th>
                   <th className="sortable-header" onClick={() => handleSort('cp')}>CP {getSortIndicator('cp')}</th>
-                  <th className="sortable-header" onClick={() => handleSort('ville')}>Ville {getSortIndicator('ville')}</th>
-                  <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date Insertion {getSortIndicator('date_insert_time')}</th>
-                  <th className="sortable-header" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
-                  <th className="sortable-header" onClick={() => handleSort('etat')}>État actuel {getSortIndicator('etat')}</th>
-                  <th className="sortable-header" onClick={() => handleSort('confirmateur')}>Confirmateur {getSortIndicator('confirmateur')}</th>
-                  <th className="sortable-header" onClick={() => handleSort('commerciaux')}>Commercial {getSortIndicator('commerciaux')}</th>
-                  <th className="sortable-header" onClick={() => handleSort('centre')}>Centre {getSortIndicator('centre')}</th>
-                  <th className="sortable-header produit-col" onClick={() => handleSort('produit')}>Produit {getSortIndicator('produit')}</th>
-                  <th className="sortable-header" onClick={() => handleSort('valider')}>Validé {getSortIndicator('valider')}</th>
-                  <th className="rdv-vue-col-details">Détails</th>
+                  {isAdminFicheLayout ? (
+                    <>
+                      <th className="sortable-header" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('commerciaux')}>Commercial {getSortIndicator('commerciaux')}</th>
+                      <FicheAdminBadgeHeaders
+                        onSortValide={() => handleSort('valider')}
+                        onSortProduit={() => handleSort('produit')}
+                        getSortIcon={(label) => getSortIndicator(label === 'Validé' ? 'valider' : label === 'Produit' ? 'produit' : '')}
+                      />
+                      <th className="sortable-header" onClick={() => handleSort('centre')}>Centre {getSortIndicator('centre')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date Insertion {getSortIndicator('date_insert_time')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('confirmateur')}>Conf {getSortIndicator('confirmateur')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('etat')}>État actuel {getSortIndicator('etat')}</th>
+                      {showDecalageColAdmin ? <th className="dashboard-decalage-col">Décalage</th> : null}
+                    </>
+                  ) : (
+                    <>
+                      <th className="sortable-header" onClick={() => handleSort('ville')}>Ville {getSortIndicator('ville')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date Insertion {getSortIndicator('date_insert_time')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('etat')}>État actuel {getSortIndicator('etat')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('confirmateur')}>Confirmateur {getSortIndicator('confirmateur')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('commerciaux')}>Commercial {getSortIndicator('commerciaux')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('centre')}>Centre {getSortIndicator('centre')}</th>
+                      <th className="sortable-header produit-col" onClick={() => handleSort('produit')}>Produit {getSortIndicator('produit')}</th>
+                      <th className="sortable-header" onClick={() => handleSort('valider')}>Validé {getSortIndicator('valider')}</th>
+                      <th className="rdv-vue-col-details">Détails</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {filteredList.map((f) => {
                   const rowBackgroundColor = `${getEtatColor(f)}40`;
                   const rowBorderColor = getEtatColor(f);
+                  const indicators = getFicheTableIndicators(f.id_etat_histo, f, etatsData || []);
+                  const decalageInfo = showDecalageColAdmin ? getDecalageDisplayInfo(f) : null;
                   return (
                   <tr
                     key={f.id}
@@ -645,57 +710,92 @@ const RendezVousVue = () => {
                     <td>{f.prenom || ''}</td>
                     <td>{f.tel || ''}</td>
                     <td>{f.cp || ''}</td>
-                    <td>{f.ville || ''}</td>
-                    <td>{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
-                    <td>{formatRdvDateTime(f.date_rdv_time)}</td>
-                    <td>
-                      <span className="etat-badge" style={{ backgroundColor: getEtatColor(f) }}>
-                        {f.etat_titre || f.id_etat_final || ''}
-                      </span>
-                    </td>
-                    <td>{getConfirmateursFormatted(f) || ''}</td>
-                    <td>{[f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ') || ''}</td>
-                    <td>{getCentreName(f.id_centre) || ''}</td>
-                    <td className="produit-col">
-                      <span className="produit-indicator" style={{ backgroundColor: getProduitColor(f.produit), color: '#fff' }}>
-                        {getProduitName(f.produit) || ''}
-                      </span>
-                    </td>
-                    <td>{Number(f.valider) > 0 ? '✓' : ''}</td>
-                    <td className="rdv-vue-col-details" style={{ backgroundColor: rowBackgroundColor }}>
-                      <div className="fiche-indicators">
-                        {f.id_commercial_2 && Number(f.id_commercial_2) > 0 && <span className="indicator r2" title="R2 placé">R2</span>}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => openRdvVueFicheDetail({ hash: f.hash })}
-                        className="btn-detail"
-                        title="Voir la fiche"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                      >
-                        <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
-                          {lastViewedFicheHash === f.hash && (
-                            <span
-                              aria-hidden="true"
-                              style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                width: '28px',
-                                height: '28px',
-                                border: '3px solid #9e9e9e',
-                                borderRadius: '1px',
-                                backgroundColor: 'transparent',
-                                boxSizing: 'border-box',
-                                pointerEvents: 'none',
-                              }}
-                            />
-                          )}
-                        </span>
-                      </button>
-                    </td>
+                    {isAdminFicheLayout ? (
+                      <>
+                        <td>{formatRdvDateTime(f.date_rdv_time)}</td>
+                        <td>{[f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ') || ''}</td>
+                        <FicheAdminValideCell valider={f.valider} confRdvAvec={f.conf_rdv_avec} />
+                        <FicheAdminActionCell
+                          onDetail={() => openRdvVueFicheDetail({ hash: f.hash })}
+                          isLastViewed={lastViewedFicheHash === f.hash}
+                        />
+                        <FicheAdminIndicatorCells
+                          indicators={indicators}
+                          produitName={getProduitName(f.produit)}
+                          produitColor={getProduitColor(f.produit)}
+                          onPdf={() => handleGeneratePdf(f.hash)}
+                        />
+                        <td>{getCentreName(f.id_centre) || ''}</td>
+                        <td>{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
+                        <td>{getConfirmateursFormatted(f) || ''}</td>
+                        <td>
+                          <span className="etat-badge" style={{ backgroundColor: getEtatColor(f) }}>
+                            {f.etat_titre || f.id_etat_final || ''}
+                          </span>
+                        </td>
+                        {showDecalageColAdmin ? (
+                          <td className="dashboard-decalage-cell">
+                            {decalageInfo ? (
+                              <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
+                                {decalageInfo.text}
+                              </span>
+                            ) : null}
+                          </td>
+                        ) : null}
+                      </>
+                    ) : (
+                      <>
+                        <td>{f.ville || ''}</td>
+                        <td>{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
+                        <td>{formatRdvDateTime(f.date_rdv_time)}</td>
+                        <td>
+                          <span className="etat-badge" style={{ backgroundColor: getEtatColor(f) }}>
+                            {f.etat_titre || f.id_etat_final || ''}
+                          </span>
+                        </td>
+                        <td>{getConfirmateursFormatted(f) || ''}</td>
+                        <td>{[f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ') || ''}</td>
+                        <td>{getCentreName(f.id_centre) || ''}</td>
+                        <td className="produit-col">
+                          <span className="produit-indicator" style={{ backgroundColor: getProduitColor(f.produit), color: '#fff' }}>
+                            {getProduitName(f.produit) || ''}
+                          </span>
+                        </td>
+                        <td>{Number(f.valider) > 0 ? '✓' : ''}</td>
+                        <td className="rdv-vue-col-details" style={{ backgroundColor: rowBackgroundColor }}>
+                          <div className="fiche-indicators">
+                            {f.id_commercial_2 && Number(f.id_commercial_2) > 0 && <span className="indicator r2" title="R2 placé">R2</span>}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openRdvVueFicheDetail({ hash: f.hash })}
+                            className="btn-detail"
+                            title="Voir la fiche"
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                          >
+                            <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <FaSearch style={{ color: '#ffffff', fontSize: '13.6px' }} />
+                              {lastViewedFicheHash === f.hash && (
+                                <span
+                                  style={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    width: '28px',
+                                    height: '28px',
+                                    border: '3px solid #9e9e9e',
+                                    borderRadius: '1px',
+                                    backgroundColor: 'transparent',
+                                    boxSizing: 'border-box',
+                                  }}
+                                />
+                              )}
+                            </span>
+                          </button>
+                        </td>
+                      </>
+                    )}
                   </tr>
                   );
                 })}

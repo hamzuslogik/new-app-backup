@@ -17,8 +17,19 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
-import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
+import {
+  getFicheTableIndicators,
+  ficheHasDecalageRequest,
+  getDecalageDisplayInfo,
+} from '../utils/ficheTableIndicators';
+import { isAdminSession } from '../utils/adminMenuUrls';
+import {
+  FicheAdminBadgeHeaders,
+  FicheAdminValideCell,
+  FicheAdminActionCell,
+  FicheAdminIndicatorCells,
+} from '../components/fiches/FicheAdminBadgeColumns';
 import {
   applyForceDesktopViewport,
   applyMobileNativeViewport,
@@ -297,6 +308,7 @@ const Dashboard = () => {
   const isREConfirmation = user?.fonction === 14;
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   const isQualiteConfirmation = Number(user?.fonction) === 4;
+  const isAdminFicheLayout = isAdminSession(user);
   /** Menu contextuel (clic droit) sur les lignes du tableau : admin (1), backoffice (11), RP (13), RE (14) */
   const canFicheContextMenu = [1, 11, 13, 14].includes(Number(user?.fonction));
   const [showFilters, setShowFilters] = useState(true);
@@ -1186,62 +1198,9 @@ const Dashboard = () => {
     return { status, text };
   };
 
-  // Vérifier les indicateurs dans l'historique basés sur les titres des états
-  const checkIndicators = (histoString, fiche = {}) => {
-    const r2Placed = ficheHasR2Placed(fiche);
-    if (!histoString || !etatsData) {
-      const presenceCouple = String(fiche?.conf_presence_couple || '').toUpperCase().trim();
-      const hasRdvSeul = [
-        'MME SEULE SANS MR',
-        'MME SEUL SANS MR',
-        'MR SEUL SANS MME',
-        'NON',
-      ].includes(presenceCouple) || String(fiche?.conf_rdv_avec || '').toUpperCase().trim() === 'SEUL';
-      return { r2: r2Placed, rf: false, an: false, rs: hasRdvSeul, sg: false };
-    }
-    
-    const histoArray = histoString.split(',').map(Number);
-    let hasAnnuler = false;
-    let hasRefuser = false;
-    let hasSigner = false;
-    
-    // Vérifier chaque ID dans l'historique
-    histoArray.forEach(etatId => {
-      const etat = etatsData.find(e => e.id === etatId);
-      if (etat && etat.titre) {
-        const titre = etat.titre.toUpperCase();
-        // Vérifier si "RDV ANNULER" est présent dans le titre
-        if (titre.includes('RDV ANNULER')) {
-          hasAnnuler = true;
-        }
-        // Vérifier si "REFUSER" est présent dans le titre
-        if (titre.includes('REFUSER')) {
-          hasRefuser = true;
-        }
-        if ([13, 16, 38, 44, 45].includes(Number(etatId)) || titre.includes('SIGNER')) {
-          hasSigner = true;
-        }
-      } else if ([13, 16, 38, 44, 45].includes(Number(etatId))) {
-        hasSigner = true;
-      }
-    });
-    
-    const presenceCouple = String(fiche?.conf_presence_couple || '').toUpperCase().trim();
-    const hasRdvSeul = [
-      'MME SEULE SANS MR',
-      'MME SEUL SANS MR',
-      'MR SEUL SANS MME',
-      'NON',
-    ].includes(presenceCouple) || String(fiche?.conf_rdv_avec || '').toUpperCase().trim() === 'SEUL';
-
-    return {
-      r2: r2Placed,
-      rf: hasRefuser,
-      an: hasAnnuler,
-      rs: hasRdvSeul,
-      sg: hasSigner,
-    };
-  };
+  // Vérifier les indicateurs badges (SIG, CS, R2, HAS, RF, ANN)
+  const checkIndicators = (histoString, fiche = {}) =>
+    getFicheTableIndicators(histoString, fiche, etatsData || []);
 
   // Obtenir le nom de l'utilisateur
   const getUserName = (userId) => {
@@ -1553,6 +1512,8 @@ const Dashboard = () => {
       });
 
   const fiches = filteredFiches;
+  const showDecalageColAdmin =
+    isAdminFicheLayout && fiches.some((f) => ficheHasDecalageRequest(f));
 
   const copyFicheTelFromMenu = (tel) => {
     const t = (tel || '').trim();
@@ -2349,7 +2310,7 @@ const Dashboard = () => {
         ) : (
           <>
             <div className={`fiches-table-container ${isFetchingList ? 'loading' : ''}`}>
-              <table className="fiches-table">
+<table className={`fiches-table${isAdminFicheLayout ? " fiches-table--admin-layout" : ""}`}>
                 <thead>
                   <tr>
                     <th onClick={() => handleSort('Nom')} className="sortable-header">
@@ -2364,32 +2325,65 @@ const Dashboard = () => {
                     <th onClick={() => handleSort('CP')} className="sortable-header">
                       CP {getSortIcon('CP')}
                     </th>
-                    <th onClick={() => handleSort('Date Insertion')} className="sortable-header">
-                      Date Insertion {getSortIcon('Date Insertion')}
-                    </th>
-                    <th onClick={() => handleSort('Date RDV')} className="sortable-header">
-                      Date RDV {getSortIcon('Date RDV')}
-                    </th>
-                    <th onClick={() => handleSort('État Final')} className="sortable-header">
-                      {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
-                    </th>
-                    <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
-                      Confirmateur {getSortIcon('Confirmateur')}
-                    </th>
-                    <th onClick={() => handleSort('Commercial')} className="sortable-header">
-                      Commercial {getSortIcon('Commercial')}
-                    </th>
-                    <th onClick={() => handleSort('Centre')} className="sortable-header">
-                      Centre {getSortIcon('Centre')}
-                    </th>
-                    <th onClick={() => handleSort('Produit')} className="sortable-header">
-                      Produit {getSortIcon('Produit')}
-                    </th>
-                    <th onClick={() => handleSort('Validé')} className="sortable-header">
-                      Validé {getSortIcon('Validé')}
-                    </th>
-                    <th>Actions</th>
-                    <th className="dashboard-decalage-col">État décalage</th>
+                    {isAdminFicheLayout ? (
+                      <>
+                        <th onClick={() => handleSort('Date RDV')} className="sortable-header">
+                          Date RDV {getSortIcon('Date RDV')}
+                        </th>
+                        <th onClick={() => handleSort('Commercial')} className="sortable-header">
+                          Commercial {getSortIcon('Commercial')}
+                        </th>
+                        <FicheAdminBadgeHeaders
+                          getSortIcon={getSortIcon}
+                          onSortValide={() => handleSort('Validé')}
+                          onSortProduit={() => handleSort('Produit')}
+                        />
+                        <th onClick={() => handleSort('Centre')} className="sortable-header">
+                          Centre {getSortIcon('Centre')}
+                        </th>
+                        <th onClick={() => handleSort('Date Insertion')} className="sortable-header">
+                          Date Insertion {getSortIcon('Date Insertion')}
+                        </th>
+                        <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
+                          Conf {getSortIcon('Confirmateur')}
+                        </th>
+                        <th onClick={() => handleSort('État Final')} className="sortable-header">
+                          {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
+                        </th>
+                        {showDecalageColAdmin ? (
+                          <th className="dashboard-decalage-col">Décalage</th>
+                        ) : null}
+                      </>
+                    ) : (
+                      <>
+                        <th onClick={() => handleSort('Date Insertion')} className="sortable-header">
+                          Date Insertion {getSortIcon('Date Insertion')}
+                        </th>
+                        <th onClick={() => handleSort('Date RDV')} className="sortable-header">
+                          Date RDV {getSortIcon('Date RDV')}
+                        </th>
+                        <th onClick={() => handleSort('État Final')} className="sortable-header">
+                          {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
+                        </th>
+                        <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
+                          Confirmateur {getSortIcon('Confirmateur')}
+                        </th>
+                        <th onClick={() => handleSort('Commercial')} className="sortable-header">
+                          Commercial {getSortIcon('Commercial')}
+                        </th>
+                        <th onClick={() => handleSort('Centre')} className="sortable-header">
+                          Centre {getSortIcon('Centre')}
+                        </th>
+                        <th onClick={() => handleSort('Produit')} className="sortable-header">
+                          Produit {getSortIcon('Produit')}
+                        </th>
+                        <th onClick={() => handleSort('Validé')} className="sortable-header">
+                          Validé {getSortIcon('Validé')}
+                        </th>
+                        <th>Actions</th>
+                        <th className="dashboard-decalage-col">État décalage</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -2397,14 +2391,16 @@ const Dashboard = () => {
                     const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                     const etatColor = getEtatColor(fiche.id_etat_final, fiche);
                     const produitColor = getProduitColor(fiche.produit);
-                    const decalageInfo = getDecalageDashboardInfo(fiche);
-                    
+                    const decalageInfo = isAdminFicheLayout
+                      ? (showDecalageColAdmin ? getDecalageDisplayInfo(fiche) : null)
+                      : getDecalageDashboardInfo(fiche);
+
                     return (
-                      <tr 
+                      <tr
                         key={fiche.hash}
                         className="fiche-row-by-etat"
                         {...bindFicheRowContextMenu(fiche, { enabled: canFicheContextMenu })}
-                        style={{ 
+                        style={{
                           backgroundColor: `${etatColor}40`,
                           borderLeft: `4px solid ${etatColor}`
                         }}
@@ -2423,103 +2419,160 @@ const Dashboard = () => {
                         <td data-label="Prénom:">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
-                        <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
-                        <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                        <td
-                          data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
-                          className="etat-col-cell"
-                        >
-                          <span 
-                            className="etat-badge etat-badge--wrap"
-                            style={{ backgroundColor: etatColor }}
-                          >
-                            {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
-                            {getEtatDisplayName(fiche)}
-                            {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
-                              <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
-                                (RDV_URGENT)
-                              </span>
-                            )}
-                          </span>
-                        </td>
-                        <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
-                        <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
-                        <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
-                        <td data-label="Produit:">
-                          <span 
-                            className="produit-indicator"
-                            style={{ backgroundColor: produitColor, color: '#ffffff' }}
-                            title={getProduitName(fiche.produit)}
-                          >
-                            {getProduitName(fiche.produit)}
-                          </span>
-                        </td>
-                        <td data-label="Validé:" style={{ textAlign: 'center' }}>
-                          {fiche.valider > 0 ? (
-                            <FaCheck 
-                              style={{ 
-                                color: '#28a745', 
-                                fontSize: '15.3px',
-                                cursor: 'pointer'
-                              }} 
-                              title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
-                            />
-                          ) : null}
-                        </td>
-                        <td data-label="">
-                          <div className="fiche-indicators">
-                            {indicators.r2 && (
-                              <span className="indicator r2" title="R2 placé (commercial secondaire)">
-                                R2
-                              </span>
-                            )}
-                            {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
-                            {indicators.sg && <span className="indicator sg" title="Signé">SIG</span>}
-                            {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
-                            {indicators.rs && <span className="indicator rs" title="SEUL">SEUL</span>}
-                          </div>
-                          <div className="qualite-confirmation-actions-cell dashboard-actions-cell">
-                            {isQualiteConfirmation && (
-                              <QualiteConfirmationAuditButton
-                                fiche={fiche}
-                                onClick={() => setAuditFiche(fiche)}
-                              />
-                            )}
-                            <button
-                              onClick={() => openDashboardFicheDetail({ hash: fiche.hash })}
-                              className="btn-detail"
-                              title="Voir les détails"
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                            >
-                              <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
-                                {lastViewedFicheHash === fiche.hash && (
-                                  <span
-                                    style={{
-                                      position: 'absolute',
-                                      top: '50%',
-                                      left: '50%',
-                                      transform: 'translate(-50%, -50%)',
-                                      width: '28px',
-                                      height: '28px',
-                                      border: '3px solid #9e9e9e',
-                                      borderRadius: '1px',
-                                      backgroundColor: 'transparent',
-                                      boxSizing: 'border-box'
-                                    }}
+                        {isAdminFicheLayout ? (
+                          <>
+                            <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                            <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
+                            <FicheAdminValideCell valider={fiche.valider} confRdvAvec={fiche.conf_rdv_avec} />
+                            <FicheAdminActionCell
+                              onDetail={() => openDashboardFicheDetail({ hash: fiche.hash })}
+                              isLastViewed={lastViewedFicheHash === fiche.hash}
+                              extras={
+                                isQualiteConfirmation ? (
+                                  <QualiteConfirmationAuditButton
+                                    fiche={fiche}
+                                    onClick={() => setAuditFiche(fiche)}
                                   />
+                                ) : null
+                              }
+                            />
+                            <FicheAdminIndicatorCells
+                              indicators={indicators}
+                              produitName={getProduitName(fiche.produit)}
+                              produitColor={produitColor}
+                              onPdf={() => runGeneratePdfFromMenu(fiche.hash)}
+                            />
+                            <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
+                            <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                            <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
+                            <td
+                              data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
+                              className="etat-col-cell"
+                            >
+                              <span
+                                className="etat-badge etat-badge--wrap"
+                                style={{ backgroundColor: etatColor }}
+                              >
+                                {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
+                                {getEtatDisplayName(fiche)}
+                                {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
+                                  <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
+                                    (RDV_URGENT)
+                                  </span>
                                 )}
                               </span>
-                            </button>
-                          </div>
-                        </td>
-                        <td data-label="État décalage:" className="dashboard-decalage-cell">
-                          {decalageInfo && (
-                            <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
-                              {decalageInfo.text}
-                            </span>
-                          )}
-                        </td>
+                            </td>
+                            {showDecalageColAdmin ? (
+                              <td data-label="Décalage:" className="dashboard-decalage-cell">
+                                {decalageInfo ? (
+                                  <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
+                                    {decalageInfo.text}
+                                  </span>
+                                ) : null}
+                              </td>
+                            ) : null}
+                          </>
+                        ) : (
+                          <>
+                            <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                            <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                            <td
+                              data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
+                              className="etat-col-cell"
+                            >
+                              <span
+                                className="etat-badge etat-badge--wrap"
+                                style={{ backgroundColor: etatColor }}
+                              >
+                                {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
+                                {getEtatDisplayName(fiche)}
+                                {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
+                                  <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
+                                    (RDV_URGENT)
+                                  </span>
+                                )}
+                              </span>
+                            </td>
+                            <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
+                            <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
+                            <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
+                            <td data-label="Produit:">
+                              <span
+                                className="produit-indicator"
+                                style={{ backgroundColor: produitColor, color: '#ffffff' }}
+                                title={getProduitName(fiche.produit)}
+                              >
+                                {getProduitName(fiche.produit)}
+                              </span>
+                            </td>
+                            <td data-label="Validé:" style={{ textAlign: 'center' }}>
+                              {fiche.valider > 0 ? (
+                                <FaCheck
+                                  style={{
+                                    color: '#28a745',
+                                    fontSize: '15.3px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
+                                />
+                              ) : null}
+                            </td>
+                            <td data-label="">
+                              <div className="fiche-indicators">
+                                {indicators.r2 && (
+                                  <span className="indicator r2" title="R2 placé (commercial secondaire)">
+                                    R2
+                                  </span>
+                                )}
+                                {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
+                                {indicators.sg && <span className="indicator sg" title="Signé">SIG</span>}
+                                {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
+                                {indicators.cs && <span className="indicator rs" title="SEUL">SEUL</span>}
+                              </div>
+                              <div className="qualite-confirmation-actions-cell dashboard-actions-cell">
+                                {isQualiteConfirmation && (
+                                  <QualiteConfirmationAuditButton
+                                    fiche={fiche}
+                                    onClick={() => setAuditFiche(fiche)}
+                                  />
+                                )}
+                                <button
+                                  onClick={() => openDashboardFicheDetail({ hash: fiche.hash })}
+                                  className="btn-detail"
+                                  title="Voir les détails"
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                >
+                                  <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
+                                    {lastViewedFicheHash === fiche.hash && (
+                                      <span
+                                        style={{
+                                          position: 'absolute',
+                                          top: '50%',
+                                          left: '50%',
+                                          transform: 'translate(-50%, -50%)',
+                                          width: '28px',
+                                          height: '28px',
+                                          border: '3px solid #9e9e9e',
+                                          borderRadius: '1px',
+                                          backgroundColor: 'transparent',
+                                          boxSizing: 'border-box'
+                                        }}
+                                      />
+                                    )}
+                                  </span>
+                                </button>
+                              </div>
+                            </td>
+                            <td data-label="État décalage:" className="dashboard-decalage-cell">
+                              {decalageInfo && (
+                                <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
+                                  {decalageInfo.text}
+                                </span>
+                              )}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     );
                   })}

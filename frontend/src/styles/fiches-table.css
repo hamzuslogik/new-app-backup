@@ -94,3 +94,65 @@ html body .fiches-table td.dashboard-decalage-cell,
   overflow-wrap: normal !important;
   word-break: normal !important;
 }
+
+
+/* Badges colonnes (session admin) */
+.fiche-col-badge {
+  text-align: center !important;
+  vertical-align: middle !important;
+  white-space: nowrap;
+}
+
+.fiche-rf-ann-wrap {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+}
+
+.indicator.has {
+  background: #FE83FE;
+  color: #ffffff;
+}
+
+.indicator.cs {
+  background: #60a5fa;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 3px 5px;
+}
+
+.indicator.cs svg {
+  font-size: 11px;
+}
+
+.fiche-badge-pdf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 3px;
+  background: #dc2626;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fiche-badge-pdf:hover {
+  background: #b91c1c;
+}
+
+.fiche-badge-pdf svg {
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.dashboard-decalage-mention.is-cancelled {
+  color: #6b7280;
+}

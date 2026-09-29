@@ -11,6 +11,19 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { getEffectiveEtatColor, getEffectiveEtatTitle } from '../utils/etatSignerComplet';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
+import {
+  getFicheTableIndicators,
+  ficheHasDecalageRequest,
+  getDecalageDisplayInfo,
+} from '../utils/ficheTableIndicators';
+import { isAdminSession } from '../utils/adminMenuUrls';
+import {
+  FicheAdminBadgeHeaders,
+  FicheAdminValideCell,
+  FicheAdminActionCell,
+  FicheAdminIndicatorCells,
+} from '../components/fiches/FicheAdminBadgeColumns';
 import { isRdvDateBeforeToday, formatLocalYmd } from '../utils/compteRenduEarlyVerification';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
@@ -74,6 +87,7 @@ const Fiches = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isAgentQualif = user?.fonction === 3;
+  const isAdminFicheLayout = isAdminSession(user);
   /** Superviseur qualification (RE qualif) : chargement auto des fiches du jour (périmètre agents) */
   const isSuperviseurQualif = user?.fonction === 2;
   /** Backoffice : toutes les fiches créées le jour courant (pas de filtre id_agent par défaut) */
@@ -764,8 +778,11 @@ const Fiches = () => {
     'Téléphone': 'tel',
     'CP': 'cp',
     'Date Insertion': 'date_insert_time',
+    'Date RDV': 'date_rdv_time',
     'Agent': 'id_agent',
     'État Final': 'id_etat_final',
+    'Confirmateur': 'id_confirmateur',
+    'Commercial': 'id_commercial',
     'Centre': 'id_centre',
     'Produit': 'produit',
     'Validé': 'valider',
@@ -798,6 +815,12 @@ const Fiches = () => {
     if (key === 'id_agent') {
       return (getUserName(fiche.id_agent) || fiche.agent_pseudo || '').toLowerCase();
     }
+    if (key === 'id_commercial') {
+      return (getUserName(fiche.id_commercial) || '').toLowerCase();
+    }
+    if (key === 'id_confirmateur') {
+      return getConfirmateursFormatted(fiche).toLowerCase();
+    }
     if (key === 'id_centre') {
       return getCentreName(fiche.id_centre).toLowerCase();
     }
@@ -828,7 +851,10 @@ const Fiches = () => {
     if (key === 'date_insert_time') return formatDate(fiche.date_insert_time);
     if (key === 'valider') return fiche.valider > 0 ? 'validé' : '';
     if (key === 'id_agent') return getUserName(fiche.id_agent) || fiche.agent_pseudo || '';
+    if (key === 'id_commercial') return getUserName(fiche.id_commercial) || '';
+    if (key === 'id_confirmateur') return getConfirmateursFormatted(fiche);
     if (key === 'id_centre') return getCentreName(fiche.id_centre);
+    if (key === 'date_rdv_time') return formatRdvDateTime(fiche.date_rdv_time);
     if (key === 'id_etat_final') {
       return isAgentQualif
         ? getEtatDisplayForAgentQualif(fiche.id_etat_final)
@@ -1496,26 +1522,46 @@ const Fiches = () => {
         ) : (
           <>
             <div className={`fiches-table-container${isFetchingList ? ' loading' : ''}`}>
-              <table className="fiches-table">
+<table className={`fiches-table${isAdminFicheLayout ? ' fiches-table--admin-layout' : ''}`}>
                 <thead>
                   <tr>
                     {renderSortableHeader('Nom')}
                     {renderSortableHeader('Prénom')}
                     {renderSortableHeader('Téléphone')}
                     {renderSortableHeader('CP')}
-                    {renderSortableHeader('Date Insertion')}
-                    {renderSortableHeader('Agent')}
-                    {renderSortableHeader('État Final')}
-                    {renderSortableHeader('Centre')}
-                    {renderSortableHeader('Produit')}
-                    {renderSortableHeader('Validé')}
-                    <th className="actions-header"><span>Actions</span></th>
+                    {isAdminFicheLayout ? (
+                      <>
+                        {renderSortableHeader('Date RDV')}
+                        {renderSortableHeader('Commercial')}
+                        <FicheAdminBadgeHeaders
+                          getSortIcon={getSortIcon}
+                          onSortValide={() => handleSort('Validé')}
+                          onSortProduit={() => handleSort('Produit')}
+                        />
+                        {renderSortableHeader('Centre')}
+                        {renderSortableHeader('Date Insertion')}
+                        <th className="sortable-header" onClick={() => handleSort('Confirmateur')}>
+                          Conf {getSortIcon('Confirmateur')}
+                        </th>
+                        {renderSortableHeader('État Final')}
+                      </>
+                    ) : (
+                      <>
+                        {renderSortableHeader('Date Insertion')}
+                        {renderSortableHeader('Agent')}
+                        {renderSortableHeader('État Final')}
+                        {renderSortableHeader('Centre')}
+                        {renderSortableHeader('Produit')}
+                        {renderSortableHeader('Validé')}
+                        <th className="actions-header"><span>Actions</span></th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {sortedFiches.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="header-filter-empty">
+                      <td colSpan={isAdminFicheLayout ? 20 : 11} className="header-filter-empty">
                         Aucune fiche pour ces filtres d&apos;en-tête
                       </td>
                     </tr>
@@ -1524,9 +1570,12 @@ const Fiches = () => {
                     const etatColor = getFicheEtatColor(fiche);
                     const produitColor = getProduitColor(fiche.produit);
                     const isArchived = fiche.archive === 1 || fiche.archive === true;
-                    
+                    const indicators = isAdminFicheLayout
+                      ? getFicheTableIndicators(fiche.id_etat_histo, fiche, etatsData || [])
+                      : null;
+
                     return (
-                      <tr 
+                      <tr
                         key={fiche.hash}
                         style={{ backgroundColor: `${etatColor}20` }}
                         className={isArchived ? 'archived' : ''}
@@ -1535,110 +1584,215 @@ const Fiches = () => {
                         <td data-label="Prénom:">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
-                        <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
-                        <td data-label="Agent:">{getUserName(fiche.id_agent) || (fiche.agent_pseudo || '')}</td>
-                        <td data-label="État:">
-                          <span 
-                            className="etat-badge"
-                            style={{ backgroundColor: etatColor }}
-                          >
-                            {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
-                            {isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getFicheEtatName(fiche)}
-                            {(fiche.ko === 1 || fiche.ko === '1') && (
-                              <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>(KO)</span>
-                            )}
-                            {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
-                              <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
-                                (RDV_URGENT)
-                              </span>
-                            )}
-                          </span>
-                        </td>
-                        <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
-                        <td data-label="Produit:">
-                          <span 
-                            className="produit-indicator"
-                            style={{ backgroundColor: produitColor, color: '#ffffff' }}
-                            title={getProduitName(fiche.produit)}
-                          >
-                            {getProduitName(fiche.produit)}
-                          </span>
-                        </td>
-                        <td data-label="Validé:" style={{ textAlign: 'center' }}>
-                          {fiche.valider > 0 ? (
-                            <FaCheck 
-                              style={{ 
-                                color: '#28a745', 
-                                fontSize: '15.3px',
-                                cursor: 'pointer'
-                              }} 
-                              title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
+                        {isAdminFicheLayout ? (
+                          <>
+                            <td data-label="Date RDV:">{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                            <td data-label="Commercial:">{getUserName(fiche.id_commercial) || ''}</td>
+                            <FicheAdminValideCell valider={fiche.valider} confRdvAvec={fiche.conf_rdv_avec} />
+                            <FicheAdminActionCell
+                              DetailButtonTag={FicheDetailLink}
+                              detailButtonProps={{ ficheHash: fiche.hash }}
+                              showDetail={!isAgentQualif}
+                              extras={(
+                                <div className="action-buttons fiche-badge-act-extras">
+                                  {isArchived ? (
+                                    <span className="indicator archive" title="Archivée">ARCH</span>
+                                  ) : null}
+                                  {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 11 || user?.fonction === 12 || user?.fonction === 13) && (
+                                    <button
+                                      type="button"
+                                      className={`btn-ko ${fiche.ko ? 'active' : ''}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!fiche.hash) {
+                                          toast.error('Identifiant fiche manquant');
+                                          return;
+                                        }
+                                        if (fiche.ko) {
+                                          if (window.confirm('Retirer le KO de cette fiche ?')) {
+                                            koMutation.mutate({ id: fiche.hash, ko: false });
+                                          }
+                                          return;
+                                        }
+                                        setKoModal({
+                                          isOpen: true,
+                                          ficheHash: fiche.hash,
+                                          motifKo: '',
+                                          commentaireComplement: '',
+                                        });
+                                      }}
+                                      title={fiche.ko ? 'Retirer KO' : 'Mettre en KO'}
+                                    >
+                                      <FaBan />
+                                    </button>
+                                  )}
+                                  {canArchiveFiche && (
+                                    <button
+                                      type="button"
+                                      className={`btn-archive${isArchived ? ' btn-archive--unarchive' : ''}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleArchive(fiche);
+                                      }}
+                                      title={isArchived ? 'Désarchiver' : 'Archiver'}
+                                      disabled={archiveMutation.isLoading}
+                                    >
+                                      {isArchived ? <FaBoxOpen /> : <FaArchive />}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             />
-                          ) : null}
-                        </td>
-                        <td data-label="">
-                          <div className="fiche-actions">
-                            {isArchived ? (
-                              <div className="fiche-indicators">
-                                <span className="indicator archive" title="Archivée">ARCH</span>
-                              </div>
-                            ) : null}
-                            <div className="action-buttons">
-                              {!isAgentQualif && (
-                                <FicheDetailLink 
-                                  ficheHash={fiche.hash}
-                                  className="btn-detail"
-                                  title="Voir les détails"
-                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                >
-                                  <FaSearch />
-                                </FicheDetailLink>
-                              )}
-                              {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 11 || user?.fonction === 12 || user?.fonction === 13) && (
-                                <button
-                                  type="button"
-                                  className={`btn-ko ${fiche.ko ? 'active' : ''}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!fiche.hash) {
-                                      toast.error('Identifiant fiche manquant');
-                                      return;
-                                    }
-                                    if (fiche.ko) {
-                                      if (window.confirm('Retirer le KO de cette fiche ?')) {
-                                        koMutation.mutate({ id: fiche.hash, ko: false });
+                            <FicheAdminIndicatorCells
+                              indicators={indicators}
+                              produitName={getProduitName(fiche.produit)}
+                              produitColor={produitColor}
+                              showPdf={!isAgentQualif}
+                              onPdf={
+                                isAgentQualif
+                                  ? undefined
+                                  : async () => {
+                                      try {
+                                        const [ficheRes, profRes, tcRes] = await Promise.all([
+                                          api.get(`/fiches/${encodeURIComponent(fiche.hash)}`),
+                                          api.get('/management/professions'),
+                                          api.get('/management/type-contrat'),
+                                        ]);
+                                        const full = ficheRes.data?.data;
+                                        if (!full) throw new Error('Fiche introuvable');
+                                        generateFicheClientPdf(full, {
+                                          professions: profRes.data?.data || [],
+                                          typeContrat: tcRes.data?.data || [],
+                                          centres: centres || [],
+                                          agents: agents || [],
+                                          commerciaux: commerciaux || [],
+                                          confirmateurs: confirmateurs || [],
+                                        });
+                                      } catch (err) {
+                                        toast.error(err.response?.data?.message || err.message || 'Impossible de générer le PDF');
                                       }
-                                      return;
                                     }
-                                    setKoModal({
-                                      isOpen: true,
-                                      ficheHash: fiche.hash,
-                                      motifKo: '',
-                                      commentaireComplement: '',
-                                    });
-                                  }}
-                                  title={fiche.ko ? 'Retirer KO' : 'Mettre en KO'}
-                                >
-                                  <FaBan />
-                                </button>
-                              )}
-                              {canArchiveFiche && (
-                                <button
-                                  type="button"
-                                  className={`btn-archive${isArchived ? ' btn-archive--unarchive' : ''}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleArchive(fiche);
-                                  }}
-                                  title={isArchived ? 'Désarchiver' : 'Archiver'}
-                                  disabled={archiveMutation.isLoading}
-                                >
-                                  {isArchived ? <FaBoxOpen /> : <FaArchive />}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </td>
+                              }
+                            />
+                            <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
+                            <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
+                            <td data-label="Conf:">{getConfirmateursFormatted(fiche)}</td>
+                            <td data-label="État:">
+                              <span className="etat-badge" style={{ backgroundColor: etatColor }}>
+                                {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
+                                {isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getFicheEtatName(fiche)}
+                                {(fiche.ko === 1 || fiche.ko === '1') && (
+                                  <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>(KO)</span>
+                                )}
+                                {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
+                                  <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
+                                    (RDV_URGENT)
+                                  </span>
+                                )}
+                              </span>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
+                            <td data-label="Agent:">{getUserName(fiche.id_agent) || (fiche.agent_pseudo || '')}</td>
+                            <td data-label="État:">
+                              <span className="etat-badge" style={{ backgroundColor: etatColor }}>
+                                {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
+                                {isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getFicheEtatName(fiche)}
+                                {(fiche.ko === 1 || fiche.ko === '1') && (
+                                  <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>(KO)</span>
+                                )}
+                                {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
+                                  <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
+                                    (RDV_URGENT)
+                                  </span>
+                                )}
+                              </span>
+                            </td>
+                            <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
+                            <td data-label="Produit:">
+                              <span
+                                className="produit-indicator"
+                                style={{ backgroundColor: produitColor, color: '#ffffff' }}
+                                title={getProduitName(fiche.produit)}
+                              >
+                                {getProduitName(fiche.produit)}
+                              </span>
+                            </td>
+                            <td data-label="Validé:" style={{ textAlign: 'center' }}>
+                              {fiche.valider > 0 ? (
+                                <FaCheck
+                                  style={{ color: '#28a745', fontSize: '15.3px', cursor: 'pointer' }}
+                                  title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
+                                />
+                              ) : null}
+                            </td>
+                            <td data-label="">
+                              <div className="fiche-actions">
+                                {isArchived ? (
+                                  <div className="fiche-indicators">
+                                    <span className="indicator archive" title="Archivée">ARCH</span>
+                                  </div>
+                                ) : null}
+                                <div className="action-buttons">
+                                  {!isAgentQualif && (
+                                    <FicheDetailLink
+                                      ficheHash={fiche.hash}
+                                      className="btn-detail"
+                                      title="Voir les détails"
+                                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                      <FaSearch />
+                                    </FicheDetailLink>
+                                  )}
+                                  {(user?.fonction === 1 || user?.fonction === 2 || user?.fonction === 7 || user?.fonction === 11 || user?.fonction === 12 || user?.fonction === 13) && (
+                                    <button
+                                      type="button"
+                                      className={`btn-ko ${fiche.ko ? 'active' : ''}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!fiche.hash) {
+                                          toast.error('Identifiant fiche manquant');
+                                          return;
+                                        }
+                                        if (fiche.ko) {
+                                          if (window.confirm('Retirer le KO de cette fiche ?')) {
+                                            koMutation.mutate({ id: fiche.hash, ko: false });
+                                          }
+                                          return;
+                                        }
+                                        setKoModal({
+                                          isOpen: true,
+                                          ficheHash: fiche.hash,
+                                          motifKo: '',
+                                          commentaireComplement: '',
+                                        });
+                                      }}
+                                      title={fiche.ko ? 'Retirer KO' : 'Mettre en KO'}
+                                    >
+                                      <FaBan />
+                                    </button>
+                                  )}
+                                  {canArchiveFiche && (
+                                    <button
+                                      type="button"
+                                      className={`btn-archive${isArchived ? ' btn-archive--unarchive' : ''}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleArchive(fiche);
+                                      }}
+                                      title={isArchived ? 'Désarchiver' : 'Archiver'}
+                                      disabled={archiveMutation.isLoading}
+                                    >
+                                      {isArchived ? <FaBoxOpen /> : <FaArchive />}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     );
                   })}

@@ -4,8 +4,20 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaUserCheck, FaCheck, FaSearch } from 'react-icons/fa';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
-import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
+import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
+import {
+  getFicheTableIndicators,
+  ficheHasDecalageRequest,
+  getDecalageDisplayInfo,
+} from '../utils/ficheTableIndicators';
+import { isAdminSession } from '../utils/adminMenuUrls';
+import {
+  FicheAdminBadgeHeaders,
+  FicheAdminValideCell,
+  FicheAdminActionCell,
+  FicheAdminIndicatorCells,
+} from '../components/fiches/FicheAdminBadgeColumns';
 import FicheDetailLink from '../components/FicheDetailLink';
 import './Affectation.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -59,6 +71,7 @@ function formatCommercials(fiche) {
 const Affectation = () => {
   useForceDesktopViewport('affectation-page');
   const { user } = useAuth();
+  const isAdminFicheLayout = isAdminSession(user);
   const queryClient = useQueryClient();
   const [selectedFiches, setSelectedFiches] = useState([]);
   const [selectedCommercial, setSelectedCommercial] = useState('');
@@ -209,37 +222,35 @@ const Affectation = () => {
     return etat?.color || '#cccccc';
   };
 
-  const checkIndicators = (histoString, fiche = {}) => {
-    const r2Placed = ficheHasR2Placed(fiche);
-    const presenceCouple = String(fiche?.conf_presence_couple || '').toUpperCase().trim();
-    const hasRdvSeul = [
-      'MME SEULE SANS MR',
-      'MME SEUL SANS MR',
-      'MR SEUL SANS MME',
-      'NON',
-    ].includes(presenceCouple) || String(fiche?.conf_rdv_avec || '').toUpperCase().trim() === 'SEUL';
-    if (!histoString || !etatsData) {
-      return { r2: r2Placed, rf: false, an: false, rs: hasRdvSeul, sg: false };
+  const checkIndicators = (histoString, fiche = {}) =>
+    getFicheTableIndicators(histoString, fiche, etatsData || []);
+
+  const handleGeneratePdf = async (hash) => {
+    if (!hash) return;
+    try {
+      const [ficheRes, profRes, tcRes] = await Promise.all([
+        api.get(`/fiches/${encodeURIComponent(hash)}`),
+        api.get('/management/professions'),
+        api.get('/management/type-contrat'),
+      ]);
+      const full = ficheRes.data?.data;
+      if (!full) throw new Error('Fiche introuvable');
+      generateFicheClientPdf(full, {
+        professions: profRes.data?.data || [],
+        typeContrat: tcRes.data?.data || [],
+        centres: centresData || [],
+        commerciaux: commerciauxData || [],
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Impossible de générer le PDF');
     }
-    const histoArray = String(histoString).split(',').map(Number);
-    let hasAnnuler = false;
-    let hasRefuser = false;
-    let hasSigner = false;
-    histoArray.forEach((etatId) => {
-      const etat = etatsData.find((e) => e.id === etatId);
-      if (etat && etat.titre) {
-        const titre = etat.titre.toUpperCase();
-        if (titre.includes('RDV ANNULER')) hasAnnuler = true;
-        if (titre.includes('REFUSER')) hasRefuser = true;
-        if ([13, 16, 38, 44, 45].includes(Number(etatId)) || titre.includes('SIGNER')) hasSigner = true;
-      } else if ([13, 16, 38, 44, 45].includes(Number(etatId))) {
-        hasSigner = true;
-      }
-    });
-    return { r2: r2Placed, rf: hasRefuser, an: hasAnnuler, rs: hasRdvSeul, sg: hasSigner };
   };
 
+  const showDecalageColAdmin =
+    isAdminFicheLayout && (fichesData || []).some((f) => ficheHasDecalageRequest(f));
+
   return (
+
     <div className="affectation-page">
       <h2 className="page-title"><FaUserCheck /> Affectation des Fiches Confirmées</h2>
 
@@ -406,7 +417,7 @@ const Affectation = () => {
           </div>
         ) : (
           <div className="fiches-table-container">
-            <table className="fiches-table">
+<table className={`fiches-table${isAdminFicheLayout ? ' fiches-table--admin-layout' : ''}`}>
               <thead>
                 <tr>
                   <th className="affectation-select-col"></th>
@@ -414,16 +425,31 @@ const Affectation = () => {
                   <th>Prénom</th>
                   <th>Téléphone</th>
                   <th>CP</th>
-                  <th>Date Insertion</th>
-                  <th>Date RDV</th>
-                  <th>État Final</th>
-                  <th>Confirmateur</th>
-                  <th>Commercial</th>
-                  <th>Centre</th>
-                  <th>Produit</th>
-                  <th>Validé</th>
-                  <th className="affectation-actions-col">Actions</th>
-                  <th className="dashboard-decalage-col">État décalage</th>
+                  {isAdminFicheLayout ? (
+                    <>
+                      <th>Date RDV</th>
+                      <th>Commercial</th>
+                      <FicheAdminBadgeHeaders />
+                      <th>Centre</th>
+                      <th>Date Insertion</th>
+                      <th>Conf</th>
+                      <th>État Final</th>
+                      {showDecalageColAdmin ? <th className="dashboard-decalage-col">Décalage</th> : null}
+                    </>
+                  ) : (
+                    <>
+                      <th>Date Insertion</th>
+                      <th>Date RDV</th>
+                      <th>État Final</th>
+                      <th>Confirmateur</th>
+                      <th>Commercial</th>
+                      <th>Centre</th>
+                      <th>Produit</th>
+                      <th>Validé</th>
+                      <th className="affectation-actions-col">Actions</th>
+                      <th className="dashboard-decalage-col">État décalage</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -431,7 +457,9 @@ const Affectation = () => {
                   const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                   const etatColor = getEtatColor(fiche);
                   const produitColor = getProduitColor(fiche.produit);
-                  const decalageInfo = getDecalageInfo(fiche);
+                  const decalageInfo = isAdminFicheLayout
+                    ? (showDecalageColAdmin ? getDecalageDisplayInfo(fiche) : null)
+                    : getDecalageInfo(fiche);
                   return (
                     <tr
                       key={fiche.id}
@@ -454,64 +482,98 @@ const Affectation = () => {
                       <td data-label="Prénom:">{fiche.prenom || ''}</td>
                       <td data-label="Téléphone:">{fiche.tel || fiche.gsm1 || ''}</td>
                       <td data-label="CP:">{fiche.cp || fiche.code_postal || ''}</td>
-                      <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
-                      <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                      <td data-label="État:" className="etat-col-cell">
-                        <span
-                          className="etat-badge etat-badge--wrap"
-                          style={{ backgroundColor: etatColor }}
-                        >
-                          {getEtatDisplayWithSousEtat(fiche, etatsData || [])}
-                        </span>
-                      </td>
-                      <td data-label="Confirmateur:">{formatConfirmateurs(fiche)}</td>
-                      <td data-label="Commercial:">{formatCommercials(fiche)}</td>
-                      <td data-label="Centre:">{fiche.centre_nom || ''}</td>
-                      <td data-label="Produit:">
-                        <span
-                          className="produit-indicator"
-                          style={{ backgroundColor: produitColor, color: '#ffffff' }}
-                          title={getProduitName(fiche.produit) || fiche.produit_nom}
-                        >
-                          {getProduitName(fiche.produit) || fiche.produit_nom || ''}
-                        </span>
-                      </td>
-                      <td data-label="Validé:" style={{ textAlign: 'center' }}>
-                        {fiche.valider > 0 ? (
-                          <FaCheck
-                            style={{ color: '#28a745', fontSize: '15.3px' }}
-                            title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
+                      {isAdminFicheLayout ? (
+                        <>
+                          <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                          <td data-label="Commercial:">{formatCommercials(fiche)}</td>
+                          <FicheAdminValideCell valider={fiche.valider} confRdvAvec={fiche.conf_rdv_avec} />
+                          <FicheAdminActionCell
+                            DetailButtonTag={FicheDetailLink}
+                            detailButtonProps={{ ficheHash: fiche.hash, ficheId: fiche.id }}
                           />
-                        ) : null}
-                      </td>
-                      <td data-label="" className="affectation-actions-col">
-                        <div className="fiche-indicators">
-                          {indicators.r2 && (
-                            <span className="indicator r2" title="R2 placé (commercial secondaire)">R2</span>
-                          )}
-                          {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
-                          {indicators.sg && <span className="indicator sg" title="Signé">SIG</span>}
-                          {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
-                          {indicators.rs && <span className="indicator rs" title="SEUL">SEUL</span>}
-                        </div>
-                        <div className="dashboard-actions-cell">
-                          <FicheDetailLink
-                            ficheHash={fiche.hash}
-                            ficheId={fiche.id}
-                            className="btn-detail"
-                            title="Voir les détails"
-                          >
-                            <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
-                          </FicheDetailLink>
-                        </div>
-                      </td>
-                      <td data-label="État décalage:" className="dashboard-decalage-cell">
-                        {decalageInfo && (
-                          <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
-                            {decalageInfo.text}
-                          </span>
-                        )}
-                      </td>
+                          <FicheAdminIndicatorCells
+                            indicators={indicators}
+                            produitName={getProduitName(fiche.produit) || fiche.produit_nom}
+                            produitColor={produitColor}
+                            onPdf={() => handleGeneratePdf(fiche.hash)}
+                          />
+                          <td data-label="Centre:">{fiche.centre_nom || ''}</td>
+                          <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                          <td data-label="Confirmateur:">{formatConfirmateurs(fiche)}</td>
+                          <td data-label="État:" className="etat-col-cell">
+                            <span className="etat-badge etat-badge--wrap" style={{ backgroundColor: etatColor }}>
+                              {getEtatDisplayWithSousEtat(fiche, etatsData || [])}
+                            </span>
+                          </td>
+                          {showDecalageColAdmin ? (
+                            <td data-label="Décalage:" className="dashboard-decalage-cell">
+                              {decalageInfo ? (
+                                <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
+                                  {decalageInfo.text}
+                                </span>
+                              ) : null}
+                            </td>
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                          <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                          <td data-label="État:" className="etat-col-cell">
+                            <span className="etat-badge etat-badge--wrap" style={{ backgroundColor: etatColor }}>
+                              {getEtatDisplayWithSousEtat(fiche, etatsData || [])}
+                            </span>
+                          </td>
+                          <td data-label="Confirmateur:">{formatConfirmateurs(fiche)}</td>
+                          <td data-label="Commercial:">{formatCommercials(fiche)}</td>
+                          <td data-label="Centre:">{fiche.centre_nom || ''}</td>
+                          <td data-label="Produit:">
+                            <span
+                              className="produit-indicator"
+                              style={{ backgroundColor: produitColor, color: '#ffffff' }}
+                              title={getProduitName(fiche.produit) || fiche.produit_nom}
+                            >
+                              {getProduitName(fiche.produit) || fiche.produit_nom || ''}
+                            </span>
+                          </td>
+                          <td data-label="Validé:" style={{ textAlign: 'center' }}>
+                            {fiche.valider > 0 ? (
+                              <FaCheck
+                                style={{ color: '#28a745', fontSize: '15.3px' }}
+                                title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
+                              />
+                            ) : null}
+                          </td>
+                          <td data-label="" className="affectation-actions-col">
+                            <div className="fiche-indicators">
+                              {indicators.r2 && (
+                                <span className="indicator r2" title="R2 placé (commercial secondaire)">R2</span>
+                              )}
+                              {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
+                              {indicators.sg && <span className="indicator sg" title="Signé">SIG</span>}
+                              {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
+                              {indicators.cs && <span className="indicator rs" title="SEUL">SEUL</span>}
+                            </div>
+                            <div className="dashboard-actions-cell">
+                              <FicheDetailLink
+                                ficheHash={fiche.hash}
+                                ficheId={fiche.id}
+                                className="btn-detail"
+                                title="Voir les détails"
+                              >
+                                <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
+                              </FicheDetailLink>
+                            </div>
+                          </td>
+                          <td data-label="État décalage:" className="dashboard-decalage-cell">
+                            {decalageInfo && (
+                              <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
+                                {decalageInfo.text}
+                              </span>
+                            )}
+                          </td>
+                        </>
+                      )}
                     </tr>
                   );
                 })}
