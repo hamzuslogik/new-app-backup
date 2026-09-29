@@ -1378,6 +1378,91 @@ body.dashboard-admin-page {
   color: white;
 }
 
+.indicator.has {
+  background: #FE83FE;
+  color: #ffffff;
+}
+
+.indicator.cs {
+  background: #60a5fa;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 3px 5px;
+}
+
+.indicator.cs svg {
+  font-size: 11px;
+}
+
+.fiche-rf-ann-wrap {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+}
+
+.fiche-col-badge {
+  text-align: center !important;
+  vertical-align: middle !important;
+  white-space: nowrap;
+}
+
+.fiche-badge-pdf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 3px;
+  background: #dc2626;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fiche-badge-pdf:hover {
+  background: #b91c1c;
+}
+
+.fiche-badge-pdf svg {
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.dashboard-admin-page .fiches-table th.dashboard-decalage-col,
+.dashboard-admin-page .fiches-table td.dashboard-decalage-cell {
+  text-align: left;
+  vertical-align: middle;
+}
+
+.dashboard-decalage-mention {
+  display: inline-block;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.dashboard-decalage-mention.is-pending {
+  color: #ea580c;
+}
+
+.dashboard-decalage-mention.is-accepted {
+  color: #16a34a;
+}
+
+.dashboard-decalage-mention.is-refused {
+  color: #dc2626;
+}
+
+.dashboard-decalage-mention.is-cancelled {
+  color: #6b7280;
+}
+
 .indicator.valid {
   background: #4BB543;
   color: white;

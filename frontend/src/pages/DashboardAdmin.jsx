@@ -4,11 +4,16 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
-import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash, FaUser, FaFilePdf } from 'react-icons/fa';
 import FicheDetailModal from '../components/FicheDetailModal';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
-import { ficheHasR2Placed } from '../utils/ficheR2Placed';
+import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
+import {
+  getFicheTableIndicators,
+  ficheHasDecalageRequest,
+  getDecalageDisplayInfo,
+} from '../utils/ficheTableIndicators';
 import './DashboardAdmin.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -376,40 +381,38 @@ const DashboardAdmin = () => {
     return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#FFE441' : '#cccccc';
   };
 
-  // Vérifier les indicateurs : R2 = commercial secondaire (comme Planning) ; AN/RF via historique
-  const checkIndicators = (histoString, fiche = {}) => {
-    const r2Placed = ficheHasR2Placed(fiche);
-    if (!histoString || !etatsData) return { r2: r2Placed, rf: false, an: false, sg: false };
-    
-    const histoArray = histoString.split(',').map(Number);
-    let hasAnnuler = false;
-    let hasRefuser = false;
-    let hasSigner = false;
-    
-    histoArray.forEach(etatId => {
-      const etat = etatsData.find(e => e.id === etatId);
-      if (etat && etat.titre) {
-        const titre = etat.titre.toUpperCase();
-        if (titre.includes('RDV ANNULER')) {
-          hasAnnuler = true;
-        }
-        if (titre.includes('REFUSER')) {
-          hasRefuser = true;
-        }
-        if ([13, 16, 38, 44, 45].includes(Number(etatId)) || titre.includes('SIGNER')) {
-          hasSigner = true;
-        }
-      } else if ([13, 16, 38, 44, 45].includes(Number(etatId))) {
-        hasSigner = true;
-      }
-    });
-    
-    return {
-      r2: r2Placed,
-      rf: hasRefuser,
-      an: hasAnnuler,
-      sg: hasSigner
-    };
+  // Indicateurs badges (SIG / CS / R2 / HAS / RF / ANN)
+  const checkIndicators = (histoString, fiche = {}) =>
+    getFicheTableIndicators(histoString, fiche, etatsData || []);
+
+  const handleGeneratePdf = async (hash) => {
+    if (!hash) return;
+    try {
+      const [ficheRes, profRes, tcRes] = await Promise.all([
+        api.get(`/fiches/${encodeURIComponent(hash)}`),
+        api.get('/management/professions'),
+        api.get('/management/type-contrat'),
+      ]);
+      const fiche = ficheRes.data?.data;
+      if (!fiche) throw new Error('Fiche introuvable');
+      const users = usersData || [];
+      const agents = users.filter((u) => Number(u.fonction) === 3);
+      const commerciauxList = users.filter((u) => Number(u.fonction) === 5 && u.etat > 0);
+      const confirmateursList = users.filter(
+        (u) => Number(u.fonction) === 6 && (u.etat > 0 || u.etat == null)
+      );
+      const centresList = centresData ? centresData.filter((c) => c.etat > 0) : [];
+      generateFicheClientPdf(fiche, {
+        professions: profRes.data?.data || [],
+        typeContrat: tcRes.data?.data || [],
+        centres: centresList,
+        agents,
+        commerciaux: commerciauxList,
+        confirmateurs: confirmateursList,
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Impossible de générer le PDF');
+    }
   };
 
   // Obtenir le nom de l'utilisateur
@@ -608,6 +611,7 @@ const DashboardAdmin = () => {
       });
 
   const fiches = filteredFiches;
+  const showDecalageCol = fiches.some((f) => ficheHasDecalageRequest(f));
 
   return (
     <div className="dashboard">
@@ -1053,7 +1057,7 @@ const DashboardAdmin = () => {
         ) : (
           <>
             <div className={`fiches-table-container ${(isLoading || isFetching || isSearching) ? 'loading' : ''}`}>
-              <table className="fiches-table">
+              <table className="fiches-table fiches-table--admin-layout">
                 <thead>
                   <tr>
                     <th onClick={() => handleSort('Nom')} className="sortable-header">
@@ -1068,31 +1072,40 @@ const DashboardAdmin = () => {
                     <th onClick={() => handleSort('CP')} className="sortable-header">
                       CP {getSortIcon('CP')}
                     </th>
-                    <th onClick={() => handleSort('Date Insertion')} className="sortable-header">
-                      Date Insertion {getSortIcon('Date Insertion')}
-                    </th>
                     <th onClick={() => handleSort('Date RDV')} className="sortable-header">
                       Date RDV {getSortIcon('Date RDV')}
-                    </th>
-                    <th onClick={() => handleSort('État Final')} className="sortable-header">
-                      {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
-                    </th>
-                    <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
-                      Confirmateur {getSortIcon('Confirmateur')}
                     </th>
                     <th onClick={() => handleSort('Commercial')} className="sortable-header">
                       Commercial {getSortIcon('Commercial')}
                     </th>
+                    <th onClick={() => handleSort('Validé')} className="sortable-header fiche-col-badge fiche-col-valide" title="Validé">
+                      <FaCheck aria-hidden /> {getSortIcon('Validé')}
+                    </th>
+                    <th className="actions-header"><span>ACTION</span></th>
+                    <th className="fiche-col-badge fiche-col-sig">SIG</th>
+                    <th className="fiche-col-badge fiche-col-cs">CS</th>
+                    <th className="fiche-col-badge fiche-col-r2">R2</th>
+                    <th className="fiche-col-badge fiche-col-has">HAS</th>
+                    <th className="fiche-col-badge fiche-col-rf">RF</th>
+                    <th className="fiche-col-badge fiche-col-pdf">PDF</th>
+                    <th onClick={() => handleSort('Produit')} className="sortable-header fiche-col-badge fiche-col-prod">
+                      PROD {getSortIcon('Produit')}
+                    </th>
                     <th onClick={() => handleSort('Centre')} className="sortable-header">
                       Centre {getSortIcon('Centre')}
                     </th>
-                    <th onClick={() => handleSort('Produit')} className="sortable-header">
-                      Produit {getSortIcon('Produit')}
+                    <th onClick={() => handleSort('Date Insertion')} className="sortable-header">
+                      Date Insertion {getSortIcon('Date Insertion')}
                     </th>
-                    <th onClick={() => handleSort('Validé')} className="sortable-header">
-                      Validé {getSortIcon('Validé')}
+                    <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
+                      Conf {getSortIcon('Confirmateur')}
                     </th>
-                    <th>Actions</th>
+                    <th onClick={() => handleSort('État Final')} className="sortable-header">
+                      {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
+                    </th>
+                    {showDecalageCol ? (
+                      <th className="dashboard-decalage-col">Décalage</th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -1100,67 +1113,34 @@ const DashboardAdmin = () => {
                     const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                     const etatColor = getEtatColor(fiche.id_etat_final);
                     const produitColor = getProduitColor(fiche.produit);
-                    
+                    const decalageInfo = showDecalageCol ? getDecalageDisplayInfo(fiche) : null;
+
                     return (
-                      <tr 
+                      <tr
                         key={fiche.hash}
                         style={{ backgroundColor: `${etatColor}20` }}
                       >
-                        <td data-label="">{fiche.nom || ''} {fiche.prenom || ''}</td>
+                        <td data-label="Nom:">{fiche.nom || ''}</td>
                         <td data-label="Prénom:">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
-                        <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
                         <td data-label="Date RDV:">{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                        <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}>
-                          <span 
-                            className="etat-badge"
-                            style={{ backgroundColor: etatColor }}
-                          >
-                            {getEtatName(fiche.id_etat_final)}
-                            {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
-                              <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
-                                (RDV_URGENT)
-                              </span>
-                            )}
-                          </span>
-                        </td>
-                        <td data-label="Confirmateur:">{getConfirmateursFormatted(fiche)}</td>
                         <td data-label="Commercial:">{getUserName(fiche.id_commercial)}</td>
-                        <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
-                        <td data-label="Produit:">
-                          <span 
-                            className="produit-indicator"
-                            style={{ backgroundColor: produitColor, color: '#ffffff' }}
-                            title={getProduitName(fiche.produit)}
-                          >
-                            {getProduitName(fiche.produit)}
-                          </span>
-                        </td>
-                        <td data-label="Validé:" style={{ textAlign: 'center' }}>
+                        <td data-label="Validé:" className="fiche-col-badge fiche-col-valide" style={{ textAlign: 'center' }}>
                           {fiche.valider > 0 ? (
-                            <FaCheck 
-                              style={{ 
-                                color: '#28a745', 
+                            <FaCheck
+                              style={{
+                                color: '#28a745',
                                 fontSize: '15.3px',
                                 cursor: 'pointer'
-                              }} 
+                              }}
                               title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
                             />
                           ) : null}
                         </td>
                         <td data-label="">
-                          <div className="fiche-indicators">
-                            {indicators.r2 && (
-                            <span className="indicator r2" title="R2 placé (commercial secondaire)">
-                              R2
-                            </span>
-                          )}
-                            {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
-                            {indicators.sg && <span className="indicator sg" title="Signé">SIG</span>}
-                            {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
-                          </div>
                           <button
+                            type="button"
                             onClick={() => {
                               setSelectedFicheHash(fiche.hash);
                               setLastViewedFicheHash(fiche.hash);
@@ -1192,6 +1172,87 @@ const DashboardAdmin = () => {
                             </span>
                           </button>
                         </td>
+                        <td data-label="SIG:" className="fiche-col-badge fiche-col-sig">
+                          {indicators.sg ? (
+                            <span className="indicator sg" title="Signé">SIG</span>
+                          ) : null}
+                        </td>
+                        <td data-label="CS:" className="fiche-col-badge fiche-col-cs">
+                          {indicators.cs ? (
+                            <span className="indicator cs" title="RDV seul">
+                              <FaUser aria-hidden />
+                            </span>
+                          ) : null}
+                        </td>
+                        <td data-label="R2:" className="fiche-col-badge fiche-col-r2">
+                          {indicators.r2 ? (
+                            <span className="indicator r2" title="R2 placé (commercial secondaire)">R2</span>
+                          ) : null}
+                        </td>
+                        <td data-label="HAS:" className="fiche-col-badge fiche-col-has">
+                          {indicators.has ? (
+                            <span className="indicator has" title="Honoré à suivre">HAS</span>
+                          ) : null}
+                        </td>
+                        <td data-label="RF:" className="fiche-col-badge fiche-col-rf">
+                          <div className="fiche-rf-ann-wrap">
+                            {indicators.rf ? (
+                              <span className="indicator rf" title="Refus">RF</span>
+                            ) : null}
+                            {indicators.an ? (
+                              <span className="indicator an" title="Annulation">ANN</span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td data-label="PDF:" className="fiche-col-badge fiche-col-pdf">
+                          <button
+                            type="button"
+                            className="fiche-badge-pdf"
+                            title="Générer le PDF"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleGeneratePdf(fiche.hash);
+                            }}
+                          >
+                            <FaFilePdf aria-hidden />
+                          </button>
+                        </td>
+                        <td data-label="PROD:" className="fiche-col-badge fiche-col-prod">
+                          {getProduitName(fiche.produit) ? (
+                            <span
+                              className="produit-indicator"
+                              style={{ backgroundColor: produitColor, color: '#ffffff' }}
+                              title={getProduitName(fiche.produit)}
+                            >
+                              {getProduitName(fiche.produit)}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
+                        <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
+                        <td data-label="Confirmateur:">{getConfirmateursFormatted(fiche)}</td>
+                        <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}>
+                          <span
+                            className="etat-badge"
+                            style={{ backgroundColor: etatColor }}
+                          >
+                            {getEtatName(fiche.id_etat_final)}
+                            {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
+                              <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
+                                (RDV_URGENT)
+                              </span>
+                            )}
+                          </span>
+                        </td>
+                        {showDecalageCol ? (
+                          <td data-label="Décalage:" className="dashboard-decalage-cell">
+                            {decalageInfo ? (
+                              <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
+                                {decalageInfo.text}
+                              </span>
+                            ) : null}
+                          </td>
+                        ) : null}
                       </tr>
                     );
                   })}
