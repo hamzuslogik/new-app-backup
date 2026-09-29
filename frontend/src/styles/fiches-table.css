@@ -156,3 +156,21 @@ html body .fiches-table td.dashboard-decalage-cell,
 .dashboard-decalage-mention.is-cancelled {
   color: #6b7280;
 }
+
+/* Aucune nuance / rayure de fond par colonne (toutes pages fiches-table) */
+html body table.fiches-table > tbody > tr > td,
+html body .fiches-table > tbody > tr > td,
+.dashboard-page .fiches-table > tbody > tr > td,
+.dashboard-admin-page .fiches-table > tbody > tr > td,
+.fiches-page .fiches-table > tbody > tr > td,
+.affectation-page .fiches-table > tbody > tr > td,
+html.rdv-vue-page .rdv-vue .fiches-table > tbody > tr > td,
+body.rdv-vue-page .rdv-vue .fiches-table > tbody > tr > td {
+  background-image: none !important;
+}
+
+html body table.fiches-table > tbody > tr > td:nth-child(even),
+html body .fiches-table > tbody > tr > td:nth-child(even) {
+  background-image: none !important;
+  background-color: transparent !important;
+}
