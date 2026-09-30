@@ -375,14 +375,14 @@
 }
 
 .fiches-table thead {
-  background: #f8f9fa;
+  background: #444444;
 }
 
 .fiches-table th {
   padding: 12px;
   text-align: left;
   font-weight: 600;
-  color: #555;
+  color: #ffffff;
   font-size: 13px;
   border-bottom: 2px solid #dee2e6;
 }
@@ -847,13 +847,13 @@
 
 .stats-agents-qualite-page .rdvs-audites-table thead,
 .stats-agents-qualite-page .fiches-content .fiches-table thead {
-  background: #4a7a87 !important;
+  background: #444444 !important;
   color: #ffffff !important;
 }
 
 .stats-agents-qualite-page .rdvs-audites-table th,
 .stats-agents-qualite-page .fiches-content .fiches-table th {
-  background: #4a7a87 !important;
+  background: #444444 !important;
   color: #ffffff !important;
   font-weight: 700 !important;
 }

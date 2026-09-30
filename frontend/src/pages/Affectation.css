@@ -259,15 +259,15 @@
 }
 
 .affectation-page .fiches-table thead {
-  background: #ffffff;
-  color: #333333;
+  background: #444444;
+  color: #ffffff;
 }
 
 .affectation-page .fiches-table th {
   padding: 6px 6.4px;
   text-align: left;
   font-weight: 800;
-  color: #333333;
+  color: #ffffff;
   font-size: 10.2px;
 }
 

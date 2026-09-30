@@ -163,16 +163,16 @@
 }
 
 .suivi-table thead {
-  background: #ffffff;
-  color: #333333;
+  background: #444444;
+  color: #ffffff;
 }
 
 .suivi-table th {
   padding: 9.6px;
   text-align: left;
   font-weight: 600;
-  color: #333;
-  border-bottom: 2px solid #ddd;
+  color: #ffffff;
+  border-bottom: 2px solid #333333;
 }
 
 .suivi-table td {

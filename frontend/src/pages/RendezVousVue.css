@@ -372,8 +372,9 @@ body.rdv-vue-page .rdv-vue-content {
 }
 
 .fiches-table thead th {
-  background: #fafafa;
-  border-bottom: 2px solid #ffffff;
+  background: #444444;
+  color: #ffffff;
+  border-bottom: 2px solid #333333;
   padding: 10px 12px;
   font-size: 12px;
   text-align: left;
@@ -428,7 +429,7 @@ body.rdv-vue-page .rdv-vue .fiches-table td.rdv-vue-col-details {
 html.rdv-vue-page .rdv-vue .fiches-table thead th.rdv-vue-col-details,
 body.rdv-vue-page .rdv-vue .fiches-table thead th.rdv-vue-col-details {
   z-index: 4;
-  background: #fafafa !important;
+  background: #444444 !important;
 }
 
 .fiches-table th.produit-col,

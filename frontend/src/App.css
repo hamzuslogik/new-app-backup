@@ -20,8 +20,8 @@ table:not(.planning-table):not(.availability-table) {
 }
 
 thead:not(.planning-table thead):not(.availability-table thead):not(.production-table thead):not(.fiches-table thead):not(.suivi-table thead) {
-  background: var(--bg-tertiary, #e9ecef) !important;
-  color: #333333 !important;
+  background: var(--bg-tertiary, #444444) !important;
+  color: #ffffff !important;
 }
 
 thead th:not(.planning-table th):not(.availability-table th):not(.production-table th):not(.fiches-table th):not(.suivi-table th) {
@@ -42,14 +42,14 @@ thead th:not(.planning-table th):not(.availability-table th):not(.production-tab
 .production-table thead th,
 .fiches-table thead,
 .fiches-table thead th {
-  background: #ffffff !important;
-  color: #333333 !important;
+  background: #444444 !important;
+  color: #ffffff !important;
 }
 
 .suivi-table thead,
 .suivi-table thead th {
-  background: #ffffff !important;
-  color: #333333 !important;
+  background: #444444 !important;
+  color: #ffffff !important;
 }
 
 .planning-table thead *,
@@ -71,14 +71,14 @@ thead th:not(.planning-table th):not(.availability-table th):not(.production-tab
 .fiches-table thead th *,
 .fiches-table th,
 .fiches-table th * {
-  color: #333333 !important;
+  color: #ffffff !important;
 }
 
 .suivi-table thead *,
 .suivi-table thead th *,
 .suivi-table th,
 .suivi-table th * {
-  color: #333333 !important;
+  color: #ffffff !important;
 }
 
 /* Règle générale : tous les thead avec fond sombre (#9cbfc8) doivent avoir du texte blanc */
@@ -133,8 +133,8 @@ table.fiches-table thead tr th *,
 .fiches-table thead tr th,
 .fiches-table thead tr th *,
 .fiches-table th {
-  color: #333333 !important;
-  background-color: #ffffff !important;
+  color: #ffffff !important;
+  background-color: #444444 !important;
 }
 
 table.suivi-table thead,
@@ -156,8 +156,8 @@ table.suivi-table thead tr th *,
 .suivi-table thead tr th,
 .suivi-table thead tr th *,
 .suivi-table th {
-  color: #333333 !important;
-  background-color: #ffffff !important;
+  color: #ffffff !important;
+  background-color: #444444 !important;
 }
 
 /* Styles pour les modales */
@@ -280,8 +280,8 @@ table tbody tr:hover, .table tbody tr:hover {
 
 /* Tableaux - header */
 table thead, table thead th, .table thead, .table thead th {
-  background: var(--table-header-bg, #ECFDF5) !important;
-  color: var(--table-header-text, #064E3B) !important;
+  background: var(--table-header-bg, #444444) !important;
+  color: var(--table-header-text, #ffffff) !important;
 }
 
 /* Zone de recherche rapide (pour les styles inline) */

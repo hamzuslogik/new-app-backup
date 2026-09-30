@@ -684,7 +684,7 @@ body.dashboard-admin-page {
 }
 
 .confirmateurs-table thead {
-  background: #f8f9fa !important;
+  background: #444444 !important;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -694,7 +694,7 @@ body.dashboard-admin-page {
   padding: 9.6px 12px;
   text-align: left;
   font-weight: 600;
-  color: #333333 !important;
+  color: #ffffff !important;
   border-bottom: 2px solid #dee2e6;
 }
 
@@ -1159,8 +1159,8 @@ body.dashboard-admin-page {
 }
 
 .fiches-table thead {
-  background: #ffffff;
-  color: #333333;
+  background: #444444;
+  color: #ffffff;
 }
 
 .fiches-table th {

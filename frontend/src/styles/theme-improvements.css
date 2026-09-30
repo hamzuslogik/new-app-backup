@@ -71,22 +71,21 @@ label,
   color: var(--text-primary, #000000) !important;
 }
 
-/* Textes dans les tableaux */
+/* Textes dans les tableaux (corps uniquement — les th sont gérés plus bas) */
 table:not(.planning-table):not(.planning-grid):not(.distance-table),
-table:not(.planning-table):not(.planning-grid):not(.production-table):not(.distance-table) td,
-table:not(.planning-table):not(.planning-grid):not(.production-table):not(.distance-table) th:not(.planning-table th):not(.planning-grid th):not(.production-table th):not(.distance-table th) {
+table:not(.planning-table):not(.planning-grid):not(.production-table):not(.distance-table) td {
   color: var(--text-primary, #333333) !important;
 }
 
 /* En-têtes de tableaux avec fond sombre - texte blanc */
 .fiches-table thead {
-  background: #ffffff !important;
-  color: #333333 !important; /* Texte noir sur fond blanc */
+  background: #444444 !important;
+  color: #ffffff !important; /* Texte blanc sur fond #444444 */
 }
 
 .stats-table thead {
-  background: #ffffff !important;
-  color: #333333 !important; /* Texte gris foncé sur fond blanc */
+  background: #444444 !important;
+  color: #ffffff !important; /* Texte blanc sur fond #444444 */
 }
 
 .data-table thead,
@@ -96,8 +95,8 @@ table:not(.planning-table):not(.planning-grid):not(.production-table):not(.dista
 }
 
 .suivi-table thead {
-  background: #ffffff !important;
-  color: #333333 !important; /* Texte noir sur fond blanc */
+  background: #444444 !important;
+  color: #ffffff !important; /* Texte blanc sur fond #444444 */
 }
 
 /* Tableau de distance dans le modal - texte blanc */
@@ -124,7 +123,7 @@ table:not(.planning-table):not(.planning-grid):not(.production-table):not(.dista
 .fiches-table th *,
 .fiches-table th span,
 .fiches-table th div {
-  color: #333333 !important;
+  color: #ffffff !important;
 }
 
 .stats-table thead th:not(.stats-etat-cell),
@@ -140,7 +139,7 @@ table:not(.planning-table):not(.planning-grid):not(.production-table):not(.dista
 .suivi-table thead th *,
 .suivi-table th,
 .suivi-table th * {
-  color: #333333 !important;
+  color: #ffffff !important;
 }
 
 .data-table thead *,
@@ -163,13 +162,13 @@ table:not(.planning-table):not(.planning-grid):not(.production-table):not(.dista
 /* En-têtes de tableaux avec fond clair - texte sombre (par défaut) */
 table thead:not(.planning-table thead):not(.planning-grid thead):not(.fiches-table thead):not(.stats-table thead):not(.suivi-table thead):not(.data-table thead):not(.availability-table thead):not(.production-table thead):not(.distance-table thead),
 thead:not(.planning-table thead):not(.planning-grid thead):not(.fiches-table thead):not(.stats-table thead):not(.suivi-table thead):not(.data-table thead):not(.availability-table thead):not(.production-table thead):not(.distance-table thead) {
-  background: var(--bg-tertiary, #e9ecef) !important;
-  color: #333333 !important; /* Texte sombre sur fond clair */
+  background: var(--bg-tertiary, #444444) !important;
+  color: #ffffff !important; /* Texte sombre sur fond clair */
 }
 
 table thead th:not(.planning-table th):not(.planning-grid th):not(.fiches-table th):not(.stats-table th):not(.suivi-table th):not(.data-table th):not(.availability-table th):not(.production-table th):not(.distance-table th),
 thead th:not(.planning-table th):not(.planning-grid th):not(.fiches-table th):not(.stats-table th):not(.suivi-table th):not(.data-table th):not(.availability-table th):not(.production-table th):not(.distance-table th) {
-  color: #333333 !important; /* Texte sombre sur fond clair */
+  color: #ffffff !important; /* Texte sombre sur fond clair */
 }
 
 /* Règle générale : tous les thead avec fond sombre (#9cbfc8) doivent avoir du texte blanc */
@@ -195,12 +194,12 @@ table thead[style*="background-color: #9cbfc8"] * {
 
 /* Exception spécifique pour confirmateurs-table */
 .confirmateurs-table thead {
-  background: #f8f9fa !important;
-  color: #333333 !important;
+  background: #444444 !important;
+  color: #ffffff !important;
 }
 
 .confirmateurs-table th {
-  color: #333333 !important;
+  color: #ffffff !important;
 }
 
 /* Planning table - texte visible */
@@ -654,8 +653,8 @@ table.fiches-table thead tr th *,
 .fiches-table thead tr th,
 .fiches-table thead tr th *,
 .fiches-table th {
-  color: #333333 !important;
-  background-color: #ffffff !important;
+  color: #ffffff !important;
+  background-color: #444444 !important;
 }
 
 table.suivi-table thead,
@@ -677,6 +676,6 @@ table.suivi-table thead tr th *,
 .suivi-table thead tr th,
 .suivi-table thead tr th *,
 .suivi-table th {
-  color: #333333 !important;
-  background-color: #ffffff !important;
+  color: #ffffff !important;
+  background-color: #444444 !important;
 }

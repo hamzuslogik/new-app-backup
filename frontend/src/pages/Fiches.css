@@ -773,14 +773,14 @@ table.fiches-table thead,
   max-height: none !important;
   overflow: visible !important;
   position: relative !important;
-  background: #14532D !important;
-  background-color: #14532D !important;
+  background: #444444 !important;
+  background-color: #444444 !important;
 }
 
 .fiches-page .fiches-table thead,
 .fiches-table thead {
-  background: #14532D !important;
-  background-color: #14532D !important;
+  background: #444444 !important;
+  background-color: #444444 !important;
   color: #ffffff !important;
   display: table-header-group !important;
   visibility: visible !important;
@@ -813,8 +813,8 @@ table.fiches-table thead,
   font-size: 11px;
   white-space: nowrap;
   color: #ffffff !important;
-  background: #14532D !important;
-  background-color: #14532D !important;
+  background: #444444 !important;
+  background-color: #444444 !important;
   height: auto !important;
   min-height: 40px !important;
   max-height: none !important;
@@ -823,7 +823,7 @@ table.fiches-table thead,
   visibility: visible !important;
   opacity: 1 !important;
   border-right: 1px solid rgba(255, 255, 255, 0.18);
-  border-bottom: 2px solid #052E16;
+  border-bottom: 2px solid #333333;
 }
 
 .fiches-page table.fiches-table thead th *,
@@ -836,8 +836,8 @@ table.fiches-table thead,
 .fiches-table th.actions-header,
 .fiches-table th:last-child {
   color: #ffffff !important;
-  background: #14532D !important;
-  background-color: #14532D !important;
+  background: #444444 !important;
+  background-color: #444444 !important;
 }
 
 .fiches-table th *,
@@ -1839,8 +1839,8 @@ table.fiches-table thead,
 
   .fiches-table thead {
     display: table-header-group !important;
-    background: #14532D !important;
-    background-color: #14532D !important;
+    background: #444444 !important;
+    background-color: #444444 !important;
     color: #ffffff !important;
     visibility: visible !important;
     opacity: 1 !important;
@@ -1857,16 +1857,16 @@ table.fiches-table thead,
     display: table-row !important;
     visibility: visible !important;
     opacity: 1 !important;
-    background: #14532D !important;
-    background-color: #14532D !important;
+    background: #444444 !important;
+    background-color: #444444 !important;
     height: auto !important;
     min-height: 50px !important;
   }
 
   .fiches-table thead th {
     display: table-cell !important;
-    background: #14532D !important;
-    background-color: #14532D !important;
+    background: #444444 !important;
+    background-color: #444444 !important;
     color: #ffffff !important;
     visibility: visible !important;
     opacity: 1 !important;
@@ -1878,7 +1878,7 @@ table.fiches-table thead,
     font-size: 12px !important;
     white-space: nowrap !important;
     border-right: 1px solid rgba(255, 255, 255, 0.18) !important;
-    border-bottom: 2px solid #052E16 !important;
+    border-bottom: 2px solid #333333 !important;
     overflow: visible !important;
     line-height: normal !important;
     vertical-align: middle !important;

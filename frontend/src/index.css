@@ -32,8 +32,8 @@
   --text-light: #ffffff;
   
   /* Variables pour tableaux */
-  --table-header-bg: #ECFDF5;
-  --table-header-text: #064E3B;
+  --table-header-bg: #444444;
+  --table-header-text: #ffffff;
   --table-hover-bg: #DCFCE7;
   
   /* Variables pour formulaires */
