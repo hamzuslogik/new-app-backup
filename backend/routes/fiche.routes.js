@@ -1707,30 +1707,27 @@ router.get('/', authenticate, async (req, res) => {
           histoJoinForFichesHisto = `INNER JOIN (${histoIdsSubquerySql}) histo_conf ON fiche.id = histo_conf.id_fiche`;
           histoParamsForFichesHisto = histoIdsSubqueryParams;
         } else if (date_champ === 'date_modif_time') {
-          // Date modification = changement d'état (fiches_histo.date_creation), pas fiches.date_modif_time
+          // Date Modification (état) = passage d'état dans fiches_histo.date_creation
+          // (pas fiches.date_modif_time). JOIN piloté par l'histo (comme fiches_histo_confirmation)
+          // au lieu d'un EXISTS corrélé — beaucoup plus rapide sur grosses tables.
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           if (dateDebut && dateFin) {
-            whereConditions.push(`EXISTS (
-              SELECT 1 FROM fiches_histo h
-              WHERE h.id_fiche = fiche.id
-                AND h.date_creation >= ? AND h.date_creation <= ?
-            )`);
-            params.push(startDatetime, endDatetime);
+            histoIdsSubquerySql =
+              'SELECT DISTINCT id_fiche FROM fiches_histo WHERE date_creation >= ? AND date_creation <= ?';
+            histoIdsSubqueryParams = [startDatetime, endDatetime];
           } else if (dateDebut) {
-            whereConditions.push(`EXISTS (
-              SELECT 1 FROM fiches_histo h
-              WHERE h.id_fiche = fiche.id
-                AND h.date_creation >= ?
-            )`);
-            params.push(startDatetime);
+            histoIdsSubquerySql =
+              'SELECT DISTINCT id_fiche FROM fiches_histo WHERE date_creation >= ?';
+            histoIdsSubqueryParams = [startDatetime];
           } else if (dateFin) {
-            whereConditions.push(`EXISTS (
-              SELECT 1 FROM fiches_histo h
-              WHERE h.id_fiche = fiche.id
-                AND h.date_creation <= ?
-            )`);
-            params.push(endDatetime);
+            histoIdsSubquerySql =
+              'SELECT DISTINCT id_fiche FROM fiches_histo WHERE date_creation <= ?';
+            histoIdsSubqueryParams = [endDatetime];
+          }
+          if (histoIdsSubquerySql) {
+            histoJoinForFichesHisto = `INNER JOIN (${histoIdsSubquerySql}) histo_modif ON fiche.id = histo_modif.id_fiche`;
+            histoParamsForFichesHisto = histoIdsSubqueryParams;
           }
         } else if (date_champ === 'date_confirmation') {
           // Convertir les dates en timestamps Unix
