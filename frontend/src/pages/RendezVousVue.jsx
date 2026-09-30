@@ -409,7 +409,7 @@ const RendezVousVue = () => {
   };
 
   const getProduitName = (produit) => (Number(produit) === 1 ? 'PAC' : Number(produit) === 2 ? 'PV' : '');
-  const getProduitColor = (produit) => (Number(produit) === 1 ? '#66D5D4' : Number(produit) === 2 ? '#FFE441' : '#cccccc');
+  const getProduitColor = (produit) => (Number(produit) === 1 ? '#66D5D4' : Number(produit) === 2 ? '#818cf8' : '#cccccc');
 
   const getSortValue = (fiche, key) => {
     switch (key) {

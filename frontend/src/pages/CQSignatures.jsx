@@ -224,7 +224,7 @@ const CQSignatures = () => {
   };
   const getProduitColor = (value) => {
     if (value === 1 || value === '1') return '#66D5D4';
-    if (value === 2 || value === '2') return '#FFE441';
+    if (value === 2 || value === '2') return '#818cf8';
     return '#cccccc';
   };
   const getProduitTextColor = (value) => {

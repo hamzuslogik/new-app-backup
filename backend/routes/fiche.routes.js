@@ -75,8 +75,14 @@ function getHistoConfirmateurIds(req, fiche = null) {
   let id2;
   let id3;
 
+  // Priorité : histo_id_* → id_confirmateur* du body → (manuel) fiche → (auto) user connecté
   if (id1Sent !== undefined) {
     id1 = id1Sent;
+  } else if (Object.prototype.hasOwnProperty.call(body, 'id_confirmateur')) {
+    id1 = fromFicheOrBody('id_confirmateur', 'id_confirmateur');
+    if (id1 == null && !isManualConfirmateurSelect && req.user && req.user.id) {
+      id1 = Number(req.user.id);
+    }
   } else if (isManualConfirmateurSelect) {
     id1 = fromFicheOrBody('id_confirmateur', 'id_confirmateur');
   } else {
@@ -85,7 +91,10 @@ function getHistoConfirmateurIds(req, fiche = null) {
 
   if (id2Sent !== undefined) {
     id2 = id2Sent;
-  } else if (isManualConfirmateurSelect) {
+  } else if (
+    Object.prototype.hasOwnProperty.call(body, 'id_confirmateur_2') ||
+    isManualConfirmateurSelect
+  ) {
     id2 = fromFicheOrBody('id_confirmateur_2', 'id_confirmateur_2');
   } else {
     id2 = null;
@@ -93,7 +102,10 @@ function getHistoConfirmateurIds(req, fiche = null) {
 
   if (id3Sent !== undefined) {
     id3 = id3Sent;
-  } else if (isManualConfirmateurSelect) {
+  } else if (
+    Object.prototype.hasOwnProperty.call(body, 'id_confirmateur_3') ||
+    isManualConfirmateurSelect
+  ) {
     id3 = fromFicheOrBody('id_confirmateur_3', 'id_confirmateur_3');
   } else {
     id3 = null;
@@ -2560,6 +2572,8 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
         fiche.rdv_urgent,
         fiche.valider,
         fiche.conf_rdv_avec,
+        fiche.conf_presence_couple,
+        fiche.is_r2,
         etat.titre as etat_titre,
         etat.color as etat_color,
         commercial.pseudo as commercial_pseudo,
@@ -4295,7 +4309,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         produit = await queryOne('SELECT nom FROM produits WHERE id = ?', [fiche.produit]);
         // Ajouter une couleur par défaut selon le produit
         if (produit) {
-          produit.color = fiche.produit === 1 ? '#0000CD' : '#FFE441'; // PAC = bleu, PV = jaune
+          produit.color = fiche.produit === 1 ? '#0000CD' : '#818cf8'; // PAC = bleu, PV = indigo
         }
       }
     } catch (_) { }
@@ -7058,8 +7072,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       // Créer une entrée dans l'historique (id_confirmateur, id_confirmateur_2/3, id_sous_etat) + champs conf_* si état 7
       const { id1: histoConf, id2: histoConf2, id3: histoConf3 } = getHistoConfirmateurIds(req, fiche);
 
-      // Synchroniser fiches.id_confirmateur(_2/_3) avec la sélection (même valeurs que fiches_histo)
-      // dès que le body envoie des slots fiche et/ou histo_id_* avec au moins un conf1.
+      // Synchroniser fiches.id_confirmateur(_2/_3) avec la sélection (mêmes valeurs que fiches_histo).
+      // Création / confirmation RDV (état 7) : toujours écrire les confirmateurs résolus sur la fiche.
       const bodyHasFicheConfSlots =
         Object.prototype.hasOwnProperty.call(ficheData, 'id_confirmateur') ||
         Object.prototype.hasOwnProperty.call(ficheData, 'id_confirmateur_2') ||
@@ -7068,9 +7082,13 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         Object.prototype.hasOwnProperty.call(ficheData, 'histo_id_confirmateur') ||
         Object.prototype.hasOwnProperty.call(ficheData, 'histo_id_confirmateur_2') ||
         Object.prototype.hasOwnProperty.call(ficheData, 'histo_id_confirmateur_3');
-      if (bodyHasFicheConfSlots) {
+      if (newEtatId === 7 && (bodyHasFicheConfSlots || bodyHasHistoConfSlots)) {
+        ficheData.id_confirmateur = histoConf;
+        ficheData.id_confirmateur_2 = histoConf2;
+        ficheData.id_confirmateur_3 = histoConf3;
+      } else if (bodyHasFicheConfSlots) {
         // Valeurs déjà dans ficheData → UPDATE fiches les prendra telles quelles
-      } else if (bodyHasHistoConfSlots && histoConf != null) {
+      } else if (bodyHasHistoConfSlots) {
         ficheData.id_confirmateur = histoConf;
         ficheData.id_confirmateur_2 = histoConf2;
         ficheData.id_confirmateur_3 = histoConf3;

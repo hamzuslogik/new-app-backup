@@ -27,7 +27,7 @@ function getProduitName(produitId) {
 }
 
 function getProduitColor(produitId) {
-  return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#FFE441' : '#cccccc';
+  return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#818cf8' : '#cccccc';
 }
 
 function getDecalageInfo(fiche) {

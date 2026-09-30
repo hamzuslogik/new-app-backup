@@ -4,6 +4,12 @@
 
 export const isAdminSession = (user) => [1, 7].includes(Number(user?.fonction));
 
+/** Session commercial (fonction 5). */
+export const isCommercialSession = (user) => Number(user?.fonction) === 5;
+
+/** Layout menu en haut (admin ou commercial) — pas de sidebar. */
+export const usesTopNavLayout = (user) => isAdminSession(user) || isCommercialSession(user);
+
 function pad2(n) {
   return String(n).padStart(2, '0');
 }

@@ -10,8 +10,9 @@ import useUserHomePage from '../hooks/useUserHomePage';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { navigateFromNotification } from '../utils/notificationNavigation';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
-import { isAdminSession } from '../utils/adminMenuUrls';
+import { isAdminSession, isCommercialSession, usesTopNavLayout } from '../utils/adminMenuUrls';
 import AdminTopNav from './AdminTopNav';
+import CommercialTopNav from './CommercialTopNav';
 import './Header.css';
 
 const Header = () => {
@@ -31,7 +32,9 @@ const Header = () => {
     }
   };
   const queryClient = useQueryClient();
+  const topNavLayout = usesTopNavLayout(user);
   const adminLayout = isAdminSession(user);
+  const commercialLayout = isCommercialSession(user);
   const [now, setNow] = useState(() => new Date());
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
@@ -320,10 +323,10 @@ const Header = () => {
   }, [showNotifications]);
 
   useEffect(() => {
-    if (!adminLayout) return undefined;
+    if (!topNavLayout) return undefined;
     const timer = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(timer);
-  }, [adminLayout]);
+  }, [topNavLayout]);
 
   const clockLabel = now.toLocaleString('fr-FR', {
     day: '2-digit',
@@ -507,7 +510,7 @@ const Header = () => {
           </div>
   );
 
-  if (adminLayout) {
+  if (topNavLayout) {
     return (
       <header className="header header-admin">
         <div className="header-admin-top">
@@ -526,7 +529,7 @@ const Header = () => {
           <Link to={homePage} className="header-logo-container" onClick={goHomePage}>
             <img src="/logo/logo.png" alt="JWS Group Logo" className="header-logo" />
           </Link>
-          <AdminTopNav />
+          {adminLayout ? <AdminTopNav /> : commercialLayout ? <CommercialTopNav /> : null}
         </div>
       </header>
     );

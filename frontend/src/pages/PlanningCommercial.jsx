@@ -10,6 +10,7 @@ import FicheDetailModal from '../components/FicheDetailModal';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { getFicheTableIndicators } from '../utils/ficheTableIndicators';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import {
   applyForceDesktopViewport,
@@ -543,7 +544,7 @@ const PlanningCommercial = () => {
 
   // Obtenir la couleur du produit
   const getProduitColor = (produitId) => {
-    return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#FFE441' : '#cccccc';
+    return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#818cf8' : '#cccccc';
   };
 
   // Obtenir le nom du commercial
@@ -957,7 +958,7 @@ const PlanningCommercial = () => {
         ) : (
           <>
             <div className="fiches-table-container">
-              <table className="fiches-table">
+              <table className={`fiches-table${isCommercial ? ' fiches-table--commercial' : ''}`}>
                 <thead>
                   <tr>
                     <th>Date RDV</th>
@@ -971,6 +972,8 @@ const PlanningCommercial = () => {
                     <th>État</th>
                     <th>Compte rendu</th>
                     {isCommercial ? <th>Validé</th> : <th>Centre</th>}
+                    {isCommercial && <th className="fiche-col-seul">SEUL</th>}
+                    {isCommercial && <th className="fiche-col-r2">R2</th>}
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -979,6 +982,9 @@ const PlanningCommercial = () => {
                     const etatColor = getEtatColor(fiche.id_etat_final);
                     const produitColor = getProduitColor(fiche.produit);
                     const hasCompteRendu = fiche.has_compte_rendu === 1 || fiche.has_compte_rendu === true;
+                    const indicators = isCommercial
+                      ? getFicheTableIndicators(null, fiche)
+                      : null;
                     
                     return (
                       <tr 
@@ -1085,6 +1091,20 @@ const PlanningCommercial = () => {
                           </td>
                         ) : (
                           <td data-label="Centre:">{fiche.centre_titre || ''}</td>
+                        )}
+                        {isCommercial && (
+                          <td data-label="SEUL:" className="fiche-col-seul" style={{ textAlign: 'center' }}>
+                            {indicators?.cs ? (
+                              <span className="indicator rs" title="RDV seul">SEUL</span>
+                            ) : null}
+                          </td>
+                        )}
+                        {isCommercial && (
+                          <td data-label="R2:" className="fiche-col-r2" style={{ textAlign: 'center' }}>
+                            {indicators?.r2 ? (
+                              <span className="indicator r2" title="R2 placé">R2</span>
+                            ) : null}
+                          </td>
                         )}
                         <td data-label="">
                           <button

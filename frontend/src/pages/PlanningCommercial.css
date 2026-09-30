@@ -351,6 +351,11 @@ body.planning-commercial-page .planning-commercial .fiches-table {
   font-size: 11px;
 }
 
+html.planning-commercial-page .planning-commercial .fiches-table--commercial,
+body.planning-commercial-page .planning-commercial .fiches-table--commercial {
+  min-width: 1520px !important;
+}
+
 .fiches-table-container {
   overflow-x: auto;
   margin-bottom: 16px;
@@ -386,7 +391,7 @@ body.planning-commercial-page .planning-commercial .fiches-table {
   vertical-align: top;
 }
 
-/* Ordre colonnes Planning Commercial : Date RDV, Nom, Prénom, Tél, CP, Ville, Commercial, Produit, État, Compte rendu, Centre, Actions */
+/* Ordre colonnes Planning Commercial : Date RDV, Nom, Prénom, Tél, CP, Ville, Commercial, Produit, État, Compte rendu, Centre|Validé, [SEUL, R2 si commercial], Actions */
 html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(1),
 html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(1) {
   min-width: 128px !important;
@@ -501,8 +506,9 @@ html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(10
   white-space: normal !important;
 }
 
-html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(11),
-html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(11) {
+/* Centre (non-commercial) / Validé (commercial) */
+html.planning-commercial-page .planning-commercial .fiches-table:not(.fiches-table--commercial) th:nth-child(11),
+html.planning-commercial-page .planning-commercial .fiches-table:not(.fiches-table--commercial) td:nth-child(11) {
   min-width: 108px !important;
   width: 122px !important;
   max-width: 145px !important;
@@ -511,16 +517,71 @@ html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(11
   overflow-wrap: anywhere !important;
 }
 
-html.planning-commercial-page .planning-commercial .fiches-table th:nth-child(12),
-html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(12) {
+html.planning-commercial-page .planning-commercial .fiches-table:not(.fiches-table--commercial) th:nth-child(12),
+html.planning-commercial-page .planning-commercial .fiches-table:not(.fiches-table--commercial) td:nth-child(12) {
   min-width: 52px !important;
   width: 72px !important;
   max-width: 88px !important;
   text-align: center !important;
 }
 
-html.planning-commercial-page .planning-commercial .fiches-table td:nth-child(12) {
+html.planning-commercial-page .planning-commercial .fiches-table:not(.fiches-table--commercial) td:nth-child(12) {
   vertical-align: middle !important;
+}
+
+/* Session commercial : Validé, SEUL, R2, Actions */
+html.planning-commercial-page .planning-commercial .fiches-table--commercial th:nth-child(11),
+html.planning-commercial-page .planning-commercial .fiches-table--commercial td:nth-child(11) {
+  min-width: 52px !important;
+  width: 60px !important;
+  max-width: 72px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table--commercial th:nth-child(12),
+html.planning-commercial-page .planning-commercial .fiches-table--commercial td:nth-child(12),
+html.planning-commercial-page .planning-commercial .fiches-table--commercial th:nth-child(13),
+html.planning-commercial-page .planning-commercial .fiches-table--commercial td:nth-child(13) {
+  min-width: 48px !important;
+  width: 56px !important;
+  max-width: 64px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table--commercial th:nth-child(14),
+html.planning-commercial-page .planning-commercial .fiches-table--commercial td:nth-child(14) {
+  min-width: 52px !important;
+  width: 72px !important;
+  max-width: 88px !important;
+  text-align: center !important;
+}
+
+html.planning-commercial-page .planning-commercial .fiches-table--commercial td:nth-child(14) {
+  vertical-align: middle !important;
+}
+
+.planning-commercial .indicator {
+  display: inline-block;
+  padding: 3px 5px;
+  border-radius: 3px;
+  font-weight: 800;
+  font-size: 9px;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.planning-commercial .indicator.r2 {
+  background: #ffa500;
+  color: #ffffff;
+}
+
+.planning-commercial .indicator.rs {
+  background: #60a5fa;
+  color: #ffffff;
 }
 
 .fiches-table tbody tr:hover {

@@ -8,19 +8,19 @@ import { SidebarProvider, useSidebar } from '../contexts/SidebarContext';
 import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
 import { isMobileNativeExtranetPage } from '../utils/applyForceDesktopViewport';
 import { useAuth } from '../contexts/AuthContext';
-import { isAdminSession } from '../utils/adminMenuUrls';
+import { usesTopNavLayout } from '../utils/adminMenuUrls';
 import api from '../config/api';
 import './Layout.css';
 
 const LayoutContent = () => {
   const { sidebarCollapsed, isMobile, isTablet, closeSidebar, mobileExtranetActive } = useSidebar();
   const { user } = useAuth();
-  const adminLayout = isAdminSession(user);
+  const topNavLayout = usesTopNavLayout(user);
 
   React.useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
-    if (adminLayout) {
+    if (topNavLayout) {
       root.classList.add('admin-topnav');
       body.classList.add('admin-topnav');
     } else {
@@ -31,7 +31,7 @@ const LayoutContent = () => {
       root.classList.remove('admin-topnav');
       body.classList.remove('admin-topnav');
     };
-  }, [adminLayout]);
+  }, [topNavLayout]);
   const extranetMobile = mobileExtranetActive || isMobileNativeExtranetPage();
   const useMobileSidebar = !FORCE_DESKTOP_VIEWPORT || extranetMobile;
   const mobileLayout = extranetMobile || isMobile || isTablet;
@@ -109,9 +109,9 @@ const LayoutContent = () => {
 
   return (
     <FicheDetailModalProvider>
-      <div className={`app ${adminLayout ? 'app-admin-topnav' : ''}`}>
+      <div className={`app ${topNavLayout ? 'app-admin-topnav' : ''}`}>
         <GlobalKeyboardShortcuts />
-        {!adminLayout && useMobileSidebar && !sidebarCollapsed && mobileLayout && (
+        {!topNavLayout && useMobileSidebar && !sidebarCollapsed && mobileLayout && (
           <div 
             ref={overlayRef}
             className={`sidebar-overlay active ${overlayReady ? 'ready' : ''}`} 
@@ -119,8 +119,8 @@ const LayoutContent = () => {
             style={{ pointerEvents: overlayReady ? 'auto' : 'none' }}
           ></div>
         )}
-        {!adminLayout && <Sidebar collapsed={sidebarCollapsed} />}
-        <div className={`main-content ${sidebarCollapsed || adminLayout ? 'sidebar-collapsed' : ''}`}>
+        {!topNavLayout && <Sidebar collapsed={sidebarCollapsed} />}
+        <div className={`main-content ${sidebarCollapsed || topNavLayout ? 'sidebar-collapsed' : ''}`}>
           <Header />
           <div className="content-wrapper">
             <Outlet />

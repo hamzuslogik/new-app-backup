@@ -23,6 +23,7 @@ import {
   SignerBonusAnnonceSelect,
 } from '../components/SignerProduitFormFields';
 import { validateSignerCompteRenduForm, alertSignerCompteRenduValidation } from '../utils/validateSignerCompteRendu';
+import { validateCreateRdvForm, alertCreateRdvValidation } from '../utils/validateCreateRdvForm';
 import {
   COMPTE_RENDU_COMMERCIAL_OPTIONS,
   applyCompteRenduOptionChange,
@@ -850,7 +851,7 @@ const FicheDetail = ({
   const slotCodeVerifiedRef = useRef(false);
   const pendingAfterSlotCodeRef = useRef(null);
   const pendingKnownSlotStatusRef = useRef(null);
-  const [showConfirmConfFields, setShowConfirmConfFields] = useState(false);
+  const [showConfirmConfFields, setShowConfirmConfFields] = useState(true);
   const [rdvFormData, setRdvFormData] = useState({
     date_rdv_time: '',
     id_etat_final: 7, // CONFIRMER par défaut
@@ -949,7 +950,7 @@ const FicheDetail = ({
 
   useEffect(() => {
     if (selectedEtat === 7) {
-      setShowConfirmConfFields(false);
+      setShowConfirmConfFields(true);
     }
   }, [selectedEtat]);
 
@@ -2487,6 +2488,18 @@ const FicheDetail = ({
   // Fonction pour créer le RDV depuis le formulaire (formData optionnel = données avec professions résolues)
   const handleCreateRdvFromForm = async (formData) => {
     const data = formData || rdvFormData;
+
+    const createValidation = validateCreateRdvForm({
+      formData: data,
+      produits,
+      requireConfirmateur: true,
+      mode: 'create',
+    });
+    if (!createValidation.valid) {
+      alertCreateRdvValidation(createValidation.missing);
+      return;
+    }
+
     if (!data.date_rdv_time) {
       alert('Veuillez remplir la date et l\'heure du RDV');
       return;
@@ -2558,10 +2571,21 @@ const FicheDetail = ({
 
       // Préparer les données de mise à jour
       // RDV_URGENT doit être en état CONFIRMER (7) avec la qualification RDV_URGENT
+      const toConfId = (v) => {
+        if (v === '' || v == null) return null;
+        const n = parseInt(v, 10);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      };
       const conf1Id =
         Number(user?.fonction) === 6 && user?.id
-          ? parseInt(user.id, 10)
-          : (data.id_confirmateur ? parseInt(data.id_confirmateur) : null);
+          ? toConfId(user.id)
+          : toConfId(data.id_confirmateur);
+      const conf2Id = isNouvelleConfirmationConf1Seul(ficheData)
+        ? null
+        : toConfId(data.id_confirmateur_2);
+      const conf3Id = isNouvelleConfirmationConf1Seul(ficheData)
+        ? null
+        : toConfId(data.id_confirmateur_3);
       const updateData = {
         date_rdv_time: data.date_rdv_time.includes(':') 
           ? data.date_rdv_time 
@@ -2569,9 +2593,13 @@ const FicheDetail = ({
         id_etat_final: 7, // Toujours CONFIRMER (7) - RDV_URGENT est géré via id_qualif
         produit: data.produit ? parseInt(data.produit) : null,
         conf_produit: data.produit ? parseInt(data.produit) : null,
+        // Affectation confirmateurs → fiches + fiches_histo (via histo_id_*)
         id_confirmateur: conf1Id,
-        id_confirmateur_2: data.id_confirmateur_2 ? parseInt(data.id_confirmateur_2) : null,
-        id_confirmateur_3: data.id_confirmateur_3 ? parseInt(data.id_confirmateur_3) : null,
+        id_confirmateur_2: conf2Id,
+        id_confirmateur_3: conf3Id,
+        histo_id_confirmateur: conf1Id,
+        histo_id_confirmateur_2: conf2Id,
+        histo_id_confirmateur_3: conf3Id,
         conf_rdv_avec: data.conf_rdv_avec || null,
         conf_appel_tunisie_avec: data.conf_appel_tunisie_avec || null,
         conf_deja_etude: data.conf_deja_etude || data.conf_deja_fait_etude || null,
@@ -2605,17 +2633,6 @@ const FicheDetail = ({
         annee_systeme_chauffage: data.annee_systeme_chauffage ? parseInt(data.annee_systeme_chauffage) : null,
         conf_commentaire_produit: data.conf_commentaire_produit || null
       };
-
-      // REFUSER / SIGNER RETRACTER : nouvelle confirmation → pas de 2e/3e confirmateur
-      if (isNouvelleConfirmationConf1Seul(ficheData)) {
-        updateData.id_confirmateur_2 = null;
-        updateData.id_confirmateur_3 = null;
-      }
-
-      // Historique = sélection manuelle du modal (sessions confirmateur / staff)
-      updateData.histo_id_confirmateur = updateData.id_confirmateur;
-      updateData.histo_id_confirmateur_2 = updateData.id_confirmateur_2;
-      updateData.histo_id_confirmateur_3 = updateData.id_confirmateur_3;
 
       // Commercial 2 optionnel
       updateData.id_commercial_2 =
@@ -2892,6 +2909,7 @@ const FicheDetail = ({
       setConfFormData(buildConfFormStateFromFiche(ficheData, user));
       setShowConfConfirmateur2(false);
       setShowConfConfirmateur3(false);
+      setShowConfirmConfFields(true);
       confFormHydratePendingRef.current = !ficheData?.id;
     } else {
       setConfFormData({ ...EMPTY_CONF_FORM_BASE });
@@ -2907,9 +2925,22 @@ const FicheDetail = ({
   // Soumettre la confirmation (état 7)
   const handleConfirmSubmit = async () => {
     try {
-      // Validation : commentaire obligatoire pour la confirmation
-      if (!(confFormData.conf_commentaire_produit || '').trim()) {
-        alert('Veuillez saisir un commentaire.');
+      const confValidation = validateCreateRdvForm({
+        formData: {
+          ...confFormData,
+          // Session confirmateur : conf1 = utilisateur connecté même si le select est figé
+          id_confirmateur:
+            isConfirmateurSession && user?.id
+              ? String(user.id)
+              : confFormData.id_confirmateur,
+        },
+        produits,
+        requireConfirmateur: true,
+        mode: 'confirm',
+      });
+      if (!confValidation.valid) {
+        setShowConfirmConfFields(true);
+        alertCreateRdvValidation(confValidation.missing);
         return;
       }
 
@@ -2937,15 +2968,30 @@ const FicheDetail = ({
       }
 
       // Préparer les données à envoyer
+      const toConfId = (v) => {
+        if (v === '' || v == null) return null;
+        const n = parseInt(v, 10);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      };
       const conf1Id = isConfirmateurSession && user?.id
-        ? parseInt(user.id, 10)
-        : (confFormData.id_confirmateur ? parseInt(confFormData.id_confirmateur) : null);
+        ? toConfId(user.id)
+        : toConfId(confFormData.id_confirmateur);
+      const conf2Id = isNouvelleConfirmationConf1Seul(ficheData)
+        ? null
+        : toConfId(confFormData.id_confirmateur_2);
+      const conf3Id = isNouvelleConfirmationConf1Seul(ficheData)
+        ? null
+        : toConfId(confFormData.id_confirmateur_3);
       const updateData = {
         id_etat_final: 7,
         produit: confFormData.produit ? parseInt(confFormData.produit) : null,
+        // Affectation confirmateurs → fiches + fiches_histo (via histo_id_*)
         id_confirmateur: conf1Id,
-        id_confirmateur_2: confFormData.id_confirmateur_2 ? parseInt(confFormData.id_confirmateur_2) : null,
-        id_confirmateur_3: confFormData.id_confirmateur_3 ? parseInt(confFormData.id_confirmateur_3) : null,
+        id_confirmateur_2: conf2Id,
+        id_confirmateur_3: conf3Id,
+        histo_id_confirmateur: conf1Id,
+        histo_id_confirmateur_2: conf2Id,
+        histo_id_confirmateur_3: conf3Id,
         date_rdv_time: dateRdvTime,
         conf_rdv_avec: confFormData.conf_rdv_avec || null,
         conf_appel_tunisie_avec: confFormData.conf_appel_tunisie_avec || null,
@@ -2977,16 +3023,6 @@ const FicheDetail = ({
         consommation_chauffage: confFormData.consommation_chauffage || null,
         conf_commentaire_produit: confFormData.conf_commentaire_produit || null
       };
-
-      if (isNouvelleConfirmationConf1Seul(ficheData)) {
-        updateData.id_confirmateur_2 = null;
-        updateData.id_confirmateur_3 = null;
-      }
-
-      // Historique confirmateurs = sélection du formulaire CONFIRMER (jamais l'utilisateur connecté en auto)
-      updateData.histo_id_confirmateur = updateData.id_confirmateur;
-      updateData.histo_id_confirmateur_2 = updateData.id_confirmateur_2;
-      updateData.histo_id_confirmateur_3 = updateData.id_confirmateur_3;
 
       updateData.id_commercial_2 =
         confFormData.id_commercial_2 && String(confFormData.id_commercial_2).trim() !== ''
@@ -3307,7 +3343,10 @@ const FicheDetail = ({
       if (Number(user?.fonction) === 5 && compteRenduOption) {
         updateData.compte_rendu_option = resolveOptionKey(compteRenduOption);
       }
-      if (showHistoConfirmateurDropdown) {
+      if (
+        showHistoConfirmateurDropdown &&
+        ![13, 44, 45].includes(Number(selectedEtat))
+      ) {
         // Toujours envoyer les IDs sélectionnés (y compris vide → null côté API) :
         // ne pas laisser le backend retomber sur l'utilisateur connecté.
         // Écriture dans fiches_histo (histo_id_*) et fiches (id_confirmateur*) quand conf1 est choisi.
@@ -3774,7 +3813,7 @@ const FicheDetail = ({
       <div className="fiche-detail-header">
         <div className="fiche-detail-header-title">
           <div className="fiche-type-badge" style={{ 
-            backgroundColor: fiche.produit_color || (fiche.produit === 1 ? '#66D5D4' : '#FFE441'),
+            backgroundColor: fiche.produit_color || (fiche.produit === 1 ? '#66D5D4' : '#818cf8'),
             color: fiche.produit === 1 ? 'white' : 'black'
           }}>
             {fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : 'PV')}
@@ -5114,7 +5153,26 @@ const FicheDetail = ({
               // Sessions confirmateur / RE / RP / backoffice / admin : permettre d'éditer même sans commentaire affiché
               const canEditEtatActuelComment = [1, 6, 7, 11, 13, 14].includes(Number(user?.fonction));
               const detailItemsActuel = (() => {
-                const items = [...detailItemsActuelRaw];
+                let items = [...detailItemsActuelRaw];
+                // Session commercial : uniquement Date RDV (+ historique des modifs plus bas)
+                if (isCommercial) {
+                  let filtered = items.filter((it) => String(it.label || '') === 'Date RDV');
+                  if (filtered.length === 0) {
+                    const dt = etatActuel.date_rdv_time || fiche.date_rdv_time;
+                    if (dt) {
+                      const heureAvant =
+                        etatActuel.heure_rdv_avant_decalage || fiche.heure_rdv_avant_decalage;
+                      filtered = [
+                        {
+                          label: 'Date RDV',
+                          value: formatRdvDateTime(dt),
+                          ...(heureAvant ? { heure_rdv_avant_decalage: heureAvant } : {}),
+                        },
+                      ];
+                    }
+                  }
+                  return filtered;
+                }
                 if (!canEditEtatActuelComment) return items;
                 // NRP : commentaire volontairement masqué dans l'état actuel
                 if (Number(etatActuel.id_etat) === 2) return items;
@@ -5319,7 +5377,7 @@ const FicheDetail = ({
                       
                       {showHistorique && (
                         <div className="historique-list" style={{ marginTop: '10px' }}>
-                          {historiqueListeSansEtatActuel.slice().reverse().map((histo) => {
+                          {historiqueListeSansEtatActuel.map((histo) => {
                             const detailItems = renderEtatDetails(histo);
                             const histoEtatColor = histo.etat_color
                               || etats?.find((e) => Number(e.id) === Number(histo.id_etat))?.color
@@ -5999,6 +6057,110 @@ const FicheDetail = ({
                                         {item.value || (canEditEtatActuelComment && isCommentItem ? '—' : '-')}
                                       </span>
                                       {item.label === 'Date RDV' && renderHeureRdvAvantBadge(heureRdvAvantDecalage)}
+                                      {item.label === 'Date RDV' && (() => {
+                                          const sinceTs = etatActuel.date_creation
+                                            ? new Date(etatActuel.date_creation).getTime()
+                                            : null;
+                                          const histoSinceConfirmer = dateRdvModifications.filter((mod) => {
+                                            if (!sinceTs) return true;
+                                            const d = mod.date_modif_time ? new Date(mod.date_modif_time).getTime() : null;
+                                            return d != null && !Number.isNaN(d) && d >= sinceTs;
+                                          });
+                                          if (histoSinceConfirmer.length === 0) return null;
+                                          return (
+                                            <div style={{ marginTop: '10px', width: '100%' }}>
+                                              <button
+                                                type="button"
+                                                onClick={() => setShowDateRdvHistory((prev) => !prev)}
+                                                title="Voir l'historique des modifications de l'heure du RDV"
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '6px',
+                                                  background: 'transparent',
+                                                  border: '1px solid #ffffff',
+                                                  color: '#ffffff',
+                                                  borderRadius: '4px',
+                                                  padding: '4px 10px',
+                                                  fontSize: '12px',
+                                                  fontWeight: 700,
+                                                  cursor: 'pointer'
+                                                }}
+                                              >
+                                                <FaHistory />
+                                                Historique des modifications ({histoSinceConfirmer.length})
+                                              </button>
+                                              {showDateRdvHistory && (
+                                                <div
+                                                  className="etat-actuel-rdv-heure-historique"
+                                                  style={{
+                                                    marginTop: '8px',
+                                                    background: '#ffffff',
+                                                    color: '#1f2937',
+                                                    borderRadius: '6px',
+                                                    padding: '8px',
+                                                    border: '1px solid #d1d5db',
+                                                    maxWidth: '720px'
+                                                  }}
+                                                >
+                                                  <table
+                                                    className="etat-actuel-rdv-heure-historique-table"
+                                                    style={{
+                                                      width: '100%',
+                                                      borderCollapse: 'collapse',
+                                                      fontSize: '12px',
+                                                      color: '#1f2937'
+                                                    }}
+                                                  >
+                                                    <thead>
+                                                      <tr style={{ background: '#f3f4f6' }}>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#111827' }}>Quand</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#111827' }}>Qui</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#111827' }}>Ancienne valeur</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #d1d5db', color: '#111827' }}>Nouvelle valeur</th>
+                                                      </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                      {histoSinceConfirmer
+                                                        .slice()
+                                                        .sort((a, b) => {
+                                                          const ta = a.date_modif_time ? new Date(a.date_modif_time).getTime() : 0;
+                                                          const tb = b.date_modif_time ? new Date(b.date_modif_time).getTime() : 0;
+                                                          return tb - ta;
+                                                        })
+                                                        .map((mod) => (
+                                                          <tr key={mod.id}>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap', color: '#1f2937' }}>
+                                                              {mod.date_modif_time
+                                                                ? new Date(mod.date_modif_time).toLocaleString('fr-FR')
+                                                                : '-'}
+                                                            </td>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#1f2937' }}>
+                                                              {mod.user_pseudo || '-'}
+                                                            </td>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#1f2937' }}>
+                                                              {modificaValueDisplay(
+                                                                mod.ancien_valeur,
+                                                                mod.type || 'date_rdv_time',
+                                                                mod.ancien_valeur_label
+                                                              )}
+                                                            </td>
+                                                            <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#1f2937' }}>
+                                                              {modificaValueDisplay(
+                                                                mod.nouvelle_valeur,
+                                                                mod.type || 'date_rdv_time',
+                                                                mod.nouvelle_valeur_label
+                                                              )}
+                                                            </td>
+                                                          </tr>
+                                                        ))}
+                                                    </tbody>
+                                                  </table>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })()}
                                           </>
                                         );
                                       })()}
@@ -6012,16 +6174,17 @@ const FicheDetail = ({
                         </div>
                       )}
 
-                      {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
+                      {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) && !isCommercial &&
                         renderQualiteConfirmationBackofficePanel()}
 
-                      {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) && !isCommercial && (
+                      {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) && (
                         <div className="etat-actuel-rdv-seul-row">
                           {getRdvSeulRawLabel(fiche) && (
                             <span className="etat-actuel-rdv-seul-label">
                               RDV seul : {getRdvSeulRawLabel(fiche)}
                             </span>
                           )}
+                          {!isCommercial && (
                           <div style={{ position: 'relative', display: 'inline-block' }}>
                             <button
                               type="button"
@@ -6062,6 +6225,10 @@ const FicheDetail = ({
                               </>
                             )}
                           </div>
+                          )}
+                          {isCommercial && !getRdvSeulRawLabel(fiche) && (
+                            <span className="etat-actuel-rdv-seul-label">RDV seul : —</span>
+                          )}
                         </div>
                       )}
 
@@ -6273,9 +6440,9 @@ const FicheDetail = ({
                         </div>
                       )}
 
-                      {/* Cadre R2 / R1 — bas de l'état actuel CONFIRMER (Admin, Backoffice, RE/RP Confirmation) */}
+                      {/* Cadre R2 / R1 — bas de l'état actuel CONFIRMER (Admin, Backoffice, RE/RP Confirmation, Commercial) */}
                       {(() => {
-                        const canSeeR2R1Box = [1, 7, 11, 13, 14].includes(Number(user?.fonction));
+                        const canSeeR2R1Box = [1, 5, 7, 11, 13, 14].includes(Number(user?.fonction));
                         const isConfirmerActuel = isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre);
                         const isR2Oui = normalizeIsR2Value(fiche.is_r2) === 1;
                         if (!canSeeR2R1Box || !isConfirmerActuel || !isR2Oui) return null;
@@ -6343,7 +6510,7 @@ const FicheDetail = ({
 
                       {/* Contrôle Qualité — affiché uniquement si l'état actuel est SIGNER (13).
                           Si l'état actuel n'est pas 13, le formulaire est rendu dans l'entrée d'historique état 13 (voir plus bas). */}
-                      {isEtatSigner13(fiche.id_etat_final) && renderControleQualiteForm({ embedded: true })}
+                      {!isCommercial && isEtatSigner13(fiche.id_etat_final) && renderControleQualiteForm({ embedded: true })}
                     </div>
                     </div>
                       )}
@@ -7386,7 +7553,10 @@ const FicheDetail = ({
                 )}
             </div>
 
-            {showHistoConfirmateurDropdown && selectedEtat !== 7 && (
+            {showHistoConfirmateurDropdown &&
+              selectedEtat != null &&
+              selectedEtat !== 7 &&
+              ![13, 44, 45].includes(Number(selectedEtat)) && (
               <div className="form-group histo-confirmateurs-picker">
                 <label htmlFor="histo_confirmateur">Confirmateur (historique)</label>
                 <select
@@ -7534,7 +7704,7 @@ const FicheDetail = ({
                 <table className="rdv-form-table">
                   <tbody>
                     <tr>
-                      <td><label htmlFor="conf_produit">Étude à faire pour :</label></td>
+                      <td><label htmlFor="conf_produit">Étude à faire pour *</label></td>
                       <td>
                         <select
                           id="conf_produit"
@@ -7700,7 +7870,7 @@ const FicheDetail = ({
                     </tr>
                     )}
                     <tr>
-                      <td><label htmlFor="conf_rdv_date">Date RDV :</label></td>
+                      <td><label htmlFor="conf_rdv_date">Date RDV *</label></td>
                       <td>
                         <input
                           type="date"
@@ -7709,11 +7879,12 @@ const FicheDetail = ({
                           min={formatLocalYmd()}
                           value={confFormData.conf_rdv_date}
                           onChange={(e) => setConfFormData({...confFormData, conf_rdv_date: e.target.value})}
+                          required
                         />
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_rdv_time">Heure RDV :</label></td>
+                      <td><label htmlFor="conf_rdv_time">Heure RDV *</label></td>
                       <td>
                         <input
                           type="time"
@@ -7721,6 +7892,7 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_rdv_time}
                           onChange={(e) => setConfFormData({...confFormData, conf_rdv_time: e.target.value})}
+                          required
                         />
                       </td>
                     </tr>
@@ -7807,13 +7979,14 @@ const FicheDetail = ({
                     {showConfirmConfFields && (
                       <>
                     <tr>
-                      <td><label htmlFor="conf_rdv_avec">RDV pris avec :</label></td>
+                      <td><label htmlFor="conf_rdv_avec">RDV pris avec *</label></td>
                       <td>
                         <select
                           id="conf_rdv_avec"
                           className="form-control"
                           value={confFormData.conf_rdv_avec}
                           onChange={(e) => setConfFormData({...confFormData, conf_rdv_avec: e.target.value})}
+                          required
                         >
                           <option value="">Sélectionner</option>
                           <option value="MR">MR</option>
@@ -7823,13 +7996,14 @@ const FicheDetail = ({
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_appel_tunisie_avec">Appel en Tunisie avec :</label></td>
+                      <td><label htmlFor="conf_appel_tunisie_avec">Appel en Tunisie avec *</label></td>
                       <td>
                         <select
                           id="conf_appel_tunisie_avec"
                           className="form-control"
                           value={confFormData.conf_appel_tunisie_avec}
                           onChange={(e) => setConfFormData({...confFormData, conf_appel_tunisie_avec: e.target.value})}
+                          required
                         >
                           <option value="">Sélectionner</option>
                           <option value="MR">Mr</option>
@@ -7838,7 +8012,7 @@ const FicheDetail = ({
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_deja_etude">A déjà fait une étude :</label></td>
+                      <td><label htmlFor="conf_deja_etude">A déjà fait une étude *</label></td>
                       <td>
                         <select
                           id="conf_deja_etude"
@@ -7853,6 +8027,7 @@ const FicheDetail = ({
                               conf_details_etude: value === 'OUI' ? confFormData.conf_details_etude : ''
                             });
                           }}
+                          required
                         >
                           <option value="">Sélectionner</option>
                           <option value="OUI">OUI</option>
@@ -7862,7 +8037,7 @@ const FicheDetail = ({
                     </tr>
                     {(confFormData.conf_deja_etude === 'OUI' || confFormData.conf_deja_fait_etude === 'OUI') && (
                     <tr>
-                      <td><label htmlFor="conf_details_etude">Détails étude :</label></td>
+                      <td><label htmlFor="conf_details_etude">Détails étude *</label></td>
                       <td>
                         <input
                           type="text"
@@ -7870,18 +8045,20 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_details_etude || ''}
                           onChange={(e) => setConfFormData({ ...confFormData, conf_details_etude: e.target.value })}
+                          required
                         />
                       </td>
                     </tr>
                     )}
                     <tr>
-                      <td><label htmlFor="conf_rdv_annule_precedent">RDV déjà annulé précédemment :</label></td>
+                      <td><label htmlFor="conf_rdv_annule_precedent">RDV déjà annulé précédemment *</label></td>
                       <td>
                         <select
                           id="conf_rdv_annule_precedent"
                           className="form-control"
                           value={confFormData.conf_rdv_annule_precedent}
                           onChange={(e) => setConfFormData({...confFormData, conf_rdv_annule_precedent: e.target.value})}
+                          required
                         >
                           <option value="">Sélectionner</option>
                           <option value="OUI">OUI</option>
@@ -7890,13 +8067,14 @@ const FicheDetail = ({
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_presence_couple">Présence du couple ou célibataire :</label></td>
+                      <td><label htmlFor="conf_presence_couple">Présence du couple ou célibataire *</label></td>
                       <td>
                         <select
                           id="conf_presence_couple"
                           className="form-control"
                           value={confFormData.conf_presence_couple}
                           onChange={(e) => setConfFormData({...confFormData, conf_presence_couple: e.target.value})}
+                          required
                         >
                           <option value="">Sélectionner</option>
                           <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
@@ -7962,7 +8140,7 @@ const FicheDetail = ({
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_revenu">Revenu :</label></td>
+                      <td><label htmlFor="conf_revenu">Revenu *</label></td>
                       <td>
                         <input
                           type="text"
@@ -7970,11 +8148,12 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_revenu}
                           onChange={(e) => setConfFormData({...confFormData, conf_revenu: e.target.value})}
+                          required
                         />
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_credit">Crédit :</label></td>
+                      <td><label htmlFor="conf_credit">Crédit *</label></td>
                       <td>
                         <input
                           type="text"
@@ -7982,11 +8161,12 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_credit}
                           onChange={(e) => setConfFormData({...confFormData, conf_credit: e.target.value})}
+                          required
                         />
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_consommation_electricite_gen">Consommations électrique :</label></td>
+                      <td><label htmlFor="conf_consommation_electricite_gen">Consommations électrique *</label></td>
                       <td>
                         <input
                           type="text"
@@ -7994,11 +8174,12 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_consommation_electricite}
                           onChange={(e) => setConfFormData({...confFormData, conf_consommation_electricite: e.target.value})}
+                          required
                         />
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_consommation_chauffage_gen">Consommations chauffage :</label></td>
+                      <td><label htmlFor="conf_consommation_chauffage_gen">Consommations chauffage *</label></td>
                       <td>
                         <input
                           type="text"
@@ -8006,11 +8187,12 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_consommation_chauffage}
                           onChange={(e) => setConfFormData({...confFormData, conf_consommation_chauffage: e.target.value})}
+                          required
                         />
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_mode_chauffage_gen">Mode de chauffage :</label></td>
+                      <td><label htmlFor="conf_mode_chauffage_gen">Mode de chauffage *</label></td>
                       <td>
                         <input
                           type="text"
@@ -8019,6 +8201,7 @@ const FicheDetail = ({
                           value={confFormData.conf_mode_chauffage || ''}
                           onChange={(e) => setConfFormData({ ...confFormData, conf_mode_chauffage: e.target.value })}
                           autoComplete="off"
+                          required
                         />
                       </td>
                     </tr>
@@ -8027,7 +8210,7 @@ const FicheDetail = ({
                     {confFormData.produit === '1' && (
                       <>
                         <tr>
-                          <td><label htmlFor="conf_annee_systeme_chauffage">Année du système de chauffage :</label></td>
+                          <td><label htmlFor="conf_annee_systeme_chauffage">Année du système de chauffage *</label></td>
                           <td>
                             <input
                               type="number"
@@ -8037,11 +8220,12 @@ const FicheDetail = ({
                               onChange={(e) => setConfFormData({...confFormData, annee_systeme_chauffage: e.target.value})}
                               min="1970"
                               max={new Date().getFullYear()}
+                              required
                             />
                           </td>
                         </tr>
                         <tr>
-                          <td><label htmlFor="conf_surface_chauffee">Surface chauffée (m²) :</label></td>
+                          <td><label htmlFor="conf_surface_chauffee">Surface chauffée (m²) *</label></td>
                           <td>
                             <input
                               type="number"
@@ -8050,11 +8234,12 @@ const FicheDetail = ({
                               value={confFormData.surface_chauffee}
                               onChange={(e) => setConfFormData({...confFormData, surface_chauffee: e.target.value})}
                               min="0"
+                              required
                             />
                           </td>
                         </tr>
                         <tr>
-                          <td><label htmlFor="conf_consommation_chauffage">Consommation chauffage (€) :</label></td>
+                          <td><label htmlFor="conf_consommation_chauffage">Consommation chauffage (€) *</label></td>
                           <td>
                             <input
                               type="text"
@@ -8062,6 +8247,7 @@ const FicheDetail = ({
                               className="form-control"
                               value={confFormData.consommation_chauffage}
                               onChange={(e) => setConfFormData({...confFormData, consommation_chauffage: e.target.value})}
+                              required
                             />
                           </td>
                         </tr>
@@ -8072,7 +8258,7 @@ const FicheDetail = ({
                     {confFormData.produit === '2' && (
                       <>
                         <tr>
-                          <td><label htmlFor="conf_orientation_toiture">Orientation toiture :</label></td>
+                          <td><label htmlFor="conf_orientation_toiture">Orientation toiture *</label></td>
                           <td>
                             <input
                               type="text"
@@ -8080,11 +8266,12 @@ const FicheDetail = ({
                               className="form-control"
                               value={confFormData.conf_orientation_toiture || ''}
                               onChange={(e) => setConfFormData({...confFormData, conf_orientation_toiture: e.target.value})}
+                              required
                             />
                           </td>
                         </tr>
                         <tr>
-                          <td><label htmlFor="conf_zones_ombres">Zones ombres :</label></td>
+                          <td><label htmlFor="conf_zones_ombres">Zones ombres *</label></td>
                           <td>
                             <input
                               type="text"
@@ -8092,17 +8279,19 @@ const FicheDetail = ({
                               className="form-control"
                               value={confFormData.conf_zones_ombres}
                               onChange={(e) => setConfFormData({...confFormData, conf_zones_ombres: e.target.value})}
+                              required
                             />
                           </td>
                         </tr>
                         <tr>
-                          <td><label htmlFor="conf_site_classe">Proche d'un site classé :</label></td>
+                          <td><label htmlFor="conf_site_classe">Proche d'un site classé *</label></td>
                           <td>
                             <select
                               id="conf_site_classe"
                               className="form-control"
                               value={confFormData.conf_site_classe}
                               onChange={(e) => setConfFormData({...confFormData, conf_site_classe: e.target.value})}
+                              required
                             >
                               <option value="">Sélectionner</option>
                               <option value="OUI">OUI</option>
@@ -8116,7 +8305,7 @@ const FicheDetail = ({
                     )}
 
                     <tr>
-                      <td><label htmlFor="conf_commentaire_produit">Commentaire :</label></td>
+                      <td><label htmlFor="conf_commentaire_produit">Commentaire *</label></td>
                       <td>
                         <textarea
                           id="conf_commentaire_produit"
@@ -8124,6 +8313,7 @@ const FicheDetail = ({
                           rows={6}
                           value={confFormData.conf_commentaire_produit}
                           onChange={(e) => setConfFormData({...confFormData, conf_commentaire_produit: e.target.value})}
+                          required
                         />
                       </td>
                     </tr>
@@ -8385,11 +8575,21 @@ const FicheDetail = ({
               </div>
             )}
 
-            {/* Formulaire SIGNER (états 13, 44, 45) - visible aussi pour commerciaux (mais seulement si pas déjà dans section compte rendu) */}
+            {/* Formulaire SIGNER (états 13, 44, 45) — aligné sur la session commercial */}
             {[13, 44, 45].includes(selectedEtat) && !(user?.fonction === 5 && compteRenduOption) && (
-              <div className="etat-form" style={{ marginTop: '20px' }}>
-                <h3>Informations Signature</h3>
-                
+              <div className="etat-form compte-rendu-signer-form" style={{ marginTop: '20px' }}>
+                <div className="form-group">
+                  <label htmlFor="etat_pseudo_signer">Pseudo :</label>
+                  <input
+                    type="text"
+                    id="etat_pseudo_signer"
+                    className="form-control"
+                    value={etatFormData.pseudo}
+                    onChange={(e) => setEtatFormData({...etatFormData, pseudo: e.target.value})}
+                    required
+                  />
+                </div>
+
                 <div className="form-group">
                   <label htmlFor="etat_produit_signer">Signature pour :</label>
                   <select
@@ -8408,8 +8608,7 @@ const FicheDetail = ({
                   </select>
                 </div>
 
-                {/* Sous État SIGNER : on n'affiche QUE les sous-états COMPLETE et IMCOMPLETE
-                    (les autres valeurs présentes en BDD sont ignorées ici). */}
+                {/* Sous État SIGNER : COMPLETE / IMCOMPLETE uniquement */}
                 {(() => {
                   const sousEtatsSigner = (sousEtats || []).filter((se) => {
                     const titre = (se?.titre || '').toString().trim().toUpperCase();
@@ -8475,18 +8674,6 @@ const FicheDetail = ({
                     </select>
                   </div>
                 )}
-
-                <div className="form-group">
-                  <label htmlFor="etat_pseudo_signer">Pseudo :</label>
-                  <input
-                    type="text"
-                    id="etat_pseudo_signer"
-                    className="form-control"
-                    value={etatFormData.pseudo}
-                    onChange={(e) => setEtatFormData({...etatFormData, pseudo: e.target.value})}
-                    required
-                  />
-                </div>
 
                 {resolveSignerProduitKind(etatFormData.produit, produits) === 'pac' && (
                   <SignerPacSelect
@@ -8651,9 +8838,7 @@ const FicheDetail = ({
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="etat_conf_commentaire_signer">
-                    {user?.fonction === 5 ? 'Compte rendu :' : 'Commentaire :'}
-                  </label>
+                  <label htmlFor="etat_conf_commentaire_signer">Compte rendu :</label>
                   {!hasPermission('compte_rendu_write') && (
                     <div className="alert alert-info" style={{ marginBottom: '10px', padding: '8px', fontSize: '0.77em' }}>
                       <FaInfoCircle /> Vous n'avez pas la permission de rédiger un compte rendu.
@@ -8666,7 +8851,7 @@ const FicheDetail = ({
                     value={etatFormData.conf_commentaire_produit}
                     onChange={(e) => setEtatFormData({...etatFormData, conf_commentaire_produit: e.target.value})}
                     disabled={!hasPermission('compte_rendu_write')}
-                    placeholder={user?.fonction === 5 ? 'Saisissez votre compte rendu commercial...' : 'Saisissez un commentaire...'}
+                    placeholder="Saisissez votre compte rendu..."
                     required
                   />
                 </div>
@@ -10900,7 +11085,7 @@ const CreateRdvModal = ({
 }) => {
   const isConfirmateurSession = Number(user?.fonction) === 6;
   const nouvelleConfConf1Seul = isNouvelleConfirmationConf1Seul(ficheData);
-  const [showRdvConfFields, setShowRdvConfFields] = useState(false);
+  const [showRdvConfFields, setShowRdvConfFields] = useState(true);
 
   const confirmateur1Options = (() => {
     if (isConfirmateurSession && user?.id) {
@@ -11003,7 +11188,7 @@ const CreateRdvModal = ({
   );
 
   useEffect(() => {
-    setShowRdvConfFields(false);
+    setShowRdvConfFields(true);
   }, [selectedSlot?.date, selectedSlot?.hour]);
 
   const dateFormatted = selectedSlot 
@@ -11028,6 +11213,23 @@ const CreateRdvModal = ({
           <form className="rdv-form" onSubmit={async (e) => {
             e.preventDefault();
             if (rdvSubmitting) return;
+            const validation = validateCreateRdvForm({
+              formData: {
+                ...rdvFormData,
+                id_confirmateur:
+                  isConfirmateurSession && user?.id
+                    ? String(user.id)
+                    : rdvFormData.id_confirmateur,
+              },
+              produits,
+              requireConfirmateur: true,
+              mode: 'create',
+            });
+            if (!validation.valid) {
+              setShowRdvConfFields(true);
+              alertCreateRdvValidation(validation.missing);
+              return;
+            }
             onSubmit(rdvFormData);
           }}>
             <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'flex-end' }}>
@@ -11414,13 +11616,14 @@ const CreateRdvModal = ({
                 {showRdvConfFields && (
                   <>
                 <tr>
-                  <td><label htmlFor="rdv_avec">RDV pris avec</label></td>
+                  <td><label htmlFor="rdv_avec">RDV pris avec *</label></td>
                   <td>
                     <select
                       id="rdv_avec"
                       className="form-control"
                       value={rdvFormData.conf_rdv_avec}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_rdv_avec: e.target.value})}
+                      required
                     >
                       <option value="">Sélectionner</option>
                       <option value="MR">MR</option>
@@ -11430,12 +11633,13 @@ const CreateRdvModal = ({
                   </td>
                 </tr>
                 <tr>
-                  <td><label>Appel en Tunisie avec</label></td>
+                  <td><label>Appel en Tunisie avec *</label></td>
                   <td>
                     <select
                       className="form-control"
                       value={rdvFormData.conf_appel_tunisie_avec || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_appel_tunisie_avec: e.target.value})}
+                      required
                     >
                       <option value="">Sélectionner</option>
                       <option value="MR">Mr</option>
@@ -11444,7 +11648,7 @@ const CreateRdvModal = ({
                   </td>
                 </tr>
                 <tr>
-                  <td><label>A déjà fait une étude</label></td>
+                  <td><label>A déjà fait une étude *</label></td>
                   <td>
                     <select
                       className="form-control"
@@ -11458,6 +11662,7 @@ const CreateRdvModal = ({
                           conf_details_etude: value === 'OUI' ? rdvFormData.conf_details_etude : ''
                         });
                       }}
+                      required
                     >
                       <option value="">Sélectionner</option>
                       <option value="OUI">OUI</option>
@@ -11467,24 +11672,26 @@ const CreateRdvModal = ({
                 </tr>
                 {(rdvFormData.conf_deja_etude === 'OUI' || rdvFormData.conf_deja_fait_etude === 'OUI') && (
                 <tr>
-                  <td><label>Détails étude</label></td>
+                  <td><label>Détails étude *</label></td>
                   <td>
                     <input
                       type="text"
                       className="form-control"
                       value={rdvFormData.conf_details_etude || ''}
                       onChange={(e) => setRdvFormData({ ...rdvFormData, conf_details_etude: e.target.value })}
+                      required
                     />
                   </td>
                 </tr>
                 )}
                 <tr>
-                  <td><label>Présence du couple ou célibataire</label></td>
+                  <td><label>Présence du couple ou célibataire *</label></td>
                   <td>
                     <select
                       className="form-control"
                       value={rdvFormData.conf_presence_couple || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_presence_couple: e.target.value})}
+                      required
                     >
                       <option value="">Sélectionner</option>
                       <option value="RAS PRESENCE CLIENT(S)">RAS PRESENCE CLIENT(S)</option>
@@ -11494,12 +11701,13 @@ const CreateRdvModal = ({
                   </td>
                 </tr>
                 <tr>
-                  <td><label>RDV déjà annulé précédemment</label></td>
+                  <td><label>RDV déjà annulé précédemment *</label></td>
                   <td>
                     <select
                       className="form-control"
                       value={rdvFormData.conf_rdv_annule_precedent || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_rdv_annule_precedent: e.target.value})}
+                      required
                     >
                       <option value="">Sélectionner</option>
                       <option value="OUI">OUI</option>
@@ -11562,29 +11770,31 @@ const CreateRdvModal = ({
                   </td>
                 </tr>
                 <tr>
-                  <td><label>Revenu</label></td>
+                  <td><label>Revenu *</label></td>
                   <td>
                     <input
                       type="text"
                       className="form-control"
                       value={rdvFormData.conf_revenu || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_revenu: e.target.value})}
+                      required
                     />
                   </td>
                 </tr>
                 <tr>
-                  <td><label>Crédit</label></td>
+                  <td><label>Crédit *</label></td>
                   <td>
                     <input
                       type="text"
                       className="form-control"
                       value={rdvFormData.conf_credit || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_credit: e.target.value})}
+                      required
                     />
                   </td>
                 </tr>
                 <tr>
-                  <td><label>Mode de chauffage</label></td>
+                  <td><label>Mode de chauffage *</label></td>
                   <td>
                     <input
                       type="text"
@@ -11592,28 +11802,31 @@ const CreateRdvModal = ({
                       value={rdvFormData.conf_mode_chauffage || ''}
                       onChange={(e) => setRdvFormData({ ...rdvFormData, conf_mode_chauffage: e.target.value })}
                       autoComplete="off"
+                      required
                     />
                   </td>
                     </tr>
                 <tr>
-                  <td><label>Consommations électrique</label></td>
+                  <td><label>Consommations électrique *</label></td>
                   <td>
                     <input
                       type="text"
                       className="form-control"
                       value={rdvFormData.conf_consommation_electricite || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_electricite: e.target.value})}
+                      required
                     />
                   </td>
                 </tr>
                 <tr>
-                  <td><label>Consommations chauffage</label></td>
+                  <td><label>Consommations chauffage *</label></td>
                   <td>
                     <input
                       type="text"
                       className="form-control"
                       value={rdvFormData.conf_consommation_chauffage || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_chauffage: e.target.value})}
+                      required
                     />
                   </td>
                 </tr>
@@ -11626,7 +11839,7 @@ const CreateRdvModal = ({
                   return (
                     <>
                       <tr>
-                        <td><label htmlFor="rdv_surface_chauffee">Surface chauffée (m²)</label></td>
+                        <td><label htmlFor="rdv_surface_chauffee">Surface chauffée (m²) *</label></td>
                         <td>
                           <input
                             type="number"
@@ -11634,11 +11847,12 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.surface_chauffee || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, surface_chauffee: e.target.value})}
+                            required
                           />
                         </td>
                       </tr>
                       <tr>
-                        <td><label htmlFor="rdv_consommation_chauffage">Consommation chauffage (€)</label></td>
+                        <td><label htmlFor="rdv_consommation_chauffage">Consommation chauffage (€) *</label></td>
                         <td>
                           <input
                             type="text"
@@ -11646,11 +11860,12 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.consommation_chauffage || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, consommation_chauffage: e.target.value})}
+                            required
                           />
                         </td>
                       </tr>
                       <tr>
-                        <td><label htmlFor="rdv_annee_systeme">Année système chauffage</label></td>
+                        <td><label htmlFor="rdv_annee_systeme">Année système chauffage *</label></td>
                         <td>
                           <input
                             type="number"
@@ -11658,6 +11873,7 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.annee_systeme_chauffage || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, annee_systeme_chauffage: e.target.value})}
+                            required
                           />
                         </td>
                       </tr>
@@ -11672,7 +11888,7 @@ const CreateRdvModal = ({
                   return (
                     <>
                       <tr>
-                        <td><label htmlFor="rdv_orientation">Orientation toiture</label></td>
+                        <td><label htmlFor="rdv_orientation">Orientation toiture *</label></td>
                         <td>
                           <input
                             type="text"
@@ -11680,11 +11896,12 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.conf_orientation_toiture || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_orientation_toiture: e.target.value})}
+                            required
                           />
                         </td>
                       </tr>
                       <tr>
-                        <td><label htmlFor="rdv_zones_ombres">Zones ombres</label></td>
+                        <td><label htmlFor="rdv_zones_ombres">Zones ombres *</label></td>
                         <td>
                           <input
                             type="text"
@@ -11692,11 +11909,12 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.conf_zones_ombres}
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_zones_ombres: e.target.value})}
+                            required
                           />
                         </td>
                       </tr>
                       <tr>
-                        <td><label htmlFor="rdv_site_classe">Proche d&apos;un site classé</label></td>
+                        <td><label htmlFor="rdv_site_classe">Proche d&apos;un site classé *</label></td>
                         <td>
                           <input
                             type="text"
@@ -11704,6 +11922,7 @@ const CreateRdvModal = ({
                             className="form-control"
                             value={rdvFormData.conf_site_classe || ''}
                             onChange={(e) => setRdvFormData({...rdvFormData, conf_site_classe: e.target.value})}
+                            required
                           />
                         </td>
                       </tr>
@@ -11713,7 +11932,7 @@ const CreateRdvModal = ({
                   </>
                 )}
                 <tr>
-                  <td><label htmlFor="rdv_commentaire">Commentaire Confirmation</label></td>
+                  <td><label htmlFor="rdv_commentaire">Commentaire Confirmation *</label></td>
                   <td>
                     <textarea
                       id="rdv_commentaire"
@@ -11721,6 +11940,7 @@ const CreateRdvModal = ({
                       rows="4"
                       value={rdvFormData.conf_commentaire_produit}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_commentaire_produit: e.target.value})}
+                      required
                     />
                   </td>
                 </tr>
