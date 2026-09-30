@@ -1297,6 +1297,15 @@
   border-color: #f7a219;
 }
 
+/* Liste « Nouvel état » : fond = couleur état, texte contrasté (inline + option) */
+.etat-change-form select.etat-change-select {
+  font-weight: 700;
+}
+
+.etat-change-form select.etat-change-select option {
+  font-weight: 600;
+}
+
 .confirmation-form {
   margin-top: 24px;
   padding: 20px;

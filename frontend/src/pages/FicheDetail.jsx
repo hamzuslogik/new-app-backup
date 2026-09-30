@@ -24,6 +24,7 @@ import {
 } from '../components/SignerProduitFormFields';
 import { validateSignerCompteRenduForm, alertSignerCompteRenduValidation } from '../utils/validateSignerCompteRendu';
 import { validateCreateRdvForm, alertCreateRdvValidation } from '../utils/validateCreateRdvForm';
+import { getEtatContrastColor } from '../utils/etatColorContrast';
 import {
   COMPTE_RENDU_COMMERCIAL_OPTIONS,
   applyCompteRenduOptionChange,
@@ -37,7 +38,14 @@ import CodeVerificationModal from '../components/CodeVerificationModal';
 import { isBeforeRdvDateTime, isRdvDateBeforeToday, formatLocalYmd } from '../utils/compteRenduEarlyVerification';
 import { resolveConfRevenuAfterTypeContratChange } from '../utils/revenuTypeContrat';
 
-/** Valeur brute affichée : « MR SEUL SANS MME » / « MME SEULE SANS MR ». */
+/** Style option / select « Nouvel état » : fond = couleur état, texte contrasté. */
+function getEtatSelectOptionStyle(color) {
+  const bg = color || '#cccccc';
+  return {
+    backgroundColor: bg,
+    color: getEtatContrastColor(bg),
+  };
+}
 function getRdvSeulRawLabel(fiche) {
   const raw = String(fiche?.conf_presence_couple ?? '').toUpperCase().trim();
   if (!raw) return null;
@@ -6177,7 +6185,8 @@ const FicheDetail = ({
                       {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) && !isCommercial &&
                         renderQualiteConfirmationBackofficePanel()}
 
-                      {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) && (
+                      {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
+                        (!isCommercial || getRdvSeulRawLabel(fiche)) && (
                         <div className="etat-actuel-rdv-seul-row">
                           {getRdvSeulRawLabel(fiche) && (
                             <span className="etat-actuel-rdv-seul-label">
@@ -6225,9 +6234,6 @@ const FicheDetail = ({
                               </>
                             )}
                           </div>
-                          )}
-                          {isCommercial && !getRdvSeulRawLabel(fiche) && (
-                            <span className="etat-actuel-rdv-seul-label">RDV seul : —</span>
                           )}
                         </div>
                       )}
@@ -7476,12 +7482,33 @@ const FicheDetail = ({
             <div className="etat-change-form">
               <div className="form-group">
                 <label htmlFor="id_etat_final">Nouvel état :</label>
+                {(() => {
+                  const selectedEtatObj = selectedEtat != null
+                    ? etats?.find((e) => Number(e.id) === Number(selectedEtat))
+                    : null;
+                  const selectStyle = selectedEtatObj
+                    ? {
+                        ...getEtatSelectOptionStyle(selectedEtatObj.color),
+                        fontWeight: 700,
+                      }
+                    : undefined;
+                  const renderEtatOption = (etat, labelSuffix = '') => (
+                    <option
+                      key={etat.id}
+                      value={etat.id}
+                      style={getEtatSelectOptionStyle(etat.color)}
+                    >
+                      {etat.titre}{labelSuffix}
+                    </option>
+                  );
+                  return (
                 <select
                   id="id_etat_final"
-                  className="form-control"
+                  className="form-control etat-change-select"
                   value={selectedEtat != null ? String(selectedEtat) : ''}
                   disabled={isChangementEtatBloque}
                   onChange={(e) => handleEtatChange(e.target.value ? parseInt(e.target.value, 10) : null)}
+                  style={selectStyle}
                 >
                   <option value="">Choisissez un état</option>
                   {/* Afficher l'état actuel comme option visible dans la liste (surtout pour les confirmateurs) */}
@@ -7494,16 +7521,7 @@ const FicheDetail = ({
                     if (!isInPhases) {
                       return (
                         <optgroup label="État actuel">
-                          <option 
-                            value={etatActuel.id} 
-                            style={{ 
-                              backgroundColor: etatActuel.color || '#cccccc', 
-                              color: (etatActuel.color === '#ffffff' || etatActuel.color === '#fff') ? '#000' : '#fff',
-                              fontWeight: 'bold'
-                            }}
-                          >
-                            {etatActuel.titre} (actuel)
-                          </option>
+                          {renderEtatOption(etatActuel, ' (actuel)')}
                         </optgroup>
                       );
                     }
@@ -7511,41 +7529,27 @@ const FicheDetail = ({
                   })()}
                   {!excludeEtatsPhase0 && etatsPhase0.length > 0 && (
                     <optgroup label="PHASE 0">
-                      {etatsPhase0.map(etat => (
-                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
-                          {etat.titre}
-                        </option>
-                      ))}
+                      {etatsPhase0.map((etat) => renderEtatOption(etat))}
                     </optgroup>
                   )}
                   {etatsPhase1.length > 0 && (
                     <optgroup label="PHASE 1">
-                      {etatsPhase1.map(etat => (
-                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
-                          {etat.titre}
-                        </option>
-                      ))}
+                      {etatsPhase1.map((etat) => renderEtatOption(etat))}
                     </optgroup>
                   )}
                   {etatsPhase2.length > 0 && (
                     <optgroup label="PHASE 2">
-                      {etatsPhase2.map(etat => (
-                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
-                          {etat.titre}
-                        </option>
-                      ))}
+                      {etatsPhase2.map((etat) => renderEtatOption(etat))}
                     </optgroup>
                   )}
                   {etatsPhase3.length > 0 && (
                     <optgroup label="PHASE 3">
-                      {etatsPhase3.map(etat => (
-                        <option key={etat.id} value={etat.id} style={{ backgroundColor: etat.color || '#cccccc', color: (etat.color === '#ffffff' || etat.color === '#fff') ? '#000' : '#fff' }}>
-                          {etat.titre}
-                        </option>
-                      ))}
+                      {etatsPhase3.map((etat) => renderEtatOption(etat))}
                     </optgroup>
                   )}
                 </select>
+                  );
+                })()}
                 {isChangementEtatBloque && (
                   <p style={{ marginTop: '10px', color: '#666', fontSize: '0.9em' }}>
                     Cette fiche est dans un état définitif : le changement d&apos;état n&apos;est plus possible.
