@@ -2809,6 +2809,57 @@
   border-radius: 6px !important;
 }
 
+/* Cadre R2 / Infos R1 (état actuel CONFIRMER) — bordure couleur HAS */
+.etat-actuel-card .etat-actuel-r2-r1-box {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background-color: rgba(247, 162, 25, 0.12) !important;
+}
+
+.etat-actuel-card .etat-actuel-r2-r1-box,
+.etat-actuel-card .etat-actuel-r2-r1-box div,
+.etat-actuel-card .etat-actuel-r2-r1-box span,
+.etat-actuel-card .etat-actuel-r2-r1-box strong {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.etat-actuel-card .etat-actuel-r2-r1-box__title {
+  color: var(--r2-r1-border, #f7a219) !important;
+  -webkit-text-fill-color: var(--r2-r1-border, #f7a219) !important;
+  font-weight: 800 !important;
+  font-size: 15px !important;
+  letter-spacing: 0.4px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.etat-actuel-card .etat-actuel-r2-r1-box__grid {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.etat-actuel-card .etat-actuel-r2-r1-box__label {
+  opacity: 0.9;
+  font-weight: 600 !important;
+}
+
+.etat-actuel-card .etat-actuel-r2-r1-box__comment {
+  white-space: pre-wrap;
+  font-weight: 700 !important;
+}
+
+.etat-actuel-card .etat-actuel-r2-r1-box a.etat-actuel-r2-r1-tel,
+.etat-actuel-card .etat-actuel-r2-r1-box a.etat-actuel-r2-r1-tel * {
+  color: var(--r2-r1-border, #f7a219) !important;
+  -webkit-text-fill-color: var(--r2-r1-border, #f7a219) !important;
+  font-weight: 800 !important;
+  text-decoration: underline !important;
+}
+
 /* Date RDV dans État Actuel : fond gris, bordure verte, texte date blanc.
    Le champ heure reste blanc pour garder son comportement input natif. */
 .etat-actuel-card .etat-actuel-date-rdv-badge,

@@ -6273,6 +6273,74 @@ const FicheDetail = ({
                         </div>
                       )}
 
+                      {/* Cadre R2 / R1 — bas de l'état actuel CONFIRMER (Admin, Backoffice, RE/RP Confirmation) */}
+                      {(() => {
+                        const canSeeR2R1Box = [1, 7, 11, 13, 14].includes(Number(user?.fonction));
+                        const isConfirmerActuel = isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre);
+                        const isR2Oui = normalizeIsR2Value(fiche.is_r2) === 1;
+                        if (!canSeeR2R1Box || !isConfirmerActuel || !isR2Oui) return null;
+
+                        const hasColor =
+                          (etats || []).find((e) => Number(e.id) === 9)?.color || '#f7a219';
+                        const comR1 = (commerciaux || []).find(
+                          (c) => Number(c.id) === Number(fiche.id_commercial_r1)
+                        );
+                        const comR1Pseudo = comR1?.pseudo
+                          ? formatAgentPseudoDisplay(comR1.pseudo)
+                          : '';
+                        const comR1Tel = comR1?.tel != null ? String(comR1.tel).trim() : '';
+                        const telHref = comR1Tel.replace(/[^\d+]/g, '');
+                        const dateR1Label = fiche.date_r1 ? formatRdvDateTime(fiche.date_r1) : '';
+                        const commentaireR1 =
+                          fiche.commentaire_r1 != null ? String(fiche.commentaire_r1).trim() : '';
+
+                        return (
+                          <div
+                            className="etat-actuel-r2-r1-box"
+                            style={{
+                              ['--r2-r1-border']: hasColor,
+                              marginTop: '16px',
+                              padding: '14px 16px',
+                              border: `3px solid ${hasColor}`,
+                              borderRadius: '8px',
+                              backgroundColor: 'rgba(247, 162, 25, 0.12)',
+                            }}
+                          >
+                            <div className="etat-actuel-r2-r1-box__title">R2 — Infos R1</div>
+                            <div className="etat-actuel-r2-r1-box__grid">
+                              <div>
+                                <span className="etat-actuel-r2-r1-box__label">Commercial R1 :</span>{' '}
+                                <strong>{comR1Pseudo || '—'}</strong>
+                              </div>
+                              <div>
+                                <span className="etat-actuel-r2-r1-box__label">Date R1 :</span>{' '}
+                                <strong>{dateR1Label || '—'}</strong>
+                              </div>
+                              <div>
+                                <span className="etat-actuel-r2-r1-box__label">Commentaire R1 :</span>{' '}
+                                <strong className="etat-actuel-r2-r1-box__comment">
+                                  {commentaireR1 || '—'}
+                                </strong>
+                              </div>
+                              <div>
+                                <span className="etat-actuel-r2-r1-box__label">Contact commercial R1 :</span>{' '}
+                                {comR1Tel && telHref ? (
+                                  <a
+                                    href={`tel:${telHref}`}
+                                    className="etat-actuel-r2-r1-tel"
+                                    title={`Appeler ${comR1Tel}`}
+                                  >
+                                    {comR1Tel}
+                                  </a>
+                                ) : (
+                                  <strong>—</strong>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* Contrôle Qualité — affiché uniquement si l'état actuel est SIGNER (13).
                           Si l'état actuel n'est pas 13, le formulaire est rendu dans l'entrée d'historique état 13 (voir plus bas). */}
                       {isEtatSigner13(fiche.id_etat_final) && renderControleQualiteForm({ embedded: true })}
