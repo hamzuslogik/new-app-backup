@@ -7126,44 +7126,55 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
       // Toujours historiser date_appel_time sur la ligne fiches_histo (affichage état actuel / historique)
       pushHistoCol('date_appel_time', effectiveDateAppelTime);
-      if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial')) {
-        const ic = ficheData.id_commercial;
-        const n = ic === '' || ic === undefined || ic === null ? NaN : parseInt(ic, 10);
-        pushHistoCol('id_commercial', Number.isFinite(n) && n > 0 ? n : null);
-      } else if ([13, 16, 38, 44, 45].includes(newEtatId) && fiche.id_commercial) {
-        // SIGNER / RETRACTER : figer le commercial propriétaire au moment du passage d'état
-        pushHistoCol('id_commercial', Number(fiche.id_commercial));
+
+      // Snapshot commercial AVANT désaffectation fiche (SIGNER admin : commercial choisi dans le formulaire)
+      const parseHistoComId = (v) => {
+        if (v === '' || v === undefined || v === null) return null;
+        const n = parseInt(v, 10);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      };
+      const isSignerEtatHisto = [13, 16, 38, 44, 45].includes(newEtatId);
+      const bodyHasCom1 = Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial');
+      const bodyHasCom2 = Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial_2');
+      const com1FromBody = bodyHasCom1 ? parseHistoComId(ficheData.id_commercial) : undefined;
+      const com2FromBody = bodyHasCom2 ? parseHistoComId(ficheData.id_commercial_2) : undefined;
+      const com1FromFiche = parseHistoComId(fiche.id_commercial);
+      const com2FromFiche = parseHistoComId(fiche.id_commercial_2);
+
+      // Priorité : commercial envoyé dans le body (sélection admin), sinon commercial déjà sur la fiche
+      if (bodyHasCom1) {
+        // SIGNER : si body null/vide, ne pas perdre le commercial déjà affecté
+        pushHistoCol(
+          'id_commercial',
+          com1FromBody != null ? com1FromBody : (isSignerEtatHisto ? com1FromFiche : null)
+        );
+      } else if (isSignerEtatHisto && com1FromFiche != null) {
+        pushHistoCol('id_commercial', com1FromFiche);
+      } else if (etatChanged && newEtatId !== 7 && com1FromFiche != null) {
+        pushHistoCol('id_commercial', com1FromFiche);
       }
-      if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial_2')) {
-        const ic2 = ficheData.id_commercial_2;
-        const n2 = ic2 === '' || ic2 === undefined || ic2 === null ? NaN : parseInt(ic2, 10);
-        pushHistoCol('id_commercial_2', Number.isFinite(n2) && n2 > 0 ? n2 : null);
-      } else if (
-        etatChanged &&
-        newEtatId !== 7 &&
-        fiche.id_commercial_2 != null &&
-        Number(fiche.id_commercial_2) > 0
-      ) {
-        pushHistoCol('id_commercial_2', Number(fiche.id_commercial_2));
+
+      if (bodyHasCom2) {
+        pushHistoCol(
+          'id_commercial_2',
+          com2FromBody != null ? com2FromBody : (isSignerEtatHisto ? com2FromFiche : null)
+        );
+      } else if (etatChanged && newEtatId !== 7 && com2FromFiche != null) {
+        pushHistoCol('id_commercial_2', com2FromFiche);
+      }
+
+      // SIGNER : garantir id_commercial sur la ligne histo (body ou fiche), même si push précédent a sauté
+      if (isSignerEtatHisto && !histoCols.includes('id_commercial')) {
+        const signerCom = bodyHasCom1 ? com1FromBody : com1FromFiche;
+        if (signerCom != null) pushHistoCol('id_commercial', signerCom);
+      }
+      if (isSignerEtatHisto && bodyHasCom2 && !histoCols.includes('id_commercial_2') && com2FromBody != null) {
+        pushHistoCol('id_commercial_2', com2FromBody);
       }
 
       // Changement d'état hors CONFIRMER : désaffecter commercial 1/2 sur la fiche
       // (déjà historisés ci-dessus / via snapshot SIGNER). Création RDV (→ 7) conserve l'affectation.
       if (etatChanged && newEtatId !== 7) {
-        if (
-          !histoCols.includes('id_commercial') &&
-          fiche.id_commercial != null &&
-          Number(fiche.id_commercial) > 0
-        ) {
-          pushHistoCol('id_commercial', Number(fiche.id_commercial));
-        }
-        if (
-          !histoCols.includes('id_commercial_2') &&
-          fiche.id_commercial_2 != null &&
-          Number(fiche.id_commercial_2) > 0
-        ) {
-          pushHistoCol('id_commercial_2', Number(fiche.id_commercial_2));
-        }
         ficheData.id_commercial = null;
         ficheData.id_commercial_2 = null;
       }

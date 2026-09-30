@@ -3237,11 +3237,20 @@ const FicheDetail = ({
             modifications.produit = parseInt(etatFormData.produit);
             updateData.produit = parseInt(etatFormData.produit, 10);
           }
-          if (user?.fonction !== 5 && etatFormData.id_commercial) {
-            modifications.id_commercial = parseInt(etatFormData.id_commercial);
-          }
-          if (user?.fonction !== 5 && etatFormData.id_commercial_2) {
-            modifications.id_commercial_2 = parseInt(etatFormData.id_commercial_2);
+          if ([1, 2, 7].includes(Number(user?.fonction))) {
+            modifications.id_commercial =
+              etatFormData.id_commercial && String(etatFormData.id_commercial).trim() !== ''
+                ? parseInt(etatFormData.id_commercial, 10)
+                : null;
+            modifications.id_commercial_2 =
+              etatFormData.id_commercial_2 && String(etatFormData.id_commercial_2).trim() !== ''
+                ? parseInt(etatFormData.id_commercial_2, 10)
+                : null;
+          } else if (user?.fonction !== 5 && etatFormData.id_commercial) {
+            modifications.id_commercial = parseInt(etatFormData.id_commercial, 10);
+            if (etatFormData.id_commercial_2) {
+              modifications.id_commercial_2 = parseInt(etatFormData.id_commercial_2, 10);
+            }
           }
           if (etatFormData.pseudo) {
             modifications.pseudo = etatFormData.pseudo;
@@ -3416,11 +3425,21 @@ const FicheDetail = ({
         if (etatFormData.id_sous_etat) {
           updateData.id_sous_etat = parseInt(etatFormData.id_sous_etat);
         }
-        if (user?.fonction !== 5 && etatFormData.id_commercial) {
-          updateData.id_commercial = parseInt(etatFormData.id_commercial);
-        }
-        if (user?.fonction !== 5 && etatFormData.id_commercial_2) {
-          updateData.id_commercial_2 = parseInt(etatFormData.id_commercial_2);
+        // Admin/qualité/superviseur : commercial choisi → body (snapshot fiches_histo côté API)
+        if ([1, 2, 7].includes(Number(user?.fonction))) {
+          updateData.id_commercial =
+            etatFormData.id_commercial && String(etatFormData.id_commercial).trim() !== ''
+              ? parseInt(etatFormData.id_commercial, 10)
+              : null;
+          updateData.id_commercial_2 =
+            etatFormData.id_commercial_2 && String(etatFormData.id_commercial_2).trim() !== ''
+              ? parseInt(etatFormData.id_commercial_2, 10)
+              : null;
+        } else if (user?.fonction !== 5 && etatFormData.id_commercial) {
+          updateData.id_commercial = parseInt(etatFormData.id_commercial, 10);
+          if (etatFormData.id_commercial_2) {
+            updateData.id_commercial_2 = parseInt(etatFormData.id_commercial_2, 10);
+          }
         }
         if (etatFormData.pseudo) {
           updateData.pseudo = etatFormData.pseudo;
@@ -3484,11 +3503,20 @@ const FicheDetail = ({
         }
       } else if ([16, 38].includes(selectedEtat)) {
         // SIGNER RETRACTER
-        if (user?.fonction !== 5 && etatFormData.id_commercial) {
-          updateData.id_commercial = parseInt(etatFormData.id_commercial);
-        }
-        if (user?.fonction !== 5 && etatFormData.id_commercial_2) {
-          updateData.id_commercial_2 = parseInt(etatFormData.id_commercial_2);
+        if ([1, 2, 7].includes(Number(user?.fonction))) {
+          updateData.id_commercial =
+            etatFormData.id_commercial && String(etatFormData.id_commercial).trim() !== ''
+              ? parseInt(etatFormData.id_commercial, 10)
+              : null;
+          updateData.id_commercial_2 =
+            etatFormData.id_commercial_2 && String(etatFormData.id_commercial_2).trim() !== ''
+              ? parseInt(etatFormData.id_commercial_2, 10)
+              : null;
+        } else if (user?.fonction !== 5 && etatFormData.id_commercial) {
+          updateData.id_commercial = parseInt(etatFormData.id_commercial, 10);
+          if (etatFormData.id_commercial_2) {
+            updateData.id_commercial_2 = parseInt(etatFormData.id_commercial_2, 10);
+          }
         }
         if (etatFormData.conf_commentaire_produit) {
           updateData.conf_commentaire_produit = etatFormData.conf_commentaire_produit;
@@ -5144,32 +5172,18 @@ const FicheDetail = ({
                 const hist = Array.isArray(fiche.historique) ? fiche.historique : [];
                 if (hist.length === 0) return [];
 
-                const isFromCompteRendu = (h) =>
-                  h?.from_compte_rendu === true || h?.from_compte_rendu === 1;
-
-                const resolveCommercial = (h, { preferCr = false } = {}) => {
+                // Bannière : uniquement fiches_histo.id_commercial (pas de fallback CR / fiche)
+                const resolveCommercialFromHisto = (h) => {
                   if (!h) return { pseudo: '', tel: '' };
-                  const idList = preferCr
-                    ? [h.id_commercial_cr, h.id_commercial, fiche.id_commercial]
-                    : [h.id_commercial, h.id_commercial_cr, fiche.id_commercial];
-                  const idCandidates = idList
-                    .map((id) => (id != null && Number(id) > 0 ? Number(id) : null))
-                    .filter(Boolean);
-                  let found = null;
-                  for (const id of idCandidates) {
-                    found = (commerciaux || []).find((c) => Number(c.id) === Number(id));
-                    if (found) break;
-                  }
-                  const pseudoRaw = preferCr
-                    ? (h.cr_commercial_pseudo || h.commercial_pseudo || found?.pseudo || '')
-                    : (h.commercial_pseudo || h.cr_commercial_pseudo || found?.pseudo || '');
-                  const pseudo = String(pseudoRaw || '').trim();
-                  if (!found && pseudo) {
-                    found = (commerciaux || []).find(
-                      (c) => String(c.pseudo || '').trim().toLowerCase() === pseudo.toLowerCase()
-                    );
-                  }
-                  const tel = found?.tel != null ? String(found.tel).trim() : '';
+                  const comId =
+                    h.id_commercial != null && Number(h.id_commercial) > 0
+                      ? Number(h.id_commercial)
+                      : null;
+                  if (!comId) return { pseudo: '', tel: '' };
+                  const found = (commerciaux || []).find((c) => Number(c.id) === comId);
+                  if (!found) return { pseudo: '', tel: '' };
+                  const pseudo = String(found.pseudo || '').trim();
+                  const tel = found.tel != null ? String(found.tel).trim() : '';
                   return { pseudo, tel };
                 };
 
@@ -5193,7 +5207,7 @@ const FicheDetail = ({
                 // Ordre: Signé, Refuser, Honoré à suivre
                 const signedState = hist.find(hasSigned);
                 if (signedState) {
-                  const com = resolveCommercial(signedState);
+                  const com = resolveCommercialFromHisto(signedState);
                   banners.push({
                     key: 'signer',
                     label: 'Signé',
@@ -5204,21 +5218,18 @@ const FicheDetail = ({
                 }
                 const refuserState = hist.find(hasRefuser);
                 if (refuserState) {
-                  const fromCr = isFromCompteRendu(refuserState);
-                  const com = fromCr ? resolveCommercial(refuserState, { preferCr: true }) : { pseudo: '', tel: '' };
+                  const com = resolveCommercialFromHisto(refuserState);
                   banners.push({
                     key: 'refuser',
                     label: 'Refuser',
                     color: refuserState.etat_color || '#e74c3c',
-                    commercialPseudo: fromCr ? com.pseudo : '',
-                    commercialTel: '',
+                    commercialPseudo: com.pseudo,
+                    commercialTel: com.tel,
                   });
                 }
                 const aSuivreState = hist.find(hasASuivre);
                 if (aSuivreState) {
-                  const com = resolveCommercial(aSuivreState, {
-                    preferCr: isFromCompteRendu(aSuivreState),
-                  });
+                  const com = resolveCommercialFromHisto(aSuivreState);
                   banners.push({
                     key: 'honore',
                     label: 'Honoré à suivre',
