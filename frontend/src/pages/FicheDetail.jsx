@@ -383,8 +383,82 @@ const EMPTY_CONF_FORM_BASE = {
   surface_chauffee: '',
   consommation_chauffage: '',
   conf_commentaire_produit: '',
-  id_commercial_2: ''
+  id_commercial_2: '',
+  is_r2: '',
+  date_r1: '',
+  id_commercial_r1: '',
+  commentaire_r1: '',
 };
+
+/** Normalise is_r2 → 0 | 1 | null */
+function normalizeIsR2Value(v) {
+  if (v === 'OUI' || v === 1 || v === '1' || v === true) return 1;
+  if (v === 'NON' || v === 0 || v === '0' || v === false) return 0;
+  return null;
+}
+
+/** datetime-local → MySQL DATETIME */
+function dateR1ToMysql(value) {
+  if (value == null || String(value).trim() === '') return null;
+  const s = String(value).trim().replace('T', ' ');
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(s)) return `${s}:00`;
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) return s;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s} 00:00:00`;
+  return s;
+}
+
+function mysqlToDatetimeLocal(value) {
+  if (value == null || String(value).trim() === '') return '';
+  const s = String(value).trim().replace(' ', 'T');
+  const m = s.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+  return m ? m[1] : '';
+}
+
+/**
+ * Valide + construit le payload R2 pour création RDV / confirmation.
+ * @returns {{ ok: true, data: object } | { ok: false, message: string }}
+ */
+function buildR2PayloadFromForm(form) {
+  const isR2 = normalizeIsR2Value(form?.is_r2);
+  if (isR2 === null) {
+    return { ok: false, message: 'Veuillez indiquer si le RDV est un R2 (OUI / NON).' };
+  }
+  if (isR2 === 0) {
+    return {
+      ok: true,
+      data: {
+        is_r2: 0,
+        date_r1: null,
+        id_commercial_r1: null,
+        commentaire_r1: null,
+      },
+    };
+  }
+  const dateR1 = dateR1ToMysql(form?.date_r1);
+  const idComR1 =
+    form?.id_commercial_r1 && String(form.id_commercial_r1).trim() !== ''
+      ? parseInt(form.id_commercial_r1, 10)
+      : null;
+  const commentaireR1 = (form?.commentaire_r1 || '').trim();
+  if (!dateR1) {
+    return { ok: false, message: 'Date R1 obligatoire lorsque R2 = OUI.' };
+  }
+  if (!idComR1 || !Number.isFinite(idComR1)) {
+    return { ok: false, message: 'Commercial R1 obligatoire lorsque R2 = OUI.' };
+  }
+  if (!commentaireR1) {
+    return { ok: false, message: 'Commentaire R1 obligatoire lorsque R2 = OUI.' };
+  }
+  return {
+    ok: true,
+    data: {
+      is_r2: 1,
+      date_r1: dateR1,
+      id_commercial_r1: idComR1,
+      commentaire_r1: commentaireR1,
+    },
+  };
+}
 
 /**
  * Formulaire « Informations de confirmation » (état 7) prérempli depuis la fiche (tous les champs conf_* + produit / RDV).
@@ -490,7 +564,19 @@ function buildConfFormStateFromFiche(ficheData, user) {
     id_commercial_2:
       ficheData.id_commercial_2 != null && Number(ficheData.id_commercial_2) > 0
         ? String(ficheData.id_commercial_2)
-        : ''
+        : '',
+    is_r2:
+      ficheData.is_r2 === 1 || ficheData.is_r2 === '1' || ficheData.is_r2 === true
+        ? 'OUI'
+        : ficheData.is_r2 === 0 || ficheData.is_r2 === '0' || ficheData.is_r2 === false
+          ? 'NON'
+          : '',
+    date_r1: mysqlToDatetimeLocal(ficheData.date_r1),
+    id_commercial_r1:
+      ficheData.id_commercial_r1 != null && Number(ficheData.id_commercial_r1) > 0
+        ? String(ficheData.id_commercial_r1)
+        : '',
+    commentaire_r1: ficheData.commentaire_r1 || '',
   };
 }
 
@@ -801,7 +887,11 @@ const FicheDetail = ({
     consommation_chauffage: '',
     annee_systeme_chauffage: '',
     conf_commentaire_produit: '',
-    id_commercial_2: ''
+    id_commercial_2: '',
+    is_r2: '',
+    date_r1: '',
+    id_commercial_r1: '',
+    commentaire_r1: '',
   });
 
   // État pour le formulaire de confirmation
@@ -848,7 +938,11 @@ const FicheDetail = ({
     surface_chauffee: '',
     consommation_chauffage: '',
     conf_commentaire_produit: '',
-    id_commercial_2: ''
+    id_commercial_2: '',
+    is_r2: '',
+    date_r1: '',
+    id_commercial_r1: '',
+    commentaire_r1: '',
   });
   /** Si l’utilisateur choisit Confirmer avant que ficheData soit chargé : réhydrater dès que la fiche arrive. */
   const confFormHydratePendingRef = useRef(false);
@@ -2181,7 +2275,19 @@ const FicheDetail = ({
       id_commercial_2:
         ficheData?.id_commercial_2 != null && Number(ficheData.id_commercial_2) > 0
           ? String(ficheData.id_commercial_2)
-          : ''
+          : '',
+      is_r2:
+        ficheData?.is_r2 === 1 || ficheData?.is_r2 === '1' || ficheData?.is_r2 === true
+          ? 'OUI'
+          : ficheData?.is_r2 === 0 || ficheData?.is_r2 === '0' || ficheData?.is_r2 === false
+            ? 'NON'
+            : '',
+      date_r1: mysqlToDatetimeLocal(ficheData?.date_r1),
+      id_commercial_r1:
+        ficheData?.id_commercial_r1 != null && Number(ficheData.id_commercial_r1) > 0
+          ? String(ficheData.id_commercial_r1)
+          : '',
+      commentaire_r1: ficheData?.commentaire_r1 || '',
     };
 
     // Confirmateur (6) : conf1 = soi ; 2/3 vides (ajout manuel). Autres sessions : slots fiche.
@@ -2510,11 +2616,20 @@ const FicheDetail = ({
       updateData.histo_id_confirmateur_2 = updateData.id_confirmateur_2;
       updateData.histo_id_confirmateur_3 = updateData.id_confirmateur_3;
 
-      // Commercial 2 (R2) optionnel
+      // Commercial 2 optionnel
       updateData.id_commercial_2 =
         data.id_commercial_2 && String(data.id_commercial_2).trim() !== ''
           ? parseInt(data.id_commercial_2, 10)
           : null;
+
+      const r2Payload = buildR2PayloadFromForm(data);
+      if (!r2Payload.ok) {
+        alert(r2Payload.message);
+        setRdvSubmitting(false);
+        return;
+      }
+      Object.assign(updateData, r2Payload.data);
+
       if (slotCodeVerifiedRef.current) {
         updateData.allow_unavailable_slot = true;
       }
@@ -2590,7 +2705,11 @@ const FicheDetail = ({
           consommation_chauffage: '',
           annee_systeme_chauffage: '',
           conf_commentaire_produit: '',
-          id_commercial_2: ''
+          id_commercial_2: '',
+          is_r2: '',
+          date_r1: '',
+          id_commercial_r1: '',
+          commentaire_r1: '',
         });
         return;
       }
@@ -2872,6 +2991,14 @@ const FicheDetail = ({
         confFormData.id_commercial_2 && String(confFormData.id_commercial_2).trim() !== ''
           ? parseInt(confFormData.id_commercial_2, 10)
           : null;
+
+      const r2Payload = buildR2PayloadFromForm(confFormData);
+      if (!r2Payload.ok) {
+        alert(r2Payload.message);
+        return;
+      }
+      Object.assign(updateData, r2Payload.data);
+
       if (slotCodeVerifiedRef.current) {
         updateData.allow_unavailable_slot = true;
       }
@@ -2920,7 +3047,11 @@ const FicheDetail = ({
           surface_chauffee: '',
           consommation_chauffage: '',
           conf_commentaire_produit: '',
-          id_commercial_2: ''
+          id_commercial_2: '',
+          is_r2: '',
+          date_r1: '',
+          id_commercial_r1: '',
+          commentaire_r1: '',
         });
         alert('Fiche confirmée avec succès');
         slotCodeVerifiedRef.current = false;
@@ -7443,6 +7574,86 @@ const FicheDetail = ({
                         />
                       </td>
                     </tr>
+                    <tr>
+                      <td><label htmlFor="conf_is_r2">R2 *</label></td>
+                      <td>
+                        <select
+                          id="conf_is_r2"
+                          className="form-control"
+                          value={confFormData.is_r2 || ''}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setConfFormData({
+                              ...confFormData,
+                              is_r2: v,
+                              ...(v !== 'OUI'
+                                ? { date_r1: '', id_commercial_r1: '', commentaire_r1: '' }
+                                : {}),
+                            });
+                          }}
+                          required
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="OUI">OUI</option>
+                          <option value="NON">NON</option>
+                        </select>
+                      </td>
+                    </tr>
+                    {confFormData.is_r2 === 'OUI' && (
+                      <>
+                        <tr>
+                          <td><label htmlFor="conf_date_r1">Date R1 *</label></td>
+                          <td>
+                            <input
+                              type="datetime-local"
+                              id="conf_date_r1"
+                              className="form-control"
+                              value={confFormData.date_r1 || ''}
+                              onChange={(e) => setConfFormData({ ...confFormData, date_r1: e.target.value })}
+                              required
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><label htmlFor="conf_id_commercial_r1">Commercial R1 *</label></td>
+                          <td>
+                            <select
+                              id="conf_id_commercial_r1"
+                              className="form-control"
+                              value={confFormData.id_commercial_r1 || ''}
+                              onChange={(e) =>
+                                setConfFormData({ ...confFormData, id_commercial_r1: e.target.value })
+                              }
+                              required
+                            >
+                              <option value="">Sélectionner</option>
+                              {(commerciaux || [])
+                                .filter((u) => u.etat > 0 || u.etat == null)
+                                .map((com) => (
+                                  <option key={com.id} value={com.id}>
+                                    {com.pseudo}
+                                  </option>
+                                ))}
+                            </select>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><label htmlFor="conf_commentaire_r1">Commentaire R1 *</label></td>
+                          <td>
+                            <textarea
+                              id="conf_commentaire_r1"
+                              className="form-control"
+                              rows="3"
+                              value={confFormData.commentaire_r1 || ''}
+                              onChange={(e) =>
+                                setConfFormData({ ...confFormData, commentaire_r1: e.target.value })
+                              }
+                              required
+                            />
+                          </td>
+                        </tr>
+                      </>
+                    )}
                     {showConfirmConfFields && (
                       <>
                     <tr>
@@ -10779,6 +10990,86 @@ const CreateRdvModal = ({
                     />
                   </td>
                 </tr>
+                <tr>
+                  <td><label htmlFor="rdv_is_r2">R2 *</label></td>
+                  <td>
+                    <select
+                      id="rdv_is_r2"
+                      className="form-control"
+                      value={rdvFormData.is_r2 || ''}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setRdvFormData({
+                          ...rdvFormData,
+                          is_r2: v,
+                          ...(v !== 'OUI'
+                            ? { date_r1: '', id_commercial_r1: '', commentaire_r1: '' }
+                            : {}),
+                        });
+                      }}
+                      required
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="OUI">OUI</option>
+                      <option value="NON">NON</option>
+                    </select>
+                  </td>
+                </tr>
+                {rdvFormData.is_r2 === 'OUI' && (
+                  <>
+                    <tr>
+                      <td><label htmlFor="rdv_date_r1">Date R1 *</label></td>
+                      <td>
+                        <input
+                          type="datetime-local"
+                          id="rdv_date_r1"
+                          className="form-control"
+                          value={rdvFormData.date_r1 || ''}
+                          onChange={(e) => setRdvFormData({ ...rdvFormData, date_r1: e.target.value })}
+                          required
+                        />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="rdv_id_commercial_r1">Commercial R1 *</label></td>
+                      <td>
+                        <select
+                          id="rdv_id_commercial_r1"
+                          className="form-control"
+                          value={rdvFormData.id_commercial_r1 || ''}
+                          onChange={(e) =>
+                            setRdvFormData({ ...rdvFormData, id_commercial_r1: e.target.value })
+                          }
+                          required
+                        >
+                          <option value="">Sélectionner</option>
+                          {(commerciaux || [])
+                            .filter((u) => u.etat > 0 || u.etat == null)
+                            .map((com) => (
+                              <option key={com.id} value={com.id}>
+                                {com.pseudo}
+                              </option>
+                            ))}
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="rdv_commentaire_r1">Commentaire R1 *</label></td>
+                      <td>
+                        <textarea
+                          id="rdv_commentaire_r1"
+                          className="form-control"
+                          rows="3"
+                          value={rdvFormData.commentaire_r1 || ''}
+                          onChange={(e) =>
+                            setRdvFormData({ ...rdvFormData, commentaire_r1: e.target.value })
+                          }
+                          required
+                        />
+                      </td>
+                    </tr>
+                  </>
+                )}
                 <tr>
                   <td><label htmlFor="rdv_produit">Produit *</label></td>
                   <td>

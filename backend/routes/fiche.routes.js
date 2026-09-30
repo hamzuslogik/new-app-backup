@@ -4989,7 +4989,8 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       'rdv_urgent', 'rdv_seul', 'commentaire', 'commentaire_qualite', 'observation_qualite', 'commentaire_commercial', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
       'conf_type_contrat_mr', 'conf_type_contrat_madame',
       'cq_etat', 'cq_dossier', 'observations_cq',
-      'id_qualite_confirmation'
+      'id_qualite_confirmation',
+      'is_r2', 'date_r1', 'id_commercial_r1', 'commentaire_r1'
     ];
 
     if (!allowedFields.includes(field)) {
@@ -5046,6 +5047,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
     const idUserFields = new Set([
       'id_commercial',
       'id_commercial_2',
+      'id_commercial_r1',
       'id_agent',
       'id_centre',
       'id_confirmateur',
@@ -5560,7 +5562,8 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       'ph3_installateur', 'ph3_pac', 'ph3_puissance', 'ph3_puissance_pv', 'ph3_rr_model',
       'ph3_ballon', 'ph3_marque_ballon', 'ph3_alimentation', 'ph3_type', 'ph3_prix',
       'ph3_bonus_30', 'ph3_mensualite', 'ph3_attente', 'nbr_annee_finance',
-      'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'pseudo'
+      'credit_immobilier', 'credit_autre', 'valeur_mensualite', 'pseudo',
+      'is_r2', 'date_r1', 'id_commercial_r1', 'commentaire_r1'
     ];
 
     if (ficheData.date_rdv_time != null && String(ficheData.date_rdv_time).trim() !== '') {
@@ -5622,6 +5625,25 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       if (Object.prototype.hasOwnProperty.call(ficheData, 'complement_chauffage')) {
         histoCols.push('complement_chauffage');
         histoValues.push(ficheData.complement_chauffage === '' || ficheData.complement_chauffage == null ? null : ficheData.complement_chauffage);
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'is_r2')) {
+        histoCols.push('is_r2');
+        const ir = ficheData.is_r2;
+        histoValues.push(ir === '' || ir == null ? null : (Number(ir) === 1 ? 1 : 0));
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'date_r1')) {
+        histoCols.push('date_r1');
+        histoValues.push(ficheData.date_r1 === '' ? null : ficheData.date_r1);
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial_r1')) {
+        histoCols.push('id_commercial_r1');
+        const icr = ficheData.id_commercial_r1;
+        const n = icr === '' || icr == null ? NaN : parseInt(icr, 10);
+        histoValues.push(Number.isFinite(n) ? n : null);
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'commentaire_r1')) {
+        histoCols.push('commentaire_r1');
+        histoValues.push(ficheData.commentaire_r1 === '' ? null : ficheData.commentaire_r1);
       }
       const histoPlaceholders = histoCols.map(() => '?').join(', ');
       await query(
@@ -6691,7 +6713,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         'conf_consommation_electricite', 'conf_rdv_avec',
         'conf_appel_tunisie_avec', 'conf_deja_etude', 'conf_deja_fait_etude', 'conf_details_etude', 'conf_revenu', 'conf_credit',
         'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
-        'conf_type_contrat_mr', 'conf_type_contrat_madame'
+        'conf_type_contrat_mr', 'conf_type_contrat_madame',
+        'is_r2', 'date_r1', 'id_commercial_r1', 'commentaire_r1'
       ];
 
       // Extraire id_etat_final et id_sous_etat séparément car ils ne vont pas dans modifications
@@ -7048,6 +7071,23 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         pushHistoCol('id_commercial', Number(fiche.id_commercial));
       }
       // id_commercial_2 : uniquement sur table fiches (pas fiches_histo pour l'instant)
+      // Champs R2 / R1 (création RDV)
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'is_r2')) {
+        const ir = ficheData.is_r2;
+        const n = ir === '' || ir === undefined || ir === null ? null : (Number(ir) === 1 ? 1 : 0);
+        pushHistoCol('is_r2', n);
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'date_r1')) {
+        pushHistoCol('date_r1', ficheData.date_r1 === '' ? null : ficheData.date_r1);
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial_r1')) {
+        const icr = ficheData.id_commercial_r1;
+        const n = icr === '' || icr === undefined || icr === null ? NaN : parseInt(icr, 10);
+        pushHistoCol('id_commercial_r1', Number.isFinite(n) ? n : null);
+      }
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'commentaire_r1')) {
+        pushHistoCol('commentaire_r1', ficheData.commentaire_r1 === '' ? null : ficheData.commentaire_r1);
+      }
       // Confirmateurs déjà poussés via histoConf* ; pour SIGNER sans body, s'assurer qu'ils sont figés
       if ([13, 16, 38, 44, 45].includes(newEtatId)) {
         if (histoConf == null && fiche.id_confirmateur) {
@@ -7085,6 +7125,10 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             'complement_chauffage',
             'conf_complement_chauffage',
             'pseudo',
+            'is_r2',
+            'date_r1',
+            'id_commercial_r1',
+            'commentaire_r1',
           ]);
           const unknownCol = String(histoInsertErr.message || '').match(/Unknown column '([^']+)'/i);
           if (unknownCol && unknownCol[1]) drop.add(unknownCol[1]);
@@ -7155,7 +7199,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       'conf_appel_tunisie_avec', 'conf_deja_etude', 'conf_deja_fait_etude', 'conf_details_etude', 'conf_revenu', 'conf_credit',
       'conf_mode_chauffage', 'conf_complement_chauffage', 'conf_consommation_chauffage', 'conf_rdv_annule_precedent',
       'conf_type_contrat_mr', 'conf_type_contrat_madame',
-      'surface_chauffee', 'consommation_chauffage', 'mode_chauffage', 'annee_systeme_chauffage'
+      'surface_chauffee', 'consommation_chauffage', 'mode_chauffage', 'annee_systeme_chauffage',
+      'is_r2', 'date_r1', 'id_commercial_r1', 'commentaire_r1'
     ];
 
     for (const [key, value] of Object.entries(ficheData)) {

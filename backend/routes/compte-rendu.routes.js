@@ -229,7 +229,8 @@ router.post('/', authenticate, triggerWorkflowOnCompteRenduCreated, async (req, 
       'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
       'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
       'conf_consommation_electricite', 'conf_rdv_avec',
-      'surface_chauffee', 'consommation_chauffage', 'mode_chauffage', 'annee_systeme_chauffage'
+      'surface_chauffee', 'consommation_chauffage', 'mode_chauffage', 'annee_systeme_chauffage',
+      'is_r2', 'date_r1', 'id_commercial_r1', 'commentaire_r1'
     ];
 
     // Filtrer les modifications pour ne garder que les champs autorisés
@@ -751,7 +752,8 @@ router.put('/:id', authenticate, async (req, res) => {
       'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
       'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
       'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
-      'conf_consommation_electricite', 'conf_rdv_avec'
+      'conf_consommation_electricite', 'conf_rdv_avec',
+      'is_r2', 'date_r1', 'id_commercial_r1', 'commentaire_r1'
     ];
 
     // Filtrer les modifications si fournies
@@ -1001,7 +1003,8 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
       'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
       'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
       'conf_orientation_toiture', 'conf_zones_ombres', 'conf_site_classe',
-      'conf_consommation_electricite', 'conf_rdv_avec'
+      'conf_consommation_electricite', 'conf_rdv_avec',
+      'is_r2', 'date_r1', 'id_commercial_r1', 'commentaire_r1'
     ]);
 
     // Ajouter les modifications JSON et enregistrer dans modifica
@@ -1321,6 +1324,49 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
         }
       }
       await persistHistoPseudo(histoInsertId);
+
+      // Historiser les champs R2 / R1 si présents dans les modifications du CR
+      if (histoInsertId) {
+        const hasR2 =
+          Object.prototype.hasOwnProperty.call(modifications, 'is_r2') ||
+          Object.prototype.hasOwnProperty.call(modifications, 'date_r1') ||
+          Object.prototype.hasOwnProperty.call(modifications, 'id_commercial_r1') ||
+          Object.prototype.hasOwnProperty.call(modifications, 'commentaire_r1');
+        if (hasR2) {
+          try {
+            const irRaw = modifications.is_r2;
+            const isR2 =
+              irRaw === '' || irRaw === undefined || irRaw === null
+                ? null
+                : Number(irRaw) === 1
+                  ? 1
+                  : 0;
+            const dateR1 =
+              modifications.date_r1 === '' || modifications.date_r1 == null
+                ? null
+                : modifications.date_r1;
+            const icr = modifications.id_commercial_r1;
+            const idComR1 =
+              icr === '' || icr === undefined || icr === null
+                ? null
+                : (Number.isFinite(parseInt(icr, 10)) ? parseInt(icr, 10) : null);
+            const comR1 =
+              modifications.commentaire_r1 === '' || modifications.commentaire_r1 == null
+                ? null
+                : modifications.commentaire_r1;
+            await query(
+              `UPDATE fiches_histo
+               SET is_r2 = ?, date_r1 = ?, id_commercial_r1 = ?, commentaire_r1 = ?
+               WHERE id = ?`,
+              [isR2, dateR1, idComR1, comR1, histoInsertId]
+            );
+          } catch (r2HistoErr) {
+            if (!r2HistoErr || r2HistoErr.code !== 'ER_BAD_FIELD_ERROR') {
+              console.error('[compte-rendu][approve] Impossible d\'historiser R2:', r2HistoErr?.message);
+            }
+          }
+        }
+      }
     } else if (histoPseudo) {
       // Pas de changement d'état : créer / mettre à jour une ligne histo si le pseudo est saisi
       try {
