@@ -524,6 +524,7 @@ const Signatures = () => {
                       <th className="sortable-header" onClick={() => handleSort('confirmateur')}>
                         Confirmateur <span>{sortIndicator('confirmateur')}</span>
                       </th>
+                      <th>Commercial</th>
                       <th>Centre</th>
                       <th>Fiche</th>
                       <th className="sortable-header" onClick={() => handleSort('telephone')}>
@@ -558,6 +559,14 @@ const Signatures = () => {
                         </td>
                         <td>{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                         <td>{sig.confirmateur_pseudo || 'Inconnu'}</td>
+                        <td>
+                          {(() => {
+                            const c1 = sig.commercial_pseudo || '';
+                            const c2 = sig.commercial_2_pseudo || '';
+                            if (c1 && c2 && c1 !== c2) return `${c1} | ${c2}`;
+                            return c1 || c2 || '-';
+                          })()}
+                        </td>
                         <td>{sig.centre_titre || '-'}</td>
                         <td>
                           {sig.id_fiche ? (

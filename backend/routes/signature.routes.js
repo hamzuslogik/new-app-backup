@@ -126,14 +126,17 @@ router.get('/', authenticate, async (req, res) => {
       params.push(id_confirmateur);
     }
     if (id_commercial) {
-      whereConditions.push('f.id_commercial = ?');
-      params.push(id_commercial);
-    }
-
-    // Filtrer par fiche
-    if (id_fiche) {
-      whereConditions.push('f.id = ?');
-      params.push(id_fiche);
+      // Commercial actuel OU commercial figé à la signature (histo SIGNER)
+      whereConditions.push(`(
+        f.id_commercial = ?
+        OR EXISTS (
+          SELECT 1 FROM fiches_histo fh_c
+          WHERE fh_c.id_fiche = f.id
+            AND fh_c.id_etat IN (13, 16, 38, 44, 45)
+            AND (fh_c.id_commercial = ? OR fh_c.id_commercial_cr = ?)
+        )
+      )`);
+      params.push(id_commercial, id_commercial, id_commercial);
     }
 
     const whereClause = 'WHERE ' + whereConditions.join(' AND ');
@@ -201,7 +204,7 @@ router.get('/', authenticate, async (req, res) => {
         e.titre as etat_titre,
         se.titre as sous_etat_titre,
         COALESCE(uc_sign.pseudo, uc.pseudo) as commercial_pseudo,
-        uc2.pseudo as commercial_2_pseudo,
+        COALESCE(uc2_sign.pseudo, uc2.pseudo) as commercial_2_pseudo,
         cqe.titre as cq_etat_titre,
         cqd.titre as cq_dossier_titre,
         i.nom as installateur_nom,
@@ -225,11 +228,12 @@ router.get('/', authenticate, async (req, res) => {
         SELECT fh2.id
         FROM fiches_histo fh2
         WHERE fh2.id_fiche = f.id
-          AND fh2.id_etat IN (13, 44, 45)
+          AND fh2.id_etat IN (13, 16, 38, 44, 45)
         ORDER BY fh2.id ASC
         LIMIT 1
       )
       LEFT JOIN utilisateurs uc_sign ON uc_sign.id = COALESCE(fh_sign.id_commercial, fh_sign.id_commercial_cr)
+      LEFT JOIN utilisateurs uc2_sign ON uc2_sign.id = fh_sign.id_commercial_2
       LEFT JOIN cq_etat cqe ON f.cq_etat = cqe.id
       LEFT JOIN cq_dossier cqd ON f.cq_dossier = cqd.id
       LEFT JOIN installateurs i ON f.ph3_installateur = i.id

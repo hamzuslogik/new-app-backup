@@ -1,13 +1,21 @@
 /**
  * Badge / étoile « R2 placé » dans le planning :
- * fiche confirmée assignée au commercial 2, après un « honoré à suivre »,
- * sans état SIGNER ni REFUSER entre le dernier RDV et le nouveau.
+ * - si is_r2 est renseigné (nouvelles fiches) → OUI / NON selon ce champ
+ * - sinon (anciennes fiches) → historique : honoré à suivre entre RDV,
+ *   sans SIGNER / REFUSER, avec commercial 2
  */
 
 const ETAT_CONFIRMER = 7;
 const ETAT_HONORE = 9;
 const ETATS_SIGNER = [13, 16, 38, 44, 45];
 const ETATS_REFUSER = [12, 25];
+
+/** @returns {0|1|null} */
+function normalizeIsR2Field(v) {
+  if (v === 1 || v === '1' || v === true) return 1;
+  if (v === 0 || v === '0' || v === false) return 0;
+  return null;
+}
 
 function parseHistoEtatIds(histo) {
   if (!histo) return [];
@@ -68,6 +76,12 @@ function isR2FromHistoIds(histoIds) {
 
 export function ficheHasR2Placed(obj) {
   if (!obj) return false;
+
+  // Nouvelles fiches : champ is_r2 prioritaire
+  const isR2Field = normalizeIsR2Field(obj.is_r2);
+  if (isR2Field !== null) return isR2Field === 1;
+
+  // Anciennes fiches : logique historique (commercial 2 + honoré à suivre)
   if (!(obj.id_commercial_2 != null && Number(obj.id_commercial_2) > 0)) return false;
 
   const histo = obj.id_etat_histo || obj.historique;

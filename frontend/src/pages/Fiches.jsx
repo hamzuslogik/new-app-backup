@@ -18,6 +18,7 @@ import {
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
 import { isAdminSession } from '../utils/adminMenuUrls';
+import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
 import {
   FicheAdminBadgeHeaders,
   FicheAdminValideCell,
@@ -646,6 +647,9 @@ const Fiches = () => {
     return user?.pseudo || '';
   };
 
+  const getCommercialsFormatted = (fiche) =>
+    formatFicheCommercialDisplay(fiche, getUserName, appliedFilters);
+
   const getCentreName = (centreId) => {
     if (!centreId || !centresData) return '';
     const centre = centresData.find(c => c.id === centreId);
@@ -752,7 +756,7 @@ const Fiches = () => {
           formatDate(fiche.date_modif_time),
           isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getFicheEtatName(fiche),
           getConfirmateursFormatted(fiche),
-          getUserName(fiche.id_commercial),
+          getCommercialsFormatted(fiche),
           getCentreName(fiche.id_centre),
           getProduitName(fiche.produit),
           fiche.valider > 0 ? 'validé' : '',
@@ -816,7 +820,7 @@ const Fiches = () => {
       return (getUserName(fiche.id_agent) || fiche.agent_pseudo || '').toLowerCase();
     }
     if (key === 'id_commercial') {
-      return (getUserName(fiche.id_commercial) || '').toLowerCase();
+      return (getCommercialsFormatted(fiche) || '').toLowerCase();
     }
     if (key === 'id_confirmateur') {
       return getConfirmateursFormatted(fiche).toLowerCase();
@@ -851,7 +855,7 @@ const Fiches = () => {
     if (key === 'date_insert_time') return formatDate(fiche.date_insert_time);
     if (key === 'valider') return fiche.valider > 0 ? 'validé' : '';
     if (key === 'id_agent') return getUserName(fiche.id_agent) || fiche.agent_pseudo || '';
-    if (key === 'id_commercial') return getUserName(fiche.id_commercial) || '';
+    if (key === 'id_commercial') return getCommercialsFormatted(fiche) || '';
     if (key === 'id_confirmateur') return getConfirmateursFormatted(fiche);
     if (key === 'id_centre') return getCentreName(fiche.id_centre);
     if (key === 'date_rdv_time') return formatRdvDateTime(fiche.date_rdv_time);
@@ -1587,7 +1591,7 @@ const Fiches = () => {
                         {isAdminFicheLayout ? (
                           <>
                             <td data-label="Date RDV:">{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                            <td data-label="Commercial:">{getUserName(fiche.id_commercial) || ''}</td>
+                            <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
                             <FicheAdminValideCell valider={fiche.valider} confRdvAvec={fiche.conf_rdv_avec} />
                             <FicheAdminActionCell
                               DetailButtonTag={FicheDetailLink}

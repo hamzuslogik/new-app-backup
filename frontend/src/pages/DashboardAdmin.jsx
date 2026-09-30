@@ -14,6 +14,7 @@ import {
   ficheHasDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
+import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
 import './DashboardAdmin.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -422,6 +423,9 @@ const DashboardAdmin = () => {
     return user?.pseudo || '';
   };
 
+  const getCommercialsFormatted = (fiche) =>
+    formatFicheCommercialDisplay(fiche, getUserName, filters);
+
   // Obtenir le nom du centre
   const getCentreName = (centreId) => {
     if (!centreId || !centresData) return '';
@@ -539,7 +543,7 @@ const DashboardAdmin = () => {
       return getConfirmateursFormatted(fiche).toLowerCase();
     }
     if (key === 'id_commercial') {
-      return getUserName(fiche.id_commercial).toLowerCase();
+      return getCommercialsFormatted(fiche).toLowerCase();
     }
     if (key === 'id_centre') {
       return getCentreName(fiche.id_centre).toLowerCase();
@@ -598,7 +602,7 @@ const DashboardAdmin = () => {
           formatDate(fiche.date_modif_time),
           getEtatName(fiche.id_etat_final),
           getConfirmateursFormatted(fiche),
-          getUserName(fiche.id_commercial),
+          getCommercialsFormatted(fiche),
           getCentreName(fiche.id_centre),
           getProduitName(fiche.produit),
           fiche.valider > 0 ? 'validé' : '',
@@ -1125,7 +1129,7 @@ const DashboardAdmin = () => {
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Date RDV:">{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                        <td data-label="Commercial:">{getUserName(fiche.id_commercial)}</td>
+                        <td data-label="Commercial:">{getCommercialsFormatted(fiche)}</td>
                         <td data-label="Validé:" className="fiche-col-badge fiche-col-valide" style={{ textAlign: 'center' }}>
                           {fiche.valider > 0 ? (
                             <FaCheck

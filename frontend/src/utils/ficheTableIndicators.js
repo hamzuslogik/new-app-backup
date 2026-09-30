@@ -7,6 +7,44 @@ const PRESENCE_SEUL = [
   'NON',
 ];
 
+/** Uniquement ANNULER (5) et RDV ANNULER (11) — pas REPROGRAMMER ni « 2 FOIS » */
+const ETATS_ANNULER_IDS = new Set([5, 11]);
+
+function normalizeTitreEtat(titre) {
+  return String(titre || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function titreIsAnnuler(titre) {
+  const t = normalizeTitreEtat(titre);
+  return t === 'ANNULER' || t === 'RDV ANNULER';
+}
+
+/** Parse id_etat_histo : "7,8,11" ou "12:7,15:8" (id_histo:id_etat). */
+function parseHistoEtatIds(histoString) {
+  if (!histoString) return [];
+  const ids = [];
+  String(histoString)
+    .split(',')
+    .forEach((part) => {
+      const trimmed = String(part).trim();
+      if (!trimmed) return;
+      let etatId;
+      if (trimmed.includes(':')) {
+        const [, etatPart] = trimmed.split(':');
+        etatId = Number(etatPart);
+      } else {
+        etatId = Number(trimmed);
+      }
+      if (Number.isFinite(etatId) && etatId > 0) ids.push(etatId);
+    });
+  return ids;
+}
+
 /**
  * Indicateurs badges admin (SIG / CS / R2 / HAS / RF / ANN).
  */
@@ -17,43 +55,49 @@ export function getFicheTableIndicators(histoString, fiche = {}, etatsData = nul
     PRESENCE_SEUL.includes(presenceCouple) ||
     String(fiche?.conf_rdv_avec || '').toUpperCase().trim() === 'SEUL';
 
-  const histoArray = String(histoString || '')
-    .split(',')
-    .map((x) => Number(String(x).trim()))
-    .filter((n) => Number.isFinite(n) && n > 0);
+  const histoArray = parseHistoEtatIds(histoString);
 
   let hasAnnuler = false;
   let hasRefuser = false;
   let hasSigner = false;
   let hasHonoreASuivre = histoArray.includes(9) || Number(fiche?.id_etat_final) === 9;
 
-  if ((!histoArray.length && !histoString) || !etatsData) {
-    return {
-      r2: r2Placed,
-      rf: false,
-      an: false,
-      cs: hasRdvSeul,
-      sg: false,
-      has: hasHonoreASuivre,
-    };
-  }
+  const markAnnulerFromEtatId = (etatId) => {
+    const n = Number(etatId);
+    if (ETATS_ANNULER_IDS.has(n)) {
+      hasAnnuler = true;
+      return;
+    }
+    const etat = Array.isArray(etatsData)
+      ? etatsData.find((e) => Number(e.id) === n)
+      : null;
+    if (etat && titreIsAnnuler(etat.titre || etat.abbreviation)) {
+      hasAnnuler = true;
+    }
+  };
 
   histoArray.forEach((etatId) => {
-    const etat = etatsData.find((e) => Number(e.id) === etatId);
-    if (etat && etat.titre) {
-      const titre = String(etat.titre).toUpperCase();
-      if (titre.includes('RDV ANNULER')) hasAnnuler = true;
+    markAnnulerFromEtatId(etatId);
+    if ([13, 16, 38, 44, 45].includes(etatId)) hasSigner = true;
+    if (etatId === 9) hasHonoreASuivre = true;
+
+    const etat = Array.isArray(etatsData)
+      ? etatsData.find((e) => Number(e.id) === etatId)
+      : null;
+    if (etat) {
+      if (titreIsAnnuler(etat.titre) || titreIsAnnuler(etat.abbreviation)) hasAnnuler = true;
+      const titre = String(etat.titre || '').toUpperCase();
       if (titre.includes('REFUSER')) hasRefuser = true;
-      if ([13, 16, 38, 44, 45].includes(etatId) || titre.includes('SIGNER')) hasSigner = true;
-      if (etatId === 9 || (titre.includes('HONOR') && titre.includes('SUIVRE'))) {
-        hasHonoreASuivre = true;
-      }
-    } else if ([13, 16, 38, 44, 45].includes(etatId)) {
-      hasSigner = true;
-    } else if (etatId === 9) {
-      hasHonoreASuivre = true;
+      if (titre.includes('SIGNER')) hasSigner = true;
+      if (titre.includes('HONOR') && titre.includes('SUIVRE')) hasHonoreASuivre = true;
     }
   });
+
+  // État actuel (même sans historique)
+  const currentEtatId = Number(fiche?.id_etat_final);
+  if (Number.isFinite(currentEtatId) && currentEtatId > 0) {
+    markAnnulerFromEtatId(currentEtatId);
+  }
 
   return {
     r2: r2Placed,

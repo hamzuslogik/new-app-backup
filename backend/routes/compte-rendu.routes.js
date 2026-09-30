@@ -1011,12 +1011,16 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     for (const [key, value] of Object.entries(modifications)) {
       // Les champs conf_rdv_date/conf_rdv_time n'existent pas en DB.
       // Ils sont traités plus bas pour alimenter date_rdv_time.
+      // id_commercial / id_commercial_2 : jamais persistés sur la fiche à l'approbation
+      // (historisés puis désaffectés juste après).
       if (
         key === 'conf_rdv_date' ||
         key === 'conf_rdv_time' ||
         key === 'pseudo' ||
         key === 'valeur_mensualite' ||
-        key === 'produit'
+        key === 'produit' ||
+        key === 'id_commercial' ||
+        key === 'id_commercial_2'
       ) {
         continue;
       }
@@ -1155,11 +1159,34 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     }
 
     // Snapshot confirmateurs + commerciaux AVANT désaffectation (propriétaire signature / historique SIGNER)
+    // Inclure un commercial éventuellement saisi dans le CR (modifications) pour l'historique.
     const ficheAvantDesaffectation = await queryOne(
       `SELECT id_commercial, id_commercial_2, id_confirmateur, id_confirmateur_2, id_confirmateur_3, valider
        FROM fiches WHERE id = ?`,
       [compteRendu.id_fiche]
     );
+    const modCom1 =
+      modifications.id_commercial != null && Number(modifications.id_commercial) > 0
+        ? Number(modifications.id_commercial)
+        : null;
+    const modCom2 =
+      modifications.id_commercial_2 != null && Number(modifications.id_commercial_2) > 0
+        ? Number(modifications.id_commercial_2)
+        : null;
+    if (ficheAvantDesaffectation) {
+      if (
+        (ficheAvantDesaffectation.id_commercial == null || Number(ficheAvantDesaffectation.id_commercial) <= 0) &&
+        modCom1
+      ) {
+        ficheAvantDesaffectation.id_commercial = modCom1;
+      }
+      if (
+        (ficheAvantDesaffectation.id_commercial_2 == null || Number(ficheAvantDesaffectation.id_commercial_2) <= 0) &&
+        modCom2
+      ) {
+        ficheAvantDesaffectation.id_commercial_2 = modCom2;
+      }
+    }
     if (ficheAvantDesaffectation && (ficheAvantDesaffectation.id_commercial != null || ficheAvantDesaffectation.id_commercial_2 != null)) {
       await logModification(compteRendu.id_fiche, user.id, 'id_commercial', ficheAvantDesaffectation.id_commercial, null, now);
       await logModification(compteRendu.id_fiche, user.id, 'id_commercial_2', ficheAvantDesaffectation.id_commercial_2, null, now);
@@ -1167,6 +1194,7 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     if (ficheAvantDesaffectation && ficheAvantDesaffectation.valider > 0) {
       await logModification(compteRendu.id_fiche, user.id, 'valider', ficheAvantDesaffectation.valider, 0, now);
     }
+    // Toujours vider id_commercial / id_commercial_2 à l'approbation si renseignés
     await query(
       `UPDATE fiches SET id_commercial = NULL, id_commercial_2 = NULL, valider = 0, conf_rdv_avec = NULL, conf_presence_couple = NULL, date_modif_time = ? WHERE id = ?`,
       [now, compteRendu.id_fiche]

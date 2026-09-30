@@ -2037,6 +2037,65 @@ router.get('/', authenticate, async (req, res) => {
         const parts = ids.map((id) => idToPseudo.get(id) || `ID${id}`).filter(Boolean);
         fiche.histo_confirmateurs_pseudo = parts.length > 0 ? parts.join(' | ') : null;
       });
+
+      // Recherche signatures (date_sign_time / tout signer / liens semaine-mois) :
+      // commercial affiché = celui figé sur la 1re ligne SIGNER de fiches_histo
+      const wantsSigningCommercial =
+        String(date_champ || '') === 'date_sign_time' ||
+        String(idEtatFinalForWhere || '') === 't_s' ||
+        sgn_week === 1 ||
+        sgn_week === '1' ||
+        sgn_month === 1 ||
+        sgn_month === '1';
+      if (wantsSigningCommercial) {
+        const signRows = [];
+        for (const chunk of chunkArray(ficheIds, FICHE_IDS_IN_CHUNK)) {
+          const placeholders = chunk.map(() => '?').join(',');
+          signRows.push(
+            ...(await query(
+              `SELECT fh.id_fiche,
+                      COALESCE(fh.id_commercial, fh.id_commercial_cr) AS id_commercial_signature,
+                      fh.id_commercial_2 AS id_commercial_2_signature,
+                      u.pseudo AS commercial_signature_pseudo,
+                      u2.pseudo AS commercial_2_signature_pseudo
+               FROM fiches_histo fh
+               INNER JOIN (
+                 SELECT id_fiche, MIN(id) AS min_id
+                 FROM fiches_histo
+                 WHERE id_fiche IN (${placeholders})
+                   AND id_etat IN (13, 16, 38, 44, 45)
+                 GROUP BY id_fiche
+               ) first_sign ON first_sign.min_id = fh.id
+               LEFT JOIN utilisateurs u ON u.id = COALESCE(fh.id_commercial, fh.id_commercial_cr)
+               LEFT JOIN utilisateurs u2 ON u2.id = fh.id_commercial_2`,
+              chunk
+            ))
+          );
+        }
+        const signByFiche = new Map(signRows.map((r) => [Number(r.id_fiche), r]));
+        fiches.forEach((fiche) => {
+          const row = signByFiche.get(Number(fiche.id));
+          if (!row) {
+            fiche.id_commercial_signature = null;
+            fiche.id_commercial_2_signature = null;
+            fiche.commercial_signature_pseudo = null;
+            fiche.commercial_2_signature_pseudo = null;
+            return;
+          }
+          const id1 =
+            row.id_commercial_signature != null && Number(row.id_commercial_signature) > 0
+              ? Number(row.id_commercial_signature)
+              : null;
+          const id2 =
+            row.id_commercial_2_signature != null && Number(row.id_commercial_2_signature) > 0
+              ? Number(row.id_commercial_2_signature)
+              : null;
+          fiche.id_commercial_signature = id1;
+          fiche.id_commercial_2_signature = id2;
+          fiche.commercial_signature_pseudo = row.commercial_signature_pseudo || null;
+          fiche.commercial_2_signature_pseudo = row.commercial_2_signature_pseudo || null;
+        });
+      }
     }
 
     // État actuel = compte rendu : vrai ssi la dernière entrée fiches_histo a from_compte_rendu = 1 (pour affichage <CR> colonne état final)
@@ -5745,8 +5804,13 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
 
     // Ne plus modifier fiches.date_appel_time (contrôle qualité) — horodatage dans fiches_histo
     // Effacer le sous-état : les états groupe 0 n'en portent pas via etat-rapide
+    // Désaffecter commercial 1/2 s'ils sont renseignés
     await query(
-      'UPDATE fiches SET id_etat_final = ?, id_sous_etat = NULL, date_modif_time = ? WHERE id = ?',
+      `UPDATE fiches
+       SET id_etat_final = ?, id_sous_etat = NULL,
+           id_commercial = NULL, id_commercial_2 = NULL,
+           date_modif_time = ?
+       WHERE id = ?`,
       [newEtatId, now, id]
     );
 
@@ -7065,12 +7129,44 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial')) {
         const ic = ficheData.id_commercial;
         const n = ic === '' || ic === undefined || ic === null ? NaN : parseInt(ic, 10);
-        pushHistoCol('id_commercial', Number.isFinite(n) ? n : null);
+        pushHistoCol('id_commercial', Number.isFinite(n) && n > 0 ? n : null);
       } else if ([13, 16, 38, 44, 45].includes(newEtatId) && fiche.id_commercial) {
         // SIGNER / RETRACTER : figer le commercial propriétaire au moment du passage d'état
         pushHistoCol('id_commercial', Number(fiche.id_commercial));
       }
-      // id_commercial_2 : uniquement sur table fiches (pas fiches_histo pour l'instant)
+      if (Object.prototype.hasOwnProperty.call(ficheData, 'id_commercial_2')) {
+        const ic2 = ficheData.id_commercial_2;
+        const n2 = ic2 === '' || ic2 === undefined || ic2 === null ? NaN : parseInt(ic2, 10);
+        pushHistoCol('id_commercial_2', Number.isFinite(n2) && n2 > 0 ? n2 : null);
+      } else if (
+        etatChanged &&
+        newEtatId !== 7 &&
+        fiche.id_commercial_2 != null &&
+        Number(fiche.id_commercial_2) > 0
+      ) {
+        pushHistoCol('id_commercial_2', Number(fiche.id_commercial_2));
+      }
+
+      // Changement d'état hors CONFIRMER : désaffecter commercial 1/2 sur la fiche
+      // (déjà historisés ci-dessus / via snapshot SIGNER). Création RDV (→ 7) conserve l'affectation.
+      if (etatChanged && newEtatId !== 7) {
+        if (
+          !histoCols.includes('id_commercial') &&
+          fiche.id_commercial != null &&
+          Number(fiche.id_commercial) > 0
+        ) {
+          pushHistoCol('id_commercial', Number(fiche.id_commercial));
+        }
+        if (
+          !histoCols.includes('id_commercial_2') &&
+          fiche.id_commercial_2 != null &&
+          Number(fiche.id_commercial_2) > 0
+        ) {
+          pushHistoCol('id_commercial_2', Number(fiche.id_commercial_2));
+        }
+        ficheData.id_commercial = null;
+        ficheData.id_commercial_2 = null;
+      }
       // Champs R2 / R1 (création RDV)
       if (Object.prototype.hasOwnProperty.call(ficheData, 'is_r2')) {
         const ir = ficheData.is_r2;

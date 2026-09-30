@@ -24,6 +24,7 @@ import {
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
 import { isAdminSession } from '../utils/adminMenuUrls';
+import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
 import {
   FicheAdminBadgeHeaders,
   FicheAdminValideCell,
@@ -1209,22 +1210,9 @@ const Dashboard = () => {
     return user?.pseudo || '';
   };
 
-  // Affichage commercial dans le tableau: "commercial 1 | commercial 2"
-  // Si commercial 1 est vide mais commercial 2 existe: "| commercial 2"
-  // Si commercial 1 et commercial 2 sont le même utilisateur : afficher uniquement commercial 1
-  const getCommercialsFormatted = (fiche) => {
-    const c1 = getUserName(fiche?.id_commercial);
-    const c2 = getUserName(fiche?.id_commercial_2);
-    const sameUser =
-      fiche?.id_commercial != null &&
-      fiche?.id_commercial_2 != null &&
-      Number(fiche.id_commercial) === Number(fiche.id_commercial_2);
-    if (sameUser) return c1 || '';
-    if (c1 && c2) return `${c1} | ${c2}`;
-    if (!c1 && c2) return `| ${c2}`;
-    if (c1 && !c2) return c1;
-    return '';
-  };
+  // Affichage commercial : en recherche signatures → commercial ayant signé (histo)
+  const getCommercialsFormatted = (fiche) =>
+    formatFicheCommercialDisplay(fiche, getUserName, appliedFilters);
 
   // Obtenir le nom du centre
   const getCentreName = (centreId) => {

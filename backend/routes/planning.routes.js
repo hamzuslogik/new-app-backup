@@ -404,7 +404,11 @@ router.get('/week', authenticate, async (req, res) => {
       let hasRefuser = false;
       let hasSigner = false;
       const hasR2 = ficheHasR2Placed(
-        { id_commercial_2: fiche.id_commercial_2, id_etat_histo: fiche.id_etat_histo },
+        {
+          is_r2: fiche.is_r2,
+          id_commercial_2: fiche.id_commercial_2,
+          id_etat_histo: fiche.id_etat_histo,
+        },
         etatsMap
       );
       
@@ -416,7 +420,17 @@ router.get('/week', authenticate, async (req, res) => {
         histoArray.forEach(etatId => {
           if (etatId && !isNaN(etatId)) {
             const titre = (etatsMap[etatId] || '').toUpperCase();
-            if (titre.includes('RDV ANNULER')) {
+            const titreNorm = String(titre || '')
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+            // Uniquement ANNULER (5) et RDV ANNULER (11)
+            if (
+              [5, 11].includes(Number(etatId)) ||
+              titreNorm === 'ANNULER' ||
+              titreNorm === 'RDV ANNULER'
+            ) {
               hasAnnuler = true;
             }
             if (titre.includes('REFUSER')) {
@@ -432,15 +446,28 @@ router.get('/week', authenticate, async (req, res) => {
       // Si l'historique n'a pas été vérifié ou n'est pas disponible, vérifier le dernier état
       if (!hasAnnuler && !hasRefuser && !hasSigner) {
         const dernierEtat = fiche.dernier_etat || fiche.id_etat_final;
+        const dernierEtatNum = Number(dernierEtat);
+        if ([5, 11].includes(dernierEtatNum)) {
+          hasAnnuler = true;
+        }
         if (dernierEtat && etatsMap[dernierEtat]) {
           const titre = etatsMap[dernierEtat].toUpperCase();
-          if (titre.includes('RDV ANNULER')) {
+          const titreNorm = String(titre || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (
+            [5, 11].includes(dernierEtatNum) ||
+            titreNorm === 'ANNULER' ||
+            titreNorm === 'RDV ANNULER'
+          ) {
             hasAnnuler = true;
           }
           if (titre.includes('REFUSER')) {
             hasRefuser = true;
           }
-          if ([13, 16, 38, 44, 45].includes(Number(dernierEtat)) || titre.includes('SIGNER')) {
+          if ([13, 16, 38, 44, 45].includes(dernierEtatNum) || titre.includes('SIGNER')) {
             hasSigner = true;
           }
         }
@@ -491,6 +518,7 @@ router.get('/week', authenticate, async (req, res) => {
         operation: fiche.produit === 1 ? 'PAC' : fiche.produit === 2 ? 'PV' : '',
         id_commercial: fiche.id_commercial || 0,
         id_commercial_2: fiche.id_commercial_2 != null ? fiche.id_commercial_2 : null,
+        is_r2: fiche.is_r2 != null ? fiche.is_r2 : null,
         id_etat_histo: fiche.id_etat_histo || null,
         id_etat_final: fiche.id_etat_final || null, // État final de la fiche
         etat_check: etats.join(','), // Retourner tous les états séparés par virgule
