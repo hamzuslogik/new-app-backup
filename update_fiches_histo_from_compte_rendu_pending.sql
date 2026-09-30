@@ -5,14 +5,17 @@
 --
 -- Règles (pas de duplication, lien exact) :
 --   1. Un seul compte rendu par (fiche, état, jour) : on ne lie que si le CR est unique pour ce triplet.
---   2. Une seule ligne fiches_histo par CR : celle dont date_creation est la plus proche de la date du CR.
+--   2. Une seule ligne fiches_histo par CR : priorité aux lignes avec id_commercial renseigné
+--      (idéalement = commercial du CR), puis celle dont date_creation est la plus proche de la date du CR.
 --   3. Reset préalable : toute ligne fiches_histo concernée par un CR est remise à 0 avant mise à jour,
 --      puis seules les lignes explicitement associées à un CR unique sont marquées from_compte_rendu=1.
+--   4. Quand une ligne est marquée compte rendu : id_commercial_cr = commercial du CR,
+--      et id_commercial est renseigné s'il était NULL/0 (un CR implique un commercial).
 --
 -- Correspondance:
 --   fiches_histo.id_fiche = compte_rendu_pending.id_fiche
 --   fiches_histo.id_etat = compte_rendu_pending.id_etat_final
---   Même jour, puis choix de la ligne dont date_creation est la plus proche de date_ref du CR
+--   Même jour, puis choix de la ligne la plus pertinente (commercial + proximité date)
 --
 -- Statuts couverts: approved, rejected, pending (tous les CR)
 -- =====================================================
@@ -41,7 +44,10 @@ SET
 
 -- ---------------------------------------------------------------------------
 -- Étape 2 : Un seul CR par (id_fiche, id_etat_final, date_jour) — HAVING COUNT(*) = 1
---           Puis pour ce CR unique, la SEULE ligne fiches_histo la plus proche en date.
+--           Puis pour ce CR unique, la SEULE ligne fiches_histo la plus pertinente :
+--             1) id_commercial = commercial du CR
+--             2) sinon id_commercial déjà renseigné
+--             3) sinon proximité de date_creation
 --           GROUP BY fh_id garantit qu’une même ligne fiches_histo n’est mise à jour qu’une fois.
 -- ---------------------------------------------------------------------------
 UPDATE `fiches_histo` fh
@@ -73,7 +79,18 @@ INNER JOIN (
       WHERE fh2.id_fiche = cr.id_fiche
         AND fh2.id_etat = cr.id_etat_final
         AND DATE(fh2.date_creation) = DATE(COALESCE(cr.date_modif, cr.date_creation))
-      ORDER BY ABS(TIMESTAMPDIFF(SECOND, fh2.date_creation, COALESCE(cr.date_modif, cr.date_creation)))
+      ORDER BY
+        -- Priorité : même commercial que le CR, puis commercial non null, puis écart de date
+        CASE
+          WHEN fh2.id_commercial IS NOT NULL
+           AND fh2.id_commercial > 0
+           AND fh2.id_commercial = cr.id_commercial THEN 0
+          WHEN fh2.id_commercial IS NOT NULL
+           AND fh2.id_commercial > 0 THEN 1
+          ELSE 2
+        END ASC,
+        ABS(TIMESTAMPDIFF(SECOND, fh2.date_creation, COALESCE(cr.date_modif, cr.date_creation))) ASC,
+        fh2.id ASC
       LIMIT 1
     )
   ) link
@@ -81,7 +98,9 @@ INNER JOIN (
 ) sel ON fh.id = sel.fh_id
 SET
   fh.from_compte_rendu = 1,
-  fh.id_commercial_cr = sel.id_commercial;
+  fh.id_commercial_cr = sel.id_commercial,
+  -- Un compte rendu implique un commercial : remplir id_commercial s'il manque
+  fh.id_commercial = COALESCE(NULLIF(fh.id_commercial, 0), sel.id_commercial);
 
 SET SQL_SAFE_UPDATES = 1;
 
@@ -92,6 +111,19 @@ SELECT 'Lignes fiches_histo marquées from_compte_rendu=1 (lien exact 1 CR → 1
 SELECT COUNT(*) AS nb_liees
 FROM `fiches_histo`
 WHERE from_compte_rendu = 1 AND id_commercial_cr IS NOT NULL;
+
+SELECT 'Lignes from_compte_rendu=1 avec id_commercial renseigné' AS info;
+SELECT COUNT(*) AS nb_liees_avec_commercial
+FROM `fiches_histo`
+WHERE from_compte_rendu = 1
+  AND id_commercial IS NOT NULL
+  AND id_commercial > 0;
+
+SELECT 'Lignes from_compte_rendu=1 SANS id_commercial (anomalie)' AS info;
+SELECT COUNT(*) AS nb_liees_sans_commercial
+FROM `fiches_histo`
+WHERE from_compte_rendu = 1
+  AND (id_commercial IS NULL OR id_commercial = 0);
 
 SELECT 'Total fiches_histo avec from_compte_rendu=1' AS info;
 SELECT COUNT(*) AS nb_from_cr FROM `fiches_histo` WHERE from_compte_rendu = 1;
@@ -125,6 +157,7 @@ WHERE cr.id_commercial IS NOT NULL
       AND fh.id_etat = cr.id_etat_final
       AND DATE(fh.date_creation) = DATE(COALESCE(cr.date_modif, cr.date_creation))
       AND fh.from_compte_rendu = 1
+      AND fh.id_commercial_cr = cr.id_commercial
   );
 
 SELECT
@@ -145,6 +178,7 @@ WHERE cr.id_commercial IS NOT NULL
       AND fh.id_etat = cr.id_etat_final
       AND DATE(fh.date_creation) = DATE(COALESCE(cr.date_modif, cr.date_creation))
       AND fh.from_compte_rendu = 1
+      AND fh.id_commercial_cr = cr.id_commercial
   )
 ORDER BY COALESCE(cr.date_modif, cr.date_creation) DESC, cr.id DESC
 LIMIT 200;
