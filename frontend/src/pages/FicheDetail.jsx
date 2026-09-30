@@ -1109,6 +1109,7 @@ const FicheDetail = ({
     };
   }, [validationDropdownOpen]);
   const [showHistorique, setShowHistorique] = useState(false); // État pour contrôler l'affichage de l'historique
+  const [showEtatActuel, setShowEtatActuel] = useState(true); // État actuel rétractable au clic
   const historiqueEtatsAnchorRef = useRef(null);
   const etatChangeSectionRef = useRef(null);
   /** Évite de régénérer le PDF plusieurs fois pour la même URL ?tab=pdf */
@@ -5139,9 +5140,9 @@ const FicheDetail = ({
                   .replace(/[\u0300-\u036f]/g, '')
                   .trim();
 
-              const historiquePriorityState = (() => {
+              const historiquePriorityStates = (() => {
                 const hist = Array.isArray(fiche.historique) ? fiche.historique : [];
-                if (hist.length === 0) return null;
+                if (hist.length === 0) return [];
 
                 const commercialFromHisto = (h) =>
                   (h && (h.cr_commercial_pseudo || h.commercial_pseudo)) || '';
@@ -5162,43 +5163,267 @@ const FicheDetail = ({
                   return id === 8 || (t.includes('annuler') && t.includes('repro'));
                 };
 
+                const banners = [];
+                // Ordre: Signé, Annuler à reprogrammer, Honoré à suivre
                 const signedState = hist.find(hasSigned);
                 if (signedState) {
-                  return {
+                  banners.push({
+                    key: 'signer',
                     label: 'Signé',
                     color: signedState.etat_color || '#4CAF50',
-                    commercialPseudo: commercialFromHisto(signedState)
-                  };
+                    commercialPseudo: commercialFromHisto(signedState),
+                  });
                 }
-
-                const aSuivreState = hist.find(hasASuivre);
-                if (aSuivreState) {
-                  return {
-                    label: 'Honoré à suivre',
-                    color: aSuivreState.etat_color || '#f7a219',
-                    commercialPseudo: commercialFromHisto(aSuivreState)
-                  };
-                }
-
                 const aReproState = hist.find(hasARepro);
                 if (aReproState) {
-                  return {
+                  banners.push({
+                    key: 'reprogrammer',
                     label: 'Annuler à reprogrammer',
                     color: aReproState.etat_color || '#9cbfc8',
-                    commercialPseudo: ''
-                  };
+                    commercialPseudo: '',
+                  });
                 }
-
-                return null;
+                const aSuivreState = hist.find(hasASuivre);
+                if (aSuivreState) {
+                  banners.push({
+                    key: 'honore',
+                    label: 'Honoré à suivre',
+                    color: aSuivreState.etat_color || '#f7a219',
+                    commercialPseudo: commercialFromHisto(aSuivreState),
+                  });
+                }
+                return banners;
               })();
               
               return (
                 <>
-                  {/* Section État Actuel - Toujours visible en premier plan */}
+                  {/* 1) Bannières Signé / Annuler à reprogrammer / Honoré à suivre */}
+                  {user?.fonction !== 5 && historiquePriorityStates.length > 0 && (
+                    <div style={{ marginBottom: '12px' }}>
+                      {historiquePriorityStates.map((banner) => (
+                        <div
+                          key={banner.key}
+                          style={{
+                            width: '100%',
+                            marginBottom: '10px',
+                            padding: '10px 12px',
+                            borderRadius: '6px',
+                            backgroundColor: banner.color,
+                            color: banner.color === '#ffffff' || banner.color === '#fff' ? '#000' : '#fff',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            fontSize: '16px',
+                          }}
+                        >
+                          {banner.label}
+                          {banner.commercialPseudo ? (
+                            <>
+                              {' — Commercial : '}
+                              <span
+                                className="fiche-detail-etat-confirmer-val--commercial"
+                                data-confirmer-hl="commercial"
+                              >
+                                {formatAgentPseudoDisplay(banner.commercialPseudo)}
+                              </span>
+                            </>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Section Historique - Pliable (masquée en session commercial) */}
+                  {user?.fonction !== 5 && fiche.historique && fiche.historique.length > 0 && (
+                    <>
+                      {historiqueListeSansEtatActuel.length > 0 && (
+                      <>
+                      <div 
+                        ref={historiqueEtatsAnchorRef}
+                        className="section-title historique-title-bar" 
+                        style={{ 
+                          cursor: 'pointer', 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          userSelect: 'none',
+                          padding: '12px 15px',
+                          backgroundColor: '#000000',
+                          color: '#ffffff',
+                          borderRadius: '6px',
+                          marginBottom: '15px',
+                          border: '1px solid #000000',
+                          WebkitTextFillColor: '#ffffff'
+                        }}
+                        onClick={() => setShowHistorique(!showHistorique)}
+                      >
+                        <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#ffffff', WebkitTextFillColor: '#ffffff' }}>
+                          <FaHistory style={{ marginRight: '8px', color: '#ffffff', fill: '#ffffff' }} />
+                          Historique des états ({historiqueListeSansEtatActuel.length} entrée{historiqueListeSansEtatActuel.length > 1 ? 's' : ''})
+                        </span>
+                        {showHistorique
+                          ? <FaChevronUp style={{ color: '#ffffff', fill: '#ffffff' }} />
+                          : <FaChevronDown style={{ color: '#ffffff', fill: '#ffffff' }} />}
+                      </div>
+                      
+                      {showHistorique && (
+                        <div className="historique-list" style={{ marginTop: '10px' }}>
+                          {historiqueListeSansEtatActuel.slice().reverse().map((histo) => {
+                            const detailItems = renderEtatDetails(histo);
+                            const histoEtatColor = histo.etat_color
+                              || etats?.find((e) => Number(e.id) === Number(histo.id_etat))?.color
+                              || '#3498db';
+                            const histoEtatTitre = histo.etat_titre
+                              || etats?.find((e) => Number(e.id) === Number(histo.id_etat))?.titre
+                              || 'État inconnu';
+                            const histoSousEtatTitre = histo.sous_etat_titre;
+                            const histoHeaderTextColor = histoEtatColor === '#ffffff' || histoEtatColor === '#fff' ? '#000000' : '#ffffff';
+                            
+                            return (
+                              <div
+                                key={histo.id}
+                                className="historique-item etat-historique-card"
+                                style={{
+                                  width: '100%',
+                                  maxWidth: '760px',
+                                  margin: '0 auto 15px auto',
+                                  alignSelf: 'center',
+                                  boxSizing: 'border-box',
+                                  backgroundColor: '#3a3a3a',
+                                  color: '#ffffff',
+                                  fontWeight: 'bold',
+                                  borderRadius: '8px',
+                                  overflow: 'hidden',
+                                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                                  border: '1px solid rgba(0,0,0,0.25)'
+                                }}
+                              >
+                                <div
+                                  className="historique-header"
+                                  style={{
+                                    backgroundColor: histoEtatColor,
+                                    color: histoHeaderTextColor,
+                                    padding: '8px 14px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                    <span
+                                      className="historique-etat"
+                                      style={{
+                                        color: histoHeaderTextColor,
+                                        fontWeight: 'bold',
+                                        fontSize: '15px',
+                                        textTransform: 'uppercase',
+                                        flex: '0 1 auto'
+                                      }}
+                                    >
+                                      {histo.from_compte_rendu && (
+                                        <span style={{ marginRight: '6px' }}>
+                                          &lt;CR&gt;
+                                          {histo.cr_commercial_pseudo ? (
+                                            <>
+                                              {' '}
+                                              <span className="fiche-detail-cr-commercial-pseudo">
+                                                {formatAgentPseudoDisplay(histo.cr_commercial_pseudo)}
+                                              </span>
+                                            </>
+                                          ) : null}
+                                        </span>
+                                      )}
+                                      {histoEtatTitre}
+                                    </span>
+                                    {histoSousEtatTitre && (
+                                      <span
+                                        style={{
+                                          padding: '3px 9px',
+                                          borderRadius: '4px',
+                                          backgroundColor: 'rgba(255,255,255,0.22)',
+                                          color: histoHeaderTextColor,
+                                          fontSize: '12px',
+                                          fontWeight: 'bold'
+                                        }}
+                                      >
+                                        {histoSousEtatTitre}
+                                      </span>
+                                    )}
+                                    <span
+                                      className="historique-date"
+                                      style={{
+                                        color: histoHeaderTextColor,
+                                        fontSize: '13px',
+                                        marginLeft: 'auto',
+                                        fontWeight: 'bold'
+                                      }}
+                                    >
+                                      {histo.date_appel_time
+                                        ? formatDateNoSeconds(histo.date_appel_time)
+                                        : (histo.date_creation ? formatDateNoSeconds(histo.date_creation) : '-')}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                {detailItems.length > 0 && (
+                                  <div style={{ padding: '15px', fontSize: '13px', color: '#ffffff' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                      {detailItems.map((item, idx) => {
+                                        const hi = getConfirmerDetailHighlight(
+                                          histo.id_etat,
+                                          histo.etat_titre,
+                                          item.label
+                                        );
+                                        return (
+                                          <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff', fontWeight: 'bold' }}>
+                                            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ffffff' }}>
+                                              <strong style={{ color: '#ffffff', fontWeight: 'bold' }}>{item.label}:</strong>{' '}
+                                              <span
+                                                className={hi?.className}
+                                                style={{
+                                                  color: '#ffffff',
+                                                  fontWeight: 'bold',
+                                                  ...(hi?.style || {}),
+                                                }}
+                                                data-confirmer-hl={hi?.dataHl || undefined}
+                                              >
+                                                {item.value || '-'}
+                                              </span>
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                                {isEtatConfirmerLike(histo.id_etat, histoEtatTitre) &&
+                                  renderQualiteConfirmationBackofficePanel()}
+                                {/* Formulaire Contrôle Qualité dans l'historique : uniquement si l'état actuel n'est PAS SIGNER (13)
+                                    et que cette entrée correspond à la dernière occurrence de l'état 13. */}
+                                {histoEtat13Id && histo.id === histoEtat13Id && (
+                                  <div style={{ padding: '0 15px 15px 15px' }}>
+                                    {renderControleQualiteForm({ embedded: true, keySuffix: `_histo_${histo.id}` })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      </>
+                      )}
+                    </>
+                  )}
+                  {/* Section État Actuel — rétractable au clic */}
                   {fiche.id_etat_final && (
                     <>
-                      {/* Bannière titre ETAT ACTUEL - pleine largeur */}
                       <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setShowEtatActuel((v) => !v)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setShowEtatActuel((v) => !v);
+                          }
+                        }}
                         style={{
                           backgroundColor: '#f97316',
                           color: '#ffffff',
@@ -5210,15 +5435,26 @@ const FicheDetail = ({
                           textTransform: 'uppercase',
                           display: 'flex',
                           alignItems: 'center',
+                          justifyContent: 'space-between',
                           gap: '10px',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
-                          marginBottom: '12px',
+                          marginTop: '12px',
+                          marginBottom: showEtatActuel ? '12px' : '0',
+                          cursor: 'pointer',
+                          userSelect: 'none',
                         }}
+                        title={showEtatActuel ? "Réduire l'état actuel" : "Afficher l'état actuel"}
                       >
-                        <FaInfoCircle />
-                        <span>ETAT ACTUEL</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                          <FaInfoCircle />
+                          <span>ETAT ACTUEL</span>
+                        </span>
+                        {showEtatActuel
+                          ? <FaChevronUp style={{ color: '#ffffff', fill: '#ffffff' }} />
+                          : <FaChevronDown style={{ color: '#ffffff', fill: '#ffffff' }} />}
                       </div>
 
+                      {showEtatActuel && (
                       <div
                         className="etat-actuel-wrapper"
                         style={{
@@ -5990,218 +6226,12 @@ const FicheDetail = ({
                       {isEtatSigner13(fiche.id_etat_final) && renderControleQualiteForm({ embedded: true })}
                     </div>
                     </div>
+                      )}
                     </>
                   )}
 
                   
-                  {/* Section Historique - Pliable (masquée en session commercial) */}
-                  {user?.fonction !== 5 && fiche.historique && fiche.historique.length > 0 && (
-                    <>
-                      {historiquePriorityState && (
-                        <div
-                          ref={historiqueListeSansEtatActuel.length === 0 ? historiqueEtatsAnchorRef : undefined}
-                          style={{
-                            width: '100%',
-                            marginBottom: '10px',
-                            padding: '10px 12px',
-                            borderRadius: '6px',
-                            backgroundColor: historiquePriorityState.color,
-                            color: historiquePriorityState.color === '#ffffff' || historiquePriorityState.color === '#fff' ? '#000' : '#fff',
-                            fontWeight: 'bold',
-                            textAlign: 'center',
-                            fontSize: '16px'
-                          }}
-                        >
-                          {historiquePriorityState.label}
-                          {historiquePriorityState.commercialPseudo ? (
-                            <>
-                              {' — Commercial : '}
-                              <span
-                                className="fiche-detail-etat-confirmer-val--commercial"
-                                data-confirmer-hl="commercial"
-                              >
-                                {formatAgentPseudoDisplay(historiquePriorityState.commercialPseudo)}
-                              </span>
-                            </>
-                          ) : null}
-                        </div>
-                      )}
-                      {historiqueListeSansEtatActuel.length > 0 && (
-                      <>
-                      <div 
-                        ref={historiqueEtatsAnchorRef}
-                        className="section-title historique-title-bar" 
-                        style={{ 
-                          cursor: 'pointer', 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center',
-                          userSelect: 'none',
-                          padding: '12px 15px',
-                          backgroundColor: '#000000',
-                          color: '#ffffff',
-                          borderRadius: '6px',
-                          marginBottom: '15px',
-                          border: '1px solid #000000',
-                          WebkitTextFillColor: '#ffffff'
-                        }}
-                        onClick={() => setShowHistorique(!showHistorique)}
-                      >
-                        <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#ffffff', WebkitTextFillColor: '#ffffff' }}>
-                          <FaHistory style={{ marginRight: '8px', color: '#ffffff', fill: '#ffffff' }} />
-                          Historique des états ({historiqueListeSansEtatActuel.length} entrée{historiqueListeSansEtatActuel.length > 1 ? 's' : ''})
-                        </span>
-                        {showHistorique
-                          ? <FaChevronUp style={{ color: '#ffffff', fill: '#ffffff' }} />
-                          : <FaChevronDown style={{ color: '#ffffff', fill: '#ffffff' }} />}
-                      </div>
-                      
-                      {showHistorique && (
-                        <div className="historique-list" style={{ marginTop: '10px' }}>
-                          {historiqueListeSansEtatActuel.slice().reverse().map((histo) => {
-                            const detailItems = renderEtatDetails(histo);
-                            const histoEtatColor = histo.etat_color
-                              || etats?.find((e) => Number(e.id) === Number(histo.id_etat))?.color
-                              || '#3498db';
-                            const histoEtatTitre = histo.etat_titre
-                              || etats?.find((e) => Number(e.id) === Number(histo.id_etat))?.titre
-                              || 'État inconnu';
-                            const histoSousEtatTitre = histo.sous_etat_titre;
-                            const histoHeaderTextColor = histoEtatColor === '#ffffff' || histoEtatColor === '#fff' ? '#000000' : '#ffffff';
-                            
-                            return (
-                              <div
-                                key={histo.id}
-                                className="historique-item etat-historique-card"
-                                style={{
-                                  width: '100%',
-                                  maxWidth: '760px',
-                                  margin: '0 auto 15px auto',
-                                  alignSelf: 'center',
-                                  boxSizing: 'border-box',
-                                  backgroundColor: '#3a3a3a',
-                                  color: '#ffffff',
-                                  fontWeight: 'bold',
-                                  borderRadius: '8px',
-                                  overflow: 'hidden',
-                                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                                  border: '1px solid rgba(0,0,0,0.25)'
-                                }}
-                              >
-                                <div
-                                  className="historique-header"
-                                  style={{
-                                    backgroundColor: histoEtatColor,
-                                    color: histoHeaderTextColor,
-                                    padding: '8px 14px',
-                                    fontWeight: 'bold'
-                                  }}
-                                >
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                    <span
-                                      className="historique-etat"
-                                      style={{
-                                        color: histoHeaderTextColor,
-                                        fontWeight: 'bold',
-                                        fontSize: '15px',
-                                        textTransform: 'uppercase',
-                                        flex: '0 1 auto'
-                                      }}
-                                    >
-                                      {histo.from_compte_rendu && (
-                                        <span style={{ marginRight: '6px' }}>
-                                          &lt;CR&gt;
-                                          {histo.cr_commercial_pseudo ? (
-                                            <>
-                                              {' '}
-                                              <span className="fiche-detail-cr-commercial-pseudo">
-                                                {formatAgentPseudoDisplay(histo.cr_commercial_pseudo)}
-                                              </span>
-                                            </>
-                                          ) : null}
-                                        </span>
-                                      )}
-                                      {histoEtatTitre}
-                                    </span>
-                                    {histoSousEtatTitre && (
-                                      <span
-                                        style={{
-                                          padding: '3px 9px',
-                                          borderRadius: '4px',
-                                          backgroundColor: 'rgba(255,255,255,0.22)',
-                                          color: histoHeaderTextColor,
-                                          fontSize: '12px',
-                                          fontWeight: 'bold'
-                                        }}
-                                      >
-                                        {histoSousEtatTitre}
-                                      </span>
-                                    )}
-                                    <span
-                                      className="historique-date"
-                                      style={{
-                                        color: histoHeaderTextColor,
-                                        fontSize: '13px',
-                                        marginLeft: 'auto',
-                                        fontWeight: 'bold'
-                                      }}
-                                    >
-                                      {histo.date_appel_time
-                                        ? formatDateNoSeconds(histo.date_appel_time)
-                                        : (histo.date_creation ? formatDateNoSeconds(histo.date_creation) : '-')}
-                                    </span>
-                                  </div>
-                                </div>
-                                
-                                {detailItems.length > 0 && (
-                                  <div style={{ padding: '15px', fontSize: '13px', color: '#ffffff' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                      {detailItems.map((item, idx) => {
-                                        const hi = getConfirmerDetailHighlight(
-                                          histo.id_etat,
-                                          histo.etat_titre,
-                                          item.label
-                                        );
-                                        return (
-                                          <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff', fontWeight: 'bold' }}>
-                                            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ffffff' }}>
-                                              <strong style={{ color: '#ffffff', fontWeight: 'bold' }}>{item.label}:</strong>{' '}
-                                              <span
-                                                className={hi?.className}
-                                                style={{
-                                                  color: '#ffffff',
-                                                  fontWeight: 'bold',
-                                                  ...(hi?.style || {}),
-                                                }}
-                                                data-confirmer-hl={hi?.dataHl || undefined}
-                                              >
-                                                {item.value || '-'}
-                                              </span>
-                                            </span>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                )}
-                                {isEtatConfirmerLike(histo.id_etat, histoEtatTitre) &&
-                                  renderQualiteConfirmationBackofficePanel()}
-                                {/* Formulaire Contrôle Qualité dans l'historique : uniquement si l'état actuel n'est PAS SIGNER (13)
-                                    et que cette entrée correspond à la dernière occurrence de l'état 13. */}
-                                {histoEtat13Id && histo.id === histoEtat13Id && (
-                                  <div style={{ padding: '0 15px 15px 15px' }}>
-                                    {renderControleQualiteForm({ embedded: true, keySuffix: `_histo_${histo.id}` })}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                      </>
-                      )}
-                    </>
-                  )}
+
                 </>
               );
             })()}

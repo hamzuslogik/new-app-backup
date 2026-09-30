@@ -1,19 +1,38 @@
 /**
  * Badge / étoile « R2 placé » dans le planning :
  * - si is_r2 est renseigné (nouvelles fiches) → OUI / NON selon ce champ
- * - sinon (anciennes fiches) → historique : honoré à suivre entre RDV,
- *   sans SIGNER / REFUSER, avec commercial 2
+ * - sinon (anciennes fiches) → commercial 2 + historique :
+ *   CONFIRMER → HONORÉ À SUIVRE → … → CONFIRMER
+ *   sans REFUSER entre l’honoré à suivre et le CONFIRMER suivant.
+ *   SIGNER n’intervient pas (ex. SIGNER → CONFIRMER → HAS → CONFIRMER = R2).
  */
 
 const ETAT_CONFIRMER = 7;
 const ETAT_HONORE = 9;
-const ETATS_SIGNER = new Set([13, 16, 38, 44, 45]);
 const ETATS_REFUSER = new Set([12, 25]);
 
-/** @returns {0|1|null} */
+/**
+ * Normalise is_r2 → 0 | 1 | null
+ * Accepte : 0/1, '0'/'1', true/false, 'OUI'/'NON', Buffer mysql
+ */
 function normalizeIsR2Field(v) {
-  if (v === 1 || v === '1' || v === true) return 1;
-  if (v === 0 || v === '0' || v === false) return 0;
+  if (v == null || v === '') return null;
+  if (Buffer.isBuffer(v)) {
+    v = v.length ? v[0] : null;
+    if (v == null) return null;
+  }
+  if (typeof v === 'object' && v !== null && Array.isArray(v.data) && v.type === 'Buffer') {
+    v = v.data.length ? v.data[0] : null;
+    if (v == null) return null;
+  }
+  if (v === true || v === 1) return 1;
+  if (v === false || v === 0) return 0;
+  const s = String(v).trim().toUpperCase();
+  if (s === 'OUI' || s === '1' || s === 'TRUE' || s === 'YES') return 1;
+  if (s === 'NON' || s === '0' || s === 'FALSE' || s === 'NO') return 0;
+  const n = Number(v);
+  if (n === 1) return 1;
+  if (n === 0) return 0;
   return null;
 }
 
@@ -45,22 +64,6 @@ function parseHistoEtatIds(histo) {
   return ids;
 }
 
-function etatsBetweenLastAndNewRdv(ids) {
-  const confirmIdxs = [];
-  ids.forEach((id, i) => {
-    if (id === ETAT_CONFIRMER) confirmIdxs.push(i);
-  });
-  if (confirmIdxs.length >= 2) {
-    const end = confirmIdxs[confirmIdxs.length - 1];
-    const start = confirmIdxs[confirmIdxs.length - 2] + 1;
-    return ids.slice(start, end);
-  }
-  if (confirmIdxs.length === 1) {
-    return ids.slice(confirmIdxs[0] + 1);
-  }
-  return ids.slice();
-}
-
 function normalizeTitre(titre) {
   return String(titre || '')
     .toUpperCase()
@@ -73,43 +76,69 @@ function titreIsHonore(titre) {
   return t.includes('HONORE') && t.includes('SUIVRE');
 }
 
-function titreBlocksR2(titre) {
-  const t = normalizeTitre(titre);
-  if (!t) return false;
-  return t.includes('REFUSER') || t.includes('SIGNER');
+function titreIsRefuser(titre) {
+  return normalizeTitre(titre).includes('REFUSER');
+}
+
+function isHonoreId(id, etatsMap) {
+  if (Number(id) === ETAT_HONORE) return true;
+  if (etatsMap && titreIsHonore(etatsMap[id])) return true;
+  return false;
+}
+
+function isRefuserId(id, etatsMap) {
+  if (ETATS_REFUSER.has(Number(id))) return true;
+  if (etatsMap && titreIsRefuser(etatsMap[id])) return true;
+  return false;
+}
+
+/**
+ * R2 histo : au moins 2 CONFIRMER, un HONORÉ À SUIVRE entre les deux derniers,
+ * et aucun REFUSER entre cet honoré et le dernier CONFIRMER.
+ * SIGNER est ignoré.
+ */
+function isR2FromHistoIds(ids, etatsMap = null) {
+  if (!ids.length) return false;
+
+  const confirmIdxs = [];
+  ids.forEach((id, i) => {
+    if (id === ETAT_CONFIRMER) confirmIdxs.push(i);
+  });
+  if (confirmIdxs.length < 2) return false;
+
+  const prevConfirmIdx = confirmIdxs[confirmIdxs.length - 2];
+  const lastConfirmIdx = confirmIdxs[confirmIdxs.length - 1];
+  const between = ids.slice(prevConfirmIdx + 1, lastConfirmIdx);
+  if (!between.length) return false;
+
+  let lastHonoreInBetween = -1;
+  between.forEach((id, i) => {
+    if (isHonoreId(id, etatsMap)) lastHonoreInBetween = i;
+  });
+  if (lastHonoreInBetween < 0) return false;
+
+  const afterHonore = between.slice(lastHonoreInBetween + 1);
+  return !afterHonore.some((id) => isRefuserId(id, etatsMap));
 }
 
 function ficheHasR2Placed(obj, etatsMap = null) {
   if (!obj) return false;
 
-  // Nouvelles fiches : champ is_r2 prioritaire
+  // Nouvelles fiches : champ is_r2 prioritaire (si mentionné)
   const isR2Field = normalizeIsR2Field(obj.is_r2);
   if (isR2Field !== null) return isR2Field === 1;
 
-  // Anciennes fiches : logique historique (commercial 2 + honoré à suivre)
+  // Anciennes fiches : commercial 2 + enchaînement CONFIRMER → HAS → CONFIRMER
   if (!(obj.id_commercial_2 != null && Number(obj.id_commercial_2) > 0)) return false;
 
   const ids = parseHistoEtatIds(obj.id_etat_histo);
   if (!ids.length) return false;
 
-  const windowIds = etatsBetweenLastAndNewRdv(ids);
-  if (!windowIds.length) return false;
-
-  let hasHonore = windowIds.some((id) => id === ETAT_HONORE);
-  let hasBlocker = windowIds.some((id) => ETATS_SIGNER.has(id) || ETATS_REFUSER.has(id));
-
-  if (etatsMap) {
-    windowIds.forEach((id) => {
-      const titre = etatsMap[id];
-      if (titreIsHonore(titre)) hasHonore = true;
-      if (titreBlocksR2(titre)) hasBlocker = true;
-    });
-  }
-
-  return hasHonore && !hasBlocker;
+  return isR2FromHistoIds(ids, etatsMap);
 }
 
 module.exports = {
   ficheHasR2Placed,
-  parseHistoEtatIds
+  parseHistoEtatIds,
+  normalizeIsR2Field,
 };

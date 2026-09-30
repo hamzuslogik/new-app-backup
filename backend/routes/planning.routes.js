@@ -4,7 +4,7 @@ const { authenticate, checkPermission } = require('../middleware/auth.middleware
 const { query, queryOne } = require('../config/database');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 const { encodeFicheId } = require('./fiche.routes');
-const { ficheHasR2Placed, parseHistoEtatIds } = require('../utils/ficheR2Placed');
+const { ficheHasR2Placed, parseHistoEtatIds, normalizeIsR2Field } = require('../utils/ficheR2Placed');
 
 // Helper pour obtenir le lundi d'une semaine ISO (plus robuste pour les transitions d'année)
 function getMondayOfWeek(year, week) {
@@ -518,7 +518,7 @@ router.get('/week', authenticate, async (req, res) => {
         operation: fiche.produit === 1 ? 'PAC' : fiche.produit === 2 ? 'PV' : '',
         id_commercial: fiche.id_commercial || 0,
         id_commercial_2: fiche.id_commercial_2 != null ? fiche.id_commercial_2 : null,
-        is_r2: fiche.is_r2 != null ? fiche.is_r2 : null,
+        is_r2: normalizeIsR2Field(fiche.is_r2),
         id_etat_histo: fiche.id_etat_histo || null,
         id_etat_final: fiche.id_etat_final || null, // État final de la fiche
         etat_check: etats.join(','), // Retourner tous les états séparés par virgule
@@ -2042,11 +2042,14 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
           f.produit,
           f.id_commercial,
           f.id_commercial_2,
+          f.is_r2,
           f.id_etat_final,
           f.valider,
           com.pseudo AS commercial_pseudo,
           com2.pseudo AS commercial2_pseudo,
-          e.titre AS etat_titre`;
+          e.titre AS etat_titre,
+          (SELECT GROUP_CONCAT(CONCAT(h.id, ':', h.id_etat) ORDER BY h.id ASC SEPARATOR ',')
+           FROM fiches_histo h WHERE h.id_fiche = f.id) AS id_etat_histo`;
 
     // Onglet « Confirmer de la veille » : état actuel CONFIRMER + date RDV demandée
     if (type === 'confirme_date_rdv') {
@@ -2086,11 +2089,14 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
           f.produit,
           f.id_commercial,
           f.id_commercial_2,
+          f.is_r2,
           f.id_etat_final,
           f.valider,
           com.pseudo AS commercial_pseudo,
           com2.pseudo AS commercial2_pseudo,
-          e.titre AS etat_titre
+          e.titre AS etat_titre,
+          (SELECT GROUP_CONCAT(CONCAT(h.id, ':', h.id_etat) ORDER BY h.id ASC SEPARATOR ',')
+           FROM fiches_histo h WHERE h.id_fiche = f.id) AS id_etat_histo
         FROM confirmations c
         INNER JOIN fiches f ON f.id = c.id_fiche
         LEFT JOIN utilisateurs com ON com.id = f.id_commercial
@@ -2129,11 +2135,14 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
             f.produit,
             f.id_commercial,
             f.id_commercial_2,
+            f.is_r2,
             f.id_etat_final,
             f.valider,
             com.pseudo AS commercial_pseudo,
             com2.pseudo AS commercial2_pseudo,
-            e.titre AS etat_titre
+            e.titre AS etat_titre,
+            (SELECT GROUP_CONCAT(CONCAT(h.id, ':', h.id_etat) ORDER BY h.id ASC SEPARATOR ',')
+             FROM fiches_histo h WHERE h.id_fiche = f.id) AS id_etat_histo
           FROM confirmations c
           INNER JOIN fiches f ON f.id = c.id_fiche
           LEFT JOIN utilisateurs com ON com.id = f.id_commercial
@@ -2191,11 +2200,14 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
           f.produit,
           f.id_commercial,
           f.id_commercial_2,
+          f.is_r2,
           f.id_etat_final,
           f.valider,
           com.pseudo as commercial_pseudo,
           com2.pseudo as commercial2_pseudo,
-          e.titre as etat_titre
+          e.titre as etat_titre,
+          (SELECT GROUP_CONCAT(CONCAT(h.id, ':', h.id_etat) ORDER BY h.id ASC SEPARATOR ',')
+           FROM fiches_histo h WHERE h.id_fiche = f.id) AS id_etat_histo
         FROM fiches f
         LEFT JOIN utilisateurs com ON f.id_commercial = com.id
         LEFT JOIN utilisateurs com2 ON f.id_commercial_2 = com2.id

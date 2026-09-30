@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import './Planning.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
+import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -545,6 +546,7 @@ const PlanningView = ({ planning, availability, days, timeSlots, getAvailability
                     }
                     
                     const rdvs = dayPlanning?.planning || [];
+                    const hasR2Placed = rdvs.some((rdv) => ficheHasR2Placed(rdv));
                     const availabilityFromPlanning = dayPlanning?.av;
                     const availabilityFromEndpoint = availability?.[day.date]?.[slot.hour]?.nbr_com;
                     const availabilityValue = (availabilityFromPlanning !== null && availabilityFromPlanning !== undefined)
@@ -566,7 +568,7 @@ const PlanningView = ({ planning, availability, days, timeSlots, getAvailability
                         }}
                       >
                         {/* Badge de disponibilité - toujours affiché (aligné onglet Disponibilité) */}
-                        <div className="availability-badge" style={{ backgroundColor: bgColor }}>
+                        <div className="availability-badge" style={{ backgroundColor: bgColor, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           <div
                             className="availability-link"
                             title={hasPlanning
@@ -577,6 +579,16 @@ const PlanningView = ({ planning, availability, days, timeSlots, getAvailability
                             <span className="availability-separator">/</span>
                             <span className="availability-total">{displayAvailability}</span>
                           </div>
+                          {hasR2Placed && (
+                            <span
+                              className="availability-r2-star"
+                              title="R2 placé"
+                              aria-label="R2 placé"
+                              style={{ color: '#ca8a04', fontWeight: 800, fontSize: '13px', lineHeight: 1 }}
+                            >
+                              ★
+                            </span>
+                          )}
                         </div>
                       </td>
                     );

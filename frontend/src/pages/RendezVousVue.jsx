@@ -21,6 +21,7 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import FicheDetailModal from '../components/FicheDetailModal';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import {
   applyForceDesktopViewport,
   applyMobileNativeViewport,
@@ -764,7 +765,7 @@ const RendezVousVue = () => {
                         <td>{Number(f.valider) > 0 ? '✓' : ''}</td>
                         <td className="rdv-vue-col-details" style={{ backgroundColor: rowBackgroundColor }}>
                           <div className="fiche-indicators">
-                            {f.id_commercial_2 && Number(f.id_commercial_2) > 0 && <span className="indicator r2" title="R2 placé">R2</span>}
+                            {ficheHasR2Placed(f) && <span className="indicator r2" title="R2 placé">R2</span>}
                           </div>
                           <button
                             type="button"

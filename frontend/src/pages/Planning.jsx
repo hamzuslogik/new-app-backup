@@ -12,6 +12,7 @@ import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import './Planning.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
+import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -944,7 +945,9 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                   // Calculer le timeKey directement à partir de l'heure pour éviter les problèmes de fuseau horaire
                   const timeKey = hourToTimeKey(slot.hour);
                   const dayPlanning = planning[day.date]?.time?.[timeKey];
-                  const rdvCount = dayPlanning?.planning?.length || 0;
+                  const rdvsInSlot = dayPlanning?.planning || [];
+                  const rdvCount = rdvsInSlot.length;
+                  const hasR2Placed = rdvsInSlot.some((rdv) => ficheHasR2Placed(rdv));
                   
                   // Badge rdv-count / availability-total (affiché même si le créneau est fermé)
                   const renderRdvBadge = () => {
@@ -960,7 +963,9 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                           border: 'none',
                           boxShadow: 'none',
                           outline: 'none',
-                          display: 'inline-block',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
                           position: 'absolute',
                           left: '4px',
                           top: '2px',
@@ -979,6 +984,16 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                             {`${rdvCount}/${currentValue ?? '-'}`}
                           </span>
                         </span>
+                        {hasR2Placed && (
+                          <span
+                            className="availability-r2-star"
+                            title="R2 placé"
+                            aria-label="R2 placé"
+                            style={{ color: '#ca8a04', fontWeight: 800, fontSize: '13px', lineHeight: 1 }}
+                          >
+                            ★
+                          </span>
+                        )}
                       </span>
                     );
                   };
