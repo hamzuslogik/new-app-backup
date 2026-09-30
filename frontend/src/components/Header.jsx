@@ -49,12 +49,20 @@ const Header = () => {
     refetchOnReconnect: true
   };
 
-  // Liste dropdown : notifications du jour (lues + non lues), destinataire = utilisateur connecté
+  // Liste dropdown : destinataire = utilisateur connecté (toutes sessions)
+  // — non lues + lues du jour, uniquement si ≤ 3 jours
   const { data: notificationsData } = useQuery(
     'notifications',
     async () => {
-      const res = await api.get('/notifications', { params: { all: 'true' } });
-      return res.data.data || [];
+      const [allRes, unreadRes] = await Promise.all([
+        api.get('/notifications', { params: { all: 'true', days: 3 } }),
+        api.get('/notifications', { params: { days: 3 } }),
+      ]);
+      const byId = new Map();
+      for (const n of [...(unreadRes.data?.data || []), ...(allRes.data?.data || [])]) {
+        if (n?.id != null) byId.set(n.id, n);
+      }
+      return Array.from(byId.values());
     },
     notificationQueryOpts
   );
@@ -198,11 +206,28 @@ const Header = () => {
     );
   };
 
+  const isNotificationWithinLastDays = (notification, days = 3) => {
+    const raw = notification?.date_creation;
+    if (!raw) return false;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return false;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    return d.getTime() >= cutoff;
+  };
+
   const notificationsAll = notificationsData || [];
-  // Dropdown : uniquement les notifications de la journée (lues et non lues)
+  // Dropdown : non lues (≤ 3 j) + lues du jour — exclure tout ce qui dépasse 3 jours
   const notifications = notificationsAll
-    .filter(isNotificationFromToday)
-    .sort((a, b) => new Date(b.date_creation || 0) - new Date(a.date_creation || 0));
+    .filter(
+      (n) =>
+        isNotificationWithinLastDays(n, 3) &&
+        (Number(n.lu) === 0 || isNotificationFromToday(n))
+    )
+    .sort((a, b) => {
+      const unreadDiff = Number(b.lu === 0) - Number(a.lu === 0);
+      if (unreadDiff !== 0) return unreadDiff;
+      return new Date(b.date_creation || 0) - new Date(a.date_creation || 0);
+    });
   const unreadCount = notificationsCount || 0;
   const userFonction = user ? Number(user.fonction) : null;
   const isAdmin = user && [1, 2, 7].includes(userFonction);
@@ -325,7 +350,7 @@ const Header = () => {
           {showNotifications && (
             <div className="notifications-dropdown">
                 <div className="notifications-header">
-                  <h3>Notifications du jour</h3>
+                  <h3>Notifications{unreadCount > 0 ? ` (${unreadCount} non lue${unreadCount > 1 ? 's' : ''})` : ''}</h3>
                   <div className="notifications-header-actions">
                     <button
                       className="sound-toggle-btn"
@@ -371,7 +396,7 @@ const Header = () => {
                 <div className="notifications-list">
                   {notifications.length === 0 ? (
                     <div className="no-notifications">
-                      <p>Aucune notification aujourd&apos;hui</p>
+                      <p>Aucune notification non lue</p>
                       <Link to="/notifications" onClick={() => setShowNotifications(false)} className="view-all-link">Voir la page Notifications</Link>
                     </div>
                   ) : (

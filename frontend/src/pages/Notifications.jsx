@@ -20,7 +20,7 @@ const Notifications = () => {
   const navigate = useNavigate();
   const { openFicheDetail } = useFicheDetailModal();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'
+  const [filter, setFilter] = useState('unread'); // 'all', 'unread', 'read' — non lues par défaut
   const notificationsListRef = useRef(null);
   const markedOnScrollRef = useRef(new Set());
 
@@ -31,22 +31,25 @@ const Notifications = () => {
     refetchOnReconnect: true
   };
 
-  // Récupérer toutes les notifications (lues et non lues)
+  // Récupérer les notifications (non lues toujours disponibles ; "all"/"read" via all=true)
   const { data: notificationsData, isLoading } = useQuery(
     ['notifications-all', filter],
     async () => {
-      // Récupérer toutes les notifications (lues et non lues)
+      if (filter === 'unread') {
+        const res = await api.get('/notifications');
+        const notifications = res.data.data || [];
+        return [...notifications].sort(
+          (a, b) => new Date(b.date_creation || 0) - new Date(a.date_creation || 0)
+        );
+      }
       const res = await api.get('/notifications', { params: { all: 'true' } });
       let notifications = res.data.data || [];
-      
-      // Filtrer selon le filtre sélectionné
-      if (filter === 'unread') {
-        notifications = notifications.filter(n => n.lu === 0);
-      } else if (filter === 'read') {
-        notifications = notifications.filter(n => n.lu === 1);
+      if (filter === 'read') {
+        notifications = notifications.filter((n) => Number(n.lu) === 1);
       }
-      // Si filter === 'all', on garde toutes les notifications. Les plus récentes en premier.
-      return [...notifications].sort((a, b) => new Date(b.date_creation || 0) - new Date(a.date_creation || 0));
+      return [...notifications].sort(
+        (a, b) => new Date(b.date_creation || 0) - new Date(a.date_creation || 0)
+      );
     },
     notificationsQueryOpts
   );

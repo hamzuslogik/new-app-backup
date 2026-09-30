@@ -145,25 +145,31 @@ async function runNotificationsQuery(query, sqlWithExp, sqlWithoutExp, params) {
 // Récupérer les notifications pour l'utilisateur connecté
 router.get('/', authenticate, async (req, res) => {
   try {
-    const { all } = req.query;
+    const { all, days } = req.query;
     const includeRead = all === 'true' || all === '1';
     const luCondition = includeRead ? '' : 'AND n.lu = 0';
+    const daysNum = parseInt(days, 10);
+    const useDaysLimit = Number.isFinite(daysNum) && daysNum > 0;
+    const daysCondition = useDaysLimit
+      ? 'AND n.date_creation >= DATE_SUB(NOW(), INTERVAL ? DAY)'
+      : '';
 
     // Toutes sessions : afficher toute notification dont le destinataire est l'utilisateur connecté.
     // Filtres conservés : lu (liste courte = non lues seulement), archive sur la ligne notification.
-    // Pas de filtre par type ni par état de fiche sur le JOIN (sinon des notifs « perdues » pour confirmateur, etc.).
+    // Option days=N : exclure les notifications plus anciennes que N jours (badge / dropdown).
     const sqlWith = `SELECT ${NOTIF_SELECT_WITH_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
          ${NOTIF_JOIN_EXP}
-         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION} ${daysCondition}
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
     const sqlWithout = `SELECT ${NOTIF_SELECT_WITHOUT_EXP}
          FROM notifications n
          LEFT JOIN fiches f ON n.id_fiche = f.id
-         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION}
+         WHERE n.destination = ? ${luCondition} ${NOTIF_ARCHIVE_CONDITION} ${daysCondition}
          ORDER BY n.date_creation DESC LIMIT ${includeRead ? 200 : 50}`;
-    const notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, [req.user.id]);
+    const queryParams = useDaysLimit ? [req.user.id, daysNum] : [req.user.id];
+    const notifications = await runNotificationsQuery(query, sqlWith, sqlWithout, queryParams);
 
     // Ajouter le hash et parser les métadonnées pour chaque notification
     // IMPORTANT: Utiliser id_fiche de la notification (pas fiche_id du JOIN) car la fiche peut ne plus exister
@@ -211,14 +217,15 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// Compter les notifications non lues
+// Compter les notifications non lues (badge) — uniquement les 3 derniers jours
 router.get('/count', authenticate, async (req, res) => {
   try {
     const result = await queryOne(
       `SELECT COUNT(*) as count
        FROM notifications
        WHERE destination = ?
-       AND lu = 0 ${COUNT_ARCHIVE_CONDITION}`,
+       AND lu = 0 ${COUNT_ARCHIVE_CONDITION}
+       AND date_creation >= DATE_SUB(NOW(), INTERVAL 3 DAY)`,
       [req.user.id]
     );
     const count = result?.count || 0;
