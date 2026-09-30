@@ -5144,8 +5144,34 @@ const FicheDetail = ({
                 const hist = Array.isArray(fiche.historique) ? fiche.historique : [];
                 if (hist.length === 0) return [];
 
-                const commercialFromHisto = (h) =>
-                  (h && (h.cr_commercial_pseudo || h.commercial_pseudo)) || '';
+                const isFromCompteRendu = (h) =>
+                  h?.from_compte_rendu === true || h?.from_compte_rendu === 1;
+
+                const resolveCommercial = (h, { preferCr = false } = {}) => {
+                  if (!h) return { pseudo: '', tel: '' };
+                  const idList = preferCr
+                    ? [h.id_commercial_cr, h.id_commercial, fiche.id_commercial]
+                    : [h.id_commercial, h.id_commercial_cr, fiche.id_commercial];
+                  const idCandidates = idList
+                    .map((id) => (id != null && Number(id) > 0 ? Number(id) : null))
+                    .filter(Boolean);
+                  let found = null;
+                  for (const id of idCandidates) {
+                    found = (commerciaux || []).find((c) => Number(c.id) === Number(id));
+                    if (found) break;
+                  }
+                  const pseudoRaw = preferCr
+                    ? (h.cr_commercial_pseudo || h.commercial_pseudo || found?.pseudo || '')
+                    : (h.commercial_pseudo || h.cr_commercial_pseudo || found?.pseudo || '');
+                  const pseudo = String(pseudoRaw || '').trim();
+                  if (!found && pseudo) {
+                    found = (commerciaux || []).find(
+                      (c) => String(c.pseudo || '').trim().toLowerCase() === pseudo.toLowerCase()
+                    );
+                  }
+                  const tel = found?.tel != null ? String(found.tel).trim() : '';
+                  return { pseudo, tel };
+                };
 
                 const hasSigned = (h) => {
                   const id = Number(h?.id_etat);
@@ -5157,39 +5183,48 @@ const FicheDetail = ({
                   const t = normalizeEtatTitle(h?.etat_titre);
                   return id === 9 || (t.includes('honore') && t.includes('suivr'));
                 };
-                const hasARepro = (h) => {
+                const hasRefuser = (h) => {
                   const id = Number(h?.id_etat);
                   const t = normalizeEtatTitle(h?.etat_titre);
-                  return id === 8 || (t.includes('annuler') && t.includes('repro'));
+                  return [12, 25].includes(id) || t.includes('refus');
                 };
 
                 const banners = [];
-                // Ordre: Signé, Annuler à reprogrammer, Honoré à suivre
+                // Ordre: Signé, Refuser, Honoré à suivre
                 const signedState = hist.find(hasSigned);
                 if (signedState) {
+                  const com = resolveCommercial(signedState);
                   banners.push({
                     key: 'signer',
                     label: 'Signé',
                     color: signedState.etat_color || '#4CAF50',
-                    commercialPseudo: commercialFromHisto(signedState),
+                    commercialPseudo: com.pseudo,
+                    commercialTel: com.tel,
                   });
                 }
-                const aReproState = hist.find(hasARepro);
-                if (aReproState) {
+                const refuserState = hist.find(hasRefuser);
+                if (refuserState) {
+                  const fromCr = isFromCompteRendu(refuserState);
+                  const com = fromCr ? resolveCommercial(refuserState, { preferCr: true }) : { pseudo: '', tel: '' };
                   banners.push({
-                    key: 'reprogrammer',
-                    label: 'Annuler à reprogrammer',
-                    color: aReproState.etat_color || '#9cbfc8',
-                    commercialPseudo: '',
+                    key: 'refuser',
+                    label: 'Refuser',
+                    color: refuserState.etat_color || '#e74c3c',
+                    commercialPseudo: fromCr ? com.pseudo : '',
+                    commercialTel: '',
                   });
                 }
                 const aSuivreState = hist.find(hasASuivre);
                 if (aSuivreState) {
+                  const com = resolveCommercial(aSuivreState, {
+                    preferCr: isFromCompteRendu(aSuivreState),
+                  });
                   banners.push({
                     key: 'honore',
                     label: 'Honoré à suivre',
                     color: aSuivreState.etat_color || '#f7a219',
-                    commercialPseudo: commercialFromHisto(aSuivreState),
+                    commercialPseudo: com.pseudo,
+                    commercialTel: com.tel,
                   });
                 }
                 return banners;
@@ -5197,7 +5232,7 @@ const FicheDetail = ({
               
               return (
                 <>
-                  {/* 1) Bannières Signé / Annuler à reprogrammer / Honoré à suivre */}
+                  {/* 1) Bannières Signé / Refuser / Honoré à suivre */}
                   {user?.fonction !== 5 && historiquePriorityStates.length > 0 && (
                     <div style={{ marginBottom: '12px' }}>
                       {historiquePriorityStates.map((banner) => (
@@ -5225,6 +5260,12 @@ const FicheDetail = ({
                               >
                                 {formatAgentPseudoDisplay(banner.commercialPseudo)}
                               </span>
+                              {banner.commercialTel ? (
+                                <>
+                                  {' — Tél : '}
+                                  <span>{banner.commercialTel}</span>
+                                </>
+                              ) : null}
                             </>
                           ) : null}
                         </div>
