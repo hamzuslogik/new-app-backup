@@ -66,18 +66,29 @@ async function ensurePresenceAgentsQualifTable() {
        MODIFY COLUMN type ENUM('present', 'absence', 'depart') NOT NULL DEFAULT 'present'`
     );
   } catch (e) {
-    // ignore
+    // ignore (table / enum déjà à jour)
   }
   const alterCols = [
     ['coefficient_presence', 'DECIMAL(6,4) NOT NULL DEFAULT 1.0000'],
     ['heures_travaillees', 'DECIMAL(6,2) NOT NULL DEFAULT 8.00'],
     ['heures_prevues', 'DECIMAL(6,2) NOT NULL DEFAULT 8.00'],
   ];
+  const existingCols = await query(
+    `SELECT COLUMN_NAME AS col
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'presence_agents_qualif'`
+  );
+  const existing = new Set((existingCols || []).map((r) => String(r.col || '').toLowerCase()));
   for (const [col, def] of alterCols) {
+    if (existing.has(col.toLowerCase())) continue;
     try {
       await query(`ALTER TABLE presence_agents_qualif ADD COLUMN ${col} ${def}`);
     } catch (e) {
-      // colonne déjà présente
+      // course / colonne déjà présente
+      if (e?.code !== 'ER_DUP_FIELDNAME' && e?.errno !== 1060) {
+        console.warn(`[presence_agents_qualif] ADD COLUMN ${col}:`, e?.message || e);
+      }
     }
   }
 }
