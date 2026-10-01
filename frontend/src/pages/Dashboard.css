@@ -1714,6 +1714,17 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   background-color: #fafafa;
 }
 
+/* Lignes colorées par état : texte noir très gras (style type Excel) */
+.dashboard-page .fiches-table tbody tr.fiche-row-by-etat td {
+  color: #000000;
+  font-weight: 800;
+}
+
+.dashboard-page .fiches-table tbody tr.fiche-row-by-etat .fiche-row-lead-label {
+  color: #000000;
+  font-weight: 800;
+}
+
 /* Badge état (autres contextes éventuels) */
 .etat-badge {
   display: inline-block;
@@ -1729,7 +1740,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 .dashboard-page .fiches-table .etat-text {
   display: inline-block;
   color: #000000;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 11px;
   background: none;
   padding: 0;
@@ -1739,13 +1750,13 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 
 .dashboard-page .fiches-table .etat-text-cr {
   margin-right: 4px;
-  font-weight: 700;
+  font-weight: 800;
   color: #000000;
 }
 
 .dashboard-page .fiches-table .etat-text-urgent {
   margin-left: 8px;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 0.77em;
   color: #000000;
 }
