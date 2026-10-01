@@ -458,33 +458,27 @@ body.planning-commercial-page .planning-commercial .fiches-table-container > .fi
   max-width: none !important;
 }
 
-/* Scroll page : barre native html + barre fixe (tons slate, pas noir) */
-html {
-  scrollbar-width: auto !important;
-  scrollbar-color: #475569 #cbd5e1 !important;
-}
-
-html::-webkit-scrollbar {
-  height: 18px !important;
+/* Masquer la barre native horizontale html/body — seule la barre fixe reste visible */
+html.fiche-page-hscroll--active::-webkit-scrollbar,
+body.fiche-page-hscroll--active::-webkit-scrollbar {
+  /* height = barre horizontale (masquée), width = barre verticale (gardée) */
+  height: 0 !important;
   width: 12px !important;
 }
 
-html::-webkit-scrollbar-track {
-  background: #cbd5e1 !important;
+html.fiche-page-hscroll--active::-webkit-scrollbar-thumb,
+body.fiche-page-hscroll--active::-webkit-scrollbar-thumb {
+  background: #94a3b8 !important;
+  border-radius: 6px !important;
 }
 
-html::-webkit-scrollbar-thumb {
-  background: #475569 !important;
-  border-radius: 9px !important;
-  border: 2px solid #cbd5e1 !important;
-  min-width: 64px !important;
+html.fiche-page-hscroll--active,
+body.fiche-page-hscroll--active {
+  /* Firefox : scrollbar-width ne sépare pas H/V ; Chromium masque via height:0 */
+  scrollbar-width: thin;
 }
 
-html::-webkit-scrollbar-thumb:hover {
-  background: #334155 !important;
-}
-
-/* Barre globale fixe — sync avec le scroll horizontal de la page */
+/* Barre globale fixe — unique barre horizontale (tons slate) */
 html body #fiche-global-hscroll-bar,
 html body .fiche-global-hscroll-bar {
   position: fixed !important;
@@ -494,16 +488,16 @@ html body .fiche-global-hscroll-bar {
   width: 100% !important;
   z-index: 9990 !important;
   display: none;
-  height: 20px !important;
+  height: 18px !important;
   margin: 0 !important;
   padding: 0 !important;
   overflow-x: scroll !important;
   overflow-y: hidden !important;
-  background: #cbd5e1 !important;
+  background: #e2e8f0 !important;
   border-top: 1px solid #94a3b8 !important;
-  box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 -1px 6px rgba(15, 23, 42, 0.1) !important;
   scrollbar-width: auto !important;
-  scrollbar-color: #475569 #cbd5e1 !important;
+  scrollbar-color: #64748b #e2e8f0 !important;
 }
 
 html body #fiche-global-hscroll-bar.fiche-global-hscroll-bar--visible,
@@ -519,26 +513,26 @@ html body .fiche-global-hscroll-spacer {
 
 html body #fiche-global-hscroll-bar::-webkit-scrollbar,
 html body .fiche-global-hscroll-bar::-webkit-scrollbar {
-  height: 18px !important;
-  width: 18px !important;
+  height: 16px !important;
+  width: 16px !important;
   display: block !important;
 }
 
 html body #fiche-global-hscroll-bar::-webkit-scrollbar-track,
 html body .fiche-global-hscroll-bar::-webkit-scrollbar-track {
-  background: #cbd5e1 !important;
+  background: #e2e8f0 !important;
   border-radius: 0 !important;
 }
 
 html body #fiche-global-hscroll-bar::-webkit-scrollbar-thumb,
 html body .fiche-global-hscroll-bar::-webkit-scrollbar-thumb {
-  background: #475569 !important;
-  border-radius: 9px !important;
-  border: 2px solid #cbd5e1 !important;
+  background: #64748b !important;
+  border-radius: 8px !important;
+  border: 2px solid #e2e8f0 !important;
   min-width: 64px !important;
 }
 
 html body #fiche-global-hscroll-bar::-webkit-scrollbar-thumb:hover,
 html body .fiche-global-hscroll-bar::-webkit-scrollbar-thumb:hover {
-  background: #334155 !important;
+  background: #475569 !important;
 }

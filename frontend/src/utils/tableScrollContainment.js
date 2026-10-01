@@ -131,12 +131,16 @@ function ensurePageScrollRoot() {
     }
   }
 
-  html.style.setProperty('overflow-x', 'scroll', 'important');
+  html.style.setProperty('overflow-x', 'auto', 'important');
   html.style.setProperty('overflow-y', 'auto', 'important');
+  // Masquer la scrollbar native horizontale (Firefox) sans bloquer le scroll
+  html.style.setProperty('scrollbar-width', 'thin', 'important');
   body.style.setProperty('overflow-x', 'visible', 'important');
   body.style.setProperty('overflow-y', 'visible', 'important');
   html.setAttribute(MARK, 'root');
   body.setAttribute(MARK, 'root');
+  html.classList.add('fiche-page-hscroll');
+  body.classList.add('fiche-page-hscroll');
 }
 
 function pickActiveScrollRoot() {
@@ -213,6 +217,8 @@ function hideBar(bar) {
   lastNeedsScroll = false;
   bar.classList.remove('fiche-global-hscroll-bar--visible');
   bar.style.display = 'none';
+  document.documentElement.classList.remove('fiche-page-hscroll--active');
+  document.body?.classList.remove('fiche-page-hscroll--active');
   lastSpacerWidth = -1;
   activeScrollRoot = null;
 }
@@ -247,6 +253,8 @@ function updateGlobalStickyBar() {
     bar.style.left = '0px';
     bar.style.width = '100%';
     bar.classList.add('fiche-global-hscroll-bar--visible');
+    document.documentElement.classList.add('fiche-page-hscroll--active');
+    document.body?.classList.add('fiche-page-hscroll--active');
     lastNeedsScroll = true;
   }
 
