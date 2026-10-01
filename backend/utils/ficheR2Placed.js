@@ -1,10 +1,9 @@
 /**
  * Badge / étoile « R2 placé » dans le planning :
- * - si is_r2 est renseigné (nouvelles fiches) → OUI / NON selon ce champ
- * - sinon (anciennes fiches) → commercial 2 + historique :
- *   CONFIRMER → HONORÉ À SUIVRE → … → CONFIRMER
- *   sans REFUSER entre l’honoré à suivre et le CONFIRMER suivant.
- *   SIGNER n’intervient pas (ex. SIGNER → CONFIRMER → HAS → CONFIRMER = R2).
+ * - is_r2 = 1 (OUI) → nouveau RDV marqué R2 → R2 direct
+ * - is_r2 = 0 / NULL → on vérifie l’historique :
+ *   HAS puis plus tard CONFIRMER, sans REFUSER entre les deux
+ *   (autres états entre HAS et CONFIRMER autorisés ; SIGNER OK).
  */
 
 const ETAT_CONFIRMER = 7;
@@ -93,48 +92,38 @@ function isRefuserId(id, etatsMap) {
 }
 
 /**
- * R2 histo : au moins 2 CONFIRMER, un HONORÉ À SUIVRE entre les deux derniers,
- * et aucun REFUSER entre cet honoré et le dernier CONFIRMER.
- * SIGNER est ignoré.
+ * R2 histo : il existe un HAS suivi plus loin d’un CONFIRMER
+ * sans aucun REFUSER entre les deux (autres états OK).
  */
 function isR2FromHistoIds(ids, etatsMap = null) {
   if (!ids.length) return false;
 
-  const confirmIdxs = [];
-  ids.forEach((id, i) => {
-    if (id === ETAT_CONFIRMER) confirmIdxs.push(i);
-  });
-  if (confirmIdxs.length < 2) return false;
-
-  const prevConfirmIdx = confirmIdxs[confirmIdxs.length - 2];
-  const lastConfirmIdx = confirmIdxs[confirmIdxs.length - 1];
-  const between = ids.slice(prevConfirmIdx + 1, lastConfirmIdx);
-  if (!between.length) return false;
-
-  let lastHonoreInBetween = -1;
-  between.forEach((id, i) => {
-    if (isHonoreId(id, etatsMap)) lastHonoreInBetween = i;
-  });
-  if (lastHonoreInBetween < 0) return false;
-
-  const afterHonore = between.slice(lastHonoreInBetween + 1);
-  return !afterHonore.some((id) => isRefuserId(id, etatsMap));
+  for (let i = 0; i < ids.length; i++) {
+    if (!isHonoreId(ids[i], etatsMap)) continue;
+    for (let j = i + 1; j < ids.length; j++) {
+      if (isRefuserId(ids[j], etatsMap)) break;
+      if (Number(ids[j]) === ETAT_CONFIRMER) return true;
+    }
+  }
+  return false;
 }
 
 function ficheHasR2Placed(obj, etatsMap = null) {
   if (!obj) return false;
 
-  // Nouvelles fiches : champ is_r2 prioritaire (si mentionné)
+  // is_r2 = 1 → nouveau RDV créé en R2 → direct
   const isR2Field = normalizeIsR2Field(obj.is_r2);
-  if (isR2Field !== null) return isR2Field === 1;
+  if (isR2Field === 1) return true;
 
-  // Anciennes fiches : commercial 2 + enchaînement CONFIRMER → HAS → CONFIRMER
-  if (!(obj.id_commercial_2 != null && Number(obj.id_commercial_2) > 0)) return false;
+  // is_r2 = 0 ou NULL → vérifier l’historique (HAS → CONFIRMER sans REFUSER)
+  const ids = parseHistoEtatIds(obj.id_etat_histo || obj.historique);
+  if (ids.length && isR2FromHistoIds(ids, etatsMap)) return true;
 
-  const ids = parseHistoEtatIds(obj.id_etat_histo);
-  if (!ids.length) return false;
-
-  return isR2FromHistoIds(ids, etatsMap);
+  if (Array.isArray(obj.etats_list) && obj.etats_list.includes('R2')) return true;
+  if (typeof obj.etat_check === 'string' && obj.etat_check.split(',').map((s) => s.trim()).includes('R2')) {
+    return true;
+  }
+  return false;
 }
 
 module.exports = {
