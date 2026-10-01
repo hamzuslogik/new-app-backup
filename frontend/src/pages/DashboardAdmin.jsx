@@ -1064,10 +1064,10 @@ const DashboardAdmin = () => {
               <table className="fiches-table fiches-table--admin-layout">
                 <thead>
                   <tr>
-                    <th onClick={() => handleSort('Nom')} className="sortable-header">
+                    <th onClick={() => handleSort('Nom')} className="sortable-header fiche-col-nom">
                       Nom {getSortIcon('Nom')}
                     </th>
-                    <th onClick={() => handleSort('Prénom')} className="sortable-header">
+                    <th onClick={() => handleSort('Prénom')} className="sortable-header fiche-col-prenom">
                       Prénom {getSortIcon('Prénom')}
                     </th>
                     <th onClick={() => handleSort('Téléphone')} className="sortable-header">
@@ -1076,7 +1076,7 @@ const DashboardAdmin = () => {
                     <th onClick={() => handleSort('CP')} className="sortable-header">
                       CP {getSortIcon('CP')}
                     </th>
-                    <th onClick={() => handleSort('Date RDV')} className="sortable-header">
+                    <th onClick={() => handleSort('Date RDV')} className="sortable-header fiche-col-date">
                       Date RDV {getSortIcon('Date RDV')}
                     </th>
                     <th onClick={() => handleSort('Commercial')} className="sortable-header">
@@ -1098,7 +1098,7 @@ const DashboardAdmin = () => {
                     <th onClick={() => handleSort('Centre')} className="sortable-header">
                       Centre {getSortIcon('Centre')}
                     </th>
-                    <th onClick={() => handleSort('Date Insertion')} className="sortable-header">
+                    <th onClick={() => handleSort('Date Insertion')} className="sortable-header fiche-col-date">
                       Date Insertion {getSortIcon('Date Insertion')}
                     </th>
                     <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
@@ -1124,11 +1124,11 @@ const DashboardAdmin = () => {
                         key={fiche.hash}
                         style={{ backgroundColor: `${etatColor}20` }}
                       >
-                        <td data-label="Nom:">{fiche.nom || ''}</td>
-                        <td data-label="Prénom:">{fiche.prenom || ''}</td>
+                        <td data-label="Nom:" className="fiche-col-nom">{fiche.nom || ''}</td>
+                        <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
-                        <td data-label="Date RDV:">{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                        <td data-label="Date RDV:" className="fiche-col-date">{formatRdvDateTime(fiche.date_rdv_time)}</td>
                         <td data-label="Commercial:">{getCommercialsFormatted(fiche)}</td>
                         <td data-label="Validé:" className="fiche-col-badge fiche-col-valide" style={{ textAlign: 'center' }}>
                           {fiche.valider > 0 ? (
@@ -1233,7 +1233,7 @@ const DashboardAdmin = () => {
                           ) : null}
                         </td>
                         <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
-                        <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
+                        <td data-label="Date Insertion:" className="fiche-col-date">{formatDate(fiche.date_insert_time)}</td>
                         <td data-label="Confirmateur:">{getConfirmateursFormatted(fiche)}</td>
                         <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}>
                           <span

@@ -1,4 +1,8 @@
-/* Tableaux .fiches-table (toutes pages) : largeur selon le contenu, max 15 caractères puis retour à la ligne. */
+/* Tableaux .fiches-table (toutes pages)
+ * - Largeur dynamique selon le contenu
+ * - Nom / Prénom : max 15 caractères, retour à la ligne par mot (pas lettre)
+ * - Dates : toujours sur une seule ligne
+ */
 
 html body table.fiches-table,
 html body .fiches-table,
@@ -12,6 +16,7 @@ body.planning-commercial-page .planning-commercial .fiches-table,
 html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table,
 .dashboard-admin-page .fiches-table,
 .dashboard-page .fiches-table,
+.fiches-page .fiches-table,
 .production-qualif table.fiches-table,
 .production-qualif table.fiches-table.fiches-table--wrap,
 .stats-agents-qualite-page .fiches-content .fiches-table,
@@ -30,6 +35,7 @@ html body .fiches-table col,
   max-width: none !important;
 }
 
+/* Défaut : largeur dynamique, pas de plafond 15ch */
 html body table.fiches-table > thead > tr > th,
 html body table.fiches-table > tbody > tr > td,
 html body table.fiches-table th:nth-child(n),
@@ -48,6 +54,8 @@ body.rdv-vue-page .rdv-vue .fiches-table td:nth-child(n),
 .dashboard-admin-page .fiches-table td:nth-child(n),
 .dashboard-page .fiches-table th:nth-child(n),
 .dashboard-page .fiches-table td:nth-child(n),
+.fiches-page .fiches-table th:nth-child(n),
+.fiches-page .fiches-table td:nth-child(n),
 .production-qualif table.fiches-table.fiches-table--wrap th,
 .production-qualif table.fiches-table.fiches-table--wrap td,
 .stats-agents-qualite-page .fiches-content .fiches-table th,
@@ -56,27 +64,85 @@ body.rdv-vue-page .rdv-vue .fiches-table td:nth-child(n),
 .affectation-page .fiches-table td:nth-child(n) {
   width: auto !important;
   min-width: 0 !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  hyphens: none;
+}
+
+/* Nom / Prénom : max 15ch, retour à la ligne par mot entier (pas lettre) */
+html body table.fiches-table th.fiche-col-nom,
+html body table.fiches-table td.fiche-col-nom,
+html body table.fiches-table th.fiche-col-prenom,
+html body table.fiches-table td.fiche-col-prenom,
+html body .fiches-table th.fiche-col-nom,
+html body .fiches-table td.fiche-col-nom,
+html body .fiches-table th.fiche-col-prenom,
+html body .fiches-table td.fiche-col-prenom,
+html body table.fiches-table td.fiche-row-lead-cell,
+html body .fiches-table td.fiche-row-lead-cell,
+html body table.fiches-table td[data-label="Nom:"],
+html body table.fiches-table td[data-label="Prénom:"],
+html body .fiches-table td[data-label="Nom:"],
+html body .fiches-table td[data-label="Prénom:"] {
   max-width: 15ch !important;
   white-space: normal !important;
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
-  hyphens: manual;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  word-wrap: normal !important;
+  hyphens: none !important;
+}
+
+html body table.fiches-table .fiche-row-lead-label,
+html body .fiches-table .fiche-row-lead-label,
+html body table.fiches-table td.fiche-col-nom,
+html body table.fiches-table td.fiche-col-prenom,
+html body .fiches-table td.fiche-col-nom,
+html body .fiches-table td.fiche-col-prenom {
+  max-width: 15ch !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
+/* État : peut wrap (libellé long), sans plafond 15ch */
+html body table.fiches-table td.etat-col-cell,
+html body .fiches-table td.etat-col-cell,
+html body table.fiches-table td[data-label^="État"],
+html body .fiches-table td[data-label^="État"] {
+  max-width: none !important;
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
 }
 
 html body table.fiches-table .etat-badge,
 html body table.fiches-table .etat-badge--wrap,
+html body table.fiches-table .etat-text,
+html body table.fiches-table .etat-text--wrap,
 html body table.fiches-table .produit-indicator,
-html body table.fiches-table .fiche-row-lead-label,
 html body .fiches-table .etat-badge,
 html body .fiches-table .etat-badge--wrap,
-html body .fiches-table .produit-indicator,
+html body .fiches-table .etat-text,
+html body .fiches-table .etat-text--wrap,
+html body .fiches-table .produit-indicator {
+  max-width: 100% !important;
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+}
+
+/* Nom dans .fiche-row-lead-label : wrap par mot, plafonné par la cellule 15ch */
+html body table.fiches-table .fiche-row-lead-label,
 html body .fiches-table .fiche-row-lead-label {
   max-width: 100% !important;
   white-space: normal !important;
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
 }
 
+/* Colonnes sans contrainte de wrap (décalage, sélection, actions) */
 html body table.fiches-table th.dashboard-decalage-col,
 html body table.fiches-table td.dashboard-decalage-cell,
 html body .fiches-table th.dashboard-decalage-col,
@@ -88,7 +154,11 @@ html body .fiches-table td.dashboard-decalage-cell,
 .affectation-page .fiches-table th.affectation-select-col,
 .affectation-page .fiches-table td.affectation-select-col,
 .affectation-page .fiches-table th.affectation-actions-col,
-.affectation-page .fiches-table td.affectation-actions-col {
+.affectation-page .fiches-table td.affectation-actions-col,
+html body table.fiches-table th.fiche-col-badge,
+html body table.fiches-table td.fiche-col-badge,
+html body .fiches-table th.fiche-col-badge,
+html body .fiches-table td.fiche-col-badge {
   max-width: none !important;
   white-space: nowrap !important;
   overflow-wrap: normal !important;

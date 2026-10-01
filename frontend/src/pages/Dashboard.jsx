@@ -2299,10 +2299,10 @@ const Dashboard = () => {
 <table className={`fiches-table${isAdminFicheLayout ? " fiches-table--admin-layout" : ""}`}>
                 <thead>
                   <tr>
-                    <th onClick={() => handleSort('Nom')} className="sortable-header">
+                    <th onClick={() => handleSort('Nom')} className="sortable-header fiche-col-nom">
                       Nom {getSortIcon('Nom')}
                     </th>
-                    <th onClick={() => handleSort('Prénom')} className="sortable-header">
+                    <th onClick={() => handleSort('Prénom')} className="sortable-header fiche-col-prenom">
                       Prénom {getSortIcon('Prénom')}
                     </th>
                     <th onClick={() => handleSort('Téléphone')} className="sortable-header">
@@ -2313,7 +2313,7 @@ const Dashboard = () => {
                     </th>
                     {isAdminFicheLayout ? (
                       <>
-                        <th onClick={() => handleSort('Date RDV')} className="sortable-header">
+                        <th onClick={() => handleSort('Date RDV')} className="sortable-header fiche-col-date">
                           Date RDV {getSortIcon('Date RDV')}
                         </th>
                         <th onClick={() => handleSort('Commercial')} className="sortable-header">
@@ -2327,7 +2327,7 @@ const Dashboard = () => {
                         <th onClick={() => handleSort('Centre')} className="sortable-header">
                           Centre {getSortIcon('Centre')}
                         </th>
-                        <th onClick={() => handleSort('Date Insertion')} className="sortable-header">
+                        <th onClick={() => handleSort('Date Insertion')} className="sortable-header fiche-col-date">
                           Date Insertion {getSortIcon('Date Insertion')}
                         </th>
                         <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
@@ -2342,10 +2342,10 @@ const Dashboard = () => {
                       </>
                     ) : (
                       <>
-                        <th onClick={() => handleSort('Date Insertion')} className="sortable-header">
+                        <th onClick={() => handleSort('Date Insertion')} className="sortable-header fiche-col-date">
                           Date Insertion {getSortIcon('Date Insertion')}
                         </th>
-                        <th onClick={() => handleSort('Date RDV')} className="sortable-header">
+                        <th onClick={() => handleSort('Date RDV')} className="sortable-header fiche-col-date">
                           Date RDV {getSortIcon('Date RDV')}
                         </th>
                         <th onClick={() => handleSort('État Final')} className="sortable-header">
@@ -2391,7 +2391,7 @@ const Dashboard = () => {
                         }}
                         title={getTooltipComment(fiche) || undefined}
                       >
-                        <td data-label="" className="fiche-row-lead-cell">
+                        <td data-label="" className="fiche-row-lead-cell fiche-col-nom">
                           <div className="fiche-row-lead-cell-inner">
                             <FicheTableMobileDetailButton
                               show={isDashboardTouchMobile}
@@ -2401,12 +2401,12 @@ const Dashboard = () => {
                             <span className="fiche-row-lead-label">{fiche.nom || ''}</span>
                           </div>
                         </td>
-                        <td data-label="Prénom:">{fiche.prenom || ''}</td>
+                        <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         {isAdminFicheLayout ? (
                           <>
-                            <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                            <td data-label="Date RDV:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                             <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
                             <FicheAdminValideCell valider={fiche.valider} confRdvAvec={fiche.conf_rdv_avec} />
                             <FicheAdminActionCell
@@ -2428,7 +2428,7 @@ const Dashboard = () => {
                               onPdf={() => runGeneratePdfFromMenu(fiche.hash)}
                             />
                             <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
-                            <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                            <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
                             <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
                             <td
                               data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
@@ -2454,8 +2454,8 @@ const Dashboard = () => {
                           </>
                         ) : (
                           <>
-                            <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
-                            <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                            <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                            <td data-label="Date RDV:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                             <td
                               data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
                               className="etat-col-cell"

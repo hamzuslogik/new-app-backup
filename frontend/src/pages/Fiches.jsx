@@ -942,8 +942,16 @@ const Fiches = () => {
   const renderSortableHeader = (label) => {
     const key = columnKeys[label];
     const active = isHeaderFilterActive(headerFilters[key]);
+    const colClass =
+      label === 'Nom'
+        ? ' fiche-col-nom'
+        : label === 'Prénom'
+          ? ' fiche-col-prenom'
+          : label === 'Date RDV' || label === 'Date Insertion'
+            ? ' fiche-col-date'
+            : '';
     return (
-      <th onClick={() => handleSort(label)} className="sortable-header">
+      <th onClick={() => handleSort(label)} className={`sortable-header${colClass}`}>
         <span className="header-label-wrap">
           <button
             type="button"
@@ -1604,13 +1612,13 @@ const Fiches = () => {
                         style={{ backgroundColor: `${etatColor}20` }}
                         className={isArchived ? 'archived' : ''}
                       >
-                        <td data-label="Nom:">{fiche.nom || ''}</td>
-                        <td data-label="Prénom:">{fiche.prenom || ''}</td>
+                        <td data-label="Nom:" className="fiche-col-nom">{fiche.nom || ''}</td>
+                        <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         {isAdminFicheLayout ? (
                           <>
-                            <td data-label="Date RDV:">{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                            <td data-label="Date RDV:" className="fiche-col-date">{formatRdvDateTime(fiche.date_rdv_time)}</td>
                             <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
                             <FicheAdminValideCell valider={fiche.valider} confRdvAvec={fiche.conf_rdv_avec} />
                             <FicheAdminActionCell
@@ -1699,7 +1707,7 @@ const Fiches = () => {
                               }
                             />
                             <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
-                            <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
+                            <td data-label="Date Insertion:" className="fiche-col-date">{formatDate(fiche.date_insert_time)}</td>
                             <td data-label="Conf:">{getConfirmateursFormatted(fiche)}</td>
                             <td data-label="État:">
                               <span className="etat-badge" style={{ backgroundColor: etatColor }}>
@@ -1718,7 +1726,7 @@ const Fiches = () => {
                           </>
                         ) : (
                           <>
-                            <td data-label="Date Insertion:">{formatDate(fiche.date_insert_time)}</td>
+                            <td data-label="Date Insertion:" className="fiche-col-date">{formatDate(fiche.date_insert_time)}</td>
                             <td data-label="Agent:">{getUserName(fiche.id_agent) || (fiche.agent_pseudo || '')}</td>
                             <td data-label="État:">
                               <span className="etat-badge" style={{ backgroundColor: etatColor }}>

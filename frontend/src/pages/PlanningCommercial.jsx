@@ -961,9 +961,9 @@ const PlanningCommercial = () => {
               <table className={`fiches-table${isCommercial ? ' fiches-table--commercial' : ''}`}>
                 <thead>
                   <tr>
-                    <th>Date RDV</th>
-                    <th>Nom</th>
-                    <th>Prénom</th>
+                    <th className="fiche-col-date">Date RDV</th>
+                    <th className="fiche-col-nom">Nom</th>
+                    <th className="fiche-col-prenom">Prénom</th>
                     <th>Téléphone</th>
                     <th>CP</th>
                     <th>Ville</th>
@@ -991,7 +991,7 @@ const PlanningCommercial = () => {
                         key={fiche.hash}
                         style={{ backgroundColor: `${etatColor}20` }}
                       >
-                        <td data-label="Date RDV:">
+                        <td data-label="Date RDV:" className="fiche-col-date">
                           <strong>{formatRdvDateTime(fiche.date_rdv_time)}</strong>
                           {fiche.rdv_urgent === 1 || fiche.qualification_code === 'RDV_URGENT' ? (
                             <span style={{ 
@@ -1004,8 +1004,8 @@ const PlanningCommercial = () => {
                             </span>
                           ) : null}
                         </td>
-                        <td data-label="Nom:">{fiche.nom || ''}</td>
-                        <td data-label="Prénom:">{fiche.prenom || ''}</td>
+                        <td data-label="Nom:" className="fiche-col-nom">{fiche.nom || ''}</td>
+                        <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Ville:">{fiche.ville || ''}</td>

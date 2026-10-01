@@ -422,25 +422,25 @@ const Affectation = () => {
               <thead>
                 <tr>
                   <th className="affectation-select-col"></th>
-                  <th>Nom</th>
-                  <th>Prénom</th>
+                  <th className="fiche-col-nom">Nom</th>
+                  <th className="fiche-col-prenom">Prénom</th>
                   <th>Téléphone</th>
                   <th>CP</th>
                   {isAdminFicheLayout ? (
                     <>
-                      <th>Date RDV</th>
+                      <th className="fiche-col-date">Date RDV</th>
                       <th>Commercial</th>
                       <FicheAdminBadgeHeaders />
                       <th>Centre</th>
-                      <th>Date Insertion</th>
+                      <th className="fiche-col-date">Date Insertion</th>
                       <th>Conf</th>
                       <th>État Final</th>
                       {showDecalageColAdmin ? <th className="dashboard-decalage-col">Décalage</th> : null}
                     </>
                   ) : (
                     <>
-                      <th>Date Insertion</th>
-                      <th>Date RDV</th>
+                      <th className="fiche-col-date">Date Insertion</th>
+                      <th className="fiche-col-date">Date RDV</th>
                       <th>État Final</th>
                       <th>Confirmateur</th>
                       <th>Commercial</th>
@@ -477,15 +477,15 @@ const Affectation = () => {
                           onChange={() => handleSelectFiche(fiche.id)}
                         />
                       </td>
-                      <td data-label="Nom:" className="fiche-row-lead-cell">
+                      <td data-label="Nom:" className="fiche-row-lead-cell fiche-col-nom">
                         <span className="fiche-row-lead-label">{fiche.nom || ''}</span>
                       </td>
-                      <td data-label="Prénom:">{fiche.prenom || ''}</td>
+                      <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
                       <td data-label="Téléphone:">{fiche.tel || fiche.gsm1 || ''}</td>
                       <td data-label="CP:">{fiche.cp || fiche.code_postal || ''}</td>
                       {isAdminFicheLayout ? (
                         <>
-                          <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                          <td data-label="Date RDV:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                           <td data-label="Commercial:">{formatCommercials(fiche)}</td>
                           <FicheAdminValideCell valider={fiche.valider} confRdvAvec={fiche.conf_rdv_avec} />
                           <FicheAdminActionCell
@@ -499,7 +499,7 @@ const Affectation = () => {
                             onPdf={() => handleGeneratePdf(fiche.hash)}
                           />
                           <td data-label="Centre:">{fiche.centre_nom || ''}</td>
-                          <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                          <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
                           <td data-label="Confirmateur:">{formatConfirmateurs(fiche)}</td>
                           <td data-label="État:" className="etat-col-cell">
                             <span className="etat-badge etat-badge--wrap" style={{ backgroundColor: etatColor }}>
@@ -518,8 +518,8 @@ const Affectation = () => {
                         </>
                       ) : (
                         <>
-                          <td data-label="Date Insertion:" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
-                          <td data-label="Date RDV:" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                          <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                          <td data-label="Date RDV:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                           <td data-label="État:" className="etat-col-cell">
                             <span className="etat-badge etat-badge--wrap" style={{ backgroundColor: etatColor }}>
                               {getEtatDisplayWithSousEtat(fiche, etatsData || [])}

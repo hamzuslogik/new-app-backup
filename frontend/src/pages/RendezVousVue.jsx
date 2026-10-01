@@ -650,13 +650,13 @@ const RendezVousVue = () => {
 <table className={`fiches-table${isAdminFicheLayout ? ' fiches-table--admin-layout' : ''}`}>
               <thead>
                 <tr>
-                  <th className="sortable-header" onClick={() => handleSort('nom')}>Nom {getSortIndicator('nom')}</th>
-                  <th className="sortable-header" onClick={() => handleSort('prenom')}>Prénom {getSortIndicator('prenom')}</th>
+                  <th className="sortable-header fiche-col-nom" onClick={() => handleSort('nom')}>Nom {getSortIndicator('nom')}</th>
+                  <th className="sortable-header fiche-col-prenom" onClick={() => handleSort('prenom')}>Prénom {getSortIndicator('prenom')}</th>
                   <th className="sortable-header" onClick={() => handleSort('tel')}>Téléphone {getSortIndicator('tel')}</th>
                   <th className="sortable-header" onClick={() => handleSort('cp')}>CP {getSortIndicator('cp')}</th>
                   {isAdminFicheLayout ? (
                     <>
-                      <th className="sortable-header" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
+                      <th className="sortable-header fiche-col-date" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
                       <th className="sortable-header" onClick={() => handleSort('commerciaux')}>Commercial {getSortIndicator('commerciaux')}</th>
                       <FicheAdminBadgeHeaders
                         onSortValide={() => handleSort('valider')}
@@ -664,7 +664,7 @@ const RendezVousVue = () => {
                         getSortIcon={(label) => getSortIndicator(label === 'Validé' ? 'valider' : label === 'Produit' ? 'produit' : '')}
                       />
                       <th className="sortable-header" onClick={() => handleSort('centre')}>Centre {getSortIndicator('centre')}</th>
-                      <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date Insertion {getSortIndicator('date_insert_time')}</th>
+                      <th className="sortable-header fiche-col-date" onClick={() => handleSort('date_insert_time')}>Date Insertion {getSortIndicator('date_insert_time')}</th>
                       <th className="sortable-header" onClick={() => handleSort('confirmateur')}>Conf {getSortIndicator('confirmateur')}</th>
                       <th className="sortable-header" onClick={() => handleSort('etat')}>État actuel {getSortIndicator('etat')}</th>
                       {showDecalageColAdmin ? <th className="dashboard-decalage-col">Décalage</th> : null}
@@ -672,8 +672,8 @@ const RendezVousVue = () => {
                   ) : (
                     <>
                       <th className="sortable-header" onClick={() => handleSort('ville')}>Ville {getSortIndicator('ville')}</th>
-                      <th className="sortable-header" onClick={() => handleSort('date_insert_time')}>Date Insertion {getSortIndicator('date_insert_time')}</th>
-                      <th className="sortable-header" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
+                      <th className="sortable-header fiche-col-date" onClick={() => handleSort('date_insert_time')}>Date Insertion {getSortIndicator('date_insert_time')}</th>
+                      <th className="sortable-header fiche-col-date" onClick={() => handleSort('date_rdv_time')}>Date RDV {getSortIndicator('date_rdv_time')}</th>
                       <th className="sortable-header" onClick={() => handleSort('etat')}>État actuel {getSortIndicator('etat')}</th>
                       <th className="sortable-header" onClick={() => handleSort('confirmateur')}>Confirmateur {getSortIndicator('confirmateur')}</th>
                       <th className="sortable-header" onClick={() => handleSort('commerciaux')}>Commercial {getSortIndicator('commerciaux')}</th>
@@ -698,7 +698,7 @@ const RendezVousVue = () => {
                     {...bindFicheRowContextMenu(f)}
                     style={{ backgroundColor: rowBackgroundColor, borderLeft: `4px solid ${rowBorderColor}` }}
                   >
-                    <td className="fiche-row-lead-cell">
+                    <td className="fiche-row-lead-cell fiche-col-nom">
                       <div className="fiche-row-lead-cell-inner">
                         <FicheTableMobileDetailButton
                           show={isRdvVueTouchMobile}
@@ -709,12 +709,12 @@ const RendezVousVue = () => {
                         <span className="fiche-row-lead-label">{f.nom || ''}</span>
                       </div>
                     </td>
-                    <td>{f.prenom || ''}</td>
+                    <td className="fiche-col-prenom">{f.prenom || ''}</td>
                     <td>{f.tel || ''}</td>
                     <td>{f.cp || ''}</td>
                     {isAdminFicheLayout ? (
                       <>
-                        <td>{formatRdvDateTime(f.date_rdv_time)}</td>
+                        <td className="fiche-col-date">{formatRdvDateTime(f.date_rdv_time)}</td>
                         <td>{[f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ') || ''}</td>
                         <FicheAdminValideCell valider={f.valider} confRdvAvec={f.conf_rdv_avec} />
                         <FicheAdminActionCell
@@ -728,7 +728,7 @@ const RendezVousVue = () => {
                           onPdf={() => handleGeneratePdf(f.hash)}
                         />
                         <td>{getCentreName(f.id_centre) || ''}</td>
-                        <td>{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
+                        <td className="fiche-col-date">{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
                         <td>{getConfirmateursFormatted(f) || ''}</td>
                         <td>
                           <span className="etat-badge" style={{ backgroundColor: getEtatColor(f) }}>
@@ -748,8 +748,8 @@ const RendezVousVue = () => {
                     ) : (
                       <>
                         <td>{f.ville || ''}</td>
-                        <td>{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
-                        <td>{formatRdvDateTime(f.date_rdv_time)}</td>
+                        <td className="fiche-col-date">{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
+                        <td className="fiche-col-date">{formatRdvDateTime(f.date_rdv_time)}</td>
                         <td>
                           <span className="etat-badge" style={{ backgroundColor: getEtatColor(f) }}>
                             {f.etat_titre || f.id_etat_final || ''}
