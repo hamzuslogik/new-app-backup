@@ -1266,27 +1266,14 @@ router.get('/dashboard', authenticate, async (req, res) => {
     `, [todayStart, todayEnd]);
 
     // 3. Nombre de RDV à venir (état CONFIRMER = 7) avec date_rdv_time >= aujourd'hui
-    // RE Confirmation (14) : uniquement fiches dont un confirmateur de son équipe est en id_confirmateur (pas 2/3)
-    const isREConfirmation = Number(req.user?.fonction) === 14;
-    let rdvUpcoming;
-    if (isREConfirmation) {
-      rdvUpcoming = await queryOne(`
-        SELECT COUNT(*) as count
-        FROM fiches f
-        INNER JOIN utilisateurs u ON u.id = f.id_confirmateur AND u.fonction = 6 AND u.etat > 0 AND u.chef_equipe = ?
-        WHERE f.id_etat_final = 7
-        AND f.date_rdv_time >= ?
-        AND (f.archive = 0 OR f.archive IS NULL)
-      `, [req.user.id, todayStart]);
-    } else {
-      rdvUpcoming = await queryOne(`
-        SELECT COUNT(*) as count
-        FROM fiches
-        WHERE id_etat_final = 7
-        AND date_rdv_time >= ?
-        AND (archive = 0 OR archive IS NULL)
-      `, [todayStart]);
-    }
+    // RE Confirmation (14) : même périmètre global que les autres sessions (toute la liste)
+    const rdvUpcoming = await queryOne(`
+      SELECT COUNT(*) as count
+      FROM fiches
+      WHERE id_etat_final = 7
+      AND date_rdv_time >= ?
+      AND (archive = 0 OR archive IS NULL)
+    `, [todayStart]);
 
     // 4. Liste des confirmateurs actifs avec RDV aujourd'hui (fiches_histo) et à venir (fiches)
     // RDV à venir : uniquement le 1er confirmateur (id_confirmateur), pas les slots 2/3

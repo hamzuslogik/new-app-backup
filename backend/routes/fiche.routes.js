@@ -1523,7 +1523,8 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
 
-    // RE Confirmation — RDV à venir : uniquement id_confirmateur (1er) parmi les confirmateurs de son équipe
+    // Filtre optionnel : RE Confirmation — RDV à venir limités aux confirmateurs de son équipe
+    // (non utilisé par défaut : le RE voit toute la liste des RDV à venir)
     if (
       req.user.fonction === 14 &&
       (re_equipe_confirmateur_primary === '1' ||

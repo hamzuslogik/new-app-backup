@@ -646,10 +646,7 @@ const Dashboard = () => {
       }
       upcomingParams.sort_by = sortConfig.key || 'date_rdv_time';
       upcomingParams.sort_dir = sortConfig.direction || 'asc';
-      // RE Confirmation : limiter aux fiches dont le 1er confirmateur appartient à son équipe
-      if (user?.fonction === 14) {
-        upcomingParams.re_equipe_confirmateur_primary = 1;
-      }
+      // RE Confirmation : toute la liste des RDV à venir (pas de filtre équipe)
       return upcomingParams;
     }
     
