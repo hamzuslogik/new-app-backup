@@ -40,13 +40,11 @@ body.rdv-vue-page .rdv-vue .fiches-table {
 html.rdv-vue-page .rdv-vue .fiches-table-container,
 body.rdv-vue-page .rdv-vue .fiches-table-container {
   min-width: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: scroll !important;
-  overflow-y: visible !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
   overscroll-behavior: auto !important;
   touch-action: pan-x pan-y pinch-zoom;
-  scrollbar-gutter: stable;
 }
 
 html[data-desktop-viewport] .rdv-vue-page .rdv-vue .fiches-table-container,
@@ -55,13 +53,11 @@ html.rdv-vue-page[data-desktop-viewport] .fiches-table-container,
 body.rdv-vue-page[data-desktop-viewport] .rdv-vue .fiches-table-container,
 body.rdv-vue-page[data-desktop-viewport] .fiches-table-container {
   min-width: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: scroll !important;
-  overflow-y: visible !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
   overscroll-behavior: auto !important;
   touch-action: pan-x pan-y pinch-zoom !important;
-  scrollbar-gutter: stable;
 }
 
 html[data-desktop-viewport] .rdv-vue-page .rdv-vue .fiches-table,
@@ -105,12 +101,10 @@ body.rdv-vue-page[data-desktop-viewport] .fiches-table {
   html.rdv-vue-page .rdv-vue .fiches-table-container,
   body.rdv-vue-page .rdv-vue .fiches-table-container {
     min-width: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: scroll !important;
-    overflow-y: visible !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
-    scrollbar-gutter: stable;
   }
 }
 
@@ -145,12 +139,10 @@ body.rdv-vue-page[data-desktop-viewport] .fiches-table {
   html.rdv-vue-page .rdv-vue .fiches-table-container,
   body.rdv-vue-page .rdv-vue .fiches-table-container {
     min-width: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: scroll !important;
-    overflow-y: visible !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
-    scrollbar-gutter: stable;
   }
 }
 
@@ -780,18 +772,15 @@ body.rdv-vue-page.rdv-vue-page--extranet-scroll .rdv-vue-content {
 }
 
 body.rdv-vue-page.rdv-vue-page--extranet-scroll .fiches-table-container {
-  width: 100% !important;
-  max-width: 100% !important;
+  width: auto !important;
+  max-width: none !important;
   min-width: 0 !important;
   max-height: none !important;
   height: auto !important;
-  overflow-x: scroll !important;
-  overflow-y: visible !important;
+  overflow: visible !important;
   overscroll-behavior: auto !important;
-  isolation: isolate !important;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;
-  scrollbar-gutter: stable;
   margin-bottom: 16px !important;
 }
 
@@ -922,11 +911,9 @@ body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table {
 
 body.rdv-vue-page.rdv-vue-page--table-desktop-view .fiches-table-container {
   min-width: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: scroll !important;
-  overflow-y: visible !important;
-  scrollbar-gutter: stable;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
   touch-action: pan-x pan-y pinch-zoom;
 }
 
