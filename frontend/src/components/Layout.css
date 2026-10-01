@@ -39,15 +39,15 @@ body.admin-topnav .main-content.sidebar-collapsed {
   max-width: 100%;
 }
 
-/* Les conteneurs tableaux restent scrollables dans la largeur du content-wrapper */
+/* Conteneurs tableaux : pas de scroll propre — scroll horizontal sur la page */
 .content-wrapper .fiches-table-container,
 .content-wrapper .confirmateurs-table-container,
 .content-wrapper .cq-table-container,
 .content-wrapper .fiches-table-wrapper {
-  max-width: 100% !important;
+  max-width: none !important;
   min-width: 0 !important;
-  width: 100% !important;
-  overflow-x: scroll !important;
+  width: auto !important;
+  overflow: visible !important;
 }
 
 /* Mode desktop forcé : scroll sur le document (html/body), pas de clip ici */
@@ -128,19 +128,15 @@ body[data-desktop-viewport] .content-wrapper {
   }
 }
 
-/* Petit écran : scroll horizontal fiable dans le conteneur tableau */
+/* Petit écran : scroll horizontal sur la page (pas dans le conteneur tableau) */
 @media (max-width: 1024px) {
   .fiches-table-container,
   .confirmateurs-table-container {
     display: block;
-    width: 100% !important;
-    max-width: 100% !important;
+    width: auto !important;
+    max-width: none !important;
     min-width: 0 !important;
-    overflow-x: auto !important;
-    overflow-y: visible;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y pinch-zoom;
-    overscroll-behavior: auto;
+    overflow: visible !important;
   }
 
   .fiches-table-container:not(.compact) > .fiches-table,
@@ -150,18 +146,13 @@ body[data-desktop-viewport] .content-wrapper {
   }
 }
 
-/* Pages mobile extranet : conteneur tableau = zone de scroll horizontal */
+/* Pages mobile extranet : scroll horizontal page entière */
 body[class*='--extranet-scroll'] .fiches-table-container,
 body[class*='--extranet-scroll'] .confirmateurs-table-container {
-  width: 100% !important;
-  max-width: 100% !important;
+  width: auto !important;
+  max-width: none !important;
   min-width: 0 !important;
-  overflow-x: auto !important;
-  overflow-y: visible !important;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y pinch-zoom;
-  overscroll-behavior: auto !important;
-  isolation: isolate;
+  overflow: visible !important;
 }
 
 body[class*='--extranet-scroll'] .fiches-table,

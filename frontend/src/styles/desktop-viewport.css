@@ -45,21 +45,17 @@ body[data-desktop-viewport] .content-wrapper > * {
   max-width: none;
 }
 
-/* Conteneurs de tableaux : scroll isolé puis propagation vers la page */
+/* Conteneurs de tableaux : pas de scroll isolé — overflow sur la page (html/body) */
 body[data-desktop-viewport]:not(.dashboard-page) .fiches-table-container,
 body[data-desktop-viewport]:not(.dashboard-page) .confirmateurs-table-container,
 body[data-desktop-viewport]:not(.dashboard-page) .table-container-responsive,
 body[data-desktop-viewport]:not(.dashboard-page) [class*='-table-container'],
 body[data-desktop-viewport]:not(.dashboard-page) .planning-table-container {
   display: block;
-  width: 100% !important;
-  max-width: 100% !important;
+  width: auto !important;
+  max-width: none !important;
   min-width: 0 !important;
-  overflow: auto !important;
-  overscroll-behavior: auto !important;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y pinch-zoom;
-  isolation: isolate;
+  overflow: visible !important;
 }
 
 body[data-desktop-viewport] .fiches-table,

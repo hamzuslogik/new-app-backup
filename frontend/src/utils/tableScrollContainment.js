@@ -1,6 +1,6 @@
 /**
- * Barre de défilement horizontale toujours visible en bas de l’écran
- * (sync avec le tableau fiches visible), sans modifier la structure React.
+ * Scroll horizontal au niveau de la page (html/body), pas des conteneurs tableaux.
+ * Barre fixe en bas de l’écran synchronisée avec window.scrollX.
  */
 
 const TABLE_SCROLL_SELECTOR = [
@@ -10,22 +10,30 @@ const TABLE_SCROLL_SELECTOR = [
   '.fiches-table-wrapper',
 ].join(',');
 
+const LAYOUT_OVERFLOW_SELECTOR = [
+  '.app',
+  '.main-content',
+  '.content-wrapper',
+].join(',');
+
 const BAR_ID = 'fiche-global-hscroll-bar';
 const SPACER_ID = 'fiche-global-hscroll-spacer';
 
-let activeContainer = null;
 let syncing = false;
 
-function applyContainerScrollStyles(el) {
+function getPageScrollEl() {
+  return document.scrollingElement || document.documentElement;
+}
+
+function applyContainerNoScroll(el) {
   if (!(el instanceof HTMLElement)) return;
   el.style.setProperty('display', 'block', 'important');
   el.style.setProperty('box-sizing', 'border-box', 'important');
   el.style.setProperty('width', '100%', 'important');
-  el.style.setProperty('max-width', '100%', 'important');
+  el.style.setProperty('max-width', 'none', 'important');
   el.style.setProperty('min-width', '0', 'important');
-  el.style.setProperty('overflow-x', 'auto', 'important');
+  el.style.setProperty('overflow-x', 'visible', 'important');
   el.style.setProperty('overflow-y', 'visible', 'important');
-  el.style.setProperty('-webkit-overflow-scrolling', 'touch');
   el.style.setProperty('scrollbar-width', 'none', 'important');
   el.style.setProperty('-ms-overflow-style', 'none');
 }
@@ -35,6 +43,25 @@ function applyTableWidthStyles(el) {
   el.style.setProperty('width', 'max-content', 'important');
   el.style.setProperty('max-width', 'none', 'important');
   el.style.setProperty('min-width', '100%', 'important');
+}
+
+function applyLayoutPageScroll(el) {
+  if (!(el instanceof HTMLElement)) return;
+  el.style.setProperty('overflow-x', 'visible', 'important');
+  el.style.setProperty('overflow-y', 'visible', 'important');
+  el.style.setProperty('max-width', 'none', 'important');
+  el.style.setProperty('min-width', '0', 'important');
+}
+
+function ensurePageScrollRoot() {
+  const html = document.documentElement;
+  const body = document.body;
+  if (!html || !body) return;
+
+  html.style.setProperty('overflow-x', 'auto', 'important');
+  html.style.setProperty('overflow-y', 'auto', 'important');
+  body.style.setProperty('overflow-x', 'auto', 'important');
+  body.style.setProperty('overflow-y', 'auto', 'important');
 }
 
 function ensureGlobalBar() {
@@ -61,9 +88,9 @@ function ensureGlobalBar() {
   bar.addEventListener(
     'scroll',
     () => {
-      if (syncing || !activeContainer) return;
+      if (syncing) return;
       syncing = true;
-      activeContainer.scrollLeft = bar.scrollLeft;
+      window.scrollTo(bar.scrollLeft, window.scrollY || 0);
       syncing = false;
     },
     { passive: true }
@@ -76,90 +103,49 @@ function hideBar(bar) {
   if (!bar) return;
   bar.classList.remove('fiche-global-hscroll-bar--visible');
   bar.style.display = 'none';
-  activeContainer = null;
-}
-
-function pickActiveContainer() {
-  const containers = Array.from(document.querySelectorAll(TABLE_SCROLL_SELECTOR));
-  let best = null;
-  let bestScore = -1;
-
-  containers.forEach((el) => {
-    if (!(el instanceof HTMLElement)) return;
-    const table = el.querySelector('table');
-    if (table) applyTableWidthStyles(table);
-    applyContainerScrollStyles(el);
-
-    const rect = el.getBoundingClientRect();
-    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
-    if (rect.bottom <= 40 || rect.top >= vh - 20) return;
-
-    const needsScroll = el.scrollWidth > el.clientWidth + 2;
-    if (!needsScroll) return;
-
-    // priorité au tableau le plus visible verticalement
-    const visible = Math.min(rect.bottom, vh) - Math.max(rect.top, 0);
-    if (visible > bestScore) {
-      bestScore = visible;
-      best = el;
-    }
-  });
-
-  return best;
-}
-
-function bindContainerScroll(container) {
-  if (!(container instanceof HTMLElement)) return;
-  if (container.dataset.hscrollListen === '1') return;
-  container.addEventListener(
-    'scroll',
-    () => {
-      if (syncing || activeContainer !== container) return;
-      const bar = document.getElementById(BAR_ID);
-      if (!bar) return;
-      syncing = true;
-      bar.scrollLeft = container.scrollLeft;
-      syncing = false;
-    },
-    { passive: true }
-  );
-  container.dataset.hscrollListen = '1';
 }
 
 function updateGlobalStickyBar() {
+  ensurePageScrollRoot();
   const { bar, spacer } = ensureGlobalBar();
-  const container = pickActiveContainer();
-
-  if (!container) {
+  const page = getPageScrollEl();
+  if (!page) {
     hideBar(bar);
     return;
   }
 
-  bindContainerScroll(container);
-  activeContainer = container;
+  const scrollWidth = Math.max(
+    page.scrollWidth || 0,
+    document.documentElement?.scrollWidth || 0,
+    document.body?.scrollWidth || 0
+  );
+  const clientWidth = page.clientWidth || window.innerWidth || 0;
+  const needsScroll = scrollWidth > clientWidth + 2;
 
-  const rect = container.getBoundingClientRect();
-  const left = Math.max(0, Math.round(rect.left));
-  const width = Math.max(0, Math.round(rect.width));
+  if (!needsScroll) {
+    hideBar(bar);
+    return;
+  }
 
   bar.style.display = 'block';
-  bar.style.left = `${left}px`;
-  bar.style.width = `${width}px`;
+  bar.style.left = '0px';
+  bar.style.width = '100%';
   bar.classList.add('fiche-global-hscroll-bar--visible');
 
-  spacer.style.width = `${container.scrollWidth}px`;
+  spacer.style.width = `${scrollWidth}px`;
   spacer.style.height = '1px';
 
   if (!syncing) {
     syncing = true;
-    bar.scrollLeft = container.scrollLeft;
+    bar.scrollLeft = window.scrollX || page.scrollLeft || 0;
     syncing = false;
   }
 }
 
 function enforceTableHorizontalScroll(root = document) {
+  root.querySelectorAll?.(LAYOUT_OVERFLOW_SELECTOR)?.forEach(applyLayoutPageScroll);
   root.querySelectorAll?.(TABLE_SCROLL_SELECTOR)?.forEach((el) => {
-    applyContainerScrollStyles(el);
+    applyContainerNoScroll(el);
     el.querySelectorAll?.('table')?.forEach(applyTableWidthStyles);
   });
   updateGlobalStickyBar();
@@ -195,7 +181,7 @@ export function initTableScrollContainment() {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['class'],
+      attributeFilter: ['class', 'style'],
     });
   };
 
@@ -204,7 +190,18 @@ export function initTableScrollContainment() {
 
   window.addEventListener('resize', schedule);
   window.addEventListener('viewport-layout-change', schedule);
-  window.addEventListener('scroll', schedule, { passive: true, capture: true });
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (syncing) return;
+      const bar = document.getElementById(BAR_ID);
+      if (!bar || !bar.classList.contains('fiche-global-hscroll-bar--visible')) return;
+      syncing = true;
+      bar.scrollLeft = window.scrollX || 0;
+      syncing = false;
+    },
+    { passive: true }
+  );
 
   window.setTimeout(schedule, 0);
   window.setTimeout(schedule, 250);
@@ -214,9 +211,7 @@ export function initTableScrollContainment() {
     observer.disconnect();
     window.removeEventListener('resize', schedule);
     window.removeEventListener('viewport-layout-change', schedule);
-    window.removeEventListener('scroll', schedule, true);
     document.getElementById(BAR_ID)?.remove();
-    activeContainer = null;
   };
 }
 
