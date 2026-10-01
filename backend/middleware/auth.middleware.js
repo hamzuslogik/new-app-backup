@@ -120,6 +120,25 @@ const authenticate = async (req, res, next) => {
       await touchUserActivity(user.id);
     }
 
+    // Partenaire (fonction 9) : centres multiples via utilisateurs_centres
+    let centresIds = [];
+    if (Number(user.fonction) === 9) {
+      try {
+        const rows = await query(
+          'SELECT id_centre FROM utilisateurs_centres WHERE id_utilisateur = ?',
+          [user.id]
+        );
+        centresIds = (rows || [])
+          .map((r) => Number(r.id_centre))
+          .filter((n) => Number.isFinite(n) && n > 0);
+      } catch (e) {
+        console.error('[auth] utilisateurs_centres:', e.message);
+      }
+      if (centresIds.length === 0 && user.centre) {
+        centresIds = [Number(user.centre)].filter((n) => Number.isFinite(n) && n > 0);
+      }
+    }
+
     // Ajouter l'utilisateur à la requête
     req.user = {
       id: user.id,
@@ -130,7 +149,8 @@ const authenticate = async (req, res, next) => {
       centre: user.centre,
       centre_titre: user.centre_titre,
       photo: user.photo,
-      genre: user.genre
+      genre: user.genre,
+      ...(Number(user.fonction) === 9 ? { centres_ids: centresIds } : {}),
     };
 
     next();

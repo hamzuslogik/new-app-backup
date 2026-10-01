@@ -11,7 +11,7 @@ import {
   ficheHasDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
-import { isAdminSession } from '../utils/adminMenuUrls';
+import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
 import {
   FicheAdminBadgeHeaders,
   FicheAdminValideCell,
@@ -72,6 +72,7 @@ const Affectation = () => {
   useForceDesktopViewport('affectation-page');
   const { user } = useAuth();
   const isAdminFicheLayout = isAdminSession(user);
+  const showHasBadge = isHonoreASuivreBadgeSession(user);
   const queryClient = useQueryClient();
   const [selectedFiches, setSelectedFiches] = useState([]);
   const [selectedCommercial, setSelectedCommercial] = useState('');
@@ -548,6 +549,9 @@ const Affectation = () => {
                             <div className="fiche-indicators">
                               {indicators.r2 && (
                                 <span className="indicator r2" title="R2 placé (commercial secondaire)">R2</span>
+                              )}
+                              {showHasBadge && indicators.has && (
+                                <span className="indicator has" title="Honoré à suivre">HAS</span>
                               )}
                               {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
                               {indicators.sg && <span className="indicator sg" title="Signé">SIG</span>}

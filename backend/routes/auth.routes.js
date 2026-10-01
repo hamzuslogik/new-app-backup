@@ -52,6 +52,25 @@ async function sendLoginSuccess(res, user, req, { bypassIpCheck = false } = {}) 
     console.error('[auth/login] touchUserActivity:', e.message);
   }
 
+  let centresIds = undefined;
+  if (Number(user.fonction) === 9) {
+    try {
+      const rows = await query(
+        'SELECT id_centre FROM utilisateurs_centres WHERE id_utilisateur = ?',
+        [user.id]
+      );
+      centresIds = (rows || [])
+        .map((r) => Number(r.id_centre))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (centresIds.length === 0 && user.centre) {
+        centresIds = [Number(user.centre)].filter((n) => Number.isFinite(n) && n > 0);
+      }
+    } catch (e) {
+      console.error('[auth/login] utilisateurs_centres:', e.message);
+      centresIds = user.centre ? [Number(user.centre)] : [];
+    }
+  }
+
   res.json({
     success: true,
     message: bypassIpCheck
@@ -68,7 +87,8 @@ async function sendLoginSuccess(res, user, req, { bypassIpCheck = false } = {}) 
       centre: user.centre,
       centre_titre: user.centre_titre,
       photo: user.photo,
-      genre: user.genre
+      genre: user.genre,
+      ...(centresIds !== undefined ? { centres_ids: centresIds } : {}),
     }
   });
 }
@@ -268,6 +288,19 @@ router.get('/me', authenticate, async (req, res) => {
         message: 'Votre fonction ou centre est désactivé'
       });
     }
+    let centresIds;
+    if (Number(user.fonction) === 9) {
+      const rows = await query(
+        'SELECT id_centre FROM utilisateurs_centres WHERE id_utilisateur = ?',
+        [user.id]
+      );
+      centresIds = (rows || [])
+        .map((r) => Number(r.id_centre))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (centresIds.length === 0 && user.centre) {
+        centresIds = [Number(user.centre)].filter((n) => Number.isFinite(n) && n > 0);
+      }
+    }
     res.json({
       success: true,
       data: {
@@ -284,7 +317,8 @@ router.get('/me', authenticate, async (req, res) => {
         centre_titre: user.centre_titre,
         genre: user.genre,
         photo: user.photo,
-        color: user.color
+        color: user.color,
+        ...(centresIds !== undefined ? { centres_ids: centresIds } : {}),
       }
     });
   } catch (error) {

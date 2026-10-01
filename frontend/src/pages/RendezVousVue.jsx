@@ -46,7 +46,7 @@ import {
   ficheHasDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
-import { isAdminSession } from '../utils/adminMenuUrls';
+import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
 import {
   FicheAdminBadgeHeaders,
   FicheAdminValideCell,
@@ -147,6 +147,7 @@ const fetchRdvVue = async (type, date) => {
 const RendezVousVue = () => {
   const { user } = useAuth();
   const isAdminFicheLayout = isAdminSession(user);
+  const showHasBadge = isHonoreASuivreBadgeSession(user);
   const { closeSidebar } = useSidebar();
   const isRdvVueTouchMobile = isTouchMobileDevice();
 
@@ -766,6 +767,9 @@ const RendezVousVue = () => {
                         <td className="rdv-vue-col-details" style={{ backgroundColor: rowBackgroundColor }}>
                           <div className="fiche-indicators">
                             {ficheHasR2Placed(f) && <span className="indicator r2" title="R2 placé">R2</span>}
+                            {showHasBadge && indicators.has && (
+                              <span className="indicator has" title="Honoré à suivre">HAS</span>
+                            )}
                           </div>
                           <button
                             type="button"

@@ -1548,6 +1548,35 @@ router.get('/', authenticate, async (req, res) => {
       whereConditions.push('fiche.id_centre = ?');
       params.push(id_centre);
     }
+    // Partenaire (fonction 9) : uniquement les fiches de ses centres (utilisateurs_centres)
+    if (Number(req.user.fonction) === 9) {
+      let allowedCentres = Array.isArray(req.user.centres_ids)
+        ? req.user.centres_ids.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)
+        : [];
+      if (allowedCentres.length === 0) {
+        const rows = await query(
+          'SELECT id_centre FROM utilisateurs_centres WHERE id_utilisateur = ?',
+          [req.user.id]
+        );
+        allowedCentres = (rows || [])
+          .map((r) => Number(r.id_centre))
+          .filter((n) => Number.isFinite(n) && n > 0);
+      }
+      if (allowedCentres.length === 0 && req.user.centre) {
+        allowedCentres = [Number(req.user.centre)].filter((n) => Number.isFinite(n) && n > 0);
+      }
+      if (allowedCentres.length === 0) {
+        whereConditions.push('1 = 0');
+      } else if (id_centre) {
+        const want = parseInt(String(id_centre), 10);
+        if (!allowedCentres.includes(want)) {
+          whereConditions.push('1 = 0');
+        }
+      } else {
+        whereConditions.push(`fiche.id_centre IN (${allowedCentres.map(() => '?').join(',')})`);
+        params.push(...allowedCentres);
+      }
+    }
     // Superviseur qualification (fonction 2) : uniquement les fiches des agents (fonction 3) rattachés en chef_equipe
     if (req.user.fonction === 2) {
       const superviseurAgents = await query(
@@ -5406,8 +5435,12 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       delete ficheData.entretien_avec;
     }
 
-    // id_insert réservé à l'import en masse (voir import.routes.js insertFiche)
-    delete ficheData.id_insert;
+    const isPartenaire = Number(req.user.fonction) === 9;
+
+    // id_insert réservé à l'import en masse… sauf création partenaire (id_insert = user)
+    if (!isPartenaire) {
+      delete ficheData.id_insert;
+    }
 
     // Normaliser le téléphone AVANT de vérifier les doublons
     // Fonction pour normaliser un numéro de téléphone
@@ -5595,6 +5628,59 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
         });
       }
     }
+
+    // Partenaire : forcer état EN-ATTENTE (1), id_insert = user (comme import masse), centres autorisés
+    if (isPartenaire) {
+      ficheData.id_etat_final = 1;
+      ficheData.id_agent = req.user.id;
+      // Ne pas renseigner id_qualite (réservé à l'agent qualité qui audite)
+      delete ficheData.id_qualite;
+      delete ficheData.id_confirmateur;
+      delete ficheData.id_confirmateur_2;
+      delete ficheData.id_confirmateur_3;
+      delete ficheData.id_commercial;
+      delete ficheData.id_commercial_2;
+      delete ficheData.date_rdv_time;
+      delete ficheData.date_rdv;
+
+      let allowedCentres = Array.isArray(req.user.centres_ids)
+        ? req.user.centres_ids.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)
+        : [];
+      if (allowedCentres.length === 0) {
+        const rows = await query(
+          'SELECT id_centre FROM utilisateurs_centres WHERE id_utilisateur = ?',
+          [req.user.id]
+        );
+        allowedCentres = (rows || [])
+          .map((r) => Number(r.id_centre))
+          .filter((n) => Number.isFinite(n) && n > 0);
+      }
+      if (allowedCentres.length === 0 && req.user.centre) {
+        allowedCentres = [Number(req.user.centre)].filter((n) => Number.isFinite(n) && n > 0);
+      }
+
+      const centreId = parseInt(ficheData.id_centre, 10);
+      if (!Number.isFinite(centreId) || centreId <= 0) {
+        if (allowedCentres.length === 1) {
+          ficheData.id_centre = allowedCentres[0];
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: 'Centre obligatoire pour créer une fiche partenaire',
+          });
+        }
+      } else if (allowedCentres.length > 0 && !allowedCentres.includes(centreId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Centre non autorisé pour votre compte partenaire',
+        });
+      } else {
+        ficheData.id_centre = centreId;
+      }
+
+      // Aligné import masse : id_insert = utilisateur qui insère (pas l'id centre)
+      ficheData.id_insert = req.user.id;
+    }
     
     ficheData.active = 1;
     ficheData.archive = 0;
@@ -5602,7 +5688,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
     ficheData.hc = 0;
     ficheData.valider = 0;
     if (!ficheData.id_etat_final) {
-      ficheData.id_etat_final = 1; // État par défaut : Nouveau
+      ficheData.id_etat_final = 1; // État par défaut : EN-ATTENTE
     }
     if (!ficheData.id_centre && req.user.centre) {
       ficheData.id_centre = req.user.centre;
@@ -5732,6 +5818,19 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
         });
       }
     }
+
+    const hash = encodeFicheId(insertId);
+    return res.status(201).json({
+      success: true,
+      message: 'Fiche créée avec succès',
+      data: {
+        id: insertId,
+        hash,
+        id_etat_final: ficheData.id_etat_final,
+        id_centre: ficheData.id_centre || null,
+        id_insert: ficheData.id_insert || null,
+      },
+    });
   } catch (error) {
     console.error('Erreur lors de la création de la fiche:', error);
     res.status(500).json({

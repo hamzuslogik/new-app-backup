@@ -17,7 +17,7 @@ import {
   ficheHasDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
-import { isAdminSession } from '../utils/adminMenuUrls';
+import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
 import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
 import {
   FicheAdminBadgeHeaders,
@@ -88,7 +88,9 @@ const Fiches = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isAgentQualif = user?.fonction === 3;
+  const isPartenaire = Number(user?.fonction) === 9;
   const isAdminFicheLayout = isAdminSession(user);
+  const showHasBadge = isHonoreASuivreBadgeSession(user);
   /** Superviseur qualification (RE qualif) : chargement auto des fiches du jour (périmètre agents) */
   const isSuperviseurQualif = user?.fonction === 2;
   /** Backoffice : toutes les fiches créées le jour courant (pas de filtre id_agent par défaut) */
@@ -104,7 +106,8 @@ const Fiches = () => {
     page: 1,
     limit: 500,
     fiche_search: false,
-    fiche_source: 'qualif', // qualif : id_agent agent qualif (f.3) | backoffice : import masse (id_insert)
+    // Partenaire : fiches avec id_insert (onglet backoffice) ; sinon qualif par défaut
+    fiche_source: isPartenaire ? 'backoffice' : 'qualif',
     include_archive: false,
     id_centre: '',
     id_sous_etat: '',
@@ -357,12 +360,13 @@ const Fiches = () => {
       ? Math.max(...statsMoisPodium.map((a) => Number(a.count) || 0), 1)
       : 1;
 
-  // Récupérer les fiches : chargement auto agent qualif / superviseur qualif / backoffice (jour courant) ; sinon au clic Recherche
+  // Récupérer les fiches : chargement auto agent qualif / superviseur qualif / backoffice / partenaire (jour courant) ; sinon au clic Recherche
   const fichesListEnabled =
     appliedFilters.fiche_search === true ||
     isAgentQualif ||
     isSuperviseurQualif ||
-    isBackoffice;
+    isBackoffice ||
+    isPartenaire;
 
   const { data, isLoading, isFetching, error, refetch } = useQuery(
     ['fiches', appliedFilters, debouncedQuickSearch, sortConfig],
@@ -459,8 +463,10 @@ const Fiches = () => {
             data.message ||
               'Une demande d\'insertion a été créée (doublon téléphone).'
           );
+        } else if (data?.data?.alreadyInsertedToday) {
+          toast.info(data.message || "Fiche déjà insérée aujourd'hui.");
         } else {
-          toast.success('Fiche créée avec succès');
+          toast.success(data?.message || 'Fiche créée avec succès');
         }
       },
       onError: (error) => {
@@ -518,7 +524,20 @@ const Fiches = () => {
   const confirmateurs = usersData ? usersData.filter(u => u.fonction === 6 && u.etat > 0) : [];
   const commerciaux = usersData ? usersData.filter(u => u.fonction === 5 && u.etat > 0) : [];
   const agents = usersData ? usersData.filter(u => u.fonction === 3 && u.etat > 0) : [];
-  const centres = centresData ? centresData.filter(c => c.etat > 0) : [];
+  const partnerCentreIds = isPartenaire
+    ? (Array.isArray(user?.centres_ids) && user.centres_ids.length > 0
+        ? user.centres_ids.map(Number)
+        : user?.centre
+          ? [Number(user.centre)]
+          : [])
+    : null;
+  const centres = centresData
+    ? centresData.filter((c) => {
+        if (!(c.etat > 0)) return false;
+        if (partnerCentreIds) return partnerCentreIds.includes(Number(c.id));
+        return true;
+      })
+    : [];
   const etats = etatsData || [];
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } = getEtatsGroupedByPhase(etats);
 
@@ -538,7 +557,7 @@ const Fiches = () => {
     // Pagination, limite, archives : appliquer immédiatement à la requête
     if (key === 'page' || key === 'limit' || key === 'include_archive') {
       setIsSearching(true);
-      const autoLoadProfile = isAgentQualif || isSuperviseurQualif || isBackoffice;
+      const autoLoadProfile = isAgentQualif || isSuperviseurQualif || isBackoffice || isPartenaire;
       setAppliedFilters(prev => ({
         ...prev,
         [key]: key === 'page' ? value : nextValue,
@@ -1574,9 +1593,10 @@ const Fiches = () => {
                     const etatColor = getFicheEtatColor(fiche);
                     const produitColor = getProduitColor(fiche.produit);
                     const isArchived = fiche.archive === 1 || fiche.archive === true;
-                    const indicators = isAdminFicheLayout
-                      ? getFicheTableIndicators(fiche.id_etat_histo, fiche, etatsData || [])
-                      : null;
+                    const indicators =
+                      isAdminFicheLayout || showHasBadge
+                        ? getFicheTableIndicators(fiche.id_etat_histo, fiche, etatsData || [])
+                        : null;
 
                     return (
                       <tr
@@ -1734,9 +1754,14 @@ const Fiches = () => {
                             </td>
                             <td data-label="">
                               <div className="fiche-actions">
-                                {isArchived ? (
+                                {(isArchived || (showHasBadge && indicators?.has)) ? (
                                   <div className="fiche-indicators">
-                                    <span className="indicator archive" title="Archivée">ARCH</span>
+                                    {isArchived ? (
+                                      <span className="indicator archive" title="Archivée">ARCH</span>
+                                    ) : null}
+                                    {showHasBadge && indicators?.has ? (
+                                      <span className="indicator has" title="Honoré à suivre">HAS</span>
+                                    ) : null}
                                   </div>
                                 ) : null}
                                 <div className="action-buttons">
@@ -1842,6 +1867,7 @@ const Fiches = () => {
           modeChauffage={modeChauffageData || []}
           etudeRaison={etudeRaisonData || []}
           typeContratData={typeContratData || []}
+          partenaireMode={isPartenaire}
           onClose={() => setShowCreateModal(false)}
           onSave={(data) => createMutation.mutate(data)}
           isLoading={createMutation.isLoading}
@@ -1937,12 +1963,14 @@ const FicheFormModal = ({
   modeChauffage,
   etudeRaison,
   typeContratData,
+  partenaireMode = false,
   onClose, 
   onSave, 
   isLoading 
 }) => {
   const { user } = useAuth();
   const isEdit = !!fiche;
+  const isPartenaireCreate = partenaireMode && !isEdit;
   const { phase0: etatsPhase0, phase1: etatsPhase1, phase2: etatsPhase2, phase3: etatsPhase3 } =
     getEtatsGroupedByPhase(etats || []);
 
@@ -1963,6 +1991,12 @@ const FicheFormModal = ({
   
   // Bloquer le scroll du body quand le modal est ouvert
   useModalScrollLock(true);
+
+  const defaultCentre =
+    (centres?.length === 1 ? centres[0].id : null) ||
+    fiche?.id_centre ||
+    user?.centre ||
+    '';
   
   const [formData, setFormData] = useState({
     civ: fiche?.civ || 'MR',
@@ -1977,7 +2011,7 @@ const FicheFormModal = ({
     ville: fiche?.ville || '',
     situation_conjugale: fiche?.situation_conjugale || '',
     produit: fiche?.produit != null && String(fiche.produit) !== '' ? fiche.produit : '',
-    id_centre: fiche?.id_centre || user?.centre || '',
+    id_centre: defaultCentre,
     id_agent: fiche?.id_agent || user?.id || '',
     id_etat_final: fiche?.id_etat_final || 1,
     id_confirmateur: fiche?.id_confirmateur || '',
@@ -2007,7 +2041,13 @@ const FicheFormModal = ({
     etude: fiche?.etude || 'NON',
     details_etude: fiche?.details_etude || '',
     etude_raison: fiche?.etude_raison || '',
-    date_appel: formatDateAppelForInput(fiche),
+    date_appel: formatDateAppelForInput(fiche) || (isPartenaireCreate
+      ? (() => {
+          const d = new Date();
+          const pad = (n) => String(n).padStart(2, '0');
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        })()
+      : ''),
     entretien: fiche?.entretien || '',
     nb_pans: fiche?.nb_pans ?? '',
     orientation_toiture: fiche?.orientation_toiture || '',
@@ -2049,10 +2089,13 @@ const FicheFormModal = ({
     const submitData = { ...formData };
 
     // date_appel (bigint côté API) : datetime-local -> secondes UNIX
+    // + date_appel_time (datetime) pour l'historique d'appel
     if (submitData.date_appel) {
       const d = new Date(submitData.date_appel);
       if (!Number.isNaN(d.getTime())) {
         submitData.date_appel = Math.floor(d.getTime() / 1000);
+        const pad = (n) => String(n).padStart(2, '0');
+        submitData.date_appel_time = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
       } else {
         delete submitData.date_appel;
       }
@@ -2066,21 +2109,26 @@ const FicheFormModal = ({
     }
     
     // Combiner date et heure du RDV
-    if (submitData.date_rdv_time && submitData.date_rdv_time_hour) {
-      submitData.date_rdv_time = `${submitData.date_rdv_time} ${submitData.date_rdv_time_hour}:00`;
-    } else if (submitData.date_rdv_time) {
-      submitData.date_rdv_time = `${submitData.date_rdv_time} 00:00:00`;
-    }
-
-    if (submitData.date_rdv_time && isRdvDateBeforeToday(submitData.date_rdv_time)) {
-      const originalYmd = fiche?.date_rdv_time
-        ? String(fiche.date_rdv_time).match(/^(\d{4}-\d{2}-\d{2})/)?.[1]
-        : '';
-      const incomingYmd = String(submitData.date_rdv_time).match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || '';
-      if (incomingYmd !== originalYmd) {
-        toast.error("Impossible de créer un RDV à une date antérieure à aujourd'hui.");
-        return;
+    if (!isPartenaireCreate) {
+      if (submitData.date_rdv_time && submitData.date_rdv_time_hour) {
+        submitData.date_rdv_time = `${submitData.date_rdv_time} ${submitData.date_rdv_time_hour}:00`;
+      } else if (submitData.date_rdv_time) {
+        submitData.date_rdv_time = `${submitData.date_rdv_time} 00:00:00`;
       }
+
+      if (submitData.date_rdv_time && isRdvDateBeforeToday(submitData.date_rdv_time)) {
+        const originalYmd = fiche?.date_rdv_time
+          ? String(fiche.date_rdv_time).match(/^(\d{4}-\d{2}-\d{2})/)?.[1]
+          : '';
+        const incomingYmd = String(submitData.date_rdv_time).match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || '';
+        if (incomingYmd !== originalYmd) {
+          toast.error("Impossible de créer un RDV à une date antérieure à aujourd'hui.");
+          return;
+        }
+      }
+    } else {
+      delete submitData.date_rdv_time;
+      delete submitData.date_rdv_time_hour;
     }
     
     // Supprimer les champs temporaires
@@ -2092,6 +2140,31 @@ const FicheFormModal = ({
     if (submitData.produit !== '' && submitData.produit != null) {
       const pi = parseInt(String(submitData.produit), 10);
       submitData.produit = Number.isFinite(pi) ? pi : null;
+    }
+
+    if (isPartenaireCreate) {
+      submitData.id_etat_final = 1;
+      submitData.id_agent = user?.id || null;
+      // Aligné import masse : id_insert = utilisateur partenaire (pas le centre, pas id_qualite)
+      const centreId = parseInt(String(submitData.id_centre), 10);
+      if (!Number.isFinite(centreId) || centreId <= 0) {
+        toast.error('Veuillez sélectionner un centre');
+        return;
+      }
+      submitData.id_centre = centreId;
+      submitData.id_insert = user?.id || null;
+      delete submitData.id_qualite;
+      delete submitData.id_confirmateur;
+      delete submitData.id_confirmateur_2;
+      delete submitData.id_confirmateur_3;
+      delete submitData.id_commercial;
+      delete submitData.id_commercial_2;
+      delete submitData.situation_conjugale;
+      delete submitData.age_mr;
+      delete submitData.age_madame;
+      delete submitData.revenu_foyer;
+      delete submitData.credit_foyer;
+      delete submitData.nb_enfants;
     }
     
     // Convertir les valeurs vides en null
@@ -2169,17 +2242,28 @@ const FicheFormModal = ({
               <h3>Informations d&apos;appel</h3>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Date et heure d&apos;appel</label>
+                  <label>Date et heure d&apos;appel{isPartenaireCreate ? ' *' : ''}</label>
                   <input
                     type="datetime-local"
                     name="date_appel"
                     value={formData.date_appel || ''}
                     onChange={handleChange}
+                    required={isPartenaireCreate}
                   />
+                </div>
+                <div className="form-group">
+                  <label>{isPartenaireCreate ? 'Appel avec' : 'Entretien avec'}</label>
+                  <select name="entretien" value={formData.entretien || ''} onChange={handleChange}>
+                    <option value="">-- Sélectionner --</option>
+                    <option value="Monsieur">Monsieur</option>
+                    <option value="Madame">Madame</option>
+                    <option value="Couple">Couple</option>
+                  </select>
                 </div>
               </div>
             </div>
 
+            {!isPartenaireCreate && (
             <div className="form-section">
               <h3>Critères client</h3>
               <div className="form-grid">
@@ -2194,17 +2278,9 @@ const FicheFormModal = ({
                     <option value="Veuf(ve)">Veuf(ve)</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Entretien avec</label>
-                  <select name="entretien" value={formData.entretien || ''} onChange={handleChange}>
-                    <option value="">-- Sélectionner --</option>
-                    <option value="Monsieur">Monsieur</option>
-                    <option value="Madame">Madame</option>
-                    <option value="Couple">Couple</option>
-                  </select>
-                </div>
               </div>
             </div>
+            )}
 
             {/* Section Informations professionnelles */}
             <div className="form-section">
@@ -2246,6 +2322,8 @@ const FicheFormModal = ({
                     ))}
                   </select>
                 </div>
+                {!isPartenaireCreate && (
+                  <>
                 <div className="form-group">
                   <label>Âge Monsieur</label>
                   <input type="number" name="age_mr" value={formData.age_mr || ''} onChange={handleChange} min="0" />
@@ -2266,6 +2344,8 @@ const FicheFormModal = ({
                   <label>Nombre d'enfants</label>
                   <input type="number" name="nb_enfants" value={formData.nb_enfants || ''} onChange={handleChange} min="0" />
                 </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -2377,7 +2457,7 @@ const FicheFormModal = ({
 
             {/* Section Produit et Assignation */}
             <div className="form-section">
-              <h3>Produit et Assignation</h3>
+              <h3>{isPartenaireCreate ? 'Produit et centre' : 'Produit et Assignation'}</h3>
               <div className="form-grid">
                 <div className="form-group">
                   <label>Produit *</label>
@@ -2447,6 +2527,8 @@ const FicheFormModal = ({
                     ))}
                   </select>
                 </div>
+                {!isPartenaireCreate && (
+                  <>
                 <div className="form-group">
                   <label>Agent</label>
                   <select name="id_agent" value={formData.id_agent || ''} onChange={handleChange}>
@@ -2547,6 +2629,8 @@ const FicheFormModal = ({
                   <label>Heure RDV</label>
                   <input type="time" name="date_rdv_time_hour" value={formData.date_rdv_time_hour || ''} onChange={handleChange} />
                 </div>
+                  </>
+                )}
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                   <label>Commentaire</label>
                   <textarea name="commentaire" value={formData.commentaire || ''} onChange={handleChange} rows="3" />

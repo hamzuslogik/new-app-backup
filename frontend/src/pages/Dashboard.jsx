@@ -23,7 +23,7 @@ import {
   ficheHasDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
-import { isAdminSession } from '../utils/adminMenuUrls';
+import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
 import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
 import {
   FicheAdminBadgeHeaders,
@@ -310,6 +310,7 @@ const Dashboard = () => {
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   const isQualiteConfirmation = Number(user?.fonction) === 4;
   const isAdminFicheLayout = isAdminSession(user);
+  const showHasBadge = isHonoreASuivreBadgeSession(user);
   /** Menu contextuel (clic droit) sur les lignes du tableau : admin (1), backoffice (11), RP (13), RE (14) */
   const canFicheContextMenu = [1, 11, 13, 14].includes(Number(user?.fonction));
   const [showFilters, setShowFilters] = useState(true);
@@ -2511,6 +2512,9 @@ const Dashboard = () => {
                                   <span className="indicator r2" title="R2 placé (commercial secondaire)">
                                     R2
                                   </span>
+                                )}
+                                {showHasBadge && indicators.has && (
+                                  <span className="indicator has" title="Honoré à suivre">HAS</span>
                                 )}
                                 {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
                                 {indicators.sg && <span className="indicator sg" title="Signé">SIG</span>}

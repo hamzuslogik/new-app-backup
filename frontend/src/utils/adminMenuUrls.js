@@ -4,6 +4,14 @@
 
 export const isAdminSession = (user) => [1, 7].includes(Number(user?.fonction));
 
+/**
+ * Badge HAS (« Honoré à suivre » dans l’historique) :
+ * Backoffice (11), RP Confirmation (13), RE Confirmation (14).
+ * (Admin 1/7 l’a déjà via le layout colonnes badges.)
+ */
+export const isHonoreASuivreBadgeSession = (user) =>
+  [11, 13, 14].includes(Number(user?.fonction));
+
 /** Session commercial (fonction 5). */
 export const isCommercialSession = (user) => Number(user?.fonction) === 5;
 
