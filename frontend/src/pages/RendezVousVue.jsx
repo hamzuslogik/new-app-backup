@@ -687,8 +687,7 @@ const RendezVousVue = () => {
               </thead>
               <tbody>
                 {filteredList.map((f) => {
-                  const rowBackgroundColor = `${getEtatColor(f)}40`;
-                  const rowBorderColor = getEtatColor(f);
+                  const etatColor = getEtatColor(f);
                   const indicators = getFicheTableIndicators(f.id_etat_histo, f, etatsData || []);
                   const decalageInfo = showDecalageColAdmin ? getDecalageDisplayInfo(f) : null;
                   return (
@@ -696,7 +695,7 @@ const RendezVousVue = () => {
                     key={f.id}
                     className="fiche-row-by-etat"
                     {...bindFicheRowContextMenu(f)}
-                    style={{ backgroundColor: rowBackgroundColor, borderLeft: `4px solid ${rowBorderColor}` }}
+                    style={{ backgroundColor: etatColor }}
                   >
                     <td className="fiche-row-lead-cell fiche-col-nom">
                       <div className="fiche-row-lead-cell-inner">
@@ -731,7 +730,7 @@ const RendezVousVue = () => {
                         <td className="fiche-col-date">{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
                         <td>{getConfirmateursFormatted(f) || ''}</td>
                         <td>
-                          <span className="etat-badge" style={{ backgroundColor: getEtatColor(f) }}>
+                          <span className="etat-text etat-text--wrap">
                             {f.etat_titre || f.id_etat_final || ''}
                           </span>
                         </td>
@@ -751,7 +750,7 @@ const RendezVousVue = () => {
                         <td className="fiche-col-date">{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
                         <td className="fiche-col-date">{formatRdvDateTime(f.date_rdv_time)}</td>
                         <td>
-                          <span className="etat-badge" style={{ backgroundColor: getEtatColor(f) }}>
+                          <span className="etat-text etat-text--wrap">
                             {f.etat_titre || f.id_etat_final || ''}
                           </span>
                         </td>
@@ -764,7 +763,7 @@ const RendezVousVue = () => {
                           </span>
                         </td>
                         <td>{Number(f.valider) > 0 ? '✓' : ''}</td>
-                        <td className="rdv-vue-col-details" style={{ backgroundColor: rowBackgroundColor }}>
+                        <td className="rdv-vue-col-details">
                           <div className="fiche-indicators">
                             {ficheHasR2Placed(f) && <span className="indicator r2" title="R2 placé">R2</span>}
                             {showHasBadge && indicators.has && (

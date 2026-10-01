@@ -783,10 +783,7 @@ const StatistiquesFiches = () => {
                     <tr
                       key={fiche.id || fiche.hash}
                       className="fiche-row-by-etat"
-                      style={{
-                        backgroundColor: `${etatColor}40`,
-                        borderLeft: `4px solid ${etatColor}`
-                      }}
+                      style={{ backgroundColor: etatColor }}
                     >
                       <td>{fiche.nom || ''}</td>
                       <td>{fiche.prenom || ''}</td>
@@ -796,21 +793,9 @@ const StatistiquesFiches = () => {
                       <td>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                       <td>{fiche.confirmateur_nom || ''}</td>
                       <td>{fiche.commercial_nom || ''}</td>
-                      <td>
+                      <td className="etat-col-cell">
                         {fiche.etat_titre ? (
-                          <span
-                            className="etat-badge"
-                            style={{
-                              backgroundColor: etatColor,
-                              color: '#ffffff',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '10.2px',
-                              fontWeight: '600'
-                            }}
-                          >
-                            {fiche.etat_titre}
-                          </span>
+                          <span className="etat-text etat-text--wrap">{fiche.etat_titre}</span>
                         ) : (
                           '-'
                         )}

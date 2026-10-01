@@ -85,22 +85,18 @@ const Phase3 = () => {
                    activeTab === 'signes-mois';
 
     return (
-      <tr key={fiche.id} style={{ backgroundColor: etatInfo.color + '20' }}>
+      <tr
+        key={fiche.id}
+        className="fiche-row-by-etat"
+        style={{ backgroundColor: etatInfo.color }}
+      >
         <td>{fiche.nom}</td>
         <td>{fiche.prenom}</td>
         <td>{fiche.tel}</td>
         <td>{fiche.cp}</td>
         <td>{fiche.ville}</td>
-        <td>
-          <span style={{ 
-            backgroundColor: etatInfo.color, 
-            color: '#fff', 
-            padding: '4px 8px', 
-            borderRadius: '4px',
-            fontSize: '10.2px'
-          }}>
-            {etatInfo.titre}
-          </span>
+        <td className="etat-col-cell">
+          <span className="etat-text etat-text--wrap">{etatInfo.titre}</span>
         </td>
         <td>{fiche.date_rdv_time ? formatRdvDateTime(fiche.date_rdv_time) : 'N/A'}</td>
         {showCQ && (

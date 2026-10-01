@@ -1122,7 +1122,8 @@ const DashboardAdmin = () => {
                     return (
                       <tr
                         key={fiche.hash}
-                        style={{ backgroundColor: `${etatColor}20` }}
+                        className="fiche-row-by-etat"
+                        style={{ backgroundColor: etatColor }}
                       >
                         <td data-label="Nom:" className="fiche-col-nom">{fiche.nom || ''}</td>
                         <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
@@ -1235,16 +1236,11 @@ const DashboardAdmin = () => {
                         <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
                         <td data-label="Date Insertion:" className="fiche-col-date">{formatDate(fiche.date_insert_time)}</td>
                         <td data-label="Confirmateur:">{getConfirmateursFormatted(fiche)}</td>
-                        <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}>
-                          <span
-                            className="etat-badge"
-                            style={{ backgroundColor: etatColor }}
-                          >
+                        <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'} className="etat-col-cell">
+                          <span className="etat-text etat-text--wrap">
                             {getEtatName(fiche.id_etat_final)}
                             {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
-                              <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
-                                (RDV_URGENT)
-                              </span>
+                              <span className="etat-text-urgent">(RDV_URGENT)</span>
                             )}
                           </span>
                         </td>

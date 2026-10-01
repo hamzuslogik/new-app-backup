@@ -1609,8 +1609,8 @@ const Fiches = () => {
                     return (
                       <tr
                         key={fiche.hash}
-                        style={{ backgroundColor: `${etatColor}20` }}
-                        className={isArchived ? 'archived' : ''}
+                        className={`fiche-row-by-etat${isArchived ? ' archived' : ''}`}
+                        style={{ backgroundColor: etatColor }}
                       >
                         <td data-label="Nom:" className="fiche-col-nom">{fiche.nom || ''}</td>
                         <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
@@ -1710,16 +1710,14 @@ const Fiches = () => {
                             <td data-label="Date Insertion:" className="fiche-col-date">{formatDate(fiche.date_insert_time)}</td>
                             <td data-label="Conf:">{getConfirmateursFormatted(fiche)}</td>
                             <td data-label="État:">
-                              <span className="etat-badge" style={{ backgroundColor: etatColor }}>
-                                {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
+                              <span className="etat-text etat-text--wrap">
+                                {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
                                 {isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getFicheEtatName(fiche)}
                                 {(fiche.ko === 1 || fiche.ko === '1') && (
-                                  <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>(KO)</span>
+                                  <span className="etat-text-urgent">(KO)</span>
                                 )}
                                 {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
-                                  <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
-                                    (RDV_URGENT)
-                                  </span>
+                                  <span className="etat-text-urgent">(RDV_URGENT)</span>
                                 )}
                               </span>
                             </td>
@@ -1729,16 +1727,14 @@ const Fiches = () => {
                             <td data-label="Date Insertion:" className="fiche-col-date">{formatDate(fiche.date_insert_time)}</td>
                             <td data-label="Agent:">{getUserName(fiche.id_agent) || (fiche.agent_pseudo || '')}</td>
                             <td data-label="État:">
-                              <span className="etat-badge" style={{ backgroundColor: etatColor }}>
-                                {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
+                              <span className="etat-text etat-text--wrap">
+                                {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
                                 {isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getFicheEtatName(fiche)}
                                 {(fiche.ko === 1 || fiche.ko === '1') && (
-                                  <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>(KO)</span>
+                                  <span className="etat-text-urgent">(KO)</span>
                                 )}
                                 {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
-                                  <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
-                                    (RDV_URGENT)
-                                  </span>
+                                  <span className="etat-text-urgent">(RDV_URGENT)</span>
                                 )}
                               </span>
                             </td>

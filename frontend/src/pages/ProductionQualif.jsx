@@ -837,26 +837,22 @@ const ProductionQualif = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {fiches.map((fiche) => (
-                      <tr key={fiche.id || fiche.hash}>
-                        <td className="col-date">{formatDateTimeFr(fiche.date_insert_time)}</td>
+                  {fiches.map((fiche) => {
+                    const { label: displayEtat, color: displayColor } = getFicheEtatDisplay(fiche);
+                    return (
+                      <tr
+                        key={fiche.id || fiche.hash}
+                        className="fiche-row-by-etat"
+                        style={{ backgroundColor: displayColor }}
+                      >
+                        <td className="col-date fiche-col-date">{formatDateTimeFr(fiche.date_insert_time)}</td>
                         <td className="col-agent">{fiche.agent_pseudo || ''}</td>
-                        <td className="col-nom">{fiche.nom || ''}</td>
-                        <td className="col-prenom">{fiche.prenom || ''}</td>
+                        <td className="col-nom fiche-col-nom">{fiche.nom || ''}</td>
+                        <td className="col-prenom fiche-col-prenom">{fiche.prenom || ''}</td>
                         <td className="col-tel">{fiche.tel || ''}</td>
                         <td className="col-cp">{fiche.cp || ''}</td>
-                        <td className="col-etat">
-                          {(() => {
-                            const { label: displayEtat, color: displayColor } = getFicheEtatDisplay(fiche);
-                            return (
-                              <span
-                                className="etat-badge"
-                                style={{ backgroundColor: displayColor }}
-                              >
-                                {displayEtat}
-                              </span>
-                            );
-                          })()}
+                        <td className="col-etat etat-col-cell">
+                          <span className="etat-text etat-text--wrap">{displayEtat}</span>
                         </td>
                         {canSeeCommentaireQualite && (
                           <td className="col-comment">
@@ -951,7 +947,8 @@ const ProductionQualif = () => {
                           )}
                         </td>
                       </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

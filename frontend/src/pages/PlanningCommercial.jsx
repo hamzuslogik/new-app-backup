@@ -989,7 +989,8 @@ const PlanningCommercial = () => {
                     return (
                       <tr 
                         key={fiche.hash}
-                        style={{ backgroundColor: `${etatColor}20` }}
+                        className="fiche-row-by-etat"
+                        style={{ backgroundColor: etatColor }}
                       >
                         <td data-label="Date RDV:" className="fiche-col-date">
                           <strong>{formatRdvDateTime(fiche.date_rdv_time)}</strong>
@@ -1036,11 +1037,8 @@ const PlanningCommercial = () => {
                             {getProduitName(fiche.produit)}
                           </span>
                         </td>
-                        <td data-label="État:">
-                          <span 
-                            className="etat-badge"
-                            style={{ backgroundColor: etatColor }}
-                          >
+                        <td data-label="État:" className="etat-col-cell">
+                          <span className="etat-text etat-text--wrap">
                             {fiche.etat_titre || 'N/A'}
                           </span>
                         </td>

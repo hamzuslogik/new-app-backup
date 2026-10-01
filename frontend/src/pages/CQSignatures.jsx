@@ -468,11 +468,8 @@ const CQSignatures = () => {
                 {sortedRows.map((sig) => (
                   <tr
                     key={sig.id_fiche || sig.id}
-                    className="cq-table-row-by-etat"
-                    style={{
-                      backgroundColor: `${getEtatColor(sig)}40`,
-                      borderLeft: `4px solid ${getEtatColor(sig)}`
-                    }}
+                    className="fiche-row-by-etat cq-table-row-by-etat"
+                    style={{ backgroundColor: getEtatColor(sig) }}
                   >
                     <td className="wrap-word-cell nom-col">{sig.nom || '-'}</td>
                     <td className="wrap-word-cell prenom-col">{sig.prenom || '-'}</td>
@@ -480,9 +477,7 @@ const CQSignatures = () => {
                     <td className="cp-col">{sig.cp || '-'}</td>
                     <td className="date-rdv-col">{sig.date_planning ? formatRdvDateTime(sig.date_planning) : '-'}</td>
                     <td className="etat-col etat-col-cell">
-                      <span className="etat-badge etat-badge--wrap" style={{ backgroundColor: getEtatColor(sig) }}>
-                        {getEtatTitle(sig)}
-                      </span>
+                      <span className="etat-text etat-text--wrap">{getEtatTitle(sig)}</span>
                     </td>
                     <td className="wrap-word-cell confirmateur-col">{sig.confirmateur_pseudo || '-'}</td>
                     <td className="wrap-word-cell commercial-col">{getCommercialsFormatted(sig)}</td>

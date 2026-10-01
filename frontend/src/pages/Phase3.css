@@ -99,7 +99,17 @@
   border-bottom: 1px solid #eee;
 }
 
-.phase3-table tbody tr:hover {
+.phase3-table tbody tr.fiche-row-by-etat > td {
+  color: #000000 !important;
+  font-weight: 800 !important;
+  background-color: transparent !important;
+}
+
+.phase3-table tbody tr.fiche-row-by-etat:hover {
+  filter: brightness(0.96);
+}
+
+.phase3-table tbody tr:hover:not(.fiche-row-by-etat) {
   background: #f8f9fa;
 }
 

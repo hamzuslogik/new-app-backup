@@ -1136,11 +1136,13 @@ const ControleQualite = () => {
                   <tr
                     key={fiche.hash}
                     className={[
+                      'fiche-row-by-etat',
                       isFicheLockedForUser(fiche) ? 'fiche-row-locked' : '',
                       (fiche.archive === 1 || fiche.archive === '1') ? 'fiche-row-archive' : '',
                       contextMenu?.fiche?.hash === fiche.hash ? 'cq-row-context-active' : '',
                       selectedFicheHash === fiche.hash ? 'cq-row-selected' : '',
                     ].filter(Boolean).join(' ')}
+                    style={{ backgroundColor: getEtatActuelColor(fiche) }}
                     onContextMenu={(e) => openRowContextMenu(e, fiche)}
                     onDoubleClick={(e) => handleRowDoubleClick(e, fiche)}
                     title="Double-clic : sélectionner pour changer l'état · Clic droit : menu d'actions"
@@ -1215,15 +1217,11 @@ const ControleQualite = () => {
                         />
                       </div>
                     </td>
-                    <td className="etat-actuel-col">
+                    <td className="etat-actuel-col etat-col-cell">
                       {isFicheLockedForUser(fiche) && (
                         <span className="fiche-locked-badge" title={getLockMessage(fiche)}>Verrouillée</span>
                       )}
-                      <span
-                        className="etat-badge etat-badge-compact"
-                        style={{ backgroundColor: getEtatActuelColor(fiche) }}
-                        title={getEtatActuelLabel(fiche)}
-                      >
+                      <span className="etat-text etat-text--wrap" title={getEtatActuelLabel(fiche)}>
                         {getEtatActuelLabel(fiche)}
                       </span>
                     </td>

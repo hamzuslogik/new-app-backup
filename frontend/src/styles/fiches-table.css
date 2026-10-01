@@ -227,9 +227,79 @@ html body .fiches-table td.fiche-col-badge {
   color: #6b7280;
 }
 
+/* Lignes colorées par état (toutes pages) : fond = couleur état, texte noir gras */
+html body table tbody tr.fiche-row-by-etat > td,
+html body .fiches-table tbody tr.fiche-row-by-etat > td,
+html body .cq-table tbody tr.fiche-row-by-etat > td,
+html body .fiches-detail-table tbody tr.fiche-row-by-etat > td,
+html body .phase3-table tbody tr.fiche-row-by-etat > td,
+.dashboard-page .fiches-table tbody tr.fiche-row-by-etat td,
+.dashboard-admin-page .fiches-table tbody tr.fiche-row-by-etat td,
+.fiches-page .fiches-table tbody tr.fiche-row-by-etat td,
+.affectation-page .fiches-table tbody tr.fiche-row-by-etat td,
+.controle-qualite .fiches-table tbody tr.fiche-row-by-etat > td,
+.production-qualif .fiches-table tbody tr.fiche-row-by-etat > td,
+.stats-agents-qualite-page .fiches-table tbody tr.fiche-row-by-etat > td,
+.suivi-agents-qualif .fiches-table tbody tr.fiche-row-by-etat > td {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+html.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat td,
+body.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat td,
+html.planning-commercial-page .planning-commercial .fiches-table tbody tr.fiche-row-by-etat td,
+body.planning-commercial-page .planning-commercial .fiches-table tbody tr.fiche-row-by-etat td {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+html body table tbody tr.fiche-row-by-etat .fiche-row-lead-label,
+html body table tbody tr.fiche-row-by-etat .etat-text,
+html body .fiches-table tbody tr.fiche-row-by-etat .fiche-row-lead-label,
+html body .fiches-table tbody tr.fiche-row-by-etat .etat-text,
+html body .cq-table tbody tr.fiche-row-by-etat .etat-text,
+html body .fiches-detail-table tbody tr.fiche-row-by-etat .etat-text,
+html body .phase3-table tbody tr.fiche-row-by-etat .etat-text {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+/* État en texte (plus de badge coloré sur fond déjà coloré) */
+html body table .etat-text,
+html body .fiches-table .etat-text,
+html body .cq-table .etat-text,
+html body .fiches-detail-table .etat-text,
+html body .phase3-table .etat-text {
+  display: inline-block;
+  color: #000000;
+  font-weight: 800;
+  font-size: 11px;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  line-height: 1.25;
+}
+
+html body table .etat-text-cr,
+html body .fiches-table .etat-text-cr {
+  margin-right: 4px;
+  font-weight: 800;
+  color: #000000;
+}
+
+html body table .etat-text-urgent,
+html body .fiches-table .etat-text-urgent {
+  margin-left: 8px;
+  font-weight: 800;
+  font-size: 0.77em;
+  color: #000000;
+}
+
 /* Aucune nuance / rayure de fond par colonne (toutes pages fiches-table) */
 html body table.fiches-table > tbody > tr > td,
 html body .fiches-table > tbody > tr > td,
+html body .cq-table > tbody > tr.fiche-row-by-etat > td,
+html body .fiches-detail-table > tbody > tr.fiche-row-by-etat > td,
+html body .phase3-table > tbody > tr.fiche-row-by-etat > td,
 .dashboard-page .fiches-table > tbody > tr > td,
 .dashboard-admin-page .fiches-table > tbody > tr > td,
 .fiches-page .fiches-table > tbody > tr > td,
@@ -240,7 +310,10 @@ body.rdv-vue-page .rdv-vue .fiches-table > tbody > tr > td {
 }
 
 html body table.fiches-table > tbody > tr > td:nth-child(even),
-html body .fiches-table > tbody > tr > td:nth-child(even) {
+html body .fiches-table > tbody > tr > td:nth-child(even),
+html body .cq-table > tbody > tr.fiche-row-by-etat > td:nth-child(even),
+html body .fiches-detail-table > tbody > tr.fiche-row-by-etat > td:nth-child(even),
+html body .phase3-table > tbody > tr.fiche-row-by-etat > td:nth-child(even) {
   background-image: none !important;
   background-color: transparent !important;
 }

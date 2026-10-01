@@ -845,8 +845,23 @@ const SuiviAgentsQualif = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {fiches.map(fiche => (
-                    <tr key={fiche.id}>
+                  {fiches.map(fiche => {
+                    const rowColor = (fiche.ko === 1 || fiche.ko === '1')
+                      ? '#dc3545'
+                      : (fiche.etat_groupe === '0' || fiche.etat_groupe === 0)
+                        ? (fiche.etat_color || '#ccc')
+                        : '#4CAF50';
+                    const etatLabel = (fiche.ko === 1 || fiche.ko === '1')
+                      ? 'KO'
+                      : (fiche.etat_groupe === '0' || fiche.etat_groupe === 0)
+                        ? (fiche.etat_titre || '')
+                        : 'Validé';
+                    return (
+                    <tr
+                      key={fiche.id}
+                      className="fiche-row-by-etat"
+                      style={{ backgroundColor: rowColor }}
+                    >
                       <td>{fiche.id}</td>
                       <td>{fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
                       <td>{fiche.agent_pseudo || ''}</td>
@@ -854,23 +869,8 @@ const SuiviAgentsQualif = () => {
                       <td>{fiche.prenom || ''}</td>
                       <td>{fiche.tel || ''}</td>
                       <td>{fiche.cp || ''}</td>
-                      <td>
-                        <span 
-                          className="etat-badge"
-                          style={{
-                            backgroundColor: (fiche.ko === 1 || fiche.ko === '1')
-                              ? '#dc3545'
-                              : (fiche.etat_groupe === '0' || fiche.etat_groupe === 0)
-                                ? (fiche.etat_color || '#ccc')
-                                : '#4CAF50'
-                          }}
-                        >
-                          {(fiche.ko === 1 || fiche.ko === '1')
-                            ? 'KO'
-                            : (fiche.etat_groupe === '0' || fiche.etat_groupe === 0)
-                              ? (fiche.etat_titre || '')
-                              : 'Validé'}
-                        </span>
+                      <td className="etat-col-cell">
+                        <span className="etat-text etat-text--wrap">{etatLabel}</span>
                       </td>
                       {canSeeCommentaireQualite && (
                         <td className="comment-qualite-cell">
@@ -938,7 +938,8 @@ const SuiviAgentsQualif = () => {
                         </td>
                       )}
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

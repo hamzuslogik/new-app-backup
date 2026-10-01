@@ -781,7 +781,12 @@ const StatsAgentsQualite = () => {
                     {filteredFichesAuditeesQualif.map((fiche) => (
                       <tr
                         key={fiche.id}
-                        className={`${fiche.ko ? 'row-ko' : ''} ${fiche.hc ? 'row-hc' : ''}`}
+                        className={[
+                          'fiche-row-by-etat',
+                          fiche.ko ? 'row-ko' : '',
+                          fiche.hc ? 'row-hc' : '',
+                        ].filter(Boolean).join(' ')}
+                        style={{ backgroundColor: fiche.etat_color || '#ccc' }}
                       >
                         <td>{formatDateTime(fiche.date_audit)}</td>
                         <td>
@@ -818,11 +823,8 @@ const StatsAgentsQualite = () => {
                           </div>
                         </td>
                         <td>{fiche.centre_titre || ''}</td>
-                        <td>
-                          <span
-                            className="etat-badge"
-                            style={{ backgroundColor: fiche.etat_color || '#ccc' }}
-                          >
+                        <td className="etat-col-cell">
+                          <span className="etat-text etat-text--wrap">
                             {fiche.etat_abbreviation || fiche.etat_titre || ''}
                           </span>
                         </td>

@@ -748,6 +748,13 @@
 
 .fiches-detail-table tbody tr.fiche-row-by-etat:hover {
   filter: brightness(0.96);
+  background: inherit;
+}
+
+.fiches-detail-table tbody tr.fiche-row-by-etat > td {
+  color: #000000 !important;
+  font-weight: 800 !important;
+  background-color: transparent !important;
 }
 
 .fiches-detail-table tbody tr:last-child {

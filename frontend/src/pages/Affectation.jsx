@@ -466,8 +466,7 @@ const Affectation = () => {
                       key={fiche.id}
                       className={`fiche-row-by-etat ${selectedFiches.includes(fiche.id) ? 'selected' : ''}`}
                       style={{
-                        backgroundColor: `${etatColor}40`,
-                        borderLeft: `4px solid ${etatColor}`,
+                        backgroundColor: etatColor,
                       }}
                     >
                       <td className="affectation-select-col">
@@ -502,7 +501,7 @@ const Affectation = () => {
                           <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
                           <td data-label="Confirmateur:">{formatConfirmateurs(fiche)}</td>
                           <td data-label="État:" className="etat-col-cell">
-                            <span className="etat-badge etat-badge--wrap" style={{ backgroundColor: etatColor }}>
+                            <span className="etat-text etat-text--wrap">
                               {getEtatDisplayWithSousEtat(fiche, etatsData || [])}
                             </span>
                           </td>
@@ -521,7 +520,7 @@ const Affectation = () => {
                           <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
                           <td data-label="Date RDV:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                           <td data-label="État:" className="etat-col-cell">
-                            <span className="etat-badge etat-badge--wrap" style={{ backgroundColor: etatColor }}>
+                            <span className="etat-text etat-text--wrap">
                               {getEtatDisplayWithSousEtat(fiche, etatsData || [])}
                             </span>
                           </td>
