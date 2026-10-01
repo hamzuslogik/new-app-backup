@@ -2390,8 +2390,7 @@ const Dashboard = () => {
                         className="fiche-row-by-etat"
                         {...bindFicheRowContextMenu(fiche, { enabled: canFicheContextMenu })}
                         style={{
-                          backgroundColor: `${etatColor}40`,
-                          borderLeft: `4px solid ${etatColor}`
+                          backgroundColor: etatColor,
                         }}
                         title={getTooltipComment(fiche) || undefined}
                       >
@@ -2438,16 +2437,11 @@ const Dashboard = () => {
                               data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
                               className="etat-col-cell"
                             >
-                              <span
-                                className="etat-badge etat-badge--wrap"
-                                style={{ backgroundColor: etatColor }}
-                              >
-                                {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
+                              <span className="etat-text etat-text--wrap">
+                                {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
                                 {getEtatDisplayName(fiche)}
                                 {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
-                                  <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
-                                    (RDV_URGENT)
-                                  </span>
+                                  <span className="etat-text-urgent">(RDV_URGENT)</span>
                                 )}
                               </span>
                             </td>
@@ -2469,16 +2463,11 @@ const Dashboard = () => {
                               data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
                               className="etat-col-cell"
                             >
-                              <span
-                                className="etat-badge etat-badge--wrap"
-                                style={{ backgroundColor: etatColor }}
-                              >
-                                {showCRPrefix(fiche) && <span style={{ marginRight: '4px', fontWeight: 'bold' }}>&lt;CR&gt;</span>}
+                              <span className="etat-text etat-text--wrap">
+                                {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
                                 {getEtatDisplayName(fiche)}
                                 {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
-                                  <span style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '0.77em' }}>
-                                    (RDV_URGENT)
-                                  </span>
+                                  <span className="etat-text-urgent">(RDV_URGENT)</span>
                                 )}
                               </span>
                             </td>

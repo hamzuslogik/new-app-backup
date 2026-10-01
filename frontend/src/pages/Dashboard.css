@@ -1714,7 +1714,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   background-color: #fafafa;
 }
 
-/* Badge état */
+/* Badge état (autres contextes éventuels) */
 .etat-badge {
   display: inline-block;
   padding: 4px 6.4px;
@@ -1725,6 +1725,31 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   white-space: nowrap;
 }
 
+/* État en texte noir gras (fond de ligne = couleur état) */
+.dashboard-page .fiches-table .etat-text {
+  display: inline-block;
+  color: #000000;
+  font-weight: 700;
+  font-size: 11px;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  line-height: 1.25;
+}
+
+.dashboard-page .fiches-table .etat-text-cr {
+  margin-right: 4px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.dashboard-page .fiches-table .etat-text-urgent {
+  margin-left: 8px;
+  font-weight: 700;
+  font-size: 0.77em;
+  color: #000000;
+}
+
 .fiches-table td.etat-col-cell,
 .fiches-table td:nth-child(7) {
   white-space: normal;
@@ -1732,7 +1757,9 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 }
 
 .fiches-table td.etat-col-cell .etat-badge--wrap,
-.fiches-table td:nth-child(7) .etat-badge {
+.fiches-table td.etat-col-cell .etat-text--wrap,
+.fiches-table td:nth-child(7) .etat-badge,
+.fiches-table td:nth-child(7) .etat-text {
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -4979,6 +5006,8 @@ html body.dashboard-page .fiches-table td:nth-child(n) {
 
 html body.dashboard-page .fiches-table td:nth-child(n) .etat-badge,
 html body.dashboard-page .fiches-table td:nth-child(n) .etat-badge--wrap,
+html body.dashboard-page .fiches-table td:nth-child(n) .etat-text,
+html body.dashboard-page .fiches-table td:nth-child(n) .etat-text--wrap,
 html body.dashboard-page .fiches-table td:nth-child(n) .produit-indicator,
 html body.dashboard-page .fiches-table td:nth-child(n) .fiche-row-lead-label {
   max-width: 100% !important;
