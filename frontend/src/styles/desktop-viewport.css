@@ -329,11 +329,20 @@ html.viewport-zoomed[data-desktop-viewport] body {
 html.viewport-zoomed .app,
 html.viewport-zoomed .main-content,
 html.viewport-zoomed .content-wrapper,
-html.viewport-zoomed .dashboard,
-html.viewport-zoomed .fiches-table-container,
-html.viewport-zoomed .confirmateurs-table-container {
+html.viewport-zoomed .dashboard {
   overflow: visible !important;
   touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+html.viewport-zoomed .fiches-table-container,
+html.viewport-zoomed .confirmateurs-table-container {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  scrollbar-gutter: stable;
 }
 
 html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .dashboard,
@@ -354,10 +363,12 @@ html.viewport-zoomed body.dashboard-page[data-desktop-viewport] .confirmateurs-t
 }
 
 html.viewport-zoomed body.planning-commercial-page[data-desktop-viewport] .fiches-table-container {
-  min-width: 1400px !important;
-  width: max-content !important;
-  max-width: none !important;
-  overflow: visible !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
+  scrollbar-gutter: stable;
 }
 
 html.viewport-zoomed body.rdv-vue-page[data-desktop-viewport] .fiches-table-container,

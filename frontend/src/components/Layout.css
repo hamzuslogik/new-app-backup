@@ -36,6 +36,18 @@ body.admin-topnav .main-content.sidebar-collapsed {
   overflow-y: auto;
   overflow-x: auto; /* Permettre le scroll horizontal si nécessaire */
   min-width: 0; /* Permettre au flex de réduire la largeur si nécessaire */
+  max-width: 100%;
+}
+
+/* Les conteneurs tableaux restent scrollables dans la largeur du content-wrapper */
+.content-wrapper .fiches-table-container,
+.content-wrapper .confirmateurs-table-container,
+.content-wrapper .cq-table-container,
+.content-wrapper .fiches-table-wrapper {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  overflow-x: scroll !important;
 }
 
 /* Mode desktop forcé : scroll sur le document (html/body), pas de clip ici */

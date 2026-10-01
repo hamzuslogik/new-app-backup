@@ -428,38 +428,40 @@ html body .fiches-table-container::-webkit-scrollbar,
 html body .confirmateurs-table-container::-webkit-scrollbar,
 html body .cq-table-container::-webkit-scrollbar,
 html body .fiches-table-wrapper::-webkit-scrollbar {
-  height: 14px;
-  width: 14px;
+  height: 16px !important;
+  width: 16px !important;
+  display: block !important;
 }
 
 html body .fiches-table-container::-webkit-scrollbar-track,
 html body .confirmateurs-table-container::-webkit-scrollbar-track,
 html body .cq-table-container::-webkit-scrollbar-track,
 html body .fiches-table-wrapper::-webkit-scrollbar-track {
-  background: #e5e7eb;
-  border-radius: 7px;
+  background: #d1d5db !important;
+  border-radius: 8px;
 }
 
 html body .fiches-table-container::-webkit-scrollbar-thumb,
 html body .confirmateurs-table-container::-webkit-scrollbar-thumb,
 html body .cq-table-container::-webkit-scrollbar-thumb,
 html body .fiches-table-wrapper::-webkit-scrollbar-thumb {
-  background: #6b7280;
-  border-radius: 7px;
-  border: 2px solid #e5e7eb;
+  background: #4b5563 !important;
+  border-radius: 8px;
+  border: 2px solid #d1d5db;
+  min-width: 48px;
 }
 
 html body .fiches-table-container::-webkit-scrollbar-thumb:hover,
 html body .confirmateurs-table-container::-webkit-scrollbar-thumb:hover,
 html body .cq-table-container::-webkit-scrollbar-thumb:hover,
 html body .fiches-table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #1f2937 !important;
 }
 
 html body .fiches-table-container,
 html body .confirmateurs-table-container,
 html body .cq-table-container,
 html body .fiches-table-wrapper {
-  scrollbar-width: auto;
-  scrollbar-color: #6b7280 #e5e7eb;
+  scrollbar-width: auto !important;
+  scrollbar-color: #4b5563 #d1d5db !important;
 }
